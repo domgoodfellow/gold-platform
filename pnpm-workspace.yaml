@@ -1,0 +1,9 @@
+packages:
+  - "apps/*"
+
+# Merged up from the nested apps/web/pnpm-workspace.yaml that create-next-app wrote.
+# A pnpm-workspace.yaml inside a package makes that directory its own workspace root and
+# detaches it from the monorepo, so there must be exactly one, here.
+allowBuilds:
+  sharp: false
+  unrs-resolver: false

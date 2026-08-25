@@ -1,0 +1,10 @@
+# Normalise line endings in the repository to LF regardless of the machine committing.
+# Without this, git on Windows stores CRLF and every file touched on another machine shows
+# as wholly rewritten. Migrations are the case that matters most: a diff nobody can read is
+# a diff nobody reviews.
+* text=auto eol=lf
+
+*.ico binary
+*.png binary
+*.jpg binary
+*.woff2 binary

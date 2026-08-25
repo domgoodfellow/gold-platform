@@ -1,0 +1,14 @@
+{
+  "name": "gold-platform",
+  "private": true,
+  "packageManager": "pnpm@11.4.0",
+  "scripts": {
+    "check": "pnpm -r --stream check",
+    "db:start": "supabase start --workdir infra",
+    "db:reset": "supabase db reset --workdir infra",
+    "db:push": "supabase db push --workdir infra"
+  },
+  "devDependencies": {
+    "supabase": "^2.22.6"
+  }
+}
