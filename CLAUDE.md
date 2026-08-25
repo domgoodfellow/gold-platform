@@ -71,6 +71,10 @@ summarise one.
 | `pnpm db:reset` | Re-apply every migration from scratch against the local stack |
 | `pnpm db:push` | Apply migrations to the linked remote project |
 
+`apps/web` needs `.env.local`; copy `apps/web/.env.example` and fill it from what
+`pnpm db:start` prints. It holds the anon key only — nothing in `apps/web` may hold a
+service-role key.
+
 The tests talk to a **real Postgres with real RLS** and run as two genuinely signed-in users.
 That is not incidental: a policy cannot be proven by a fake, and a service-role client would
 bypass the very thing under test. `pnpm db:start` must be running.

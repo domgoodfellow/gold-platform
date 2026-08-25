@@ -5,6 +5,32 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Authentication and session
+
+Makes the platform reachable by a person rather than only by its tests.
+
+- `apps/web/src/middleware.ts` and `lib/db/middleware.ts` — session refresh on every
+  request, plus a redirect for anonymous callers. The redirect is convenience: the
+  server-side guard and RLS remain the authorization boundary, and the redirect target is a
+  fixed literal because a `?next=` parameter would be an open redirector.
+- `lib/domain/identity/credentials.ts` — sign in, register, sign out, with email
+  normalisation and a password minimum owned by the domain rather than by provider config.
+  Sign-in failure returns one message whether the account is absent or the password is
+  wrong, so it cannot be used to enumerate addresses.
+- `/sign-in`, `/sign-up`, and sign-out on the organizations page. All callers.
+- `tests/schema-conformance.test.ts` — reads `pg_class`, `pg_index`, and `pg_constraint` to
+  assert RLS and the leading-column rule for **every** table in `public`, including tables
+  not written yet. Carries its own negative control.
+- `tests/identity.test.ts` — registration, sign-in, normalisation, and the
+  non-enumeration property.
+
+**I1** and **I2** are now enforced for every future table, not only the three that exist.
+**I12** gains the server-side guard that runs regardless of the middleware.
+
+Verified: 20 tests, and the redirect behaviour checked against a running dev server. The
+browser cookie handshake through `@supabase/ssr` is covered only in parts — a
+browser-level test is the honest way to close that, and does not exist yet.
+
 ### Tenancy kernel — organizations, memberships, events
 
 The first vertical slice: schema, domain, route, UI, guard, test.

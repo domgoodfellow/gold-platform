@@ -1,24 +1,32 @@
+import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
+import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { CreateOrganizationForm } from './create-organization-form';
 
 export const dynamic = 'force-dynamic';
 
+async function signOutAction() {
+  'use server';
+  const db = await getDb();
+  await signOut(db);
+  redirect('/sign-in');
+}
+
 export default async function OrganizationsPage() {
   const db = await getDb();
 
+  // Middleware already turned anonymous callers away, and this still runs. That is the
+  // point: a middleware redirect is not the authorization boundary (constraints.md,
+  // Security). If the matcher were misconfigured tomorrow, this guard and RLS would both
+  // still hold.
   try {
     await requireActor(db);
   } catch (error) {
     if (error instanceof DomainError && error.code === 'auth.required') {
-      return (
-        <main className="mx-auto max-w-2xl p-8">
-          <h1 className="text-2xl font-semibold">Organizations</h1>
-          <p className="mt-4 text-sm opacity-70">Sign in to see your organizations.</p>
-        </main>
-      );
+      redirect('/sign-in');
     }
     throw error;
   }
@@ -27,12 +35,17 @@ export default async function OrganizationsPage() {
 
   return (
     <main className="mx-auto max-w-2xl p-8">
-      <h1 className="text-2xl font-semibold">Organizations</h1>
+      <div className="flex items-baseline justify-between">
+        <h1 className="text-2xl font-semibold">Organizations</h1>
+        <form action={signOutAction}>
+          <button type="submit" className="text-sm underline underline-offset-4 opacity-70">
+            Sign out
+          </button>
+        </form>
+      </div>
 
       {organizations.length === 0 ? (
-        <p className="mt-4 text-sm opacity-70">
-          You do not belong to an organization yet.
-        </p>
+        <p className="mt-4 text-sm opacity-70">You do not belong to an organization yet.</p>
       ) : (
         <ul className="mt-6 divide-y divide-black/10 dark:divide-white/15">
           {organizations.map((organization) => (

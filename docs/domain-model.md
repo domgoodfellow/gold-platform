@@ -18,8 +18,8 @@ Use `/verify <n>` to audit one. "The code appears to do the right thing" is not 
 
 | # | Invariant | Enforced by |
 |---|---|---|
-| I1 | Every tenant-owned row carries `tenant_id`, and RLS keyed to it is enabled on its table. | `20260825000001_tenancy.sql` — RLS enabled *and forced* on `organizations`, `memberships`, `events`; `tenancy.test.ts` "hides the other tenant even when its id is known". **Nothing yet stops a new table shipping without it.** |
-| I2 | Every unique index and every exclusion constraint on a tenant-owned table leads with `tenant_id`. | `memberships_org_user_unique (organization_id, user_id)`; `tenancy.test.ts` "lets one user hold memberships in two organizations" and "gives each tenant a distinct organization despite identical names". **Not yet enforced for indexes added later.** |
+| I1 | Every tenant-owned row carries `tenant_id`, and RLS keyed to it is enabled on its table. | `20260825000001_tenancy.sql` — RLS enabled *and* forced; `tenancy.test.ts` "hides the other tenant even when its id is known"; `schema-conformance.test.ts` asserts it from `pg_class` for **every** table in `public`, so a table added later cannot ship without it. |
+| I2 | Every unique index and every exclusion constraint on a tenant-owned table leads with `tenant_id`. | `memberships_org_user_unique (organization_id, user_id)`; `tenancy.test.ts` "lets one user hold memberships in two organizations"; `schema-conformance.test.ts` asserts from `pg_index` and `pg_constraint` that every non-primary unique index and every exclusion constraint on a table carrying `organization_id` leads with it. |
 | I3 | Tenant identity resolves through exactly one function; nothing assumes how many tenants a database holds. | `app.current_tenant_ids()` — returns a *set*, is the only tenant lookup, and every RLS policy calls it; `tenancy.test.ts` "shows each user only their own organizations". |
 | I4 | There is exactly one price calculation. | *not yet enforced* |
 | I5 | There is exactly one availability calculation. | *not yet enforced* |
@@ -29,7 +29,7 @@ Use `/verify <n>` to audit one. "The code appears to do the right thing" is not 
 | I9 | Every scheduled item is an absolute instant, rendered in the tenant's timezone. | *not yet enforced* |
 | I10 | Money is integer minor units, and currency is per-tenant configuration. | *not yet enforced* |
 | I11 | Consequential writes are attributable to an actor. | `events.actor_id not null references auth.users`; policy `events_insert` pins `actor_id = auth.uid()`; `tenancy.test.ts` "refuses to attribute an event to someone else" and "keeps events append-only". |
-| I12 | Hiding UI is not authorization; every sensitive operation is checked server-side. | `requireActor()` in `domain/tenancy/actor.ts`, called before the one write that exists; `public.create_organization` raises `42501` without a caller; `tenancy.test.ts` "refuses an unauthenticated caller". |
+| I12 | Hiding UI is not authorization; every sensitive operation is checked server-side. | `requireActor()` in `domain/tenancy/actor.ts`, called server-side on every protected route *in addition to* the middleware redirect, which is convenience only; `public.create_organization` raises `42501` without a caller; `tenancy.test.ts` "refuses an unauthenticated caller". |
 | I13 | A work item's status transition is valid according to that tenant's configured transitions. | *not yet enforced* |
 | I14 | An AI agent reaches business state only through domain tools that validate and check permissions. | *not yet enforced* |
 | I15 | No domain module imports a vendor SDK directly. | *not yet enforced* |

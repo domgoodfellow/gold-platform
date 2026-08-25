@@ -19,8 +19,10 @@ next-env.d.ts
 coverage/
 
 # Environment. Nothing with credentials in it is tracked, including the local Supabase
-# keys that `pnpm db:start` prints into infra/.env.test.
+# keys that `pnpm db:start` prints into infra/.env.test. The example file is the exception:
+# it names the variables without carrying any value.
 .env*
+!.env.example
 
 # Supabase CLI local state
 supabase/.temp/
