@@ -6,11 +6,11 @@ import { createServerClient } from '@supabase/ssr';
  * cookies and the user they resolve to.
  *
  * This exists because Server Components cannot write cookies once the response has begun
- * streaming, so something upstream has to rotate the refresh token. That something is
- * middleware, and this is it.
+ * streaming, so something upstream has to rotate the refresh token. That something is the
+ * proxy (`src/proxy.ts`), and this is what it calls.
  *
  * The user it returns is for deciding where to send someone, never for deciding what they
- * may do. A middleware redirect is not the authorization boundary (constraints.md,
+ * may do. A redirect from the proxy is not the authorization boundary (constraints.md,
  * Security) — the server-side guard and RLS are.
  */
 export async function updateSession(

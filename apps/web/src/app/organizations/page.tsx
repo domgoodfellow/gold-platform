@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
@@ -18,10 +19,9 @@ async function signOutAction() {
 export default async function OrganizationsPage() {
   const db = await getDb();
 
-  // Middleware already turned anonymous callers away, and this still runs. That is the
-  // point: a middleware redirect is not the authorization boundary (constraints.md,
-  // Security). If the matcher were misconfigured tomorrow, this guard and RLS would both
-  // still hold.
+  // The proxy already turned anonymous callers away, and this still runs. That is the
+  // point: a redirect is not the authorization boundary (constraints.md, Security). If the
+  // matcher were misconfigured tomorrow, this guard and RLS would both still hold.
   try {
     await requireActor(db);
   } catch (error) {
@@ -50,7 +50,12 @@ export default async function OrganizationsPage() {
         <ul className="mt-6 divide-y divide-black/10 dark:divide-white/15">
           {organizations.map((organization) => (
             <li key={organization.id} className="flex items-baseline justify-between py-3">
-              <span className="font-medium">{organization.name}</span>
+              <Link
+                href={`/organizations/${organization.id}/customers`}
+                className="font-medium underline underline-offset-4"
+              >
+                {organization.name}
+              </Link>
               <span className="text-sm opacity-70">{organization.role}</span>
             </li>
           ))}

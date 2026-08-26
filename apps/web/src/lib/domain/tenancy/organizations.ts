@@ -88,3 +88,36 @@ export async function createOrganization(db: Db, input: { name: string }): Promi
 
   return data as string;
 }
+
+/**
+ * One organization the acting user belongs to, or null.
+ *
+ * Null covers both "no such organization" and "not yours", and does so without the caller
+ * being able to tell them apart. RLS produces that indistinguishability for free — the row
+ * simply is not in the result — and a caller that tried to distinguish them would be
+ * building the leak back by hand.
+ */
+export async function getOrganization(db: Db, id: string): Promise<Organization | null> {
+  const { data, error } = await db
+    .from('memberships')
+    .select('role, organization:organizations!inner(id, name, created_at)')
+    .eq('organization_id', id)
+    .limit(1);
+
+  if (error) {
+    throw new DomainError(error.message, 'organizations.get_failed');
+  }
+
+  const row = (data ?? [])[0];
+  if (!row) return null;
+
+  const organization = Array.isArray(row.organization) ? row.organization[0] : row.organization;
+  if (!organization) return null;
+
+  return {
+    id: organization.id as string,
+    name: organization.name as string,
+    createdAt: organization.created_at as string,
+    role: row.role as string,
+  };
+}

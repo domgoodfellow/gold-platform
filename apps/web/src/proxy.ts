@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { updateSession } from '@/lib/db/middleware';
+import { updateSession } from '@/lib/db/session';
 
 /**
  * Routes reachable without a session. Everything else redirects to sign-in.
@@ -17,13 +17,14 @@ function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.includes(pathname);
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { response, userId } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
   // Redirection here is convenience, not authorization. Every protected operation is
   // checked again server-side and again by RLS; if this block were deleted the system
-  // would be uglier and still correct.
+  // would be uglier and still correct. Next 16 renamed this convention from `middleware`
+  // to `proxy`; the security reasoning is unchanged by the rename.
   if (!userId && !isPublic(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = '/sign-in';
@@ -43,7 +44,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Everything except Next's own assets and files with an extension. Middleware runs on
+    // Everything except Next's own assets and files with an extension. The proxy runs on
     // every other request because that is what keeps the session alive.
     '/((?!_next/static|_next/image|.*\\.).*)',
   ],

@@ -27,9 +27,8 @@ export async function getDb(): Promise<Db> {
             }
           } catch {
             // Thrown when called from a Server Component, where the response has already
-            // begun. Nothing refreshes the session yet, so a token expiring mid-render is
-            // not renewed until the next request. The auth slice adds the middleware that
-            // makes dropping this write genuinely safe.
+            // begun. The proxy (src/proxy.ts) refreshes the session on every request
+            // before the route renders, so dropping this write is safe.
           }
         },
       },
