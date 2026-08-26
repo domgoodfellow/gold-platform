@@ -100,8 +100,13 @@ business shape still needs code, M3 is not done regardless of what has been buil
 
 See `constraints.md` D5 for why field service rather than sales.
 
-Covers: the modules this vertical actually needs, extracted at the moment a second caller
-appears. Which modules those are is an output of this milestone, not an input.
+Covers: the domain code this vertical actually needs, extracted into shared functions the
+moment a second *caller* appears.
+
+**Modules are not expected from M4.** A module waits for a second *business*
+(`constraints.md`, Scope and abstraction) and this milestone has exactly one. What M4
+produces instead is a candidate list — the seams that looked general — to be tested against
+vertical two. Which of them survive is an output of M5 and beyond, never an input here.
 
 ---
 

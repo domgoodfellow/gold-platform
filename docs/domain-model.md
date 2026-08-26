@@ -81,15 +81,17 @@ entity's `custom` JSONB column. See `constraints.md` D7.
 
 | Module | Owns |
 |---|---|
-| *(none yet)* | Tenancy is kernel, not a module. The first module appears the moment a second caller needs a rule that is currently inline. |
+| *(none yet)* | Tenancy is kernel, not a module. The first module appears when a second *business* needs the same capability — not when a second caller needs a rule, which is grounds for extracting a function and nothing more. |
 
-Filled in as modules are extracted. A module appears here when a second caller needs it —
-never in anticipation.
+Filled in as modules are extracted. A module appears here when a second **business** needs
+it — never in anticipation, and never on the strength of one business's requirements.
 
 ## Not yet modules
 
-Named by the vision, deliberately absent. Create each **when a second caller needs it**, not
-before.
+Named by the vision, deliberately absent. Create each **when a second business needs it** —
+a second paying company, not a second call site. A second caller inside one business is
+grounds for extracting a function into the domain layer, which is a cheaper and different
+thing (`constraints.md`, Scope and abstraction).
 
 `scheduling` · `dispatch` · `pricing` · `inventory` · `maintenance` · `bookings` ·
 `communications` · `finance` · `automations` · `reporting`

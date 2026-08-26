@@ -15,9 +15,16 @@ An entry nobody could violate is not a constraint. Delete it.
 
 ### Scope and abstraction
 
-- **Never build a module before a second business needs it.** The first business gets code
-  written for it. The second reveals which parts were actually general. Modules extracted
-  from one caller are guesses wearing a costume.
+- **Never build a module before a second business needs it.** *Business* means a second
+  paying company — not a second place in this codebase. The first business gets code written
+  for it; the second reveals which parts were actually general. A module extracted from one
+  business is that business's implementation wearing a costume.
+- **Do not confuse that with extracting a rule, which has a far lower bar.** A second
+  *caller* — another route, server action, or AI tool in this repository — is enough, and can
+  arrive in week one inside a single business. See *Never duplicate a rule across callers*
+  below. The two rules pull in opposite directions on purpose: extracting a function stops
+  two copies drifting apart, while naming a module claims a generality that one business
+  cannot possibly evidence.
 - **Never create a workspace package with one consumer.** It buys a build step and a
   `dist/` for no isolation. `saas-agent-platform` collapsed `ui`, `shared`, `config`, and
   `assistant-core` for exactly this reason. Code used only by `apps/web` lives in
@@ -111,6 +118,10 @@ An entry nobody could violate is not a constraint. Delete it.
 
 ### Vendors
 
+**Vendor** in this file always means a third-party *service provider* — Twilio, Stripe, a
+maps or weather API. It never means the packaging sense of *vendoring* source code into a
+repository, which D1 refers to as bundling for exactly this reason.
+
 - **A vendor belongs behind an adapter.** Twilio, Stripe, ElevenLabs, Google, and any map or
   weather provider are implementation details. Domain code names capabilities — *place a
   call*, *charge a card* — never providers.
@@ -123,8 +134,17 @@ An entry nobody could violate is not a constraint. Delete it.
 
 ### D1 — `tire-app-template` is a reference, not the base
 
-GOLD starts fresh. Pneu3L continues to run on `tire-app-template` independently, and that
-repo is not migrated, forked, or vendored.
+GOLD starts fresh. No code from `tire-app-template` is **migrated, forked, or bundled in**:
+not moved here and continued, not copied into a second codebase that then diverges from the
+first, and not checked into this tree as frozen source that GOLD imports but never maintains.
+
+(That third practice is normally called *vendoring*. This file avoids the word, because
+**vendor** here always means a third-party service provider — see the Vendors section.)
+
+Whether **Pneu3L itself eventually onboards as a GOLD tenant** is a separate question from
+where its code lives, and is deferred to M4. That would be migrating a business, which
+happens through configuration — not migrating a codebase, which is what this decision
+refuses. Until then Pneu3L runs on `tire-app-template`.
 
 **Rejected:** moving the repo in and retrofitting tenancy. It is genuinely the cheapest
 moment to do so — pre-V1, seed data only — but it couples the platform's first months to

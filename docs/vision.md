@@ -106,7 +106,8 @@ Three prior attempts exist, and each proved something worth keeping:
 
 The failure mode is visible in the middle one: documentation and abstraction written *ahead*
 of evidence, which then governed work that never arrived. This repo starts with four
-documents and a hard budget, and every abstraction waits for its second caller.
+documents and a hard budget: a function waits for its second caller, and a module waits for
+its second business.
 
 See `constraints.md` for what that means in practice, and `roadmap.md` for what "done"
 means at each stage.
