@@ -72,7 +72,7 @@ export async function listMyOrganizations(db: Db): Promise<Organization[]> {
     throw new DomainError(error.message, 'organizations.list_failed');
   }
 
-  return ((data ?? []) as MembershipRow[])
+  return (data ?? [])
     .map(toOrganization)
     .filter((organization): organization is Organization => organization !== null)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -97,7 +97,7 @@ export async function getOrganization(db: Db, id: string): Promise<Organization 
     throw new DomainError(error.message, 'organizations.get_failed');
   }
 
-  const row = ((data ?? []) as MembershipRow[])[0];
+  const row = (data ?? [])[0];
   return row ? toOrganization(row) : null;
 }
 
@@ -134,5 +134,5 @@ export async function createOrganization(db: Db, input: { name: string }): Promi
     throw new DomainError(error.message, 'organizations.create_failed');
   }
 
-  return data as string;
+  return data;
 }

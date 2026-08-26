@@ -27,10 +27,10 @@ export async function listRoles(
   }
 
   return (data ?? []).map((row) => ({
-    id: row.id as string,
-    name: row.name as string,
-    capabilities: ((row.capabilities as string[]) ?? []).filter(isCapability),
-    createdAt: row.created_at as string,
+    id: row.id,
+    name: row.name,
+    capabilities: row.capabilities.filter(isCapability),
+    createdAt: row.created_at,
   }));
 }
 
@@ -87,7 +87,7 @@ export async function createRole(
     throw new DomainError(error.message, 'roles.create_failed');
   }
 
-  return data as string;
+  return data;
 }
 
 /**

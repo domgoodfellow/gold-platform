@@ -5,6 +5,47 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Generated database types, and the scaffolding decisions written down
+
+M0's acceptance criterion is met. `/scope` was run against the tenancy kernel task and
+returned five invariants and five decision records with nothing supplied by the operator.
+Its one finding is now D18.
+
+- `pnpm db:types` generates `apps/web/src/lib/db/database.types.ts` from the local schema,
+  and the file is checked in. `Db` is `SupabaseClient<Database>` rather than an untyped
+  client, which deleted a dozen casts of the form `row.id as string` and
+  `row.email as string | null` — each one a column type hand-copied out of a migration, and
+  each one silencing exactly the error the generic now catches. `organizations.ts`'s
+  hand-written `MembershipRow` survives, but it is now *checked against* the generated embed
+  shape rather than asserted over it.
+- Generated types are not authoritative for function arguments. Postgres records no
+  nullability for parameters, so `p_email text` — which accepts null by design — is emitted
+  as `string`. Two casts in `customers.ts` bridge that and say why; they are the whole of
+  that gap in this codebase.
+- `schema-conformance.test.ts` compares the checked-in file against `pg_attribute` in both
+  directions, because a stale generated file is worse than none: `tsc` will validate every
+  query against a schema that no longer exists and pass. Verified by negative control both
+  ways — an invented column fails as `customers.bogus_column`, a removed one as
+  `customers.phone`.
+- **D13-D17** record what the tree already did and no document had captured: pnpm without a
+  build orchestrator, the App Router with one caller-JWT client per request, raw SQL
+  migrations with generated types, vitest against a real Postgres and the four-step gate, and
+  how tenant identity reaches Postgres. Each names its rejected alternative and what would
+  trigger a revisit, and cites `tire-app-template` or `saas-agent-platform` where the two
+  prior repos disagree.
+- **D18** resolves the contradiction `/scope` found. D7 puts custom fields in the kernel; the
+  no-column-without-a-caller rule forbids a `custom` column whose registry does not exist.
+  The kernel is M1 and M1 is several slices, so both hold — and `roadmap.md` M1's acceptance
+  criteria now name `field_definitions`, which is what gives D7 something that checks it.
+- `CLAUDE.md`'s "Current state" described one vertical slice; four have shipped. Fixed, along
+  with a stale invariant count in `roadmap.md` M0.
+
+**No new invariant.** This change enforces nothing in `domain-model.md` that was not already
+enforced — it removes a class of runtime error that has no row in that table. The `Enforced
+by` column is unchanged on purpose.
+
+Verified: 40 tests, gate green.
+
 ### Roles and capabilities
 
 Turns I12 from "is there an actor" into "may this actor", and puts the answer in RLS.

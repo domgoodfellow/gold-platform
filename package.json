@@ -6,6 +6,7 @@
     "check": "pnpm -r --stream check",
     "db:start": "supabase start --workdir infra",
     "db:reset": "supabase db reset --workdir infra",
+    "db:types": "supabase gen types typescript --local --workdir infra > apps/web/src/lib/db/database.types.ts",
     "db:push": "supabase db push --workdir infra"
   },
   "devDependencies": {

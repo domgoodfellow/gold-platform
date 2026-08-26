@@ -21,9 +21,11 @@ checklists to documents.
 ## Current state
 
 **M1 is under way.** `apps/web` exists, the tenancy kernel is migrated, and the check gate
-runs. What exists is deliberately narrow: `organizations`, `memberships`, `events`, the one
-tenant resolution function, and a single vertical slice that creates and lists an
-organization. Everything else in the layout below is still absent on purpose.
+runs. What exists is deliberately narrow: `organizations`, `memberships`, `events`,
+`customers`, and `roles`; the one tenant resolution function and `app.has_capability`; and a
+vertical slice behind authentication for each of them. Everything else in the layout below
+is still absent on purpose — and M1 still owes `Location`, `Asset`, `Work Item`, `Resource`,
+`Document`, and `Field Definition`.
 
 `docs/starting_conversation.txt` is an archived source, not a governing document. It records
 the thinking that led here and is superseded by `docs/constraints.md` wherever the two
@@ -69,6 +71,7 @@ summarise one.
 | `pnpm --filter @gold/web dev` | Next.js dev server on :3000 |
 | `pnpm db:start` | Local Supabase (needs Docker). Prints the keys; they belong in `infra/.env.test`, which is gitignored. |
 | `pnpm db:reset` | Re-apply every migration from scratch against the local stack |
+| `pnpm db:types` | Regenerate `apps/web/src/lib/db/database.types.ts` from the local schema. The file is checked in; a stale one fails the gate (D15). |
 | `pnpm db:push` | Apply migrations to the linked remote project |
 
 `apps/web` needs `.env.local`; copy `apps/web/.env.example` and fill it from what

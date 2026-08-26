@@ -26,7 +26,9 @@ rather than one milestone.
 - `vision.md`, `constraints.md`, `domain-model.md`, and `roadmap.md` exist.
 - `CLAUDE.md` routes work to the right document.
 - The five prompts exist as slash commands in `.claude/commands/`.
-- Fifteen invariants are stated, all unenforced. That is expected and correct.
+- The invariants are stated. Which of them are actually enforced is recorded in
+  `domain-model.md`'s `Enforced by` column and nowhere else, because a count repeated here
+  is a status field that nothing keeps honest (D9).
 
 ### Remaining
 
@@ -39,7 +41,9 @@ Nothing structural. M0 closes the first time `/scope` is used in anger.
 > **Done when:** two organizations exist in one database, each with its own users,
 > customers, locations, and work items, and no query, index, or constraint belonging to one
 > can observe or block the other — demonstrated by a test that creates colliding rows in
-> both tenants and expects success.
+> both tenants and expects success. Those entities accept per-tenant custom fields through
+> `field_definitions`, because after M4 they hold production data and the registry can no
+> longer be added cheaply (`constraints.md` D7, D18).
 
 That test is the milestone. It is also the thing every prior attempt deferred.
 
@@ -47,14 +51,15 @@ Covers: `organizations`, memberships and roles, the tenant resolution function, 
 every table created so far, `Customer`, `Location`, `Asset`, `Work Item`, `Resource`,
 `Document`, `Event`, and `Field Definition`.
 
-Enforces: **I1, I2, I3, I11, I12** — and `Event` must ship with the first slice that writes
-state, because it cannot be backfilled.
+Enforces: **I1, I2, I3, I11, I12, I16** — and `Event` must ship with the first slice that
+writes state, because it cannot be backfilled.
 
 Two things that must be right here because they are expensive later:
 
 - Every unique index and exclusion constraint leads with `tenant_id` (I2). The
   colliding-rows test exists specifically to catch this.
-- Custom fields land now, not in a later phase (`constraints.md` D7).
+- Custom fields land inside this milestone, not a later one, and arrive together with the
+  registry that governs them (`constraints.md` D7 and D18).
 
 ---
 

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import type { Db } from './types';
+import type { Database, Db } from './types';
 
 /**
  * The request-scoped database client, running under the caller's own JWT.
@@ -14,7 +14,7 @@ import type { Db } from './types';
 export async function getDb(): Promise<Db> {
   const cookieStore = await cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
     requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
     {

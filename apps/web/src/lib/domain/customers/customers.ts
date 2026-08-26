@@ -35,11 +35,11 @@ export async function listCustomers(
   }
 
   return (data ?? []).map((row) => ({
-    id: row.id as string,
-    name: row.name as string,
-    email: (row.email as string | null) ?? null,
-    phone: (row.phone as string | null) ?? null,
-    createdAt: row.created_at as string,
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    createdAt: row.created_at,
   }));
 }
 
@@ -72,8 +72,13 @@ export async function createCustomer(
   const { data, error } = await db.rpc('create_customer', {
     p_organization_id: input.organizationId,
     p_name: name,
-    p_email: email,
-    p_phone: phone,
+    // `supabase gen types` emits every function argument as non-null, because Postgres
+    // records no nullability for parameters: `p_email text` accepts null and is meant to,
+    // and the catalog has nowhere to say so. Generated types are authoritative for tables
+    // and columns, not for function arguments (constraints.md D15). These two casts are the
+    // whole of that gap in this codebase, and they assert what the migration already allows.
+    p_email: email as string,
+    p_phone: phone as string,
   });
 
   if (error) {
@@ -88,5 +93,5 @@ export async function createCustomer(
     throw new DomainError(error.message, 'customers.create_failed');
   }
 
-  return data as string;
+  return data;
 }

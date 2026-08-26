@@ -327,6 +327,200 @@ concern, not a fulfilment engine.
 **Trigger to revisit:** a tenant already running on the platform makes selling stock its
 primary motion.
 
+### D13 — pnpm workspaces, no build orchestrator
+
+`pnpm` is pinned through `packageManager`. The workspace glob is `apps/*` and nothing else.
+The root `check` is `pnpm -r --stream check`; each package owns its own gate. There is
+exactly one `pnpm-workspace.yaml`, at the root — `create-next-app` writes a second one inside
+`apps/web`, and a workspace file inside a package makes that directory its own workspace root
+and silently detaches it from the monorepo.
+
+**Rejected: npm.** `tire-app-template` is not evidence for npm so much as evidence that the
+question never arose there: it has no root `package.json`, no root lockfile, and no workspace
+file at all. `apps/web/package.json` is the entire project, and `apps/` is a tidy folder
+rather than a glob. That is a coherent choice for one application, and it cannot express D3,
+which needs `apps/*` and `services/*` to mean different things.
+
+**Rejected: Turbo.** `saas-agent-platform` runs `turbo@^2` over `apps/*`, `services/*`, and
+`packages/*` — a task graph with caching and topological `dependsOn` ordering. Its
+`packages/` directory contains exactly one package. A dependency graph with one node does not
+need a scheduler, and the rule against workspace packages with one consumer keeps this graph
+flat by design.
+
+**The two prior repos disagree and pnpm wins**, not on package-manager merits but because
+D3's layout needs a workspace glob doing real work, and npm's is weaker where it matters.
+
+**Consequence:** `pnpm --filter @gold/web check` is a filter over a real workspace, so it goes
+on working unchanged when `apps/desktop` arrives. A Python service under `services/` stays
+outside the glob entirely — stricter than `saas-agent-platform`, whose glob includes
+`services/*` and then relies on `services/api` having no `package.json` for pnpm to skip it.
+
+**Trigger to revisit:** the first genuine second workspace package — M7's `packages/ui`. At
+that point `pnpm -r` rebuilds what did not change, and Turbo's caching starts earning its
+configuration.
+
+### D14 — Next.js App Router, `@supabase/ssr`, one caller-JWT client per request
+
+Exactly one place constructs a client for a web request — `apps/web/src/lib/db/server.ts` —
+using `createServerClient` with the anon key. `src/proxy.ts` (Next 16's rename of
+`middleware`) rotates the refresh token on every request through `lib/db/session.ts`, because
+a Server Component cannot write cookies once the response has begun streaming. `.env.local`
+holds the anon key and nothing else.
+
+**Rejected: a service-role client in the application, with tenant scoping by query filter.**
+It is the shortest path and it deletes D4. One forgotten `where` is a cross-tenant leak, and
+the connection doing the work has already bypassed the RLS that D4 names as the boundary. The
+leak is invisible in review because every query still looks correctly written.
+
+**Rejected: `getSession()` in the proxy.** It trusts whatever the cookie asserts. `getUser()`
+revalidates against the auth server, and that call *is* the refresh — it must never be pruned
+as an unused result.
+
+**Consequence:** `Db` is by construction bound to a caller. An operation that genuinely needs
+privilege gets a narrow `SECURITY DEFINER` function in a migration — `create_organization`,
+`create_customer`, `create_role`, `assign_role` — never a privileged client in TypeScript.
+That keeps the privileged surface enumerable in one directory instead of diffuse across the
+application.
+
+**Trigger to revisit:** the first writer with no human caller — a scheduled job, or M6's
+Python plane handling an inbound webhook. That caller gets its own Postgres role and its own
+policies. It does not get service-role.
+
+### D15 — Raw SQL migrations, and generated database types checked in
+
+Migrations are hand-written SQL under `infra/supabase/migrations/`, applied by the Supabase
+CLI, commented for *why*. The TypeScript view of that schema is **generated, not written**:
+`pnpm db:types` writes `apps/web/src/lib/db/database.types.ts` from the live local schema, the
+file is checked in, and `Db` is `SupabaseClient<Database>`.
+
+**Rejected: an ORM.** The load-bearing artifacts here are not tables. They are RLS policies,
+`SECURITY DEFINER` functions with a pinned empty `search_path`, composite foreign keys,
+expression unique indexes such as `customers_org_email_unique on (organization_id,
+lower(email))`, and the exclusion constraint I7 will need. No ORM schema language expresses
+that set, so an ORM would own the boring half and leave the half that enforces the invariants
+in raw SQL — two partial sources of truth, against the rule that migrations *are* the source
+of truth for the data model.
+
+**Rejected: leaving the client untyped.** This was the state until this decision, and it is
+the state of all three prior attempts — `tire-app-template` has no generated types, and
+`saas-agent-platform`'s own ADR 0004 records that "no generated Supabase types exist yet
+anywhere in the codebase". The cost is visible rather than theoretical: the domain layer had
+accumulated a dozen casts of the form `row.id as string` and `row.email as string | null`,
+each one hand-copying a column type out of a migration, and each one silencing exactly the
+error generation catches. Every one of them is deleted by this decision.
+
+**Rejected: generating at build time instead of checking the file in.** It would make the
+typecheck step require Docker and a running database, and it would leave nothing in review to
+read when a migration changes a column's type.
+
+**Consequence, and the boundary of the tool:** generated types are authoritative for tables,
+columns, and their nullability. They are **not** authoritative for function arguments —
+Postgres records no nullability for parameters, so `p_email text`, which accepts null by
+design, is emitted as `string`. Two casts in `customers.ts` bridge that gap and say so. A
+stale generated file is worse than none, because `tsc` will validate every query against a
+schema that no longer exists and pass — so `schema-conformance.test.ts` compares the
+checked-in file against `pg_attribute` and fails naming the column that drifted.
+
+**Trigger to revisit:** none plausible for the ORM half; adopting one after live policies
+exist is a rewrite. For the types half: if `supabase gen types` starts emitting argument
+nullability, the two casts go.
+
+### D16 — vitest against a real local Postgres, and the gate is typecheck, lint, test, build
+
+`vitest` in `environment: 'node'`, `fileParallelism: false`, credentials read from the
+gitignored `infra/.env.test`. Two client kinds: `@supabase/supabase-js` bound to genuinely
+signed-in users for behaviour, and raw `pg` for catalog assertions. Service-role appears once,
+to mint test users — never to exercise a policy.
+
+The gate is `pnpm --filter @gold/web check` = `typecheck && lint && test && build`, in that
+order, and nothing is finished until it passes end to end.
+
+**Rejected: `node --test` with type stripping.** `tire-app-template` runs
+`node --experimental-strip-types --import ./tests/register.mjs --test`, which adds no
+dependency and is genuinely attractive. The cost is visible in that repo: node's type
+stripping does not resolve `tsconfig` path aliases, so although its `tsconfig.json` defines
+`@/*`, every test imports the domain layer as `../src/lib/domain/scheduling/blocks.ts` —
+relative, with an explicit `.ts` extension, in a different import style from the application
+it is testing. Our tests import `@/lib/domain/...`, the same way the application does.
+
+**Rejected: mocked or in-memory database tests.** A fake cannot prove a policy, and a policy
+is what M1 claims.
+
+**`build` is in the gate on purpose.** `saas-agent-platform`'s `repo:check` runs format, lint,
+typecheck, audit, and test — and not build. A Next application can typecheck cleanly and
+still fail to build.
+
+**Consequence:** the suite requires Docker and `pnpm db:start`; there is no offline mode, and
+CI must stand up Supabase. `fileParallelism: false` because every test file shares one
+database.
+
+**Trigger to revisit:** the gate becomes slow enough that people stop running it before
+committing. The answer then is a schema or template database per test file — never a fake.
+
+### D17 — Tenant identity reaches Postgres as the caller's own JWT
+
+End to end: Supabase Auth issues a session; `@supabase/ssr` carries it in cookies; the proxy
+rotates it; every `Db` handle is bound to that access token; Postgres sees `auth.uid()`;
+`app.current_tenant_ids()` maps it to a set of organization ids; every policy calls that
+function and nothing else. `app.has_capability(organization_id, capability)` extends the same
+path from "which tenants" to "may this actor, here".
+
+Three properties carry the weight:
+
+- **It returns `setof uuid`, never a single id.** That is what makes Standard and Private the
+  same code — Private is a database where the set has one element, not a branch.
+- **It is `SECURITY DEFINER` with `search_path = ''`.** A policy on `memberships` that selects
+  from `memberships` recurses; this function is the designated break in that cycle, and the
+  pinned empty search path means nothing inside it can be shadowed by a caller's.
+- **No tenant id is ever supplied by the application.** RLS is the boundary; an application
+  filter is an optimisation.
+
+**Rejected: the application setting a tenant GUC** — `set_config('app.tenant_id', ...)` on a
+shared or service-role connection. This is the common pattern and it inverts D4: the
+application becomes the boundary, one missed `set` on one code path is a cross-tenant leak,
+and it discards `auth.uid()`, which I11 needs for attribution.
+
+**Rejected: resolving the tenant from a subdomain or path segment.** Routing convenience,
+never an authorization input. `/organizations/[organizationId]` is a route parameter precisely
+because RLS re-derives the answer regardless of what the URL claims.
+
+**Rejected: an active organization on the session.** Session state RLS would then have to
+trust, and no second caller needs one.
+
+**Consequence:** I3 is a database fact rather than a convention, and "which tenant" is never
+an argument to a domain function. A direct PostgREST call is refused exactly as a form is,
+which is what I16 exists to keep true.
+
+**Trigger to revisit:** M6's Python plane needing to write with no human JWT. Per D2 it
+proposes and TypeScript executes, so this may never arrive — but if it does, it gets its own
+Postgres role and its own policies, not a service-role bypass.
+
+### D18 — Custom fields land with the registry that governs them, inside M1
+
+D7 says per-tenant custom fields land "in the kernel, not a later phase". The rule above says
+no column without a caller in the same change. Read as instructions to a single slice, these
+contradict each other: a `custom jsonb` column on a table whose `field_definitions` registry
+does not exist yet is a column nothing reads.
+
+They are not instructions to a slice. The kernel is M1, and M1 is several slices. D7 binds the
+milestone: no entity table ships a `custom` column before the registry that governs it exists,
+and the registry ships before M1 closes. Between those two points the ordering is free, and
+the tenancy, customer, and roles slices were right to omit both.
+
+**Rejected: adding `custom jsonb not null default '{}'` to every kernel table pre-emptively**
+so that nothing has to be retrofitted. That is a column nothing reads on every table in the
+schema, plus a GIN index over empty objects — the exact speculative abstraction this file
+names — and it does not even buy the thing it is for: the expensive half of the retrofit is
+the registry and its policies, not the column.
+
+**Rejected: deferring custom fields to M3 with the rest of configuration.** That is the "later
+phase" D7 refuses. M4 onboards a real business, and from that point the entities hold
+production data.
+
+**Consequence:** `roadmap.md` M1's acceptance criteria name field definitions explicitly, so
+the milestone cannot be declared done while D7 is outstanding. That is what gives D7 teeth —
+without it, "lands in the kernel" is a sentence nothing checks.
+
 ---
 
 ## Decided, not yet built

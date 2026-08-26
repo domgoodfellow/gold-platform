@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import type { Database } from './types';
 
 /**
  * Refresh the caller's session and hand back both the response carrying the rotated
@@ -18,7 +19,7 @@ export async function updateSession(
 ): Promise<{ response: NextResponse; userId: string | null }> {
   let response = NextResponse.next({ request });
 
-  const db = createServerClient(
+  const db = createServerClient<Database>(
     requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
     requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
     {

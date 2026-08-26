@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
@@ -121,6 +122,41 @@ describe('schema conformance', () => {
     expect(unenforced).toEqual([]);
   });
 
+  it('keeps the generated database types current with the schema (D15)', async () => {
+    // Stale generated types are strictly worse than none: `tsc` cheerfully validates every
+    // query against a schema that no longer exists, and passes. This asks the catalog and
+    // compares it to the checked-in file, in the same spirit as everything else here —
+    // and it fails by naming the table or column that drifted, which is the instruction to
+    // run `pnpm db:types`.
+    const source = await readFile(
+      new URL('../src/lib/db/database.types.ts', import.meta.url),
+      'utf8',
+    );
+    const declared = declaredColumns(source);
+
+    // Vacuity guard, like the first test in this file: a parser that matched nothing would
+    // make both comparisons below trivially true.
+    expect(declared.size).toBeGreaterThan(0);
+
+    const { rows } = await db.query<{ table_name: string; column_name: string }>(
+      `select c.relname as table_name, a.attname as column_name
+         from pg_class c
+         join pg_namespace n on n.oid = c.relnamespace
+         join pg_attribute a on a.attrelid = c.oid
+        where n.nspname = 'public'
+          and c.relkind = 'r'
+          and a.attnum > 0
+          and not a.attisdropped`,
+    );
+
+    const actual = new Set(rows.map((r) => `${r.table_name}.${r.column_name}`));
+
+    expect({
+      inSchemaButNotInTypes: [...actual].filter((c) => !declared.has(c)).sort(),
+      inTypesButNotInSchema: [...declared].filter((c) => !actual.has(c)).sort(),
+    }).toEqual({ inSchemaButNotInTypes: [], inTypesButNotInSchema: [] });
+  });
+
   it('catches a violation rather than passing by construction', async () => {
     // A negative control. Without this, every assertion above could be querying nothing and
     // nobody would know until the day it mattered.
@@ -140,3 +176,55 @@ describe('schema conformance', () => {
     }
   });
 });
+
+/**
+ * Every `table.column` the generated types declare under `public.Tables`.
+ *
+ * Parsed from the file's text rather than imported as a type, because this check has to run
+ * at runtime and TypeScript types do not survive to it. The file is machine-generated, so
+ * its indentation is stable; the vacuity guard in the test covers the day it stops being.
+ */
+function declaredColumns(source: string): Set<string> {
+  const columns = new Set<string>();
+  const lines = source.split(/\r?\n/);
+
+  // `graphql_public` is matched exactly, not by suffix, so it cannot be mistaken for this.
+  let i = lines.findIndex((line) => line === '  public: {');
+  if (i < 0) return columns;
+
+  i = lines.findIndex((line, n) => n > i && line === '    Tables: {');
+  if (i < 0) return columns;
+
+  let table: string | null = null;
+  let inRow = false;
+
+  for (let n = i + 1; n < lines.length; n += 1) {
+    const line = lines[n];
+
+    // A sibling key at Tables' own indentation — `Views`, `Functions` — ends the section.
+    if (/^ {4}\w+: \{$/.test(line)) break;
+
+    const tableStart = line.match(/^ {6}"?([A-Za-z_][A-Za-z0-9_]*)"?: \{$/);
+    if (tableStart) {
+      table = tableStart[1];
+      inRow = false;
+      continue;
+    }
+
+    if (table && line === '        Row: {') {
+      inRow = true;
+      continue;
+    }
+
+    if (inRow) {
+      if (line === '        }') {
+        inRow = false;
+        continue;
+      }
+      const column = line.match(/^ {10}"?([A-Za-z_][A-Za-z0-9_]*)"?\??: /);
+      if (column) columns.add(`${table}.${column[1]}`);
+    }
+  }
+
+  return columns;
+}
