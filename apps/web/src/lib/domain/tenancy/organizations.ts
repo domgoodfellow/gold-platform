@@ -1,25 +1,61 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from './actor';
+import { ALL_CAPABILITIES, isCapability, type Capability } from './capabilities';
 
 export type Organization = {
   id: string;
   name: string;
   createdAt: string;
-  /** The acting user's role in this organization, in the tenant's own vocabulary. */
+  /** The acting user's role here, in the tenant's own vocabulary. */
   role: string;
+  /** What the acting user may do here. Read from the role, never from the UI. */
+  capabilities: Capability[];
 };
 
 const NAME_MAX = 200;
 
 /**
- * The role the creator of an organization receives.
+ * The name given to the role that founds an organization.
  *
- * A constant, not an enum and not a database type (D6). When a tenant wants to call this
- * something else, this becomes a lookup against that tenant's configured roles — one
- * caller, one value, in one place until then.
+ * A default, not a fixture: it is a row in `roles` from the moment it is created, so a
+ * tenant can rename it without a migration (D6).
  */
-const CREATOR_ROLE = 'owner';
+const FOUNDING_ROLE = 'Owner';
+
+// The embed is hinted with the constraint name because the reference is composite
+// (organization_id, role_id) -> roles (organization_id, id). Naming it keeps the query
+// unambiguous if a second reference to roles is ever added.
+// Written as one string literal, not a concatenation: supabase-js parses the select at the
+// type level and only sees a literal, so splitting it across lines collapses the result type
+// to GenericStringError[].
+const MEMBERSHIP_SELECT =
+  'role:roles!memberships_role_same_org(name, capabilities), organization:organizations!inner(id, name, created_at)';
+
+type MembershipRow = {
+  role: { name: string; capabilities: string[] } | { name: string; capabilities: string[] }[];
+  organization:
+    | { id: string; name: string; created_at: string }
+    | { id: string; name: string; created_at: string }[];
+};
+
+function one<T>(value: T | T[]): T | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function toOrganization(row: MembershipRow): Organization | null {
+  const organization = one(row.organization);
+  const role = one(row.role);
+  if (!organization || !role) return null;
+
+  return {
+    id: organization.id,
+    name: organization.name,
+    createdAt: organization.created_at,
+    role: role.name,
+    capabilities: (role.capabilities ?? []).filter(isCapability),
+  };
+}
 
 /**
  * Every organization the acting user belongs to.
@@ -30,37 +66,48 @@ const CREATOR_ROLE = 'owner';
  * (constraints.md, Tenancy).
  */
 export async function listMyOrganizations(db: Db): Promise<Organization[]> {
-  const { data, error } = await db
-    .from('memberships')
-    .select('role, organization:organizations(id, name, created_at)');
+  const { data, error } = await db.from('memberships').select(MEMBERSHIP_SELECT);
 
   if (error) {
     throw new DomainError(error.message, 'organizations.list_failed');
   }
 
-  return (data ?? [])
-    .map((row) => {
-      // PostgREST returns an embedded to-one relation as an object; supabase-js types it as
-      // possibly-array without generated types, so normalise before reading.
-      const organization = Array.isArray(row.organization) ? row.organization[0] : row.organization;
-      if (!organization) return null;
-      return {
-        id: organization.id as string,
-        name: organization.name as string,
-        createdAt: organization.created_at as string,
-        role: row.role as string,
-      };
-    })
+  return ((data ?? []) as MembershipRow[])
+    .map(toOrganization)
     .filter((organization): organization is Organization => organization !== null)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 /**
+ * One organization the acting user belongs to, or null.
+ *
+ * Null covers both "no such organization" and "not yours", and does so without the caller
+ * being able to tell them apart. RLS produces that indistinguishability for free — the row
+ * simply is not in the result — and a caller that tried to distinguish them would be
+ * building the leak back by hand.
+ */
+export async function getOrganization(db: Db, id: string): Promise<Organization | null> {
+  const { data, error } = await db
+    .from('memberships')
+    .select(MEMBERSHIP_SELECT)
+    .eq('organization_id', id)
+    .limit(1);
+
+  if (error) {
+    throw new DomainError(error.message, 'organizations.get_failed');
+  }
+
+  const row = ((data ?? []) as MembershipRow[])[0];
+  return row ? toOrganization(row) : null;
+}
+
+/**
  * Create an organization and make the acting user its first member.
  *
- * The three writes — organization, membership, event — are one transaction inside
- * `public.create_organization`, because a tenant that exists with nobody in it is a row
- * nobody can ever reach again. The decision of what the creator is called stays here.
+ * The four writes — organization, founding role, membership, event — are one transaction
+ * inside `public.create_organization`, because a tenant that exists with nobody in it is a
+ * row nobody can ever reach again. What the founding role is called and what it may do stay
+ * decisions of this layer.
  */
 export async function createOrganization(db: Db, input: { name: string }): Promise<string> {
   await requireActor(db);
@@ -79,7 +126,8 @@ export async function createOrganization(db: Db, input: { name: string }): Promi
 
   const { data, error } = await db.rpc('create_organization', {
     p_name: name,
-    p_role: CREATOR_ROLE,
+    p_role: FOUNDING_ROLE,
+    p_capabilities: ALL_CAPABILITIES,
   });
 
   if (error) {
@@ -87,37 +135,4 @@ export async function createOrganization(db: Db, input: { name: string }): Promi
   }
 
   return data as string;
-}
-
-/**
- * One organization the acting user belongs to, or null.
- *
- * Null covers both "no such organization" and "not yours", and does so without the caller
- * being able to tell them apart. RLS produces that indistinguishability for free — the row
- * simply is not in the result — and a caller that tried to distinguish them would be
- * building the leak back by hand.
- */
-export async function getOrganization(db: Db, id: string): Promise<Organization | null> {
-  const { data, error } = await db
-    .from('memberships')
-    .select('role, organization:organizations!inner(id, name, created_at)')
-    .eq('organization_id', id)
-    .limit(1);
-
-  if (error) {
-    throw new DomainError(error.message, 'organizations.get_failed');
-  }
-
-  const row = (data ?? [])[0];
-  if (!row) return null;
-
-  const organization = Array.isArray(row.organization) ? row.organization[0] : row.organization;
-  if (!organization) return null;
-
-  return {
-    id: organization.id as string,
-    name: organization.name as string,
-    createdAt: organization.created_at as string,
-    role: row.role as string,
-  };
 }

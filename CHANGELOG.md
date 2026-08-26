@@ -5,6 +5,32 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Roles and capabilities
+
+Turns I12 from "is there an actor" into "may this actor", and puts the answer in RLS.
+
+- `infra/supabase/migrations/20260826000002_roles.sql` — `roles` per tenant, holding a name
+  the tenant chooses and a `capabilities` array the platform defines. `memberships.role`
+  (text nobody read) becomes `memberships.role_id`, backfilled from existing rows.
+- A composite foreign key `(organization_id, role_id) → roles (organization_id, id)` makes
+  "a membership's role belongs to the same organization" a database guarantee rather than
+  something every caller must remember to check.
+- `app.has_capability(organization_id, capability)` is the single answer to "may the caller
+  do this here", and it is called from `customers_insert`, `roles_insert` and
+  `memberships_update`. Creating a customer now requires `customer.create`, not mere
+  membership.
+- `public.assign_role` refuses to leave an organization with nobody holding `role.manage`.
+  That is an invariant spanning rows, so it cannot be a column constraint and must not be a
+  domain-only check a direct RPC call would walk past.
+- `lib/domain/tenancy/capabilities.ts` declares the capability vocabulary; `roles.ts` owns
+  what a well-formed role is. `/organizations/[organizationId]/roles` lists roles and, for
+  those who may, creates them.
+- **New invariant I16** — every declared capability is backed by a database policy.
+  `schema-conformance.test.ts` reads `pg_policy` and fails if one is not. Verified by
+  negative control: adding an unenforced capability makes it fail by name.
+
+Verified against a database rebuilt from scratch with `pnpm db:reset`: 39 tests, gate green.
+
 ### Customer
 
 The first genuinely tenant-owned entity — `organizations` is the tenant, and `memberships`

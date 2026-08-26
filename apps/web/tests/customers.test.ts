@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { createCustomer, listCustomers } from '@/lib/domain/customers/customers';
 
 /**
@@ -47,7 +48,8 @@ async function newTenant(label: string): Promise<Tenant> {
 
   const { data: organizationId, error } = await db.rpc('create_organization', {
     p_name: `${label} Ltd`,
-    p_role: 'owner',
+    p_role: 'Owner',
+      p_capabilities: ALL_CAPABILITIES,
   });
   if (error) throw error;
 

@@ -29,10 +29,11 @@ Use `/verify <n>` to audit one. "The code appears to do the right thing" is not 
 | I9 | Every scheduled item is an absolute instant, rendered in the tenant's timezone. | *not yet enforced* |
 | I10 | Money is integer minor units, and currency is per-tenant configuration. | *not yet enforced* |
 | I11 | Consequential writes are attributable to an actor. | `events.actor_id not null references auth.users`; policy `events_insert` pins `actor_id = auth.uid()`; `tenancy.test.ts` "refuses to attribute an event to someone else" and "keeps events append-only". |
-| I12 | Hiding UI is not authorization; every sensitive operation is checked server-side. | `requireActor()` in `domain/tenancy/actor.ts`, called server-side on every protected route *in addition to* the proxy redirect, which is convenience only; `public.create_organization` raises `42501` without a caller; `tenancy.test.ts` "refuses an unauthenticated caller". |
+| I12 | Hiding UI is not authorization; every sensitive operation is checked server-side. | `requireActor()` server-side on every protected route *in addition to* the proxy redirect, which is convenience only; capability checks live in the RLS policies themselves via `app.has_capability`, so a direct RPC call is refused exactly as a form is; `roles.test.ts` "enforces the capability in the database, not just the domain". |
 | I13 | A work item's status transition is valid according to that tenant's configured transitions. | *not yet enforced* |
 | I14 | An AI agent reaches business state only through domain tools that validate and check permissions. | *not yet enforced* |
 | I15 | No domain module imports a vendor SDK directly. | *not yet enforced* |
+| I16 | Every capability the platform declares is enforced by a database policy, not by application code alone. | `customers_insert`, `roles_insert` and `memberships_update` each call `app.has_capability`; `schema-conformance.test.ts` reads `pg_policy` and fails if any entry in `CAPABILITIES` appears in no policy. |
 
 Invariants are added when a rule becomes load-bearing, not in anticipation. Each new one
 arrives with the slice that enforces it.

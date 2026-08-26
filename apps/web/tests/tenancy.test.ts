@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 
 /**
@@ -67,13 +68,15 @@ describe('tenant isolation', () => {
     // If either of these fails, a unique index is missing its leading tenant column (I2).
     const { data: aOrg, error: aError } = await a.db.rpc('create_organization', {
       p_name: COLLIDING_NAME,
-      p_role: 'owner',
+      p_role: 'Owner',
+      p_capabilities: ALL_CAPABILITIES,
     });
     expect(aError).toBeNull();
 
     const { data: bOrg, error: bError } = await b.db.rpc('create_organization', {
       p_name: COLLIDING_NAME,
-      p_role: 'owner',
+      p_role: 'Owner',
+      p_capabilities: ALL_CAPABILITIES,
     });
     expect(bError).toBeNull();
 
@@ -84,7 +87,8 @@ describe('tenant isolation', () => {
     // organization_id: were it (user_id, organization_id), this would collide.
     const { data: aSecond, error: aSecondError } = await a.db.rpc('create_organization', {
       p_name: 'Alice Overflow Ltd',
-      p_role: 'owner',
+      p_role: 'Owner',
+      p_capabilities: ALL_CAPABILITIES,
     });
     expect(aSecondError).toBeNull();
     aliceSecondOrganizationId = aSecond as string;
@@ -184,7 +188,8 @@ describe('tenant isolation', () => {
 
     const { error } = await anonymous.rpc('create_organization', {
       p_name: 'Ghost Ltd',
-      p_role: 'owner',
+      p_role: 'Owner',
+      p_capabilities: ALL_CAPABILITIES,
     });
 
     expect(error).not.toBeNull();

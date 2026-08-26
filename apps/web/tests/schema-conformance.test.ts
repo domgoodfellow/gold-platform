@@ -1,5 +1,6 @@
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 
 /**
  * I1 and I2, enforced for every table that exists — including ones not written yet.
@@ -95,6 +96,29 @@ describe('schema conformance', () => {
     );
 
     expect(rows).toEqual([]);
+  });
+
+  it('backs every declared capability with a database policy (I16)', async () => {
+    // A capability enforced only in TypeScript is a capability a direct RPC call ignores.
+    // This asserts each one named in code appears in some policy's USING or WITH CHECK, so
+    // adding an entry to CAPABILITIES without the policy that gives it teeth fails here
+    // rather than shipping as a promise the UI makes and the database does not keep.
+    const { rows } = await db.query<{ expression: string }>(
+      `select coalesce(pg_get_expr(p.polqual, p.polrelid), '')
+              || ' '
+              || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') as expression
+         from pg_policy p
+         join pg_class c on c.oid = p.polrelid
+         join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public'`,
+    );
+
+    const allPolicies = rows.map((r) => r.expression).join(' ');
+    const unenforced = CAPABILITIES.filter(
+      (capability) => !allPolicies.includes(`'${capability}'`),
+    );
+
+    expect(unenforced).toEqual([]);
   });
 
   it('catches a violation rather than passing by construction', async () => {
