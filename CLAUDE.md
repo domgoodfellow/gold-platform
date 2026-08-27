@@ -22,10 +22,11 @@ checklists to documents.
 
 **M1 is under way.** `apps/web` exists, the tenancy kernel is migrated, and the check gate
 runs. What exists is deliberately narrow: `organizations`, `memberships`, `events`,
-`customers`, and `roles`; the one tenant resolution function and `app.has_capability`; and a
-vertical slice behind authentication for each of them. Everything else in the layout below
-is still absent on purpose — and M1 still owes `Location`, `Asset`, `Work Item`, `Resource`,
-`Document`, and `Field Definition`.
+`customers`, `roles`, and `field_definitions`; the one tenant resolution function and
+`app.has_capability`; and a vertical slice behind authentication for each of them.
+Everything else in the layout below is still absent on purpose — and M1 still owes
+`Location`, `Asset`, `Work Item`, `Resource`, and `Document`, each of which is now born
+carrying `custom` rather than having it retrofitted.
 
 `docs/starting_conversation.txt` is an archived source, not a governing document. It records
 the thinking that led here and is superseded by `docs/constraints.md` wherever the two

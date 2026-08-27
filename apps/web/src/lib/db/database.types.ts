@@ -38,6 +38,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          custom: Json
           email: string | null
           id: string
           name: string
@@ -47,6 +48,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          custom?: Json
           email?: string | null
           id?: string
           name: string
@@ -56,6 +58,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          custom?: Json
           email?: string | null
           id?: string
           name?: string
@@ -106,6 +109,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_definitions: {
+        Row: {
+          created_at: string
+          created_by: string
+          entity_type: string
+          id: string
+          key: string
+          kind: string
+          label: string
+          organization_id: string
+          required: boolean
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          entity_type: string
+          id?: string
+          key: string
+          kind: string
+          label: string
+          organization_id: string
+          required?: boolean
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          entity_type?: string
+          id?: string
+          key?: string
+          kind?: string
+          label?: string
+          organization_id?: string
+          required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_definitions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -222,10 +269,22 @@ export type Database = {
       }
       create_customer: {
         Args: {
+          p_custom: Json
           p_email: string
           p_name: string
           p_organization_id: string
           p_phone: string
+        }
+        Returns: string
+      }
+      create_field_definition: {
+        Args: {
+          p_entity_type: string
+          p_key: string
+          p_kind: string
+          p_label: string
+          p_organization_id: string
+          p_required: boolean
         }
         Returns: string
       }

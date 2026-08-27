@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { DomainError } from '@/lib/domain/errors';
+import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
 import { CreateCustomerForm } from './create-customer-form';
@@ -33,6 +34,10 @@ export default async function CustomersPage({
   }
 
   const customers = await listCustomers(db, { organizationId });
+  const definitions = await listFieldDefinitions(db, {
+    organizationId,
+    entityType: 'customer',
+  });
 
   return (
     <main className="mx-auto max-w-2xl p-8">
@@ -55,12 +60,31 @@ export default async function CustomersPage({
                   {[customer.email, customer.phone].filter(Boolean).join(' · ')}
                 </div>
               ) : null}
+              {/*
+                Driven by the registry rather than by the stored keys, so a value left over
+                from a field that no longer exists is not rendered as a nameless string.
+              */}
+              {definitions.some((d) => customer.custom[d.key] !== undefined) ? (
+                <dl className="mt-1 flex flex-wrap gap-x-4 text-sm opacity-70">
+                  {definitions
+                    .filter((d) => customer.custom[d.key] !== undefined)
+                    .map((d) => {
+                      const value = customer.custom[d.key];
+                      return (
+                        <div key={d.id} className="flex gap-1">
+                          <dt>{d.label}:</dt>
+                          <dd>{typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}</dd>
+                        </div>
+                      );
+                    })}
+                </dl>
+              ) : null}
             </li>
           ))}
         </ul>
       )}
 
-      <CreateCustomerForm organizationId={organizationId} />
+      <CreateCustomerForm organizationId={organizationId} definitions={definitions} />
     </main>
   );
 }

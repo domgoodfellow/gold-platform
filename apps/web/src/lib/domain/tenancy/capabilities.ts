@@ -11,7 +11,7 @@
  *
  * Grows one entry per slice that adds a guarded operation. It is deliberately short.
  */
-export const CAPABILITIES = ['customer.create', 'role.manage'] as const;
+export const CAPABILITIES = ['customer.create', 'role.manage', 'field.manage'] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
 
@@ -32,4 +32,5 @@ export function isCapability(value: string): value is Capability {
 export const CAPABILITY_LABELS: Record<Capability, string> = {
   'customer.create': 'Add customers',
   'role.manage': 'Manage roles',
+  'field.manage': 'Define custom fields',
 };

@@ -1,11 +1,23 @@
 'use client';
 
 import { useActionState } from 'react';
+import {
+  CUSTOM_FIELD_PREFIX,
+  type FieldDefinition,
+} from '@/lib/domain/fields/field-definitions';
 import { createCustomerAction, type CreateCustomerState } from './actions';
 
 const INITIAL: CreateCustomerState = { error: null };
 
-export function CreateCustomerForm({ organizationId }: { organizationId: string }) {
+const INPUT_CLASS = 'flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20';
+
+export function CreateCustomerForm({
+  organizationId,
+  definitions,
+}: {
+  organizationId: string;
+  definitions: FieldDefinition[];
+}) {
   const [state, formAction, pending] = useActionState(createCustomerAction, INITIAL);
 
   return (
@@ -22,23 +34,54 @@ export function CreateCustomerForm({ organizationId }: { organizationId: string 
           maxLength={200}
           placeholder="Name"
           aria-label="Name"
-          className="flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20"
+          className={INPUT_CLASS}
         />
         <input
           name="email"
           type="email"
           placeholder="Email (optional)"
           aria-label="Email"
-          className="flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20"
+          className={INPUT_CLASS}
         />
         <input
           name="phone"
           type="tel"
           placeholder="Phone (optional)"
           aria-label="Phone"
-          className="flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20"
+          className={INPUT_CLASS}
         />
       </div>
+
+      {/*
+        Whatever this tenant has defined, rendered from its own registry. `required` here is
+        the browser being helpful; the rule is re-checked in the domain layer and again by
+        app.check_custom_fields, because a form attribute is not a constraint.
+      */}
+      {definitions.map((definition) => {
+        const name = `${CUSTOM_FIELD_PREFIX}${definition.key}`;
+
+        if (definition.kind === 'boolean') {
+          return (
+            <label key={definition.id} className="flex w-fit items-center gap-2 text-sm">
+              <input name={name} type="checkbox" />
+              {definition.label}
+            </label>
+          );
+        }
+
+        return (
+          <input
+            key={definition.id}
+            name={name}
+            type={definition.kind === 'number' ? 'number' : 'text'}
+            step={definition.kind === 'number' ? 'any' : undefined}
+            required={definition.required}
+            placeholder={definition.required ? definition.label : `${definition.label} (optional)`}
+            aria-label={definition.label}
+            className={INPUT_CLASS}
+          />
+        );
+      })}
 
       <button
         type="submit"

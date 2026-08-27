@@ -1,4 +1,9 @@
 import type { Db } from '@/lib/db/types';
+import {
+  listFieldDefinitions,
+  parseCustom,
+  type CustomValues,
+} from '@/lib/domain/fields/field-definitions';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -7,6 +12,8 @@ export type Customer = {
   name: string;
   email: string | null;
   phone: string | null;
+  /** Tenant-defined fields, governed by this organization's registry (D7). */
+  custom: CustomValues;
   createdAt: string;
 };
 
@@ -26,7 +33,7 @@ export async function listCustomers(
 ): Promise<Customer[]> {
   const { data, error } = await db
     .from('customers')
-    .select('id, name, email, phone, created_at')
+    .select('id, name, email, phone, custom, created_at')
     .eq('organization_id', input.organizationId)
     .order('created_at', { ascending: false });
 
@@ -39,13 +46,24 @@ export async function listCustomers(
     name: row.name,
     email: row.email,
     phone: row.phone,
+    // `custom` is `Json` in the generated types because that is all Postgres promises about
+    // a jsonb column. A check constraint pins it to an object, and the trigger pins what may
+    // be in it, so the narrowing here restates a guarantee the database already enforces.
+    custom: (row.custom ?? {}) as CustomValues,
     createdAt: row.created_at,
   }));
 }
 
 export async function createCustomer(
   db: Db,
-  input: { organizationId: string; name: string; email?: string; phone?: string },
+  input: {
+    organizationId: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    /** Raw form values keyed by field key. Coerced and checked against the registry here. */
+    custom?: Record<string, string>;
+  },
 ): Promise<string> {
   await requireActor(db);
 
@@ -69,6 +87,15 @@ export async function createCustomer(
 
   const phone = input.phone?.trim() || null;
 
+  // The registry is read here rather than passed in, because deciding what a customer may
+  // carry is this layer's business and not the caller's. A route, an action and an AI tool
+  // all get the same answer without any of them knowing there is a registry at all.
+  const definitions = await listFieldDefinitions(db, {
+    organizationId: input.organizationId,
+    entityType: 'customer',
+  });
+  const custom = parseCustom(definitions, input.custom ?? {});
+
   const { data, error } = await db.rpc('create_customer', {
     p_organization_id: input.organizationId,
     p_name: name,
@@ -79,6 +106,7 @@ export async function createCustomer(
     // whole of that gap in this codebase, and they assert what the migration already allows.
     p_email: email as string,
     p_phone: phone as string,
+    p_custom: custom,
   });
 
   if (error) {
@@ -89,6 +117,12 @@ export async function createCustomer(
         'A customer with that email already exists here.',
         'customers.email_taken',
       );
+    }
+    // 23514 is app.check_custom_fields refusing a payload the registry does not allow.
+    // parseCustom above catches this first for anything arriving through the domain, so
+    // reaching here means the row was built somewhere that skipped it.
+    if (error.code === '23514') {
+      throw new DomainError(error.message, 'customers.custom_invalid');
     }
     throw new DomainError(error.message, 'customers.create_failed');
   }

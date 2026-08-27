@@ -521,6 +521,15 @@ production data.
 the milestone cannot be declared done while D7 is outstanding. That is what gives D7 teeth —
 without it, "lands in the kernel" is a sentence nothing checks.
 
+**One part of D7 is deliberately not built yet, and this is where that is recorded.** D7
+describes the `custom` column "with a GIN index for querying". There is no GIN index, because
+nothing queries by custom value: an index with no query is the same speculative abstraction as
+a column with no reader, and a GIN index over a column that is `{}` on every row is worse than
+useless. The asymmetry is what makes this safe to split — adding the index later is
+`create index concurrently` against a table whose shape does not change, while adding the
+column and the registry later is precisely the migration D7 exists to avoid. The expensive
+half shipped. Reverse this the moment a screen filters on a custom value.
+
 ---
 
 ## Decided, not yet built

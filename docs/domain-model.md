@@ -19,7 +19,7 @@ Use `/verify <n>` to audit one. "The code appears to do the right thing" is not 
 | # | Invariant | Enforced by |
 |---|---|---|
 | I1 | Every tenant-owned row carries `tenant_id`, and RLS keyed to it is enabled on its table. | `20260825000001_tenancy.sql` — RLS enabled *and* forced; `tenancy.test.ts` "hides the other tenant even when its id is known"; `schema-conformance.test.ts` asserts it from `pg_class` for **every** table in `public`, so a table added later cannot ship without it. |
-| I2 | Every unique index and every exclusion constraint on a tenant-owned table leads with `tenant_id`. | `memberships_org_user_unique (organization_id, user_id)`; `tenancy.test.ts` "lets one user hold memberships in two organizations"; `schema-conformance.test.ts` asserts from `pg_index` and `pg_constraint` that every non-primary unique index and every exclusion constraint on a table carrying `organization_id` leads with it. |
+| I2 | Every unique index and every exclusion constraint on a tenant-owned table leads with `tenant_id`. | `memberships_org_user_unique (organization_id, user_id)`; `tenancy.test.ts` "lets one user hold memberships in two organizations"; `field-definitions.test.ts` "lets two tenants define the same field key on the same entity"; `schema-conformance.test.ts` asserts from `pg_index` and `pg_constraint` that every non-primary unique index and every exclusion constraint on a table carrying `organization_id` leads with it. |
 | I3 | Tenant identity resolves through exactly one function; nothing assumes how many tenants a database holds. | `app.current_tenant_ids()` — returns a *set*, is the only tenant lookup, and every RLS policy calls it; `tenancy.test.ts` "shows each user only their own organizations". |
 | I4 | There is exactly one price calculation. | *not yet enforced* |
 | I5 | There is exactly one availability calculation. | *not yet enforced* |
@@ -33,7 +33,8 @@ Use `/verify <n>` to audit one. "The code appears to do the right thing" is not 
 | I13 | A work item's status transition is valid according to that tenant's configured transitions. | *not yet enforced* |
 | I14 | An AI agent reaches business state only through domain tools that validate and check permissions. | *not yet enforced* |
 | I15 | No domain module imports a vendor SDK directly. | *not yet enforced* |
-| I16 | Every capability the platform declares is enforced by a database policy, not by application code alone. | `customers_insert`, `roles_insert` and `memberships_update` each call `app.has_capability`; `schema-conformance.test.ts` reads `pg_policy` and fails if any entry in `CAPABILITIES` appears in no policy. |
+| I16 | Every capability the platform declares is enforced by a database policy, not by application code alone. | `customers_insert`, `roles_insert`, `field_definitions_insert` and `memberships_update` each call `app.has_capability`; `schema-conformance.test.ts` reads `pg_policy` and fails if any entry in `CAPABILITIES` appears in no policy. |
+| I17 | Only a field declared in that tenant's registry may appear in an entity's `custom`, and it holds the kind the registry says. | `app.check_custom_fields`, a trigger on `customers`, refusing undeclared keys, absent required fields and mistyped values — scoped by `organization_id`, so another tenant's definition authorises nothing; `parseCustom` re-checks in the domain for the message rather than the guarantee; `field-definitions.test.ts` "refuses an undeclared key in the database, not just the domain" and "does not let one tenant's definition authorize another tenant's row". |
 
 Invariants are added when a rule becomes load-bearing, not in anticipation. Each new one
 arrives with the slice that enforces it.

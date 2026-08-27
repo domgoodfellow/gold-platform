@@ -5,6 +5,54 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Field definitions
+
+D7's registry, and the first entity to carry a `custom` column. Every entity M1 still owes —
+`Location`, `Asset`, `Work Item`, `Resource` — can now be born with custom fields instead of
+having them bolted on afterwards, which is the migration D7 exists to avoid.
+
+- `infra/supabase/migrations/20260826000003_field_definitions.sql` — `field_definitions` per
+  tenant and entity type, with `field_definitions_org_entity_key_unique` on
+  `(organization_id, entity_type, key)`. Two businesses both wanting a field called
+  `vat_number` on their customers is the ordinary case, and that index leading with
+  `organization_id` is what makes both succeed.
+- `customers.custom jsonb`, and a new `field.manage` capability. `roles_capabilities_known`
+  is dropped and rewritten to admit it — a correction as a new migration, never an edit to an
+  applied one — and every role already holding `role.manage` is backfilled with it, because
+  an organization whose only administrator could not define a field would have no way to
+  grant themselves in.
+- **New invariant I17** — only a field the tenant declared may appear in `custom`, and it
+  holds the kind the registry says. `app.check_custom_fields` is a trigger on `customers`
+  that refuses undeclared keys, absent required fields, and mistyped values, scoped by
+  `organization_id` so another tenant's definition authorises nothing. `customers` grants
+  INSERT to authenticated, so a direct PostgREST call never passes through the domain layer —
+  the same reason `public.assign_role` puts its last-manager rule in the database.
+- `parseCustom` re-checks the identical rules in the domain layer, for the message rather
+  than the guarantee. The same shape as `requireActor` alongside RLS: one produces a usable
+  error, the other produces the promise. Verified by negative control — dropping the trigger
+  fails exactly the three tests that insert directly and leaves the domain-level ones passing,
+  which is what proves the domain check would not have covered them.
+- Field kinds are `text`, `number` and `boolean`. Each has a coercion branch in the domain
+  and a validation branch in the trigger, so the list is platform vocabulary like
+  capabilities: adding one is code plus a migration, never tenant configuration.
+- `/organizations/[organizationId]/fields` defines fields; the customer form renders whatever
+  this tenant declared. Hiding the form is a courtesy — `field_definitions_insert` requires
+  `field.manage`, and `field-definitions.test.ts` asserts a member who has lost that
+  capability is refused by RLS while still a member.
+- `tests/field-definitions.test.ts` — thirteen tests, including the colliding-key test in
+  both tenants, cross-tenant definition leakage, numeric coercion, and a check that defining
+  a required field does not retroactively invalidate customers that already exist.
+
+**D7 is not fully built, and D18 now says so.** There is no GIN index on `custom`, because
+nothing queries by custom value yet. Adding it later is `create index concurrently` against a
+table whose shape does not change; adding the column and the registry later is the expensive
+migration. The expensive half shipped.
+
+I8 gains a test but not an entry — its substance is snapshot columns on committed work, and
+those do not exist yet.
+
+Verified against a database rebuilt from scratch with `pnpm db:reset`: 53 tests, gate green.
+
 ### Generated database types, and the scaffolding decisions written down
 
 M0's acceptance criterion is met. `/scope` was run against the tenancy kernel task and

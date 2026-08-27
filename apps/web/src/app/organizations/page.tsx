@@ -58,6 +58,12 @@ export default async function OrganizationsPage() {
               </Link>
               <span className="flex items-baseline gap-3 text-sm opacity-70">
                 <Link
+                  href={`/organizations/${organization.id}/fields`}
+                  className="underline underline-offset-4"
+                >
+                  Fields
+                </Link>
+                <Link
                   href={`/organizations/${organization.id}/roles`}
                   className="underline underline-offset-4"
                 >
