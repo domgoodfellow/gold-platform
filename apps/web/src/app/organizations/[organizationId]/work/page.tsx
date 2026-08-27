@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { CustomFieldValues } from '@/components/custom-field-values';
 import { getDb } from '@/lib/db/server';
+import { listAssets } from '@/lib/domain/assets/assets';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { DomainError } from '@/lib/domain/errors';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
@@ -35,12 +36,14 @@ export default async function WorkPage({
     notFound();
   }
 
-  const [workItems, statuses, customers, locations, resources, definitions] = await Promise.all([
+  const [workItems, statuses, customers, locations, resources, assets, definitions] =
+    await Promise.all([
     listWorkItems(db, { organizationId }),
     listWorkItemStatuses(db, { organizationId }),
     listCustomers(db, { organizationId }),
     listLocations(db, { organizationId }),
     listResources(db, { organizationId }),
+    listAssets(db, { organizationId }),
     listFieldDefinitions(db, { organizationId, entityType: 'work_item' }),
   ]);
 
@@ -74,11 +77,12 @@ export default async function WorkPage({
                 {inStatus.map((item) => (
                   <li key={item.id} className="py-3">
                     <div className="font-medium">{item.title}</div>
-                    {item.customer || item.location || item.resource ? (
+                    {item.customer || item.location || item.resource || item.asset ? (
                       <div className="text-sm opacity-70">
                         {[
                           item.customer?.label,
                           item.location?.label,
+                          item.asset?.label,
                           item.resource ? `→ ${item.resource.label}` : null,
                         ]
                           .filter(Boolean)
@@ -106,6 +110,7 @@ export default async function WorkPage({
           customers={customers.map((c) => ({ id: c.id, label: c.name }))}
           locations={locations.map((l) => ({ id: l.id, label: l.label }))}
           resources={resources.map((r) => ({ id: r.id, label: r.name }))}
+          assets={assets.map((a) => ({ id: a.id, label: a.name }))}
           definitions={definitions}
         />
       ) : (

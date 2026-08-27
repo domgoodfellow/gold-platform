@@ -5,6 +5,33 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Assets
+
+What work is *about*, as opposed to Resource, which is what work is done *with*. The same
+physical van is both — a Resource when it carries a technician to a job, an Asset when the
+job is servicing the van. Merging them would force one row to answer two unrelated
+questions, and the scheduling engine only ever asks the first.
+
+- `infra/supabase/migrations/20260827000004_assets.sql` — `assets` with optional composite
+  references to a customer and a location, an `asset.create` capability, and the registry's
+  fifth entity type.
+- **Customer-owned equipment is the case that shapes the table.** An asset is frequently not
+  the tenant's property; it is the customer's machine that the tenant maintains. That makes
+  `assets.customer_id` another I18 surface, tested by inserting directly with the other
+  tenant's customer.
+- `work_items` gains `asset_id`, its fifth composite reference, with the caller in the same
+  change: the work item form gains an asset selector and the board renders it. "Service the
+  compressor" is work *about* an asset, which is what makes maintenance a rule set over the
+  kernel rather than a module of its own.
+- `create_work_item` is dropped and recreated rather than replaced, because adding a
+  parameter changes the signature and `CREATE OR REPLACE` would leave the old arity behind
+  as an overload.
+- `OptionalSelect` extracted at its second caller.
+
+No new invariant — I17 gains a fifth table, I18 gains three references.
+
+Verified against a database rebuilt from scratch with `pnpm db:reset`: 99 tests, gate green.
+
 ### Work items
 
 The universal operational object, and the first place D6 has teeth. A job, service call,

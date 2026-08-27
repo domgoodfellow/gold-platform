@@ -64,6 +64,12 @@ export default async function OrganizationsPage() {
                   Work
                 </Link>
                 <Link
+                  href={`/organizations/${organization.id}/assets`}
+                  className="underline underline-offset-4"
+                >
+                  Assets
+                </Link>
+                <Link
                   href={`/organizations/${organization.id}/resources`}
                   className="underline underline-offset-4"
                 >

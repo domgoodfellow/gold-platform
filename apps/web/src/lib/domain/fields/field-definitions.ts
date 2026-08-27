@@ -15,6 +15,7 @@ export const CUSTOM_FIELD_ENTITIES = [
   'location',
   'resource',
   'work_item',
+  'asset',
 ] as const;
 
 export type CustomFieldEntity = (typeof CUSTOM_FIELD_ENTITIES)[number];
@@ -25,6 +26,7 @@ export const CUSTOM_FIELD_ENTITY_LABELS: Record<CustomFieldEntity, string> = {
   location: 'Locations',
   resource: 'Resources',
   work_item: 'Work items',
+  asset: 'Assets',
 };
 
 export function isCustomFieldEntity(value: string): value is CustomFieldEntity {

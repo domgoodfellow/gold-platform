@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { CustomFieldInputs } from '@/components/custom-field-inputs';
+import { OptionalSelect, type SelectOption } from '@/components/optional-select';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createStatusAction, createWorkItemAction, type WorkActionState } from './actions';
@@ -10,21 +11,21 @@ const INITIAL: WorkActionState = { error: null };
 
 const INPUT_CLASS = 'flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20';
 
-type Option = { id: string; label: string };
-
 export function CreateWorkItemForm({
   organizationId,
   statuses,
   customers,
   locations,
   resources,
+  assets,
   definitions,
 }: {
   organizationId: string;
   statuses: WorkItemStatus[];
-  customers: Option[];
-  locations: Option[];
-  resources: Option[];
+  customers: SelectOption[];
+  locations: SelectOption[];
+  resources: SelectOption[];
+  assets: SelectOption[];
   definitions: FieldDefinition[];
 }) {
   const [state, formAction, pending] = useActionState(createWorkItemAction, INITIAL);
@@ -71,6 +72,12 @@ export function CreateWorkItemForm({
         <OptionalSelect name="resourceId" label="Assigned to" options={resources} />
       </div>
 
+      {/* What the work is about, as opposed to what it is done with. "Service the
+          compressor" names an asset; "Sam drives there" names a resource. */}
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <OptionalSelect name="assetId" label="About" options={assets} />
+      </div>
+
       <CustomFieldInputs definitions={definitions} />
 
       <button
@@ -87,27 +94,6 @@ export function CreateWorkItemForm({
         </p>
       ) : null}
     </form>
-  );
-}
-
-function OptionalSelect({
-  name,
-  label,
-  options,
-}: {
-  name: string;
-  label: string;
-  options: Option[];
-}) {
-  return (
-    <select name={name} defaultValue="" aria-label={label} className={INPUT_CLASS}>
-      <option value="">{label} — none</option>
-      {options.map((option) => (
-        <option key={option.id} value={option.id}>
-          {option.label}
-        </option>
-      ))}
-    </select>
   );
 }
 

@@ -16,6 +16,8 @@ export type WorkItem = {
   customer: WorkItemRef | null;
   location: WorkItemRef | null;
   resource: WorkItemRef | null;
+  /** What the work is about, as opposed to what it is done with. */
+  asset: WorkItemRef | null;
   /** Tenant-defined fields, governed by this organization's registry (D7). */
   custom: CustomValues;
   createdAt: string;
@@ -28,7 +30,7 @@ const TITLE_MAX = 300;
 // Every embed is hinted with its constraint name because all four references are composite
 // (organization_id, x_id) and the hint is what tells PostgREST which one to follow.
 const WORK_ITEM_SELECT =
-  'id, title, custom, created_at, status:work_item_statuses!work_items_status_same_org (id, name), customer:customers!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), resource:resources!work_items_resource_same_org (id, name)';
+  'id, title, custom, created_at, status:work_item_statuses!work_items_status_same_org (id, name), customer:customers!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), resource:resources!work_items_resource_same_org (id, name), asset:assets!work_items_asset_same_org (id, name)';
 
 function one<T>(value: T | T[] | null): T | undefined {
   if (value === null) return undefined;
@@ -65,6 +67,7 @@ export async function listWorkItems(
     const customer = one(row.customer);
     const location = one(row.location);
     const resource = one(row.resource);
+    const asset = one(row.asset);
 
     return [
       {
@@ -74,6 +77,7 @@ export async function listWorkItems(
         customer: customer ? { id: customer.id, label: customer.name } : null,
         location: location ? { id: location.id, label: location.label } : null,
         resource: resource ? { id: resource.id, label: resource.name } : null,
+        asset: asset ? { id: asset.id, label: asset.name } : null,
         custom: (row.custom ?? {}) as CustomValues,
         createdAt: row.created_at,
       },
@@ -98,6 +102,7 @@ export async function createWorkItem(
     customerId?: string | null;
     locationId?: string | null;
     resourceId?: string | null;
+    assetId?: string | null;
     /** Raw form values keyed by field key. Coerced and checked against the registry here. */
     custom?: Record<string, string>;
   },
@@ -134,6 +139,7 @@ export async function createWorkItem(
     p_customer_id: (input.customerId || null) as string,
     p_location_id: (input.locationId || null) as string,
     p_resource_id: (input.resourceId || null) as string,
+    p_asset_id: (input.assetId || null) as string,
     p_custom: custom,
   });
 
@@ -143,7 +149,7 @@ export async function createWorkItem(
     // hinting that it exists somewhere else.
     if (error.code === '23503') {
       throw new DomainError(
-        'No such status, customer, location or resource here.',
+        'No such status, customer, location, resource or asset here.',
         'work_items.reference_not_found',
       );
     }

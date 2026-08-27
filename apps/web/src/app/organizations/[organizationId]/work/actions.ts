@@ -26,6 +26,7 @@ export async function createWorkItemAction(
       customerId: String(formData.get('customerId') ?? ''),
       locationId: String(formData.get('locationId') ?? ''),
       resourceId: String(formData.get('resourceId') ?? ''),
+      assetId: String(formData.get('assetId') ?? ''),
       custom: customValuesFromFormData(formData),
     });
   } catch (error) {

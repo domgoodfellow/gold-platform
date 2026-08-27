@@ -34,6 +34,61 @@ export type Database = {
   }
   public: {
     Tables: {
+      assets: {
+        Row: {
+          created_at: string
+          created_by: string
+          custom: Json
+          customer_id: string | null
+          id: string
+          location_id: string | null
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          custom?: Json
+          customer_id?: string | null
+          id?: string
+          location_id?: string | null
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          custom?: Json
+          customer_id?: string | null
+          id?: string
+          location_id?: string | null
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assets_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "assets_location_same_org"
+            columns: ["organization_id", "location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "assets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_locations: {
         Row: {
           created_at: string
@@ -417,6 +472,7 @@ export type Database = {
       }
       work_items: {
         Row: {
+          asset_id: string | null
           created_at: string
           created_by: string
           custom: Json
@@ -429,6 +485,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          asset_id?: string | null
           created_at?: string
           created_by: string
           custom?: Json
@@ -441,6 +498,7 @@ export type Database = {
           title: string
         }
         Update: {
+          asset_id?: string | null
           created_at?: string
           created_by?: string
           custom?: Json
@@ -453,6 +511,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "work_items_asset_same_org"
+            columns: ["organization_id", "asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "work_items_customer_same_org"
             columns: ["organization_id", "customer_id"]
@@ -498,6 +563,16 @@ export type Database = {
       assign_role: {
         Args: { p_membership_id: string; p_role_id: string }
         Returns: undefined
+      }
+      create_asset: {
+        Args: {
+          p_custom: Json
+          p_customer_id: string
+          p_location_id: string
+          p_name: string
+          p_organization_id: string
+        }
+        Returns: string
       }
       create_customer: {
         Args: {
@@ -548,6 +623,7 @@ export type Database = {
       }
       create_work_item: {
         Args: {
+          p_asset_id: string
           p_custom: Json
           p_customer_id: string
           p_location_id: string
