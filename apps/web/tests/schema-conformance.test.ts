@@ -157,6 +157,85 @@ describe('schema conformance', () => {
     }).toEqual({ inSchemaButNotInTypes: [], inTypesButNotInSchema: [] });
   });
 
+  it('makes every reference between tenant-owned tables composite (I18)', async () => {
+    // A foreign key from one tenant-owned table to another must carry organization_id, so
+    // that a row can only ever reference an entity in its own tenant. RLS cannot do this:
+    // a policy on the referencing table sees that row's organization_id and is satisfied,
+    // while the id it points at belongs to somebody else. `customer_locations` is the case
+    // that motivated it and `memberships` had it already; this asserts it from the catalog
+    // so the next junction table cannot ship without it.
+    //
+    // References to `organizations` itself are excluded automatically: that table has no
+    // organization_id column, so it never matches the second condition.
+    const { rows } = await db.query<{ constraint_name: string; table_name: string }>(
+      `select c.conname as constraint_name, t.relname as table_name
+         from pg_constraint c
+         join pg_class t on t.oid = c.conrelid
+         join pg_class r on r.oid = c.confrelid
+         join pg_namespace n on n.oid = t.relnamespace
+         join pg_namespace rn on rn.oid = r.relnamespace
+        where c.contype = 'f'
+          and n.nspname = 'public'
+          and rn.nspname = 'public'
+          and exists (
+            select 1 from pg_attribute a
+             where a.attrelid = t.oid and a.attname = 'organization_id'
+               and a.attnum > 0 and not a.attisdropped
+          )
+          and exists (
+            select 1 from pg_attribute a
+             where a.attrelid = r.oid and a.attname = 'organization_id'
+               and a.attnum > 0 and not a.attisdropped
+          )
+          and not exists (
+            select 1 from pg_attribute a
+             where a.attrelid = t.oid and a.attname = 'organization_id'
+               and a.attnum = any (c.conkey)
+          )`,
+    );
+
+    expect(rows).toEqual([]);
+  });
+
+  it('catches a plain reference between tenant-owned tables', async () => {
+    // The negative control for the test above: the foreign key anyone would write by
+    // reflex, which is the one that lets a row point across the wall.
+    await db.query(`create table public.__fk_probe (
+      id uuid primary key default gen_random_uuid(),
+      organization_id uuid not null,
+      customer_id uuid not null references public.customers (id)
+    )`);
+    try {
+      const { rows } = await db.query<{ table_name: string }>(
+        `select t.relname as table_name
+           from pg_constraint c
+           join pg_class t on t.oid = c.conrelid
+           join pg_class r on r.oid = c.confrelid
+           join pg_namespace n on n.oid = t.relnamespace
+          where c.contype = 'f'
+            and n.nspname = 'public'
+            and exists (
+              select 1 from pg_attribute a
+               where a.attrelid = t.oid and a.attname = 'organization_id'
+                 and a.attnum > 0 and not a.attisdropped
+            )
+            and exists (
+              select 1 from pg_attribute a
+               where a.attrelid = r.oid and a.attname = 'organization_id'
+                 and a.attnum > 0 and not a.attisdropped
+            )
+            and not exists (
+              select 1 from pg_attribute a
+               where a.attrelid = t.oid and a.attname = 'organization_id'
+                 and a.attnum = any (c.conkey)
+            )`,
+      );
+      expect(rows.map((r) => r.table_name)).toContain('__fk_probe');
+    } finally {
+      await db.query('drop table public.__fk_probe');
+    }
+  });
+
   it('catches a violation rather than passing by construction', async () => {
     // A negative control. Without this, every assertion above could be querying nothing and
     // nobody would know until the day it mattered.

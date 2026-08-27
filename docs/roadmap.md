@@ -51,8 +51,8 @@ Covers: `organizations`, memberships and roles, the tenant resolution function, 
 every table created so far, `Customer`, `Location`, `Asset`, `Work Item`, `Resource`,
 `Document`, `Event`, and `Field Definition`.
 
-Enforces: **I1, I2, I3, I11, I12, I16** — and `Event` must ship with the first slice that
-writes state, because it cannot be backfilled.
+Enforces: **I1, I2, I3, I11, I12, I16, I17, I18** — and `Event` must ship with the first
+slice that writes state, because it cannot be backfilled.
 
 Two things that must be right here because they are expensive later:
 

@@ -1,7 +1,12 @@
 'use client';
 
 import { useActionState } from 'react';
-import { FIELD_KINDS, FIELD_KIND_LABELS } from '@/lib/domain/fields/field-definitions';
+import {
+  CUSTOM_FIELD_ENTITIES,
+  CUSTOM_FIELD_ENTITY_LABELS,
+  FIELD_KINDS,
+  FIELD_KIND_LABELS,
+} from '@/lib/domain/fields/field-definitions';
 import { createFieldAction, type CreateFieldState } from './actions';
 
 const INITIAL: CreateFieldState = { error: null };
@@ -14,6 +19,19 @@ export function CreateFieldForm({ organizationId }: { organizationId: string }) 
       <input type="hidden" name="organizationId" value={organizationId} />
 
       <h2 className="text-sm font-medium">New field</h2>
+
+      <select
+        name="entityType"
+        defaultValue="customer"
+        aria-label="Applies to"
+        className="w-fit rounded border border-black/15 px-3 py-2 dark:border-white/20"
+      >
+        {CUSTOM_FIELD_ENTITIES.map((entity) => (
+          <option key={entity} value={entity}>
+            {CUSTOM_FIELD_ENTITY_LABELS[entity]}
+          </option>
+        ))}
+      </select>
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <input

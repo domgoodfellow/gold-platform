@@ -64,11 +64,23 @@ An entry nobody could violate is not a constraint. Delete it.
   code.
 - **Never scope a query by application-layer filtering alone.** One forgotten `WHERE` is a
   cross-tenant data leak. RLS is the boundary; the application filter is an optimisation.
+- **Never reference one tenant-owned table from another without carrying `tenant_id` in the
+  foreign key.** `references customers (id)` is the reflex and it is wrong: RLS on the
+  referencing row checks *that row's* `tenant_id` and is satisfied, while the id it points at
+  belongs to someone else. The reference must be composite — `(tenant_id, customer_id)` to
+  `customers (tenant_id, id)` — which needs a `unique (tenant_id, id)` on the target. This is
+  I18, and unlike most of this section it is not caught by RLS at all. See the failure below.
 - **Never separate tenants by provisioning.** Not a bucket per tenant, not a schema per
   tenant, not a project per tenant. Isolation is `tenant_id` and RLS; files live in shared
   buckets under a tenant-scoped path prefix, with the row in `documents` as the authority on
   who owns the bytes. Per-tenant provisioning is operational work that grows linearly with
   customers and proves nothing RLS has not already proved.
+
+> **The failure a composite reference prevents.** A junction table joining customers and
+> locations, with plain `references customers (id)` and `references locations (id)`, lets one
+> tenant write a row naming their own customer and another tenant's location. Every policy
+> passes, because the row's own `organization_id` is genuinely theirs. Verified by removing
+> the composite key: the insert succeeds and RLS raises no objection.
 
 > **The failure this prevents.** `tire-app-template` has an exclusion constraint that
 > coalesces a null technician to the zero UUID, so every unassigned booking in the database

@@ -34,6 +34,52 @@ export type Database = {
   }
   public: {
     Tables: {
+      customer_locations: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          location_id: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          location_id: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          location_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_locations_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_locations_location_same_org"
+            columns: ["organization_id", "location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_locations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -153,6 +199,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "field_definitions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          access_notes: string | null
+          address: string
+          created_at: string
+          created_by: string
+          custom: Json
+          id: string
+          label: string
+          organization_id: string
+        }
+        Insert: {
+          access_notes?: string | null
+          address: string
+          created_at?: string
+          created_by: string
+          custom?: Json
+          id?: string
+          label: string
+          organization_id: string
+        }
+        Update: {
+          access_notes?: string | null
+          address?: string
+          created_at?: string
+          created_by?: string
+          custom?: Json
+          id?: string
+          label?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -288,6 +375,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_location: {
+        Args: {
+          p_access_notes: string
+          p_address: string
+          p_custom: Json
+          p_label: string
+          p_organization_id: string
+        }
+        Returns: string
+      }
       create_organization: {
         Args: { p_capabilities: string[]; p_name: string; p_role: string }
         Returns: string
@@ -299,6 +396,14 @@ export type Database = {
           p_organization_id: string
         }
         Returns: string
+      }
+      link_customer_location: {
+        Args: {
+          p_customer_id: string
+          p_location_id: string
+          p_organization_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

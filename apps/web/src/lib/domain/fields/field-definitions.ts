@@ -10,9 +10,19 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
  * a core entity. This list mirrors the check constraint on `field_definitions.entity_type`
  * and grows with the migration that adds each entity.
  */
-export const CUSTOM_FIELD_ENTITIES = ['customer'] as const;
+export const CUSTOM_FIELD_ENTITIES = ['customer', 'location'] as const;
 
 export type CustomFieldEntity = (typeof CUSTOM_FIELD_ENTITIES)[number];
+
+/** Wording for the selector that exists now that more than one entity carries fields. */
+export const CUSTOM_FIELD_ENTITY_LABELS: Record<CustomFieldEntity, string> = {
+  customer: 'Customers',
+  location: 'Locations',
+};
+
+export function isCustomFieldEntity(value: string): value is CustomFieldEntity {
+  return (CUSTOM_FIELD_ENTITIES as readonly string[]).includes(value);
+}
 
 /**
  * What a field can hold.
@@ -56,10 +66,6 @@ export type CustomValues = Record<string, string | number | boolean>;
 const KEY_PATTERN = /^[a-z][a-z0-9_]{0,62}$/;
 const LABEL_MAX = 100;
 
-function isEntity(value: string): value is CustomFieldEntity {
-  return (CUSTOM_FIELD_ENTITIES as readonly string[]).includes(value);
-}
-
 function isKind(value: string): value is FieldKind {
   return (FIELD_KINDS as readonly string[]).includes(value);
 }
@@ -89,7 +95,7 @@ export async function listFieldDefinitions(
   // discard anything a future migration adds that this build does not know how to render,
   // rather than rendering it wrongly.
   return (data ?? [])
-    .filter((row) => isEntity(row.entity_type) && isKind(row.kind))
+    .filter((row) => isCustomFieldEntity(row.entity_type) && isKind(row.kind))
     .map((row) => ({
       id: row.id,
       entityType: row.entity_type as CustomFieldEntity,
@@ -113,7 +119,7 @@ export async function createFieldDefinition(
   db: Db,
   input: {
     organizationId: string;
-    entityType: CustomFieldEntity;
+    entityType: string;
     key: string;
     label: string;
     kind: string;
@@ -148,6 +154,9 @@ export async function createFieldDefinition(
 
   // Named here rather than left to the check constraint, so the message says what was wrong
   // instead of quoting a constraint name.
+  if (!isCustomFieldEntity(input.entityType)) {
+    throw new DomainError(`Not an entity: ${input.entityType}.`, 'fields.entity_unknown');
+  }
   if (!isKind(input.kind)) {
     throw new DomainError(`Not a field type: ${input.kind}.`, 'fields.kind_unknown');
   }
@@ -182,8 +191,8 @@ export async function createFieldDefinition(
  *
  * This is the rule that makes `custom` a registry rather than a junk drawer, and it runs in
  * two independent places on purpose. Here it produces a message naming the offending field;
- * in `app.check_custom_fields` it produces the guarantee, because `customers` grants INSERT
- * to authenticated and a direct PostgREST call never passes through this function at all.
+ * in `app.check_custom_fields` it produces the guarantee, because every entity table grants
+ * INSERT to authenticated and a direct PostgREST call never passes through this function.
  * The same shape as `requireActor` alongside RLS: one for the error, one for the promise.
  *
  * Absent and blank are the same thing. HTML sends an empty string for an untouched text

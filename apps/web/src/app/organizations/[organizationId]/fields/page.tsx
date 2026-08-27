@@ -3,8 +3,12 @@ import { notFound, redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import {
+  CUSTOM_FIELD_ENTITIES,
+  CUSTOM_FIELD_ENTITY_LABELS,
   FIELD_KIND_LABELS,
   listFieldDefinitions,
+  type CustomFieldEntity,
+  type FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
@@ -32,11 +36,18 @@ export default async function FieldsPage({
     notFound();
   }
 
-  const definitions = await listFieldDefinitions(db, {
-    organizationId,
-    entityType: 'customer',
-  });
+  // One query per entity that can carry fields, driven by the vocabulary rather than by a
+  // hand-kept list here — so an entity added in a later migration appears on this screen
+  // without anyone remembering to extend it.
+  const byEntity = await Promise.all(
+    CUSTOM_FIELD_ENTITIES.map(async (entityType): Promise<[CustomFieldEntity, FieldDefinition[]]> => [
+      entityType,
+      await listFieldDefinitions(db, { organizationId, entityType }),
+    ]),
+  );
+
   const mayManage = organization.capabilities.includes('field.manage');
+  const total = byEntity.reduce((sum, [, definitions]) => sum + definitions.length, 0);
 
   return (
     <main className="mx-auto max-w-2xl p-8">
@@ -44,30 +55,37 @@ export default async function FieldsPage({
         ← Organizations
       </Link>
 
-      <h1 className="mt-4 text-2xl font-semibold">Customer fields</h1>
+      <h1 className="mt-4 text-2xl font-semibold">Custom fields</h1>
       <p className="text-sm opacity-70">{organization.name}</p>
 
-      {definitions.length === 0 ? (
+      {total === 0 ? (
         <p className="mt-6 text-sm opacity-70">
-          No custom fields yet. Anything you define here appears on every customer form.
+          No custom fields yet. Anything you define here appears on that entity&apos;s form.
         </p>
       ) : (
-        <ul className="mt-6 divide-y divide-black/10 dark:divide-white/15">
-          {definitions.map((definition) => (
-            <li key={definition.id} className="py-3">
-              <div className="font-medium">{definition.label}</div>
-              <div className="text-sm opacity-70">
-                {[
-                  definition.key,
-                  FIELD_KIND_LABELS[definition.kind],
-                  definition.required ? 'Required' : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </div>
-            </li>
-          ))}
-        </ul>
+        byEntity
+          .filter(([, definitions]) => definitions.length > 0)
+          .map(([entityType, definitions]) => (
+            <section key={entityType} className="mt-6">
+              <h2 className="text-sm font-medium">{CUSTOM_FIELD_ENTITY_LABELS[entityType]}</h2>
+              <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+                {definitions.map((definition) => (
+                  <li key={definition.id} className="py-3">
+                    <div className="font-medium">{definition.label}</div>
+                    <div className="text-sm opacity-70">
+                      {[
+                        definition.key,
+                        FIELD_KIND_LABELS[definition.kind],
+                        definition.required ? 'Required' : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))
       )}
 
       {/*

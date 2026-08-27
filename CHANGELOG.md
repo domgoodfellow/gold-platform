@@ -5,6 +5,47 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Locations
+
+The first many-to-many in the schema, and the first entity born carrying `custom` rather than
+having it retrofitted — which is the payoff D18 was arguing for. One line of migration
+attaches the registry to a second entity, because the column shipped with the table.
+
+- `infra/supabase/migrations/20260827000001_locations.sql` — `locations` with label, address,
+  access notes and `custom`; `customer_locations` joining them to customers; a new
+  `location.create` capability, backfilled onto every role that already holds
+  `customer.create`.
+- **New invariant I18** — a row referencing two tenant-owned entities can only reference
+  entities in its own tenant. `customer_locations` references `customers (organization_id,
+  id)` and `locations (organization_id, id)` rather than either table's `id`, which makes a
+  cross-tenant row impossible to write down.
+- **RLS does not cover this, and that is the finding.** A policy on the junction sees the
+  row's own `organization_id`, which genuinely belongs to the caller, and is satisfied —
+  while the `location_id` beside it points at another tenant. Verified by replacing the
+  composite key with the plain `references locations (id)` anyone would write by reflex: the
+  cross-tenant insert then **succeeds**, with no policy objecting. `constraints.md` gains
+  the Never and the worked failure next to the exclusion-constraint one it rhymes with.
+- `schema-conformance.test.ts` asserts I18 from `pg_constraint` for every reference between
+  two tables carrying `organization_id`, so the next junction table cannot ship without it.
+  Carries its own negative control — a probe table with a plain foreign key is caught by name.
+- `app.check_custom_fields` gains a second table without gaining a second function: the
+  entity type was already a trigger argument, which is what that argument was for.
+  `locations.test.ts` "scopes a field definition to its entity type" proves the lookup is
+  keyed on `(organization_id, entity_type, key)` and not on the key alone.
+- `CustomFieldInputs` and `customValuesFromFormData` are extracted at their second caller,
+  not in anticipation — the customer form and the location form need the identical mapping
+  from field kind to input, and two copies would drift the first time a kind is added.
+  `isEntity` and `isCustomFieldEntity` were briefly the same predicate twice; collapsed.
+- `/organizations/[organizationId]/locations` lists locations with the customers served from
+  each, creates them, and links them. The fields screen now has the entity selector its own
+  comment promised "in the change that adds the second one" — and it is driven by
+  `CUSTOM_FIELD_ENTITIES`, so a third entity appears there without anyone editing the page.
+- `tests/locations.test.ts` — eleven tests, including the direct cross-tenant insert, the
+  domain reporting it as absent rather than forbidden, and the other tenant being unable to
+  see the link at all.
+
+Verified against a database rebuilt from scratch with `pnpm db:reset`: 64 tests, gate green.
+
 ### Field definitions
 
 D7's registry, and the first entity to carry a `custom` column. Every entity M1 still owes —

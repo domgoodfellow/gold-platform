@@ -17,10 +17,9 @@ export async function createFieldAction(
   try {
     await createFieldDefinition(db, {
       organizationId,
-      // Fixed rather than submitted, because `customer` is the only entity that carries
-      // custom fields today. This becomes a selector in the change that adds the second one,
-      // not before.
-      entityType: 'customer',
+      // Submitted now that a second entity carries custom fields. Whether it names a real
+      // entity is decided by the domain layer, not here.
+      entityType: String(formData.get('entityType') ?? ''),
       key: String(formData.get('key') ?? ''),
       label: String(formData.get('label') ?? ''),
       kind: String(formData.get('kind') ?? ''),
