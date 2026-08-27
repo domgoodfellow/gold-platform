@@ -55,7 +55,12 @@ export default async function CustomersPage({
         <ul className="mt-6 divide-y divide-black/10 dark:divide-white/15">
           {customers.map((customer) => (
             <li key={customer.id} className="py-3">
-              <div className="font-medium">{customer.name}</div>
+              <Link
+                href={`/organizations/${organizationId}/customers/${customer.id}`}
+                className="font-medium underline underline-offset-4"
+              >
+                {customer.name}
+              </Link>
               {customer.email || customer.phone ? (
                 <div className="text-sm opacity-70">
                   {[customer.email, customer.phone].filter(Boolean).join(' · ')}

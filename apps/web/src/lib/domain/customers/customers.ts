@@ -122,3 +122,36 @@ export async function createCustomer(
 
   return data;
 }
+
+/**
+ * One customer, or null.
+ *
+ * Null covers both "no such customer" and "not yours" without the caller being able to tell
+ * them apart — RLS produces that indistinguishability for free, and a caller that tried to
+ * distinguish them would be rebuilding the leak by hand.
+ */
+export async function getCustomer(
+  db: Db,
+  input: { organizationId: string; customerId: string },
+): Promise<Customer | null> {
+  const { data, error } = await db
+    .from('customers')
+    .select('id, name, email, phone, custom, created_at')
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.customerId)
+    .maybeSingle();
+
+  if (error) {
+    throw new DomainError(error.message, 'customers.get_failed');
+  }
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    custom: (data.custom ?? {}) as CustomValues,
+    createdAt: data.created_at,
+  };
+}

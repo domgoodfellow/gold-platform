@@ -19,6 +19,7 @@ export const CAPABILITIES = [
   'resource.create',
   'work_item.create',
   'asset.create',
+  'document.create',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -45,4 +46,5 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'resource.create': 'Add resources',
   'work_item.create': 'Add work items',
   'asset.create': 'Add assets',
+  'document.create': 'Attach documents',
 };

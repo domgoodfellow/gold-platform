@@ -428,10 +428,12 @@ read when a migration changes a column's type.
 **Consequence, and the boundary of the tool:** generated types are authoritative for tables,
 columns, and their nullability. They are **not** authoritative for function arguments —
 Postgres records no nullability for parameters, so `p_email text`, which accepts null by
-design, is emitted as `string`. Two casts in `customers.ts` bridge that gap and say so. A
-stale generated file is worse than none, because `tsc` will validate every query against a
-schema that no longer exists and pass — so `schema-conformance.test.ts` compares the
-checked-in file against `pg_attribute` and fails naming the column that drifted.
+design, is emitted as `string`. Every `create_*` RPC with an optional argument therefore
+carries a cast at the boundary, each one naming this decision; they are the only casts of
+that shape in the domain layer, and a reviewer seeing one elsewhere should ask why. A stale
+generated file is worse than none, because `tsc` will validate every query against a schema
+that no longer exists and pass — so `schema-conformance.test.ts` compares the checked-in file
+against `pg_attribute` and fails naming the column that drifted.
 
 **Trigger to revisit:** none plausible for the ORM half; adopting one after live policies
 exist is a rewrite. For the types half: if `supabase gen types` starts emitting argument

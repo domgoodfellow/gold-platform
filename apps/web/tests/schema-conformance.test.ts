@@ -236,6 +236,38 @@ describe('schema conformance', () => {
     }
   });
 
+  it('keeps attachment references real rather than polymorphic (I18)', async () => {
+    // The I18 assertion above checks that foreign keys between tenant-owned tables carry
+    // organization_id. It cannot see the design that has no foreign key at all: a
+    // polymorphic `(entity_type, entity_id)` pair points at a different table depending on
+    // its own contents, so Postgres cannot constrain it and nothing stops a row from naming
+    // another tenant's record. `documents` is four nullable columns for exactly this reason.
+    //
+    // `events` is the deliberate exception and the only one. It is an append-only log rather
+    // than a reference: nothing joins to it expecting integrity, and its rows describe things
+    // that happened rather than pointing at things that must exist.
+    const { rows } = await db.query<{ table_name: string }>(
+      `select c.relname as table_name
+         from pg_class c
+         join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public'
+          and c.relkind = 'r'
+          and c.relname <> 'events'
+          and exists (
+            select 1 from pg_attribute a
+             where a.attrelid = c.oid and a.attname = 'entity_id'
+               and a.attnum > 0 and not a.attisdropped
+          )
+          and exists (
+            select 1 from pg_attribute a
+             where a.attrelid = c.oid and a.attname = 'entity_type'
+               and a.attnum > 0 and not a.attisdropped
+          )`,
+    );
+
+    expect(rows).toEqual([]);
+  });
+
   it('catches a violation rather than passing by construction', async () => {
     // A negative control. Without this, every assertion above could be querying nothing and
     // nobody would know until the day it mattered.

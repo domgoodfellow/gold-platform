@@ -5,6 +5,46 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Documents
+
+The last entity M1 names, and the only one with a security surface outside Postgres.
+
+- `infra/supabase/migrations/20260827000005_documents.sql` — `documents`, one private
+  `documents` bucket, storage policies on `storage.objects`, and a `document.create`
+  capability.
+- **The obvious design is wrong, and the migration says why.** A polymorphic
+  `(entity_type, entity_id)` pair cannot be a foreign key — it points at a different table
+  depending on its own contents — so nothing would stop a document naming another tenant's
+  customer, and RLS would not help. I18 is unimplementable polymorphically. The attachment is
+  four nullable columns with four composite references and a constraint that exactly one is
+  set, which costs a column per attachable entity and buys the guarantee.
+- The I18 conformance assertion would **not** have caught the polymorphic version — it checks
+  that foreign keys carry `organization_id`, and a design with no foreign key passes
+  trivially. `schema-conformance.test.ts` now also forbids an `(entity_type, entity_id)` pair
+  outside `events`, which is an append-only log rather than a reference.
+- **New invariant I19** — a private file is never reachable without a short-lived signature
+  minted after the same permission check the rest of the operation gets. The bucket is
+  private, so there is no durable URL to leak. Storage policies pin an object key's first
+  path segment to an organization the caller belongs to, under the caller's own JWT.
+  `getDocumentUrl` reads the metadata row under RLS *first* — that read is the check — then
+  signs for 60 seconds, and the download route mints per click so nothing durable is rendered
+  into a page.
+- **Verified by loosening the storage policy** to `bucket_id = 'documents'` alone: the
+  cross-tenant write then succeeds, the assertion failing with *expected null not to be
+  null*. Nothing in TypeScript was ever between that call and the bucket.
+- Bytes are written before the metadata row, deliberately. The two writes cannot be one
+  transaction, so one failure mode has to be chosen: bytes with no row are unreferenced and
+  unreachable — `documents` is the authority on who owns them — while a row with no bytes is
+  a broken link an operator sees. A compensating delete makes the first case rare.
+- A customer detail page at `/customers/[customerId]` carries the upload form and the
+  document list; `getCustomer` arrives with it as its caller.
+
+D15's consequence paragraph is corrected: it claimed two casts in `customers.ts` were "the
+whole of that gap", which stopped being true once four more `create_*` functions gained
+optional arguments.
+
+Verified against a database rebuilt from scratch with `pnpm db:reset`: 113 tests, gate green.
+
 ### Assets
 
 What work is *about*, as opposed to Resource, which is what work is done *with*. The same

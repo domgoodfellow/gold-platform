@@ -176,6 +176,87 @@ export type Database = {
           },
         ]
       }
+      documents: {
+        Row: {
+          asset_id: string | null
+          created_at: string
+          created_by: string
+          customer_id: string | null
+          file_name: string
+          id: string
+          location_id: string | null
+          mime_type: string
+          organization_id: string
+          size_bytes: number
+          storage_path: string
+          work_item_id: string | null
+        }
+        Insert: {
+          asset_id?: string | null
+          created_at?: string
+          created_by: string
+          customer_id?: string | null
+          file_name: string
+          id?: string
+          location_id?: string | null
+          mime_type: string
+          organization_id: string
+          size_bytes: number
+          storage_path: string
+          work_item_id?: string | null
+        }
+        Update: {
+          asset_id?: string | null
+          created_at?: string
+          created_by?: string
+          customer_id?: string | null
+          file_name?: string
+          id?: string
+          location_id?: string | null
+          mime_type?: string
+          organization_id?: string
+          size_bytes?: number
+          storage_path?: string
+          work_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_asset_same_org"
+            columns: ["organization_id", "asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "documents_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "documents_location_same_org"
+            columns: ["organization_id", "location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       events: {
         Row: {
           action: string
@@ -581,6 +662,20 @@ export type Database = {
           p_name: string
           p_organization_id: string
           p_phone: string
+        }
+        Returns: string
+      }
+      create_document: {
+        Args: {
+          p_asset_id: string
+          p_customer_id: string
+          p_file_name: string
+          p_location_id: string
+          p_mime_type: string
+          p_organization_id: string
+          p_size_bytes: number
+          p_storage_path: string
+          p_work_item_id: string
         }
         Returns: string
       }
