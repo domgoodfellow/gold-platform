@@ -98,6 +98,20 @@ a member may do, and dispatch does not exist. When work is assigned to a team ra
 person, that is the change that adds it — and see `constraints.md` D19, because a Team is
 about identity and this repository deliberately owns very little of that.
 
+**Calendar** is a view, not an entity. It is Work Items organised by time and resource, which
+is the scheduling core reading its own rows back. A `calendar` table would be a second place a
+scheduled thing could live, and the two would disagree the first time one was written without
+the other.
+
+**Activity** is an Event. The append-only table already serves the customer timeline,
+automation triggers, reporting, and AI context; a parallel activity log would be the same rows
+written twice with no rule about which is authoritative.
+
+*Notes* and *Notifications* appear in that list too and are deliberately **not** answered
+here. Neither reduces cleanly to something that exists — a note is editable and `events` is
+not, and a notification needs delivery and per-recipient read state that nothing models. They
+get a decision when something needs them, not before.
+
 ## Module ownership
 
 | Module | Owns |
