@@ -1,10 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
-import {
-  listFieldDefinitions,
-  parseCustom,
-  type CustomValues,
-} from '@/lib/domain/fields/field-definitions';
+import { resolveCustom, type CustomValues } from '@/lib/domain/fields/field-definitions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 export type LinkedCustomer = {
@@ -142,13 +138,11 @@ export async function createLocation(
     );
   }
 
-  // Same shape as createCustomer: the registry is read here, not passed in, because deciding
-  // what a location may carry is this layer's business and not the caller's.
-  const definitions = await listFieldDefinitions(db, {
+  const custom = await resolveCustom(db, {
     organizationId: input.organizationId,
     entityType: 'location',
+    custom: input.custom,
   });
-  const custom = parseCustom(definitions, input.custom ?? {});
 
   const { data, error } = await db.rpc('create_location', {
     p_organization_id: input.organizationId,

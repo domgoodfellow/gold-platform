@@ -1,9 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import {
-  listFieldDefinitions,
-  parseCustom,
-  type CustomValues,
-} from '@/lib/domain/fields/field-definitions';
+import { resolveCustom, type CustomValues } from '@/lib/domain/fields/field-definitions';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -87,14 +83,11 @@ export async function createCustomer(
 
   const phone = input.phone?.trim() || null;
 
-  // The registry is read here rather than passed in, because deciding what a customer may
-  // carry is this layer's business and not the caller's. A route, an action and an AI tool
-  // all get the same answer without any of them knowing there is a registry at all.
-  const definitions = await listFieldDefinitions(db, {
+  const custom = await resolveCustom(db, {
     organizationId: input.organizationId,
     entityType: 'customer',
+    custom: input.custom,
   });
-  const custom = parseCustom(definitions, input.custom ?? {});
 
   const { data, error } = await db.rpc('create_customer', {
     p_organization_id: input.organizationId,
@@ -119,7 +112,7 @@ export async function createCustomer(
       );
     }
     // 23514 is app.check_custom_fields refusing a payload the registry does not allow.
-    // parseCustom above catches this first for anything arriving through the domain, so
+    // resolveCustom above catches this first for anything arriving through the domain, so
     // reaching here means the row was built somewhere that skipped it.
     if (error.code === '23514') {
       throw new DomainError(error.message, 'customers.custom_invalid');

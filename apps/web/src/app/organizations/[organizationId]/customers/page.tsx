@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
+import { CustomFieldValues } from '@/components/custom-field-values';
 import { getDb } from '@/lib/db/server';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { DomainError } from '@/lib/domain/errors';
@@ -60,25 +61,7 @@ export default async function CustomersPage({
                   {[customer.email, customer.phone].filter(Boolean).join(' · ')}
                 </div>
               ) : null}
-              {/*
-                Driven by the registry rather than by the stored keys, so a value left over
-                from a field that no longer exists is not rendered as a nameless string.
-              */}
-              {definitions.some((d) => customer.custom[d.key] !== undefined) ? (
-                <dl className="mt-1 flex flex-wrap gap-x-4 text-sm opacity-70">
-                  {definitions
-                    .filter((d) => customer.custom[d.key] !== undefined)
-                    .map((d) => {
-                      const value = customer.custom[d.key];
-                      return (
-                        <div key={d.id} className="flex gap-1">
-                          <dt>{d.label}:</dt>
-                          <dd>{typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}</dd>
-                        </div>
-                      );
-                    })}
-                </dl>
-              ) : null}
+              <CustomFieldValues definitions={definitions} custom={customer.custom} />
             </li>
           ))}
         </ul>

@@ -5,6 +5,37 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Resources
+
+The last kernel entity before Work Item, and deliberately the thinnest slice so far. A
+resource is a name plus whatever fields the tenant has defined; everything that makes one
+interesting — availability, assignment, double-booking — belongs to the thing that consumes
+it.
+
+- `infra/supabase/migrations/20260827000002_resources.sql` — `resources`, a
+  `resource.create` capability backfilled onto every role holding `customer.create`, and the
+  registry's third entity type.
+- **Three deliberate absences**, each recorded in the migration because each looks like an
+  oversight: no `kind` column (nothing branches on it; a tenant that wants to group
+  resources has field definitions), no `active` flag (retiring matters only once something
+  can be scheduled), and no unique index on name (two employees called Sam Okafor is
+  ordinary).
+- `resources_org_id_unique` is written ahead of its foreign key — the one thing here built
+  for the next slice. `work_items` needs a composite reference to satisfy I18, that
+  reference needs a `unique (organization_id, id)` to point at, and adding one to a
+  populated table is the expensive direction.
+- Registering a third entity with the registry cost two statements and no new validator,
+  because `app.check_custom_fields` takes the entity type as an argument.
+  `resources.test.ts` "will not accept a field defined for a different entity" is the
+  property that makes the registry per-entity rather than per-tenant.
+- **Three extractions at the caller that made them duplicates:** `resolveCustom` pairs
+  `listFieldDefinitions` with `parseCustom` for all three entities; `CustomFieldValues`
+  replaces a third copy of the same display JSX; the customer and location pages now call it.
+
+No new invariant — I17 gains a third table, I11 and I12 hold as before.
+
+Verified against a database rebuilt from scratch with `pnpm db:reset`: 72 tests, gate green.
+
 ### Locations
 
 The first many-to-many in the schema, and the first entity born carrying `custom` rather than

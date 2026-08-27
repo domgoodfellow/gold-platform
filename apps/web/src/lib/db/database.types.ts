@@ -310,6 +310,41 @@ export type Database = {
         }
         Relationships: []
       }
+      resources: {
+        Row: {
+          created_at: string
+          created_by: string
+          custom: Json
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          custom?: Json
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          custom?: Json
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roles: {
         Row: {
           capabilities: string[]
@@ -387,6 +422,10 @@ export type Database = {
       }
       create_organization: {
         Args: { p_capabilities: string[]; p_name: string; p_role: string }
+        Returns: string
+      }
+      create_resource: {
+        Args: { p_custom: Json; p_name: string; p_organization_id: string }
         Returns: string
       }
       create_role: {

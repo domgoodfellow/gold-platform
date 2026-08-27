@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
+import { CustomFieldValues } from '@/components/custom-field-values';
 import { getDb } from '@/lib/db/server';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { DomainError } from '@/lib/domain/errors';
@@ -67,23 +68,7 @@ export default async function LocationsPage({
                 </div>
               ) : null}
 
-              {/* Driven by the registry, so a value left over from a removed field is not
-                  rendered as a nameless string. */}
-              {definitions.some((d) => location.custom[d.key] !== undefined) ? (
-                <dl className="mt-1 flex flex-wrap gap-x-4 text-sm opacity-70">
-                  {definitions
-                    .filter((d) => location.custom[d.key] !== undefined)
-                    .map((d) => {
-                      const value = location.custom[d.key];
-                      return (
-                        <div key={d.id} className="flex gap-1">
-                          <dt>{d.label}:</dt>
-                          <dd>{typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}</dd>
-                        </div>
-                      );
-                    })}
-                </dl>
-              ) : null}
+              <CustomFieldValues definitions={definitions} custom={location.custom} />
             </li>
           ))}
         </ul>

@@ -10,7 +10,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
  * a core entity. This list mirrors the check constraint on `field_definitions.entity_type`
  * and grows with the migration that adds each entity.
  */
-export const CUSTOM_FIELD_ENTITIES = ['customer', 'location'] as const;
+export const CUSTOM_FIELD_ENTITIES = ['customer', 'location', 'resource'] as const;
 
 export type CustomFieldEntity = (typeof CUSTOM_FIELD_ENTITIES)[number];
 
@@ -18,6 +18,7 @@ export type CustomFieldEntity = (typeof CUSTOM_FIELD_ENTITIES)[number];
 export const CUSTOM_FIELD_ENTITY_LABELS: Record<CustomFieldEntity, string> = {
   customer: 'Customers',
   location: 'Locations',
+  resource: 'Resources',
 };
 
 export function isCustomFieldEntity(value: string): value is CustomFieldEntity {
@@ -245,4 +246,31 @@ export function parseCustom(
   }
 
   return values;
+}
+
+/**
+ * Read a tenant's registry for one entity and validate a raw payload against it.
+ *
+ * Extracted at its third caller. `createCustomer`, `createLocation` and `createResource` all
+ * needed the identical pair — fetch the definitions, then `parseCustom` — and the pair is
+ * the rule, not either half: reading the registry from anywhere other than the database, or
+ * validating against definitions the caller supplied, would each defeat the point.
+ *
+ * The registry is read here rather than passed in so that a route, a server action and an AI
+ * tool all get the same answer without any of them knowing there is a registry at all.
+ */
+export async function resolveCustom(
+  db: Db,
+  input: {
+    organizationId: string;
+    entityType: CustomFieldEntity;
+    custom?: Record<string, string>;
+  },
+): Promise<CustomValues> {
+  const definitions = await listFieldDefinitions(db, {
+    organizationId: input.organizationId,
+    entityType: input.entityType,
+  });
+
+  return parseCustom(definitions, input.custom ?? {});
 }
