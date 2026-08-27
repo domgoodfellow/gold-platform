@@ -5,6 +5,47 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### M1 — the kernel, demonstrated
+
+`roadmap.md` does not describe M1 as a list of tables. It describes one demonstration, and
+calls it "the thing every prior attempt deferred". `apps/web/tests/milestone-m1.test.ts` is
+that demonstration.
+
+Two whole businesses are built from **byte-identical input** — the same organization name,
+customer email, customer name, site label, technician name, machine, board column, job title,
+field key and file name. Not similar: identical. Every one is a natural key a single-tenant
+schema would have made globally unique, and every one collides harmlessly.
+
+- **Block** is proved by the collisions succeeding. **Observe** is proved by each tenant
+  seeing exactly its own rows — asserted as counts and ids, never as emptiness, because a
+  version where both tenants saw nothing would pass for entirely the wrong reason.
+- Both tenants have **two users each**, so "each with its own users" is literally true, and
+  each person sees their own role rather than a colleague's.
+- Holding the other tenant's real ids grants nothing: `getOrganization` returns null and every
+  list returns empty, because from there those rows do not exist.
+- The composite references are sampled together — a work item borrowing a customer, a junction
+  row borrowing a location, an asset borrowing an owner — so the kernel is shown holding the
+  line all at once rather than one file at a time.
+- **Verified non-vacuous**, and the first attempt at that failed instructively. Applying a
+  global `customers_email_unique` to a database that already held both tenants' rows could not
+  create the index at all, leaving the table with *no* unique index and the test passing
+  trivially. Rebuilt from scratch first, the real control lands: building the *second* business
+  dies on the customer email and all nine assertions are skipped — the failure
+  `constraints.md` quotes from `tire-app-template` by name.
+
+M1's criteria are met: two organizations, each with its own users, customers, locations and
+work items, none able to observe or block the other, all carrying per-tenant custom fields.
+**I1, I2, I3, I11, I12, I16, I17 and I18 are enforced.**
+
+Deliberately absent: nothing schedules. Work items have no window, no exclusion constraint, and
+no update policy at all — a work item cannot currently change status, because an update policy
+without transition rules would let it move anywhere. I5, I6, I7, I9 and I13 are M2.
+
+Per D9 this is where the milestone is recorded. `roadmap.md` keeps the criteria and gains no
+checkbox.
+
+Verified against a database rebuilt from scratch with `pnpm db:reset`: 137 tests, gate green.
+
 ### Members
 
 A second person can join an organization. Until now `create_organization` was the only thing

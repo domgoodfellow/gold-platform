@@ -20,14 +20,20 @@ checklists to documents.
 
 ## Current state
 
-**M1 is under way.** `apps/web` exists, the tenancy kernel is migrated, and the check gate
-runs. What exists is deliberately narrow: `organizations`, `memberships`, `events`,
+**M1's acceptance criteria are met.** `apps/web/tests/milestone-m1.test.ts` builds two whole
+businesses from byte-identical input in one database — the same organization name, customer
+email, site label, technician, machine, board column, job title, field key and file name —
+and asserts that neither can observe or block the other. That test is the milestone, not the
+table count.
+
+What exists is the kernel and nothing past it: `organizations`, `memberships`, `events`,
 `customers`, `roles`, `field_definitions`, `locations`, `customer_locations`, `resources`,
 `work_item_statuses`, `work_items`, `assets` and `documents`; the one tenant resolution
-function and `app.has_capability`; and a vertical slice behind authentication for each of
-them. **Every entity M1 names now exists.** Work items carry no scheduled window and no
-exclusion constraint, and nothing schedules: I5, I6, I7, I9 and I13 are M2, and
-`roadmap.md` says so.
+function and `app.has_capability`; and a vertical slice behind authentication for each.
+
+**Nothing schedules.** Work items carry no window and no exclusion constraint, and a work
+item cannot change status at all — there is deliberately no update policy. I5, I6, I7, I9
+and I13 are M2, and `roadmap.md` says so.
 
 `docs/starting_conversation.txt` is an archived source, not a governing document. It records
 the thinking that led here and is superseded by `docs/constraints.md` wherever the two
