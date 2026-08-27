@@ -10,7 +10,12 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
  * a core entity. This list mirrors the check constraint on `field_definitions.entity_type`
  * and grows with the migration that adds each entity.
  */
-export const CUSTOM_FIELD_ENTITIES = ['customer', 'location', 'resource'] as const;
+export const CUSTOM_FIELD_ENTITIES = [
+  'customer',
+  'location',
+  'resource',
+  'work_item',
+] as const;
 
 export type CustomFieldEntity = (typeof CUSTOM_FIELD_ENTITIES)[number];
 
@@ -19,6 +24,7 @@ export const CUSTOM_FIELD_ENTITY_LABELS: Record<CustomFieldEntity, string> = {
   customer: 'Customers',
   location: 'Locations',
   resource: 'Resources',
+  work_item: 'Work items',
 };
 
 export function isCustomFieldEntity(value: string): value is CustomFieldEntity {

@@ -17,6 +17,7 @@ export const CAPABILITIES = [
   'field.manage',
   'location.create',
   'resource.create',
+  'work_item.create',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -41,4 +42,5 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'field.manage': 'Define custom fields',
   'location.create': 'Add locations',
   'resource.create': 'Add resources',
+  'work_item.create': 'Add work items',
 };

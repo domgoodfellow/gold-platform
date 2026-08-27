@@ -5,6 +5,36 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Work items
+
+The universal operational object, and the first place D6 has teeth. A job, service call,
+inspection, delivery or booking is this table with different configuration.
+
+- `infra/supabase/migrations/20260827000003_work_items.sql` — `work_item_statuses` as
+  per-tenant rows, `work_items` with four composite references, a `work_item.create`
+  capability, and the registry's fourth entity type.
+- **D6's first real exercise.** Nothing in the domain layer knows what a status *means*. The
+  test builds one tenant whose first status is "Scheduled" and another whose first is
+  "Ingepland", and neither is privileged. A Postgres enum here would mean a deploy every time
+  a customer renames a column on their board.
+- **I18, four times over** — status, customer, location and resource. Confirmed by replacing
+  one composite key with the plain `references customers (id)`: the cross-tenant insert then
+  succeeds, the assertion failing with *expected undefined to be 23503*, `undefined` meaning
+  there was no error at all.
+- `on delete set null (customer_id)` names its column deliberately. The bare form would try
+  to null `organization_id` too, which is `NOT NULL`, and deletes would fail at runtime
+  rather than at migration time. Tested over a direct connection, because `customers` grants
+  only select and insert and no API caller can delete one.
+- **Three absences, each a roadmap boundary**: no scheduled window and no exclusion
+  constraint (I7 is M2, and window columns without the constraint governing them would create
+  the very state I7 prevents); no transition validation and therefore no update policy at all
+  (I13 is M2 — an update policy now would let a work item move anywhere); and no work item
+  *type*, because with one implicit type per tenant a `type` column's only consumer is itself.
+
+No new invariant — I17 gains a fourth table, I18 gains four references.
+
+Verified against a database rebuilt from scratch with `pnpm db:reset`: 87 tests, gate green.
+
 ### Resources
 
 The last kernel entity before Work Item, and deliberately the thinnest slice so far. A

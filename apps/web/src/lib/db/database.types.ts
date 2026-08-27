@@ -380,6 +380,116 @@ export type Database = {
           },
         ]
       }
+      work_item_statuses: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          organization_id: string
+          position: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          organization_id: string
+          position?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_statuses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_items: {
+        Row: {
+          created_at: string
+          created_by: string
+          custom: Json
+          customer_id: string | null
+          id: string
+          location_id: string | null
+          organization_id: string
+          resource_id: string | null
+          status_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          custom?: Json
+          customer_id?: string | null
+          id?: string
+          location_id?: string | null
+          organization_id: string
+          resource_id?: string | null
+          status_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          custom?: Json
+          customer_id?: string | null
+          id?: string
+          location_id?: string | null
+          organization_id?: string
+          resource_id?: string | null
+          status_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_items_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_items_location_same_org"
+            columns: ["organization_id", "location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_items_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_items_status_same_org"
+            columns: ["organization_id", "status_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_statuses"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -434,6 +544,22 @@ export type Database = {
           p_name: string
           p_organization_id: string
         }
+        Returns: string
+      }
+      create_work_item: {
+        Args: {
+          p_custom: Json
+          p_customer_id: string
+          p_location_id: string
+          p_organization_id: string
+          p_resource_id: string
+          p_status_id: string
+          p_title: string
+        }
+        Returns: string
+      }
+      create_work_item_status: {
+        Args: { p_name: string; p_organization_id: string; p_position: number }
         Returns: string
       }
       link_customer_location: {
