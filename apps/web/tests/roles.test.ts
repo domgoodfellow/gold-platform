@@ -51,7 +51,10 @@ describe('roles and capabilities', () => {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
     }
     owner = await signUp('owner');
-    organizationId = await createOrganization(owner.db, { name: `Roles ${randomUUID().slice(0, 6)}` });
+    organizationId = await createOrganization(owner.db, {
+      name: `Roles ${randomUUID().slice(0, 6)}`,
+      displayName: 'Founder',
+    });
 
     const { data } = await owner.db
       .from('memberships')
@@ -97,7 +100,7 @@ describe('roles and capabilities', () => {
 
   it('lets two tenants each have a role of the same name (I2)', async () => {
     const other = await signUp('other');
-    const otherOrganizationId = await createOrganization(other.db, { name: 'Other Ltd' });
+    const otherOrganizationId = await createOrganization(other.db, { name: 'Other Ltd', displayName: 'Founder' });
 
     // Both organizations now hold a role called Owner. If roles_org_name_unique had lost
     // its leading organization_id, the second create_organization would already have failed.

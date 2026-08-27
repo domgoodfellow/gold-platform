@@ -66,7 +66,18 @@ function toOrganization(row: MembershipRow): Organization | null {
  * (constraints.md, Tenancy).
  */
 export async function listMyOrganizations(db: Db): Promise<Organization[]> {
-  const { data, error } = await db.from('memberships').select(MEMBERSHIP_SELECT);
+  const actor = await requireActor(db);
+
+  // `user_id` is filtered here and this is NOT the application scoping a tenant boundary,
+  // which the constraints forbid. RLS already restricts these rows to organizations the
+  // caller belongs to; within those, a member legitimately sees their colleagues' rows,
+  // because the people list needs them. Which of those rows is *mine* is an application
+  // question, and until an organization could have a second member the answer happened to
+  // be "all of them".
+  const { data, error } = await db
+    .from('memberships')
+    .select(MEMBERSHIP_SELECT)
+    .eq('user_id', actor.id);
 
   if (error) {
     throw new DomainError(error.message, 'organizations.list_failed');
@@ -87,10 +98,17 @@ export async function listMyOrganizations(db: Db): Promise<Organization[]> {
  * building the leak back by hand.
  */
 export async function getOrganization(db: Db, id: string): Promise<Organization | null> {
+  const actor = await requireActor(db);
+
+  // Same reason as above, and the same bug avoided: without `user_id` this returned whichever
+  // membership sorted first, so in a two-person organization a member was shown a colleague's
+  // role and capabilities as though they were their own. Every guard still refused the
+  // operations — RLS does not consult this — but the UI would have offered them.
   const { data, error } = await db
     .from('memberships')
     .select(MEMBERSHIP_SELECT)
     .eq('organization_id', id)
+    .eq('user_id', actor.id)
     .limit(1);
 
   if (error) {
@@ -109,7 +127,10 @@ export async function getOrganization(db: Db, id: string): Promise<Organization 
  * row nobody can ever reach again. What the founding role is called and what it may do stay
  * decisions of this layer.
  */
-export async function createOrganization(db: Db, input: { name: string }): Promise<string> {
+export async function createOrganization(
+  db: Db,
+  input: { name: string; displayName: string },
+): Promise<string> {
   await requireActor(db);
 
   const name = input.name.trim();
@@ -124,10 +145,19 @@ export async function createOrganization(db: Db, input: { name: string }): Promi
     );
   }
 
+  // The founder names themselves here rather than being called "Member": this is the same
+  // per-tenant display name every other membership carries (D19), and the organization's
+  // first person is not a special case.
+  const displayName = input.displayName.trim();
+  if (displayName.length === 0) {
+    throw new DomainError('Your name is required.', 'organizations.display_name_required');
+  }
+
   const { data, error } = await db.rpc('create_organization', {
     p_name: name,
     p_role: FOUNDING_ROLE,
     p_capabilities: ALL_CAPABILITIES,
+    p_display_name: displayName,
   });
 
   if (error) {

@@ -20,6 +20,18 @@ export function CreateOrganizationForm() {
           type="text"
           required
           maxLength={200}
+          placeholder="Organization name"
+          className="flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20"
+        />
+        {/* What this organization will call you. Per-tenant, never a global profile (D19) —
+            the founder is not a special case, they are its first membership. */}
+        <input
+          name="displayName"
+          type="text"
+          required
+          maxLength={120}
+          placeholder="Your name"
+          aria-label="Your name"
           className="flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20"
         />
         <button

@@ -51,7 +51,9 @@ here.
 
 **User / Membership** — identity is global and lives in `auth.users`; this repository owns
 no users table and no profile mirror (`constraints.md` D19). Membership binds a user to an
-organization with a role and capabilities. Roles are per-tenant data.
+organization with a role, capabilities, and the name *that organization* uses for them.
+Roles are per-tenant data, and so is the name: the same account can be "Sam" to one tenant
+and "S. Okafor, Contractor" to another.
 
 **Customer** — individual or company, with contacts, locations, communication history,
 documents, and financial history. The CRM timeline hangs off this.

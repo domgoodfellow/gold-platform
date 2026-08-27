@@ -567,6 +567,14 @@ profile.
 **Trigger to revisit:** the first screen that must render an actor's name. The answer is
 most likely a per-tenant display name on `memberships`, not a global mirror.
 
+**That trigger has fired, and this is what it produced.** The people list that arrived with
+the M1 membership slice is the screen, and the answer was the predicted one:
+`memberships.display_name`, set when someone is added and when an organization is founded.
+It is what *this* organization calls that person — the same account is "Sam" in one and
+"Contractor" in another, and neither tenant learns anything about the other. `auth.users` is
+still not mirrored, and there is still no `profiles` table. What remains missing is an edit
+path, which waits for a caller like everything else.
+
 ---
 
 **A person-Resource is not a User.** `resources` has no `user_id` and must not gain one

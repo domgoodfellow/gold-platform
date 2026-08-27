@@ -61,12 +61,11 @@ Three things that must be right here because they are expensive later:
   colliding-rows test exists specifically to catch this.
 - Custom fields land inside this milestone, not a later one, and arrive together with the
   registry that governs them (`constraints.md` D7 and D18).
-- **An organization can gain a second member.** `create_organization` is currently the only
-  thing that writes a `memberships` row and the table has no insert policy, so every
-  organization has exactly one member permanently. "Each with its own users" above is not
-  merely untested — it is impossible — and roles and capabilities cannot be exercised in
-  their real form until a second person can hold one. See `constraints.md` D19 for what this
-  slice may and may not invent.
+- **An organization can gain a second member, and roles are exercised by somebody who is
+  not the founder.** A kernel in which every organization has exactly one member cannot
+  demonstrate "each with its own users" at all, and a capability check tested by one member
+  reassigning their own role proves less than it appears to. See `constraints.md` D19 for
+  what a membership may and may not be.
 
 ---
 

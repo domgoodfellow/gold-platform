@@ -387,6 +387,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          display_name: string
           id: string
           organization_id: string
           role_id: string
@@ -395,6 +396,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          display_name: string
           id?: string
           organization_id: string
           role_id: string
@@ -403,6 +405,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          display_name?: string
           id?: string
           organization_id?: string
           role_id?: string
@@ -641,6 +644,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_member_by_email: {
+        Args: {
+          p_display_name: string
+          p_email: string
+          p_organization_id: string
+          p_role_id: string
+        }
+        Returns: string
+      }
       assign_role: {
         Args: { p_membership_id: string; p_role_id: string }
         Returns: undefined
@@ -701,7 +713,12 @@ export type Database = {
         Returns: string
       }
       create_organization: {
-        Args: { p_capabilities: string[]; p_name: string; p_role: string }
+        Args: {
+          p_capabilities: string[]
+          p_display_name: string
+          p_name: string
+          p_role: string
+        }
         Returns: string
       }
       create_resource: {

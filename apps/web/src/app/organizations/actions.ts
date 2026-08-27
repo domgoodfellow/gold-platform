@@ -20,7 +20,10 @@ export async function createOrganizationAction(
   const db = await getDb();
 
   try {
-    await createOrganization(db, { name: String(formData.get('name') ?? '') });
+    await createOrganization(db, {
+      name: String(formData.get('name') ?? ''),
+      displayName: String(formData.get('displayName') ?? ''),
+    });
   } catch (error) {
     if (error instanceof DomainError) {
       return { error: error.message };

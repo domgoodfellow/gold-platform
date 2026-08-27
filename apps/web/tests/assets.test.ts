@@ -60,6 +60,7 @@ async function newTenant(label: string): Promise<Tenant> {
     p_name: `${label} Ltd`,
     p_role: 'Owner',
     p_capabilities: ALL_CAPABILITIES,
+    p_display_name: 'Founder',
   });
   if (error) throw error;
 

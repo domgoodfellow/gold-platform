@@ -5,6 +5,43 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Members
+
+A second person can join an organization. Until now `create_organization` was the only thing
+that wrote a `memberships` row and the table had no insert policy, so every organization had
+exactly one member permanently — M1's "each with its own users" was impossible rather than
+untested.
+
+- `infra/supabase/migrations/20260827000006_members.sql` — `memberships.display_name`,
+  `add_member_by_email`, and `create_organization` gaining the founder's own name.
+- **A real bug, exposed the moment a second member existed.** `listMyOrganizations` and
+  `getOrganization` selected memberships with no `user_id` filter — correct only while an
+  organization had one member. With two, each person saw the organization twice and could be
+  shown a *colleague's* role and capabilities as their own. Every guard still refused the
+  actual operations, so it was never privilege escalation; the UI would simply have offered
+  what RLS then denied. Fixed, and pinned by a regression test that names it.
+- **No new capability.** `role.manage` already governs what roles exist and who holds which;
+  who is *in* the organization is the same administrative concern.
+- `add_member_by_email` is the only SECURITY DEFINER function here that genuinely needs to
+  be — `auth.users` is not readable by `authenticated`, deliberately. That makes its own
+  capability check load-bearing rather than decorative: DEFINER bypasses RLS, so nothing else
+  stands between a caller and a `memberships` insert. There is still no insert policy,
+  because there is no second path to guard.
+- **Known disclosure, recorded rather than discovered later:** a caller holding `role.manage`
+  can learn whether an address has an account, because "no account for that address" must be
+  distinguishable from "added" for the screen to work. Blast radius is one organization's
+  administrators; the alternative is the invitation system D19 says this slice may not
+  invent.
+- **D19's prediction fired and held.** It said the trigger for a display name would be "the
+  first screen that must render an actor's name" and that the answer would be a per-tenant
+  name on `memberships` rather than a global profile. That screen is the people list, and
+  that is what it got. A test asserts the same account is "Sam" in one organization and
+  "Contractor" in another.
+- `members.test.ts` — thirteen tests, and the first anywhere that deny a capability to a
+  genuinely different person rather than to one member reassigning their own role.
+
+Verified against a database rebuilt from scratch with `pnpm db:reset`: 128 tests, gate green.
+
 ### Identity, and two entities refused by name
 
 Three documents corrected after reading the kernel back against what it actually

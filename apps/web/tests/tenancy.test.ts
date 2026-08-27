@@ -70,6 +70,7 @@ describe('tenant isolation', () => {
       p_name: COLLIDING_NAME,
       p_role: 'Owner',
       p_capabilities: ALL_CAPABILITIES,
+      p_display_name: 'Founder',
     });
     expect(aError).toBeNull();
 
@@ -77,6 +78,7 @@ describe('tenant isolation', () => {
       p_name: COLLIDING_NAME,
       p_role: 'Owner',
       p_capabilities: ALL_CAPABILITIES,
+      p_display_name: 'Founder',
     });
     expect(bError).toBeNull();
 
@@ -89,6 +91,7 @@ describe('tenant isolation', () => {
       p_name: 'Alice Overflow Ltd',
       p_role: 'Owner',
       p_capabilities: ALL_CAPABILITIES,
+      p_display_name: 'Founder',
     });
     expect(aSecondError).toBeNull();
     aliceSecondOrganizationId = aSecond as string;
@@ -190,6 +193,7 @@ describe('tenant isolation', () => {
       p_name: 'Ghost Ltd',
       p_role: 'Owner',
       p_capabilities: ALL_CAPABILITIES,
+      p_display_name: 'Founder',
     });
 
     expect(error).not.toBeNull();
