@@ -5,6 +5,33 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Identity, and two entities refused by name
+
+Three documents corrected after reading the kernel back against what it actually
+demonstrates.
+
+- **`roadmap.md` M1 now names the membership gap.** `create_organization` is the only thing
+  that writes a `memberships` row and the table has no insert policy, so every organization
+  has exactly one member permanently. "Each with its own users" was not untested — it was
+  impossible, and roles and capabilities have never been exercised in their real form
+  because every multi-member scenario in the tests is one member reassigning their own role.
+- **New decision D19** — identity lives in `auth.users` and nowhere else. No `profiles`
+  mirror, because two answers to "who is this" drift and the trigger keeping them in step is
+  a business step performed by the database. The cost is stated rather than hidden: there is
+  nowhere to put an actor's display name, so a timeline renders a uuid until a screen needs
+  otherwise — and the fix is more likely a per-tenant name on `memberships` than a global
+  profile.
+- D19 also refuses `resources.user_id`. A Resource is capacity; a User is an account. A
+  business schedules people who never log in and grants accounts to people never scheduled.
+  Adding the link now would answer three questions — may a resource exist without an account,
+  may an account hold two resources, what happens to the schedule when someone leaves — by
+  guesswork rather than by a caller.
+- **`domain-model.md` answers Task and Team** rather than dropping them. Task is a Work Item
+  with a configured type. Team is not yet anything: grouping earns a table when something
+  filters, assigns or reports by it, and nothing does.
+
+No code changed. Still four documents, against D8's budget of eight.
+
 ### Documents
 
 The last entity M1 names, and the only one with a security surface outside Postgres.

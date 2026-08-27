@@ -544,6 +544,54 @@ useless. The asymmetry is what makes this safe to split — adding the index lat
 column and the registry later is precisely the migration D7 exists to avoid. The expensive
 half shipped. Reverse this the moment a screen filters on a custom value.
 
+### D19 — We do not own a users table, and a person-Resource is not a User
+
+Identity lives in `auth.users` and nowhere else. There is no `public.users`, no `profiles`,
+and nothing in `public` mirrors an account. `created_by`, `actor_id` and
+`memberships.user_id` reference `auth.users (id)` directly.
+
+**Rejected: a `profiles` table mirroring `auth.users`.** It is the near-universal Supabase
+pattern and it is a second answer to "who is this". Two answers drift: a row that exists in
+one and not the other is either a ghost account or an invisible one, and the trigger that
+keeps them in step is a business step performed by the database, which the Business logic
+section forbids. `starting_conversation.txt` lists *Users* among the things every business
+gets, which is true of the *concept* and not of a table we write.
+
+**Consequence, stated plainly because it is a real cost:** there is nowhere to put a display
+name for an actor. An event can say who did something but not what to call them, so a
+timeline renders a uuid. That is the price until something needs the name, and the shape of
+what fixes it is not yet knowable — it may be a column on `memberships` (what this tenant
+calls this person, which is per-tenant and therefore correct here) rather than a global
+profile.
+
+**Trigger to revisit:** the first screen that must render an actor's name. The answer is
+most likely a per-tenant display name on `memberships`, not a global mirror.
+
+---
+
+**A person-Resource is not a User.** `resources` has no `user_id` and must not gain one
+before something reads it.
+
+A Resource is capacity — "there is a technician called Sam who work can be assigned to". A
+User is an account that can sign in. A business schedules against people who have never
+logged in, and grants accounts to office staff who are never scheduled. The overlap is
+real but partial, and modelling it as identity would make every resource an account.
+
+**Rejected: `resources.user_id` now.** Nothing reads it. The moment it exists, three
+questions arrive that have no answer yet — whether a resource may exist without an account,
+whether an account may hold two resources, and what happens to the schedule when a person
+leaves — and each would be answered by guesswork rather than by a caller.
+
+**Trigger to revisit:** a technician must sign in and see the work assigned to them. That
+slice adds the link, chooses the cardinality with a screen in front of it, and gets to make
+the leaver question concrete instead of hypothetical.
+
+**Consequence for the M1 membership slice:** adding a second person to an organization is a
+`memberships` row against an existing `auth.users` id. It is not an invitation system, not a
+profile, and not a resource link. What it needs beyond that — an email invite for someone
+with no account yet — is a separate question, and if the slice cannot answer it without
+inventing one of the three things above, it should ship the narrower thing.
+
 ---
 
 ## Decided, not yet built

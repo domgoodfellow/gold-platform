@@ -49,8 +49,9 @@ The kernel. Every module consumes these rather than defining its own.
 modules, terminology, and business rules. A Private deployment is a database with one row
 here.
 
-**User / Membership** — identity is global; membership binds a user to an organization with
-a role and capabilities. Roles are per-tenant data.
+**User / Membership** — identity is global and lives in `auth.users`; this repository owns
+no users table and no profile mirror (`constraints.md` D19). Membership binds a user to an
+organization with a role and capabilities. Roles are per-tenant data.
 
 **Customer** — individual or company, with contacts, locations, communication history,
 documents, and financial history. The CRM timeline hangs off this.
@@ -80,6 +81,22 @@ that writes state.
 
 **Field Definition** — the per-tenant, per-entity registry governing what may appear in each
 entity's `custom` JSONB column. See `constraints.md` D7.
+
+### Named in the conversation, answered here
+
+`docs/starting_conversation.txt` lists entities every business gets. Two are absent above
+and their absence is a decision rather than an omission.
+
+**Task** is a Work Item. A task is a unit of work with a state and usually an assignee, which
+is what a Work Item is; a tenant that wants one configures a type whose statuses are *To do*
+and *Done*. A separate table would be a second thing needing assignment, status, timeline and
+permissions — and the moment a task needed scheduling there would be two schedulers.
+
+**Team** is not yet anything. It is a grouping of memberships, and grouping earns a table
+when something filters, assigns, or reports by it. Nothing does: a role already carries what
+a member may do, and dispatch does not exist. When work is assigned to a team rather than a
+person, that is the change that adds it — and see `constraints.md` D19, because a Team is
+about identity and this repository deliberately owns very little of that.
 
 ## Module ownership
 

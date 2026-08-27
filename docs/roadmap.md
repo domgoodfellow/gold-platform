@@ -47,19 +47,26 @@ Nothing structural. M0 closes the first time `/scope` is used in anger.
 
 That test is the milestone. It is also the thing every prior attempt deferred.
 
-Covers: `organizations`, memberships and roles, the tenant resolution function, RLS across
-every table created so far, `Customer`, `Location`, `Asset`, `Work Item`, `Resource`,
-`Document`, `Event`, and `Field Definition`.
+Covers: `organizations`, memberships and roles — **including a way for a second person to
+join one** — the tenant resolution function, RLS across every table created so far,
+`Customer`, `Location`, `Asset`, `Work Item`, `Resource`, `Document`, `Event`, and
+`Field Definition`.
 
 Enforces: **I1, I2, I3, I11, I12, I16, I17, I18** — and `Event` must ship with the first
 slice that writes state, because it cannot be backfilled.
 
-Two things that must be right here because they are expensive later:
+Three things that must be right here because they are expensive later:
 
 - Every unique index and exclusion constraint leads with `tenant_id` (I2). The
   colliding-rows test exists specifically to catch this.
 - Custom fields land inside this milestone, not a later one, and arrive together with the
   registry that governs them (`constraints.md` D7 and D18).
+- **An organization can gain a second member.** `create_organization` is currently the only
+  thing that writes a `memberships` row and the table has no insert policy, so every
+  organization has exactly one member permanently. "Each with its own users" above is not
+  merely untested — it is impossible — and roles and capabilities cannot be exercised in
+  their real form until a second person can hold one. See `constraints.md` D19 for what this
+  slice may and may not invent.
 
 ---
 
