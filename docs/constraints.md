@@ -600,6 +600,62 @@ profile, and not a resource link. What it needs beyond that — an email invite 
 with no account yet — is a separate question, and if the slice cannot answer it without
 inventing one of the three things above, it should ship the narrower thing.
 
+### D20 — Admin is the only surface until the configuration engine exists
+
+`vision.md` names four surfaces on `apps/web`: marketing, booking, admin, and customer
+portal. Only admin is built, only admin appears in `roadmap.md`, and that asymmetry is a
+decision rather than an oversight.
+
+The four are not four equal piles of screens. Admin is the surface that *operates* the
+business, and it is the only one whose shape is decided by the domain alone. The other three
+are outward-facing, and each is shaped by configuration or by an authorization model that
+does not exist yet. Built now, each would harden a guess into a surface customers can see.
+
+**Booking is blocked on invariants, not on effort.** A booking surface answers *what can I
+book, when, and for how much*, which is I5 (one availability calculation), I6 (availability
+shown to a client is advisory and re-asserted server-side before work is committed) and I4
+(one price calculation). None of the three is enforced; I5 and I6 are M2, I4 is M3. A booking
+page written before them necessarily carries its own notion of availability and its own idea
+of price — which is precisely the second implementation I4 and I5 exist to forbid, sitting on
+the surface where being wrong is most expensive. I6 is worse than that: it describes a public
+booking flow *specifically*, and building the flow before the invariant is enforceable means
+shipping the double-booking it exists to prevent.
+
+**The customer portal is not more screens; it is a second identity model.** Every permission
+today runs `membership → role → capability`, and `app.current_tenant_ids()` answers "which
+tenants is the caller in". A customer is not a member and must never become one: a membership
+row would put them inside that function's result and hand them the tenant. So a portal needs
+a way for someone outside the organization to see exactly the rows that concern them — their
+work, their documents, their history — which is a new authorization axis rather than more
+policies on the existing one. It also lands directly on I19: a customer downloading their own
+contract needs a signed URL minted after a permission check that has no `has_capability` to
+call. That model deserves its own decision record and its own slice, made once, not
+discovered while building a page.
+
+**Marketing is blocked on configuration and proves nothing.** Every word on a public page a
+business shows the world is a claim that business makes about itself, and this file already
+forbids hardcoding one. A per-tenant marketing surface is therefore an M3 artefact by
+definition — it is configuration with a renderer. It is also the cheapest surface to build
+and the least informative: it exercises no domain rule, enforces no invariant, and would be
+the only part of `apps/web` with nothing behind it.
+
+**Rejected: building a thin booking or portal page early "to have something to show".** It is
+the most tempting version of this and the most expensive. A booking flow built for one
+business hardcodes that business's flow — service, slot, deposit — which is the per-client
+app studio `vision.md` refuses in its second sentence. Showing something is not the same as
+proving something, and the admin surface already shows the whole kernel working.
+
+**Consequence:** `apps/web` is an admin application until M3 at the earliest. Booking is not
+started before I5 and I6 are enforced; the portal is not started before its authorization
+model is written down as its own decision; marketing is not started before terminology and
+copy are configuration. `CLAUDE.md`'s layout table lists all four because it describes what
+the directory is *for*, not what is in it.
+
+**Trigger to revisit:** a paying tenant needs to take a booking before M3 lands. That is a
+real possibility rather than a hypothetical, and the answer is not to relax this — it is to
+build the availability calculation the booking needs, which is M2 work brought forward, and
+to say so.
+
 ---
 
 ## Decided, not yet built

@@ -47,7 +47,8 @@ exist; the rest does not.
 
 ```text
 apps/
-  web/              Next.js — marketing, booking, admin, customer portal
+  web/              Next.js — admin today; marketing, booking and customer portal are
+                    what the directory is FOR, not what is in it (D20)
   desktop/          Electron shell (M7; not before)
 services/
   api/              Python/FastAPI — intelligence and realtime plane (M6; not before)

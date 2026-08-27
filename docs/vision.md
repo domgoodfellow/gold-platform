@@ -79,6 +79,11 @@ see `constraints.md` D4.
 
 Every one of these is a *caller*. None of them owns a business rule.
 
+This is the architecture, not the build order. Only the admin surface exists, and booking,
+the customer portal and marketing are deliberately later — see `constraints.md` D20 for what
+each is waiting on, which in every case is an invariant or an authorization model rather than
+the screens themselves.
+
 ```text
    PUBLIC / BOOKING ────►┌──────────────────┐
                          │                  │

@@ -5,6 +5,38 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Why three of the four surfaces are later
+
+`vision.md` names four surfaces on `apps/web` — marketing, booking, admin, customer portal —
+and only admin appears anywhere in `roadmap.md`. **New decision D20** writes down why, so the
+asymmetry reads as a choice rather than a backlog nobody wrote.
+
+- **Booking is blocked on invariants, not effort.** It answers *what can I book, when, and
+  for how much*, which is I5, I6 and I4 — none enforced. A booking page written first
+  necessarily carries its own availability and its own price, the exact second implementation
+  I4 and I5 forbid, on the surface where being wrong costs most. I6 describes a public
+  booking flow *specifically*: building the flow before the invariant is enforceable ships
+  the double-booking it exists to prevent.
+- **The customer portal is a second identity model, not more screens.** Every permission runs
+  `membership → role → capability`, and a customer must never hold a membership — that row
+  would put them inside `app.current_tenant_ids()` and hand them the tenant. Seeing only the
+  rows that concern you, from outside the organization, is a new authorization axis. It also
+  lands on I19, where a customer downloading their own contract needs a signed URL minted
+  after a check that has no `has_capability` to call.
+- **Marketing is configuration with a renderer**, and therefore M3 by definition — every word
+  a business shows the world is a claim it makes about itself, which this file already forbids
+  hardcoding. It is also the only part of `apps/web` that would exercise no domain rule.
+- **Rejected: a thin booking or portal page early "to have something to show".** A booking
+  flow built for one business hardcodes that business's flow, which is the per-client app
+  studio `vision.md` refuses in its second sentence. The admin surface already shows the whole
+  kernel working.
+
+Two claims corrected to match: `CLAUDE.md`'s layout table listed four surfaces in a way that
+read as present tense, and `vision.md`'s surfaces diagram is now labelled as architecture
+rather than build order.
+
+No code changed. Still four documents.
+
 ### M1 — the kernel, demonstrated
 
 `roadmap.md` does not describe M1 as a list of tables. It describes one demonstration, and
