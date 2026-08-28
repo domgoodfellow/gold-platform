@@ -108,10 +108,29 @@ them as a side effect.
 > migration and no deploy. The test is literally: configure a second business shape without
 > a pull request.
 
-Covers: module enablement per tenant, custom forms over field definitions, pricing rules,
-business rules, dashboard configuration.
+Covers: custom forms over field definitions, the price book and what a job is quoted from it,
+and the interface.
 
 Enforces: **I4**.
+
+**Three things named in that coverage list were removed, and the reason is the same one each
+time: nothing calls them.** Module enablement has no modules to enable — the module table in
+`domain-model.md` is empty, and a module needs two independent pieces of evidence with one
+from a system that shipped, which M4 is the first to supply. D21 already concedes as much:
+partial adoption "needs no new mechanism at all". Dashboard configuration has no dashboard.
+Business rules is one trigger-condition-action runtime by `domain-model.md`'s own account, and
+nothing triggers anything yet. Each would be a table, a screen and a vocabulary built against
+a hypothesis, which is the speculative abstraction `constraints.md` opens by refusing — and
+the criterion above survives their absence, because standing up a business shape needs roles,
+fields, statuses, transitions, hours, currency, timezone and prices, not modules.
+
+**Pricing rules stayed, in the only form that has a caller.** What a business charges is a
+per-tenant catalogue and a quantity, and `milestone-m3.test.ts` stands up two businesses that
+share no word or number without either needing more than that. A rule *engine* — conditions
+over a work item, minimum charges, surcharges — was scoped and deliberately not built, because
+neither shape asked for one and a hypothesis is not evidence. When a business needs a rule the
+catalogue cannot express, that rule belongs inside `priceWorkItem`, which is why I4 insists
+there is only one of it.
 
 I10 and I8 were both enforced in M2. See that milestone for why a cost is not a price; I8
 arrived with the two edit paths that made it load-bearing — changing a currency, and editing

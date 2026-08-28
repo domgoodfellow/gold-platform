@@ -5,6 +5,57 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### M3 — the configuration engine
+
+`milestone-m3.test.ts` stands up two whole businesses that share no word, number, status,
+field, currency or timezone — an equipment hire yard in Amsterdam trading in euro, a clinic in
+Tokyo trading in yen — through **one** `configure` function containing no branch on which of
+them it is holding. That structure is the milestone rather than the assertions inside it: if
+either shape had needed a special case, the function could not exist, and its existence is
+what "configure a second business shape without a pull request" means. It inverts its
+predecessors deliberately — M1 ran byte-identical input, M2 ran identical input twice, M3 runs
+maximally different input through identical code.
+
+**I4 is enforced.** `priceWorkItem` is the only place an amount is derived. What keeps it
+single is that a priced line *copies* its catalogue row rather than joining to it, and
+`work_item_priced_lines` holds no foreign key to `price_book_items` at all — asserted from
+`pg_constraint`, because a copy that is merely not currently joined becomes a join the first
+time a key makes one look safe. Re-pricing the catalogue changes what the next job is quoted
+and nothing about a job that exists (I8). A job is never quoted in two currencies: after a
+business changes what it trades in, its catalogue holds both — amounts are never converted —
+and a gist exclusion using `currency with <>` refuses the mix in the database rather than in a
+check before the insert that would race identically (I6).
+
+A price is not a cost, and they are now two tables. Quantity is an integer and nothing rounds,
+which is a constraint on the product rather than a simplification: a business billing
+half-hours prices per half-hour, and when a fractional quantity earns its way in, how a
+half-cent rounds is a pricing decision belonging in that same one function.
+
+**The field registry became a form.** Fields carry a position and can be relabelled and
+required, so the shape of every form is configuration rather than an artefact of the order
+somebody defined things in. `kind` and `key` are refused to everyone by a column grant:
+changing a kind reinterprets every value already stored under that key and renaming a key
+orphans them, and neither fails at the moment of the edit — both surface later as
+`check_custom_fields` refusing an unrelated write to a row that was valid when it was made.
+
+**The operator shell landed**, with persistent navigation, a decided responsive breakpoint and
+no drawer. Every platform noun now lives in one file, serving as both the navigation entry and
+the page heading, so no page under `[organizationId]` carries a heading of its own. A test
+asserts that registry is complete in both directions — an entry with no route, and a route
+with no entry. The eleven-fold copy of the route guard preamble is extracted and cached, and
+still runs in every page rather than only the layout: Next reuses a layout across client-side
+navigations without re-rendering it, so a page leaning on its parent for authorization would
+be trusting a cache.
+
+**Terminology was two mechanisms and `roadmap.md` was wrong about it.** Names a tenant authors
+shipped in M1 and M2; overriding the platform's own nouns is unbuilt and stays deferred until
+a second vertical makes its shape knowable. **Module enablement, dashboard configuration and
+business rules were removed from M3's coverage** — there are no modules to enable, no
+dashboard, and nothing that triggers anything. Each would have been built against a
+hypothesis. A pricing rule *engine* was scoped and deliberately not built for the same reason:
+neither business shape needed one.
+
+
 ### Two basics on the way in, and M3 takes the interface
 
 Sign-up asks for the password twice, and the rule that they must match lives in
@@ -24,8 +75,8 @@ place and a text box in the other.
 
 **M3 now owns the interface**, and `roadmap.md` says so: an operator shell, real
 responsiveness, and shared form components. Deferred there rather than done now because M3
-rebuilds these screens anyway — per-tenant terminology, custom forms and dashboard
-configuration all change what is on them — and styling them twice is the waste.
+rebuilds these screens anyway — custom forms and pricing both change what is on them — and
+styling them twice is the waste.
 `my-builder/my-app/frontend/components/layout/org-sidebar.tsx` is recorded as the reference
 shape. Its sibling `admin-sidebar.tsx` is a *platform staff* console spanning tenants, and
 that is now in `constraints.md` under "Decided, not yet built" as an authorization decision
