@@ -1,13 +1,10 @@
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { CustomFieldValues } from '@/components/custom-field-values';
-import { getDb } from '@/lib/db/server';
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { listDocuments } from '@/lib/domain/documents/documents';
-import { DomainError } from '@/lib/domain/errors';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
-import { requireActor } from '@/lib/domain/tenancy/actor';
-import { getOrganization } from '@/lib/domain/tenancy/organizations';
+import { requireOrganization } from '@/lib/route/organization';
 import { UploadDocumentForm } from './upload-document-form';
 
 export const dynamic = 'force-dynamic';
@@ -22,21 +19,7 @@ export default async function CustomerPage({
   params,
 }: PageProps<'/organizations/[organizationId]/customers/[customerId]'>) {
   const { organizationId, customerId } = await params;
-  const db = await getDb();
-
-  try {
-    await requireActor(db);
-  } catch (error) {
-    if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
-    }
-    throw error;
-  }
-
-  const organization = await getOrganization(db, organizationId);
-  if (!organization) {
-    notFound();
-  }
+  const { db, organization } = await requireOrganization(organizationId);
 
   // Another tenant's customer id resolves to null, so this renders a 404 rather than an
   // empty page. From this caller's position the customer genuinely does not exist.
@@ -56,7 +39,7 @@ export default async function CustomerPage({
   const mayAttach = organization.capabilities.includes('document.create');
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
+    <>
       <Link
         href={`/organizations/${organizationId}/customers`}
         className="text-sm underline underline-offset-4 opacity-70"
@@ -110,6 +93,6 @@ export default async function CustomerPage({
           </p>
         )}
       </section>
-    </main>
+    </>
   );
 }

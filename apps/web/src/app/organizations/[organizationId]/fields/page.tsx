@@ -1,7 +1,4 @@
-import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
-import { getDb } from '@/lib/db/server';
-import { DomainError } from '@/lib/domain/errors';
+import { requireOrganization } from '@/lib/route/organization';
 import {
   CUSTOM_FIELD_ENTITIES,
   CUSTOM_FIELD_ENTITY_LABELS,
@@ -10,8 +7,6 @@ import {
   type CustomFieldEntity,
   type FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
-import { requireActor } from '@/lib/domain/tenancy/actor';
-import { getOrganization } from '@/lib/domain/tenancy/organizations';
 import { CreateFieldForm } from './create-field-form';
 
 export const dynamic = 'force-dynamic';
@@ -20,21 +15,7 @@ export default async function FieldsPage({
   params,
 }: PageProps<'/organizations/[organizationId]/fields'>) {
   const { organizationId } = await params;
-  const db = await getDb();
-
-  try {
-    await requireActor(db);
-  } catch (error) {
-    if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
-    }
-    throw error;
-  }
-
-  const organization = await getOrganization(db, organizationId);
-  if (!organization) {
-    notFound();
-  }
+  const { db, organization } = await requireOrganization(organizationId);
 
   // One query per entity that can carry fields, driven by the vocabulary rather than by a
   // hand-kept list here — so an entity added in a later migration appears on this screen
@@ -50,14 +31,7 @@ export default async function FieldsPage({
   const total = byEntity.reduce((sum, [, definitions]) => sum + definitions.length, 0);
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <Link href="/organizations" className="text-sm underline underline-offset-4 opacity-70">
-        ← Organizations
-      </Link>
-
-      <h1 className="mt-4 text-2xl font-semibold">Custom fields</h1>
-      <p className="text-sm opacity-70">{organization.name}</p>
-
+    <>
       {total === 0 ? (
         <p className="mt-6 text-sm opacity-70">
           No custom fields yet. Anything you define here appears on that entity&apos;s form.
@@ -100,6 +74,6 @@ export default async function FieldsPage({
           Your role, {organization.role}, cannot define fields here.
         </p>
       )}
-    </main>
+    </>
   );
 }

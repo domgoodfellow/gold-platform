@@ -1,16 +1,13 @@
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { CustomFieldValues } from '@/components/custom-field-values';
-import { getDb } from '@/lib/db/server';
-import { DomainError } from '@/lib/domain/errors';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listResources } from '@/lib/domain/resources/resources';
 import { formatWindow } from '@/lib/domain/scheduling/window';
-import { requireActor } from '@/lib/domain/tenancy/actor';
-import { getOrganization } from '@/lib/domain/tenancy/organizations';
 import { listChecklistItems } from '@/lib/domain/work-items/checklists';
 import { formatMoney, listCosts, listTimeEntries } from '@/lib/domain/work-items/consumption';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
+import { requireOrganization } from '@/lib/route/organization';
 import {
   AddChecklistItemForm,
   RecordCostForm,
@@ -25,21 +22,7 @@ export default async function WorkItemPage({
   params,
 }: PageProps<'/organizations/[organizationId]/work/[workItemId]'>) {
   const { organizationId, workItemId } = await params;
-  const db = await getDb();
-
-  try {
-    await requireActor(db);
-  } catch (error) {
-    if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
-    }
-    throw error;
-  }
-
-  const organization = await getOrganization(db, organizationId);
-  if (!organization) {
-    notFound();
-  }
+  const { db, organization } = await requireOrganization(organizationId);
 
   const workItems = await listWorkItems(db, { organizationId });
   const workItem = workItems.find((item) => item.id === workItemId);
@@ -65,7 +48,7 @@ export default async function WorkItemPage({
   const nextPosition = checklist.reduce((highest, item) => Math.max(highest, item.position), -1) + 1;
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
+    <>
       <Link
         href={`/organizations/${organizationId}/work?type=${workItem.type.id}`}
         className="text-sm underline underline-offset-4 opacity-70"
@@ -192,6 +175,6 @@ export default async function WorkItemPage({
           />
         ) : null}
       </section>
-    </main>
+    </>
   );
 }

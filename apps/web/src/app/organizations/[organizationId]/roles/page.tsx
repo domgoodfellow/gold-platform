@@ -1,12 +1,7 @@
-import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
-import { getDb } from '@/lib/db/server';
-import { DomainError } from '@/lib/domain/errors';
-import { requireActor } from '@/lib/domain/tenancy/actor';
 import { CAPABILITY_LABELS } from '@/lib/domain/tenancy/capabilities';
-import { getOrganization } from '@/lib/domain/tenancy/organizations';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { listRoles } from '@/lib/domain/tenancy/roles';
+import { requireOrganization } from '@/lib/route/organization';
 import { AddMemberForm } from './add-member-form';
 import { CreateRoleForm } from './create-role-form';
 
@@ -16,21 +11,7 @@ export default async function RolesPage({
   params,
 }: PageProps<'/organizations/[organizationId]/roles'>) {
   const { organizationId } = await params;
-  const db = await getDb();
-
-  try {
-    await requireActor(db);
-  } catch (error) {
-    if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
-    }
-    throw error;
-  }
-
-  const organization = await getOrganization(db, organizationId);
-  if (!organization) {
-    notFound();
-  }
+  const { db, organization } = await requireOrganization(organizationId);
 
   const [roles, members] = await Promise.all([
     listRoles(db, { organizationId }),
@@ -39,14 +20,7 @@ export default async function RolesPage({
   const mayManage = organization.capabilities.includes('role.manage');
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <Link href="/organizations" className="text-sm underline underline-offset-4 opacity-70">
-        ← Organizations
-      </Link>
-
-      <h1 className="mt-4 text-2xl font-semibold">People and roles</h1>
-      <p className="text-sm opacity-70">{organization.name}</p>
-
+    <>
       <section className="mt-8">
         <h2 className="text-sm font-medium">People</h2>
         <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
@@ -95,6 +69,6 @@ export default async function RolesPage({
           Your role, {organization.role}, cannot manage roles here.
         </p>
       )}
-    </main>
+    </>
   );
 }

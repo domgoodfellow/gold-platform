@@ -1,12 +1,7 @@
-import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
 import { CustomFieldValues } from '@/components/custom-field-values';
-import { getDb } from '@/lib/db/server';
-import { DomainError } from '@/lib/domain/errors';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listResources } from '@/lib/domain/resources/resources';
-import { requireActor } from '@/lib/domain/tenancy/actor';
-import { getOrganization } from '@/lib/domain/tenancy/organizations';
+import { requireOrganization } from '@/lib/route/organization';
 import { CreateResourceForm } from './create-resource-form';
 
 export const dynamic = 'force-dynamic';
@@ -15,21 +10,7 @@ export default async function ResourcesPage({
   params,
 }: PageProps<'/organizations/[organizationId]/resources'>) {
   const { organizationId } = await params;
-  const db = await getDb();
-
-  try {
-    await requireActor(db);
-  } catch (error) {
-    if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
-    }
-    throw error;
-  }
-
-  const organization = await getOrganization(db, organizationId);
-  if (!organization) {
-    notFound();
-  }
+  const { db, organization } = await requireOrganization(organizationId);
 
   const [resources, definitions] = await Promise.all([
     listResources(db, { organizationId }),
@@ -39,12 +20,7 @@ export default async function ResourcesPage({
   const mayAdd = organization.capabilities.includes('resource.create');
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <Link href="/organizations" className="text-sm underline underline-offset-4 opacity-70">
-        ← Organizations
-      </Link>
-
-      <h1 className="mt-4 text-2xl font-semibold">Resources</h1>
+    <>
       <p className="text-sm opacity-70">
         People, vehicles and equipment that work is scheduled against.
       </p>
@@ -74,6 +50,6 @@ export default async function ResourcesPage({
           Your role, {organization.role}, cannot add resources here.
         </p>
       )}
-    </main>
+    </>
   );
 }

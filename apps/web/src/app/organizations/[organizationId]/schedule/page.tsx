@@ -1,11 +1,7 @@
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
-import { getDb } from '@/lib/db/server';
-import { DomainError } from '@/lib/domain/errors';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { formatWindow, todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
-import { requireActor } from '@/lib/domain/tenancy/actor';
-import { getOrganization } from '@/lib/domain/tenancy/organizations';
+import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,21 +23,7 @@ export default async function SchedulePage({
 }: PageProps<'/organizations/[organizationId]/schedule'>) {
   const { organizationId } = await params;
   const { on } = await searchParams;
-  const db = await getDb();
-
-  try {
-    await requireActor(db);
-  } catch (error) {
-    if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
-    }
-    throw error;
-  }
-
-  const organization = await getOrganization(db, organizationId);
-  if (!organization) {
-    notFound();
-  }
+  const { db, organization } = await requireOrganization(organizationId);
 
   // Which day, as this business reads a day — not as the server does. A tenant in Auckland
   // and one in Los Angeles are on different dates for most of the server's day.
@@ -64,22 +46,17 @@ export default async function SchedulePage({
   };
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <Link href="/organizations" className="text-sm underline underline-offset-4 opacity-70">
-        ← Organizations
-      </Link>
-
-      <div className="mt-4 flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">Schedule</h1>
+    <>
+      {/* I9: every window below is an absolute instant rendered in this business's own
+          zone, so naming the zone is part of reading the day rather than decoration. */}
+      <p className="text-sm opacity-70">
+        Times shown in {organization.timezone} ·{' '}
         <Link
           href={`/organizations/${organizationId}/settings`}
-          className="text-sm underline underline-offset-4 opacity-70"
+          className="underline underline-offset-4"
         >
           Opening hours
         </Link>
-      </div>
-      <p className="text-sm opacity-70">
-        {organization.name} · {organization.timezone}
       </p>
 
       <nav className="mt-4 flex items-center gap-3 text-sm" aria-label="Day">
@@ -138,6 +115,6 @@ export default async function SchedulePage({
           </section>
         ))
       )}
-    </main>
+    </>
   );
 }

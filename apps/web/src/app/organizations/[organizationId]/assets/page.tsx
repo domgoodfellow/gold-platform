@@ -1,14 +1,9 @@
-import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
 import { CustomFieldValues } from '@/components/custom-field-values';
-import { getDb } from '@/lib/db/server';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listCustomers } from '@/lib/domain/customers/customers';
-import { DomainError } from '@/lib/domain/errors';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
-import { requireActor } from '@/lib/domain/tenancy/actor';
-import { getOrganization } from '@/lib/domain/tenancy/organizations';
+import { requireOrganization } from '@/lib/route/organization';
 import { CreateAssetForm } from './create-asset-form';
 
 export const dynamic = 'force-dynamic';
@@ -17,21 +12,7 @@ export default async function AssetsPage({
   params,
 }: PageProps<'/organizations/[organizationId]/assets'>) {
   const { organizationId } = await params;
-  const db = await getDb();
-
-  try {
-    await requireActor(db);
-  } catch (error) {
-    if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
-    }
-    throw error;
-  }
-
-  const organization = await getOrganization(db, organizationId);
-  if (!organization) {
-    notFound();
-  }
+  const { db, organization } = await requireOrganization(organizationId);
 
   const [assets, customers, locations, definitions] = await Promise.all([
     listAssets(db, { organizationId }),
@@ -43,12 +24,7 @@ export default async function AssetsPage({
   const mayAdd = organization.capabilities.includes('asset.create');
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <Link href="/organizations" className="text-sm underline underline-offset-4 opacity-70">
-        ← Organizations
-      </Link>
-
-      <h1 className="mt-4 text-2xl font-semibold">Assets</h1>
+    <>
       <p className="text-sm opacity-70">
         What work is about — machines, vehicles, properties, customer-owned equipment.
       </p>
@@ -92,6 +68,6 @@ export default async function AssetsPage({
           Your role, {organization.role}, cannot add assets here.
         </p>
       )}
-    </main>
+    </>
   );
 }

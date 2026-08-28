@@ -1,10 +1,5 @@
-import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
-import { getDb } from '@/lib/db/server';
-import { DomainError } from '@/lib/domain/errors';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
-import { requireActor } from '@/lib/domain/tenancy/actor';
-import { getOrganization } from '@/lib/domain/tenancy/organizations';
+import { requireOrganization } from '@/lib/route/organization';
 import {
   AddOperatingHoursForm,
   OperatingHoursRow,
@@ -25,21 +20,7 @@ export default async function SettingsPage({
   params,
 }: PageProps<'/organizations/[organizationId]/settings'>) {
   const { organizationId } = await params;
-  const db = await getDb();
-
-  try {
-    await requireActor(db);
-  } catch (error) {
-    if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
-    }
-    throw error;
-  }
-
-  const organization = await getOrganization(db, organizationId);
-  if (!organization) {
-    notFound();
-  }
+  const { db, organization } = await requireOrganization(organizationId);
 
   const hours = await listOperatingHours(db, { organizationId });
 
@@ -47,14 +28,7 @@ export default async function SettingsPage({
   const mayConfigure = organization.capabilities.includes('field.manage');
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <Link href="/organizations" className="text-sm underline underline-offset-4 opacity-70">
-        ← Organizations
-      </Link>
-
-      <h1 className="mt-4 text-2xl font-semibold">Settings</h1>
-      <p className="text-sm opacity-70">{organization.name}</p>
-
+    <>
       <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
         <h2 className="text-sm font-medium">This business</h2>
         <p className="mt-1 text-sm opacity-70">
@@ -111,6 +85,6 @@ export default async function SettingsPage({
           </p>
         )}
       </section>
-    </main>
+    </>
   );
 }

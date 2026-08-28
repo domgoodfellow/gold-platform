@@ -1,13 +1,8 @@
-import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
 import { CustomFieldValues } from '@/components/custom-field-values';
-import { getDb } from '@/lib/db/server';
 import { listCustomers } from '@/lib/domain/customers/customers';
-import { DomainError } from '@/lib/domain/errors';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
-import { requireActor } from '@/lib/domain/tenancy/actor';
-import { getOrganization } from '@/lib/domain/tenancy/organizations';
+import { requireOrganization } from '@/lib/route/organization';
 import { CreateLocationForm, LinkCustomerForm } from './location-forms';
 
 export const dynamic = 'force-dynamic';
@@ -16,21 +11,7 @@ export default async function LocationsPage({
   params,
 }: PageProps<'/organizations/[organizationId]/locations'>) {
   const { organizationId } = await params;
-  const db = await getDb();
-
-  try {
-    await requireActor(db);
-  } catch (error) {
-    if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
-    }
-    throw error;
-  }
-
-  const organization = await getOrganization(db, organizationId);
-  if (!organization) {
-    notFound();
-  }
+  const { db, organization } = await requireOrganization(organizationId);
 
   const [locations, customers, definitions] = await Promise.all([
     listLocations(db, { organizationId }),
@@ -41,14 +22,7 @@ export default async function LocationsPage({
   const mayAdd = organization.capabilities.includes('location.create');
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <Link href="/organizations" className="text-sm underline underline-offset-4 opacity-70">
-        ← Organizations
-      </Link>
-
-      <h1 className="mt-4 text-2xl font-semibold">Locations</h1>
-      <p className="text-sm opacity-70">{organization.name}</p>
-
+    <>
       {locations.length === 0 ? (
         <p className="mt-6 text-sm opacity-70">No locations yet.</p>
       ) : (
@@ -93,6 +67,6 @@ export default async function LocationsPage({
           Your role, {organization.role}, cannot add locations here.
         </p>
       )}
-    </main>
+    </>
   );
 }

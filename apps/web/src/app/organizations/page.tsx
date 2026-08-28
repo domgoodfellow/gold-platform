@@ -5,6 +5,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
+import { AREAS, areaHref } from '@/lib/navigation';
 import { CreateOrganizationForm } from './create-organization-form';
 
 export const dynamic = 'force-dynamic';
@@ -44,69 +45,27 @@ export default async function OrganizationsPage() {
         </form>
       </div>
 
+      {/*
+        This page names no area of a business, and used to name eight. Every one of them is
+        now an entry in `lib/navigation.ts`, which is the whole point of that file: the
+        platform's own nouns live in one place, so the terminology override `constraints.md`
+        defers has one place to reach when it has evidence. A link straight to the first
+        area is enough — the shell takes it from there.
+      */}
       {organizations.length === 0 ? (
         <p className="mt-4 text-sm opacity-70">You do not belong to an organization yet.</p>
       ) : (
         <ul className="mt-6 divide-y divide-black/10 dark:divide-white/15">
           {organizations.map((organization) => (
-            <li key={organization.id} className="flex items-baseline justify-between py-3">
+            <li key={organization.id} className="flex items-baseline justify-between gap-4 py-3">
               <Link
-                href={`/organizations/${organization.id}/customers`}
+                href={areaHref(organization.id, AREAS[0].segment)}
                 className="font-medium underline underline-offset-4"
               >
                 {organization.name}
               </Link>
-              <span className="flex items-baseline gap-3 text-sm opacity-70">
-                <Link
-                  href={`/organizations/${organization.id}/work`}
-                  className="underline underline-offset-4"
-                >
-                  Work
-                </Link>
-                <Link
-                  href={`/organizations/${organization.id}/schedule`}
-                  className="underline underline-offset-4"
-                >
-                  Schedule
-                </Link>
-                <Link
-                  href={`/organizations/${organization.id}/assets`}
-                  className="underline underline-offset-4"
-                >
-                  Assets
-                </Link>
-                <Link
-                  href={`/organizations/${organization.id}/resources`}
-                  className="underline underline-offset-4"
-                >
-                  Resources
-                </Link>
-                <Link
-                  href={`/organizations/${organization.id}/locations`}
-                  className="underline underline-offset-4"
-                >
-                  Locations
-                </Link>
-                <Link
-                  href={`/organizations/${organization.id}/fields`}
-                  className="underline underline-offset-4"
-                >
-                  Fields
-                </Link>
-                <Link
-                  href={`/organizations/${organization.id}/settings`}
-                  className="underline underline-offset-4"
-                >
-                  Settings
-                </Link>
-                <Link
-                  href={`/organizations/${organization.id}/roles`}
-                  className="underline underline-offset-4"
-                >
-                  Roles
-                </Link>
-                {organization.role}
-              </span>
+              {/* The tenant's own word for this member's role, not a platform label. */}
+              <span className="shrink-0 text-sm opacity-70">{organization.role}</span>
             </li>
           ))}
         </ul>

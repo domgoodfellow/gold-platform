@@ -1,16 +1,11 @@
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
 import { CustomFieldValues } from '@/components/custom-field-values';
-import { getDb } from '@/lib/db/server';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listCustomers } from '@/lib/domain/customers/customers';
-import { DomainError } from '@/lib/domain/errors';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { listResources } from '@/lib/domain/resources/resources';
 import { formatWindow } from '@/lib/domain/scheduling/window';
-import { requireActor } from '@/lib/domain/tenancy/actor';
-import { getOrganization } from '@/lib/domain/tenancy/organizations';
 import { listTypeChecklistItems } from '@/lib/domain/work-items/checklists';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import {
@@ -19,6 +14,7 @@ import {
 } from '@/lib/domain/work-items/transitions';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
+import { requireOrganization } from '@/lib/route/organization';
 import {
   AddTypeChecklistItemForm,
   CreateStatusForm,
@@ -40,21 +36,7 @@ export default async function WorkPage({
 }: PageProps<'/organizations/[organizationId]/work'>) {
   const { organizationId } = await params;
   const { type: requestedType } = await searchParams;
-  const db = await getDb();
-
-  try {
-    await requireActor(db);
-  } catch (error) {
-    if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
-    }
-    throw error;
-  }
-
-  const organization = await getOrganization(db, organizationId);
-  if (!organization) {
-    notFound();
-  }
+  const { db, organization } = await requireOrganization(organizationId);
 
   const types = await listWorkItemTypes(db, { organizationId });
 
@@ -106,14 +88,7 @@ export default async function WorkPage({
   const statusName = new Map(statuses.map((status) => [status.id, status.name]));
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <Link href="/organizations" className="text-sm underline underline-offset-4 opacity-70">
-        ← Organizations
-      </Link>
-
-      <h1 className="mt-4 text-2xl font-semibold">Work</h1>
-      <p className="text-sm opacity-70">{organization.name}</p>
-
+    <>
       {/* The tenant's own kinds of work, in their own words. Nothing here branches on which
           one is selected — a different type is a different set of columns, not a different
           screen. */}
@@ -363,6 +338,6 @@ export default async function WorkPage({
           </p>
         )}
       </section>
-    </main>
+    </>
   );
 }
