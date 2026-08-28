@@ -2,7 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { AREAS, areaHref, areaRootSegment, currentSegment } from '@/lib/navigation';
+import {
+  AREAS,
+  areaHref,
+  areaRootSegment,
+  areasIn,
+  currentSegment,
+  type Area,
+} from '@/lib/navigation';
 
 /**
  * The two pieces of the shell that have to know which area is on screen.
@@ -16,39 +23,100 @@ import { AREAS, areaHref, areaRootSegment, currentSegment } from '@/lib/navigati
  * every member and lets each screen explain what a role cannot do.
  */
 
+function NavLink({
+  organizationId,
+  area,
+  current,
+  className,
+}: {
+  organizationId: string;
+  area: Area;
+  current: boolean;
+  className: string;
+}) {
+  return (
+    <Link
+      href={areaHref(organizationId, area.segment)}
+      aria-current={current ? 'page' : undefined}
+      className={
+        current
+          ? `${className} bg-foreground font-medium text-background`
+          : `${className} hover:bg-black/5 dark:hover:bg-white/10`
+      }
+    >
+      {area.label}
+    </Link>
+  );
+}
+
+/**
+ * The information architecture, rendered twice.
+ *
+ * **The areas do not change across breakpoints; only their presentation does**, which is what
+ * D23 adopts and is why both renderings map the same `AREAS` rather than each holding a list.
+ * Two lists that had to agree eventually would not.
+ *
+ * On a phone the bar is fixed to the bottom, because the thing an operator does on a phone is
+ * ask what to do next while holding it one-handed, and the top of a large screen is the one
+ * place a thumb does not reach. It scrolls horizontally rather than collapsing into a drawer
+ * or a "More" menu: a drawer needs state, a toggle, a focus trap and an escape key to be
+ * correct, and a "More" menu would be the second place an area could live.
+ *
+ * From `md` up it is a column, and the two groups are ruled apart. D23: "An operator must
+ * never reach today's work by going through settings."
+ */
 export function OrgNav({ organizationId }: { organizationId: string }) {
   const segment = currentSegment(usePathname());
 
   return (
-    <nav aria-label="This business" className="min-w-0">
-      {/*
-        The responsive decision, made rather than inherited: one horizontal strip that
-        scrolls below `md`, one column at `md` and up. There is deliberately no drawer — a
-        drawer needs state, a toggle, a focus trap and an escape key to be correct, and it
-        buys nothing here, because nine entries fit in a strip an operator can thumb
-        through. On a phone somebody is looking at one board, not navigating a hierarchy.
-      */}
-      <ul className="flex gap-1 overflow-x-auto p-2 md:flex-col md:overflow-visible md:p-3">
-        {AREAS.map((area) => {
-          const current = area.segment === segment;
-          return (
-            <li key={area.segment} className="shrink-0 md:shrink">
-              <Link
-                href={areaHref(organizationId, area.segment)}
-                aria-current={current ? 'page' : undefined}
-                className={
-                  current
-                    ? 'block rounded bg-foreground px-3 py-1.5 text-sm font-medium text-background'
-                    : 'block rounded px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/10'
-                }
-              >
-                {area.label}
-              </Link>
+    <>
+      {/* Phone: fixed to the bottom, out of the document flow. The layout reserves the space
+          with padding so the last row of a screen is never sitting underneath this. */}
+      <nav
+        aria-label="This business"
+        className="fixed inset-x-0 bottom-0 z-10 border-t border-black/10 bg-background md:hidden dark:border-white/15"
+      >
+        <ul className="flex gap-1 overflow-x-auto p-2">
+          {AREAS.map((area) => (
+            <li key={area.segment} className="shrink-0">
+              <NavLink
+                organizationId={organizationId}
+                area={area}
+                current={area.segment === segment}
+                className="block rounded px-3 py-1.5 text-sm"
+              />
             </li>
-          );
-        })}
-      </ul>
-    </nav>
+          ))}
+        </ul>
+      </nav>
+
+      {/* Tablet and desktop: one column, operational above the rule and configuration below
+          it. Hidden from assistive technology on phones by the `hidden` class rather than
+          duplicated, so the two renderings are never both in the accessibility tree. */}
+      <nav aria-label="This business" className="hidden min-w-0 p-3 md:block">
+        {(['operational', 'configuration'] as const).map((group, index) => (
+          <ul
+            key={group}
+            className={
+              index === 0
+                ? 'flex flex-col gap-1'
+                : 'mt-3 flex flex-col gap-1 border-t border-black/10 pt-3 dark:border-white/15'
+            }
+          >
+            {areasIn(group).map((area) => (
+              <li key={area.segment}>
+                <NavLink
+                  organizationId={organizationId}
+                  area={area}
+                  current={area.segment === segment}
+                  className="block rounded px-3 py-1.5 text-sm"
+                />
+              </li>
+            ))}
+          </ul>
+        ))}
+      </nav>
+    </>
   );
 }
 

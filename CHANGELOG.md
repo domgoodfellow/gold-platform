@@ -7,6 +7,33 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ### M4 — vertical one: Pneu3L
 
+**The customer timeline: `events` gets its first reader.** The table shipped in M1 because it
+cannot be backfilled, and thirty-odd writers have been filling it since with nothing looking.
+Reading found two things. Payloads are thin about vocabulary and thick about snapshots, and
+that split is already right — a status name is a row the tenant owns and is resolved at render
+(D6), while an amount or a title is a term somebody agreed to and is snapshotted (I8); so a
+business that renames a board column sees the new word in last month's history, because the job
+moved into a *row*. And `location.linked` names the **location**, carrying the customer in its
+payload, which was reasonable when written and invisible to a reader filtering on `entity_id`.
+That is a standing hazard of an append-only table with a polymorphic subject rather than a bug
+fixed once: the row records which entity the writer thought it was about, and the reader that
+arrives two milestones later may be standing on the other side of it.
+
+**Today, and the phone rendering D23 asked for.** The area an operator opens the application
+for, answering *what do I do next* — one chronological list merged across every resource, which
+is a different question from the schedule's per-resource grid. It computes nothing: every window
+comes from `listSchedule`, because a second notion of "today's work" is exactly the second
+answer I5 forbids. The navigation bar is now fixed to the bottom on a phone and a column from
+`md`, and `AREAS` carries a `group` so that D23's separation of operational from configuration
+is asserted rather than merely typed in the right order.
+
+**Job economics.** Revenue minus cost per job, the number the owner asks for first. `totalCost`
+is new and is the only place costs are added, for the reason I4 gives about prices — a total
+looks like formatting until something conditions it. Margin comes back `null` rather than zero
+when nothing is priced, and `null` rather than converted when the currencies disagree: a rate
+has a date, and a date makes this accounting software. A business that changes what it trades in
+reaches that case for real.
+
 **Editing a work item, and cancellation that actually frees the van.**
 
 `work_item.update` is a third lane in the per-column split `app.check_work_item_update_capability`

@@ -1,7 +1,7 @@
 import { readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { AREAS, areaHref, areaRootSegment, currentSegment } from '@/lib/navigation';
+import { AREAS, areaHref, areaRootSegment, areasIn, currentSegment } from '@/lib/navigation';
 
 /**
  * The shell's navigation is the only place the platform's own nouns are written down, and
@@ -79,5 +79,24 @@ describe('the operator shell navigation', () => {
     // A route that exists but is not an area — today the document download handler. The
     // shell highlights nothing rather than guessing.
     expect(currentSegment('/organizations/org-1/documents/doc-1/download')).toBeNull();
+  });
+
+  it('puts every operational area ahead of every configuration one (D23)', () => {
+    // "An operator must never reach today's work by going through settings." The order used
+    // to carry that claim and nothing held it, which made it the accident D23 says a later
+    // contributor would be free to tidy away. The sidebar rules between the two groups, so
+    // an interleaved list would render a divider in the middle of the operational half.
+    const groups = AREAS.map((area) => area.group);
+    expect(groups.lastIndexOf('operational')).toBeLessThan(groups.indexOf('configuration'));
+  });
+
+  it('leads with the area an operator opens the application for', () => {
+    // Not alphabetisation and not an accident: D23 designs the phone rendering around one
+    // action, and this is the area that answers it.
+    expect(AREAS[0].segment).toBe('today');
+  });
+
+  it('splits every area into exactly one group', () => {
+    expect(areasIn('operational').length + areasIn('configuration').length).toBe(AREAS.length);
   });
 });

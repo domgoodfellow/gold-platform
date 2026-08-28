@@ -105,7 +105,7 @@ Four things about the configuration engine are load-bearing in the same way:
   as `app.check_custom_fields` refusing an unrelated write to a row that was valid when it was
   made.
 
-Two about the interface, which M3 owns:
+Two about the interface, which M3 owns and M4 extends:
 
 - **Every platform noun lives in `apps/web/src/lib/navigation.ts`**, and one string serves as
   both the navigation entry and the page's `<h1>`, so no *area* page writes a heading of its
@@ -116,6 +116,10 @@ Two about the interface, which M3 owns:
   in one place is what leaves the terminology override `constraints.md` defers a lookup rather
   than an excavation. `navigation.test.ts` fails on a route with no entry *and* an entry with
   no route.
+- **`AREAS` carries a `group`, and operational must precede configuration.** D23 adopts that
+  separation as a decision — "an operator must never reach today's work by going through
+  settings" — and until M4 nothing held it but the order somebody typed. The sidebar rules
+  between the two groups and `navigation.test.ts` fails on an interleaved list.
 - **The shell is not the authorization boundary.** Every page calls `requireOrganization` for
   itself even though the layout does too, because Next reuses a layout across client-side
   navigations without re-rendering it — a page leaning on its parent would be trusting a cache.
@@ -130,7 +134,19 @@ M4 in `docs/roadmap.md` for why the distinction is the whole point.
 
 **A recorded cost is still not a price.** `work_item_costs` is an observation about a job that
 happened; a price is a claim the business publishes in advance. They are two tables and
-neither is derived from the other.
+neither is derived from the other. `jobEconomics` subtracts one from the other and is the only
+thing that may: it **calls** `priceWorkItem` rather than totalling lines, and `totalCost` is
+the one place costs are added. **It returns `null` for margin rather than converting a
+currency** — a rate has a date, and a date makes this accounting software. A job priced in one
+currency with costs in another has two totals and no margin, and the screen says so.
+
+**`events` has a reader now**, and reading it found two things worth keeping. Payloads are thin
+about vocabulary and thick about snapshots, and that split is correct: a status name is a row
+the tenant owns and is resolved at render (D6), while an amount or a title is a term somebody
+agreed to and is snapshotted (I8). And an event can name the *other* side of what it records —
+`location.linked` names the location and carries the customer in its payload — so a reader
+filtering on `entity_id` silently misses it. That is a standing hazard of a polymorphic subject,
+not a bug that was fixed once.
 
 **No pricing *rule engine* exists, and that is a finding rather than a gap.** Both business
 shapes in the M3 test price correctly from a catalogue and a quantity, so nothing called for

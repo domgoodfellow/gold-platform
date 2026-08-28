@@ -11,6 +11,7 @@ import { listChecklistItems } from '@/lib/domain/work-items/checklists';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listPricedLines, priceWorkItem } from '@/lib/domain/pricing/prices';
 import { formatMoney, listCosts, listTimeEntries } from '@/lib/domain/work-items/consumption';
+import { jobEconomics } from '@/lib/domain/work-items/economics';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
 import {
@@ -67,6 +68,9 @@ export default async function WorkItemPage({
   // I4: the only total on this page, and the only one anywhere. Nothing here reduces an
   // array, and nothing writes a subtotal to a column that could later disagree with it.
   const price = priceWorkItem(lines);
+  // Revenue minus cost. It calls `priceWorkItem` rather than totalling anything itself, so
+  // this page still has exactly one price calculation on it (I4).
+  const economics = jobEconomics({ lines, costs });
   const mayPrice = organization.capabilities.includes('work_item.price');
 
   const mayAdd = organization.capabilities.includes('work_item.create');
@@ -275,6 +279,20 @@ export default async function WorkItemPage({
           </ul>
         )}
 
+        {economics.costs.length > 0 ? (
+          <p className="mt-2 flex flex-wrap justify-between gap-x-3 text-sm font-medium">
+            <span>Total</span>
+            {/* One line per currency. A job whose costs are in two currencies has no single
+                total, and printing one would require a rate — which has a date, which makes
+                this accounting software (`vision.md`). */}
+            <span>
+              {economics.costs
+                .map((cost) => formatMoney(cost.amountMinor, cost.currency))
+                .join(' + ')}
+            </span>
+          </p>
+        ) : null}
+
         {mayRecord ? (
           <RecordCostForm
             organizationId={organizationId}
@@ -282,6 +300,32 @@ export default async function WorkItemPage({
             currency={organization.currency}
           />
         ) : null}
+      </section>
+
+      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
+        <h2 className="text-sm font-medium">Margin</h2>
+        {/* The number the owner asks for first, and the smallest useful version of it: what
+            this job earned, less what it consumed. Not a report and not a dashboard — those
+            are M6, where an aggregate layer is the whole milestone. */}
+
+        {economics.marginMinor !== null && economics.currency ? (
+          <p className="mt-2 flex justify-between text-sm">
+            <span className="font-medium">
+              {economics.marginMinor < 0 ? 'Loss on this job' : 'Margin on this job'}
+            </span>
+            <span className="font-medium tabular-nums">
+              {formatMoney(economics.marginMinor, economics.currency)}
+            </span>
+          </p>
+        ) : (
+          <p className="mt-1 text-sm opacity-60">
+            {/* Three different absences, said differently. A zero here would claim the job
+                broke even, which is a much stronger statement than "we cannot say". */}
+            {economics.revenue === null
+              ? 'Nothing is priced on this job yet, so there is nothing to compare its costs against.'
+              : 'This job is priced in one currency and its costs are recorded in another, so there is no single margin. The two totals are above.'}
+          </p>
+        )}
       </section>
     </>
   );

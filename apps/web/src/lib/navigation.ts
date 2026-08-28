@@ -23,6 +23,19 @@
  * this platform has, and is told why the form is not theirs.
  */
 
+/**
+ * Which half of the shell an area belongs to.
+ *
+ * D23 adopts this as a decision rather than a habit: "Operational navigation is separate
+ * from configuration navigation… An operator must never reach today's work by going through
+ * settings." The order below already said so and nothing enforced it, which made it exactly
+ * the accident that record says the next contributor would be free to tidy away.
+ *
+ * It has a caller in the same change: the sidebar rules between the two groups, and the
+ * phone rendering puts the operational half where a thumb reaches first.
+ */
+export type AreaGroup = 'operational' | 'configuration';
+
 export type Area = {
   /**
    * The path segment under `/organizations/[organizationId]/`.
@@ -39,6 +52,8 @@ export type Area = {
    * about the tree rather than a convention someone has to remember.
    */
   label: string;
+  /** Operational or configuration. See `AreaGroup` — D23 makes this a decision. */
+  group: AreaGroup;
 };
 
 /**
@@ -49,17 +64,26 @@ export type Area = {
  * things they set up once and revisit rarely.
  */
 export const AREAS: readonly Area[] = [
-  { segment: 'work', label: 'Work' },
-  { segment: 'schedule', label: 'Schedule' },
-  { segment: 'customers', label: 'Customers' },
-  { segment: 'locations', label: 'Locations' },
-  { segment: 'assets', label: 'Assets' },
-  { segment: 'resources', label: 'Resources' },
-  { segment: 'pricing', label: 'Pricing' },
-  { segment: 'fields', label: 'Custom fields' },
-  { segment: 'roles', label: 'People and roles' },
-  { segment: 'settings', label: 'Settings' },
+  // Today leads, because D23 says the action an operator's phone is designed around is
+  // *what do I do next* — and for an owner-operator who is also the technician, that is most
+  // of what running the business on this platform means.
+  { segment: 'today', label: 'Today', group: 'operational' },
+  { segment: 'work', label: 'Work', group: 'operational' },
+  { segment: 'schedule', label: 'Schedule', group: 'operational' },
+  { segment: 'customers', label: 'Customers', group: 'operational' },
+  { segment: 'locations', label: 'Locations', group: 'operational' },
+  { segment: 'assets', label: 'Assets', group: 'operational' },
+  { segment: 'resources', label: 'Resources', group: 'operational' },
+  { segment: 'pricing', label: 'Pricing', group: 'configuration' },
+  { segment: 'fields', label: 'Custom fields', group: 'configuration' },
+  { segment: 'roles', label: 'People and roles', group: 'configuration' },
+  { segment: 'settings', label: 'Settings', group: 'configuration' },
 ] as const;
+
+/** The areas of one group, in the order declared above. */
+export function areasIn(group: AreaGroup): Area[] {
+  return AREAS.filter((area) => area.group === group);
+}
 
 export function areaHref(organizationId: string, segment: string): string {
   return `/organizations/${organizationId}/${segment}`;

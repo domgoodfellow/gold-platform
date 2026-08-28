@@ -65,7 +65,10 @@ export default async function OrganizationLayout({
           scrolls inside the column instead of stretching the grid and pushing the sidebar
           off screen. */}
       <div className="min-w-0">
-        <main className="mx-auto max-w-3xl p-6 sm:p-8">
+        {/* `pb-24` on phones is not spacing — it is the room the fixed bottom navigation
+            occupies. Without it the last control on every screen sits underneath the bar and
+            cannot be tapped. From `md` the bar is a column and the reservation goes away. */}
+        <main className="mx-auto max-w-3xl p-6 pb-24 sm:p-8 md:pb-8">
           <AreaHeading />
           {children}
         </main>
