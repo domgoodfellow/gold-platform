@@ -496,6 +496,47 @@ export type Database = {
         }
         Relationships: []
       }
+      price_book_items: {
+        Row: {
+          created_at: string
+          created_by: string
+          currency: string
+          id: string
+          name: string
+          organization_id: string
+          unit: string
+          unit_amount_minor: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          currency: string
+          id?: string
+          name: string
+          organization_id: string
+          unit: string
+          unit_amount_minor: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          currency?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          unit?: string
+          unit_amount_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_book_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resources: {
         Row: {
           created_at: string
@@ -1112,6 +1153,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_price_book_item: {
+        Args: {
+          p_name: string
+          p_organization_id: string
+          p_unit: string
+          p_unit_amount_minor: number
+        }
+        Returns: string
+      }
       create_resource: {
         Args: { p_custom: Json; p_name: string; p_organization_id: string }
         Returns: string
@@ -1223,6 +1273,15 @@ export type Database = {
           p_id: string
           p_name: string
           p_timezone: string
+        }
+        Returns: undefined
+      }
+      update_price_book_item: {
+        Args: {
+          p_id: string
+          p_name: string
+          p_unit: string
+          p_unit_amount_minor: number
         }
         Returns: undefined
       }

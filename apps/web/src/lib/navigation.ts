@@ -55,6 +55,7 @@ export const AREAS: readonly Area[] = [
   { segment: 'locations', label: 'Locations' },
   { segment: 'assets', label: 'Assets' },
   { segment: 'resources', label: 'Resources' },
+  { segment: 'pricing', label: 'Pricing' },
   { segment: 'fields', label: 'Custom fields' },
   { segment: 'roles', label: 'People and roles' },
   { segment: 'settings', label: 'Settings' },
