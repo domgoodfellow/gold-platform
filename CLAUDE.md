@@ -20,8 +20,8 @@ checklists to documents.
 
 ## Current state
 
-**M1's and M2's acceptance criteria are met**, each demonstrated by one test rather than by
-a table count.
+**M1's, M2's and M3's acceptance criteria are met**, each demonstrated by one test rather
+than by a table count.
 
 `apps/web/tests/milestone-m1.test.ts` builds two whole businesses from byte-identical input
 in one database and asserts that neither can observe or block the other.
@@ -32,15 +32,24 @@ lifecycle, and commit it to a resource for a window nothing else can double-book
 from identical input, down to the same instants. It touches no SQL, because "without opening
 the database" is a claim about the path.
 
+`apps/web/tests/milestone-m3.test.ts` stands up two whole businesses that share no word,
+number, status, field, currency or timezone — an equipment hire yard in Amsterdam trading in
+euro, a clinic in Tokyo trading in yen — through **one** `configure` function containing no
+branch on which of them it is holding. The structure is the milestone and the assertions
+inside it are secondary: had either shape needed a special case, that function could not
+exist. The three invert each other deliberately — M1 runs byte-identical input, M2 runs
+identical input twice, M3 runs maximally different input through identical code.
+
 The kernel is `organizations`, `memberships`, `events`, `customers`, `roles`,
 `field_definitions`, `locations`, `customer_locations`, `resources`, `assets`, `documents`,
 `operating_hours` and — the work engine — `work_item_types`, `work_item_statuses`,
 `work_item_transitions`, `work_items`, `work_item_type_checklist_items`,
-`work_item_checklist_items`, `work_item_time_entries` and `work_item_costs`;
-the one tenant resolution function and `app.has_capability`; and a vertical slice behind
-authentication for each.
+`work_item_checklist_items`, `work_item_time_entries` and `work_item_costs`; and — the
+configuration engine — `price_book_items` and `work_item_priced_lines`; the one tenant
+resolution function and `app.has_capability`; and a vertical slice behind authentication for
+each.
 
-Four things about the work engine are load-bearing and easy to undo by accident:
+Six things about the work engine are load-bearing and easy to undo by accident:
 
 - **There is no overlap check in the domain layer and none may be added.**
   `work_items_resource_not_double_booked` is a partial gist exclusion constraint, and
@@ -55,7 +64,6 @@ Four things about the work engine are load-bearing and easy to undo by accident:
   RLS policy sees the old row or the new one, never both, so per-column rules
   (`work_item.transition` vs `work_item.schedule`) live in
   `app.check_work_item_update_capability`. Both are in the database.
-
 - **Nothing holds a working week.** Operating hours are rows a business owns; there is no
   Monday-to-Friday, no weekend, no seeded set and no default, and a business that has
   configured nothing is treated as always open. A default week is the hardcoded business
@@ -64,7 +72,59 @@ Four things about the work engine are load-bearing and easy to undo by accident:
   editing a template safe. The same reasoning makes changing a currency safe: every amount
   carries the one it was recorded in.
 
-**Nothing prices.** I4 is M3, and a recorded cost is deliberately not a price.
+Four things about the configuration engine are load-bearing in the same way:
+
+- **A priced line copies its catalogue row, and `work_item_priced_lines` holds no foreign key
+  to `price_book_items`. None may be added.** The absence *is* the enforcement — a copy that
+  is merely not currently joined becomes a join the first time a key makes one look safe, and
+  the first `join price_book_items` written for a perfectly good reason would make every
+  historical quote track today's catalogue (I8). `prices.test.ts` asserts it from
+  `pg_constraint`.
+- **There is one price calculation** (`priceWorkItem`), and nothing else may total lines. The
+  reason a second one appears is that a total looks like formatting rather than like pricing;
+  it is pricing, and the day a minimum charge or a tax lands, every inline `reduce` is a place
+  the rule was forgotten. A rule the catalogue cannot express belongs *inside* that function.
+- **A job is never quoted in two currencies**, and the guarantee is
+  `work_item_priced_lines_one_currency`, a gist exclusion using `currency with <>` — not a
+  check before the insert, which races identically. The case is real rather than theoretical:
+  a business that changes what it trades in has a catalogue in two currencies, because
+  amounts are never converted.
+- **A field definition's `kind` and `key` are not editable, by anyone, through any path.** The
+  column grant refuses them. Changing a kind reinterprets every value already stored under
+  that key and renaming a key orphans them, and neither fails at the edit — both surface later
+  as `app.check_custom_fields` refusing an unrelated write to a row that was valid when it was
+  made.
+
+Two about the interface, which M3 owns:
+
+- **Every platform noun lives in `apps/web/src/lib/navigation.ts`**, and one string serves as
+  both the navigation entry and the page's `<h1>`, so no *area* page writes a heading of its
+  own. A detail route (`/work/{id}`, `/customers/{id}`) does, because its heading is the job's
+  title or the customer's name rather than a platform noun — which is why `currentSegment` and
+  `areaRootSegment` answer different questions: a detail route is *in* an area for the purpose
+  of marking the navigation, and not *at* it for the purpose of the heading. Keeping the nouns
+  in one place is what leaves the terminology override `constraints.md` defers a lookup rather
+  than an excavation. `navigation.test.ts` fails on a route with no entry *and* an entry with
+  no route.
+- **The shell is not the authorization boundary.** Every page calls `requireOrganization` for
+  itself even though the layout does too, because Next reuses a layout across client-side
+  navigations without re-rendering it — a page leaning on its parent would be trusting a cache.
+  A layout is no more the boundary than a redirect is (I12). Nothing in the navigation is
+  capability-gated: each screen shows itself and explains what a role cannot do.
+
+**A recorded cost is still not a price.** `work_item_costs` is an observation about a job that
+happened; a price is a claim the business publishes in advance. They are two tables and
+neither is derived from the other.
+
+**No pricing *rule engine* exists, and that is a finding rather than a gap.** Both business
+shapes in the M3 test price correctly from a catalogue and a quantity, so nothing called for
+one. Quantity is an integer and nothing rounds anywhere — a business billing half-hours prices
+per half-hour — and when a fractional quantity earns its way in, how a half-cent rounds is a
+pricing decision that belongs in `priceWorkItem`.
+
+**Module enablement, dashboard configuration and business rules are not built**, and
+`docs/roadmap.md` records why each was removed from M3's coverage rather than deferred
+quietly: there are no modules to enable, no dashboard, and nothing that triggers anything.
 
 `docs/starting_conversation.txt` is an archived source, not a governing document. It records
 the thinking that led here and is superseded by `docs/constraints.md` wherever the two
