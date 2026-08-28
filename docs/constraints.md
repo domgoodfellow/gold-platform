@@ -201,12 +201,24 @@ fifteenth. Harvest deliberately and cite the source: the invariants form, the mi
 commenting style, the pricing and scheduling engines' structure, the constraint that pricing
 never leaks the schedule.
 
-### D2 — Python is the intelligence and realtime plane, not the domain layer
+### D2 — Python is the second runtime; TypeScript owns the transactional domain
 
 TypeScript owns the transactional domain: entities, pricing, scheduling, work items,
-invoicing. Python owns what it is genuinely better at and what Vercel cannot host — Twilio
-media streams, streaming speech-to-text, the live rebuttal loop, embeddings and retrieval,
-route optimisation, and batch analysis workers.
+invoicing. It runs under the caller's own JWT with RLS as the authorization boundary, and
+that property is what every paragraph below exists to protect.
+
+**Python owns four things, not one.** This record used to say "the intelligence and realtime
+plane", which was too narrow: it made `apps/api/` read as an accessory to be built last, when
+the first of these is needed at M5.
+
+- **Automation execution** — the scheduled evaluation that asks *what is due, what changed,
+  what crossed a threshold*. First needed, and the reason `apps/api/` arrives at M5 rather
+  than alongside voice.
+- **Webhook ingress** — a vendor calling in with no human session behind it. Stripe at M4 is
+  the first, and it is the writer D14 and D17 both name as their trigger to revisit.
+- **Intelligence** — embeddings, retrieval, batch analysis, the AI tool loop.
+- **Realtime** — media streams, streaming speech-to-text, the live rebuttal loop. This one
+  does not run on Vercel; see D24.
 
 **The contract between them:** the Python plane writes to its own tables (`calls`,
 `transcripts`, `agent_runs`, `embeddings`) and *proposes* actions. The TypeScript domain
@@ -229,21 +241,36 @@ it settles the shape of the contract and not the authorization model behind it: 
 runs under the caller's JWT with RLS as the boundary, and a service-role FastAPI layer
 discards that however its types are produced. That is the argument doing the work.
 
-**Trigger to revisit:** if the realtime plane ever needs to *write* transactional state
+**Trigger to revisit:** if either plane ever needs to *write* transactional state
 synchronously and the proposal round-trip becomes the bottleneck.
 
-### D3 — Python lives in `services/api/`, not `apps/api/`
+### D3 — Python lives in `apps/api/`, and the workspace glob is explicit
 
-`docs/starting_conversation.txt` §5 explicitly recommends `apps/api/`, having corrected an
-earlier inconsistency. We diverge.
+`docs/starting_conversation.txt` §5 recommends `apps/api/`. This record used to diverge and
+no longer does.
 
-`apps/*` is the pnpm workspace glob. A Python service placed there is a package manager
-being asked to manage something it cannot. `saas-agent-platform` hit this and moved the
-service, and its README states the reason plainly: *"the Python API isn't a pnpm workspace
-package."*
+The original argument was real: `apps/*` was the pnpm workspace glob, so a Python service
+placed there is a package manager being asked to manage something it cannot, and
+`saas-agent-platform` hit exactly that — *"the Python API isn't a pnpm workspace package."*
+But the glob is one line in `pnpm-workspace.yaml`, not a law, and naming its members costs
+one line per deployable:
 
-**Consequence:** `apps/` means "a thing pnpm builds and ships." `services/` means "a thing
-deployed on its own runtime." One-line reversal if this turns out to be wrong.
+```yaml
+packages:
+  - "apps/web"
+```
+
+**Reversed because the layout was carrying an argument it should not have.** `apps/` versus
+`services/` was made to mean "pnpm package" versus "own runtime", which is a fact about a
+tool rather than about this system, and it put the second runtime somewhere the prescribed
+layout does not have a directory for. `apps/` now means what that layout means by it: **a
+deployable this repository ships.** `apps/web`, `apps/api` and eventually `apps/desktop` are
+all that, and `services/` is gone.
+
+**Consequence:** every new deployable adds itself to the glob by name. That is the trade —
+a directory under `apps/` that pnpm should not manage is now silently ignored rather than a
+build error, so the glob is the first place to look when a workspace package appears not to
+exist.
 
 ### D4 — Shared-schema multi-tenancy with RLS, deployment-neutral
 
@@ -370,30 +397,34 @@ runtime and of I6 — availability shown to a client is advisory and re-asserted
 before work is committed — precisely because the external world changes between the two. Use
 it as a test case, not as a directory.
 
-### D12 — E-commerce operations is not a target vertical
+### D12 — E-commerce operations is a target vertical
 
-One of the four systems this platform generalises from is an e-commerce inventory app, so its
-absence from `vision.md`'s scope needs a reason rather than a silence.
+**Reversed.** This record previously refused it. The argument was that field service, asset
+maintenance and sales floors all reduce to *a unit of work needs a time, a resource and a
+place*, while fulfilment does not: work is triggered by an order, batched against stock, and
+shipped.
 
-Field service, asset maintenance, and sales floors all reduce to *a unit of work needs a time,
-a resource, and a place*. Fulfilment does not: work is triggered by an order, batched against
-stock, and shipped. Building for it now would generalise the kernel along an axis no paying
-tenant is pulling on, and the pull is what tells us which parts were actually general.
+That distinction is real and it was overstated. Reading `docs/starting_conversation.txt` §6
+against the tree closes most of the gap. `price_book_items` is already a per-tenant catalogue
+of what a business sells. `work_item_costs` already records a material consumed against a job,
+which is a stock movement without a stock level. `locations` is already a place stock could
+sit. And the fulfilment lifecycle — Ordered → Picked → Packed → Shipped → Returned — is
+`work_item_statuses` and `work_item_transitions`, which are per-tenant rows that already
+refuse to be hardcoded, so it needs no new mechanism at all.
 
-**Consequence:** parts and materials consumption still lands — a maintenance job consumes
-stock, and I8 governs the price it consumed that stock at. That is inventory as a work-item
-concern, not a fulfilment engine.
+**What it costs, stated rather than hidden:** inventory is a real engine — eight operations,
+reorder points, lead times, suppliers, warehouses — and it is the third one after scheduling
+and pricing. Admitting the vertical is a scope decision and not a free one. What it does *not*
+cost is a new kernel primitive, which is what the previous version of this record claimed and
+could not support.
 
-**The e-commerce app is `mamouandco`, and looking at it closes the question rather than
-reopening it.** Its nineteen tables are products, categories, collections, sales, orders,
-order_items and product_imports: no work item, no schedule, no resource, no place. It touches
-none of the kernel, so it would exercise nothing this platform is good at while needing a
-fulfilment engine this platform does not have. What is genuinely worth taking from it is not
-e-commerce at all — it is `brand_settings`, and that is a surface concern belonging to every
-vertical (see D23).
+**Consequence:** parts and materials consumption still lands as a work-item concern, exactly as
+before, and I8 still governs the price it consumed that stock at. Inventory extends that rather
+than replacing it. `mamouandco` is the reference for the catalogue and the storefront settings;
+D23 records the one column that does not come across.
 
-**Trigger to revisit:** a tenant already running on the platform makes selling stock its
-primary motion.
+**Trigger to revisit:** none — this is a decision, not a deferral. *When* the vertical is built
+is a sequencing question and lives in `roadmap.md`.
 
 ### D13 — pnpm workspaces, no build orchestrator
 
@@ -406,8 +437,8 @@ and silently detaches it from the monorepo.
 **Rejected: npm.** `tire-app-template` is not evidence for npm so much as evidence that the
 question never arose there: it has no root `package.json`, no root lockfile, and no workspace
 file at all. `apps/web/package.json` is the entire project, and `apps/` is a tidy folder
-rather than a glob. That is a coherent choice for one application, and it cannot express D3,
-which needs `apps/*` and `services/*` to mean different things.
+rather than a glob. That is a coherent choice for one application, and it cannot express a
+workspace whose members are named one at a time (D3) alongside a deployable pnpm must ignore.
 
 **Rejected: Turbo.** `saas-agent-platform` runs `turbo@^2` over `apps/*`, `services/*`, and
 `packages/*` — a task graph with caching and topological `dependsOn` ordering. Its
@@ -419,11 +450,11 @@ flat by design.
 D3's layout needs a workspace glob doing real work, and npm's is weaker where it matters.
 
 **Consequence:** `pnpm --filter @gold/web check` is a filter over a real workspace, so it goes
-on working unchanged when `apps/desktop` arrives. A Python service under `services/` stays
-outside the glob entirely — stricter than `saas-agent-platform`, whose glob includes
+on working unchanged when `apps/desktop` arrives. `apps/api` is outside the glob because the
+glob names its members (D3) — stricter than `saas-agent-platform`, whose glob includes
 `services/*` and then relies on `services/api` having no `package.json` for pnpm to skip it.
 
-**Trigger to revisit:** the first genuine second workspace package — M8's `packages/ui`. At
+**Trigger to revisit:** the first genuine second workspace package — M9's `packages/ui`. At
 that point `pnpm -r` rebuilds what did not change, and Turbo's caching starts earning its
 configuration.
 
@@ -450,7 +481,7 @@ privilege gets a narrow `SECURITY DEFINER` function in a migration — `create_o
 That keeps the privileged surface enumerable in one directory instead of diffuse across the
 application.
 
-**Trigger to revisit:** the first writer with no human caller — a scheduled job, or M7's
+**Trigger to revisit:** the first writer with no human caller — M4's Stripe webhook, then M5's
 Python plane handling an inbound webhook. That caller gets its own Postgres role and its own
 policies. It does not get service-role.
 
@@ -561,7 +592,7 @@ trust, and no second caller needs one.
 an argument to a domain function. A direct PostgREST call is refused exactly as a form is,
 which is what I16 exists to keep true.
 
-**Trigger to revisit:** M7's Python plane needing to write with no human JWT. Per D2 it
+**Trigger to revisit:** M5's Python plane needing to write with no human JWT. Per D2 it
 proposes and TypeScript executes, so this may never arrive — but if it does, it gets its own
 Postgres role and its own policies, not a service-role bypass.
 
@@ -903,6 +934,33 @@ column is `organization_id`, leading every index, under RLS (I2). D1 refuses the
 **Trigger to revisit:** `docs/ui-spec.md` is admissible as a Tier 1 document under D8 once the
 second and third surfaces exist. Three surfaces with genuinely different navigation models are
 more than one decision record should carry; one surface is not.
+### D24 — Web and API both deploy to Vercel, and that forbids a daemon
+
+Both deployables target Vercel. `apps/web` is Next.js; `apps/api` is Python behind serverless
+functions, invoked by a request or by a schedule.
+
+**What this decides.** There is no persistent process, so the automation runtime (D2's first
+responsibility) is **a scheduled invocation that asks what is due**, never a worker daemon
+holding a queue in memory. That is the same shape `Mechanic_Maintenance` uses when it indexes
+on `(active, nextDueHours)` and asks the question rather than waiting to be told the answer.
+Anything wanting to survive between invocations puts that state in Postgres, which is where it
+belonged regardless — a queue that lives in a process is a queue that loses work when the
+process restarts.
+
+**What this does not survive.** Live voice does not fit the model: a call is a persistent media
+stream for its whole duration. Both prior systems that solved it — `agent-system` and
+`infieldos` — host their Python on Render for exactly this reason. D2's realtime
+responsibility therefore lands on a second host, and that is a decision for the milestone that
+needs it.
+
+**Rejected:** hosting `apps/api` on Render from the start "because voice will need it
+eventually". Three of Python's four responsibilities are request- or schedule-shaped and run on
+Vercel today. A second host bought in advance for the fourth is infrastructure with no caller,
+and it would also split the deployment story for every milestone before the one that needs it.
+
+**Trigger to revisit:** the reception and sales vertical, where a media stream *is* the product.
+That milestone adds a host; it does not move `apps/api`.
+
 ---
 
 ## Decided, not yet built

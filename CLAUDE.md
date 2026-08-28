@@ -140,9 +140,9 @@ exist; the rest does not.
 apps/
   web/              Next.js — admin today; marketing, booking and customer portal are
                     what the directory is FOR, not what is in it (D20)
-  desktop/          Electron shell (M8; not before)
-services/
-  api/              Python/FastAPI — intelligence and realtime plane (M7; not before)
+  api/              Python — automation, webhook ingress, intelligence, realtime (M5; not
+                    before). Deploys to Vercel as serverless functions (D24)
+  desktop/          Electron shell (M9; not before)
 packages/           Empty until a package has two consumers. See constraints.md.
 infra/
   supabase/         migrations, policies, seed
@@ -152,10 +152,11 @@ docs/
 
 Two layout rules carry reasoning that is easy to lose:
 
-- **`apps/` means "a thing pnpm builds and ships." `services/` means "a thing deployed on
-  its own runtime."** Python lives in `services/api/`, not `apps/api/`, because `apps/*` is
-  the pnpm workspace glob. `docs/starting_conversation.txt` recommends otherwise;
-  `constraints.md` D3 records why we diverge and how to reverse it.
+- **`apps/` means "a deployable this repository ships."** `apps/web`, `apps/api` and
+  eventually `apps/desktop` are all that, which is the layout
+  `docs/starting_conversation.txt` prescribes. `pnpm-workspace.yaml` therefore names its
+  members instead of globbing `apps/*`, so pnpm never tries to manage the Python one — the
+  trade is that a new workspace package must add itself to that file by name (D3).
 - **`packages/` stays empty until something has two consumers.** A workspace package with
   one consumer buys a build step and a `dist/` for no isolation.
 

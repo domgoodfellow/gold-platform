@@ -1,5 +1,7 @@
 packages:
-  - "apps/*"
+  # Named, not globbed: apps/ means "a deployable this repo ships" (D3), and apps/api is
+  # Python -- pnpm must not try to manage it. A new pnpm package adds itself here by name.
+  - "apps/web"
 
 # Merged up from the nested apps/web/pnpm-workspace.yaml that create-next-app wrote.
 # A pnpm-workspace.yaml inside a package makes that directory its own workspace root and

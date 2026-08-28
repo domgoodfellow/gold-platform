@@ -27,15 +27,20 @@ Small and mid-sized operations businesses where work is scheduled, assigned, per
 and billed — and where the owner currently holds the process in their head, a spreadsheet,
 and a phone.
 
-Three shapes are in scope, and they are already understood from prior work:
+Four shapes are in scope, and each is already understood from prior work:
 
 - **Field service** — mobile technicians, travel-constrained scheduling, per-visit pricing,
   and work that external conditions can invalidate after it is booked.
 - **Asset maintenance** — customer-owned machines, recurring plans, parts consumption.
 - **Sales floors** — lead lists, dialers, call outcomes, pipeline.
+- **E-commerce operations** — catalogue, stock, suppliers, orders and fulfilment. Admitted by
+  `constraints.md` D12, which previously refused it: the lifecycle is per-tenant statuses like
+  any other, and what it genuinely adds is stock levels, suppliers and shipments rather than a
+  new kernel primitive.
 
-E-commerce operations and property management are plausible later. They are not targets —
-see `constraints.md` D12.
+Property management is plausible later and is not a target. A lease is the same exclusion
+constraint as a booking — one thing held for a window nothing else may hold — so the argument
+for admitting it is available when a tenant is.
 
 ## What it refuses to be
 

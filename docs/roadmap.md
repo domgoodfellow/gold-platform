@@ -242,7 +242,7 @@ explicit that it is not a gate on building any of it.
 
 ---
 
-## M5 — Automations, and the channels they act through
+## M5 — Workflows, automations, and the channels they act through
 
 > **Done when:** Pneu3L adds a second technician, writes a rule — *when the forecast at a
 > job's location crosses this threshold, move the job and tell the customer* — and a forecast
@@ -257,16 +257,32 @@ already live is a far stronger claim than proving it on a second tenant built to
 
 Covers:
 
-- **The automation runtime** — trigger, condition, action (`starting_conversation.txt` §11).
-  It arrives here rather than in M3 or M4 because it needs a second caller and M4 supplies
-  only the first: a booking confirmation is one line inside the domain function that creates
-  the booking. Weather is the second, and the runtime absorbs the first when it lands. That
-  is *Never duplicate a rule across callers* running on schedule rather than as a rescue.
-- **Weather as an integration and a trigger** (D11), which already names this the sharpest
-  available test of both the runtime and I6 — availability shown to a client is advisory and
-  re-asserted server-side, and the external world changes between the two.
+- **The workflow and automation runtime.** `starting_conversation.txt` describes these as
+  §11 and §13 and they are one feature seen twice: a trigger, a condition, an action, and a
+  branch. What exists today is the graph without the verbs — `work_item_transitions` says
+  which status may follow which, and nothing anywhere expresses *if* or *then*. The runtime
+  arrives here rather than in M3 or M4 because it needs a second caller and M4 supplies only
+  the first: a booking confirmation is one line inside the domain function that creates the
+  booking. Weather is the second, and the runtime absorbs the first when it lands — *Never
+  duplicate a rule across callers* running on schedule rather than as a rescue.
+- **Three trigger shapes, and they are not the same shape.** A schedule fires at a time. An
+  external condition fires on a reading from a provider. Maintenance fires when *a counter a
+  human or a sensor advances crosses a threshold* — the model `Mechanic_Maintenance` already
+  ships, and the one an event-shaped runtime does not express naturally. Designing for the
+  second alone is the specific mistake available here.
+- **Weather is an integration plus rules, and nothing else** (D11). The provider goes behind
+  an adapter like any other; the business writes conditions against its answer. What is *not*
+  configuration is the one prerequisite underneath: **`locations` holds an address string and
+  no coordinates.** Nothing can ask a provider for conditions at a place until that is a
+  column or a geocoding adapter, and the same gap blocks travel time and service areas.
 - **Channels** — email, SMS, and the first outbound voice path, each behind an adapter that
-  names a capability rather than a provider.
+  names a capability rather than a provider. Delivery is idempotent per recipient per reason;
+  `Mechanic_Maintenance`'s notification log is the shape, and the failure it prevents is
+  telling a customer the same thing twice.
+- **`apps/api/` arrives here**, and this is earlier than the Python plane used to be placed.
+  A scheduled evaluation asking *what is due* has nowhere to live in Next.js. Per D24 it is a
+  scheduled serverless invocation and not a worker daemon, so anything that must survive
+  between runs lives in Postgres.
 
 `infieldos-main` is the reference for the screens this shape needs — alerts, crews, activity —
 alongside `tire-app-template`'s spec under D23. Reference for the shape, never the code; D1's
@@ -274,7 +290,39 @@ reasoning generalises to both.
 
 ---
 
-## M6 — The AI layer
+## M6 — Reporting and dashboards
+
+> **Done when:** an operator defines a report — entity, fields, filters, grouping, period —
+> pins it to a dashboard, and shares it with a role, without anything about that report or
+> that dashboard existing in code.
+
+`starting_conversation.txt` describes these as §17 and §14. They are one machinery: **a
+dashboard is a saved report with a layout and an audience.** Building them apart produces two
+aggregate layers that disagree, which is the same failure I4 and I5 exist to prevent one level
+up.
+
+Covers: the aggregate layer, report definitions as per-tenant rows, the four dashboards the
+source names — executive, operations, manager, employee — as configuration rather than four
+screens, and the operational and financial report sets.
+
+**M3 removed dashboard configuration and gave a reason with an expiry date:** there was no
+dashboard to configure. M4 builds the operator's day view, which is the first one, and at that
+point the argument stops working — a second hardcoded dashboard is the thing this milestone
+exists to prevent.
+
+**Job economics is this milestone's first row, and it ships in M4 without it.** Revenue minus
+cost on one job screen is one function and needs no engine. Revenue by customer, by service, by
+employee and by location are that same subtraction grouped four ways, which is where an engine
+starts paying. Building the engine first would have been the abstraction with no caller;
+building the fourth grouping by hand would be the copy.
+
+It lands before the AI layer deliberately. Four of the seven commands `starting_conversation.txt`
+§18 uses as examples — least profitable services, cost trends, parts to order, customers not
+contacted — are reports. An AI layer over no aggregate layer can only answer the other three.
+
+---
+
+## M7 — The AI layer
 
 > **Done when:** an operator can ask "what work is at risk of being late today" and
 > "which customers haven't been contacted in thirty days," and the answers are produced
@@ -296,9 +344,12 @@ configuration. This is also **Business templates** from *Decided, not yet built*
 the way that entry demands: as an extract of configuration that has already proven itself,
 rather than a bundle cloned from a guess.
 
+`step-by-roll` is the reference: role, agent, skill, tool, workflow held apart, with a
+capability check on every tool. That separation is I14 already built once.
+
 ---
 
-## M7 — Vertical two: reception and sales
+## M8 — Vertical two: reception and sales
 
 > **Done when:** a business runs its front desk on GOLD — a call is placed or answered,
 > recorded, transcribed, analysed, and attached to the customer timeline as events — and the
@@ -310,7 +361,9 @@ M4's test instead of a demo's: a call placed and transcribed proves a pipeline, 
 answering its phone here proves a product. D5 already calls the dialer vertical two and says
 why it is cheaper built second, once customers, timeline and audit exist to attach to.
 
-This is where the Python plane arrives (`constraints.md` D2).
+**This milestone buys a second host, and D24 says why.** A call is a persistent media stream
+for its whole duration, which is not what Vercel serverless is. `apps/api` does not move; a
+realtime deployment target is added beside it.
 
 References: **`agent-system`** — a receptionist agent and a sales agent over Twilio and
 ElevenLabs, with an orchestration service and a tool dispatcher whose split matches D2's — and
@@ -318,7 +371,8 @@ ElevenLabs, with an orchestration service and a tool dispatcher whose split matc
 transcription.
 
 **Customer intelligence lands here**: lifetime value, outstanding balance, last contact, next
-action. M4 built the history; this is the first caller that needs it reduced to a number.
+action. M4 built the history and M6 built the aggregate layer; this is the first caller that
+needs a customer reduced to a number.
 
 The progression is deliberately staged, and each stage is sellable on its own:
 record → understand → assist → automate → delegate. Live rebuttals and voice agents are the
@@ -326,7 +380,7 @@ last two stages, not the first.
 
 ---
 
-## M8 — Desktop
+## M9 — Desktop
 
 > **Done when:** the Electron build renders the same React components as the web app, with
 > no forked UI, and adds only what a browser genuinely cannot do — device access, local
