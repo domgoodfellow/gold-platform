@@ -66,6 +66,8 @@ export type FieldDefinition = {
   label: string;
   kind: FieldKind;
   required: boolean;
+  /** Where this field sits on the entity's form. The tenant's order, not creation order. */
+  position: number;
   createdAt: string;
 };
 
@@ -80,7 +82,11 @@ function isKind(value: string): value is FieldKind {
 }
 
 /**
- * The fields one tenant has defined for one entity type.
+ * The fields one tenant has defined for one entity type, in the order that tenant put them.
+ *
+ * This is the whole of "custom forms over field definitions" on the read side: every form in
+ * the platform renders this sequence, so changing it here changes the form everywhere, and
+ * nothing else gets an opinion about field order.
  *
  * The `organization_id` filter is an optimisation, not the boundary — RLS has already
  * restricted the rows to organizations the caller belongs to.
@@ -91,9 +97,12 @@ export async function listFieldDefinitions(
 ): Promise<FieldDefinition[]> {
   const { data, error } = await db
     .from('field_definitions')
-    .select('id, entity_type, key, label, kind, required, created_at')
+    .select('id, entity_type, key, label, kind, required, position, created_at')
     .eq('organization_id', input.organizationId)
     .eq('entity_type', input.entityType)
+    // The tenant's own order, with creation order breaking ties — `position` is not unique,
+    // so this second key is what makes the form deterministic rather than merely sorted.
+    .order('position', { ascending: true })
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -112,6 +121,7 @@ export async function listFieldDefinitions(
       label: row.label,
       kind: row.kind as FieldKind,
       required: row.required,
+      position: row.position,
       createdAt: row.created_at,
     }));
 }
@@ -193,6 +203,65 @@ export async function createFieldDefinition(
   }
 
   return data;
+}
+
+/**
+ * Change how a field appears on the form: its label, whether it is required, where it sits.
+ *
+ * Deliberately not its `kind` and not its `key`. Both are refused by the column grant rather
+ * than by an argument this function declines to accept, so a raw PostgREST update is refused
+ * identically — see the migration for why each would be a retroactive rewrite (I8) wearing a
+ * rename's clothing.
+ *
+ * Whether the caller *may* is decided by `field_definitions_update`, which requires
+ * `field.manage`. What this owns is what a well-formed edit looks like, and it repeats
+ * `createFieldDefinition`'s label rules rather than inventing softer ones — a label that
+ * could not be created should not be reachable by editing.
+ */
+export async function updateFieldDefinition(
+  db: Db,
+  input: {
+    id: string;
+    label: string;
+    required: boolean;
+    position: number;
+  },
+): Promise<void> {
+  await requireActor(db);
+
+  const label = input.label.trim();
+  if (label.length === 0) {
+    throw new DomainError('A field needs a label.', 'fields.label_required');
+  }
+  if (label.length > LABEL_MAX) {
+    throw new DomainError(
+      `That label is longer than ${LABEL_MAX} characters.`,
+      'fields.label_too_long',
+    );
+  }
+
+  // A position is a sort key, not an index into anything, so the only wrong values are the
+  // ones that are not whole numbers. Gaps and duplicates are both fine and both survive.
+  if (!Number.isInteger(input.position) || input.position < 0) {
+    throw new DomainError(
+      'A position is a whole number, counting from zero.',
+      'fields.position_invalid',
+    );
+  }
+
+  const { error } = await db.rpc('update_field_definition', {
+    p_id: input.id,
+    p_label: label,
+    p_required: input.required,
+    p_position: input.position,
+  });
+
+  if (error) {
+    if (error.code === '42501') {
+      throw new DomainError('You cannot manage fields here.', 'fields.forbidden');
+    }
+    throw new DomainError(error.message, 'fields.update_failed');
+  }
 }
 
 /**

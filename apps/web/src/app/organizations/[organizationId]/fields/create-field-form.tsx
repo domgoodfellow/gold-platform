@@ -7,9 +7,17 @@ import {
   FIELD_KINDS,
   FIELD_KIND_LABELS,
 } from '@/lib/domain/fields/field-definitions';
-import { createFieldAction, type CreateFieldState } from './actions';
+import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
+import {
+  createFieldAction,
+  updateFieldAction,
+  type CreateFieldState,
+  type UpdateFieldState,
+} from './actions';
 
 const INITIAL: CreateFieldState = { error: null };
+const EDIT_INITIAL: UpdateFieldState = { error: null };
+const CELL = 'rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20';
 
 export function CreateFieldForm({ organizationId }: { organizationId: string }) {
   const [state, formAction, pending] = useActionState(createFieldAction, INITIAL);
@@ -83,6 +91,75 @@ export function CreateFieldForm({ organizationId }: { organizationId: string }) 
 
       {state.error ? (
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {state.error}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+/**
+ * One row of the form a tenant is arranging.
+ *
+ * The same shape as `EditStatusForm` on the work board, deliberately: an operator who has
+ * reordered their statuses already knows that a position is a number they type. Extracting
+ * the two into a shared control is M3's job at the point a *third* screen wants it, which
+ * `roadmap.md` says explicitly and which two screens do not yet justify.
+ *
+ * The key and the kind are rendered as text rather than as inputs. That is not a disabled
+ * control standing in for a permission — the column grant refuses both to everybody, so
+ * there is no version of this form, for any role, in which they are editable.
+ */
+export function EditFieldForm({
+  organizationId,
+  definition,
+}: {
+  organizationId: string;
+  definition: FieldDefinition;
+}) {
+  const [state, formAction, pending] = useActionState(updateFieldAction, EDIT_INITIAL);
+
+  return (
+    <form action={formAction} className="flex flex-wrap items-center gap-2 py-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="fieldId" value={definition.id} />
+
+      <input
+        name="position"
+        type="number"
+        required
+        min={0}
+        step={1}
+        defaultValue={definition.position}
+        aria-label={`Position of ${definition.label}`}
+        className={`w-16 ${CELL}`}
+      />
+      <input
+        name="label"
+        type="text"
+        required
+        maxLength={100}
+        defaultValue={definition.label}
+        aria-label={`Label of ${definition.label}`}
+        className={`min-w-0 flex-1 ${CELL}`}
+      />
+      <code className="text-xs opacity-60">
+        {definition.key} · {FIELD_KIND_LABELS[definition.kind]}
+      </code>
+      <label className="flex items-center gap-1 text-sm">
+        <input name="required" type="checkbox" defaultChecked={definition.required} />
+        Required
+      </label>
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-50 dark:border-white/20"
+      >
+        Save
+      </button>
+
+      {state.error ? (
+        <p role="alert" className="w-full text-sm text-red-600 dark:text-red-400">
           {state.error}
         </p>
       ) : null}

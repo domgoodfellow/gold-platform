@@ -2,7 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
-import { createFieldDefinition } from '@/lib/domain/fields/field-definitions';
+import {
+  createFieldDefinition,
+  updateFieldDefinition,
+} from '@/lib/domain/fields/field-definitions';
 import { DomainError } from '@/lib/domain/errors';
 
 export type CreateFieldState = { error: string | null };
@@ -36,6 +39,40 @@ export async function createFieldAction(
   // As on the customers action: the organization id comes from a hidden field a client could
   // edit, and it is deliberately not re-checked here. `field_definitions_insert` requires
   // both membership and field.manage, so tampering produces a refusal rather than a leak.
+  revalidatePath(`/organizations/${organizationId}/fields`);
+  return { error: null };
+}
+
+export type UpdateFieldState = { error: string | null };
+
+/**
+ * Relabel a field, require it or stop requiring it, and move it on the form.
+ *
+ * There is no `kind` and no `key` here, and their absence is not this file's decision to
+ * make or unmake: the column grant refuses both to every caller, so adding them to this
+ * form would produce a refusal rather than a rename.
+ */
+export async function updateFieldAction(
+  _previous: UpdateFieldState,
+  formData: FormData,
+): Promise<UpdateFieldState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await updateFieldDefinition(db, {
+      id: String(formData.get('fieldId') ?? ''),
+      label: String(formData.get('label') ?? ''),
+      required: formData.get('required') !== null,
+      position: Number(formData.get('position') ?? ''),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
+
   revalidatePath(`/organizations/${organizationId}/fields`);
   return { error: null };
 }

@@ -7,7 +7,7 @@ import {
   type CustomFieldEntity,
   type FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
-import { CreateFieldForm } from './create-field-form';
+import { CreateFieldForm, EditFieldForm } from './create-field-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,19 +42,31 @@ export default async function FieldsPage({
           .map(([entityType, definitions]) => (
             <section key={entityType} className="mt-6">
               <h2 className="text-sm font-medium">{CUSTOM_FIELD_ENTITY_LABELS[entityType]}</h2>
+              {/* In the tenant's own order, which is the order the entity's form renders
+                  in. Editing the number here is what "custom forms" means on this screen —
+                  there is no separate form designer, because the registry *is* the form. */}
               <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
                 {definitions.map((definition) => (
-                  <li key={definition.id} className="py-3">
-                    <div className="font-medium">{definition.label}</div>
-                    <div className="text-sm opacity-70">
-                      {[
-                        definition.key,
-                        FIELD_KIND_LABELS[definition.kind],
-                        definition.required ? 'Required' : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </div>
+                  <li key={definition.id}>
+                    {mayManage ? (
+                      <EditFieldForm
+                        organizationId={organizationId}
+                        definition={definition}
+                      />
+                    ) : (
+                      <div className="py-3">
+                        <div className="font-medium">{definition.label}</div>
+                        <div className="text-sm opacity-70">
+                          {[
+                            definition.key,
+                            FIELD_KIND_LABELS[definition.kind],
+                            definition.required ? 'Required' : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </div>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

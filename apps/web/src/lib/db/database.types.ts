@@ -308,6 +308,7 @@ export type Database = {
           kind: string
           label: string
           organization_id: string
+          position: number
           required: boolean
         }
         Insert: {
@@ -319,6 +320,7 @@ export type Database = {
           kind: string
           label: string
           organization_id: string
+          position?: number
           required?: boolean
         }
         Update: {
@@ -330,6 +332,7 @@ export type Database = {
           kind?: string
           label?: string
           organization_id?: string
+          position?: number
           required?: boolean
         }
         Relationships: [
@@ -1203,6 +1206,15 @@ export type Database = {
       }
       unschedule_work_item: {
         Args: { p_work_item_id: string }
+        Returns: undefined
+      }
+      update_field_definition: {
+        Args: {
+          p_id: string
+          p_label: string
+          p_position: number
+          p_required: boolean
+        }
         Returns: undefined
       }
       update_organization: {
