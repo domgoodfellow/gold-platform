@@ -180,31 +180,107 @@ a screen.
 
 ---
 
-## M4 — Vertical one: field service
+## M4 — Vertical one: Pneu3L
 
-> **Done when:** one real field-service business runs its operations on GOLD — quotes or
-> bookings in, work scheduled and assigned, work completed, invoiced, and paid — and the
-> operator has never been given database credentials.
+> **Done when:** Pneu3L runs its operations on GOLD — quotes or bookings in, work scheduled
+> and assigned, work completed, invoiced, and paid — and nobody at that business has ever
+> been given database credentials.
+
+The business is named because "one real field-service business" was a placeholder and D1
+deferred the naming to this milestone. Pneu3L: mobile automotive service, one owner-operator
+who is also the technician, Montreal, CAD, `America/Toronto`, Stripe alongside cash as a
+first-class payment method. **Travel is the primary scheduling constraint, not job duration.**
+
+It onboards **fresh** — see `constraints.md` D1, which this milestone resolves. Its rows do
+not migrate; its configuration does. A business arriving through configuration is the claim
+`vision.md` makes, and a business arriving through an import script would prove the opposite.
+
+**"Operator" means whoever runs the business, not the founder.** M2's criterion already
+exercised somebody who was not, D19 governs what a membership may be, and D20 records that
+*admin* names the tenant operator surface. What separates an owner from a dispatcher is role
+capabilities and nothing else.
 
 See `constraints.md` D5 for why field service rather than sales.
 
-Covers: the domain code this vertical actually needs, extracted into shared functions the
-moment a second *caller* appears.
+Covers:
 
-**Modules are not expected from M4.** A module waits for two independent pieces of evidence
-(`constraints.md`, Scope and abstraction). M4 supplies one — a live business, which is the
-strongest kind — and a prior repo can supply the other, so a module becoming admissible here
-is possible rather than forbidden. It is still not the milestone's output. What M4 produces
-is a candidate list: the seams that looked general, to be tested against vertical two. Which
-of them survive is an output of M5 and beyond, never an input here.
+- **The external-actor authorization axis, and this is the milestone's largest cost.** D22
+  says booking, the customer portal and any embedded surface are blocked on one model, and
+  that whichever surface goes first pays for it. Booking goes first here, so M4 pays, and
+  D22 is amended in that slice rather than completed speculatively before it.
+- **Booking and the customer portal.** D20 deferred both and its trigger has now fired: I5
+  and I6 were enforced in M2, I4 in M3, and D22 is written. They are no longer blocked on
+  invariants — only on the model above.
+- **Quote → invoice → payment.** Named in the criterion above and absent from every coverage
+  list until now. Stripe is the first vendor behind an adapter and the first real caller for
+  the integration shape.
+- **Job economics.** Prices landed in M3 and costs in M2, and nothing subtracts them.
+  Revenue minus cost per job is the smallest useful version, and it is the number the owner
+  asks for first.
+- **The customer timeline.** `Event` shipped in M1 precisely because it cannot be backfilled,
+  so the substrate exists and what is missing is a screen.
+- **Editing and cancelling a work item.** `updateWorkItem` does not exist and neither does a
+  cancel path: a job typed wrong today is wrong permanently, which no live business tolerates.
+  Cancelling is a status the tenant configures and a transition into it, needing no new code.
+  Editing the details is a `work_item.update` capability following the per-column split
+  `app.check_work_item_update_capability` already establishes.
+- **The interface, per D23** — which exists so that M4 does not rebuild its screens the way
+  M3 rebuilt M2's.
+
+**There is no CRM engine, and the reason is worth keeping.**
+`docs/starting_conversation.txt` §9 describes one: a customer timeline and customer
+intelligence. The timeline is a projection of `events`. The intelligence is arithmetic over
+work items, prices and payments. Neither owns an entity or a rule, so neither is an engine,
+and building the word would produce a directory that reformats other tables. The timeline
+screen lands here; lifetime value, outstanding balance and last-contacted land in M7, where
+the dialer is the caller that needs a number rather than a history.
+
+**What M4 produces beyond a running business** is the list of seams that looked general — to
+be tested against the next vertical rather than declared general here. `constraints.md`'s
+*Scope and abstraction* governs what may be *claimed* about them, and that section is
+explicit that it is not a gate on building any of it.
 
 ---
 
-## M5 — The AI layer
+## M5 — Automations, and the channels they act through
+
+> **Done when:** Pneu3L adds a second technician, writes a rule — *when the forecast at a
+> job's location crosses this threshold, move the job and tell the customer* — and a forecast
+> change reschedules the job and sends the message. No code change and no deploy.
+
+**One tenant, deliberately.** The obvious version of this milestone stands up a second
+business with crews and dispatch and calls the difference a feature. That framing makes
+weather a module, which D11 forbids for the right reason: weather owns no entity and no rule.
+**Dispatch is not something the platform builds.** It is what a business has once it
+configures several resources and turns these capabilities on — and proving that on a business
+already live is a far stronger claim than proving it on a second tenant built to need it.
+
+Covers:
+
+- **The automation runtime** — trigger, condition, action (`starting_conversation.txt` §11).
+  It arrives here rather than in M3 or M4 because it needs a second caller and M4 supplies
+  only the first: a booking confirmation is one line inside the domain function that creates
+  the booking. Weather is the second, and the runtime absorbs the first when it lands. That
+  is *Never duplicate a rule across callers* running on schedule rather than as a rescue.
+- **Weather as an integration and a trigger** (D11), which already names this the sharpest
+  available test of both the runtime and I6 — availability shown to a client is advisory and
+  re-asserted server-side, and the external world changes between the two.
+- **Channels** — email, SMS, and the first outbound voice path, each behind an adapter that
+  names a capability rather than a provider.
+
+`infieldos-main` is the reference for the screens this shape needs — alerts, crews, activity —
+alongside `tire-app-template`'s spec under D23. Reference for the shape, never the code; D1's
+reasoning generalises to both.
+
+---
+
+## M6 — The AI layer
 
 > **Done when:** an operator can ask "what work is at risk of being late today" and
 > "which customers haven't been contacted in thirty days," and the answers are produced
-> through the same domain tools a human uses, under that user's permissions.
+> through the same domain tools a human uses, under that user's permissions — **and** can
+> describe a business in prose and receive a proposed configuration, work item types,
+> statuses, fields and price book, which a human reviews and applies.
 
 Enforces: **I14**.
 
@@ -212,25 +288,45 @@ Do not start with autonomous agents. First make the AI good at *understanding* t
 operating it follows. Every tool is a domain service that already exists — if a tool needs
 new business logic, that logic belongs in the domain layer and the tool is a caller.
 
+**The second criterion is onboarding, and it is the half with a business behind it.** Reading
+the system answers questions; configuring it removes the bottleneck of a service business,
+which is standing up the next tenant. It stays inside the guardrail above because a person
+reviews and applies the proposal — the AI proposes configuration, it does not become
+configuration. This is also **Business templates** from *Decided, not yet built*, arriving
+the way that entry demands: as an extract of configuration that has already proven itself,
+rather than a bundle cloned from a guess.
+
 ---
 
-## M6 — Communications and the dialer
+## M7 — Vertical two: reception and sales
 
-> **Done when:** a call is placed from the platform, recorded, transcribed, analysed, and
-> attached to the customer timeline as events — and the analysis proposes actions that the
-> domain layer executes rather than performing them itself.
+> **Done when:** a business runs its front desk on GOLD — a call is placed or answered,
+> recorded, transcribed, analysed, and attached to the customer timeline as events — and the
+> analysis proposes actions that the domain layer executes rather than performing them itself.
 
-This is where the Python plane arrives (`constraints.md` D2), and where `nextfund-portal`
-gets harvested: capability tokens, inbound routing, recording, transcription.
+Renamed from "Communications and the dialer", which described the plumbing. The plumbing
+serves a business function — reception and sales — and naming it that way gives the milestone
+M4's test instead of a demo's: a call placed and transcribed proves a pipeline, a business
+answering its phone here proves a product. D5 already calls the dialer vertical two and says
+why it is cheaper built second, once customers, timeline and audit exist to attach to.
+
+This is where the Python plane arrives (`constraints.md` D2).
+
+References: **`agent-system`** — a receptionist agent and a sales agent over Twilio and
+ElevenLabs, with an orchestration service and a tool dispatcher whose split matches D2's — and
+**`nextfund-portal`**, which proved capability tokens, inbound routing, recording and
+transcription.
+
+**Customer intelligence lands here**: lifetime value, outstanding balance, last contact, next
+action. M4 built the history; this is the first caller that needs it reduced to a number.
 
 The progression is deliberately staged, and each stage is sellable on its own:
-record → understand → assist → automate → delegate.
-
-Live rebuttals and voice agents are the last two stages, not the first.
+record → understand → assist → automate → delegate. Live rebuttals and voice agents are the
+last two stages, not the first.
 
 ---
 
-## M7 — Desktop
+## M8 — Desktop
 
 > **Done when:** the Electron build renders the same React components as the web app, with
 > no forked UI, and adds only what a browser genuinely cannot do — device access, local

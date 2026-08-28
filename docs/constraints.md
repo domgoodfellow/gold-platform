@@ -43,6 +43,20 @@ An entry nobody could violate is not a constraint. Delete it.
 - **Never add a column, table, enum value, or abstraction without a caller in the same
   change.** A field nothing reads is a speculative abstraction that will be maintained,
   migrated, and eventually misinterpreted as meaningful.
+- **What counts as a caller, because this is where the rule above is misread.** A caller is
+  whatever uses the thing *in the same change* — a screen, a route, a domain function, an
+  operator who needs it on Monday. It is not "a second existing call site"; that is the bar
+  for *extracting a rule*, three bullets up, and naming a module at the top of this section
+  is harder still. A business that has gone live wanting to see a customer's history is a
+  caller. A business that might one day want a dashboard is not.
+- **This section's own failure mode, stated so that it stays checkable.** It has removed
+  module enablement, dashboard configuration, business rules and terminology overrides — four
+  things, from M3 alone. Three of them return in M4 and M5 with shapes that the removal is
+  what gave them, which is this section working as designed. It is **over-tuned the first
+  time something is removed and does not come back**, and the honest response then is to
+  weaken these rules rather than defer the same feature a third time. Removals are recorded
+  in `CHANGELOG.md` on the commit that made them (D9), which is what makes that a count
+  rather than a feeling.
 - **Never write a document ahead of the evidence.** See D8 for the budget and the
   admission rule.
 
@@ -168,6 +182,13 @@ Whether **Pneu3L itself eventually onboards as a GOLD tenant** is a separate que
 where its code lives, and is deferred to M4. That would be migrating a business, which
 happens through configuration — not migrating a codebase, which is what this decision
 refuses. Until then Pneu3L runs on `tire-app-template`.
+
+**Resolved at M4, and the answer is fresh.** Pneu3L onboards as a GOLD tenant and its rows do
+not come with it. The data there is largely mock, and what was worth keeping was never the
+rows: what crosses over is configuration — the service catalogue as price book items, the
+service area, the operating hours, the work item types and their statuses — plus the visual
+reasoning recorded in D23. That is the milestone's point rather than a shortcut around it. A
+business arriving through an import script would prove the opposite of what M4 claims.
 
 **Rejected:** moving the repo in and retrofitting tenancy. It is genuinely the cheapest
 moment to do so — pre-V1, seed data only — but it couples the platform's first months to
@@ -363,6 +384,14 @@ tenant is pulling on, and the pull is what tells us which parts were actually ge
 stock, and I8 governs the price it consumed that stock at. That is inventory as a work-item
 concern, not a fulfilment engine.
 
+**The e-commerce app is `mamouandco`, and looking at it closes the question rather than
+reopening it.** Its nineteen tables are products, categories, collections, sales, orders,
+order_items and product_imports: no work item, no schedule, no resource, no place. It touches
+none of the kernel, so it would exercise nothing this platform is good at while needing a
+fulfilment engine this platform does not have. What is genuinely worth taking from it is not
+e-commerce at all — it is `brand_settings`, and that is a surface concern belonging to every
+vertical (see D23).
+
 **Trigger to revisit:** a tenant already running on the platform makes selling stock its
 primary motion.
 
@@ -394,7 +423,7 @@ on working unchanged when `apps/desktop` arrives. A Python service under `servic
 outside the glob entirely — stricter than `saas-agent-platform`, whose glob includes
 `services/*` and then relies on `services/api` having no `package.json` for pnpm to skip it.
 
-**Trigger to revisit:** the first genuine second workspace package — M7's `packages/ui`. At
+**Trigger to revisit:** the first genuine second workspace package — M8's `packages/ui`. At
 that point `pnpm -r` rebuilds what did not change, and Turbo's caching starts earning its
 configuration.
 
@@ -421,7 +450,7 @@ privilege gets a narrow `SECURITY DEFINER` function in a migration — `create_o
 That keeps the privileged surface enumerable in one directory instead of diffuse across the
 application.
 
-**Trigger to revisit:** the first writer with no human caller — a scheduled job, or M6's
+**Trigger to revisit:** the first writer with no human caller — a scheduled job, or M7's
 Python plane handling an inbound webhook. That caller gets its own Postgres role and its own
 policies. It does not get service-role.
 
@@ -532,7 +561,7 @@ trust, and no second caller needs one.
 an argument to a domain function. A direct PostgREST call is refused exactly as a form is,
 which is what I16 exists to keep true.
 
-**Trigger to revisit:** M6's Python plane needing to write with no human JWT. Per D2 it
+**Trigger to revisit:** M7's Python plane needing to write with no human JWT. Per D2 it
 proposes and TypeScript executes, so this may never arrive — but if it does, it gets its own
 Postgres role and its own policies, not a service-role bypass.
 
@@ -806,6 +835,74 @@ than D20 implies, because I5 and I6 are now enforced. Its remaining blockers are
 record. Whichever surface goes first pays for the model; the other two inherit it, and this
 record is amended in that slice rather than completed speculatively now.
 
+### D23 — The interface has a decided visual language, harvested from `tire-app-template`
+
+M3 rebuilt every screen M1 and M2 produced, because those screens were a `max-w-2xl` stack of
+sections with whatever `sm:` breakpoint was typed first. That is once. M4 builds an operator's
+daily surface, a booking flow and a customer portal for a business that will use all three
+every day, and building them without a decided visual language is the same mistake at four
+times the size.
+
+`tire-app-template/docs/ui-spec.md` is the source, harvested the way D1 says to harvest — the
+reasoning, cited, never the code, and not all of the reasoning.
+
+**Adopted.**
+
+- **Mobile-first means designed around the action performed on a phone**, not the desktop
+  layout shrunk. For an operator that action is *what do I do next*; for a customer it is
+  *book this with the least friction*. Those are different enough that one navigation model
+  serving both makes both worse.
+- **The information architecture does not change across breakpoints; only its rendering
+  does.** One set of areas — `apps/web/src/lib/navigation.ts` already holds them, and already
+  asserts that every area has a page and every page an area — with three presentations:
+  bottom tab bar on a phone, a rail on a tablet, a persistent sidebar on a desktop. The
+  sidebar is the desktop rendering of the IA, never its source.
+- **Operational navigation is separate from configuration navigation.** `navigation.ts`
+  already orders itself this way and says the order "is a claim about what an operator does
+  all day, not an alphabetisation". This record is what makes that a decision rather than an
+  accident the next contributor is free to tidy away. An operator must never reach today's
+  work by going through settings.
+- **One primary action per screen**, secondary and tertiary beneath it, destructive
+  confirmed when consequential. Not every interaction is a dialog: cards for lists, sheets
+  for small forms and quick actions, full screens for complex forms, dialogs for confirmation.
+- **One component file, extended — never a parallel set per surface.** M3 already owes shared
+  form components "at the point a third screen needs the same control"; four surfaces make
+  that point arrive fast, and the failure mode is an admin `Button` and a booking `Button`
+  that drift.
+
+**Rejected, and this is the sharp one: the status system.** `ui-spec.md` fixes a nine-value
+vocabulary — `REQUESTED · CONFIRMED · EN ROUTE · COMPLETED · NO SHOW` — in a `STATUS_LABELS`
+constant and names it the single source. GOLD cannot have that constant. D6 makes statuses
+per-tenant rows; `work_item_statuses` holds a `name` the platform never translates and a
+`position`, with deliberately no `is_terminal` and no colour. A badge here therefore cannot
+be coloured by what a status *means*, because the platform does not know what it means:
+"Klaar" and "Awaiting parts" are the same shape of row.
+
+**Consequence:** a status is styled from data the tenant owns, and until a tenant owns
+something beyond a name and an ordinal it is styled from neither — one neutral treatment,
+legible, the tenant's word rendered as written. A colour is a column a tenant fills, added in
+the change where a screen reads it, never a lookup keyed to English. This is the general
+shape of harvesting from a single-tenant source: everything it was free to hardcode is
+exactly what this platform is not.
+
+**Also rejected:** a design-tokens document, a component-naming convention, and a per-tenant
+theme. The first two are what D8's never-write list exists for. The third is a real feature
+and is not this one — a tenant choosing its own colours is configuration with a renderer,
+which lands with the marketing surface under D20 and needs the same evidence.
+
+**Its shape is known, though, and recording it costs nothing.** `mamouandco`'s
+`brand_settings` is that table already written: brand name, tagline, logo, favicon, five
+colour roles, a heading and a body font, contact and social links as JSONB, edited from an
+admin screen and live across the site immediately. One thing about it does **not** come
+across, and it is the whole difference between that product and this one — the table is
+declared `id INTEGER PRIMARY KEY ... CONSTRAINT single_row CHECK (id = 1)`, because
+`mamouandco` is single-tenant and gets a second store by cloning the repository. Here that
+column is `organization_id`, leading every index, under RLS (I2). D1 refuses the clone for
+`tire-app-template`; this is the same refusal, and the column list survives it intact.
+
+**Trigger to revisit:** `docs/ui-spec.md` is admissible as a Tier 1 document under D8 once the
+second and third surfaces exist. Three surfaces with genuinely different navigation models are
+more than one decision record should carry; one surface is not.
 ---
 
 ## Decided, not yet built
@@ -813,7 +910,14 @@ record is amended in that slice rather than completed speculatively now.
 Named so they are not reinvented, and deliberately unbuilt until they have a consumer.
 
 - **Approval workflows** on work items — changes the commitment flow; no caller yet.
-- **Recurring work generation** — needs the maintenance module's trigger model first.
+- **Recurring work generation** — the trigger model it was waiting on now exists.
+  `Mechanic_Maintenance` ships it: an append-only `HourReading` log, an interval and a
+  `nextDueHours` on each task, and an index on `(active, nextDueHours)` that is the whole
+  "what is due" query. It is worth naming because it is a **third trigger shape**, and M5 is
+  designed around the other two. A schedule fires at a time; weather fires on an external
+  event; this fires when *an accumulated counter a human or a sensor advances crosses a
+  threshold*. A when/if/then runtime built for events does not express that naturally, and
+  discovering it after the runtime exists is more expensive than reading it here.
 - **Group and proximity discounting** — a discount must never exceed what the business
   provably saved; requires travel cost modelling that does not exist.
 - **Terminology overrides** per tenant — a display-layer concern that needs a second vertical

@@ -140,9 +140,9 @@ exist; the rest does not.
 apps/
   web/              Next.js — admin today; marketing, booking and customer portal are
                     what the directory is FOR, not what is in it (D20)
-  desktop/          Electron shell (M7; not before)
+  desktop/          Electron shell (M8; not before)
 services/
-  api/              Python/FastAPI — intelligence and realtime plane (M6; not before)
+  api/              Python/FastAPI — intelligence and realtime plane (M7; not before)
 packages/           Empty until a package has two consumers. See constraints.md.
 infra/
   supabase/         migrations, policies, seed
