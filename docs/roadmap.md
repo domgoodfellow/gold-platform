@@ -108,8 +108,8 @@ them as a side effect.
 > migration and no deploy. The test is literally: configure a second business shape without
 > a pull request.
 
-Covers: module enablement per tenant, custom forms over field definitions, per-tenant
-terminology, pricing rules, business rules, dashboard configuration.
+Covers: module enablement per tenant, custom forms over field definitions, pricing rules,
+business rules, dashboard configuration.
 
 Enforces: **I4**.
 
@@ -119,15 +119,31 @@ a checklist template — each of which is safe only because the thing it could h
 was snapshotted. Pricing does not add the invariant, it inherits it: when amounts derived
 from a catalogue land, they snapshot the same way.
 
+**Terminology was in that coverage list and is not a thing M3 builds, so the word is gone.**
+It named two mechanisms at once. A tenant already names its own things — `work_item_types.name`,
+`work_item_statuses.name`, `roles.name`, `field_definitions.label`, and the per-tenant display
+name on a membership (`constraints.md` D19) are rows a business wrote, rendered as written.
+That shipped across M1 and M2, and it is what the criterion above means: standing up a business
+shape is largely the act of naming its things.
+
+What is **not** built is overriding the platform's own nouns — Work Item, Resource, Customer —
+in chrome the tenant never authored. That is a display-layer indirection over strings the code
+owns, deferred in `constraints.md` under "Decided, not yet built" until a second vertical makes
+its shape knowable; `capabilities.ts` already cites that deferral for the same reason about
+capability labels, and `vision.md` makes the primitives non-negotiable in the same breath as it
+makes everything else configurable. The debt M3 does take on is that the operator shell
+concentrates every platform noun into one navigation definition instead of scattering it across
+page headings, so the override is a lookup swap when it has evidence rather than an excavation.
+
 This is the milestone that decides whether the platform is a platform. If standing up a
 business shape still needs code, M3 is not done regardless of what has been built.
 
 **M3 also owns the interface, and until then nothing does.** Every screen through M2 is a
 `max-w-2xl` stack of sections with incidental `sm:` breakpoints, no shell, no navigation
 between areas of one business, and no shared form vocabulary. That is a deliberate deferral
-rather than an oversight — M3 rebuilds these screens anyway, because per-tenant terminology,
-custom forms over field definitions and dashboard configuration all change what is on them,
-and styling them twice would be the waste. What M3 owes:
+rather than an oversight — M3 rebuilds these screens anyway, because custom forms over field
+definitions and pricing both change what is on them, and styling them twice would be the
+waste. What M3 owes:
 
 - **An operator shell**: persistent navigation across one business's areas, rather than every
   page beginning with a back-link to `/organizations`.
