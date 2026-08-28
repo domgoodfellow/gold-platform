@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { addChecklistItem, setChecklistItemDone } from '@/lib/domain/work-items/checklists';
+import { addPricedLine, removePricedLine } from '@/lib/domain/pricing/prices';
 import { recordCost, recordTime } from '@/lib/domain/work-items/consumption';
 
 export type WorkItemActionState = { error: string | null };
@@ -101,6 +102,55 @@ export async function recordCostAction(
       description: String(formData.get('description') ?? ''),
       amountMinor: Number(formData.get('amountMinor') ?? Number.NaN),
     });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidate(organizationId, workItemId);
+  return { error: null };
+}
+
+/**
+ * Put a catalogue item on this job.
+ *
+ * Notice what this form cannot submit: an amount. The domain layer takes an item and a
+ * quantity, and the RPC copies the price from the catalogue — so there is no field here for
+ * somebody to type a number into, which is the difference between quoting and invoicing.
+ */
+export async function addPricedLineAction(
+  _previous: WorkItemActionState,
+  formData: FormData,
+): Promise<WorkItemActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const workItemId = String(formData.get('workItemId') ?? '');
+
+  try {
+    await addPricedLine(db, {
+      workItemId,
+      priceBookItemId: String(formData.get('priceBookItemId') ?? ''),
+      quantity: Number(formData.get('quantity') ?? Number.NaN),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidate(organizationId, workItemId);
+  return { error: null };
+}
+
+export async function removePricedLineAction(
+  _previous: WorkItemActionState,
+  formData: FormData,
+): Promise<WorkItemActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const workItemId = String(formData.get('workItemId') ?? '');
+
+  try {
+    await removePricedLine(db, { id: String(formData.get('lineId') ?? '') });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;

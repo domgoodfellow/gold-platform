@@ -5,13 +5,17 @@ import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listResources } from '@/lib/domain/resources/resources';
 import { formatWindow } from '@/lib/domain/scheduling/window';
 import { listChecklistItems } from '@/lib/domain/work-items/checklists';
+import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
+import { listPricedLines, priceWorkItem } from '@/lib/domain/pricing/prices';
 import { formatMoney, listCosts, listTimeEntries } from '@/lib/domain/work-items/consumption';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
 import {
   AddChecklistItemForm,
+  AddPricedLineForm,
   RecordCostForm,
   RecordTimeForm,
+  RemovePricedLineForm,
   ToggleChecklistItemForm,
 } from './work-item-forms';
 
@@ -32,13 +36,21 @@ export default async function WorkItemPage({
     notFound();
   }
 
-  const [checklist, timeEntries, costs, resources, definitions] = await Promise.all([
+  const [checklist, timeEntries, costs, resources, definitions, lines, priceBook] =
+    await Promise.all([
     listChecklistItems(db, { organizationId, workItemId }),
     listTimeEntries(db, { organizationId, workItemId }),
     listCosts(db, { organizationId, workItemId }),
     listResources(db, { organizationId }),
     listFieldDefinitions(db, { organizationId, entityType: 'work_item' }),
+    listPricedLines(db, { organizationId, workItemId }),
+    listPriceBookItems(db, { organizationId }),
   ]);
+
+  // I4: the only total on this page, and the only one anywhere. Nothing here reduces an
+  // array, and nothing writes a subtotal to a column that could later disagree with it.
+  const price = priceWorkItem(lines);
+  const mayPrice = organization.capabilities.includes('work_item.price');
 
   const mayAdd = organization.capabilities.includes('work_item.create');
   const mayTick = organization.capabilities.includes('work_item.transition');
@@ -142,6 +154,66 @@ export default async function WorkItemPage({
             organizationId={organizationId}
             workItemId={workItemId}
             resources={resources.map((resource) => ({ id: resource.id, label: resource.name }))}
+          />
+        ) : null}
+      </section>
+
+      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
+        <h2 className="text-sm font-medium">Quote</h2>
+        {/* A quote is what this job is charged; the Cost section below is what it consumed.
+            They are deliberately not the same number and are never derived from each other
+            — see `roadmap.md` M2 on why a cost is not a price. */}
+
+        {lines.length === 0 ? (
+          <p className="mt-1 text-sm opacity-60">Nothing priced.</p>
+        ) : (
+          <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+            {lines.map((line) => (
+              <li key={line.id} className="flex items-baseline justify-between gap-3 py-2 text-sm">
+                <span>
+                  {line.description}
+                  <span className="opacity-60">
+                    {' '}
+                    × {line.quantity} {line.unit}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-baseline gap-3">
+                  {/* The line's own snapshotted amount and currency. Re-pricing the
+                      catalogue does not reach this row (I8). */}
+                  <span className="opacity-70">
+                    {formatMoney(line.unitAmountMinor * line.quantity, line.currency)}
+                  </span>
+                  {mayPrice ? (
+                    <RemovePricedLineForm
+                      organizationId={organizationId}
+                      workItemId={workItemId}
+                      lineId={line.id}
+                      description={line.description}
+                    />
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {price ? (
+          <p className="mt-2 flex justify-between text-sm font-medium">
+            <span>Total</span>
+            <span>{formatMoney(price.totalMinor, price.currency)}</span>
+          </p>
+        ) : null}
+
+        {mayPrice && priceBook.length === 0 ? (
+          <p className="mt-3 text-sm opacity-70">
+            Nothing is priced in this business yet, so there is nothing to quote from.
+          </p>
+        ) : null}
+        {mayPrice && priceBook.length > 0 ? (
+          <AddPricedLineForm
+            organizationId={organizationId}
+            workItemId={workItemId}
+            items={priceBook}
           />
         ) : null}
       </section>

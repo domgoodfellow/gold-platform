@@ -709,6 +709,53 @@ export type Database = {
           },
         ]
       }
+      work_item_priced_lines: {
+        Row: {
+          created_at: string
+          created_by: string
+          currency: string
+          description: string
+          id: string
+          organization_id: string
+          quantity: number
+          unit: string
+          unit_amount_minor: number
+          work_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          currency: string
+          description: string
+          id?: string
+          organization_id: string
+          quantity: number
+          unit: string
+          unit_amount_minor: number
+          work_item_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string
+          id?: string
+          organization_id?: string
+          quantity?: number
+          unit?: string
+          unit_amount_minor?: number
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_priced_lines_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       work_item_statuses: {
         Row: {
           created_at: string
@@ -1079,6 +1126,14 @@ export type Database = {
         }
         Returns: string
       }
+      add_work_item_priced_line: {
+        Args: {
+          p_price_book_item_id: string
+          p_quantity: number
+          p_work_item_id: string
+        }
+        Returns: string
+      }
       assign_role: {
         Args: { p_membership_id: string; p_role_id: string }
         Returns: undefined
@@ -1237,6 +1292,10 @@ export type Database = {
       }
       remove_operating_hours: { Args: { p_id: string }; Returns: undefined }
       remove_type_checklist_item: { Args: { p_id: string }; Returns: undefined }
+      remove_work_item_priced_line: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
       rename_work_item_type: {
         Args: { p_id: string; p_name: string }
         Returns: undefined

@@ -25,6 +25,7 @@ export const CAPABILITIES = [
   'work_item.record',
   'organization.manage',
   'price.manage',
+  'work_item.price',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -57,4 +58,5 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'work_item.record': 'Record time and cost',
   'organization.manage': 'Change this business’s own settings',
   'price.manage': 'Set what this business charges',
+  'work_item.price': 'Put priced items on a job',
 };

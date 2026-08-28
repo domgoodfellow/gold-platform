@@ -2,10 +2,13 @@
 
 import { useActionState } from 'react';
 import { OptionalSelect, type SelectOption } from '@/components/optional-select';
+import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import {
   addChecklistItemAction,
+  addPricedLineAction,
   recordCostAction,
   recordTimeAction,
+  removePricedLineAction,
   setChecklistItemDoneAction,
   type WorkItemActionState,
 } from './actions';
@@ -202,6 +205,105 @@ export function RecordCostForm({
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">
           {state.error}
         </p>
+      ) : null}
+    </form>
+  );
+}
+
+/**
+ * Put something from the catalogue on this job.
+ *
+ * There is no amount input, and its absence is the feature. A quantity and an item is all a
+ * caller supplies; the price is copied from the catalogue by the database. Somebody who
+ * should be able to type an amount onto a job is asking for a cost, which is a different form
+ * a few sections up, and a different thing (`roadmap.md` M2 on why a cost is not a price).
+ */
+export function AddPricedLineForm({
+  organizationId,
+  workItemId,
+  items,
+}: {
+  organizationId: string;
+  workItemId: string;
+  items: PriceBookItem[];
+}) {
+  const [state, formAction, pending] = useActionState(addPricedLineAction, INITIAL);
+
+  return (
+    <form action={formAction} className="mt-3 flex flex-wrap items-center gap-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="workItemId" value={workItemId} />
+
+      <select
+        name="priceBookItemId"
+        required
+        aria-label="Priced item"
+        className="min-w-0 flex-1 rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
+      >
+        {items.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name} · per {item.unit}
+          </option>
+        ))}
+      </select>
+      <input
+        name="quantity"
+        type="number"
+        required
+        min={1}
+        step={1}
+        defaultValue={1}
+        aria-label="Quantity"
+        className="w-20 rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
+      />
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-50 dark:border-white/20"
+      >
+        {pending ? 'Adding…' : 'Add to quote'}
+      </button>
+
+      {state.error ? (
+        <p role="alert" className="w-full text-sm text-red-600 dark:text-red-400">
+          {state.error}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+/** Strike one line off. A quote changes by removal and re-adding, never by amendment. */
+export function RemovePricedLineForm({
+  organizationId,
+  workItemId,
+  lineId,
+  description,
+}: {
+  organizationId: string;
+  workItemId: string;
+  lineId: string;
+  description: string;
+}) {
+  const [state, formAction, pending] = useActionState(removePricedLineAction, INITIAL);
+
+  return (
+    <form action={formAction} className="inline">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="workItemId" value={workItemId} />
+      <input type="hidden" name="lineId" value={lineId} />
+      <button
+        type="submit"
+        disabled={pending}
+        aria-label={`Remove ${description}`}
+        className="text-xs underline underline-offset-4 opacity-60 disabled:opacity-30"
+      >
+        Remove
+      </button>
+      {state.error ? (
+        <span role="alert" className="ml-2 text-xs text-red-600 dark:text-red-400">
+          {state.error}
+        </span>
       ) : null}
     </form>
   );
