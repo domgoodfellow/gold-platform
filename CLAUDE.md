@@ -56,7 +56,17 @@ Six things about the work engine are load-bearing and easy to undo by accident:
   `scheduleWorkItem` deliberately does not look before it writes — a check before an insert
   races identically, which is exactly what I6 says.
 - **There is one availability calculation** (`freeWindows`), and it is advisory by
-  construction. What keeps I5 honest is that it and the constraint agree.
+  construction. What keeps I5 honest is that it and the constraint agree — `listSchedule`'s
+  filters are the constraint's partial predicate written as a query, `status_releases_resource`
+  included, and a clause added to one without the other breaks I5 rather than a test.
+- **`work_items.status_releases_resource` is a maintained cache and must not become a
+  snapshot.** It mirrors the tenant's `work_item_statuses.releases_resource` onto the row
+  because an exclusion constraint's predicate must be IMMUTABLE and cannot join, and it is what
+  makes cancelling free the resource. Everything else this platform copies onto a row is
+  snapshotted so configuration cannot reach backwards (I8); this one is the deliberate
+  exception, because a tenant marking "Cancelled" as releasing means it about the jobs already
+  in it. Snapshotting it would look like enforcing I8 and would silently unfix cancellation.
+  Nobody may write it: it is in no column grant, and two triggers own it.
 - **A type with no configured transitions is frozen, not unconstrained** (I13), and the
   guarantee is `app.check_status_transition`, a trigger — the domain layer re-checks only to
   produce the message.
@@ -111,6 +121,12 @@ Two about the interface, which M3 owns:
   navigations without re-rendering it — a page leaning on its parent would be trusting a cache.
   A layout is no more the boundary than a redirect is (I12). Nothing in the navigation is
   capability-gated: each screen shows itself and explains what a role cannot do.
+
+**Cancellation was the first place "configuration is enough" was checked and found short.**
+`roadmap.md` recorded that cancelling needed no new code — a status the tenant configures and a
+transition into it. That was right about D6 and wrong about I7, whose predicate knew nothing
+about status. The fix is one tenant-answered question, not a platform-owned `is_terminal`; see
+M4 in `docs/roadmap.md` for why the distinction is the whole point.
 
 **A recorded cost is still not a price.** `work_item_costs` is an observation about a job that
 happened; a price is a claim the business publishes in advance. They are two tables and

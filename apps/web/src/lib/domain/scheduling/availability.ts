@@ -128,6 +128,13 @@ export async function listSchedule(
       .select('id, title, resource_id, scheduled_during')
       .eq('organization_id', input.organizationId)
       .not('resource_id', 'is', null)
+      // The three filters here are the exclusion constraint's partial predicate, written as a
+      // query. That correspondence is not decoration: what keeps I5 honest is that this
+      // calculation and the constraint agree in both directions, so a clause added to one
+      // without the other turns a free window into an unbookable one — or worse, the reverse.
+      // `status_releases_resource` is the tenant's own answer about their own status, mirrored
+      // onto the row because a constraint predicate must be immutable.
+      .eq('status_releases_resource', false)
       .overlaps('scheduled_during', range),
     input.on
       ? listOperatingHours(db, { organizationId: input.organizationId })

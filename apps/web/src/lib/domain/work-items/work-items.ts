@@ -191,3 +191,82 @@ export async function createWorkItem(
 
   return data;
 }
+
+/**
+ * Correct a work item's details.
+ *
+ * **What this deliberately cannot touch is the whole design.** Not `status_id`, which is
+ * `work_item.transition` and is validated against the tenant's configured transitions (I13).
+ * Not `resource_id` or `scheduled_during`, which is `work_item.schedule` and lands on the
+ * exclusion constraint (I7). Not `type_id` at any price: changing a type strands the status
+ * the job is in, and I20's three-column reference exists so that mismatch cannot be written
+ * down at all. `create_work_item` derives the type from the status precisely so nobody ever
+ * holds both, and this keeps that true for the rest of the job's life.
+ *
+ * The column grant in the migration is what enforces that, not this comment — the same three
+ * lanes are re-checked per column by `app.check_work_item_update_capability`, because a
+ * policy sees the old row or the new one but never both.
+ *
+ * A null reference is a real edit rather than an omission: a job attached to the wrong
+ * customer has to be detachable, so these are passed through rather than merged with what is
+ * already stored.
+ */
+export async function updateWorkItem(
+  db: Db,
+  input: {
+    organizationId: string;
+    id: string;
+    title: string;
+    customerId?: string | null;
+    locationId?: string | null;
+    assetId?: string | null;
+    /** Raw form values keyed by field key. Coerced and checked against the registry here. */
+    custom?: Record<string, string>;
+  },
+): Promise<void> {
+  await requireActor(db);
+
+  const title = input.title.trim();
+  if (title.length === 0) {
+    throw new DomainError('A work item needs a title.', 'work_items.title_required');
+  }
+  if (title.length > TITLE_MAX) {
+    throw new DomainError(
+      `That title is longer than ${TITLE_MAX} characters.`,
+      'work_items.title_too_long',
+    );
+  }
+
+  // Re-checked here for the message rather than the guarantee: `app.check_custom_fields` is
+  // the guarantee, and it fires on this update because `custom` is in the SET list.
+  const custom = await resolveCustom(db, {
+    organizationId: input.organizationId,
+    entityType: 'work_item',
+    custom: input.custom,
+  });
+
+  const { error } = await db.rpc('update_work_item', {
+    p_id: input.id,
+    p_title: title,
+    p_customer_id: (input.customerId || null) as string,
+    p_location_id: (input.locationId || null) as string,
+    p_asset_id: (input.assetId || null) as string,
+    p_custom: custom,
+  });
+
+  if (error) {
+    if (error.code === '23503') {
+      throw new DomainError(
+        'No such customer, location or asset here.',
+        'work_items.reference_not_found',
+      );
+    }
+    if (error.code === '42501') {
+      throw new DomainError('You cannot edit work items here.', 'work_items.forbidden');
+    }
+    if (error.code === '23514') {
+      throw new DomainError(error.message, 'work_items.custom_invalid');
+    }
+    throw new DomainError(error.message, 'work_items.update_failed');
+  }
+}

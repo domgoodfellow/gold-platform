@@ -1,8 +1,11 @@
 'use client';
 
 import { useActionState } from 'react';
+import { CustomFieldInputs } from '@/components/custom-field-inputs';
 import { OptionalSelect, type SelectOption } from '@/components/optional-select';
+import type { CustomValues, FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
+import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import {
   addChecklistItemAction,
   addPricedLineAction,
@@ -10,6 +13,7 @@ import {
   recordTimeAction,
   removePricedLineAction,
   setChecklistItemDoneAction,
+  updateWorkItemAction,
   type WorkItemActionState,
 } from './actions';
 
@@ -304,6 +308,85 @@ export function RemovePricedLineForm({
         <span role="alert" className="ml-2 text-xs text-red-600 dark:text-red-400">
           {state.error}
         </span>
+      ) : null}
+    </form>
+  );
+}
+
+/**
+ * Correct a job's details.
+ *
+ * **What is missing from this form is the design.** There is no status select and no resource
+ * select, because those are `work_item.transition` and `work_item.schedule` — separate
+ * capabilities, plausibly separate people, with their own forms on this screen. The column
+ * grant would refuse them from here even if somebody added the inputs, which is what makes
+ * the omission a guarantee rather than a convention.
+ *
+ * Every reference keeps a "none" option: a job attached to the wrong customer has to be
+ * detachable, so clearing one is an edit rather than a gap in the form.
+ */
+export function EditWorkItemForm({
+  organizationId,
+  workItem,
+  customers,
+  locations,
+  assets,
+  definitions,
+}: {
+  organizationId: string;
+  workItem: WorkItem;
+  customers: SelectOption[];
+  locations: SelectOption[];
+  assets: SelectOption[];
+  definitions: FieldDefinition[];
+}) {
+  const [state, formAction, pending] = useActionState(updateWorkItemAction, INITIAL);
+
+  return (
+    <form action={formAction} className="mt-3 flex flex-col gap-3">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="workItemId" value={workItem.id} />
+
+      <input
+        name="title"
+        type="text"
+        required
+        maxLength={300}
+        defaultValue={workItem.title}
+        aria-label="Title"
+        className={INPUT_CLASS}
+      />
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <OptionalSelect
+          name="customerId"
+          label="Customer"
+          options={customers}
+          value={workItem.customer?.id}
+        />
+        <OptionalSelect
+          name="locationId"
+          label="Location"
+          options={locations}
+          value={workItem.location?.id}
+        />
+        <OptionalSelect name="assetId" label="About" options={assets} value={workItem.asset?.id} />
+      </div>
+
+      <CustomFieldInputs definitions={definitions} values={workItem.custom as CustomValues} />
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
+      >
+        {pending ? 'Saving…' : 'Save details'}
+      </button>
+
+      {state.error ? (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {state.error}
+        </p>
       ) : null}
     </form>
   );

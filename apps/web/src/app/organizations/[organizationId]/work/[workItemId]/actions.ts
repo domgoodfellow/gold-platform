@@ -1,11 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { customValuesFromFormData } from '@/lib/custom-fields';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { addChecklistItem, setChecklistItemDone } from '@/lib/domain/work-items/checklists';
 import { addPricedLine, removePricedLine } from '@/lib/domain/pricing/prices';
 import { recordCost, recordTime } from '@/lib/domain/work-items/consumption';
+import { updateWorkItem } from '@/lib/domain/work-items/work-items';
 
 export type WorkItemActionState = { error: string | null };
 
@@ -151,6 +153,37 @@ export async function removePricedLineAction(
 
   try {
     await removePricedLine(db, { id: String(formData.get('lineId') ?? '') });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidate(organizationId, workItemId);
+  return { error: null };
+}
+
+export async function updateWorkItemAction(
+  _previous: WorkItemActionState,
+  formData: FormData,
+): Promise<WorkItemActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const workItemId = String(formData.get('workItemId') ?? '');
+
+  try {
+    // Neither the status nor the resource is submitted, and their absence is the guard's
+    // shape rather than an oversight: those are `work_item.transition` and
+    // `work_item.schedule`, they have their own forms on this page, and the column grant
+    // would refuse them from here even if the form carried them.
+    await updateWorkItem(db, {
+      organizationId,
+      id: workItemId,
+      title: String(formData.get('title') ?? ''),
+      customerId: String(formData.get('customerId') ?? ''),
+      locationId: String(formData.get('locationId') ?? ''),
+      assetId: String(formData.get('assetId') ?? ''),
+      custom: customValuesFromFormData(formData),
+    });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;

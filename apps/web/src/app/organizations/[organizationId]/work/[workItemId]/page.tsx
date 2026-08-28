@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CustomFieldValues } from '@/components/custom-field-values';
+import { listAssets } from '@/lib/domain/assets/assets';
+import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { listLocations } from '@/lib/domain/locations/locations';
 import { listResources } from '@/lib/domain/resources/resources';
 import { formatWindow } from '@/lib/domain/scheduling/window';
 import { listChecklistItems } from '@/lib/domain/work-items/checklists';
@@ -13,6 +16,7 @@ import { requireOrganization } from '@/lib/route/organization';
 import {
   AddChecklistItemForm,
   AddPricedLineForm,
+  EditWorkItemForm,
   RecordCostForm,
   RecordTimeForm,
   RemovePricedLineForm,
@@ -36,8 +40,18 @@ export default async function WorkItemPage({
     notFound();
   }
 
-  const [checklist, timeEntries, costs, resources, definitions, lines, priceBook] =
-    await Promise.all([
+  const [
+    checklist,
+    timeEntries,
+    costs,
+    resources,
+    definitions,
+    lines,
+    priceBook,
+    customers,
+    locations,
+    assets,
+  ] = await Promise.all([
     listChecklistItems(db, { organizationId, workItemId }),
     listTimeEntries(db, { organizationId, workItemId }),
     listCosts(db, { organizationId, workItemId }),
@@ -45,6 +59,9 @@ export default async function WorkItemPage({
     listFieldDefinitions(db, { organizationId, entityType: 'work_item' }),
     listPricedLines(db, { organizationId, workItemId }),
     listPriceBookItems(db, { organizationId }),
+    listCustomers(db, { organizationId }),
+    listLocations(db, { organizationId }),
+    listAssets(db, { organizationId }),
   ]);
 
   // I4: the only total on this page, and the only one anywhere. Nothing here reduces an
@@ -53,6 +70,7 @@ export default async function WorkItemPage({
   const mayPrice = organization.capabilities.includes('work_item.price');
 
   const mayAdd = organization.capabilities.includes('work_item.create');
+  const mayEdit = organization.capabilities.includes('work_item.update');
   const mayTick = organization.capabilities.includes('work_item.transition');
   const mayRecord = organization.capabilities.includes('work_item.record');
 
@@ -86,6 +104,24 @@ export default async function WorkItemPage({
         </p>
       ) : null}
       <CustomFieldValues definitions={definitions} custom={workItem.custom} />
+
+      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
+        <h2 className="text-sm font-medium">Details</h2>
+        {mayEdit ? (
+          <EditWorkItemForm
+            organizationId={organizationId}
+            workItem={workItem}
+            customers={customers.map((customer) => ({ id: customer.id, label: customer.name }))}
+            locations={locations.map((location) => ({ id: location.id, label: location.label }))}
+            assets={assets.map((asset) => ({ id: asset.id, label: asset.name }))}
+            definitions={definitions}
+          />
+        ) : (
+          <p className="mt-1 text-sm opacity-60">
+            Your role cannot correct a job&rsquo;s details here.
+          </p>
+        )}
+      </section>
 
       <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
         <h2 className="text-sm font-medium">Steps</h2>

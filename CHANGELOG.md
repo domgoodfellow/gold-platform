@@ -5,6 +5,47 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### M4 — vertical one: Pneu3L
+
+**Editing a work item, and cancellation that actually frees the van.**
+
+`work_item.update` is a third lane in the per-column split `app.check_work_item_update_capability`
+already ran: the policy is the coarse gate, the trigger is the refinement, and a caller holding
+only this may correct a title, a customer, a location, an asset and the custom fields — and may
+not touch the status, the resource, the window, or the type. `type_id` is outside every grant
+because changing it strands the status the job sits in, and I20's three-column reference is what
+would refuse it; better no path than one that fails halfway with a foreign key error nobody can
+read.
+
+**A referential action is not an edit.** Three of those columns sit behind `on delete set null`,
+so deleting a customer nulls the reference on every job pointing at it — an UPDATE that reaches
+the trigger looking exactly like somebody editing a job. Without a guard, deleting a customer
+would have demanded `work_item.update` from whoever did it, which is authorization for one
+entity leaking onto another. `resource_id` had the same hole before this change and nothing had
+exercised it.
+
+**`roadmap.md` said cancelling needed no new code, and that was wrong.** The claim was about D6
+and it was right about D6; what it missed is that `work_items_resource_not_double_booked` was
+partial on `resource_id is not null and scheduled_during is not null` and knew nothing about
+status. A tenant could configure "Cancelled", move a job into it, and the van stayed booked
+forever — and the workaround was worse than the gap, because unschedule-then-transition is two
+capabilities, so a dispatcher who could cancel but not schedule left the slot held with nothing
+reporting it.
+
+The fix is one question the tenant answers about their own word — `releases_resource` — and
+deliberately not `is_terminal`, which the original migration refused for the right reason: that
+flag is the platform deciding what a status *means*, while this asks only whether the van is
+still occupied. It reaches the constraint through a mirrored column, because an exclusion
+predicate must be IMMUTABLE and cannot join, and **that mirror is a cache rather than a
+snapshot** — the one place configuration is meant to reach work already committed, because a
+tenant marking "Cancelled" as releasing means it about the jobs already in it. I8 now records
+where it stops, so nobody enforces it here and silently unfixes cancellation.
+
+I5 and I7 moved together, which is the property that keeps I5 honest: `listSchedule`'s filters
+are the constraint's partial predicate written as a query. One test reads a window as free and
+then commits against it, which is both halves of that agreement in one assertion.
+
+
 ### M3 — the configuration engine
 
 `milestone-m3.test.ts` stands up two whole businesses that share no word, number, status,

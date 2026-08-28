@@ -358,13 +358,54 @@ describe('work item transitions', () => {
   });
 
   it('lets a member without the capability change nothing else either', async () => {
-    // Bob's founder still holds the limited role from the test above. The column grant is
-    // what stops a caller reaching past status_id, and it binds regardless of capability.
+    // Bob's founder still holds the limited role from the test above — `role.manage` and
+    // `work_item.create`, and none of the three capabilities that reach this table.
+    //
+    // What stops them changed shape when `work_item.update` landed, and the assertion moved
+    // with it rather than being relaxed. `title` used to be outside the column grant
+    // altogether, so any caller got a bare privilege error; it is now grantable, and the
+    // refusal comes from the `work_items_update` policy instead. That means no error at all:
+    // a row an UPDATE policy denies is invisible to the statement rather than raising, which
+    // is the silent shape `change_work_item_status` checks `returning` to catch. So the
+    // assertion that carries the guarantee is the value.
     const { error } = await bob.db
       .from('work_items')
       .update({ title: 'Renamed by someone who may not' })
       .eq('organization_id', bob.organizationId);
 
+    expect(error).toBeNull();
+
+    const { data } = await bob.db
+      .from('work_items')
+      .select('title')
+      .eq('organization_id', bob.organizationId);
+    expect(data!.every((row) => row.title !== 'Renamed by someone who may not')).toBe(true);
+  });
+
+  it('refuses the title to a member who may transition but not edit', async () => {
+    // The other half, and the one the per-column trigger exists for: this role passes the
+    // policy — it holds `work_item.transition`, so it has a reason to be writing here — and
+    // is refused the column anyway. A policy sees the old row or the new one but never both,
+    // so only a trigger can say "you may change the status and not the title".
+    const mover = await createRole(bob.db, {
+      organizationId: bob.organizationId,
+      name: 'Moves Only',
+      capabilities: ['role.manage', 'work_item.create', 'work_item.transition'],
+    });
+
+    const { data: membership } = await bob.db
+      .from('memberships')
+      .select('id')
+      .eq('organization_id', bob.organizationId)
+      .single();
+    await assignRole(bob.db, { membershipId: membership!.id, roleId: mover });
+
+    const { error } = await bob.db
+      .from('work_items')
+      .update({ title: 'Renamed by a mover' })
+      .eq('organization_id', bob.organizationId);
+
     expect(error).not.toBeNull();
+    expect(error!.message).toContain('edit the details');
   });
 });

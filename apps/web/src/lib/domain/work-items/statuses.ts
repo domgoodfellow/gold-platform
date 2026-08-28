@@ -18,6 +18,18 @@ export type WorkItemStatus = {
   id: string;
   name: string;
   position: number;
+  /**
+   * Whether work in this status still occupies its resource.
+   *
+   * The one question the platform asks about a status, and it is deliberately not
+   * `isTerminal`. That flag would be the platform deciding what a status *means*; this asks
+   * the tenant something only they can answer about their own word. "Cancelled" and "No show"
+   * release the van; "Awaiting parts" does not, because the vehicle is still on the lift.
+   *
+   * It reaches the exclusion constraint through a mirrored column on `work_items` — see the
+   * migration for why a constraint predicate cannot read it from here.
+   */
+  releasesResource: boolean;
 };
 
 const NAME_MAX = 64;
@@ -35,7 +47,7 @@ export async function listWorkItemStatuses(
 ): Promise<WorkItemStatus[]> {
   const { data, error } = await db
     .from('work_item_statuses')
-    .select('id, name, position')
+    .select('id, name, position, releases_resource')
     .eq('organization_id', input.organizationId)
     .eq('type_id', input.typeId)
     .order('position', { ascending: true })
@@ -49,6 +61,7 @@ export async function listWorkItemStatuses(
     id: row.id,
     name: row.name,
     position: row.position,
+    releasesResource: row.releases_resource,
   }));
 }
 
@@ -128,10 +141,15 @@ export async function createWorkItemStatus(
  * "Booked" is sitting in the same row once it becomes "Scheduled". The type is deliberately
  * not changeable — moving a status to another type would strand every work item in it and
  * every transition wired to it, and I20's constraint would refuse it anyway.
+ *
+ * `releasesResource` is the one field here that reaches work already committed, and it is
+ * meant to. Marking "Cancelled" as releasing frees the van on every job already sitting in
+ * it, which is the only reading that helps — a tenant who says a status does not hold a
+ * resource is not making a claim about the future.
  */
 export async function updateWorkItemStatus(
   db: Db,
-  input: { id: string; name: string; position: number },
+  input: { id: string; name: string; position: number; releasesResource: boolean },
 ): Promise<void> {
   await requireActor(db);
 
@@ -156,11 +174,22 @@ export async function updateWorkItemStatus(
     p_id: input.id,
     p_name: name,
     p_position: input.position,
+    p_releases_resource: input.releasesResource,
   });
 
   if (error) {
     if (error.code === '23505') {
       throw new DomainError(`A status called ${name} already exists here.`, 'statuses.name_taken');
+    }
+    // Reachable only when releasesResource goes true → false: the tenant has just asserted
+    // that two overlapping jobs both hold the same resource, and the exclusion constraint
+    // refuses inside the propagation trigger rather than letting the board become something
+    // the schedule cannot draw.
+    if (error.code === '23P01') {
+      throw new DomainError(
+        'Work already in this status overlaps on the same resource, so it cannot start holding one again. Reschedule that work first.',
+        'statuses.release_conflict',
+      );
     }
     if (error.code === '42501') {
       throw new DomainError('You cannot configure statuses here.', 'statuses.forbidden');

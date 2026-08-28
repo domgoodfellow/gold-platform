@@ -764,6 +764,7 @@ export type Database = {
           name: string
           organization_id: string
           position: number
+          releases_resource: boolean
           type_id: string
         }
         Insert: {
@@ -773,6 +774,7 @@ export type Database = {
           name: string
           organization_id: string
           position?: number
+          releases_resource?: boolean
           type_id: string
         }
         Update: {
@@ -782,6 +784,7 @@ export type Database = {
           name?: string
           organization_id?: string
           position?: number
+          releases_resource?: boolean
           type_id?: string
         }
         Relationships: [
@@ -1005,6 +1008,7 @@ export type Database = {
           resource_id: string | null
           scheduled_during: unknown
           status_id: string
+          status_releases_resource: boolean
           title: string
           type_id: string
         }
@@ -1020,6 +1024,7 @@ export type Database = {
           resource_id?: string | null
           scheduled_during?: unknown
           status_id: string
+          status_releases_resource?: boolean
           title: string
           type_id: string
         }
@@ -1035,6 +1040,7 @@ export type Database = {
           resource_id?: string | null
           scheduled_during?: unknown
           status_id?: string
+          status_releases_resource?: boolean
           title?: string
           type_id?: string
         }
@@ -1344,8 +1350,24 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_work_item: {
+        Args: {
+          p_asset_id: string
+          p_custom: Json
+          p_customer_id: string
+          p_id: string
+          p_location_id: string
+          p_title: string
+        }
+        Returns: undefined
+      }
       update_work_item_status: {
-        Args: { p_id: string; p_name: string; p_position: number }
+        Args: {
+          p_id: string
+          p_name: string
+          p_position: number
+          p_releases_resource: boolean
+        }
         Returns: undefined
       }
     }

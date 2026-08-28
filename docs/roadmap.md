@@ -221,9 +221,25 @@ Covers:
   so the substrate exists and what is missing is a screen.
 - **Editing and cancelling a work item.** `updateWorkItem` does not exist and neither does a
   cancel path: a job typed wrong today is wrong permanently, which no live business tolerates.
-  Cancelling is a status the tenant configures and a transition into it, needing no new code.
   Editing the details is a `work_item.update` capability following the per-column split
   `app.check_work_item_update_capability` already establishes.
+
+  **This list said cancelling "is a status the tenant configures and a transition into it,
+  needing no new code", and that was wrong.** The claim was about D6 and it was right about
+  D6; what it missed is the exclusion constraint, whose partial predicate was
+  `resource_id is not null and scheduled_during is not null` and knew nothing about status. A
+  tenant could configure "Cancelled" and move a job into it, and the van stayed booked for a
+  job nobody was doing — on a business whose primary scheduling constraint is travel, that is
+  the afternoon gone. The available workaround was worse than the gap: unschedule then
+  transition is two capabilities, so a dispatcher who could cancel but not schedule left the
+  slot held with nothing reporting it.
+
+  What it needed was one question the tenant answers about their own word —
+  `work_item_statuses.releases_resource` — feeding the constraint's predicate. Deliberately
+  not `is_terminal`, which 20260827000003 refused for the right reason: that flag is the
+  platform deciding what a status *means*, and this asks only whether the van is occupied.
+  Recorded here rather than quietly fixed, because "configuration is enough" is the claim
+  this platform makes most often and this is the first place it was checked and found short.
 - **The interface, per D23** — which exists so that M4 does not rebuild its screens the way
   M3 rebuilt M2's.
 
@@ -232,8 +248,9 @@ Covers:
 intelligence. The timeline is a projection of `events`. The intelligence is arithmetic over
 work items, prices and payments. Neither owns an entity or a rule, so neither is an engine,
 and building the word would produce a directory that reformats other tables. The timeline
-screen lands here; lifetime value, outstanding balance and last-contacted land in M7, where
-the dialer is the caller that needs a number rather than a history.
+screen lands here; lifetime value, outstanding balance and last-contacted land in M8, where
+the dialer is the caller that needs a number rather than a history — over the aggregate layer
+M6 builds, which is why they are not simply arithmetic written twice.
 
 **What M4 produces beyond a running business** is the list of seams that looked general — to
 be tested against the next vertical rather than declared general here. `constraints.md`'s

@@ -446,6 +446,20 @@ export function EditStatusForm({
         aria-label={`Position of status ${status.name}`}
         className="w-20 rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
       />
+      {/* The one question the platform asks about a status, and it is the tenant's to answer.
+          Not `is_terminal`: this does not ask what the word means, only whether work sitting
+          in it still occupies the van. Ticking it here frees the slot on every job already in
+          this status, which is the whole point — see the migration. */}
+      <label className="flex items-center gap-1.5 text-xs opacity-80">
+        <input
+          name="releasesResource"
+          type="checkbox"
+          value="1"
+          defaultChecked={status.releasesResource}
+          aria-label={`Work in ${status.name} releases its resource`}
+        />
+        Frees the resource
+      </label>
       <button
         type="submit"
         disabled={pending}

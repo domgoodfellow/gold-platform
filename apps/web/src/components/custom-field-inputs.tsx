@@ -2,6 +2,7 @@
 
 import {
   CUSTOM_FIELD_PREFIX,
+  type CustomValues,
   type FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
 
@@ -17,17 +18,30 @@ const INPUT_CLASS = 'flex-1 rounded border border-black/15 px-3 py-2 dark:border
  * `required` here is the browser being helpful. The rule is re-checked by `parseCustom` in
  * the domain layer and again by `app.check_custom_fields` in the database, because a form
  * attribute is not a constraint.
+ *
+ * `values` arrived with the third caller — the work item edit form — and the component was
+ * extended rather than copied, which is the rule D23 states for exactly this moment. An edit
+ * form prefills; a create form passes nothing and gets the empty inputs it always had. A key
+ * the registry no longer declares simply does not render, because `definitions` decides what
+ * exists and the stored values only decide what they contain.
  */
-export function CustomFieldInputs({ definitions }: { definitions: FieldDefinition[] }) {
+export function CustomFieldInputs({
+  definitions,
+  values,
+}: {
+  definitions: FieldDefinition[];
+  values?: CustomValues;
+}) {
   return (
     <>
       {definitions.map((definition) => {
         const name = `${CUSTOM_FIELD_PREFIX}${definition.key}`;
+        const value = values?.[definition.key];
 
         if (definition.kind === 'boolean') {
           return (
             <label key={definition.id} className="flex w-fit items-center gap-2 text-sm">
-              <input name={name} type="checkbox" />
+              <input name={name} type="checkbox" defaultChecked={value === true} />
               {definition.label}
             </label>
           );
@@ -40,6 +54,7 @@ export function CustomFieldInputs({ definitions }: { definitions: FieldDefinitio
             type={definition.kind === 'number' ? 'number' : 'text'}
             step={definition.kind === 'number' ? 'any' : undefined}
             required={definition.required}
+            defaultValue={value === undefined ? undefined : String(value)}
             placeholder={
               definition.required ? definition.label : `${definition.label} (optional)`
             }
