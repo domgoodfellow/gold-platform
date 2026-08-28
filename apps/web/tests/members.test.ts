@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createCustomer, listCustomers } from '@/lib/domain/customers/customers';
-import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { addMember, listMembers } from '@/lib/domain/tenancy/members';
 import {
   createOrganization,
@@ -74,6 +73,7 @@ describe('members', () => {
     organizationId = await createOrganization(owner.db, {
       name: `Members ${randomUUID().slice(0, 6)}`,
       displayName: 'Dominic',
+      currency: 'EUR',
     });
 
     // A role that can do the day job but cannot manage people or roles.
@@ -86,6 +86,7 @@ describe('members', () => {
     otherOrganizationId = await createOrganization(stranger.db, {
       name: `Other ${randomUUID().slice(0, 6)}`,
       displayName: 'Someone Else',
+      currency: 'EUR',
     });
   });
 

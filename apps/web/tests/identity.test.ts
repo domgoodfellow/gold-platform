@@ -28,7 +28,7 @@ describe('password identity', () => {
   });
 
   it('registers and then signs in', async () => {
-    await registerWithPassword(db, { email, password: PASSWORD });
+    await registerWithPassword(db, { email, password: PASSWORD, passwordConfirmation: PASSWORD });
     await signOut(db);
 
     const fresh = anonClient();
@@ -39,7 +39,7 @@ describe('password identity', () => {
   });
 
   it('normalises the email so case and spacing do not create a second account', async () => {
-    await registerWithPassword(db, { email, password: PASSWORD });
+    await registerWithPassword(db, { email, password: PASSWORD, passwordConfirmation: PASSWORD });
 
     const fresh = anonClient();
     await signInWithPassword(fresh, { email: `  ${email.toUpperCase()}  `, password: PASSWORD });
@@ -49,19 +49,32 @@ describe('password identity', () => {
   });
 
   it('rejects a short password before it reaches the provider', async () => {
-    await expect(registerWithPassword(db, { email, password: 'short' })).rejects.toMatchObject({
+    await expect(registerWithPassword(db, { email, password: 'short', passwordConfirmation: 'short' })).rejects.toMatchObject({
       code: 'identity.password_too_short',
     });
   });
 
+  it('refuses a mistyped confirmation, and says so from the domain', async () => {
+    // The rule lives here rather than in the form, because `credentials-form.tsx` renders
+    // whatever the domain returned and composes no sentence of its own. It guards a typo in
+    // the one credential nobody can recover for you.
+    await expect(
+      registerWithPassword(db, {
+        email,
+        password: PASSWORD,
+        passwordConfirmation: `${PASSWORD}-typo`,
+      }),
+    ).rejects.toMatchObject({ code: 'identity.password_mismatch' });
+  });
+
   it('rejects an address that is not one', async () => {
     await expect(
-      registerWithPassword(db, { email: 'not-an-address', password: PASSWORD }),
+      registerWithPassword(db, { email: 'not-an-address', password: PASSWORD, passwordConfirmation: PASSWORD }),
     ).rejects.toMatchObject({ code: 'identity.email_invalid' });
   });
 
   it('does not reveal whether an account exists', async () => {
-    await registerWithPassword(db, { email, password: PASSWORD });
+    await registerWithPassword(db, { email, password: PASSWORD, passwordConfirmation: PASSWORD });
 
     const wrongPassword = await signInWithPassword(anonClient(), {
       email,
@@ -80,7 +93,7 @@ describe('password identity', () => {
   });
 
   it('signs out', async () => {
-    await registerWithPassword(db, { email, password: PASSWORD });
+    await registerWithPassword(db, { email, password: PASSWORD, passwordConfirmation: PASSWORD });
     expect((await db.auth.getUser()).data.user).not.toBeNull();
 
     await signOut(db);

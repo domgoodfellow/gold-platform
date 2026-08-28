@@ -428,24 +428,68 @@ export type Database = {
           },
         ]
       }
+      operating_hours: {
+        Row: {
+          closes_at: string
+          created_at: string
+          created_by: string
+          day_of_week: number
+          id: string
+          opens_at: string
+          organization_id: string
+        }
+        Insert: {
+          closes_at: string
+          created_at?: string
+          created_by: string
+          day_of_week: number
+          id?: string
+          opens_at: string
+          organization_id: string
+        }
+        Update: {
+          closes_at?: string
+          created_at?: string
+          created_by?: string
+          day_of_week?: number
+          id?: string
+          opens_at?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operating_hours_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
           created_by: string
+          currency: string
           id: string
           name: string
+          timezone: string
         }
         Insert: {
           created_at?: string
           created_by: string
+          currency?: string
           id?: string
           name: string
+          timezone?: string
         }
         Update: {
           created_at?: string
           created_by?: string
+          currency?: string
           id?: string
           name?: string
+          timezone?: string
         }
         Relationships: []
       }
@@ -519,6 +563,108 @@ export type Database = {
           },
         ]
       }
+      work_item_checklist_items: {
+        Row: {
+          created_at: string
+          created_by: string
+          done_at: string | null
+          done_by: string | null
+          id: string
+          label: string
+          organization_id: string
+          position: number
+          work_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          label: string
+          organization_id: string
+          position?: number
+          work_item_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          label?: string
+          organization_id?: string
+          position?: number
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_checklist_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_checklist_items_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      work_item_costs: {
+        Row: {
+          amount_minor: number
+          created_at: string
+          created_by: string
+          currency: string
+          description: string
+          id: string
+          incurred_at: string
+          organization_id: string
+          work_item_id: string
+        }
+        Insert: {
+          amount_minor: number
+          created_at?: string
+          created_by: string
+          currency: string
+          description: string
+          id?: string
+          incurred_at?: string
+          organization_id: string
+          work_item_id: string
+        }
+        Update: {
+          amount_minor?: number
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string
+          id?: string
+          incurred_at?: string
+          organization_id?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_costs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_costs_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       work_item_statuses: {
         Row: {
           created_at: string
@@ -527,6 +673,7 @@ export type Database = {
           name: string
           organization_id: string
           position: number
+          type_id: string
         }
         Insert: {
           created_at?: string
@@ -535,6 +682,7 @@ export type Database = {
           name: string
           organization_id: string
           position?: number
+          type_id: string
         }
         Update: {
           created_at?: string
@@ -543,10 +691,209 @@ export type Database = {
           name?: string
           organization_id?: string
           position?: number
+          type_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "work_item_statuses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_statuses_type_same_org"
+            columns: ["organization_id", "type_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_types"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      work_item_time_entries: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          note: string | null
+          organization_id: string
+          resource_id: string | null
+          work_item_id: string
+          worked_during: unknown
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          note?: string | null
+          organization_id: string
+          resource_id?: string | null
+          work_item_id: string
+          worked_during: unknown
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          note?: string | null
+          organization_id?: string
+          resource_id?: string | null
+          work_item_id?: string
+          worked_during?: unknown
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_time_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_time_entries_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_item_time_entries_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      work_item_transitions: {
+        Row: {
+          created_at: string
+          created_by: string
+          from_status_id: string
+          id: string
+          organization_id: string
+          to_status_id: string
+          type_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          from_status_id: string
+          id?: string
+          organization_id: string
+          to_status_id: string
+          type_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          from_status_id?: string
+          id?: string
+          organization_id?: string
+          to_status_id?: string
+          type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_transitions_from_same_org_and_type"
+            columns: ["organization_id", "type_id", "from_status_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_statuses"
+            referencedColumns: ["organization_id", "type_id", "id"]
+          },
+          {
+            foreignKeyName: "work_item_transitions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_transitions_to_same_org_and_type"
+            columns: ["organization_id", "type_id", "to_status_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_statuses"
+            referencedColumns: ["organization_id", "type_id", "id"]
+          },
+          {
+            foreignKeyName: "work_item_transitions_type_same_org"
+            columns: ["organization_id", "type_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_types"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      work_item_type_checklist_items: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          label: string
+          organization_id: string
+          position: number
+          type_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          label: string
+          organization_id: string
+          position?: number
+          type_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          label?: string
+          organization_id?: string
+          position?: number
+          type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_type_checklist_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_type_checklist_items_type_same_org"
+            columns: ["organization_id", "type_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_types"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      work_item_types: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_types_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -565,8 +912,10 @@ export type Database = {
           location_id: string | null
           organization_id: string
           resource_id: string | null
+          scheduled_during: unknown
           status_id: string
           title: string
+          type_id: string
         }
         Insert: {
           asset_id?: string | null
@@ -578,8 +927,10 @@ export type Database = {
           location_id?: string | null
           organization_id: string
           resource_id?: string | null
+          scheduled_during?: unknown
           status_id: string
           title: string
+          type_id: string
         }
         Update: {
           asset_id?: string | null
@@ -591,8 +942,10 @@ export type Database = {
           location_id?: string | null
           organization_id?: string
           resource_id?: string | null
+          scheduled_during?: unknown
           status_id?: string
           title?: string
+          type_id?: string
         }
         Relationships: [
           {
@@ -631,10 +984,17 @@ export type Database = {
             referencedColumns: ["organization_id", "id"]
           },
           {
-            foreignKeyName: "work_items_status_same_org"
-            columns: ["organization_id", "status_id"]
+            foreignKeyName: "work_items_status_same_org_and_type"
+            columns: ["organization_id", "type_id", "status_id"]
             isOneToOne: false
             referencedRelation: "work_item_statuses"
+            referencedColumns: ["organization_id", "type_id", "id"]
+          },
+          {
+            foreignKeyName: "work_items_type_same_org"
+            columns: ["organization_id", "type_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_types"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -644,6 +1004,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_checklist_item: {
+        Args: { p_label: string; p_position: number; p_work_item_id: string }
+        Returns: string
+      }
       add_member_by_email: {
         Args: {
           p_display_name: string
@@ -653,8 +1017,30 @@ export type Database = {
         }
         Returns: string
       }
+      add_operating_hours: {
+        Args: {
+          p_closes_at: string
+          p_day_of_week: number
+          p_opens_at: string
+          p_organization_id: string
+        }
+        Returns: string
+      }
+      add_type_checklist_item: {
+        Args: {
+          p_label: string
+          p_organization_id: string
+          p_position: number
+          p_type_id: string
+        }
+        Returns: string
+      }
       assign_role: {
         Args: { p_membership_id: string; p_role_id: string }
+        Returns: undefined
+      }
+      change_work_item_status: {
+        Args: { p_status_id: string; p_work_item_id: string }
         Returns: undefined
       }
       create_asset: {
@@ -715,9 +1101,11 @@ export type Database = {
       create_organization: {
         Args: {
           p_capabilities: string[]
+          p_currency: string
           p_display_name: string
           p_name: string
           p_role: string
+          p_timezone: string
         }
         Returns: string
       }
@@ -747,7 +1135,25 @@ export type Database = {
         Returns: string
       }
       create_work_item_status: {
-        Args: { p_name: string; p_organization_id: string; p_position: number }
+        Args: {
+          p_name: string
+          p_organization_id: string
+          p_position: number
+          p_type_id: string
+        }
+        Returns: string
+      }
+      create_work_item_transition: {
+        Args: {
+          p_from_status_id: string
+          p_organization_id: string
+          p_to_status_id: string
+          p_type_id: string
+        }
+        Returns: string
+      }
+      create_work_item_type: {
+        Args: { p_name: string; p_organization_id: string }
         Returns: string
       }
       link_customer_location: {
@@ -756,6 +1162,60 @@ export type Database = {
           p_location_id: string
           p_organization_id: string
         }
+        Returns: undefined
+      }
+      record_work_item_cost: {
+        Args: {
+          p_amount_minor: number
+          p_description: string
+          p_work_item_id: string
+        }
+        Returns: string
+      }
+      record_work_item_time: {
+        Args: {
+          p_ended_at: string
+          p_note: string
+          p_resource_id: string
+          p_started_at: string
+          p_work_item_id: string
+        }
+        Returns: string
+      }
+      remove_operating_hours: { Args: { p_id: string }; Returns: undefined }
+      remove_type_checklist_item: { Args: { p_id: string }; Returns: undefined }
+      rename_work_item_type: {
+        Args: { p_id: string; p_name: string }
+        Returns: undefined
+      }
+      schedule_work_item: {
+        Args: {
+          p_ends_at: string
+          p_resource_id: string
+          p_starts_at: string
+          p_work_item_id: string
+        }
+        Returns: undefined
+      }
+      set_checklist_item_done: {
+        Args: { p_checklist_item_id: string; p_done: boolean }
+        Returns: undefined
+      }
+      unschedule_work_item: {
+        Args: { p_work_item_id: string }
+        Returns: undefined
+      }
+      update_organization: {
+        Args: {
+          p_currency: string
+          p_id: string
+          p_name: string
+          p_timezone: string
+        }
+        Returns: undefined
+      }
+      update_work_item_status: {
+        Args: { p_id: string; p_name: string; p_position: number }
         Returns: undefined
       }
     }

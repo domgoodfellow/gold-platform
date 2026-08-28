@@ -64,6 +64,12 @@ export default async function OrganizationsPage() {
                   Work
                 </Link>
                 <Link
+                  href={`/organizations/${organization.id}/schedule`}
+                  className="underline underline-offset-4"
+                >
+                  Schedule
+                </Link>
+                <Link
                   href={`/organizations/${organization.id}/assets`}
                   className="underline underline-offset-4"
                 >
@@ -86,6 +92,12 @@ export default async function OrganizationsPage() {
                   className="underline underline-offset-4"
                 >
                   Fields
+                </Link>
+                <Link
+                  href={`/organizations/${organization.id}/settings`}
+                  className="underline underline-offset-4"
+                >
+                  Settings
                 </Link>
                 <Link
                   href={`/organizations/${organization.id}/roles`}

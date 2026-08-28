@@ -31,12 +31,20 @@ function normaliseEmail(raw: string): string {
   return email;
 }
 
-function checkPassword(password: string): void {
+function checkPassword(password: string, confirmation: string): void {
   if (password.length < PASSWORD_MIN) {
     throw new DomainError(
       `Use at least ${PASSWORD_MIN} characters.`,
       'identity.password_too_short',
     );
+  }
+
+  // The confirmation is checked here rather than in the form, because `credentials-form.tsx`
+  // renders whatever message the domain returned and composes none of its own — a second
+  // sentence written there would be a second rule. It guards a typo in the one credential
+  // nobody can recover for you.
+  if (password !== confirmation) {
+    throw new DomainError('Those passwords do not match.', 'identity.password_mismatch');
   }
 }
 
@@ -61,10 +69,10 @@ export async function signInWithPassword(
 
 export async function registerWithPassword(
   db: Db,
-  input: { email: string; password: string },
+  input: { email: string; password: string; passwordConfirmation: string },
 ): Promise<void> {
   const email = normaliseEmail(input.email);
-  checkPassword(input.password);
+  checkPassword(input.password, input.passwordConfirmation);
 
   const { error } = await db.auth.signUp({ email, password: input.password });
 

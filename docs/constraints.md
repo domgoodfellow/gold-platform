@@ -15,15 +15,26 @@ An entry nobody could violate is not a constraint. Delete it.
 
 ### Scope and abstraction
 
-- **Never build a module before a second business needs it.** *Business* means a second
-  paying company — not a second place in this codebase. The first business gets code written
-  for it; the second reveals which parts were actually general. A module extracted from one
-  business is that business's implementation wearing a costume.
+- **Never build a module before two independent pieces of evidence want it, at least one of
+  them from a system that shipped.** A prior product counts — `tire-app-template`,
+  `saas-agent-platform` and `nextfund-portal` are evidence, and D12 already reasons from one
+  of them. A discovery call that produced signed intent counts. A hypothesis does not, and
+  neither does a second call site in this repository, which is grounds for extracting a
+  function and nothing more. The point was never the invoice; it is that a single source
+  cannot tell you which parts of itself were general, so a module extracted from one is that
+  source's implementation wearing a costume.
+- **How you start, because this rule is read as a block and is not one.** Write it concrete,
+  in the domain layer, for the business in front of you, named for what it does rather than
+  for the category it might one day belong to. Nothing waits on a second anything. The rule
+  forbids *claiming* generality, not writing code — and the asymmetry is what makes it cheap:
+  extracting a proven function later is an afternoon, while a directory named `pricing` with
+  a `README` describing future intent is the speculative abstraction this file exists to
+  refuse, and it will be defended for a year because it looks like architecture.
 - **Do not confuse that with extracting a rule, which has a far lower bar.** A second
   *caller* — another route, server action, or AI tool in this repository — is enough, and can
   arrive in week one inside a single business. See *Never duplicate a rule across callers*
   below. The two rules pull in opposite directions on purpose: extracting a function stops
-  two copies drifting apart, while naming a module claims a generality that one business
+  two copies drifting apart, while naming a module claims a generality that one source
   cannot possibly evidence.
 - **Never create a workspace package with one consumer.** It buys a build step and a
   `dist/` for no isolation. `saas-agent-platform` collapsed `ui`, `shared`, `config`, and
@@ -246,8 +257,24 @@ Work item statuses, their allowed transitions, and their display vocabulary are 
 rows. A Postgres enum means a migration and a deploy every time a customer renames a column
 on their board.
 
-**Consequence:** transition validity is enforced in the domain layer against configuration,
-not by the type system. That check needs a test from the first slice.
+**Consequence:** transition validity is enforced against configuration, not by the type
+system. That check needs a test from the first slice.
+
+**Where "against configuration" turned out to live, and why it is not only the domain layer.**
+This entry originally said the check runs *in the domain layer*. That is where the message
+lives, and it is not where the guarantee can live: I12 requires a direct PostgREST update to
+be refused exactly as a form is, and TypeScript is not on that path at all. The check is
+`app.check_status_transition`, a trigger reading `work_item_transitions` — still
+configuration rather than the type system, so the clause actually doing the work in this
+decision is intact. The domain layer re-checks the same rows to produce the sentence a person
+reads, which is the division of labour `parseCustom` already has with the custom-fields
+trigger for I17. A trigger that *refuses* an illegal step is not the database owning a
+workflow; one that *performs* a step would be.
+
+**A second thing this decision did not settle, now settled.** A type with no configured
+transitions is **frozen**, not unconstrained. The forgiving reading — unconfigured means
+anything goes — makes I13 hold vacuously for every tenant who has not yet opened the
+transitions screen, which is every tenant on their first day, and it does so silently.
 
 ### D7 — Custom fields are typed core columns plus a `custom` JSONB column
 
@@ -656,6 +683,129 @@ real possibility rather than a hypothetical, and the answer is not to relax this
 build the availability calculation the booking needs, which is M2 work brought forward, and
 to say so.
 
+### D21 — Partial adoption is a supported shape, not a fork
+
+A tenant may enable one module, keep their own system of record for everything else, and still
+be a full tenant of this platform. A business whose website already owns its customer list,
+buying customer-service chat and the admin surface behind it, is the shape this decision exists
+for — and it is not the per-client app studio `vision.md` refuses in its second sentence.
+
+The distinction is *what differs between tenants*. An app studio ships different code per
+client. A partial adopter runs identical code with fewer modules enabled, which is M3's module
+enablement and needs no new mechanism at all. Nothing forks, no migration is client-specific,
+and every invariant in `domain-model.md` holds for them exactly as written.
+
+**What is genuinely new is the direction data flows.** The *Sources of truth* section above was
+written assuming GOLD holds the whole business, and one of its rules — never make an external
+calendar canonical, sync flows internal → external — generalises by accident into *nothing
+outside may be authoritative for anything*. For a tenant whose website goes on creating
+customers after onboarding, that is false.
+
+**Source of truth is therefore per entity and per tenant, and it is declared.** GOLD is
+authoritative for every row it creates and for every entity whose module the tenant has enabled.
+For an entity the tenant owns elsewhere, GOLD holds a projection with a named origin, and that
+projection is never edited in GOLD. Exactly one system may write any given entity — the rule
+that keeps this from becoming the drift D19 rejects a `profiles` mirror for, applied across a
+process boundary instead of across two tables.
+
+The calendar rule survives unchanged. A work item's window is something GOLD *computes*, and I5
+and I7 make it the only answer; importing a customer record is not that.
+
+**Rejected: forking the codebase for a partial adopter.** It is the reflex when a client says
+"we only want this part," and it buys nothing they asked for — they want fewer modules, not
+different ones. The cost is that I1, I2, I18 and I19 stop being facts about one database and
+become N sets of facts, `schema-conformance.test.ts` runs against N schemas, and every security
+fix is applied N times by someone who must first remember that N is not one.
+
+**Rejected: bidirectional sync.** Two writers and no rule about which wins means the first
+conflict is settled by whoever wrote last, and nobody can say afterwards which value was
+correct. This is D19's argument about a mirror; the second writer being across an API rather
+than across a trigger makes it worse rather than better.
+
+**Rejected: importing once at onboarding and declaring GOLD authoritative thereafter.** Clean,
+cheap, and a lie about a live business — their website takes an enquiry the morning after the
+import, and the two lists diverge immediately with nothing that notices.
+
+**Consequence:** nothing is built now. Partial adoption today means enabling fewer modules,
+which is M3, and no schema changes hands until a tenant actually holds an entity elsewhere — no
+column, no origin field, no sync table, under the same rule as everything else here. What this
+record buys is that the first such tenant is a configuration question rather than an
+architecture one, and that selling one module is priced as a tenant rather than as a discount.
+
+**The invariant this will need, when it has a caller:** exactly one system may write any given
+entity. It is deliberately not in `domain-model.md` yet, because nothing imports anything and an
+invariant with an empty `Enforced by` cell is the intention that table exists to expose.
+
+**Trigger to revisit:** the first tenant that genuinely needs the same entity written in both
+places. The answer is not bidirectional sync — it is to find the field-level seam where each
+side owns different columns, and if there is none, to decide which system loses.
+
+### D22 — The external actor is one authorization axis, decided once
+
+Everyone outside the organization reaches tenant data through a single authorization model: the
+customer in a portal, the anonymous visitor talking to a chat widget on a tenant's own website
+(D21), and the member of the public taking a booking slot. One model, written down before the
+first of them is built — not three, discovered while building three pages.
+
+This is the record D20 promised. It says the portal "is not more screens; it is a second
+identity model" and defers it to "its own decision record and its own slice, made once." Two
+further surfaces have since asked the same question, which is the evidence that it is one axis
+rather than a portal concern.
+
+**Why the existing axis cannot stretch.** Every permission today runs membership → role →
+capability, and `app.current_tenant_ids()` answers *which tenants is this caller in* (D17, I3).
+An outsider is in none of them: for a customer that is deliberate, and for an anonymous visitor
+there is no `auth.uid()` at all, so the function returns the empty set and every policy correctly
+refuses. The anonymous surface therefore cannot be reached by adding policies to the existing
+axis — there is nothing for those policies to key on.
+
+**What the model must answer.** Stated rather than settled, because settling them now is writing
+ahead of the evidence:
+
+- **What is an external actor bound to** — a customer row, a token naming one booking, or nothing?
+- **Does it reach Postgres as a JWT?** D17 says every other caller does, and the whole value of
+  that is that RLS stays the boundary. An external actor that does not is a second boundary.
+- **What is its scope?** Always exactly one tenant, never a set — so it cannot reuse
+  `app.current_tenant_ids()` however similar the shape looks.
+- **How is I19 satisfied with no capability to check?** A customer downloading their own contract
+  needs a signed URL minted after a permission check, and `app.has_capability` has nothing to say
+  about someone holding no role.
+- **What is attributable?** I11 is `actor_id not null references auth.users` and is enforced
+  today. An anonymous writer either gets a real `auth.users` row or I11 needs a second shape, and
+  those are very different decisions.
+
+Supabase's anonymous sign-in is the option that costs those last two the least, because it
+produces a genuine `auth.uid()` and leaves D17 and I11 standing. That is a candidate, not the
+decision.
+
+**Rejected: a membership row with a `customer` role.** By far the cheapest — every policy, every
+function and every screen already works. It is also the leak. A membership puts an outsider
+inside `app.current_tenant_ids()`, at which point every table's policies return rows to them and
+the safety of the whole system collapses onto one role's capability list being complete. The
+default runs the wrong way: a member sees things unless something refuses, and an outsider must
+see nothing unless something permits.
+
+**Rejected: a service-role endpoint that checks permissions in TypeScript and queries on the
+customer's behalf.** D14 rejected this shape for the application and the argument is unchanged
+here — the connection doing the work has already bypassed the boundary, and the query still looks
+correctly written in review.
+
+**Rejected: answering it once per surface, as each is built.** Named because it is what happens
+if this record does not exist. Three surfaces produce three notions of who an outsider is, and
+the first cross-surface question — can the customer who booked anonymously see that booking in
+the portal — then has three answers.
+
+**Consequence:** booking, the customer portal, and any embedded surface are blocked on this
+record rather than on effort, which is what D20 already said about two of them. It is one
+decision, so blocking three surfaces on it is cheaper than it sounds. Meanwhile nothing adds an
+external-facing write path before it exists, and nothing adds a membership row for someone who is
+not staff.
+
+**Trigger to revisit:** the first of the three surfaces to be scheduled — and booking is closer
+than D20 implies, because I5 and I6 are now enforced. Its remaining blockers are I4 and this
+record. Whichever surface goes first pays for the model; the other two inherit it, and this
+record is amended in that slice rather than completed speculatively now.
+
 ---
 
 ## Decided, not yet built
@@ -668,6 +818,16 @@ Named so they are not reinvented, and deliberately unbuilt until they have a con
   provably saved; requires travel cost modelling that does not exist.
 - **Terminology overrides** per tenant — a display-layer concern that needs a second vertical
   before its shape is knowable.
+- **A platform staff console** — one surface spanning every tenant, for the people who run
+  GOLD rather than a business on it: which tenants exist, what they are using, what is
+  failing. `my-builder`'s `app/dashboard/*` is the reference shape. It is deferred because it
+  is an **authorization decision before it is a screen**: `app.current_tenant_ids()`
+  deliberately answers "which tenants is this caller in", and staff are in none of them. D14
+  rejects a service-role client outright, so this needs its own Postgres role with its own
+  policies — the same shape D14's trigger-to-revisit anticipates for a writer with no human
+  caller. Building the screens first would mean discovering that model while laying out a
+  table. Note also that **"admin" already means the tenant operator surface here** (D20); this
+  one needs a different word before it needs a route.
 - **Business templates** — a named, cloneable bundle of modules, statuses, fields, and roles,
   so onboarding a field-service business starts from `Field Service` rather than from zero.
   `docs/starting_conversation.txt` calls this the thing that turns four apps into a product,

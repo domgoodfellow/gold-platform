@@ -40,9 +40,13 @@ see `constraints.md` D12.
 ## What it refuses to be
 
 - **Not a per-client app studio.** A client whose needs require forking the codebase is a
-  client we have mispriced or misunderstood.
-- **Not a no-code builder.** Configuration is deep, but the platform has opinions. A
-  business that wants an empty canvas wants a different product.
+  client we have mispriced or misunderstood. Partial adoption is not a fork: a tenant may
+  enable one module, keep their own system of record for the rest, and run identical code —
+  see `constraints.md` D21.
+- **Not an empty canvas.** Configuration goes as deep as no-code — a business shape is stood
+  up with no migration and no deploy, and that is M3's acceptance test rather than a
+  concession. What is not negotiable is the primitives: `Customer`, `Work Item`, `Resource`,
+  `Event`. A business that wants to define its own entities wants a different product.
 - **Not accounting software.** Job economics — revenue, labour, materials, travel, margin —
   are tracked because they drive operational decisions. The general ledger stays elsewhere.
 - **Not a chatbot with a database.** AI operates the business through the same domain
@@ -50,21 +54,34 @@ see `constraints.md` D12.
 
 ## The commercial model
 
-Three products, each the previous one plus a layer. This is not only a price list — it is
-the build order, and the two should not diverge.
+Three products, each the previous one plus a layer:
 
-| Tier | Price | What it is technically |
-|---|---|---|
-| Management System | $299–799/mo | The kernel plus operational modules |
-| AI Management System | $799–2,000/mo | An AI layer over the domain tools |
-| AI Workforce / Voice | $1,500–5,000+/mo | The realtime communications plane |
+| Tier | What it is technically |
+|---|---|
+| Management System | The kernel plus operational modules |
+| AI Management System | An AI layer over the domain tools |
+| AI Workforce / Voice | The realtime communications plane |
 
-Pricing is **platform fee + modules + usage + implementation**, never primarily per seat.
-A fifteen-person company replacing three systems is not buying fifteen accounts; charging
-as though they were leaves most of the value uncaptured.
+**The prices are deliberately not here.** They are the least durable claim this platform
+makes — the first three sales calls will move them — and a number written in `docs/` carries
+the same apparent authority as an invariant, which is precisely the authority it does not
+have. The layering is architecture and belongs here. The numbers belong wherever numbers can
+change without falsifying a document, and that is not this directory (D8).
+
+**Nor does this file own the build order.** The two currently coincide — kernel, then AI,
+then voice — and an earlier draft welded them with a rule that they must not diverge. That
+rule lets a price list decide what gets built. `roadmap.md` owns sequence; a tier is a bundle
+of capability, not a phase, and the two are free to come apart.
+
+Pricing is **platform fee + modules + usage + implementation + deployment tier**. Per seat is
+not the primary lever: a fifteen-person company replacing three systems is not buying fifteen
+accounts, and charging as though they were leaves most of the value uncaptured. That is a
+default and not a rule — the dialer is a genuinely per-seat market, and `constraints.md` D5
+makes it vertical two.
 
 Implementation is a real line item, not a loss leader. The discovery-and-configuration step
-is the product working as designed.
+is the product working as designed. So is partial adoption: one module at a real price is a
+tenant, not a discount (D21).
 
 ### Deployment tiers
 
@@ -112,7 +129,8 @@ Three prior attempts exist, and each proved something worth keeping:
 The failure mode is visible in the middle one: documentation and abstraction written *ahead*
 of evidence, which then governed work that never arrived. This repo starts with four
 documents and a hard budget: a function waits for its second caller, and a module waits for
-its second business.
+its second piece of evidence — of which the three repos above are the first, since a system
+that shipped is exactly the thing a hypothesis is not.
 
 See `constraints.md` for what that means in practice, and `roadmap.md` for what "done"
 means at each stage.

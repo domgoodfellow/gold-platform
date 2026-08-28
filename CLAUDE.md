@@ -20,20 +20,51 @@ checklists to documents.
 
 ## Current state
 
-**M1's acceptance criteria are met.** `apps/web/tests/milestone-m1.test.ts` builds two whole
-businesses from byte-identical input in one database — the same organization name, customer
-email, site label, technician, machine, board column, job title, field key and file name —
-and asserts that neither can observe or block the other. That test is the milestone, not the
-table count.
+**M1's and M2's acceptance criteria are met**, each demonstrated by one test rather than by
+a table count.
 
-What exists is the kernel and nothing past it: `organizations`, `memberships`, `events`,
-`customers`, `roles`, `field_definitions`, `locations`, `customer_locations`, `resources`,
-`work_item_statuses`, `work_items`, `assets` and `documents`; the one tenant resolution
-function and `app.has_capability`; and a vertical slice behind authentication for each.
+`apps/web/tests/milestone-m1.test.ts` builds two whole businesses from byte-identical input
+in one database and asserts that neither can observe or block the other.
 
-**Nothing schedules.** Work items carry no window and no exclusion constraint, and a work
-item cannot change status at all — there is deliberately no update policy. I5, I6, I7, I9
-and I13 are M2, and `roadmap.md` says so.
+`apps/web/tests/milestone-m2.test.ts` has an operator who is **not the founder** define a
+work item type, its statuses and its allowed transitions, walk a work item through that
+lifecycle, and commit it to a resource for a window nothing else can double-book — twice,
+from identical input, down to the same instants. It touches no SQL, because "without opening
+the database" is a claim about the path.
+
+The kernel is `organizations`, `memberships`, `events`, `customers`, `roles`,
+`field_definitions`, `locations`, `customer_locations`, `resources`, `assets`, `documents`,
+`operating_hours` and — the work engine — `work_item_types`, `work_item_statuses`,
+`work_item_transitions`, `work_items`, `work_item_type_checklist_items`,
+`work_item_checklist_items`, `work_item_time_entries` and `work_item_costs`;
+the one tenant resolution function and `app.has_capability`; and a vertical slice behind
+authentication for each.
+
+Four things about the work engine are load-bearing and easy to undo by accident:
+
+- **There is no overlap check in the domain layer and none may be added.**
+  `work_items_resource_not_double_booked` is a partial gist exclusion constraint, and
+  `scheduleWorkItem` deliberately does not look before it writes — a check before an insert
+  races identically, which is exactly what I6 says.
+- **There is one availability calculation** (`freeWindows`), and it is advisory by
+  construction. What keeps I5 honest is that it and the constraint agree.
+- **A type with no configured transitions is frozen, not unconstrained** (I13), and the
+  guarantee is `app.check_status_transition`, a trigger — the domain layer re-checks only to
+  produce the message.
+- **Authorization on `work_items` is split between a policy and a trigger on purpose.** An
+  RLS policy sees the old row or the new one, never both, so per-column rules
+  (`work_item.transition` vs `work_item.schedule`) live in
+  `app.check_work_item_update_capability`. Both are in the database.
+
+- **Nothing holds a working week.** Operating hours are rows a business owns; there is no
+  Monday-to-Friday, no weekend, no seeded set and no default, and a business that has
+  configured nothing is treated as always open. A default week is the hardcoded business
+  hours `constraints.md` forbids, wearing a default's clothing.
+- **A checklist template is copied onto a job, never joined to it** (I8), which is what makes
+  editing a template safe. The same reasoning makes changing a currency safe: every amount
+  carries the one it was recorded in.
+
+**Nothing prices.** I4 is M3, and a recorded cost is deliberately not a price.
 
 `docs/starting_conversation.txt` is an archived source, not a governing document. It records
 the thinking that led here and is superseded by `docs/constraints.md` wherever the two

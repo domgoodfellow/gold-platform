@@ -54,6 +54,7 @@ describe('roles and capabilities', () => {
     organizationId = await createOrganization(owner.db, {
       name: `Roles ${randomUUID().slice(0, 6)}`,
       displayName: 'Founder',
+      currency: 'EUR',
     });
 
     const { data } = await owner.db
@@ -100,7 +101,7 @@ describe('roles and capabilities', () => {
 
   it('lets two tenants each have a role of the same name (I2)', async () => {
     const other = await signUp('other');
-    const otherOrganizationId = await createOrganization(other.db, { name: 'Other Ltd', displayName: 'Founder' });
+    const otherOrganizationId = await createOrganization(other.db, { name: 'Other Ltd', displayName: 'Founder', currency: 'EUR' });
 
     // Both organizations now hold a role called Owner. If roles_org_name_unique had lost
     // its leading organization_id, the second create_organization would already have failed.

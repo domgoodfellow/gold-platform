@@ -5,6 +5,263 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Two basics on the way in, and M3 takes the interface
+
+Sign-up asks for the password twice, and the rule that they must match lives in
+`domain/identity` rather than the form, because `credentials-form.tsx` renders whatever the
+domain returned and composes no sentence of its own. It guards a typo in the one credential
+nobody can recover for you.
+
+Founding a business now asks **where it is** with a real timezone picker and **what it trades
+in** with a real currency list, both from ICU at runtime rather than a table in this
+repository — a currency list checked in here would be a second, staler answer to something the
+platform already has a source for. Neither is derived from the other: a Dutch company
+invoicing in dollars is ordinary, so a country-to-currency guess would be the platform
+deciding what a business trades in. The currency still has no preselection when founding, for
+the same reason it never had a default. The settings screen reuses the identical two controls,
+so there is one answer to "how does a business say where it is" rather than a picker in one
+place and a text box in the other.
+
+**M3 now owns the interface**, and `roadmap.md` says so: an operator shell, real
+responsiveness, and shared form components. Deferred there rather than done now because M3
+rebuilds these screens anyway — per-tenant terminology, custom forms and dashboard
+configuration all change what is on them — and styling them twice is the waste.
+`my-builder/my-app/frontend/components/layout/org-sidebar.tsx` is recorded as the reference
+shape. Its sibling `admin-sidebar.tsx` is a *platform staff* console spanning tenants, and
+that is now in `constraints.md` under "Decided, not yet built" as an authorization decision
+before it is a screen: staff are in no tenant, `app.current_tenant_ids()` answers accordingly,
+and D14 rejects service-role outright.
+
+### Opening hours, checklist templates, and the edit paths
+
+The four things M2 had left, and the one instruction attached to them: no hardcoded business
+hours or days.
+
+**Operating hours are entirely the tenant's, and no part of the platform holds a week.**
+There is no Monday-to-Friday, no weekend, no seeded rows and no default set. A day is a
+number 1–7 because the calendar has seven days and repeats — the only thing assumed, and a
+property every one of these businesses already shares. The platform holds no *word* for any
+day in any language either: the settings screen asks `Intl` for the reader's own names.
+
+- A business that has configured nothing is treated as **always open**, and the asymmetry
+  with I13 is deliberate. An empty transition set genuinely asserts that no move is legal, so
+  reading it permissively would void the invariant silently. An empty hours set asserts
+  nothing, and reading it as *closed* would invent a claim the business never made.
+  `operating-hours.test.ts` "seeds no hours at all for a new business" is the assertion that
+  keeps that honest — if anything ever starts creating a default week, it fails first and by
+  name.
+- **The one bare `time` column in the schema, and it belongs there.** "Time is `timestamptz`"
+  governs instants; "we open at nine" is a recurring local reading with no answer to *which*
+  nine. Stored as an instant it would drift an hour twice a year — the bug that rule exists
+  to prevent, arrived at from the other direction. `zonedTimeToInstant` resolves it against
+  the tenant's zone, and a `pg_attribute` assertion pins `time` to that one table.
+- A split day is two rows, and a shift past midnight is two rows on two days — which is what
+  they are, rather than one row with a wraparound rule every reader must know.
+- Availability changed range, not shape: `freeWindows` is still the single calculation (I5),
+  now asked about open periods instead of whole days.
+
+**Checklist templates are a copy, and that is I8.** `20260827000010_checklists.sql` deferred
+these and named the question it could not answer without guessing — what happens to work
+already created when a template changes. The answer is nothing. `create_work_item` copies the
+template onto the job in the same transaction, with no foreign key back, so editing a
+template never rewrites what a technician already agreed to do and removing a step never
+unticks one they already did. Both are asserted against a job created before the change,
+because a copy that is only *described* as a copy is a join waiting to be written by somebody
+optimising a query.
+
+**Three edit paths that shipped write-once now exist**, and two of them are safe only because
+of decisions taken earlier:
+
+- An organization's name, timezone and currency, behind a new `organization.manage`
+  capability — deliberately not `field.manage`, because naming a board column is configuring
+  how a business records work and changing the currency it trades in is changing the
+  business.
+- Changing the currency does not reinterpret history: every amount carries the currency it
+  was recorded in. Changing the timezone does not move a booking: every window is an absolute
+  instant. Both asserted.
+- Renaming a status moves no work, because a job references its status by id — which is the
+  whole argument for D6, and now has a test rather than only a claim. A status's `type_id`
+  stays outside the column grant: moving one would strand every work item in it, and a path
+  that fails halfway with a foreign key error is worse than no path.
+
+**I8 is enforced**, and `roadmap.md` moved it out of M3 with I10. Pricing does not add the
+invariant; it inherits it.
+
+The two long-standing lint warnings are gone — an unused import in two test files.
+
+Gate green: 259 tests, against a database rebuilt from scratch.
+
+### M2 — the work engine, demonstrated
+
+`roadmap.md` describes M2 as one demonstration: *an operator can define a work item type, its
+statuses, and its allowed transitions from the admin UI without opening the database — and a
+work item moves through that lifecycle, consuming a resource for a window that nothing else
+can double-book.* `apps/web/tests/milestone-m2.test.ts` is that demonstration.
+
+- **Nothing in it touches SQL.** Every call is a domain function — the same one the server
+  action behind the screen calls — and the only privileged client mints the two accounts.
+  "Without opening the database" is a claim about the path, so the path is what is exercised.
+  Where raw statements appear in the other M2 files they prove a guarantee survives *without*
+  the domain layer; here their presence would weaken the milestone's own claim.
+- **The operator is not the founder.** The founder creates the business and a Dispatcher
+  role; a second human does every act the milestone names, and the timeline is asserted to
+  carry the operator's id and never the founder's.
+- Two businesses, byte-identical input, including the same instants: the same technician
+  name booked for the same hour on the same Tuesday, in both, neither blocking the other.
+- **Verified non-vacuous.** `infra/supabase/snippets/i7-vacuity-control.sql` replaces the
+  exclusion constraint with the shape `constraints.md` quotes from `tire-app-template` — no
+  leading tenant, null resource coalesced to the zero uuid — against a database rebuilt from
+  scratch. Exactly the two unassigned-work tests then fail with `23P01`, including the
+  cross-tenant one, and everything else still passes.
+
+**A correction that came out of writing that control.** With a non-null `resource_id`, the
+leading `organization_id` in the exclusion constraint is redundant for *correctness* — a
+resource uuid belongs to exactly one organization, so two tenants can never share a key. It
+earns its place through I2, index selectivity, and the fact that the redundancy stops holding
+the moment a null resource is coalesced. What actually keeps two tenants' unassigned work
+from colliding is the **partial predicate**, and the gap in coverage that this made obvious —
+no test had one tenant's unassigned booking meet another's — is now closed.
+
+### Checklists, time and cost
+
+- `infra/supabase/migrations/20260827000010_checklists.sql` and
+  `20260827000011_time_and_cost.sql`.
+- **I10 is enforced, one milestone earlier than `roadmap.md` said.** A recorded *cost* is not
+  a *price*: a price is derived from configuration a business publishes and is what I4
+  governs; a cost is an observation about a job that already happened, and needs no pricing
+  engine. Deferring it would have meant the first pricing slice inventing the money columns
+  as a side effect. Both roadmap lines are corrected rather than quietly outgrown.
+- **There is no platform default currency**, and the asymmetry with the timezone is the
+  point: UTC is the absence of an assumption about a business, and there is no equivalent for
+  money, so `create_organization` refuses to found one without a currency. It is snapshotted
+  onto every amount rather than joined, so changing what a business trades in does not
+  reinterpret last year's costs.
+- `formatMoney` is the only place a minor unit is divided, and it takes the fraction digits
+  from the currency rather than assuming two — a JPY case is asserted, because assuming two
+  prints ¥1,00 for what is ¥100.
+- A checklist step stores `done_at` **and** `done_by`, not a boolean: who ticked it is the
+  evidentiary value, and the policy pins `done_by` to `auth.uid()` so it cannot be forged.
+  A column grant keeps a caller from rewriting a step's label after doing something else.
+- Time worked is separate from time scheduled, and deliberately has **no** exclusion
+  constraint: two overlapping timesheet entries are a correction or a mistake to report on,
+  not an impossibility. Refusing them would mean refusing to record what happened.
+- Neither table has an update or delete policy. A correction is a new row — a negative
+  amount is explicitly allowed — which is the rule `events` already follows.
+
+### Availability, and the calendar as a view
+
+**I5 and I6 are enforced.**
+
+- `apps/web/src/lib/domain/scheduling/availability.ts` and the schedule screen.
+- **I5 is not provable by counting functions.** What makes one calculation hold is that it
+  and the constraint agree, so nothing has a reason to grow a second opinion — asserted in
+  both directions: a window it calls free can be committed, one it does not cannot.
+- **I6 is asserted as the race it describes.** Availability is read, a second caller takes
+  the slot, and the first commits against an answer that was true when given. Nothing in the
+  domain layer could have prevented that: `scheduleWorkItem` deliberately does not check
+  first, because a check before an insert would race identically. The exclusion constraint,
+  in the transaction that would have written the row, is the re-assertion.
+- **No calendar table**, per `domain-model.md`. The schedule screen derives everything on
+  read; a day is bounded by `zonedDayRange` in the tenant's own zone, which is 23 hours on
+  the day a zone springs forward and 25 on the day it falls back. Both are asserted, because
+  that is the bug reported as "the app broke in March" and never reproduced.
+- Operating hours are **not** subtracted: a resource is treated as free whenever it is not
+  committed, which is true of a resource and not of a business. Per-tenant hours are M3
+  configuration, and hardcoding a working day would be the hardcoded business hours
+  `constraints.md` forbids.
+
+### The window, the exclusion constraint, and the tenant's clock
+
+**I7 and I9 are enforced.** A work item occupies a resource for a window that nothing else
+can double-book, and the guarantee is a database constraint — `roadmap.md` will not accept
+this in any other form, and there is no overlap check in the domain layer.
+
+- `infra/supabase/migrations/20260827000009_scheduling.sql` — `btree_gist`,
+  `work_items.scheduled_during`, `work_items_resource_not_double_booked`,
+  `organizations.timezone`, `schedule_work_item`, `unschedule_work_item`, and the
+  `work_item.schedule` capability.
+- **The constraint is partial, and that is the whole answer to the failure `constraints.md`
+  quotes.** `where (resource_id is not null and scheduled_during is not null)` means
+  unassigned or untimed work never enters the index, so there is no key to collide on —
+  rather than `tire-app-template`'s coalesce of a null technician to the zero uuid, where
+  every unassigned job in the database shares one key and a second tenant's 9am blocks yours.
+  Three tests are that failure inverted, and a fourth is the cross-tenant one: the other
+  business books the byte-identical window on an identically named resource and succeeds.
+- **One `tstzrange`, half-open, not two timestamps.** A gist exclusion needs a range anyway,
+  a pair of columns is a pair that can be stored the wrong way round, and `[start, end)` is
+  what makes a job ending at 10:00 not collide with one starting at 10:00 — the off-by-one
+  nobody finds until a technician is double-booked at a shift boundary.
+- **Authorization is split between a policy and a trigger, deliberately.** An RLS policy sees
+  the old row in `USING` or the new row in `WITH CHECK` and never both, so no policy can say
+  "you may change the status but not the resource". The policy is the coarse gate; the
+  per-column refinement is `app.check_work_item_update_capability`, and the test that proves
+  it matters gives a member `work_item.transition` — enough to pass the policy — and watches
+  the trigger refuse the schedule.
+- **I9's second half needed somewhere for the clock to live.** `organizations.timezone` is
+  chosen once at founding and validated against `pg_timezone_names`. There is no edit path
+  yet, which is the answer D19 already gave for a membership's display name: it waits for a
+  caller. `formatWindow` is the one renderer.
+
+Gate green: 178 tests.
+
+### Transitions, and the first update policy work_items has ever had
+
+**I13 is enforced.** A work item can change status, and only along moves the tenant has
+configured for that work item type.
+
+- `infra/supabase/migrations/20260827000008_work_item_transitions.sql` —
+  `work_item_transitions`, `app.check_status_transition`, `work_items_update`, and the
+  `work_item.transition` capability.
+- **The check is a trigger, not only domain code.** D6 said transition validity is "enforced
+  in the domain layer"; I12 says a direct PostgREST update must be refused exactly as a form
+  is, and TypeScript is not on that path. D6 has been corrected rather than softened — the
+  clause that was doing the work, *not by the type system*, survives intact, because a
+  trigger reading `work_item_transitions` is reading configuration.
+- **A type with no configured transitions is frozen, not unconstrained.** The forgiving
+  reading makes I13 hold vacuously for every tenant on their first day, silently.
+- **The column grant is authorization, not tidiness.** An RLS policy sees the old row in
+  `USING` or the new row in `WITH CHECK` and never both, so no policy can say "you may change
+  the status but not the customer". `grant update (status_id)` says it, and binds a direct
+  caller and an RPC alike.
+- **A real bug, caught by the test before it shipped.** A row failing an UPDATE policy's
+  `USING` clause is invisible to the statement: the update touches nothing and *raises
+  nothing*. The first version of `change_work_item_status` went on to write a
+  `work_item.status_changed` event for a move that never happened. It now checks `returning`,
+  which is the shape `assign_role` already used for the same reason — and the capability test
+  asserts both halves: the status did not change, and no event was written.
+
+Gate green: 162 tests.
+
+### Work item types
+
+M2's first slice, and the debt `20260827000003_work_items.sql` wrote down by name: *"Statuses
+are therefore per organization here, and become per type in the change that adds types."*
+This is that change.
+
+- `infra/supabase/migrations/20260827000007_work_item_types.sql` — `work_item_types`, statuses
+  scoped to a type, work items carrying theirs, and `create_work_item_type`.
+- **A status name is now unique within a type, not within the organization.** A business that
+  installs *and* repairs wants "Scheduled" on both boards; the old index refused the second
+  one. The new index still leads with `organization_id` (I2) — the type is inserted after it,
+  never before.
+- **I20 arrives with the constraint that enforces it.** A work item cannot sit in another
+  type's status, and this is the first claim in the schema that I18's machinery does *not*
+  catch: both rows belong to the same organization, so RLS is satisfied and every composite
+  reference passes. `work_items_status_same_org_and_type` is a three-column reference, and
+  the test writes the mismatch directly because the domain layer cannot express it.
+- **`create_work_item` did not gain a type argument.** The type follows from the status, and
+  an argument that must agree with another argument is an argument that can disagree with it.
+  It is derived inside the function, under the caller's own RLS.
+- The backfill names one type per organization that already had statuses. It is the only
+  place in this schema where the platform picks a word on a tenant's behalf; the migration
+  says why, and says that both alternatives — deleting a board, or refusing to apply — are
+  worse in kind rather than in degree.
+
+Nothing transitions yet. There is still no update policy on `work_items`: I13 needs the
+allowed-transitions table, which is the next slice.
+
+Gate green: 147 tests.
+
 ### Why three of the four surfaces are later
 
 `vision.md` names four surfaces on `apps/web` — marketing, booking, admin, customer portal —

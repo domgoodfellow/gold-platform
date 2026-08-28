@@ -20,6 +20,10 @@ export const CAPABILITIES = [
   'work_item.create',
   'asset.create',
   'document.create',
+  'work_item.transition',
+  'work_item.schedule',
+  'work_item.record',
+  'organization.manage',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -47,4 +51,8 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'work_item.create': 'Add work items',
   'asset.create': 'Add assets',
   'document.create': 'Attach documents',
+  'work_item.transition': 'Move work along its board',
+  'work_item.schedule': 'Assign and schedule work',
+  'work_item.record': 'Record time and cost',
+  'organization.manage': 'Change this business’s own settings',
 };

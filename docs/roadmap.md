@@ -79,10 +79,25 @@ Covers: work item types and statuses as data, transition validation, assignment,
 scheduling core over Work Item and Resource, availability calculation, checklists, time and
 cost capture.
 
-Enforces: **I5, I6, I7, I9, I13**.
+Enforces: **I5, I6, I7, I8, I9, I10, I13** — and **I20**, which was added by the slice that
+enforced it.
 
 `I7` is a database exclusion constraint. An application-level overlap check is not this
 milestone.
+
+**Operating hours are configuration, and they are nothing else.** The availability
+calculation subtracts them, and no part of the platform holds a working week: there is no
+Monday-to-Friday, no weekend, no seeded rows and no default, because all of those are the
+hardcoded business hours `constraints.md` forbids. A business that has configured nothing is
+treated as always open, which is the only reading of "it has said nothing" that does not
+invent a claim on its behalf.
+
+**I10 and I8 moved here from M3, and the reason is a distinction worth keeping.** M3 owns *pricing*,
+which is I4. A recorded **cost** is not a price: a price is derived from configuration a
+business publishes, a cost is an observation about a job that already happened. Cost capture
+is named in this milestone's coverage above, and it needs no pricing engine — but it does
+need money columns, and deferring them would have meant the first pricing slice inventing
+them as a side effect.
 
 ---
 
@@ -96,10 +111,37 @@ milestone.
 Covers: module enablement per tenant, custom forms over field definitions, per-tenant
 terminology, pricing rules, business rules, dashboard configuration.
 
-Enforces: **I4, I10**.
+Enforces: **I4**.
+
+I10 and I8 were both enforced in M2. See that milestone for why a cost is not a price; I8
+arrived with the two edit paths that made it load-bearing — changing a currency, and editing
+a checklist template — each of which is safe only because the thing it could have rewritten
+was snapshotted. Pricing does not add the invariant, it inherits it: when amounts derived
+from a catalogue land, they snapshot the same way.
 
 This is the milestone that decides whether the platform is a platform. If standing up a
 business shape still needs code, M3 is not done regardless of what has been built.
+
+**M3 also owns the interface, and until then nothing does.** Every screen through M2 is a
+`max-w-2xl` stack of sections with incidental `sm:` breakpoints, no shell, no navigation
+between areas of one business, and no shared form vocabulary. That is a deliberate deferral
+rather than an oversight — M3 rebuilds these screens anyway, because per-tenant terminology,
+custom forms over field definitions and dashboard configuration all change what is on them,
+and styling them twice would be the waste. What M3 owes:
+
+- **An operator shell**: persistent navigation across one business's areas, rather than every
+  page beginning with a back-link to `/organizations`.
+- **Real responsiveness**, decided rather than inherited from whatever Tailwind default was
+  typed first.
+- **Shared form components**, extracted from what already exists at the point a third screen
+  needs the same control — never before.
+
+`../../my-builder/my-app/frontend` is the **reference** for the shape of that shell, not for
+its code: `components/layout/org-sidebar.tsx` is the one to read. Its sibling
+`admin-sidebar.tsx` belongs to a *platform staff* console spanning tenants, which is a
+different question entirely and is recorded in `constraints.md` under "Decided, not yet
+built" — it cannot run on the caller's JWT, so it is an authorization decision before it is
+a screen.
 
 ---
 
@@ -114,10 +156,12 @@ See `constraints.md` D5 for why field service rather than sales.
 Covers: the domain code this vertical actually needs, extracted into shared functions the
 moment a second *caller* appears.
 
-**Modules are not expected from M4.** A module waits for a second *business*
-(`constraints.md`, Scope and abstraction) and this milestone has exactly one. What M4
-produces instead is a candidate list — the seams that looked general — to be tested against
-vertical two. Which of them survive is an output of M5 and beyond, never an input here.
+**Modules are not expected from M4.** A module waits for two independent pieces of evidence
+(`constraints.md`, Scope and abstraction). M4 supplies one — a live business, which is the
+strongest kind — and a prior repo can supply the other, so a module becoming admissible here
+is possible rather than forbidden. It is still not the milestone's output. What M4 produces
+is a candidate list: the seams that looked general, to be tested against vertical two. Which
+of them survive is an output of M5 and beyond, never an input here.
 
 ---
 

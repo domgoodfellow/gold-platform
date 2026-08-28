@@ -16,6 +16,7 @@ export async function signUpAction(
     await registerWithPassword(db, {
       email: String(formData.get('email') ?? ''),
       password: String(formData.get('password') ?? ''),
+      passwordConfirmation: String(formData.get('passwordConfirmation') ?? ''),
     });
   } catch (error) {
     if (error instanceof DomainError) {

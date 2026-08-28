@@ -14,11 +14,11 @@ import {
   listLocations,
 } from '@/lib/domain/locations/locations';
 import { createResource, listResources } from '@/lib/domain/resources/resources';
-import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { addMember, listMembers } from '@/lib/domain/tenancy/members';
 import { createOrganization, getOrganization } from '@/lib/domain/tenancy/organizations';
 import { createRole, listRoles } from '@/lib/domain/tenancy/roles';
 import { createWorkItemStatus, listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
+import { createWorkItemType, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
 
 /**
@@ -37,8 +37,9 @@ import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-item
  * and it does it by building two tenants from *byte-identical input*: the same organization
  * name, the same customer email, the same site label, the same technician name, the same
  * machine, the same board column, the same job title, the same field key, the same file
- * name. Not similar — identical. Every one of those is a natural key that a single-tenant
- * schema would have made unique, and every one of them must collide harmlessly.
+ * name, the same kind of work. Not similar — identical. Every one of those is a natural key
+ * that a single-tenant schema would have made unique, and every one of them must collide
+ * harmlessly.
  *
  * The failure it exists to catch is named in constraints.md, from a real prior repository:
  *
@@ -63,6 +64,7 @@ const SHARED = {
   locationLabel: 'North Depot',
   resourceName: 'Sam Okafor',
   assetName: 'Compressor A',
+  typeName: 'Callout',
   statusName: 'Scheduled',
   workItemTitle: 'Replace the pump',
   roleName: 'Technician',
@@ -80,6 +82,7 @@ type Tenant = {
   locationId: string;
   resourceId: string;
   assetId: string;
+  typeId: string;
   statusId: string;
   workItemId: string;
   documentId: string;
@@ -124,6 +127,7 @@ async function buildTenant(label: string): Promise<Tenant> {
   const organizationId = await createOrganization(founder.db, {
     name: SHARED.organizationName,
     displayName: 'The Founder',
+    currency: 'EUR',
   });
 
   // A second human, so "each with its own users" is literally true.
@@ -181,8 +185,14 @@ async function buildTenant(label: string): Promise<Tenant> {
     custom: { [SHARED.fieldKey]: `VAT-${label}` },
   });
 
+  const typeId = await createWorkItemType(founder.db, {
+    organizationId,
+    name: SHARED.typeName,
+  });
+
   const statusId = await createWorkItemStatus(founder.db, {
     organizationId,
+    typeId,
     name: SHARED.statusName,
   });
 
@@ -211,6 +221,7 @@ async function buildTenant(label: string): Promise<Tenant> {
     locationId,
     resourceId,
     assetId,
+    typeId,
     statusId,
     workItemId,
     documentId,
@@ -260,22 +271,33 @@ describe('M1 — the kernel', () => {
       const organizationId = self.organizationId;
       const db = self.founder.db;
 
-      const [customers, locations, resources, assets, statuses, workItems, members, roles] =
-        await Promise.all([
-          listCustomers(db, { organizationId }),
-          listLocations(db, { organizationId }),
-          listResources(db, { organizationId }),
-          listAssets(db, { organizationId }),
-          listWorkItemStatuses(db, { organizationId }),
-          listWorkItems(db, { organizationId }),
-          listMembers(db, { organizationId }),
-          listRoles(db, { organizationId }),
-        ]);
+      const [
+        customers,
+        locations,
+        resources,
+        assets,
+        types,
+        statuses,
+        workItems,
+        members,
+        roles,
+      ] = await Promise.all([
+        listCustomers(db, { organizationId }),
+        listLocations(db, { organizationId }),
+        listResources(db, { organizationId }),
+        listAssets(db, { organizationId }),
+        listWorkItemTypes(db, { organizationId }),
+        listWorkItemStatuses(db, { organizationId, typeId: self.typeId }),
+        listWorkItems(db, { organizationId }),
+        listMembers(db, { organizationId }),
+        listRoles(db, { organizationId }),
+      ]);
 
       expect(customers.map((r) => r.id)).toEqual([self.customerId]);
       expect(locations.map((r) => r.id)).toEqual([self.locationId]);
       expect(resources.map((r) => r.id)).toEqual([self.resourceId]);
       expect(assets.map((r) => r.id)).toEqual([self.assetId]);
+      expect(types.map((r) => r.id)).toEqual([self.typeId]);
       expect(statuses.map((r) => r.id)).toEqual([self.statusId]);
       expect(workItems.map((r) => r.id)).toEqual([self.workItemId]);
       expect(members).toHaveLength(2);
@@ -287,6 +309,7 @@ describe('M1 — the kernel', () => {
         ...locations.map((r) => r.id),
         ...resources.map((r) => r.id),
         ...assets.map((r) => r.id),
+        ...types.map((r) => r.id),
         ...statuses.map((r) => r.id),
         ...workItems.map((r) => r.id),
       ];
@@ -295,6 +318,7 @@ describe('M1 — the kernel', () => {
         other.locationId,
         other.resourceId,
         other.assetId,
+        other.typeId,
         other.statusId,
         other.workItemId,
       ]) {
@@ -375,6 +399,7 @@ describe('M1 — the kernel', () => {
       a.founder.db.from('work_items').insert({
         organization_id: a.organizationId,
         title: 'Borrowed customer',
+        type_id: a.typeId,
         status_id: a.statusId,
         customer_id: b.customerId,
         created_by: a.founder.userId,

@@ -1,6 +1,7 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { resolveCustom, type CustomValues } from '@/lib/domain/fields/field-definitions';
+import { parseWindow, type Window } from '@/lib/domain/scheduling/window';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /** A named reference on a work item — the customer, the place, or who is doing it. */
@@ -12,12 +13,16 @@ export type WorkItemRef = {
 export type WorkItem = {
   id: string;
   title: string;
+  /** What kind of work this is. Scopes the statuses; nothing branches on it. */
+  type: WorkItemRef;
   status: WorkItemRef;
   customer: WorkItemRef | null;
   location: WorkItemRef | null;
   resource: WorkItemRef | null;
   /** What the work is about, as opposed to what it is done with. */
   asset: WorkItemRef | null;
+  /** When this work occupies its resource, or null if it is not yet scheduled. */
+  window: Window | null;
   /** Tenant-defined fields, governed by this organization's registry (D7). */
   custom: CustomValues;
   createdAt: string;
@@ -27,10 +32,12 @@ const TITLE_MAX = 300;
 
 // One string literal, not a concatenation: supabase-js parses the select at the type level
 // and only sees a literal, so splitting it collapses the result type to GenericStringError[].
-// Every embed is hinted with its constraint name because all four references are composite
-// (organization_id, x_id) and the hint is what tells PostgREST which one to follow.
+// Every embed is hinted with its constraint name because every reference is composite
+// (organization_id, x_id) and the hint is what tells PostgREST which one to follow. The
+// status hint names the three-column constraint, which carries type_id as well — a work item
+// cannot sit in another type's status, and that is a database fact rather than a convention.
 const WORK_ITEM_SELECT =
-  'id, title, custom, created_at, status:work_item_statuses!work_items_status_same_org (id, name), customer:customers!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), resource:resources!work_items_resource_same_org (id, name), asset:assets!work_items_asset_same_org (id, name)';
+  'id, title, custom, created_at, scheduled_during, type:work_item_types!work_items_type_same_org (id, name), status:work_item_statuses!work_items_status_same_org_and_type (id, name), customer:customers!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), resource:resources!work_items_resource_same_org (id, name), asset:assets!work_items_asset_same_org (id, name)';
 
 function one<T>(value: T | T[] | null): T | undefined {
   if (value === null) return undefined;
@@ -38,31 +45,41 @@ function one<T>(value: T | T[] | null): T | undefined {
 }
 
 /**
- * The work items of one organization.
+ * The work items of one organization, optionally of one type.
+ *
+ * Both callers are real, which is why `typeId` is optional rather than required: a board
+ * shows one type's work, and "everything this business has recorded" is the other question
+ * anyone asks. Neither is a speculative generalisation of the other.
  *
  * The `organization_id` filter is an optimisation, not the boundary — RLS has already
  * restricted these rows, and every embedded row besides.
  */
 export async function listWorkItems(
   db: Db,
-  input: { organizationId: string },
+  input: { organizationId: string; typeId?: string },
 ): Promise<WorkItem[]> {
-  const { data, error } = await db
+  let query = db
     .from('work_items')
     .select(WORK_ITEM_SELECT)
-    .eq('organization_id', input.organizationId)
-    .order('created_at', { ascending: false });
+    .eq('organization_id', input.organizationId);
+
+  if (input.typeId) {
+    query = query.eq('type_id', input.typeId);
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
     throw new DomainError(error.message, 'work_items.list_failed');
   }
 
   return (data ?? []).flatMap((row) => {
+    const type = one(row.type);
     const status = one(row.status);
-    // A work item without a status cannot exist — status_id is NOT NULL behind a foreign
-    // key — so this is unreachable rather than defensive. Dropping the row is still better
-    // than rendering a board column with no name if it ever becomes reachable.
-    if (!status) return [];
+    // Neither can be absent — both columns are NOT NULL behind a foreign key — so this is
+    // unreachable rather than defensive. Dropping the row is still better than rendering a
+    // board column with no name if it ever becomes reachable.
+    if (!type || !status) return [];
 
     const customer = one(row.customer);
     const location = one(row.location);
@@ -73,11 +90,17 @@ export async function listWorkItems(
       {
         id: row.id,
         title: row.title,
+        type: { id: type.id, label: type.name },
         status: { id: status.id, label: status.name },
         customer: customer ? { id: customer.id, label: customer.name } : null,
         location: location ? { id: location.id, label: location.label } : null,
         resource: resource ? { id: resource.id, label: resource.name } : null,
         asset: asset ? { id: asset.id, label: asset.name } : null,
+        // D15's boundary again: `supabase gen types` has no TypeScript for a Postgres range
+        // and emits `unknown`. The cast is at the one place the value enters the domain, and
+        // `parseWindow` treats anything it cannot read as "not scheduled" rather than trusting
+        // the shape.
+        window: parseWindow(row.scheduled_during as string | null),
         custom: (row.custom ?? {}) as CustomValues,
         createdAt: row.created_at,
       },
@@ -92,6 +115,10 @@ export async function listWorkItems(
  * belong to this organization. All four references are composite, so a work item naming
  * another tenant's anything is impossible to write down — a stronger guarantee than this
  * function could make, and one a direct PostgREST insert cannot skip (I18).
+ *
+ * The type is not an argument. It follows from the status, and `create_work_item` derives it
+ * under the caller's own RLS — an argument that must agree with another argument is an
+ * argument that can disagree with it.
  */
 export async function createWorkItem(
   db: Db,

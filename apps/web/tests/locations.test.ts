@@ -60,6 +60,8 @@ async function newTenant(label: string): Promise<Tenant> {
     p_role: 'Owner',
     p_capabilities: ALL_CAPABILITIES,
     p_display_name: 'Founder',
+    p_timezone: 'UTC',
+    p_currency: 'EUR',
   });
   if (error) throw error;
 

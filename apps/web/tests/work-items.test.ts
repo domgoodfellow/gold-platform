@@ -12,6 +12,7 @@ import {
   createWorkItemStatus,
   listWorkItemStatuses,
 } from '@/lib/domain/work-items/statuses';
+import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
 
 /**
@@ -36,6 +37,7 @@ type Tenant = {
   db: SupabaseClient;
   userId: string;
   organizationId: string;
+  typeId: string;
   statusId: string;
   customerId: string;
   locationId: string;
@@ -70,16 +72,27 @@ async function newTenant(label: string, statusName: string): Promise<Tenant> {
     p_role: 'Owner',
     p_capabilities: ALL_CAPABILITIES,
     p_display_name: 'Founder',
+    p_timezone: 'UTC',
+    p_currency: 'EUR',
   });
   if (error) throw error;
 
   const orgId = organizationId as string;
 
+  // A status belongs to a type, so the type comes first. Both tenants call theirs the same
+  // thing for the same reason the statuses differ: the collision is the point.
+  const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });
+
   return {
     db,
     userId: created.user.id,
     organizationId: orgId,
-    statusId: await createWorkItemStatus(db, { organizationId: orgId, name: statusName }),
+    typeId,
+    statusId: await createWorkItemStatus(db, {
+      organizationId: orgId,
+      typeId,
+      name: statusName,
+    }),
     customerId: await createCustomer(db, { organizationId: orgId, name: `${label} Customer` }),
     locationId: await createLocation(db, {
       organizationId: orgId,
@@ -95,6 +108,7 @@ async function insertDirectly(tenant: Tenant, overrides: Record<string, string>)
   return tenant.db.from('work_items').insert({
     organization_id: tenant.organizationId,
     title: `Direct ${randomUUID().slice(0, 6)}`,
+    type_id: tenant.typeId,
     status_id: tenant.statusId,
     created_by: tenant.userId,
     ...overrides,
@@ -116,28 +130,32 @@ describe('work items', () => {
     // lost its leading organization_id, the second of these would fail.
     const mine = await createWorkItemStatus(alice.db, {
       organizationId: alice.organizationId,
+      typeId: alice.typeId,
       name: 'Done',
     });
     const theirs = await createWorkItemStatus(bob.db, {
       organizationId: bob.organizationId,
+      typeId: bob.typeId,
       name: 'Done',
     });
 
     expect(mine).not.toBe(theirs);
   });
 
-  it('refuses two statuses with the same name in one tenant (I2)', async () => {
+  it('refuses two statuses with the same name on one type (I2)', async () => {
     await expect(
       createWorkItemStatus(alice.db, {
         organizationId: alice.organizationId,
+        typeId: alice.typeId,
         name: 'done',
       }),
     ).rejects.toMatchObject({ code: 'statuses.name_taken' });
   });
 
-  it('puts a new status at the end of the board', async () => {
+  it('puts a new status at the end of that type\'s board', async () => {
     const statuses = await listWorkItemStatuses(alice.db, {
       organizationId: alice.organizationId,
+      typeId: alice.typeId,
     });
     expect(statuses.map((s) => s.name)).toEqual(['Scheduled', 'Done']);
     expect(statuses[1].position).toBeGreaterThan(statuses[0].position);

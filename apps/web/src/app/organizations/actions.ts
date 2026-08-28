@@ -23,6 +23,14 @@ export async function createOrganizationAction(
     await createOrganization(db, {
       name: String(formData.get('name') ?? ''),
       displayName: String(formData.get('displayName') ?? ''),
+      // The zone this business thinks in. Submitted by the browser rather than typed,
+      // because the founder is nearly always in it — and validated against
+      // `pg_timezone_names` in the database, so a forged value is refused there rather than
+      // here (I9).
+      timezone: String(formData.get('timezone') ?? ''),
+      // Required, and typed by the founder: there is no neutral currency for the platform to
+      // pick, and no locale API that answers what a business trades in.
+      currency: String(formData.get('currency') ?? ''),
     });
   } catch (error) {
     if (error instanceof DomainError) {

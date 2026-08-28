@@ -8,6 +8,7 @@ import { createLocation } from '@/lib/domain/locations/locations';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
+import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
 
 /**
@@ -29,6 +30,7 @@ type Tenant = {
   organizationId: string;
   customerId: string;
   locationId: string;
+  typeId: string;
   statusId: string;
   assetId: string;
 };
@@ -61,6 +63,8 @@ async function newTenant(label: string): Promise<Tenant> {
     p_role: 'Owner',
     p_capabilities: ALL_CAPABILITIES,
     p_display_name: 'Founder',
+    p_timezone: 'UTC',
+    p_currency: 'EUR',
   });
   if (error) throw error;
 
@@ -75,13 +79,17 @@ async function newTenant(label: string): Promise<Tenant> {
     address: `1 ${label} Way`,
   });
 
+  // A status belongs to a type, so the type comes first.
+  const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Service' });
+
   return {
     db,
     userId: created.user.id,
     organizationId: orgId,
     customerId,
     locationId,
-    statusId: await createWorkItemStatus(db, { organizationId: orgId, name: 'Open' }),
+    typeId,
+    statusId: await createWorkItemStatus(db, { organizationId: orgId, typeId, name: 'Open' }),
     assetId: await createAsset(db, {
       organizationId: orgId,
       name: 'Compressor',
@@ -182,6 +190,7 @@ describe('assets', () => {
     const { error } = await alice.db.from('work_items').insert({
       organization_id: alice.organizationId,
       title: 'Borrowed subject',
+      type_id: alice.typeId,
       status_id: alice.statusId,
       asset_id: bob.assetId,
       created_by: alice.userId,

@@ -71,6 +71,8 @@ describe('tenant isolation', () => {
       p_role: 'Owner',
       p_capabilities: ALL_CAPABILITIES,
       p_display_name: 'Founder',
+    p_timezone: 'UTC',
+    p_currency: 'EUR',
     });
     expect(aError).toBeNull();
 
@@ -79,6 +81,8 @@ describe('tenant isolation', () => {
       p_role: 'Owner',
       p_capabilities: ALL_CAPABILITIES,
       p_display_name: 'Founder',
+    p_timezone: 'UTC',
+    p_currency: 'EUR',
     });
     expect(bError).toBeNull();
 
@@ -92,6 +96,8 @@ describe('tenant isolation', () => {
       p_role: 'Owner',
       p_capabilities: ALL_CAPABILITIES,
       p_display_name: 'Founder',
+    p_timezone: 'UTC',
+    p_currency: 'EUR',
     });
     expect(aSecondError).toBeNull();
     aliceSecondOrganizationId = aSecond as string;
@@ -194,6 +200,8 @@ describe('tenant isolation', () => {
       p_role: 'Owner',
       p_capabilities: ALL_CAPABILITIES,
       p_display_name: 'Founder',
+    p_timezone: 'UTC',
+    p_currency: 'EUR',
     });
 
     expect(error).not.toBeNull();

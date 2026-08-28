@@ -13,6 +13,7 @@ export default function SignUpPage() {
         submitLabel="Create account"
         pendingLabel="Creating…"
         passwordAutoComplete="new-password"
+        confirmPassword
       />
       <p className="mt-6 text-sm opacity-70">
         Already have one?{' '}

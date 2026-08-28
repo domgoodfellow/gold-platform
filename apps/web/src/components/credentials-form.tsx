@@ -11,6 +11,8 @@ type Props = {
   submitLabel: string;
   pendingLabel: string;
   passwordAutoComplete: 'current-password' | 'new-password';
+  /** Sign-up asks twice; sign-in has nothing to confirm against. */
+  confirmPassword?: boolean;
 };
 
 /**
@@ -23,6 +25,7 @@ export function CredentialsForm({
   submitLabel,
   pendingLabel,
   passwordAutoComplete,
+  confirmPassword = false,
 }: Props) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
 
@@ -55,6 +58,24 @@ export function CredentialsForm({
           className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
         />
       </div>
+
+      {/* Whether they match is decided in `domain/identity`, not here — this field only
+          collects the second reading. */}
+      {confirmPassword ? (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="passwordConfirmation" className="text-sm font-medium">
+            Confirm password
+          </label>
+          <input
+            id="passwordConfirmation"
+            name="passwordConfirmation"
+            type="password"
+            required
+            autoComplete="new-password"
+            className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
+          />
+        </div>
+      ) : null}
 
       <button
         type="submit"
