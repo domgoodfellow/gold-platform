@@ -175,7 +175,10 @@ refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
-enable_anonymous_sign_ins = false
+# Enabled by D22's slice: an external actor reaches Postgres as a real JWT, so RLS stays the
+# boundary (D17) and `events.actor_id` still references a genuine auth.users row (I11). The
+# rate limit below is the abuse control for a page anyone on the internet can load.
+enable_anonymous_sign_ins = true
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.

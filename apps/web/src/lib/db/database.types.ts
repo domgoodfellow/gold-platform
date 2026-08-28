@@ -298,6 +298,35 @@ export type Database = {
           },
         ]
       }
+      external_actors: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_actors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       field_definitions: {
         Row: {
           created_at: string
@@ -850,6 +879,13 @@ export type Database = {
             foreignKeyName: "work_item_time_entries_resource_same_org"
             columns: ["organization_id", "resource_id"]
             isOneToOne: false
+            referencedRelation: "bookable_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_item_time_entries_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
             referencedRelation: "resources"
             referencedColumns: ["organization_id", "id"]
           },
@@ -968,6 +1004,9 @@ export type Database = {
       }
       work_item_types: {
         Row: {
+          booking_duration_minutes: number | null
+          booking_price_item_id: string | null
+          booking_status_id: string | null
           created_at: string
           created_by: string
           id: string
@@ -975,6 +1014,9 @@ export type Database = {
           organization_id: string
         }
         Insert: {
+          booking_duration_minutes?: number | null
+          booking_price_item_id?: string | null
+          booking_status_id?: string | null
           created_at?: string
           created_by: string
           id?: string
@@ -982,6 +1024,9 @@ export type Database = {
           organization_id: string
         }
         Update: {
+          booking_duration_minutes?: number | null
+          booking_price_item_id?: string | null
+          booking_status_id?: string | null
           created_at?: string
           created_by?: string
           id?: string
@@ -989,6 +1034,20 @@ export type Database = {
           organization_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "work_item_types_booking_price_same_org"
+            columns: ["organization_id", "booking_price_item_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_item_types_booking_status_same_type"
+            columns: ["organization_id", "id", "booking_status_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_statuses"
+            referencedColumns: ["organization_id", "type_id", "id"]
+          },
           {
             foreignKeyName: "work_item_types_organization_id_fkey"
             columns: ["organization_id"]
@@ -1083,6 +1142,13 @@ export type Database = {
             foreignKeyName: "work_items_resource_same_org"
             columns: ["organization_id", "resource_id"]
             isOneToOne: false
+            referencedRelation: "bookable_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_items_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
             referencedRelation: "resources"
             referencedColumns: ["organization_id", "id"]
           },
@@ -1104,7 +1170,69 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      bookable_resources: {
+        Row: {
+          id: string | null
+          organization_id: string | null
+        }
+        Insert: {
+          id?: string | null
+          organization_id?: string | null
+        }
+        Update: {
+          id?: string | null
+          organization_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resource_commitments: {
+        Row: {
+          occupies: unknown
+          organization_id: string | null
+          resource_id: string | null
+        }
+        Insert: {
+          occupies?: unknown
+          organization_id?: string | null
+          resource_id?: string | null
+        }
+        Update: {
+          occupies?: unknown
+          organization_id?: string | null
+          resource_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_items_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "bookable_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_items_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_checklist_item: {
@@ -1161,6 +1289,18 @@ export type Database = {
           p_location_id: string
           p_name: string
           p_organization_id: string
+        }
+        Returns: string
+      }
+      create_booking: {
+        Args: {
+          p_email: string
+          p_name: string
+          p_organization_id: string
+          p_phone: string
+          p_resource_id: string
+          p_starts_at: string
+          p_type_id: string
         }
         Returns: string
       }
@@ -1323,6 +1463,15 @@ export type Database = {
       }
       set_checklist_item_done: {
         Args: { p_checklist_item_id: string; p_done: boolean }
+        Returns: undefined
+      }
+      set_type_bookable: {
+        Args: {
+          p_duration_minutes: number
+          p_id: string
+          p_price_item_id: string
+          p_status_id: string
+        }
         Returns: undefined
       }
       unschedule_work_item: {

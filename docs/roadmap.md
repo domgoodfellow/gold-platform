@@ -206,8 +206,13 @@ Covers:
 
 - **The external-actor authorization axis, and this is the milestone's largest cost.** D22
   says booking, the customer portal and any embedded surface are blocked on one model, and
-  that whichever surface goes first pays for it. Booking goes first here, so M4 pays, and
-  D22 is amended in that slice rather than completed speculatively before it.
+  that whichever surface goes first pays for it. Booking went first, M4 paid, and D22 carries
+  the four answers. The one that was not anticipated: the plan was for every write to be an
+  RLS permit policy, and a returning customer broke it — `customers_org_email_unique` refuses a
+  second row for one address, and a read policy narrow enough to be safe cannot see the
+  customer already there. The write side became one privileged function with a scope check
+  instead, which made the surface *smaller*: an outsider now holds no insert permission on any
+  table at all.
 - **Booking and the customer portal.** D20 deferred both and its trigger has now fired: I5
   and I6 were enforced in M2, I4 in M3, and D22 is written. They are no longer blocked on
   invariants — only on the model above.

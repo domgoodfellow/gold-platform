@@ -125,3 +125,75 @@ export async function renameWorkItemType(
     throw new DomainError(error.message, 'work_item_types.update_failed');
   }
 }
+
+/**
+ * Publish a type for public booking, or withdraw it.
+ *
+ * **There is no `bookable` flag**, and that is the design rather than an omission. A type is
+ * bookable when the business has said which of that type's own statuses a booking arrives in
+ * and how long one takes; passing `null` for the status withdraws it. A boolean beside those
+ * columns would be a second answer able to contradict the first — bookable with no status, or
+ * a status and not bookable — and a check constraint makes the pair the whole answer instead.
+ *
+ * The status must belong to *this type*, and the database says so: the reference is
+ * `(organization_id, id, booking_status_id)` against `work_item_statuses (organization_id,
+ * type_id, id)`, which is I20's three-column shape. A booking cannot arrive in another type's
+ * column even by writing the row directly.
+ *
+ * The price is optional. A business may take bookings without publishing what it charges, and
+ * saying nothing is different from saying zero.
+ */
+export async function setTypeBookable(
+  db: Db,
+  input: {
+    id: string;
+    statusId: string | null;
+    durationMinutes: number | null;
+    priceItemId?: string | null;
+  },
+): Promise<void> {
+  await requireActor(db);
+
+  const publishing = input.statusId !== null;
+
+  if (publishing && (!Number.isInteger(input.durationMinutes) || input.durationMinutes === null)) {
+    throw new DomainError(
+      'A bookable type needs to say how long the work takes.',
+      'types.booking_duration_required',
+    );
+  }
+  if (publishing && (input.durationMinutes! < 5 || input.durationMinutes! > 1440)) {
+    throw new DomainError(
+      'A booking lasts between five minutes and a day.',
+      'types.booking_duration_invalid',
+    );
+  }
+
+  const { error } = await db.rpc('set_type_bookable', {
+    p_id: input.id,
+    p_status_id: (input.statusId ?? null) as string,
+    p_duration_minutes: (publishing ? input.durationMinutes : null) as number,
+    p_price_item_id: (input.priceItemId || null) as string,
+  });
+
+  if (error) {
+    // The three-column reference refusing a status that belongs to another type (I20), or a
+    // price book item that is not this tenant's.
+    if (error.code === '23503') {
+      throw new DomainError(
+        'That status belongs to a different kind of work, or that price is not this business’s.',
+        'types.booking_reference_invalid',
+      );
+    }
+    if (error.code === '23514') {
+      throw new DomainError(
+        'A bookable type needs both a status and a duration.',
+        'types.booking_incomplete',
+      );
+    }
+    if (error.code === '42501') {
+      throw new DomainError('You cannot configure work item types here.', 'types.forbidden');
+    }
+    throw new DomainError(error.message, 'types.booking_failed');
+  }
+}

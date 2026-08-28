@@ -13,8 +13,23 @@ import { updateSession } from '@/lib/db/session';
  */
 const PUBLIC_PATHS = ['/', '/sign-in', '/sign-up'];
 
+/**
+ * The booking surface, which is public in a way the paths above are not.
+ *
+ * A prefix rather than an exact match, because the organization and the booking are in the
+ * path — and it stays a closed set: one literal, checked with its trailing delimiter so that
+ * `/booking` or `/book-a-thing` cannot talk their way in.
+ *
+ * Letting these through is not an authorization decision and nothing here decides anything. A
+ * visitor arrives with no session at all; `beginBooking` gives them an anonymous one, and
+ * every row they can then reach is decided by an RLS policy keyed to
+ * `app.current_external_tenant()`. If this line were deleted the surface would be unreachable
+ * and still correct, which is exactly what the redirect below is also true of.
+ */
+const BOOKING_PREFIX = '/book/';
+
 function isPublic(pathname: string): boolean {
-  return PUBLIC_PATHS.includes(pathname);
+  return PUBLIC_PATHS.includes(pathname) || pathname.startsWith(BOOKING_PREFIX);
 }
 
 export async function proxy(request: NextRequest) {

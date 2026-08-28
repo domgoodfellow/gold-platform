@@ -866,6 +866,55 @@ than D20 implies, because I5 and I6 are now enforced. Its remaining blockers are
 record. Whichever surface goes first pays for the model; the other two inherit it, and this
 record is amended in that slice rather than completed speculatively now.
 
+### Amended by booking (M4). The four answers.
+
+Booking went first and paid for the model. What follows is settled; the portal and any embedded
+surface inherit it rather than deciding again.
+
+- **What it is bound to: a row in `external_actors`, binding one `auth.users` id to exactly one
+  organization.** Not a customer row — at the moment somebody opens a booking page there is no
+  customer yet, and there must not be one until they commit to something. The binding is
+  *immutable*: it has select and insert grants and nothing else. The first draft carried a
+  `customer_id` that `create_booking` wrote, and that was the leak — an outsider who can write a
+  customer id onto their own binding can write somebody else's, and the composite foreign key
+  does not object because another customer of the same tenant satisfies it perfectly. What
+  identifies an outsider's own rows instead is `created_by`, which nothing can move.
+- **It reaches Postgres as a JWT: Supabase anonymous sign-in**, which this record already named
+  as the option costing I11 and D17 the least. It produces a genuine `auth.uid()`, so
+  `events.actor_id not null references auth.users` needed no second shape, and RLS is still the
+  boundary rather than a second one in application code. `config.toml` enables it, and its
+  anonymous rate limit is the abuse control for a page anyone on the internet can load.
+- **Scope is exactly one tenant, through `app.current_external_tenant()`** — a *different
+  function* from `app.current_tenant_ids()`, returning at most one uuid rather than a set, and
+  sharing neither its name nor its signature so that one cannot be reached for in place of the
+  other. What makes "never a set" structural is a unique index on `external_actors (user_id)`
+  **alone**. That deliberately does not lead with `organization_id`: I2 exists so one tenant's
+  uniqueness cannot block another's, and this is the opposite constraint — one actor may never
+  span two tenants — so leading with the tenant would permit exactly the row it forbids.
+  `schema-conformance.test.ts` names it as its one exception, with that reasoning.
+- **I19 is satisfied by the read being the permission check**, exactly as `getDocumentUrl`
+  already works. `app.has_capability` is never consulted on this axis, because there is no role
+  to ask about.
+
+**What changed against the plan, and it is the useful part of the record.** The intent was that
+every write be an RLS *permit* policy, so that RLS was the boundary in both directions. Four
+were written — customers, work items, events, priced lines — and they worked. They broke on a
+returning customer: `customers_org_email_unique` refuses a second row for one address, and a
+read policy narrow enough to be safe cannot see the customer already there to attach to. Widening
+the read to fix that would have handed a stranger the customer list.
+
+So the write side became **one `SECURITY DEFINER` function with the scope check as its first
+act** — the shape D14 already sanctions and `create_organization` already uses, privileged for
+the same reason: there is no tenant to be a member of yet, and here no customer to be one yet.
+The surface got *smaller* rather than larger: an external actor now holds **no insert permission
+on any table at all**, and there is exactly one shape of write they can perform. Reads stayed
+entirely on RLS, which is where a leak would actually live.
+
+**Consequence for the other two surfaces.** The portal will need to bind an outsider to a
+customer the *business* created, which `created_by` cannot express — that is a real gap and it
+gets its column when it has a caller, not before. Nothing else about this model is expected to
+move.
+
 ### D23 — The interface has a decided visual language, harvested from `tire-app-template`
 
 M3 rebuilt every screen M1 and M2 produced, because those screens were a `max-w-2xl` stack of

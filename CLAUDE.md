@@ -132,6 +132,25 @@ transition into it. That was right about D6 and wrong about I7, whose predicate 
 about status. The fix is one tenant-answered question, not a platform-owned `is_terminal`; see
 M4 in `docs/roadmap.md` for why the distinction is the whole point.
 
+**The external actor is one axis and it is decided (D22, amended by the booking slice).** An
+outsider is a row in `external_actors` binding one `auth.users` id — from anonymous sign-in, so
+`auth.uid()` is real and I11 is untouched — to **exactly one** organization. The scope function
+is `app.current_external_tenant()`, which returns at most one uuid and is deliberately not
+`app.current_tenant_ids()`; nothing shares a name or a signature between them. Three things are
+easy to undo by accident:
+
+- **The binding is immutable, and `created_by` is what scopes an outsider to their own rows.**
+  The first draft put a `customer_id` on the binding, which meant granting an outsider `update`
+  on it — and an outsider who can write a customer id onto their own binding can write somebody
+  else's. Do not add that column back without a caller and a different mechanism.
+- **`external_actors_one_tenant_per_user` is on `user_id` alone**, not led by
+  `organization_id`. That is I2 inverted on purpose: one actor may never span two tenants.
+  `schema-conformance.test.ts` names it as its one exception.
+- **An external actor holds no insert permission on any table.** Every write goes through
+  `create_booking`, one `SECURITY DEFINER` function whose first act is the scope check. Reads
+  stay entirely on RLS. Adding a permissive insert policy for this axis would widen the surface
+  back to where it started.
+
 **A recorded cost is still not a price.** `work_item_costs` is an observation about a job that
 happened; a price is a claim the business publishes in advance. They are two tables and
 neither is derived from the other. `jobEconomics` subtracts one from the other and is the only

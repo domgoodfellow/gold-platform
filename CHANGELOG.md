@@ -7,6 +7,34 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ### M4 — vertical one: Pneu3L
 
+**Booking, and the external actor it paid for.** D22 stated four questions and settled none,
+on the grounds that whichever surface went first would pay. Booking went first. An outsider is
+a row binding one `auth.users` id — from anonymous sign-in, so `auth.uid()` is real and I11
+needed no second shape — to exactly one organization, through a scope function that returns at
+most one uuid and is deliberately not `app.current_tenant_ids()`. What makes "never a set"
+structural is a unique index on `user_id` alone: I2 inverted on purpose, because the risk here
+is one actor spanning two tenants rather than one tenant blocking another. The conformance test
+names it as its single exception.
+
+**Two things went differently from the plan, and both made the result better.** The binding was
+to carry a `customer_id`; writing it meant granting an outsider `update` on their own binding,
+and an outsider who can write a customer id onto their binding can write somebody else's — the
+composite foreign key does not object, because another customer of the same tenant satisfies it.
+`created_by` scopes an outsider to their own rows instead, and the binding is now immutable. And
+the write side was to be four RLS permit policies; a returning customer broke that, because
+`customers_org_email_unique` refuses a second row for one address and a read policy narrow enough
+to be safe cannot see the customer already there. One `SECURITY DEFINER` function with the scope
+check as its first act replaced them, and the surface got smaller: an external actor now holds no
+insert permission on any table.
+
+**Nothing on that page carries a second opinion.** Slots come from `freeWindows` over the same
+operating hours the operator's schedule subtracts, and the price is the catalogue row copied by
+`add_work_item_priced_line` — which is exactly what D20 said booking was blocked on. Availability
+is published through a view that says which resource is occupied and when, and nothing else: a
+resource can be a person, and who is free on Tuesday is not a fact a booking page needs to
+publish. I6 stopped being an internal claim — a test reads a slot as a member of the public, lets
+somebody else take it, and commits against the stale answer.
+
 **A buffer between jobs, and it is the tenant's.** `constraints.md` lists **buffers** in the
 never-hardcode set beside statuses, prices, hours and currency, and this is that taken
 literally: the platform holds no gap between jobs and invents none, zero is what a business

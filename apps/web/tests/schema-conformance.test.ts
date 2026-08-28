@@ -77,7 +77,24 @@ describe('schema conformance', () => {
           and a.attname <> 'organization_id'`,
     );
 
-    expect(rows).toEqual([]);
+    // **One exception, and it is the opposite constraint rather than a lapse.**
+    //
+    // I2 exists so one tenant's uniqueness cannot block another's: two businesses must both be
+    // able to call a status "Booked". `external_actors_one_tenant_per_user` is on `user_id`
+    // alone because it enforces the reverse — that one *actor* can never span two tenants,
+    // which is D22's "always exactly one tenant, never a set". Leading it with
+    // `organization_id` would permit exactly the row it exists to forbid, and
+    // `app.current_external_tenant()` would then have a set to return.
+    //
+    // Named here rather than excluded by a pattern, so a second such index cannot arrive
+    // quietly by matching a rule somebody loosened.
+    expect(rows).toEqual([
+      {
+        table_name: 'external_actors',
+        index_name: 'external_actors_one_tenant_per_user',
+        first: 'user_id',
+      },
+    ]);
   });
 
   it('leads every exclusion constraint on a tenant-owned table with organization_id (I2)', async () => {
