@@ -471,6 +471,7 @@ export type Database = {
       }
       organizations: {
         Row: {
+          buffer_minutes: number
           created_at: string
           created_by: string
           currency: string
@@ -479,6 +480,7 @@ export type Database = {
           timezone: string
         }
         Insert: {
+          buffer_minutes?: number
           created_at?: string
           created_by: string
           currency?: string
@@ -487,6 +489,7 @@ export type Database = {
           timezone?: string
         }
         Update: {
+          buffer_minutes?: number
           created_at?: string
           created_by?: string
           currency?: string
@@ -1004,6 +1007,7 @@ export type Database = {
           customer_id: string | null
           id: string
           location_id: string | null
+          occupies: unknown
           organization_id: string
           resource_id: string | null
           scheduled_during: unknown
@@ -1020,6 +1024,7 @@ export type Database = {
           customer_id?: string | null
           id?: string
           location_id?: string | null
+          occupies?: unknown
           organization_id: string
           resource_id?: string | null
           scheduled_during?: unknown
@@ -1036,6 +1041,7 @@ export type Database = {
           customer_id?: string | null
           id?: string
           location_id?: string | null
+          occupies?: unknown
           organization_id?: string
           resource_id?: string | null
           scheduled_during?: unknown
@@ -1334,6 +1340,7 @@ export type Database = {
       }
       update_organization: {
         Args: {
+          p_buffer_minutes: number
           p_currency: string
           p_id: string
           p_name: string

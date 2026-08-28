@@ -230,6 +230,7 @@ describe('editing configuration that shipped write-once', () => {
       name: 'Renamed Operations Ltd',
       timezone: 'America/New_York',
       currency: 'USD',
+      bufferMinutes: 0,
     });
 
     const organization = await getOrganization(alice.db, alice.organizationId);
@@ -261,6 +262,7 @@ describe('editing configuration that shipped write-once', () => {
       name: 'Bob Ltd',
       timezone: 'Europe/Amsterdam',
       currency: 'GBP',
+      bufferMinutes: 0,
     });
 
     const [existing] = await listCosts(bob.db, {
@@ -291,6 +293,7 @@ describe('editing configuration that shipped write-once', () => {
         name: 'Renamed Operations Ltd',
         timezone: 'Mars/Olympus_Mons',
         currency: 'USD',
+        bufferMinutes: 0,
       }),
     ).rejects.toMatchObject({ code: 'organizations.timezone_invalid' });
   });
@@ -302,6 +305,7 @@ describe('editing configuration that shipped write-once', () => {
         name: 'Renamed Operations Ltd',
         timezone: 'America/New_York',
         currency: 'dollars',
+        bufferMinutes: 0,
       }),
     ).rejects.toMatchObject({ code: 'organizations.currency_invalid' });
   });
@@ -313,6 +317,7 @@ describe('editing configuration that shipped write-once', () => {
         name: 'Taken over',
         timezone: 'UTC',
         currency: 'USD',
+        bufferMinutes: 0,
       }),
     ).rejects.toMatchObject({ code: 'organizations.forbidden' });
 
@@ -344,6 +349,7 @@ describe('editing configuration that shipped write-once', () => {
         name: 'Should not change',
         timezone: 'UTC',
         currency: 'USD',
+        bufferMinutes: 0,
       }),
     ).rejects.toMatchObject({ code: 'organizations.forbidden' });
 

@@ -7,6 +7,23 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ### M4 — vertical one: Pneu3L
 
+**A buffer between jobs, and it is the tenant's.** `constraints.md` lists **buffers** in the
+never-hardcode set beside statuses, prices, hours and currency, and this is that taken
+literally: the platform holds no gap between jobs and invents none, zero is what a business
+that has said nothing means, and why a business wants one — driving to the next address,
+cleaning the room, inspecting the machine — is deliberately not modelled, because naming the
+column for any one reason would put one business's operations in every business's schema.
+
+**It is enforced, not displayed**, and that decided the shape. Padding only the availability
+calculation would leave `freeWindows` refusing a slot the database happily accepts — I5 broken
+in the direction nobody notices, and the constraint no longer the re-assertion I6 depends on.
+So a job now carries two ranges: `scheduled_during`, the appointment the customer was told, and
+`occupies`, which is that plus the buffer and is what the exclusion constraint compares. At a
+zero buffer the two are identical, so a business that has configured nothing sees byte-identical
+behaviour. Changing the buffer recomputes work already scheduled, and widening it far enough to
+overlap two committed jobs is refused — the database declining to hold a schedule the resource
+cannot actually work.
+
 **The customer timeline: `events` gets its first reader.** The table shipped in M1 because it
 cannot be backfilled, and thirty-odd writers have been filling it since with nothing looking.
 Reading found two things. Payloads are thin about vocabulary and thick about snapshots, and

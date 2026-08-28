@@ -38,11 +38,13 @@ export function OrganizationSettingsForm({
   name,
   timezone,
   currency,
+  bufferMinutes,
 }: {
   organizationId: string;
   name: string;
   timezone: string;
   currency: string;
+  bufferMinutes: number;
 }) {
   const [state, formAction, pending] = useActionState(updateOrganizationAction, INITIAL);
 
@@ -70,6 +72,28 @@ export function OrganizationSettingsForm({
         <TimeZoneField defaultValue={timezone} label="Where is this business?" />
         <CurrencyField defaultValue={currency} />
       </div>
+
+      {/* Why a business wants one is its own affair — driving to the next address, cleaning
+          the room, inspecting the machine — so the label describes the effect rather than any
+          one reason. Zero is a real answer and the default: a business that has said nothing
+          gets no gap invented on its behalf. */}
+      <label className="flex flex-col gap-1 text-sm">
+        <span>Time a resource stays busy after a job (minutes)</span>
+        <input
+          name="bufferMinutes"
+          type="number"
+          required
+          min={0}
+          max={1440}
+          step={1}
+          defaultValue={bufferMinutes}
+          className={INPUT_CLASS}
+        />
+        <span className="text-xs opacity-70">
+          Nothing else can be booked on that resource until this has passed. Changing it moves
+          nothing, but work already scheduled too close together will be refused.
+        </span>
+      </label>
 
       <button
         type="submit"

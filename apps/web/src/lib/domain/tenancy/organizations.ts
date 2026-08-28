@@ -15,6 +15,14 @@ export type Organization = {
   timezone: string;
   /** ISO 4217, this business's own. Never assumed by the platform (I10). */
   currency: string;
+  /**
+   * Minutes a resource stays occupied after work ends.
+   *
+   * Travel for a mobile service, cleaning for a clinic, inspection for a hire yard — the
+   * reason is the tenant's and the platform does not hold one. Zero means this business has
+   * said nothing, exactly as an empty operating-hours set does.
+   */
+  bufferMinutes: number;
 };
 
 const NAME_MAX = 200;
@@ -59,18 +67,26 @@ const FOUNDING_ROLE = 'Owner';
 // type level and only sees a literal, so splitting it across lines collapses the result type
 // to GenericStringError[].
 const MEMBERSHIP_SELECT =
-  'role:roles!memberships_role_same_org(name, capabilities), organization:organizations!inner(id, name, created_at, timezone, currency)';
+  'role:roles!memberships_role_same_org(name, capabilities), organization:organizations!inner(id, name, created_at, timezone, currency, buffer_minutes)';
 
 type MembershipRow = {
   role: { name: string; capabilities: string[] } | { name: string; capabilities: string[] }[];
   organization:
-    | { id: string; name: string; created_at: string; timezone: string; currency: string }
     | {
         id: string;
         name: string;
         created_at: string;
         timezone: string;
         currency: string;
+        buffer_minutes: number;
+      }
+    | {
+        id: string;
+        name: string;
+        created_at: string;
+        timezone: string;
+        currency: string;
+        buffer_minutes: number;
       }[];
 };
 
@@ -91,6 +107,7 @@ function toOrganization(row: MembershipRow): Organization | null {
     capabilities: (role.capabilities ?? []).filter(isCapability),
     timezone: organization.timezone,
     currency: organization.currency,
+    bufferMinutes: organization.buffer_minutes,
   };
 }
 
@@ -206,7 +223,8 @@ export async function createOrganization(
 }
 
 /**
- * Change what a business calls itself, the clock it thinks in, and the currency it trades in.
+ * Change what a business calls itself, the clock it thinks in, what it trades in, and how long
+ * a resource stays busy after a job.
  *
  * All three shipped write-once, because each needed an authorization model that had no caller
  * (D19's precedent for deferring an edit path). The caller is a business that picked the
@@ -217,10 +235,22 @@ export async function createOrganization(
  * insert, so changing this one does not reinterpret what past jobs cost (I8). Every scheduled
  * window is an absolute instant, so changing the zone changes how it renders and not when it
  * is (I9).
+ *
+ * **The buffer is the one field here that does reach committed work, and it must.** A business
+ * that discovers it needs forty minutes between jobs means that about tomorrow's bookings, not
+ * only about the next one it takes — so every scheduled job's occupied window is recomputed.
+ * Widening it far enough to overlap two committed jobs is refused by the exclusion constraint,
+ * which is the database declining to hold a schedule the business cannot actually work.
  */
 export async function updateOrganization(
   db: Db,
-  input: { id: string; name: string; timezone: string; currency: string },
+  input: {
+    id: string;
+    name: string;
+    timezone: string;
+    currency: string;
+    bufferMinutes: number;
+  },
 ): Promise<void> {
   await requireActor(db);
 
@@ -232,11 +262,25 @@ export async function updateOrganization(
     throw new DomainError('A timezone is required.', 'organizations.timezone_required');
   }
 
+  // Re-checked here for the message; the check constraints are the guarantee. The upper bound
+  // is not a business rule — it stops a typo padding every job by a decade.
+  if (
+    !Number.isInteger(input.bufferMinutes) ||
+    input.bufferMinutes < 0 ||
+    input.bufferMinutes > 1440
+  ) {
+    throw new DomainError(
+      'A buffer is a whole number of minutes, from zero to a day.',
+      'organizations.buffer_invalid',
+    );
+  }
+
   const { error } = await db.rpc('update_organization', {
     p_id: input.id,
     p_name: name,
     p_timezone: timezone,
     p_currency: currency,
+    p_buffer_minutes: input.bufferMinutes,
   });
 
   if (error) {
@@ -246,6 +290,14 @@ export async function updateOrganization(
       throw new DomainError(
         'That is not a timezone this system recognises.',
         'organizations.timezone_invalid',
+      );
+    }
+    // Widening the buffer far enough that two committed jobs would overlap. Reachable, and
+    // the right refusal: the alternative is a schedule the van cannot physically work.
+    if (error.code === '23P01') {
+      throw new DomainError(
+        'That buffer would overlap work already scheduled on the same resource. Move that work first, or choose a shorter buffer.',
+        'organizations.buffer_conflict',
       );
     }
     if (error.code === '42501') {

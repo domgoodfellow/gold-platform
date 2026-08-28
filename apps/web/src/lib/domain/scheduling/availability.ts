@@ -35,7 +35,18 @@ import { parseWindow, type Window } from '@/lib/domain/scheduling/window';
 /** A resource's day: what it is committed to, and what is left. */
 export type ResourceSchedule = {
   resource: { id: string; name: string };
-  booked: { workItemId: string; title: string; window: Window }[];
+  booked: {
+    workItemId: string;
+    title: string;
+    /** The appointment — what the customer was told, and the only one ever rendered. */
+    window: Window;
+    /**
+     * What the resource is actually unavailable for: the appointment plus the tenant's
+     * buffer. This is what `free` is computed against and what the exclusion constraint
+     * compares, which is the only reason I5 and I7 still agree once a buffer exists.
+     */
+    occupied: Window;
+  }[];
   free: Window[];
 };
 
@@ -124,8 +135,11 @@ export async function listSchedule(
       .eq('organization_id', input.organizationId)
       .order('name', { ascending: true }),
     db
+      // `occupies` is what the resource is unavailable for -- the appointment plus this
+      // business's buffer -- and `scheduled_during` is what the customer was told. Both are
+      // read because they answer different questions on this screen.
       .from('work_items')
-      .select('id, title, resource_id, scheduled_during')
+      .select('id, title, resource_id, scheduled_during, occupies')
       .eq('organization_id', input.organizationId)
       .not('resource_id', 'is', null)
       // The three filters here are the exclusion constraint's partial predicate, written as a
@@ -135,7 +149,7 @@ export async function listSchedule(
       // `status_releases_resource` is the tenant's own answer about their own status, mirrored
       // onto the row because a constraint predicate must be immutable.
       .eq('status_releases_resource', false)
-      .overlaps('scheduled_during', range),
+      .overlaps('occupies', range),
     input.on
       ? listOperatingHours(db, { organizationId: input.organizationId })
       : Promise.resolve([] as OperatingHours[]),
@@ -159,10 +173,11 @@ export async function listSchedule(
   for (const row of committed.data ?? []) {
     // D15's boundary: `supabase gen types` has no TypeScript for a Postgres range.
     const window = parseWindow(row.scheduled_during as string | null);
-    if (!window || !row.resource_id) continue;
+    const occupied = parseWindow(row.occupies as string | null);
+    if (!window || !occupied || !row.resource_id) continue;
 
     const existing = byResource.get(row.resource_id) ?? [];
-    existing.push({ workItemId: row.id, title: row.title, window });
+    existing.push({ workItemId: row.id, title: row.title, window, occupied });
     byResource.set(row.resource_id, existing);
   }
 
@@ -179,7 +194,10 @@ export async function listSchedule(
       free: open.flatMap((window) =>
         freeWindows(
           window,
-          booked.map((entry) => entry.window),
+          // The occupied windows, not the appointments. Subtracting the appointment would
+          // offer a slot the constraint then refuses, which is exactly the disagreement I5
+          // exists to prevent.
+          booked.map((entry) => entry.occupied),
           { minimumMinutes: input.minimumMinutes },
         ),
       ),

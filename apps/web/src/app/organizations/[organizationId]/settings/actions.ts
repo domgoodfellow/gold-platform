@@ -24,6 +24,7 @@ export async function updateOrganizationAction(
       name: String(formData.get('name') ?? ''),
       timezone: String(formData.get('timezone') ?? ''),
       currency: String(formData.get('currency') ?? ''),
+      bufferMinutes: Number(formData.get('bufferMinutes') ?? Number.NaN),
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };

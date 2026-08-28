@@ -42,6 +42,7 @@ export default async function SettingsPage({
             organizationId={organizationId}
             name={organization.name}
             timezone={organization.timezone}
+            bufferMinutes={organization.bufferMinutes}
             currency={organization.currency}
           />
         ) : (
