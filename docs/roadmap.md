@@ -274,7 +274,15 @@ Covers:
   invariants — only on the model above.
 - **Quote → invoice → payment.** Named in the criterion above and absent from every coverage
   list until now. Stripe is the first vendor behind an adapter and the first real caller for
-  the integration shape.
+  the integration shape — and it brought two decisions with it. **D26** moves `apps/api/`
+  forward from M5, because ingress is Python's by D2 and the alternative was a route called
+  *api* inside the app that is not the API. **D27** decides that a tenant connects their own
+  processor account rather than pasting a key into a settings form: GOLD stores an account id,
+  charges are created on the business's own account, and no customer money ever reaches a
+  balance of ours — which is what keeps this platform out of being a money transmitter, and is
+  a legal position rather than an architectural preference.
+  What lands in `apps/api` is one endpoint: no scheduler, no `domains/`, no `workers/`, because
+  automation execution is still M5 and still the thing that needs them.
 - **Job economics.** Prices landed in M3 and costs in M2, and nothing subtracts them.
   Revenue minus cost per job is the smallest useful version, and it is the number the owner
   asks for first.
@@ -387,7 +395,8 @@ Covers:
   names a capability rather than a provider. Delivery is idempotent per recipient per reason;
   `Mechanic_Maintenance`'s notification log is the shape, and the failure it prevents is
   telling a customer the same thing twice.
-- **`apps/api/` arrives here**, and this is earlier than the Python plane used to be placed.
+- **`apps/api/` gains a scheduler here.** It was stood up in M4 for webhook ingress (D26) and
+  holds one endpoint; this is the milestone that gives it the responsibility D2 lists first.
   A scheduled evaluation asking *what is due* has nowhere to live in Next.js. Per D24 it is a
   scheduled serverless invocation and not a worker daemon, so anything that must survive
   between runs lives in Postgres.

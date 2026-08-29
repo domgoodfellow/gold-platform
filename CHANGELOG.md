@@ -7,6 +7,85 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ### M4 — vertical one: Pneu3L
 
+**M4 is met.** `milestone-m4.test.ts` runs one business end to end — a stranger with no account
+finds it by the name it chose, reads what it offers, takes a slot, and the operator schedules
+that job, works it along the lifecycle the business configured, quotes it, invoices it and takes
+cash — while asserting at every step, including the ones where they successfully wrote, that
+`app.current_tenant_ids()` is empty for that stranger. That is the milestone's inversion: M1 ran
+byte-identical input across two tenants, M2 ran identical input twice, M3 ran maximally
+different input through identical code, and all three ran as members. Half of this one is
+somebody who is a member of nothing. It touches no SQL, because "nobody has ever been given
+database credentials" is a claim about the path.
+
+**`apps/api` exists, and Stripe is what brought it forward.** D2 gives webhook ingress to
+Python and the roadmap put `apps/api/` at M5; both could not hold. D26 settles it in favour of
+D2 and the layout: a Next route would have put a second thing called *api* inside the app that
+is not the API. What landed is one endpoint, no scheduler and no `domains/`. The two Stripe
+touchpoints split along D2's own line — creating a checkout session is a transactional flow and
+stays in TypeScript, being *called* by Stripe is ingress and is Python — and only one side
+verifies, so there is one HMAC in the repository rather than two.
+
+**The writer with no human caller gets a role, not a key.** `payment_webhook` holds no grant on
+any table and exactly one `execute`; `record_provider_payment` derives the organization, the
+invoice and the currency from a `payment_requests` row this platform wrote first, so the caller
+names a provider, a reference and an amount and nothing that decides where money lands. Stripe
+may not tell this system which invoice to settle. **I11 kept one shape**: the integration is a
+real `auth.users` row with no email and no password, which was one insert against a nullable
+actor for machines.
+
+**I15 is enforced, and the test's second assertion is the one that matters.** An import
+boundary was the obvious half; the half that caught a real break is that no domain file may
+name a provider *at all*, because the first draft derived a provider name from whether a
+reference started with `cs_`. It also forced `registry.ts` out of the contract file, since
+choosing an implementation is the one operation that must name implementations.
+
+**Module enablement, arriving late from M3.** `organization_modules` is what a business has
+switched on — a row, never a directory (D25). Off is an absent row rather than a false flag, so
+there is no third state; switching a module off removes its area from the navigation and
+removes nothing it produced. **It is not authorization**: no RLS policy consults it, and a
+member who lacks a capability still sees the screen and is told why (I12), whereas a module the
+business never bought is not part of that business. A founding business gets the operational
+core and nothing that publishes anything — booking, the portal and card payments start off,
+because publishing a page to the internet is not a default anybody should acquire by signing up.
+
+**A tenant connects its own processor; GOLD holds neither its keys nor its money.** D27. The
+obvious reading of "per-tenant payment configuration" is a settings form taking a secret key,
+and it is the expensive one — it obliges this platform to encrypt, rotate and eventually leak
+somebody else's live credentials. Instead a business authorizes GOLD from its own Stripe
+account and what gets stored is an `acct_` id, which grants nothing on its own and which the
+business can revoke without telling us. Charges are created **on** that account, so funds never
+enter a balance of ours: Connect is not the same as a marketplace, and the charge type is what
+decides whether a platform needs a money-transmitter licence. `account` is a required field on
+`PaymentRequest` precisely so the other shape cannot be reached by forgetting an argument.
+
+**Two holes the tests found rather than the design.** The connect callback had no CSRF state —
+anyone who could get an operator to open it with a code of their choosing would have pointed
+that business's card payments at their own bank; it now carries a single-use httpOnly nonce
+naming the organization. And **a refused RLS `delete` returns success, not an error**: a role
+without `organization.manage` was being told an account was disconnected, and a module switched
+off, while both sat unchanged. Both now read back the deleted rows and tell "you may not" from
+"there was nothing to remove". A write that silently does not happen is worse than one that is
+refused loudly.
+
+**A module that switches nothing off is worse than no module, and the first version of this
+shipped three of them.** `booking`, `portal` and `card_payments` declared a surface they
+controlled and controlled nothing — a business could turn public booking off, believe its page
+was down, and find out otherwise from a customer. Enforcement is in the database, not the page:
+`app.module_enabled` is the single answer, `booking_organization` stops resolving a slug,
+`create_booking` re-checks rather than trusting how the visitor arrived, and a portal link goes
+dead with the same message a never-valid one gets. Card payments is checked in the domain layer,
+because its caller is a member and can read the table. `modules.test.ts` asserts each switch
+removes its surface, that switching back on destroys nothing, and — the case that would catch
+modules and capabilities merging — that a role without `organization.manage` loses the switch
+and keeps its work.
+
+**Reading `events` found a third missing action.** `work_item.booked` was written by the
+booking slice and was not in the timeline's allowlist, so a job a customer booked themselves was
+invisible on that customer's own history. That is now three times the same hazard has surfaced —
+a polymorphic append-only table whose readers arrive after its writers — and it will recur
+every time a slice writes a new action.
+
+
 **Invoicing, and money arriving — three columns that are not there carry the design.** An
 invoice has no `total_minor`: its total is `priceWorkItem` over its own snapshotted lines, and
 `InvoiceLine` is a `PricedLine` with a position rather than a parallel shape, so the second
