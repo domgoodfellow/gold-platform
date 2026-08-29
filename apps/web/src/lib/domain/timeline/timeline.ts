@@ -66,6 +66,7 @@ const CUSTOMER_ACTIONS = [
   'location.linked',
   'document.created',
   'work_item.created',
+  'work_item.booked',
   'work_item.status_changed',
   'work_item.scheduled',
   'work_item.unscheduled',
@@ -120,6 +121,11 @@ function describe(row: EventRow, words: Vocabulary): string {
       return `Document attached: ${text(row.payload, 'file_name') ?? 'a file'}`;
     case 'work_item.created':
       return `Work created: ${text(row.payload, 'title') ?? 'untitled'}`;
+    case 'work_item.booked':
+      // A different fact from `work_item.created`, and the outsider axis writes it as one: a
+      // job somebody booked themselves is not a job an operator typed, and a timeline that
+      // rendered them identically would lose the only part a customer would recognise.
+      return `Booked: ${text(row.payload, 'title') ?? 'untitled'}`;
     case 'work_item.status_changed': {
       // The id, resolved to what the tenant calls that status *today*. A status that has
       // since been deleted has no word left, and saying so is better than a blank.

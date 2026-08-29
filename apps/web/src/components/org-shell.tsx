@@ -21,6 +21,12 @@ import {
  *
  * Neither reads a capability. See `lib/navigation.ts` for why the shell shows every area to
  * every member and lets each screen explain what a role cannot do.
+ *
+ * **They do read which modules the business has enabled, and that is not the same thing.** A
+ * role decides what a member may do inside this business; a module decides what this business
+ * bought. Hiding a screen for the first would make this file the authorization boundary, which
+ * I12 says it is not. Hiding it for the second is showing a business its own shape. The set
+ * arrives from the layout, which reads it server-side under RLS — nothing is decided here.
  */
 
 function NavLink({
@@ -65,8 +71,15 @@ function NavLink({
  * From `md` up it is a column, and the two groups are ruled apart. D23: "An operator must
  * never reach today's work by going through settings."
  */
-export function OrgNav({ organizationId }: { organizationId: string }) {
+export function OrgNav({
+  organizationId,
+  enabledModules,
+}: {
+  organizationId: string;
+  enabledModules: string[];
+}) {
   const segment = currentSegment(usePathname());
+  const enabled = new Set(enabledModules);
 
   return (
     <>
@@ -77,7 +90,7 @@ export function OrgNav({ organizationId }: { organizationId: string }) {
         className="fixed inset-x-0 bottom-0 z-10 border-t border-black/10 bg-background md:hidden dark:border-white/15"
       >
         <ul className="flex gap-1 overflow-x-auto p-2">
-          {AREAS.map((area) => (
+          {AREAS.filter((area) => enabled.has(area.module)).map((area) => (
             <li key={area.segment} className="shrink-0">
               <NavLink
                 organizationId={organizationId}
@@ -103,7 +116,7 @@ export function OrgNav({ organizationId }: { organizationId: string }) {
                 : 'mt-3 flex flex-col gap-1 border-t border-black/10 pt-3 dark:border-white/15'
             }
           >
-            {areasIn(group).map((area) => (
+            {areasIn(group, enabled).map((area) => (
               <li key={area.segment}>
                 <NavLink
                   organizationId={organizationId}

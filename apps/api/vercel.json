@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "app/api/*.py": {
+      "runtime": "@vercel/python@4.3.0"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/webhooks/stripe",
+      "destination": "/app/api/stripe_webhook"
+    }
+  ]
+}

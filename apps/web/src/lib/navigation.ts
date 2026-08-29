@@ -36,6 +36,97 @@
  */
 export type AreaGroup = 'operational' | 'configuration';
 
+/**
+ * The modules this platform sells, and the only list of them.
+ *
+ * **A module is what a tenant switches on, is billed for, and sees below** — a row in
+ * `organization_modules`, never a directory (`constraints.md` D25). It is emphatically not a
+ * capability: `app.has_capability` decides what a *role* may do inside a business, and this
+ * decides what the business bought. Nothing here is ever read by an RLS policy.
+ *
+ * **Every key names areas that exist today, and no more.** `starting_conversation.txt` lists
+ * Inventory, Maintenance, Dispatch and Weather as modules and they will be; none of them is a
+ * screen yet, and a key nobody can switch on is a promise the billing page makes and the
+ * product does not keep. `navigation.test.ts` fails on a module owning no area and on an area
+ * owned by no module, which is what keeps the two lists from drifting.
+ */
+export type Module = {
+  key: string;
+  /** What a business sees on the settings screen and, eventually, on an invoice. */
+  label: string;
+  description: string;
+  /**
+   * The operational core, which cannot be switched off.
+   *
+   * Not every module is optional, and pretending otherwise would be dishonest rather than
+   * flexible: a business with no way to record that work happened is not running on this
+   * platform. `setModuleEnabled` refuses, and the settings screen shows no switch.
+   */
+  required?: true;
+  /**
+   * The surface this module controls, when it is not an area of the operator shell.
+   *
+   * **Not every module is a sidebar entry, and the first draft of `navigation.test.ts`
+   * assumed otherwise.** Public booking is a page the operator never visits; the portal is a
+   * customer's screen; card payments is a control on the invoice. Each is still something a
+   * business switches on and is billed for, so each is a module — and the test's real claim is
+   * that a module owns *something*, not that it owns a sidebar entry.
+   */
+  outside?: string;
+};
+
+export const MODULES = [
+  {
+    key: 'work',
+    label: 'Work',
+    description: 'Jobs, their types, statuses and checklists — what this business does.',
+    required: true,
+  },
+  {
+    key: 'scheduling',
+    label: 'Scheduling',
+    description: 'A calendar over resources, with operating hours and a buffer between jobs.',
+    required: true,
+  },
+  {
+    key: 'customers',
+    label: 'Customers',
+    description: 'Who the work is for, where they are, and everything that has happened.',
+    required: true,
+  },
+  {
+    key: 'billing',
+    label: 'Billing',
+    description: 'A price book, quotes, invoices and payments recorded by hand.',
+    required: true,
+  },
+  {
+    key: 'booking',
+    label: 'Public booking',
+    description:
+      'A page the public can reach, where somebody with no account takes a free slot.',
+    outside: 'the public page at /book/{slug}',
+  },
+  {
+    key: 'portal',
+    label: 'Customer portal',
+    description: 'A customer signs in by invitation and sees their own work and invoices.',
+    outside: 'the customer portal, reached by an invitation this business sends',
+  },
+  {
+    key: 'card_payments',
+    label: 'Card payments',
+    description: 'Ask a processor to collect what is outstanding, rather than only cash.',
+    outside: 'the card control on an invoice',
+  },
+] as const satisfies readonly Module[];
+
+export type ModuleKey = (typeof MODULES)[number]['key'];
+
+export function isModuleKey(value: string): value is ModuleKey {
+  return MODULES.some((module) => module.key === value);
+}
+
 export type Area = {
   /**
    * The path segment under `/organizations/[organizationId]/`.
@@ -54,6 +145,16 @@ export type Area = {
   label: string;
   /** Operational or configuration. See `AreaGroup` — D23 makes this a decision. */
   group: AreaGroup;
+  /**
+   * The module this area belongs to.
+   *
+   * A business that has not enabled that module does not see this entry, and **that is not
+   * capability gating**: the paragraph above says nothing here is gated by a role, and this
+   * does not change it. A member who cannot configure fields still sees Custom fields and is
+   * told why the form is not theirs (I12). A module the business never bought is a different
+   * fact — it is not part of that business, so there is nobody to explain it to.
+   */
+  module: ModuleKey;
 };
 
 /**
@@ -67,22 +168,32 @@ export const AREAS: readonly Area[] = [
   // Today leads, because D23 says the action an operator's phone is designed around is
   // *what do I do next* — and for an owner-operator who is also the technician, that is most
   // of what running the business on this platform means.
-  { segment: 'today', label: 'Today', group: 'operational' },
-  { segment: 'work', label: 'Work', group: 'operational' },
-  { segment: 'schedule', label: 'Schedule', group: 'operational' },
-  { segment: 'customers', label: 'Customers', group: 'operational' },
-  { segment: 'locations', label: 'Locations', group: 'operational' },
-  { segment: 'assets', label: 'Assets', group: 'operational' },
-  { segment: 'resources', label: 'Resources', group: 'operational' },
-  { segment: 'pricing', label: 'Pricing', group: 'configuration' },
-  { segment: 'fields', label: 'Custom fields', group: 'configuration' },
-  { segment: 'roles', label: 'People and roles', group: 'configuration' },
-  { segment: 'settings', label: 'Settings', group: 'configuration' },
+  { segment: 'today', label: 'Today', group: 'operational', module: 'work' },
+  { segment: 'work', label: 'Work', group: 'operational', module: 'work' },
+  { segment: 'schedule', label: 'Schedule', group: 'operational', module: 'scheduling' },
+  { segment: 'customers', label: 'Customers', group: 'operational', module: 'customers' },
+  { segment: 'locations', label: 'Locations', group: 'operational', module: 'customers' },
+  { segment: 'assets', label: 'Assets', group: 'operational', module: 'work' },
+  { segment: 'resources', label: 'Resources', group: 'operational', module: 'scheduling' },
+  { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing' },
+  { segment: 'fields', label: 'Custom fields', group: 'configuration', module: 'work' },
+  { segment: 'roles', label: 'People and roles', group: 'configuration', module: 'work' },
+  // Settings belongs to the core because it is where a business switches the rest on and off.
+  // A module that could hide its own switch would be a business locked out of its own account.
+  { segment: 'settings', label: 'Settings', group: 'configuration', module: 'work' },
 ] as const;
 
-/** The areas of one group, in the order declared above. */
-export function areasIn(group: AreaGroup): Area[] {
-  return AREAS.filter((area) => area.group === group);
+/**
+ * The areas of one group that this business has switched on, in the order declared above.
+ *
+ * `enabled` is a set of module keys, not a set of capabilities, and the difference is the one
+ * D25 exists to keep visible. Passing nothing shows everything, which is what a caller with no
+ * business in hand — there is none today — would mean.
+ */
+export function areasIn(group: AreaGroup, enabled?: ReadonlySet<string>): Area[] {
+  return AREAS.filter(
+    (area) => area.group === group && (!enabled || enabled.has(area.module)),
+  );
 }
 
 export function areaHref(organizationId: string, segment: string): string {

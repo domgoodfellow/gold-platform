@@ -209,14 +209,19 @@ exist; the rest does not.
 
 ```text
 apps/
-  web/              Next.js — admin and booking today; marketing and the customer portal are
-                    what the directory is FOR, not what is in it (D20)
+  web/              Next.js — admin, booking and the customer portal; marketing is what the
+                    directory is FOR, not what is in it (D20)
     src/app/        routes; components with one caller sit beside their route
     src/features/   UI a second *surface* needs — see its README. Empty until that happens.
     src/components/ shared controls, extracted at the third caller (D23)
     src/lib/domain/ the business rules. Nothing in features/ or app/ decides anything.
-  api/              Python — automation, webhook ingress, intelligence, realtime (M5; not
-                    before). Deploys to Vercel as serverless functions (D24)
+    src/lib/adapters/ vendors. Domain code imports the capability, never the implementation.
+  api/              Python. Webhook ingress today (M4, D26); automation, intelligence and
+                    realtime later. Deploys to Vercel as serverless functions (D24)
+    app/core/       configuration and the database handle
+    app/integrations/ the only place this repo's Python names a vendor
+    app/api/        the HTTP entrypoints — one file, one route. NOT `apps/api/api/`:
+                    `vercel.json` configures the vendor's default away (see its README)
   desktop/          Electron shell (M9; not before)
 packages/           Empty until a package has two consumers. See constraints.md.
 infra/
@@ -224,6 +229,14 @@ infra/
 docs/
 .claude/commands/   The reusable prompts
 ```
+
+**`apps/api` exists as of M4, and it holds one endpoint.** D26 brought it forward from M5:
+Stripe calls in with no human session, D2 gives webhook ingress to Python, and the alternative
+was a route under `apps/web/src/app/api/` — a second thing called *api*, inside the app that is
+not the API. **There is no `api/` directory under `apps/web` and none may be added.** Nothing
+there anticipates M5: no scheduler, no `domains/`, no `workers/`. Its tests are
+`python -m pytest apps/api/tests`, and **they are not in the check gate** — a real gap, named
+in `apps/api/README.md` so nobody finds it by shipping through it.
 
 Two layout rules carry reasoning that is easy to lose:
 

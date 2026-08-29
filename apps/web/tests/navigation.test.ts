@@ -1,7 +1,14 @@
 import { readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { AREAS, areaHref, areaRootSegment, areasIn, currentSegment } from '@/lib/navigation';
+import {
+  AREAS,
+  MODULES,
+  areaHref,
+  areaRootSegment,
+  areasIn,
+  currentSegment,
+} from '@/lib/navigation';
 
 /**
  * The shell's navigation is the only place the platform's own nouns are written down, and
@@ -97,6 +104,55 @@ describe('the operator shell navigation', () => {
   });
 
   it('splits every area into exactly one group', () => {
+    expect(areasIn('operational').length + areasIn('configuration').length).toBe(AREAS.length);
+  });
+});
+
+/**
+ * Modules, and the two lists that must not drift.
+ *
+ * `MODULES` is what a business is offered and billed for; `AREAS` is what it then sees. A
+ * module owning no area is a line on an invoice with no product behind it. An area owned by no
+ * module is a screen nobody can switch off, which is the state the whole platform was in
+ * before this — see `constraints.md` D25 and `roadmap.md` M3.
+ */
+describe('modules', () => {
+  it('offers no module that owns nothing', () => {
+    // A module owning neither an area nor a named surface outside the shell is a line on an
+    // invoice with no product behind it. Booking, the portal and card payments own no sidebar
+    // entry and are not orphans — they are the reason `outside` exists.
+    const owned = new Set(AREAS.map((area) => area.module));
+    const orphans = MODULES.filter((module) => !owned.has(module.key) && !('outside' in module));
+    expect(orphans.map((module) => module.key)).toEqual([]);
+  });
+
+  it('has every area owned by a module that exists', () => {
+    const keys = new Set(MODULES.map((module) => module.key));
+    const unowned = AREAS.filter((area) => !keys.has(area.module));
+    expect(unowned.map((area) => area.segment)).toEqual([]);
+  });
+
+  it('keeps a business inside its own settings whatever it switches off', () => {
+    // Settings is where the switches are. A module that could hide its own switch would be a
+    // business locked out of its account with no way back.
+    const settings = AREAS.find((area) => area.segment === 'settings')!;
+    const owner = MODULES.find((module) => module.key === settings.module)!;
+    expect('required' in owner).toBe(true);
+  });
+
+  it('shows only what a business has switched on', () => {
+    const core = new Set(['work']);
+    const shown = [...areasIn('operational', core), ...areasIn('configuration', core)];
+
+    // Scheduling, Customers and Billing are off in this business, so their areas are absent —
+    // which is *not* the capability gating I12 forbids. A role that cannot configure fields
+    // still sees Custom fields and is told why; a module the business never bought is not
+    // part of that business at all.
+    expect(shown.every((area) => area.module === 'work')).toBe(true);
+    expect(shown.map((area) => area.segment)).toContain('settings');
+    expect(shown.map((area) => area.segment)).not.toContain('schedule');
+
+    // And with nothing passed, everything: a caller with no business in hand means all of it.
     expect(areasIn('operational').length + areasIn('configuration').length).toBe(AREAS.length);
   });
 });

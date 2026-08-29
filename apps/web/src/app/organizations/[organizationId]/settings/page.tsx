@@ -1,5 +1,8 @@
 import { ProfileForm } from '@/features/public-profile/profile-form';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
+import { paymentProvider } from '@/lib/adapters/payments';
+import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
+import { listModuleSettings } from '@/lib/domain/tenancy/modules';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { requireOrganization } from '@/lib/route/organization';
 import { updateProfileAction } from './actions';
@@ -7,6 +10,8 @@ import {
   AddOperatingHoursForm,
   OperatingHoursRow,
   OrganizationSettingsForm,
+  ModuleSwitch,
+  PaymentAccountRow,
 } from './settings-forms';
 
 export const dynamic = 'force-dynamic';
@@ -25,9 +30,12 @@ export default async function SettingsPage({
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const [hours, profile] = await Promise.all([
+  const provider = await paymentProvider();
+  const [hours, profile, modules, paymentAccount] = await Promise.all([
     listOperatingHours(db, { organizationId }),
     publicProfile(db, { organizationId, fallbackName: organization.name }),
+    listModuleSettings(db, { organizationId }),
+    provider ? getPaymentAccount(db, { organizationId, provider: provider.name }) : null,
   ]);
 
   const mayManage = organization.capabilities.includes('organization.manage');
@@ -112,6 +120,60 @@ export default async function SettingsPage({
         ) : (
           <p className="mt-2 text-sm opacity-70">
             Your role, {organization.role}, cannot set opening hours.
+          </p>
+        )}
+      </section>
+
+      {/* Only when this deployment has a processor at all. A business that takes cash has
+          nothing to configure here and is shown nothing, rather than an empty control. */}
+      {provider ? (
+        <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
+          <h2 className="text-sm font-medium">Getting paid</h2>
+          <p className="mt-1 text-sm opacity-70">
+            Card payments go directly to this business. GOLD never holds the money, and this
+            business keeps its own account with the payment provider.
+          </p>
+          <div className="mt-2 border-t border-black/10 dark:border-white/15">
+            <PaymentAccountRow
+              organizationId={organizationId}
+              provider={provider.name}
+              accountId={paymentAccount?.account.accountId ?? null}
+              connectedAt={paymentAccount?.connectedAt ?? null}
+              mayManage={mayManage}
+            />
+          </div>
+        </section>
+      ) : null}
+
+      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
+        <h2 className="text-sm font-medium">What this business uses</h2>
+        {/* Modules: what this business switched on and is billed for, not what a role may do
+            (`constraints.md` D25). Switching one off removes its area from the navigation and
+            removes nothing it produced — a business that stops offering public booking keeps
+            every job somebody booked. */}
+        <p className="mt-1 text-sm opacity-70">
+          Turning something off hides it from this business. Nothing it has already recorded is
+          removed.
+        </p>
+
+        <div className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+          {modules.map(({ module, enabledAt }) => (
+            <ModuleSwitch
+              key={module.key}
+              organizationId={organizationId}
+              moduleKey={module.key}
+              label={module.label}
+              description={module.description}
+              enabled={enabledAt !== null}
+              required={'required' in module}
+              mayConfigure={mayManage}
+            />
+          ))}
+        </div>
+
+        {mayManage ? null : (
+          <p className="mt-2 text-sm opacity-70">
+            Your role, {organization.role}, cannot change what this business uses.
           </p>
         )}
       </section>

@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
+import { disconnectPaymentAccount } from '@/lib/domain/billing/payment-accounts';
+import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import {
   addOperatingHours,
   removeOperatingHours,
@@ -103,6 +105,64 @@ export async function updateProfileAction(
       contactEmail: String(formData.get('contactEmail') ?? ''),
       contactPhone: String(formData.get('contactPhone') ?? ''),
       address: String(formData.get('address') ?? ''),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/settings`);
+  return { error: null };
+}
+
+/**
+ * Switch a module on or off.
+ *
+ * `revalidatePath` on the layout rather than the page, because what changes is the navigation
+ * — the areas this business sees are read in `layout.tsx`, and revalidating only this screen
+ * would leave the sidebar showing a module the business has just turned off.
+ */
+export async function setModuleEnabledAction(
+  _previous: { error: string | null },
+  formData: FormData,
+): Promise<{ error: string | null }> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await setModuleEnabled(db, {
+      organizationId,
+      key: String(formData.get('moduleKey') ?? ''),
+      enabled: formData.get('enabled') === '1',
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
+  return { error: null };
+}
+
+/**
+ * Stop using a connected processor account.
+ *
+ * There is no matching "connect" action: connecting is a redirect out to the provider and back
+ * (`payments/connect`), because an account id is not something an operator can type. A form
+ * that accepted one would let somebody point this business's payments at an account of their
+ * choosing.
+ */
+export async function disconnectPaymentAccountAction(
+  _previous: { error: string | null },
+  formData: FormData,
+): Promise<{ error: string | null }> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await disconnectPaymentAccount(db, {
+      organizationId,
+      provider: String(formData.get('provider') ?? ''),
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };

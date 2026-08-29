@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { AreaHeading, OrgNav } from '@/components/org-shell';
 import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
+import { listEnabledModules } from '@/lib/domain/tenancy/modules';
 import { requireOrganization } from '@/lib/route/organization';
 
 /**
@@ -24,7 +25,11 @@ export default async function OrganizationLayout({
   children,
 }: LayoutProps<'/organizations/[organizationId]'>) {
   const { organizationId } = await params;
-  const { organization } = await requireOrganization(organizationId);
+  const { db, organization } = await requireOrganization(organizationId);
+  // Read server-side under RLS, then handed to the client component. What a business has
+  // switched on is not a secret and not a permission — it decides which of its own areas it
+  // sees, and the screens themselves are guarded by policies either way.
+  const enabledModules = await listEnabledModules(db, { organizationId });
 
   async function signOutAction() {
     'use server';
@@ -52,7 +57,7 @@ export default async function OrganizationLayout({
           </Link>
         </div>
 
-        <OrgNav organizationId={organizationId} />
+        <OrgNav organizationId={organizationId} enabledModules={[...enabledModules]} />
 
         <form action={signOutAction} className="px-4 pb-4 md:pt-2">
           <button type="submit" className="text-sm underline underline-offset-4 opacity-70">

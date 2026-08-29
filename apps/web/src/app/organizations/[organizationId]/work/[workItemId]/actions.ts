@@ -1,9 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
+import { requestCardPayment } from '@/lib/domain/billing/card-payments';
 import { issueInvoice, recordPayment } from '@/lib/domain/billing/invoices';
 import { addChecklistItem, setChecklistItemDone } from '@/lib/domain/work-items/checklists';
 import { addPricedLine, removePricedLine } from '@/lib/domain/pricing/prices';
@@ -11,6 +13,15 @@ import { recordCost, recordTime } from '@/lib/domain/work-items/consumption';
 import { updateWorkItem } from '@/lib/domain/work-items/work-items';
 
 export type WorkItemActionState = { error: string | null };
+
+/**
+ * The card path's own state, because it has an answer as well as an error.
+ *
+ * A separate type rather than a nullable field on `WorkItemActionState`: every other action on
+ * this page succeeds by changing the database and re-rendering, and this one succeeds by
+ * handing back somewhere to go.
+ */
+export type CardPaymentActionState = { error: string | null; payUrl: string | null };
 
 function revalidate(organizationId: string, workItemId: string) {
   revalidatePath(`/organizations/${organizationId}/work/${workItemId}`);
@@ -246,4 +257,52 @@ export async function recordPaymentAction(
 
   revalidate(organizationId, workItemId);
   return { error: null };
+}
+
+/**
+ * Ask the processor to collect what is still owed.
+ *
+ * **The amount is not submitted and cannot be.** `requestCardPayment` reads the outstanding
+ * figure from `invoiceStanding`, which is `priceWorkItem` minus what has arrived — so a form
+ * cannot ask a customer for a number nothing in this system stands behind.
+ *
+ * Returns a URL rather than redirecting from the domain layer, so the one place a caller is
+ * sent off this platform stays in the caller.
+ */
+export async function requestCardPaymentAction(
+  _previous: CardPaymentActionState,
+  formData: FormData,
+): Promise<CardPaymentActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const workItemId = String(formData.get('workItemId') ?? '');
+
+  try {
+    const requested = await requestCardPayment(db, {
+      organizationId,
+      workItemId,
+      // A path this application owns, built here rather than accepted from the form. *Never
+      // build an open redirector*: the destination resolves against routes we control, and a
+      // submitted `returnUrl` is exactly the field that rule exists to refuse.
+      returnUrl: `${await origin()}/organizations/${organizationId}/work/${workItemId}`,
+    });
+
+    if (!requested) {
+      return { error: 'This business has no card processor configured.', payUrl: null };
+    }
+
+    revalidate(organizationId, workItemId);
+    return { error: null, payUrl: requested.payUrl };
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message, payUrl: null };
+    throw error;
+  }
+}
+
+/** Where this deployment is reachable, for a round trip that has to come back. */
+async function origin(): Promise<string> {
+  const headerList = await headers();
+  const host = headerList.get('host') ?? 'localhost:3000';
+  const protocol = host.startsWith('localhost') ? 'http' : 'https';
+  return `${protocol}://${host}`;
 }

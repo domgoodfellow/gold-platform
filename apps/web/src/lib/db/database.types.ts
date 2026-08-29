@@ -665,6 +665,35 @@ export type Database = {
           },
         ]
       }
+      organization_modules: {
+        Row: {
+          enabled_at: string
+          enabled_by: string
+          module_key: string
+          organization_id: string
+        }
+        Insert: {
+          enabled_at?: string
+          enabled_by: string
+          module_key: string
+          organization_id: string
+        }
+        Update: {
+          enabled_at?: string
+          enabled_by?: string
+          module_key?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_modules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_profiles: {
         Row: {
           address: string | null
@@ -741,6 +770,89 @@ export type Database = {
           timezone?: string
         }
         Relationships: []
+      }
+      payment_accounts: {
+        Row: {
+          account_id: string
+          connected_at: string
+          connected_by: string
+          organization_id: string
+          provider: string
+        }
+        Insert: {
+          account_id: string
+          connected_at?: string
+          connected_by: string
+          organization_id: string
+          provider: string
+        }
+        Update: {
+          account_id?: string
+          connected_at?: string
+          connected_by?: string
+          organization_id?: string
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_accounts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_requests: {
+        Row: {
+          amount_minor: number
+          created_by: string
+          currency: string
+          id: string
+          invoice_id: string
+          organization_id: string
+          provider: string
+          provider_reference: string
+          requested_at: string
+        }
+        Insert: {
+          amount_minor: number
+          created_by: string
+          currency: string
+          id?: string
+          invoice_id: string
+          organization_id: string
+          provider: string
+          provider_reference: string
+          requested_at?: string
+        }
+        Update: {
+          amount_minor?: number
+          created_by?: string
+          currency?: string
+          id?: string
+          invoice_id?: string
+          organization_id?: string
+          provider?: string
+          provider_reference?: string
+          requested_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_requests_invoice_same_org"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -1707,6 +1819,15 @@ export type Database = {
           p_provider: string
           p_provider_reference: string
           p_received_at: string
+        }
+        Returns: string
+      }
+      record_provider_payment: {
+        Args: {
+          p_amount_minor: number
+          p_provider: string
+          p_provider_reference: string
+          p_request_id: string
         }
         Returns: string
       }

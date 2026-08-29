@@ -43,3 +43,7 @@ apps/web/CLAUDE.md
 npm-debug.log*
 yarn-debug.log*
 .pnpm-debug.log*
+
+# Python bytecode from apps/api.
+__pycache__/
+*.pyc

@@ -224,7 +224,9 @@ the first of these is needed at M5.
   what crossed a threshold*. First needed, and the reason `apps/api/` arrives at M5 rather
   than alongside voice.
 - **Webhook ingress** — a vendor calling in with no human session behind it. Stripe at M4 is
-  the first, and it is the writer D14 and D17 both name as their trigger to revisit.
+  the first, and it is the writer D14 and D17 both name as their trigger to revisit. **This is
+  what brings `apps/api/` forward to M4** rather than M5; see D26, which also records why the
+  handler writes no table of its own.
 - **Intelligence** — embeddings, retrieval, batch analysis, the AI tool loop.
 - **Realtime** — media streams, streaming speech-to-text, the live rebuttal loop. This one
   does not run on Vercel; see D24.
@@ -1102,6 +1104,84 @@ That milestone adds a host; it does not move `apps/api`.
 
 ---
 
+### D26 — `apps/api` arrives at M4, and webhook ingress is what brings it
+
+`roadmap.md` said `apps/api/` arrives at M5 for automation execution. D2 said Python owns
+webhook ingress and named Stripe at M4 as the first one. Both could not hold, and M4 could not
+start C3 without settling it. **D2 wins and the roadmap moves: `apps/api/` stands up at M4.**
+
+**What decided it was the layout, not the endpoint.** `docs/starting_conversation.txt` §2 lays
+out `apps/web` and `apps/api` as the two deployables, and D3 already adopts that — "`apps/`
+means a deployable this repository ships". A Next route handler under `apps/web/src/app/api/`
+would have put a second thing called *api* in the tree, in the app that is explicitly not the
+API, and every future webhook would have had to argue its way out of the same place. The
+directory that already means "the second runtime" is the one a second runtime's work goes in.
+
+**An earlier draft of this record argued the opposite** — that ingress is a runtime-neutral
+concern and the handler belongs beside the tables it writes — and it was overruled. The
+argument was not wrong about the authorization half, which is why that half survives below
+unchanged; it was wrong to treat one endpoint's convenience as more decisive than where the
+repository has said its Python lives.
+
+**The two Stripe touchpoints split along D2's own line.** Creating a checkout session is an
+operator pressing a button inside a transactional flow, and D2's first sentence gives the
+transactional domain — invoicing included — to TypeScript, so it stays in
+`apps/web/src/lib/adapters/payments/`. Being *called* by Stripe with no session behind it is
+webhook ingress, and it is `apps/api/app/integrations/stripe/`. **The cost is that the vendor is
+named in two runtimes**, and it is stated here rather than discovered later. What is *not*
+duplicated is the part that would matter: there is exactly one HMAC implementation in this
+repository, because only one side verifies.
+
+**Python writes no table, which keeps D2's contract intact.** That decision says the Python
+plane "writes to its own tables and *proposes* actions". The handler verifies a signature and
+calls `record_provider_payment`, one `SECURITY DEFINER` function that derives the organization,
+the invoice and the currency from a `payment_requests` row this platform wrote first. The
+caller names a provider, a reference and an amount, and nothing that decides where the money
+lands.
+
+**The writer with no human caller** is D14's and D17's named trigger, and it is answered the
+same way in either language. It gets **its own Postgres role** — `payment_webhook`, holding no
+grant on any table and exactly one `execute`, which `adapters.test.ts` asserts from
+`information_schema` — and emphatically not service-role, which D14 rejects outright. Identity
+still arrives as a JWT (D17); it simply is not a person's.
+
+**How I11 survives a machine.** `events.actor_id` is `not null references auth.users`, and a
+webhook has no human behind it. Rather than give the invariant a second shape — a nullable
+actor, or a sentinel outside `auth.users` — the integration gets **a real `auth.users` row it
+can never sign in as**, and the timeline reads honestly. Only `id` is required on that table, so
+the row costs one insert in a migration. A second shape for I11 would have been a much larger
+decision than it looked, taken to avoid one row.
+
+**Rejected: a Next route handler under `apps/web/src/app/api/`.** Cheaper today, and it puts
+`api` inside `web` — see above.
+
+**Rejected: `apps/api/api/`, and the same reasoning caught it one level down.** Vercel
+discovers Python functions in a top-level `api/`, so following the vendor's default would have
+produced a directory called `api` at the root of the app that *is* the API. The source tree
+nests routes under `app/`; the routes are at `apps/api/app/api/` and a three-line `vercel.json`
+configures the default away. A vendor's convention is worth following until it makes the tree
+lie about itself.
+
+**Not a candidate at all: `apps/web/src/hooks/`.** Recorded because the word invites it. A
+*webhook* is an inbound HTTP request from a vendor; React *hooks* are `useSomething()`
+functions that run inside a component. Next serves routes from `app/` only, so a file under
+`src/hooks/` has no URL — it is not a worse endpoint, it is not an endpoint.
+
+**Rejected: moving the checkout call to Python as well**, so that Stripe is named once. It
+would make an operator's button depend on a second deployment and a contract between them, and
+D2 explicitly rejects a full FastAPI domain layer. The duplication that remains is a provider's
+*name* in two places, not a rule in two places.
+
+**Rejected: service-role for the webhook, "because there is no user".** It is the reflex, it is
+one line, and it turns the one writer with no session into the one writer with no limits.
+
+**What `apps/api` is not, at M4.** Automation execution is still M5 and nothing here
+anticipates it: no scheduler, no `domains/`, no `workers/`. `pnpm-workspace.yaml` still does not
+name it (D3) — pnpm must not manage a Python package. **Its tests do not run in
+`pnpm --filter @gold/web check`**, which is a real gap: that gate is the web app's, and until
+there is a repository-level one, `python -m pytest apps/api/tests` is run alongside it. Named
+in `apps/api/README.md` so nobody finds it by shipping through it.
+
 ### D25 — A module is what a tenant enables; an engine is what owns rules
 
 Two different objects were called *module* throughout these documents, and the collision cost a
@@ -1146,6 +1226,67 @@ authorization function. The source's word is *module* and the sales conversation
 because it has callers today: `navigation.ts` shows every area to every tenant, D21 prices
 partial adoption against a mechanism that does not exist, and `vision.md` bills
 `platform fee + modules + usage` against the same.
+
+### D27 — A tenant connects their own processor; GOLD never holds their keys and never holds their money
+
+`registry.ts` deferred per-tenant payment configuration on the grounds that it means "secrets at
+rest, a rotation story and a vault". That reasoning was right about the *shape it assumed* — a
+settings form where a business pastes a live secret key — and the deferral is what bought the
+time to notice there is a shape with no secret in it at all.
+
+**A tenant authorizes GOLD from their own Stripe account, and what GOLD stores is an account
+id.** An `acct_…` is not a credential: it grants nothing on its own, it is useless without the
+platform's own key, and the business can revoke it from their dashboard without telling us. It
+is per-tenant configuration like a currency or a timezone, and it belongs in a row.
+
+**Standard accounts and direct charges, and both halves matter.**
+
+- **Standard** means the tenant holds a full Stripe account they onboarded themselves, and they
+  are the merchant of record — disputes, refunds and compliance are theirs, with their name on
+  the customer's statement. Express and Custom move progressively more of that onto the
+  platform, which is buying liability to control an onboarding screen.
+- **Direct charges** means the charge is created *on* the connected account and the money is
+  never in GOLD's balance. A platform fee still comes off it, which is revenue with no funds
+  flow attached.
+
+**This is what keeps GOLD out of being a money transmitter, and it is a legal position rather
+than an architectural preference.** Connect is not the same as a marketplace: destination
+charges and separate charges-and-transfers put customer funds in the platform's balance, which
+is the thing that attracts licensing in most jurisdictions. Using Connect does not commit us to
+that; the charge type does, and the charge type is a line of code.
+
+**Rejected: a settings form that takes a secret key.** It is the obvious reading of "per-tenant
+configuration" and it is the expensive one — it obliges GOLD to encrypt, rotate, audit and
+eventually leak somebody else's live processor credentials. *Secrets and OAuth tokens stay
+server-side, encrypted at rest* is a rule this repository already holds; the better move is to
+have nothing that rule applies to.
+
+**Rejected: keeping the platform's own key in the environment forever.** It is correct today,
+in test mode, with one business. The moment Pneu3L takes a real card, that variable is a
+customer's live secret key sitting in GOLD's deployment — it works, and it is a dead end at two
+tenants and a liability at one.
+
+**Rejected: GOLD collecting and paying out.** It is the version that sounds like a platform and
+it is the version that needs a licence.
+
+**What this costs when it lands**, which is small because the correlation-token design already
+absorbed most of it: an authorization route and its callback, a column holding `acct_…`, and one
+header on the outbound call. **The webhook does not change** — it routes on `payment_requests`,
+whose row already carries the organization, so a connected-account event lands correctly without
+the handler reading `event.account` at all. The signature stays the platform endpoint's.
+
+**Consequence:** nothing is built now, and no column changes hands until there is a caller —
+the same rule as everything else here. `STRIPE_SECRET_KEY` stays in the environment for test
+mode. What this record buys is that nobody builds the vault.
+
+**Trigger:** the first real charge, not the second tenant. `registry.ts` says "when a second
+business asks to take cards", and that is the wrong trigger — it would leave one business's live
+key in an environment variable in the meantime.
+
+**Caveat worth carrying:** Stripe's onboarding wording and the mechanics of the Standard
+authorization flow move. The account types and charge types have been stable for years and are
+what this decision turns on; confirm the current flow against Stripe's documentation rather than
+against this paragraph.
 
 ## Decided, not yet built
 

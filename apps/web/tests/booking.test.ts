@@ -15,6 +15,7 @@ import { createResource } from '@/lib/domain/resources/resources';
 import { addOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
+import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { createWorkItemType, setTypeBookable } from '@/lib/domain/work-items/types';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 
@@ -119,6 +120,10 @@ async function newBusiness(label: string, opts: { publish: boolean }): Promise<B
   });
 
   if (opts.publish) {
+    // Publishing is two decisions and this business makes both: the module says the public
+    // page exists at all, and a bookable type says what is on it. A business that does one
+    // without the other has no public presence — see `modules.test.ts`.
+    await setModuleEnabled(db, { organizationId: orgId, key: 'booking', enabled: true });
     await setTypeBookable(db, {
       id: typeId,
       statusId,

@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { paymentProvider } from '@/lib/adapters/payments';
+import { listEnabledModules } from '@/lib/domain/tenancy/modules';
 import { CustomFieldValues } from '@/components/custom-field-values';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { getInvoiceForWorkItem, invoiceStanding } from '@/lib/domain/billing/invoices';
@@ -23,6 +25,7 @@ import {
   RecordCostForm,
   RecordPaymentForm,
   RecordTimeForm,
+  RequestCardPaymentForm,
   RemovePricedLineForm,
   ToggleChecklistItemForm,
 } from './work-item-forms';
@@ -56,6 +59,7 @@ export default async function WorkItemPage({
     locations,
     assets,
     invoice,
+    enabledModules,
   ] = await Promise.all([
     listChecklistItems(db, { organizationId, workItemId }),
     listTimeEntries(db, { organizationId, workItemId }),
@@ -68,6 +72,7 @@ export default async function WorkItemPage({
     listLocations(db, { organizationId }),
     listAssets(db, { organizationId }),
     getInvoiceForWorkItem(db, { organizationId, workItemId }),
+    listEnabledModules(db, { organizationId }),
   ]);
 
   // I4: the only total on this page, and the only one anywhere. Nothing here reduces an
@@ -83,6 +88,11 @@ export default async function WorkItemPage({
   const standing = invoice ? invoiceStanding(invoice) : null;
   const mayInvoice = organization.capabilities.includes('invoice.issue');
   const mayBePaid = organization.capabilities.includes('payment.record');
+  // Whether this business can take a card: a processor configured on this deployment *and*
+  // the module switched on. A business that takes only cash is a complete business, so the
+  // control is simply absent rather than disabled with an explanation.
+  const cardsAccepted =
+    (await paymentProvider()) !== null && enabledModules.has('card_payments');
 
   const mayAdd = organization.capabilities.includes('work_item.create');
   const mayEdit = organization.capabilities.includes('work_item.update');
@@ -394,6 +404,13 @@ export default async function WorkItemPage({
                   : formatMoney(standing.outstandingMinor, invoice.currency)}
               </span>
             </p>
+
+            {mayBePaid && cardsAccepted && !standing.settled ? (
+              <RequestCardPaymentForm
+                organizationId={organizationId}
+                workItemId={workItemId}
+              />
+            ) : null}
 
             {mayBePaid ? (
               <RecordPaymentForm

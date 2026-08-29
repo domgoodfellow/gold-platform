@@ -12,6 +12,7 @@ import {
   revokePortalInvite,
 } from '@/lib/domain/portal/portal';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
+import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
@@ -113,6 +114,10 @@ async function newBusiness(label: string): Promise<Business> {
     statusId,
     customerId: otherCustomerId,
   });
+
+  // A business offering a portal has switched it on. Without that the links it sends are
+  // dead, which is what switching it off means — `modules.test.ts` holds the other half.
+  await setModuleEnabled(db, { organizationId: orgId, key: 'portal', enabled: true });
 
   await addPricedLine(db, { workItemId, priceBookItemId: priceItemId, quantity: 1 });
   const invoiceId = await issueInvoice(db, { workItemId, dueAt: null });

@@ -451,3 +451,126 @@ describe('what has arrived, totalled', () => {
     expect(standing.settled).toBe(false);
   });
 });
+
+describe('money arriving from a processor', () => {
+  /** Ask for money, as the operator would. Returns the request id the processor is handed. */
+  async function requestPayment(tenant: Tenant, invoiceId: string, amountMinor: number) {
+    const id = randomUUID();
+    const { error } = await tenant.db.from('payment_requests').insert({
+      id,
+      organization_id: tenant.organizationId,
+      invoice_id: invoiceId,
+      provider: 'stripe',
+      provider_reference: `cs_test_${id.slice(0, 12)}`,
+      amount_minor: amountMinor,
+      currency: 'CAD',
+      created_by: tenant.userId,
+    });
+    if (error) throw error;
+    return id;
+  }
+
+  /**
+   * Call the webhook's one function *as the webhook role*, which is the point of the test.
+   *
+   * `set role payment_webhook` first, so what is exercised is the grant rather than a
+   * superuser's ability to call anything. If that grant were missing this throws 42501.
+   */
+  async function asWebhook(sql: string, params: unknown[]): Promise<unknown> {
+    const client = new Client({ connectionString: CONNECTION });
+    await client.connect();
+    try {
+      await client.query('set role payment_webhook');
+      const { rows } = await client.query(sql, params);
+      return rows[0];
+    } finally {
+      await client.end();
+    }
+  }
+
+  it('derives the organization, invoice and currency from the request, not from its caller', async () => {
+    const job = await quotedJob(alice, 'Paid by card');
+    const invoiceId = await issueInvoice(alice.db, { workItemId: job });
+    const requestId = await requestPayment(alice, invoiceId, 12_000);
+
+    await asWebhook('select public.record_provider_payment($1, $2, $3, $4) as id', [
+      requestId,
+      'stripe',
+      'cs_test_settled_1',
+      12_000,
+    ]);
+
+    const invoice = await getInvoiceForWorkItem(alice.db, {
+      organizationId: alice.organizationId,
+      workItemId: job,
+    });
+
+    // The function was told a provider, a reference and an amount, and nothing else. Every
+    // value that decides *where* this landed came from the request row.
+    expect(invoice!.payments).toHaveLength(1);
+    expect(invoice!.payments[0].provider).toBe('stripe');
+    expect(invoice!.payments[0].currency).toBe('CAD');
+    expect(invoiceStanding(invoice!).settled).toBe(true);
+  });
+
+  it('writes one row when the processor delivers the same event twice', async () => {
+    const job = await quotedJob(alice, 'Delivered twice');
+    const invoiceId = await issueInvoice(alice.db, { workItemId: job });
+    const requestId = await requestPayment(alice, invoiceId, 12_000);
+
+    const first = (await asWebhook(
+      'select public.record_provider_payment($1, $2, $3, $4) as id',
+      [requestId, 'stripe', 'cs_test_twice', 12_000],
+    )) as { id: string };
+    const second = (await asWebhook(
+      'select public.record_provider_payment($1, $2, $3, $4) as id',
+      [requestId, 'stripe', 'cs_test_twice', 12_000],
+    )) as { id: string };
+
+    // Idempotent by constraint rather than by a check before the insert, which would race
+    // identically (I6) — and here the race costs a refund rather than a double booking.
+    expect(second.id).toBe(first.id);
+
+    const invoice = await getInvoiceForWorkItem(alice.db, {
+      organizationId: alice.organizationId,
+      workItemId: job,
+    });
+    expect(invoice!.payments).toHaveLength(1);
+  });
+
+  it('refuses a payment nobody asked for', async () => {
+    // A verified event naming a request this platform has no record of. The handler turns this
+    // into a 200 with nothing written, because retrying will not make the row appear.
+    await expect(
+      asWebhook('select public.record_provider_payment($1, $2, $3, $4) as id', [
+        randomUUID(),
+        'stripe',
+        'cs_test_unknown',
+        50_000,
+      ]),
+    ).rejects.toThrow(/no payment was requested/i);
+  });
+
+  it('attributes the write to the integration actor, so I11 keeps one shape', async () => {
+    const job = await quotedJob(alice, 'Attributed to a machine');
+    const invoiceId = await issueInvoice(alice.db, { workItemId: job });
+    const requestId = await requestPayment(alice, invoiceId, 12_000);
+
+    await asWebhook('select public.record_provider_payment($1, $2, $3, $4) as id', [
+      requestId,
+      'stripe',
+      'cs_test_actor',
+      12_000,
+    ]);
+
+    const { data } = await alice.db
+      .from('payments')
+      .select('created_by')
+      .eq('provider_reference', 'cs_test_actor')
+      .single();
+
+    // A real `auth.users` row rather than a null actor or a sentinel outside the table. That
+    // choice is D26's, and it is what let I11 stay a single claim.
+    expect(data!.created_by).toBe('00000000-0000-4000-8000-0000000000a1');
+  });
+});

@@ -12,6 +12,7 @@ import {
   issueInvoiceAction,
   recordCostAction,
   recordPaymentAction,
+  requestCardPaymentAction,
   recordTimeAction,
   removePricedLineAction,
   setChecklistItemDoneAction,
@@ -496,6 +497,68 @@ export function RecordPaymentForm({
           {pending ? 'Recording…' : 'Record payment'}
         </button>
       </div>
+
+      {state.error ? (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {state.error}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+/**
+ * Ask a processor to collect what is outstanding.
+ *
+ * There is no amount field, for the reason the invoice form has no lines: the figure is
+ * `invoiceStanding`'s, and a form that could name one could ask a customer for a number this
+ * platform does not stand behind.
+ *
+ * The link is rendered rather than followed automatically. An operator taking payment over the
+ * phone reads it out or sends it on; a redirect would assume the payer is the person at the
+ * keyboard, which for a mobile business is usually wrong.
+ */
+export function RequestCardPaymentForm({
+  organizationId,
+  workItemId,
+}: {
+  organizationId: string;
+  workItemId: string;
+}) {
+  const [state, formAction, pending] = useActionState(requestCardPaymentAction, {
+    error: null,
+    payUrl: null,
+  });
+
+  return (
+    <form action={formAction} className="mt-3 flex flex-col gap-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="workItemId" value={workItemId} />
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="w-fit rounded border border-black/15 px-4 py-2 text-sm disabled:opacity-50 dark:border-white/20"
+      >
+        {pending ? 'Asking…' : 'Take card payment'}
+      </button>
+
+      {state.payUrl ? (
+        <p className="text-sm">
+          <a
+            href={state.payUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-4"
+          >
+            Payment link
+          </a>
+          <span className="opacity-60">
+            {' '}
+            — send this to the customer. Nothing is recorded until the processor confirms it.
+          </span>
+        </p>
+      ) : null}
 
       {state.error ? (
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">

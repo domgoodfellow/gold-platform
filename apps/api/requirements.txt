@@ -1,0 +1,4 @@
+# Deliberately short. The Stripe handler needs an HMAC and an HTTP call, both of which are in
+# the standard library plus one client -- see `integrations/stripe/signature.py` for why no
+# vendor SDK is used here either.
+httpx==0.28.1
