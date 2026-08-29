@@ -146,6 +146,16 @@ easy to undo by accident:
 - **`external_actors_one_tenant_per_user` is on `user_id` alone**, not led by
   `organization_id`. That is I2 inverted on purpose: one actor may never span two tenants.
   `schema-conformance.test.ts` names it as its one exception.
+- **A public URL never carries a tenant id.** `/book/[slug]` resolves through
+  `public.booking_organization`, which answers only for a business that publishes a bookable
+  type — so the id the binding is made against is one the server resolved, never one a URL
+  supplied. That is D17 applied where there is no membership to re-derive against.
+- **No platform sentence appears on a public page.** `constraints.md` forbids hardcoding a
+  claim a business makes about itself, and a booking page is exactly that; the tenant's own
+  words come from `organization_profiles` and the platform speaks only where it describes
+  application state. A business that has configured nothing renders its own name and stops.
+  `public-profile.test.ts` scans the public routes' source, so this fails at the gate rather
+  than in front of a customer.
 - **An external actor holds no insert permission on any table.** Every write goes through
   `create_booking`, one `SECURITY DEFINER` function whose first act is the scope check. Reads
   stay entirely on RLS. Adding a permissive insert policy for this axis would widen the surface
@@ -173,9 +183,19 @@ one. Quantity is an integer and nothing rounds anywhere — a business billing h
 per half-hour — and when a fractional quantity earns its way in, how a half-cent rounds is a
 pricing decision that belongs in `priceWorkItem`.
 
-**Module enablement, dashboard configuration and business rules are not built**, and
-`docs/roadmap.md` records why each was removed from M3's coverage rather than deferred
-quietly: there are no modules to enable, no dashboard, and nothing that triggers anything.
+**Two words that are not interchangeable, and confusing them already deleted a feature.** A
+**module** is what a tenant switches on, is billed for, and sees in their navigation — CRM,
+Bookings, Dispatch — and it is a row, never a directory. An **engine** is code that owns
+entities and rules, and it is the only thing `constraints.md`'s two-pieces-of-evidence bar
+governs. They are not one-to-one: Scheduling, Dispatch, Bookings and Maintenance are four
+modules over one scheduling engine, and CRM is a module with no engine at all. Before applying
+any rule from *Scope and abstraction*, name the noun it governs. `constraints.md` D25 has the
+full record and `docs/roadmap.md` M3 has what it cost.
+
+**Dashboard configuration and business rules are not built** — no dashboard, nothing that
+triggers anything — and `docs/roadmap.md` records that as a removal rather than a quiet
+deferral. **Module enablement was removed from M3 with them and should not have been**; it
+lands in M4 and the reasoning is in both documents above.
 
 `docs/starting_conversation.txt` is an archived source, not a governing document. It records
 the thinking that led here and is superseded by `docs/constraints.md` wherever the two
@@ -189,8 +209,12 @@ exist; the rest does not.
 
 ```text
 apps/
-  web/              Next.js — admin today; marketing, booking and customer portal are
+  web/              Next.js — admin and booking today; marketing and the customer portal are
                     what the directory is FOR, not what is in it (D20)
+    src/app/        routes; components with one caller sit beside their route
+    src/features/   UI a second *surface* needs — see its README. Empty until that happens.
+    src/components/ shared controls, extracted at the third caller (D23)
+    src/lib/domain/ the business rules. Nothing in features/ or app/ decides anything.
   api/              Python — automation, webhook ingress, intelligence, realtime (M5; not
                     before). Deploys to Vercel as serverless functions (D24)
   desktop/          Electron shell (M9; not before)

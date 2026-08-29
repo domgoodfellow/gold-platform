@@ -27,6 +27,35 @@ to be safe cannot see the customer already there. One `SECURITY DEFINER` functio
 check as its first act replaced them, and the surface got smaller: an external actor now holds no
 insert permission on any table.
 
+**A business's own words on its public page, because booking broke a Never.** The booking
+surface shipped saying "Book a time" and "This business is not taking bookings online at the
+moment" — the platform speaking in a tenant's voice, on a URL that business puts on the side of
+a van. `constraints.md` forbids exactly that, and D20 defers the *marketing* surface for exactly
+that reason while permitting booking, which is a public page. The two were always one problem
+and the second arrived first; D20 is amended to say so.
+
+What landed is one row of tenant copy — display name, tagline, intro, contact, address —
+rendered at the top of any public surface. **Not** the marketing surface: no pages, no blocks,
+no editor, and no colour, because D23 rejects a per-tenant theme by name and copy is what the
+Never is about. A business that has configured nothing renders its own name and stops, which is
+the same reading of silence that operating hours and the buffer take. The assertion that
+matters reads the public routes' own source and fails on a hardcoded sentence, so the rule
+survives a careless author.
+
+It is also the first inhabitant of `apps/web/src/features/` — UI that two *surfaces* need, admin
+editing what booking renders. Route-owned components stay beside their route; a feature moves
+when it has a second surface, which is the bar `constraints.md` sets for extracting a function,
+applied to a directory.
+
+**A public URL carries a name, not a tenant id.** The surface first shipped at
+`/book/{organizationId}`, which published an internal identifier and — worse — let a path
+segment decide which tenant an anonymous visitor bound to. D17 forbids exactly that;
+`/organizations/[organizationId]` gets away with it because RLS re-derives membership whatever
+the URL claims, and out here there is nothing to re-derive against. A business now chooses a
+slug, resolved server-side by a function that answers only for a business publishing something
+bookable — which also makes the public directory opt-in, where before anyone holding a uuid
+could bind themselves to any organization.
+
 **Nothing on that page carries a second opinion.** Slots come from `freeWindows` over the same
 operating hours the operator's schedule subtracts, and the price is the catalogue row copied by
 `add_work_item_priced_line` — which is exactly what D20 said booking was blocked on. Availability

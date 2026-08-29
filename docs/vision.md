@@ -11,7 +11,9 @@ through configuration and modules, not a new codebase each time.
 The distinction decides where logic lives. If this were four applications sharing a
 component library, each would own its own notion of a customer, a schedule, and a job. It
 is one engine, so `Customer`, `Work Item`, `Schedule`, and `Document` are defined once, in
-the kernel, and every module consumes them.
+the kernel, and every module is sold on top of them. **Module** here means what a business
+switches on and is billed for — CRM, Bookings, Dispatch, Inventory — and never a directory in
+the source tree; `constraints.md` D25 pins that down and records what confusing the two cost.
 
 When a business says *"we do things differently,"* the first question is never
 *"what do we rebuild?"* It is:
@@ -85,8 +87,14 @@ default and not a rule — the dialer is a genuinely per-seat market, and `const
 makes it vertical two.
 
 Implementation is a real line item, not a loss leader. The discovery-and-configuration step
-is the product working as designed. So is partial adoption: one module at a real price is a
-tenant, not a discount (D21).
+is the product working as designed.
+
+**So is partial adoption, said plainly.** A business that wants only bookings, or only the
+customer timeline, is not asking for a cheaper platform — they are asking for less of it. They
+are a full tenant: identical code, identical invariants, identical isolation and support, with
+fewer modules switched on. Charge the real price of what they enabled. The reflex this refuses
+is discounting them into a lesser class of customer, which prices the part they actually bought
+as though it were a sample of the part they declined (D21).
 
 ### Deployment tiers
 
@@ -133,7 +141,7 @@ Three prior attempts exist, and each proved something worth keeping:
 
 The failure mode is visible in the middle one: documentation and abstraction written *ahead*
 of evidence, which then governed work that never arrived. This repo starts with four
-documents and a hard budget: a function waits for its second caller, and a module waits for
+documents and a hard budget: a function waits for its second caller, and an engine waits for
 its second piece of evidence — of which the three repos above are the first, since a system
 that shipped is exactly the thing a hypothesis is not.
 

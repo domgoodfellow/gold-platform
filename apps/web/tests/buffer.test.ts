@@ -107,6 +107,7 @@ async function setBuffer(tenant: Tenant, minutes: number) {
     timezone: organization!.timezone,
     currency: organization!.currency,
     bufferMinutes: minutes,
+    slug: null,
   });
 }
 

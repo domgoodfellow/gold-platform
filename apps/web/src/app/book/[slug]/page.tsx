@@ -4,8 +4,11 @@ import {
   beginBooking,
   bookableSlots,
   listBookableTypes,
+  resolveBookingSlug,
   type Slot,
 } from '@/lib/domain/booking/booking';
+import { PublicHeader } from '@/features/public-profile/public-header';
+import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { todayInZone } from '@/lib/domain/scheduling/window';
 import { BookingForm } from './booking-form';
@@ -28,20 +31,42 @@ export const dynamic = 'force-dynamic';
  * areas, and one thing to do on the page. What is shared is the component vocabulary
  * underneath, never a parallel set.
  *
- * Nothing on this page is a claim the platform makes about the business. Every word a visitor
- * reads that is not chrome — the kind of work, what it costs — is a row that business wrote.
+ * **Nothing on this page is a claim the platform makes about the business.** That is a rule
+ * rather than an aspiration: `constraints.md` forbids hardcoding "guarantees, trust points,
+ * service assertions, section headings", and carves out only "strings describing *application
+ * state*". This page shipped once without that and said "Book a time" in a business's voice.
+ *
+ * The line, applied concretely: the business's own words at the top (`PublicHeader`, every
+ * string a row it wrote), the kinds of work and their prices from its own configuration, and
+ * the platform speaking only where it describes what the system is doing — "Nothing free on
+ * this day", and the note that a time is not held, which is I6 being honest rather than a claim
+ * anybody is making about the business.
+ *
+ * **The segment is a slug the business chose, not a tenant id**, and that is a correctness
+ * point rather than a cosmetic one. D17 says a path segment is routing convenience and must
+ * never be an authorization input; under `/organizations/[organizationId]` that holds because
+ * RLS re-derives membership whatever the URL claims, and out here there is no membership to
+ * re-derive against. So the slug is resolved by a function that answers only for a business
+ * which has published something bookable, and the id it returns — never the URL — is what the
+ * binding is made against.
  */
 export default async function BookingPage({
   params,
   searchParams,
-}: PageProps<'/book/[organizationId]'>) {
-  const { organizationId } = await params;
+}: PageProps<'/book/[slug]'>) {
+  const { slug } = await params;
   const { on } = await searchParams;
   const db = await getDb();
 
-  // Anonymous sign-in and the binding, before anything is read: every policy on this surface
-  // keys on `app.current_external_tenant()`, so a visitor with no binding sees a business that
-  // appears not to exist rather than an error.
+  // Absent rather than forbidden, and the two absences are deliberately indistinguishable: no
+  // such business, and a business that publishes nothing, are the same fact from out here.
+  const organizationId = await resolveBookingSlug(db, slug);
+  if (!organizationId) {
+    notFound();
+  }
+
+  // Anonymous sign-in and the binding. Every policy on this surface keys on
+  // `app.current_external_tenant()`, so nothing below is readable until this has run.
   await beginBooking(db, { organizationId });
 
   const { data: organization } = await db
@@ -50,13 +75,14 @@ export default async function BookingPage({
     .eq('id', organizationId)
     .maybeSingle();
 
-  // Absent rather than forbidden. From out here, a business that takes no bookings and a
-  // business that does not exist are the same thing, and saying which would be a disclosure.
   if (!organization) {
     notFound();
   }
 
-  const types = await listBookableTypes(db, { organizationId });
+  const [types, profile] = await Promise.all([
+    listBookableTypes(db, { organizationId }),
+    publicProfile(db, { organizationId, fallbackName: organization.name }),
+  ]);
 
   const requested = typeof on === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(on) ? on : null;
   const date = requested ?? todayInZone(organization.timezone);
@@ -76,15 +102,15 @@ export default async function BookingPage({
 
   return (
     <main className="mx-auto max-w-xl p-6 sm:p-8">
-      <h1 className="text-2xl font-semibold">{organization.name}</h1>
-      <p className="mt-1 text-sm opacity-70">Book a time · {day}</p>
+      <PublicHeader profile={profile} />
 
       {types.length === 0 ? (
-        <p className="mt-8 text-sm opacity-70">
-          This business is not taking bookings online at the moment.
-        </p>
+        // Application state, not a claim: there is nothing published to show. A sentence
+        // apologising on the business's behalf would be the platform speaking for it.
+        <p className="mt-8 text-sm opacity-70">Nothing is available to book here.</p>
       ) : (
         <div className="mt-8 flex flex-col gap-8">
+          <p className="text-sm opacity-70">{day}</p>
           {types.map((type) => {
             const slots = slotsByType.get(type.id) ?? [];
 
@@ -102,6 +128,7 @@ export default async function BookingPage({
                   <p className="mt-3 text-sm opacity-60">Nothing free on this day.</p>
                 ) : (
                   <BookingForm
+                    slug={slug}
                     organizationId={organizationId}
                     typeId={type.id}
                     slots={slots}

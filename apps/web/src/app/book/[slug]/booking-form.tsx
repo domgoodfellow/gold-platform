@@ -15,11 +15,13 @@ const INPUT_CLASS = 'w-full rounded border border-black/15 px-3 py-2 dark:border
  * — and finds out from the exclusion constraint if the world moved underneath it (I6).
  */
 export function BookingForm({
+  slug,
   organizationId,
   typeId,
   slots,
   timeZone,
 }: {
+  slug: string;
   organizationId: string;
   typeId: string;
   slots: Slot[];
@@ -32,6 +34,11 @@ export function BookingForm({
 
   return (
     <form action={formAction} className="mt-3 flex flex-col gap-3">
+      {/* Both travel: the slug is where to send them afterwards, and the id is what the
+          server commits against. The id was resolved server-side from the slug and is only
+          ever accepted here because `create_booking` checks it against the caller's binding —
+          a forged one names a business this visitor is not bound to and is refused. */}
+      <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="typeId" value={typeId} />
       <input type="hidden" name="startsAt" value={chosen?.startsAt ?? ''} />

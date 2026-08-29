@@ -1,5 +1,8 @@
 import { notFound } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
+import { PublicHeader } from '@/features/public-profile/public-header';
+import { resolveBookingSlug } from '@/lib/domain/booking/booking';
+import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { listPricedLines, priceWorkItem } from '@/lib/domain/pricing/prices';
 import { formatWindow, parseWindow } from '@/lib/domain/scheduling/window';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
@@ -20,9 +23,14 @@ export const dynamic = 'force-dynamic';
  */
 export default async function BookingConfirmationPage({
   params,
-}: PageProps<'/book/[organizationId]/[workItemId]'>) {
-  const { organizationId, workItemId } = await params;
+}: PageProps<'/book/[slug]/[workItemId]'>) {
+  const { slug, workItemId } = await params;
   const db = await getDb();
+
+  const organizationId = await resolveBookingSlug(db, slug);
+  if (!organizationId) {
+    notFound();
+  }
 
   const [organization, item] = await Promise.all([
     db.from('organizations').select('name, timezone').eq('id', organizationId).maybeSingle(),
@@ -37,6 +45,11 @@ export default async function BookingConfirmationPage({
     notFound();
   }
 
+  const profile = await publicProfile(db, {
+    organizationId,
+    fallbackName: organization.data.name,
+  });
+
   const window = parseWindow(item.data.scheduled_during as string | null);
   const lines = await listPricedLines(db, { organizationId, workItemId });
   const price = priceWorkItem(lines);
@@ -44,8 +57,9 @@ export default async function BookingConfirmationPage({
 
   return (
     <main className="mx-auto max-w-xl p-6 sm:p-8">
-      <h1 className="text-2xl font-semibold">Booked</h1>
-      <p className="mt-1 text-sm opacity-70">{organization.data.name}</p>
+      <PublicHeader profile={profile} />
+      {/* Application state — what just happened — rather than anything the business claims. */}
+      <p className="mt-6 text-sm font-medium">Your booking is confirmed.</p>
 
       <dl className="mt-8 flex flex-col gap-3 text-sm">
         <div>
@@ -76,10 +90,7 @@ export default async function BookingConfirmationPage({
         ) : null}
       </dl>
 
-      <p className="mt-10 text-xs opacity-60">
-        Keep this page to check your booking. This business will be in touch if anything
-        changes.
-      </p>
+      <p className="mt-10 text-xs opacity-60">Keep this page to check your booking.</p>
     </main>
   );
 }

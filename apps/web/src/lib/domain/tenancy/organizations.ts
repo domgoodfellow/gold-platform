@@ -23,6 +23,14 @@ export type Organization = {
    * said nothing, exactly as an empty operating-hours set does.
    */
   bufferMinutes: number;
+  /**
+   * What this business is called in a public URL, or null until it wants one.
+   *
+   * The platform never derives it from the name — that would be the platform naming a
+   * business, and the first tenant called "Smith & Sons" would find it had opinions about
+   * apostrophes.
+   */
+  slug: string | null;
 };
 
 const NAME_MAX = 200;
@@ -67,7 +75,7 @@ const FOUNDING_ROLE = 'Owner';
 // type level and only sees a literal, so splitting it across lines collapses the result type
 // to GenericStringError[].
 const MEMBERSHIP_SELECT =
-  'role:roles!memberships_role_same_org(name, capabilities), organization:organizations!inner(id, name, created_at, timezone, currency, buffer_minutes)';
+  'role:roles!memberships_role_same_org(name, capabilities), organization:organizations!inner(id, name, created_at, timezone, currency, buffer_minutes, slug)';
 
 type MembershipRow = {
   role: { name: string; capabilities: string[] } | { name: string; capabilities: string[] }[];
@@ -79,6 +87,7 @@ type MembershipRow = {
         timezone: string;
         currency: string;
         buffer_minutes: number;
+        slug: string | null;
       }
     | {
         id: string;
@@ -87,6 +96,7 @@ type MembershipRow = {
         timezone: string;
         currency: string;
         buffer_minutes: number;
+        slug: string | null;
       }[];
 };
 
@@ -108,6 +118,7 @@ function toOrganization(row: MembershipRow): Organization | null {
     timezone: organization.timezone,
     currency: organization.currency,
     bufferMinutes: organization.buffer_minutes,
+    slug: organization.slug,
   };
 }
 
@@ -250,6 +261,7 @@ export async function updateOrganization(
     timezone: string;
     currency: string;
     bufferMinutes: number;
+    slug: string | null;
   },
 ): Promise<void> {
   await requireActor(db);
@@ -275,12 +287,23 @@ export async function updateOrganization(
     );
   }
 
+  // Re-checked for the message; the check constraint is the guarantee. Lowercased here rather
+  // than rejected, because "Pneu3L" is what somebody will type and it is not a mistake.
+  const slug = (input.slug ?? '').trim().toLowerCase();
+  if (slug.length > 0 && !/^[a-z0-9][a-z0-9-]{1,62}$/.test(slug)) {
+    throw new DomainError(
+      'A public address is letters, numbers and hyphens — two to sixty-three characters, starting with a letter or number.',
+      'organizations.slug_invalid',
+    );
+  }
+
   const { error } = await db.rpc('update_organization', {
     p_id: input.id,
     p_name: name,
     p_timezone: timezone,
     p_currency: currency,
     p_buffer_minutes: input.bufferMinutes,
+    p_slug: slug,
   });
 
   if (error) {
@@ -298,6 +321,12 @@ export async function updateOrganization(
       throw new DomainError(
         'That buffer would overlap work already scheduled on the same resource. Move that work first, or choose a shorter buffer.',
         'organizations.buffer_conflict',
+      );
+    }
+    if (error.code === '23505') {
+      throw new DomainError(
+        'Another business already uses that public address.',
+        'organizations.slug_taken',
       );
     }
     if (error.code === '42501') {

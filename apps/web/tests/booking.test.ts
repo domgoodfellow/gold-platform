@@ -6,7 +6,9 @@ import {
   bookSlot,
   bookableSlots,
   listBookableTypes,
+  resolveBookingSlug,
 } from '@/lib/domain/booking/booking';
+import { getOrganization, updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { listPricedLines, priceWorkItem } from '@/lib/domain/pricing/prices';
 import { createResource } from '@/lib/domain/resources/resources';
@@ -50,6 +52,7 @@ type Business = {
   statusId: string;
   resourceId: string;
   priceItemId: string;
+  slug: string;
 };
 
 let pneu: Business;
@@ -65,7 +68,10 @@ async function newBusiness(label: string, opts: { publish: boolean }): Promise<B
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const email = `${label}-${randomUUID().slice(0, 8)}@example.test`;
+  // Unique per run, because a slug is unique across the whole platform by design and this
+  // suite runs against a database it does not own exclusively.
+  const slug = `${label}-${randomUUID().slice(0, 8)}`;
+  const email = `${slug}@example.test`;
   const password = `pw-${randomUUID()}`;
   const { error: createError } = await admin.auth.admin.createUser({
     email,
@@ -121,7 +127,18 @@ async function newBusiness(label: string, opts: { publish: boolean }): Promise<B
     });
   }
 
-  return { db, organizationId: orgId, typeId, statusId, resourceId, priceItemId };
+  // The public address, which the business chooses and the platform never invents.
+  const organization = await getOrganization(db, orgId);
+  await updateOrganization(db, {
+    id: orgId,
+    name: organization!.name,
+    timezone: organization!.timezone,
+    currency: organization!.currency,
+    bufferMinutes: organization!.bufferMinutes,
+    slug,
+  });
+
+  return { db, organizationId: orgId, typeId, statusId, resourceId, priceItemId, slug };
 }
 
 /** A member of the public: no membership, no role, no capability, no account. */
@@ -138,6 +155,61 @@ describe('booking, by somebody who is a member of nothing', () => {
     }
     pneu = await newBusiness('bk-pneu', { publish: true });
     rival = await newBusiness('bk-rival', { publish: true });
+  });
+
+  it('is reached by a name the business chose, not by its tenant id', async () => {
+    // The booking surface first shipped at `/book/{organizationId}`, which published a tenant
+    // id and — worse — let a path segment decide which business an anonymous visitor was bound
+    // to. D17 says a segment is routing convenience and never an authorization input; under
+    // `/organizations/[organizationId]` that holds because RLS re-derives membership, and out
+    // here there is no membership to re-derive against.
+    const anonymous = anonClient();
+    expect(await resolveBookingSlug(anonymous, pneu.slug)).toBe(pneu.organizationId);
+
+    // Case and surrounding space are the visitor's typing, not a different business.
+    expect(await resolveBookingSlug(anonymous, `  ${pneu.slug.toUpperCase()} `)).toBe(
+      pneu.organizationId,
+    );
+  });
+
+  it('gives a business that publishes nothing no public presence at all', async () => {
+    // Opt-in, and this is the half that matters. Before the slug, anybody holding a uuid could
+    // bind themselves to any organization — they could then see nothing, but the binding
+    // existed. A business with no bookable type is now simply not addressable.
+    const quiet = await newBusiness('bk-silent', { publish: false });
+    const anonymous = anonClient();
+
+    expect(await resolveBookingSlug(anonymous, quiet.slug)).toBeNull();
+    expect(await resolveBookingSlug(anonymous, 'no-such-business')).toBeNull();
+    expect(quiet.organizationId).toBeTypeOf('string');
+  });
+
+  it('refuses a public address another business already uses', async () => {
+    const organization = await getOrganization(rival.db, rival.organizationId);
+    await expect(
+      updateOrganization(rival.db, {
+        id: rival.organizationId,
+        name: organization!.name,
+        timezone: organization!.timezone,
+        currency: organization!.currency,
+        bufferMinutes: organization!.bufferMinutes,
+        slug: pneu.slug,
+      }),
+    ).rejects.toMatchObject({ code: 'organizations.slug_taken' });
+  });
+
+  it('refuses an address that is not a public address', async () => {
+    const organization = await getOrganization(rival.db, rival.organizationId);
+    await expect(
+      updateOrganization(rival.db, {
+        id: rival.organizationId,
+        name: organization!.name,
+        timezone: organization!.timezone,
+        currency: organization!.currency,
+        bufferMinutes: organization!.bufferMinutes,
+        slug: 'Pneu 3L!',
+      }),
+    ).rejects.toMatchObject({ code: 'organizations.slug_invalid' });
   });
 
   it('is in no tenant at all, which is the whole of D22', async () => {

@@ -183,6 +183,7 @@ describe('the price book', () => {
       timezone: 'UTC',
       currency: 'USD',
       bufferMinutes: 0,
+      slug: null,
     });
 
     const after = await listPriceBookItems(alice.db, { organizationId: alice.organizationId });

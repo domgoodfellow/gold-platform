@@ -39,12 +39,14 @@ export function OrganizationSettingsForm({
   timezone,
   currency,
   bufferMinutes,
+  slug,
 }: {
   organizationId: string;
   name: string;
   timezone: string;
   currency: string;
   bufferMinutes: number;
+  slug: string | null;
 }) {
   const [state, formAction, pending] = useActionState(updateOrganizationAction, INITIAL);
 
@@ -92,6 +94,26 @@ export function OrganizationSettingsForm({
         <span className="text-xs opacity-70">
           Nothing else can be booked on that resource until this has passed. Changing it moves
           nothing, but work already scheduled too close together will be refused.
+        </span>
+      </label>
+
+      {/* Empty until the business asks for one. The platform does not invent a slug from the
+          name: that would be the platform naming a business, and the first tenant called
+          "Smith & Sons" would find it had opinions about apostrophes. */}
+      <label className="flex flex-col gap-1 text-sm">
+        <span>Public booking address</span>
+        <input
+          name="slug"
+          type="text"
+          maxLength={63}
+          pattern="[a-z0-9][a-z0-9-]{1,62}"
+          defaultValue={slug ?? ''}
+          placeholder="your-business"
+          className={INPUT_CLASS}
+        />
+        <span className="text-xs opacity-70">
+          Customers book at /book/&lt;this&gt;. Leave it empty to have no public page. Changing
+          it breaks links already shared.
         </span>
       </label>
 

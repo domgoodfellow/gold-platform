@@ -1,6 +1,6 @@
 # Domain model
 
-The authoritative description of the entities, the module that owns each rule, and the
+The authoritative description of the entities, the engine that owns each rule, and the
 invariants that must hold. If the code and this document disagree, one of them is a bug —
 decide which, then fix it. Do not resolve the contradiction by softening the wording here
 until it stops saying anything.
@@ -32,7 +32,7 @@ Use `/verify <n>` to audit one. "The code appears to do the right thing" is not 
 | I12 | Hiding UI is not authorization; every sensitive operation is checked server-side. | `requireActor()` server-side on every protected route *in addition to* the proxy redirect, which is convenience only; capability checks live in the RLS policies themselves via `app.has_capability`, so a direct RPC call is refused exactly as a form is; `roles.test.ts` "enforces the capability in the database, not just the domain". |
 | I13 | A work item's status transition is valid according to that tenant's configured transitions. | `app.check_status_transition`, a trigger on `work_items`, refusing any `status_id` change with no matching row in `work_item_transitions` for that organization, type and pair — so a type with no configured transitions is frozen rather than unconstrained; `work_items_update` carries `work_item.transition` and `grant update (status_id)` keeps that capability from reaching any other column, because a policy sees the old row or the new one but never both; `change_work_item_status` checks `returning` so a policy-denied update — which affects zero rows and raises nothing — cannot write a timeline entry for a move that never happened; the domain re-checks for the message rather than the guarantee. `work-item-transitions.test.ts` "freezes a type with no configured transitions", "still refuses the move that was not configured", "is directional" and "does not let one tenant's transitions authorize another tenant's move", each asserted through the domain *and* as a raw PostgREST update. |
 | I14 | An AI agent reaches business state only through domain tools that validate and check permissions. | *not yet enforced* |
-| I15 | No domain module imports a vendor SDK directly. | *not yet enforced* |
+| I15 | No domain code imports a vendor SDK directly. | *not yet enforced* |
 | I16 | Every capability the platform declares is enforced by a database policy, not by application code alone. | `customers_insert`, `roles_insert`, `field_definitions_insert` and `memberships_update` each call `app.has_capability`; `schema-conformance.test.ts` reads `pg_policy` and fails if any entry in `CAPABILITIES` appears in no policy. |
 | I17 | Only a field declared in that tenant's registry may appear in an entity's `custom`, and it holds the kind the registry says. | `app.check_custom_fields`, a trigger on `customers`, `locations`, `resources`, `work_items` and `assets` — one function taking the entity type as an argument — refusing undeclared keys, absent required fields and mistyped values — scoped by `organization_id`, so another tenant's definition authorises nothing; `parseCustom` re-checks in the domain for the message rather than the guarantee; `field-definitions.test.ts` "refuses an undeclared key in the database, not just the domain" and "does not let one tenant's definition authorize another tenant's row"; `locations.test.ts` "scopes a field definition to its entity type" and `resources.test.ts` "will not accept a field defined for a different entity". |
 | I18 | A row referencing two tenant-owned entities can only reference entities in its own tenant. | Composite foreign keys carrying `organization_id` — `memberships_role_same_org`, the two on `customer_locations`, the five on `work_items` (type, status, customer, location, resource, asset — the status one carrying `type_id` as a third column, see I20), `work_item_statuses_type_same_org`, the two on `assets`, and the four on `documents` — so a cross-tenant row cannot be written down at all; `schema-conformance.test.ts` asserts from `pg_constraint` that every reference between two tables carrying `organization_id` includes it, with a negative control; `locations.test.ts` "cannot link across tenants, even by writing the row directly" and `work-items.test.ts` "cannot borrow another tenant's customer/location/resource/status", each verified by swapping the composite key for a plain one, at which point the insert succeeds and RLS raises no objection. `schema-conformance.test.ts` also forbids a polymorphic `(entity_type, entity_id)` attachment outside `events`, because a reference with no foreign key satisfies the first assertion trivially. |
@@ -44,7 +44,8 @@ arrives with the slice that enforces it.
 
 ## Core entities
 
-The kernel. Every module consumes these rather than defining its own.
+The kernel. Every engine consumes these rather than defining its own, and every module is
+sold on top of them.
 
 **Organization** — the tenant. Owns settings, operating hours, currency, timezone, enabled
 modules, terminology, and business rules. A Private deployment is a database with one row
@@ -115,22 +116,34 @@ here. Neither reduces cleanly to something that exists — a note is editable an
 not, and a notification needs delivery and per-recipient read state that nothing models. They
 get a decision when something needs them, not before.
 
-## Module ownership
+## Engine ownership
 
-| Module | Owns |
+**An engine is code that owns entities and rules. It is not a module** — a module is what a
+tenant switches on and is billed for, it is a row rather than a directory, and nothing in this
+section governs it. `constraints.md` D25 pins the two words apart and explains what the
+collision cost.
+
+| Engine | Owns |
 |---|---|
-| *(none yet)* | Tenancy is kernel, not a module. The first module appears when two independent pieces of evidence want the same capability — not when a second caller needs a rule, which is grounds for extracting a function and nothing more. |
+| *(none yet)* | Tenancy is kernel, not an engine. The first engine appears when two independent pieces of evidence want the same capability — not when a second caller needs a rule, which is grounds for extracting a function and nothing more. |
 
-Filled in as modules are extracted. A module appears here on two independent pieces of
+Filled in as engines are extracted. An engine appears here on two independent pieces of
 evidence, at least one from a system that shipped — never in anticipation, and never on the
 strength of one source's requirements.
 
-## Not yet modules
+**A module needs no entry here at all.** CRM is a module with no engine: the timeline is a
+projection of `events` and the intelligence is arithmetic over work items, prices and payments.
+Weather is another (D11). That is the normal case, and an engine with no module is the
+suspicious one.
+
+## Not yet engines
 
 Named by the vision, deliberately absent. Create each **on two independent pieces of
 evidence, at least one from a system that shipped** — not on a second call site. A second
 caller inside one business is grounds for extracting a function into the domain layer, which
-is a cheaper and different thing (`constraints.md`, Scope and abstraction).
+is a cheaper and different thing (`constraints.md`, Scope and abstraction). Several of the
+names below are also *module* names, and that is not a contradiction: `bookings` may be a
+module a tenant enables long before any code is extracted under that name.
 
 `scheduling` · `dispatch` · `pricing` · `inventory` · `maintenance` · `bookings` ·
 `communications` · `finance` · `automations` · `reporting`
@@ -147,9 +160,11 @@ They are one engine with four policies. All four reduce to the same statement:
 
 > A unit of work needs a time, a resource, and a place, subject to constraints.
 
-Built as separate modules, they become four calendars, four availability models, and four
+Built as separate engines, they become four calendars, four availability models, and four
 conflict-resolution bugs. Build one scheduling core over Work Item and Resource; Booking,
-Dispatch, and Maintenance are rule sets and screens above it.
+Dispatch, and Maintenance are rule sets and screens above it. **They are still four modules** —
+a tenant enables Bookings without enabling Dispatch — which is the clearest illustration of why
+D25 separates the words: one engine, four things a business can buy.
 
 The same collapse applies to automations and workflows: one trigger-condition-action runtime,
 two authoring interfaces.

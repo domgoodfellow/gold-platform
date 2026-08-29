@@ -225,6 +225,7 @@ describe('pricing a work item', () => {
       timezone: 'UTC',
       currency: 'USD',
       bufferMinutes: 0,
+      slug: null,
     });
     const inDollars = await createPriceBookItem(alice.db, {
       organizationId: alice.organizationId,

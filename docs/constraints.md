@@ -15,13 +15,16 @@ An entry nobody could violate is not a constraint. Delete it.
 
 ### Scope and abstraction
 
-- **Never build a module before two independent pieces of evidence want it, at least one of
-  them from a system that shipped.** A prior product counts — `tire-app-template`,
+- **Never build an engine before two independent pieces of evidence want it, at least one of
+  them from a system that shipped.** An *engine* is code that owns entities and rules; it is
+  not a **module**, which is a capability a tenant switches on and is billed for and is
+  governed by nothing in this section. D25 pins the two words apart, and the reason it had to
+  is that this bullet was once read as the bar for the second one. A prior product counts — `tire-app-template`,
   `saas-agent-platform` and `nextfund-portal` are evidence, and D12 already reasons from one
   of them. A discovery call that produced signed intent counts. A hypothesis does not, and
   neither does a second call site in this repository, which is grounds for extracting a
   function and nothing more. The point was never the invoice; it is that a single source
-  cannot tell you which parts of itself were general, so a module extracted from one is that
+  cannot tell you which parts of itself were general, so an engine extracted from one is that
   source's implementation wearing a costume.
 - **How you start, because this rule is read as a block and is not one.** Write it concrete,
   in the domain layer, for the business in front of you, named for what it does rather than
@@ -34,7 +37,7 @@ An entry nobody could violate is not a constraint. Delete it.
   *caller* — another route, server action, or AI tool in this repository — is enough, and can
   arrive in week one inside a single business. See *Never duplicate a rule across callers*
   below. The two rules pull in opposite directions on purpose: extracting a function stops
-  two copies drifting apart, while naming a module claims a generality that one source
+  two copies drifting apart, while naming an engine claims a generality that one source
   cannot possibly evidence.
 - **Never create a workspace package with one consumer.** It buys a build step and a
   `dist/` for no isolation. `saas-agent-platform` collapsed `ui`, `shared`, `config`, and
@@ -46,7 +49,7 @@ An entry nobody could violate is not a constraint. Delete it.
 - **What counts as a caller, because this is where the rule above is misread.** A caller is
   whatever uses the thing *in the same change* — a screen, a route, a domain function, an
   operator who needs it on Monday. It is not "a second existing call site"; that is the bar
-  for *extracting a rule*, three bullets up, and naming a module at the top of this section
+  for *extracting a rule*, three bullets up, and naming an engine at the top of this section
   is harder still. A business that has gone live wanting to see a customer's history is a
   caller. A business that might one day want a dashboard is not.
 - **This section's own failure mode, stated so that it stays checkable.** It has removed
@@ -57,6 +60,12 @@ An entry nobody could violate is not a constraint. Delete it.
   weaken these rules rather than defer the same feature a third time. Removals are recorded
   in `CHANGELOG.md` on the commit that made them (D9), which is what makes that a count
   rather than a feeling.
+- **One of those four was removed wrongly, and the tell was a word rather than a judgement.**
+  Module enablement was cut by applying the engine bar at the top of this section to a
+  question that is not about code at all — see D25 and `roadmap.md` M3. That is a second
+  failure mode and it is cheaper to catch than the first: **before applying any rule here,
+  name the noun it governs and check that it is the noun in front of you.** This section
+  refuses speculative *code*. It has never had anything to say about what a tenant turns on.
 - **Never write a document ahead of the evidence.** See D8 for the budget and the
   admission rule.
 
@@ -162,8 +171,8 @@ repository, which D1 refers to as bundling for exactly this reason.
 - **A vendor belongs behind an adapter.** Twilio, Stripe, ElevenLabs, Google, and any map or
   weather provider are implementation details. Domain code names capabilities — *place a
   call*, *charge a card* — never providers.
-- **Never scatter provider logic into domain modules.** If a domain file imports a vendor
-  SDK, the adapter is missing.
+- **Never scatter provider logic through the domain layer.** If a domain file imports a
+  vendor SDK, the adapter is missing.
 
 ---
 
@@ -379,18 +388,23 @@ handler is usually the shorter path.
 
 **Never write one before it has a caller.** The same rule as every other abstraction here.
 
-### D11 — Weather is an integration and a trigger, not a module
+### D11 — Weather is an integration and a trigger, not an engine
 
 `docs/starting_conversation.txt` lists Weather among the modules and gives it a worked
-business configuration (§21). It is not a module here.
+business configuration (§21). **That listing is right and this decision does not contradict
+it** — it was originally written as "not a module", before D25 separated the two senses of the
+word, and it was always an argument about code. Weather is a perfectly good *module*: a
+weather-dependent business turns it on, sees it, and is billed for it. What it is not is an
+engine.
 
-A module owns entities and rules. Weather owns neither. It is a provider behind an adapter
+An engine owns entities and rules. Weather owns neither. It is a provider behind an adapter
 answering *what are conditions at this place and time*, plus automation rules a tenant writes
 against that answer — *when the forecast at a work item's location crosses this threshold,
 flag the item and notify the dispatcher*. Both halves must exist for other reasons already.
 
-**Rejected:** a `weather` module with its own tables. It needs a Work Item, a Location, and a
-Resource before it can say anything, which makes it a rule set over the kernel.
+**Rejected:** a `weather` engine with its own tables. It needs a Work Item, a Location, and a
+Resource before it can say anything, which makes it a rule set over the kernel — which is
+exactly what a module is allowed to be.
 
 **Consequence:** weather-driven rescheduling is the sharpest available test of the automation
 runtime and of I6 — availability shown to a client is advisory and re-asserted server-side
@@ -735,7 +749,32 @@ proving something, and the admin surface already shows the whole kernel working.
 **Consequence:** `apps/web` is an admin application until M3 at the earliest. Booking is not
 started before I5 and I6 are enforced; the portal is not started before its authorization
 model is written down as its own decision; marketing is not started before terminology and
-copy are configuration. `CLAUDE.md`'s layout table lists all four because it describes what
+copy are configuration.
+
+**Amended by booking (M4): the last clause was unenforceable as written, because booking *is*
+a public page.** This record defers marketing on the grounds that "every word on a public page
+a business shows the world is a claim that business makes about itself" — and then permits
+booking, which is a page a business puts on the side of a van. The booking surface duly shipped
+saying "Book a time" and "This business is not taking bookings online at the moment", which is
+the platform speaking in a tenant's voice, and is the Never this file states in *Business
+logic*.
+
+The two are one problem and the second arrived first. What M4 built is **not** the marketing
+surface — no pages, no sections, no blocks, no editor and deliberately no colour (D23 rejects a
+per-tenant theme by name and that stands). It is one row of copy per tenant, rendered at the top
+of any public surface: display name, tagline, intro, contact, address. The line it draws is the
+one this file already carves out — **a business's own voice for anything it claims, the
+platform's words only where they describe application state.** "Nothing free on this day" is
+state; "we come to you across Montréal" is a row.
+
+A business that has configured nothing renders **its own name and stops**, which is the same
+reading of silence operating hours and the buffer take. `public-profile.test.ts` reads the
+public routes' own source and fails on a hardcoded sentence, so the rule survives a careless
+author rather than only a careful one.
+
+**Still deferred:** the marketing surface proper — a per-tenant site with pages and editable
+blocks. Its trigger is unchanged, and this slice is evidence toward it rather than a substitute
+for it. `CLAUDE.md`'s layout table lists all four because it describes what
 the directory is *for*, not what is in it.
 
 **Trigger to revisit:** a paying tenant needs to take a booking before M3 lands. That is a
@@ -751,8 +790,10 @@ buying customer-service chat and the admin surface behind it, is the shape this 
 for — and it is not the per-client app studio `vision.md` refuses in its second sentence.
 
 The distinction is *what differs between tenants*. An app studio ships different code per
-client. A partial adopter runs identical code with fewer modules enabled, which is M3's module
-enablement and needs no new mechanism at all. Nothing forks, no migration is client-specific,
+client. A partial adopter runs identical code with fewer modules enabled, which needs no new
+mechanism beyond module enablement itself. **That mechanism was M3's and M3 removed it** for
+reasons D25 shows were about the wrong noun; it lands in M4, and until it does, this decision
+is a promise with nothing behind it. Nothing forks, no migration is client-specific,
 and every invariant in `domain-model.md` holds for them exactly as written.
 
 **What is genuinely new is the direction data flows.** The *Sources of truth* section above was
@@ -786,11 +827,17 @@ than across a trigger makes it worse rather than better.
 cheap, and a lie about a live business — their website takes an enquiry the morning after the
 import, and the two lists diverge immediately with nothing that notices.
 
-**Consequence:** nothing is built now. Partial adoption today means enabling fewer modules,
-which is M3, and no schema changes hands until a tenant actually holds an entity elsewhere — no
-column, no origin field, no sync table, under the same rule as everything else here. What this
-record buys is that the first such tenant is a configuration question rather than an
-architecture one, and that selling one module is priced as a tenant rather than as a discount.
+**Consequence:** no *sync* machinery is built now — no column, no origin field, no sync table,
+under the same rule as everything else here — and none is until a tenant actually holds an
+entity elsewhere. Module enablement is the one piece that is built, in M4, because partial
+adoption is not a shape at all without it.
+
+**On price, said plainly, because the sentence that used to sit here was too compressed to be
+useful.** When a business wants only one part of the platform, the reflex is to treat them as a
+small deal and discount them into a lesser class of customer. Do not. They are a full tenant:
+same code, same invariants, same isolation, same support — they have simply switched fewer
+modules on. Charge the real price of what they enabled. The thing being refused is pricing the
+part they actually bought as though it were a sample of something bigger they declined.
 
 **The invariant this will need, when it has a caller:** exactly one system may write any given
 entity. It is deliberately not in `domain-model.md` yet, because nothing imports anything and an
@@ -910,9 +957,20 @@ The surface got *smaller* rather than larger: an external actor now holds **no i
 on any table at all**, and there is exactly one shape of write they can perform. Reads stayed
 entirely on RLS, which is where a leak would actually live.
 
+**A third thing was wrong and is worth keeping.** The surface shipped at
+`/book/{organizationId}`, which published a tenant id — and made a *path segment* decide which
+tenant an anonymous visitor was bound to. D17 says a segment is "routing convenience, never an
+authorization input", and `/organizations/[organizationId]` is safe precisely because RLS
+re-derives membership whatever the URL claims; out here there is no membership to re-derive
+against, so the segment was the whole of it. A business now chooses a `slug`, resolved by
+`public.booking_organization`, which answers **only for a business that has published something
+bookable** — so the public directory is opt-in and a tenant that has not opted in is not
+addressable from outside at all.
+
 **Consequence for the other two surfaces.** The portal will need to bind an outsider to a
 customer the *business* created, which `created_by` cannot express — that is a real gap and it
-gets its column when it has a caller, not before. Nothing else about this model is expected to
+gets its column when it has a caller, not before. It will also need a public address of its own,
+and `organizations.slug` is where that already is. Nothing else about this model is expected to
 move.
 
 ### D23 — The interface has a decided visual language, harvested from `tire-app-template`
@@ -1011,6 +1069,51 @@ and it would also split the deployment story for every milestone before the one 
 That milestone adds a host; it does not move `apps/api`.
 
 ---
+
+### D25 — A module is what a tenant enables; an engine is what owns rules
+
+Two different objects were called *module* throughout these documents, and the collision cost a
+shipped requirement. `docs/starting_conversation.txt` uses the word in its §3 and §20 sense — an
+installable capability a business turns on, which appears in their navigation and on their
+invoice. This file's *Scope and abstraction* section used it in the opposite sense — a body of
+code that owns entities and rules, which must not be created before two independent pieces of
+evidence want it. M3 applied the second bar to the first question, concluded there were no
+modules to enable, and removed tenant-facing module enablement on the strength of an argument
+about directory structure. See `roadmap.md` M3, which records it rather than quietly fixing it.
+
+From here the two words are pinned:
+
+- **Module** — a capability a tenant enables, is billed for, and sees in their navigation.
+  Per-tenant configuration; a row, not a directory. *CRM, Bookings, Scheduling, Dispatch,
+  Inventory, Maintenance, Reporting, Weather, Communications* are modules, exactly as the
+  source lists them, and the tenant is the one who decides which are on.
+- **Engine** — code that owns entities and rules. `roadmap.md` already uses the word this way
+  in M2 and M3, and `domain-model.md` uses it for the scheduling core. The
+  two-pieces-of-evidence rule governs engines and nothing else, and the ownership table in
+  `domain-model.md` lists engines.
+
+**They are deliberately not one-to-one, and that is the reason to separate them rather than a
+side effect.** One engine serves several modules: Scheduling, Dispatch, Bookings and
+Maintenance are four modules over the one scheduling engine `domain-model.md` insists on. Some
+modules have no engine at all — CRM is a projection of `events` plus arithmetic, and Weather is
+an adapter plus rules a tenant writes (D11). **A module with no engine is normal. An engine
+with no module is code nobody asked for.**
+
+**Rejected: keeping one word and relying on context.** It survived four documents and then
+deleted a requirement in the milestone whose entire purpose was configuration. A word that
+expensive gets two words.
+
+**Rejected: renaming the tenant-facing one instead** — *capability*, *feature*, *package*.
+*Capability* is taken and load-bearing: `app.has_capability` is a permission check inside one
+tenant, and overloading it onto what a tenant bought would put a billing question inside an
+authorization function. The source's word is *module* and the sales conversation's word is
+*module*; the sense that should move is the one only this repository ever used.
+
+**Consequence:** the two-pieces-of-evidence bar is unchanged and still binding — it just says
+*engine* now, which is what it always meant. Module enablement is unblocked and lands in M4,
+because it has callers today: `navigation.ts` shows every area to every tenant, D21 prices
+partial adoption against a mechanism that does not exist, and `vision.md` bills
+`platform fee + modules + usage` against the same.
 
 ## Decided, not yet built
 

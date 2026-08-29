@@ -374,6 +374,118 @@ export type Database = {
           },
         ]
       }
+      invoice_lines: {
+        Row: {
+          currency: string
+          description: string
+          id: string
+          invoice_id: string
+          organization_id: string
+          position: number
+          quantity: number
+          unit: string
+          unit_amount_minor: number
+        }
+        Insert: {
+          currency: string
+          description: string
+          id?: string
+          invoice_id: string
+          organization_id: string
+          position: number
+          quantity: number
+          unit: string
+          unit_amount_minor: number
+        }
+        Update: {
+          currency?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          organization_id?: string
+          position?: number
+          quantity?: number
+          unit?: string
+          unit_amount_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_lines_invoice_same_org"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoice_lines_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          billed_to: string
+          created_by: string
+          currency: string
+          customer_id: string | null
+          due_at: string | null
+          id: string
+          issued_at: string
+          number: number
+          organization_id: string
+          work_item_id: string
+        }
+        Insert: {
+          billed_to: string
+          created_by: string
+          currency: string
+          customer_id?: string | null
+          due_at?: string | null
+          id?: string
+          issued_at?: string
+          number: number
+          organization_id: string
+          work_item_id: string
+        }
+        Update: {
+          billed_to?: string
+          created_by?: string
+          currency?: string
+          customer_id?: string | null
+          due_at?: string | null
+          id?: string
+          issued_at?: string
+          number?: number
+          organization_id?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           access_notes: string | null
@@ -498,6 +610,50 @@ export type Database = {
           },
         ]
       }
+      organization_profiles: {
+        Row: {
+          address: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          display_name: string | null
+          intro: string | null
+          organization_id: string
+          tagline: string | null
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          display_name?: string | null
+          intro?: string | null
+          organization_id: string
+          tagline?: string | null
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          display_name?: string | null
+          intro?: string | null
+          organization_id?: string
+          tagline?: string | null
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           buffer_minutes: number
@@ -506,6 +662,7 @@ export type Database = {
           currency: string
           id: string
           name: string
+          slug: string | null
           timezone: string
         }
         Insert: {
@@ -515,6 +672,7 @@ export type Database = {
           currency?: string
           id?: string
           name: string
+          slug?: string | null
           timezone?: string
         }
         Update: {
@@ -524,9 +682,64 @@ export type Database = {
           currency?: string
           id?: string
           name?: string
+          slug?: string | null
           timezone?: string
         }
         Relationships: []
+      }
+      payments: {
+        Row: {
+          amount_minor: number
+          created_by: string
+          currency: string
+          id: string
+          invoice_id: string
+          note: string | null
+          organization_id: string
+          provider: string | null
+          provider_reference: string | null
+          received_at: string
+        }
+        Insert: {
+          amount_minor: number
+          created_by: string
+          currency: string
+          id?: string
+          invoice_id: string
+          note?: string | null
+          organization_id: string
+          provider?: string | null
+          provider_reference?: string | null
+          received_at?: string
+        }
+        Update: {
+          amount_minor?: number
+          created_by?: string
+          currency?: string
+          id?: string
+          invoice_id?: string
+          note?: string | null
+          organization_id?: string
+          provider?: string | null
+          provider_reference?: string | null
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_same_org"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       price_book_items: {
         Row: {
@@ -1278,6 +1491,7 @@ export type Database = {
         Args: { p_membership_id: string; p_role_id: string }
         Returns: undefined
       }
+      booking_organization: { Args: { p_slug: string }; Returns: string }
       change_work_item_status: {
         Args: { p_status_id: string; p_work_item_id: string }
         Returns: undefined
@@ -1416,6 +1630,10 @@ export type Database = {
         Args: { p_name: string; p_organization_id: string }
         Returns: string
       }
+      issue_invoice: {
+        Args: { p_due_at: string; p_work_item_id: string }
+        Returns: string
+      }
       link_customer_location: {
         Args: {
           p_customer_id: string
@@ -1423,6 +1641,17 @@ export type Database = {
           p_organization_id: string
         }
         Returns: undefined
+      }
+      record_payment: {
+        Args: {
+          p_amount_minor: number
+          p_invoice_id: string
+          p_note: string
+          p_provider: string
+          p_provider_reference: string
+          p_received_at: string
+        }
+        Returns: string
       }
       record_work_item_cost: {
         Args: {
@@ -1465,6 +1694,18 @@ export type Database = {
         Args: { p_checklist_item_id: string; p_done: boolean }
         Returns: undefined
       }
+      set_organization_profile: {
+        Args: {
+          p_address: string
+          p_contact_email: string
+          p_contact_phone: string
+          p_display_name: string
+          p_intro: string
+          p_organization_id: string
+          p_tagline: string
+        }
+        Returns: undefined
+      }
       set_type_bookable: {
         Args: {
           p_duration_minutes: number
@@ -1493,6 +1734,7 @@ export type Database = {
           p_currency: string
           p_id: string
           p_name: string
+          p_slug: string
           p_timezone: string
         }
         Returns: undefined

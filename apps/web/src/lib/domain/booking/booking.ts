@@ -44,12 +44,38 @@ export type Slot = {
 };
 
 /**
+ * Which business a public slug names, or null.
+ *
+ * **A visitor arriving with a slug has no binding, and therefore no RLS scope at all** — every
+ * policy on this axis keys on `app.current_external_tenant()`, so they cannot read the very row
+ * that would tell them which business they are looking at. `app.booking_organization` breaks
+ * that circle: privileged, one uuid out, and it answers only for a business that has actually
+ * published something bookable, which is what makes the public directory opt-in.
+ *
+ * Null covers "no such slug" and "that business publishes nothing" indistinguishably, and the
+ * page turns both into a 404. From outside, those are the same fact.
+ */
+export async function resolveBookingSlug(db: Db, slug: string): Promise<string | null> {
+  const { data, error } = await db.rpc('booking_organization', { p_slug: slug });
+
+  if (error) {
+    throw new DomainError(error.message, 'booking.slug_failed');
+  }
+
+  return (data as string | null) ?? null;
+}
+
+/**
  * Become an external actor of one business.
  *
  * Anonymous sign-in first — D22 named it as the option costing I11 and D17 the least, because
  * it produces a genuine `auth.uid()` — then the binding row that scopes it to exactly one
  * tenant. Calling this twice for one visitor is harmless: the unique index on `user_id` means
  * the second insert conflicts, and the existing binding is the correct answer anyway.
+ *
+ * The organization id is one this process resolved from a slug, never one a URL supplied. That
+ * distinction is D17's: a path segment is routing convenience and must never be an
+ * authorization input, and out here there is no membership to re-derive it against.
  *
  * A member of the business must never end up here. The unique index would let them hold a
  * binding as well as a membership, so the guard is that this signs in *anonymously* — a

@@ -1,5 +1,8 @@
+import { ProfileForm } from '@/features/public-profile/profile-form';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
+import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { requireOrganization } from '@/lib/route/organization';
+import { updateProfileAction } from './actions';
 import {
   AddOperatingHoursForm,
   OperatingHoursRow,
@@ -22,13 +25,38 @@ export default async function SettingsPage({
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const hours = await listOperatingHours(db, { organizationId });
+  const [hours, profile] = await Promise.all([
+    listOperatingHours(db, { organizationId }),
+    publicProfile(db, { organizationId, fallbackName: organization.name }),
+  ]);
 
   const mayManage = organization.capabilities.includes('organization.manage');
   const mayConfigure = organization.capabilities.includes('field.manage');
 
   return (
     <>
+      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
+        <h2 className="text-sm font-medium">Public page</h2>
+        <p className="mt-1 text-sm opacity-70">
+          What customers see before they book. Everything here is this business&rsquo;s own
+          words — the platform writes none of it, and a page left empty shows the business name
+          and nothing else.
+        </p>
+
+        {mayManage ? (
+          <ProfileForm
+            organizationId={organizationId}
+            profile={profile}
+            slug={organization.slug}
+            action={updateProfileAction}
+          />
+        ) : (
+          <p className="mt-4 text-sm opacity-70">
+            Your role, {organization.role}, cannot change what this business says about itself.
+          </p>
+        )}
+      </section>
+
       <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
         <h2 className="text-sm font-medium">This business</h2>
         <p className="mt-1 text-sm opacity-70">
@@ -43,6 +71,7 @@ export default async function SettingsPage({
             name={organization.name}
             timezone={organization.timezone}
             bufferMinutes={organization.bufferMinutes}
+            slug={organization.slug}
             currency={organization.currency}
           />
         ) : (

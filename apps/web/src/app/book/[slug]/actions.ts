@@ -23,6 +23,7 @@ export async function bookAction(
   formData: FormData,
 ): Promise<BookingActionState> {
   const db = await getDb();
+  const slug = String(formData.get('slug') ?? '');
   const organizationId = String(formData.get('organizationId') ?? '');
 
   const slot: Slot = {
@@ -46,5 +47,5 @@ export async function bookAction(
     throw error;
   }
 
-  redirect(`/book/${organizationId}/${workItemId}`);
+  redirect(`/book/${slug}/${workItemId}`);
 }

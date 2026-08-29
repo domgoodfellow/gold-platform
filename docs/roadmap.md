@@ -113,16 +113,35 @@ and the interface.
 
 Enforces: **I4**.
 
-**Three things named in that coverage list were removed, and the reason is the same one each
-time: nothing calls them.** Module enablement has no modules to enable — the module table in
-`domain-model.md` is empty, and a module needs two independent pieces of evidence with one
-from a system that shipped, which M4 is the first to supply. D21 already concedes as much:
-partial adoption "needs no new mechanism at all". Dashboard configuration has no dashboard.
-Business rules is one trigger-condition-action runtime by `domain-model.md`'s own account, and
-nothing triggers anything yet. Each would be a table, a screen and a vocabulary built against
-a hypothesis, which is the speculative abstraction `constraints.md` opens by refusing — and
-the criterion above survives their absence, because standing up a business shape needs roles,
-fields, statuses, transitions, hours, currency, timezone and prices, not modules.
+**Two things named in that coverage list were removed correctly. One was removed by mistake,
+and this milestone owns the mistake.**
+
+Dashboard configuration had no dashboard to configure, and business rules is one
+trigger-condition-action runtime by `domain-model.md`'s own account with nothing triggering
+anything yet. Each would have been a table, a screen and a vocabulary built against a
+hypothesis, which is the speculative abstraction `constraints.md` opens by refusing. Those two
+removals stand.
+
+**Module enablement was the mistake.** The argument given was that there were no modules to
+enable — the module table in `domain-model.md` was empty, and a module needs two independent
+pieces of evidence with one from a system that shipped. Every clause of that is true about the
+wrong noun. An empty ownership table and a two-pieces-of-evidence bar govern an **engine**, a
+body of code that owns entities and rules; module enablement is not a claim about code at all.
+It is a per-tenant row saying which capabilities this business has switched on, and it had
+callers the day it was cut: `navigation.ts` shows every area to every tenant regardless of what
+they bought, D21 prices partial adoption against a mechanism this milestone was supposed to
+ship, and `vision.md` bills `platform fee + modules + usage` against the same. The D21
+quotation used to justify the removal — partial adoption "needs no new mechanism at all" — says
+the opposite of what it was read as saying: it means *no mechanism beyond module enablement*,
+which was this milestone's job.
+
+`constraints.md` D25 now holds the two words apart so the substitution cannot be made again,
+and the *Scope and abstraction* section's own prediction — that it would be over-tuned the
+first time something was removed and did not come back — is exactly this. **The slice lands in
+M4.** What survives unharmed is the criterion above, because standing up a business shape needs
+roles, fields, statuses, transitions, hours, currency, timezone and prices; modules decide what
+that business is *shown and charged for*, which is a different question and was always a
+smaller one.
 
 **Pricing rules stayed, in the only form that has a caller.** What a business charges is a
 per-tenant catalogue and a quantity, and `milestone-m3.test.ts` stands up two businesses that
@@ -180,20 +199,57 @@ a screen.
 
 ---
 
-## M4 — Vertical one: Pneu3L
+## M4 — Vertical one: a real business runs on the platform
 
-> **Done when:** Pneu3L runs its operations on GOLD — quotes or bookings in, work scheduled
-> and assigned, work completed, invoiced, and paid — and nobody at that business has ever
-> been given database credentials.
+> **Done when:** a real business runs its operations on GOLD — quotes or bookings in, work
+> scheduled and assigned, work completed, invoiced, and paid — and nobody at that business
+> has ever been given database credentials.
+
+**Pneu3L is this milestone's evidence, not its subject.** The criterion above is a claim
+about the platform; Pneu3L is the business that makes the claim checkable, in the same way
+that M1's criterion is about tenancy and the two organizations in `milestone-m1.test.ts` are
+how it is proved. The milestone is over when the *platform* can do that, and the fact that
+one named business is doing it is what stops the claim being a hypothesis.
 
 The business is named because "one real field-service business" was a placeholder and D1
 deferred the naming to this milestone. Pneu3L: mobile automotive service, one owner-operator
 who is also the technician, Montreal, CAD, `America/Toronto`, Stripe alongside cash as a
-first-class payment method. **Travel is the primary scheduling constraint, not job duration.**
+first-class payment method. **Its binding scheduling constraint is the travel between jobs
+rather than the length of any one of them** — and that is a fact about this business, which is
+the whole point of the paragraph above it. Nothing in the platform may hold it.
+
+What the platform owes is not travel-aware scheduling. It is that **what makes a job fit is
+something a tenant states, never something the code assumes**, and the first answer to that
+already shipped: `organizations.buffer_minutes` is a per-tenant number the exclusion constraint
+reads through `occupies`, and a business that leaves it at zero has said its jobs run
+back-to-back. A clinic whose real constraint is room turnaround and a hire yard whose constraint
+is nothing at all configure the same column to different numbers, and no line of code knows
+which of them is which. Travel time computed between two specific addresses is the part the
+buffer cannot express; that is a platform capability with a named prerequisite — `locations`
+holds an address string and no coordinates — and not a Pneu3L feature.
 
 It onboards **fresh** — see `constraints.md` D1, which this milestone resolves. Its rows do
 not migrate; its configuration does. A business arriving through configuration is the claim
 `vision.md` makes, and a business arriving through an import script would prove the opposite.
+
+**The test that keeps the two apart, applied to every slice in this milestone.** Anything
+Pneu3L needs is one of exactly three things, and only the first two may be built here:
+
+1. **Platform capability** — the tenant could not express it by configuring, and any business
+   of this shape would hit the same wall. `releases_resource` was this. Build it, in the
+   domain layer, named for what it does rather than for whom.
+2. **Configuration** — a work item type, a status, a transition, a price book item, an
+   operating-hours row, a field definition. This is Pneu3L's data, it lives in the database
+   and not in the tree, and it is the milestone working as designed.
+3. **Pneu3L-specific code** — a branch, a column, a screen or a constant that names this
+   business or encodes a fact only true of it. There is no such category. It is the
+   per-client app studio `vision.md` refuses in its second sentence, and the fork D1 rejects,
+   arriving one `if` at a time instead of all at once.
+
+A slice that cannot be sorted into (1) or (2) has not been scoped yet. The symptom is a
+platform noun that reads as a tire word, a default that is only a default because Pneu3L
+would have chosen it, or a table whose only conceivable second tenant is another mobile
+mechanic. Run `/scope` rather than guessing — the question it is for is exactly this one.
 
 **"Operator" means whoever runs the business, not the founder.** M2's criterion already
 exercised somebody who was not, D19 governs what a membership may be, and D20 records that
@@ -245,20 +301,49 @@ Covers:
   platform deciding what a status *means*, and this asks only whether the van is occupied.
   Recorded here rather than quietly fixed, because "configuration is enough" is the claim
   this platform makes most often and this is the first place it was checked and found short.
+- **Module enablement, arriving late from M3.** See that milestone for why it was removed and
+  `constraints.md` D25 for the word that removed it. It lands here because this is where the
+  callers finally became undeniable rather than merely present: Pneu3L is one owner-operator
+  who does not want *Assets*, *Resources* or a customer portal on their phone, and booking is
+  the first surface that a tenant either offers to the public or does not. The shape is the
+  smallest thing that satisfies those callers — a per-tenant set of enabled module keys, an
+  `AREAS` entry naming the module it belongs to, and a navigation that renders what is on.
+  **It is not authorization and must never become it**: a member who cannot configure fields
+  still sees that fields exist and is told why the form is not theirs (I12), whereas a module a
+  tenant has not bought is not part of their business at all. The two failures look identical
+  on screen and are opposite in the database — the guard stays RLS and `app.has_capability`,
+  and module state answers a different question.
 - **The interface, per D23** — which exists so that M4 does not rebuild its screens the way
   M3 rebuilt M2's.
+- **A business's own words on its public page**, which was not in this list and had to be.
+  Booking is a public surface, so it trips the precondition D20 defers *marketing* over: copy
+  is configuration, and the first booking page shipped speaking in the platform's voice. One
+  row of tenant copy per business, rendered at the top of any public surface. Not the marketing
+  surface — no pages, no blocks, no theme — and D20 is amended to say why the two could never
+  have been sequenced the way this roadmap assumed.
 
-**There is no CRM engine, and the reason is worth keeping.**
-`docs/starting_conversation.txt` §9 describes one: a customer timeline and customer
-intelligence. The timeline is a projection of `events`. The intelligence is arithmetic over
-work items, prices and payments. Neither owns an entity or a rule, so neither is an engine,
-and building the word would produce a directory that reformats other tables. The timeline
-screen lands here; lifetime value, outstanding balance and last-contacted land in M8, where
-the dialer is the caller that needs a number rather than a history — over the aggregate layer
-M6 builds, which is why they are not simply arithmetic written twice.
+**CRM is a module and not an engine, and both halves of that are worth keeping.**
+`docs/starting_conversation.txt` §9 describes a CRM engine: a customer timeline and customer
+intelligence. **Both get built.** The timeline screen lands in this milestone; lifetime value,
+outstanding balance and last-contacted land in M8, where the dialer is the caller that needs a
+customer reduced to a number rather than a history — over the aggregate layer M6 builds, which
+is why they are not simply arithmetic written twice. A tenant will see *Customers* in their
+navigation, switch CRM on or off, and be billed for it. That is a module and it is real.
+
+What is not built is a `crm` directory owning entities and rules of its own, because the
+timeline is a projection of `events` and the intelligence is arithmetic over work items, prices
+and payments. That is the engine bar in `constraints.md`, and CRM does not clear it — nor does
+it need to, because **a module with no engine is the normal case** (D25).
+
+An earlier version of this paragraph read "there is no CRM engine" and stopped there, which
+sounded like refusing the product when it was only declining a directory. That is precisely the
+collision D25 exists to end, and it is recorded here rather than smoothed over because this
+document caused it.
 
 **What M4 produces beyond a running business** is the list of seams that looked general — to
-be tested against the next vertical rather than declared general here. `constraints.md`'s
+be tested against the next vertical rather than declared general here. That is the other half
+of *evidence, not subject*: one business cannot tell you which parts of itself were general,
+so what this milestone hands to M5 and M8 is a list of candidates, not a set of engines. `constraints.md`'s
 *Scope and abstraction* governs what may be *claimed* about them, and that section is
 explicit that it is not a gate on building any of it.
 
@@ -272,7 +357,8 @@ explicit that it is not a gate on building any of it.
 
 **One tenant, deliberately.** The obvious version of this milestone stands up a second
 business with crews and dispatch and calls the difference a feature. That framing makes
-weather a module, which D11 forbids for the right reason: weather owns no entity and no rule.
+weather an engine, which D11 forbids for the right reason: weather owns no entity and no rule.
+Weather is a perfectly good module, and a weather-dependent tenant switches it on.
 **Dispatch is not something the platform builds.** It is what a business has once it
 configures several resources and turns these capabilities on — and proving that on a business
 already live is a far stronger claim than proving it on a second tenant built to need it.
