@@ -7,6 +7,30 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ### M4 — vertical one: Pneu3L
 
+**Invoicing, and money arriving — three columns that are not there carry the design.** An
+invoice has no `total_minor`: its total is `priceWorkItem` over its own snapshotted lines, and
+`InvoiceLine` is a `PricedLine` with a position rather than a parallel shape, so the second
+document to carry a total did not get a second calculation (I4). It has no `status` and no
+`paid` flag: settlement is `invoiceStanding`, arithmetic over payments, which cannot disagree
+with the payments it was derived from — the argument `domain-model.md` already makes for
+refusing a `calendar` table. And a payment has no `method`: "cash" is what *no provider* means,
+so the operator path takes no provider argument at all and a payment that names a processor can
+only have been written by one.
+
+**An invoice line copies a priced line, which copies a catalogue row, and there is no key back
+to either.** That is I8 one level up from where it already applied. The test that matters
+strikes every line off the quote *after* the invoice is issued and reads the invoice unchanged:
+the quote stays editable, which is the whole point of copying rather than pointing.
+
+**Two capabilities rather than one**, because they are plausibly two people — deciding a job is
+finished and asking to be paid for it is whoever runs the work; writing down that money arrived
+is whoever opens the post. A second invoice for one job is refused by a unique index rather
+than by a check before the insert, and so is a duplicated number: I6's argument about checking
+before writing, applied to a sequence instead of a slot. `events` gained two readers' worth of
+actions — `invoice.issued` snapshots the number and `payment.recorded` the amount and currency,
+because both are terms somebody agreed to rather than vocabulary a tenant can rename.
+
+
 **Booking, and the external actor it paid for.** D22 stated four questions and settled none,
 on the grounds that whichever surface went first would pay. Booking went first. An outsider is
 a row binding one `auth.users` id — from anonymous sign-in, so `auth.uid()` is real and I11

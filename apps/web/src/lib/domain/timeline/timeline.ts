@@ -1,5 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { formatMoney } from '@/lib/domain/work-items/consumption';
 
 /**
  * What happened to a customer, read back out of `events`.
@@ -73,6 +74,8 @@ const CUSTOMER_ACTIONS = [
   'work_item.cost_recorded',
   'work_item.time_recorded',
   'work_item.updated',
+  'invoice.issued',
+  'payment.recorded',
 ] as const;
 
 type EventRow = {
@@ -141,6 +144,22 @@ function describe(row: EventRow, words: Vocabulary): string {
       return `Time recorded${on}`;
     case 'work_item.updated':
       return `Details corrected${on}`;
+    case 'invoice.issued': {
+      // The number is snapshotted onto the payload because it is a term — it is what the
+      // document this customer holds says on it (I8), and unlike a status name it can never
+      // be renamed by a later edit.
+      const number = row.payload.number;
+      return `Invoiced${typeof number === 'number' ? ` (#${number})` : ''}${on}`;
+    }
+    case 'payment.recorded': {
+      // The amount and its currency, snapshotted for the same reason. The provider is a fact
+      // about where the money came from and a null one is a person writing it down.
+      const amount = row.payload.amount_minor;
+      const currency = text(row.payload, 'currency');
+      const money =
+        typeof amount === 'number' && currency ? ` ${formatMoney(amount, currency)}` : '';
+      return `Payment recorded${money}${on}`;
+    }
     default:
       // Unreachable while CUSTOMER_ACTIONS is the filter, and here so that adding an action
       // to that list without a sentence degrades to something legible rather than blank.

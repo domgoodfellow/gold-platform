@@ -9,7 +9,9 @@ import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import {
   addChecklistItemAction,
   addPricedLineAction,
+  issueInvoiceAction,
   recordCostAction,
+  recordPaymentAction,
   recordTimeAction,
   removePricedLineAction,
   setChecklistItemDoneAction,
@@ -382,6 +384,118 @@ export function EditWorkItemForm({
       >
         {pending ? 'Saving…' : 'Save details'}
       </button>
+
+      {state.error ? (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {state.error}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+/**
+ * Turn the quote above into an invoice.
+ *
+ * The only field is a due date, and everything absent from this form is deliberate: no
+ * amount, no lines, no currency, no invoice number. `issue_invoice` copies the quote and takes
+ * the next number for this business, so nothing a person types can change what the document
+ * says — which is what makes it a snapshot rather than a view of the quote.
+ */
+export function IssueInvoiceForm({
+  organizationId,
+  workItemId,
+}: {
+  organizationId: string;
+  workItemId: string;
+}) {
+  const [state, formAction, pending] = useActionState(issueInvoiceAction, INITIAL);
+
+  return (
+    <form action={formAction} className="mt-3 flex flex-col gap-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="workItemId" value={workItemId} />
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label className="flex flex-1 items-center gap-2 text-sm">
+          <span className="opacity-70">Due</span>
+          {/* Optional. A business that invoices on delivery has no due date to give, and an
+              invented default would be this platform deciding that business's terms. */}
+          <input name="dueAt" type="date" aria-label="Due date" className={INPUT_CLASS} />
+        </label>
+        <button
+          type="submit"
+          disabled={pending}
+          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
+        >
+          {pending ? 'Issuing…' : 'Issue invoice'}
+        </button>
+      </div>
+
+      {state.error ? (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {state.error}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+/**
+ * Write down that money arrived.
+ *
+ * There is no payment-method field, and there is no provider field. A payment somebody was
+ * handed names nobody; one that came from a processor is written by that processor, and this
+ * form is not it.
+ */
+export function RecordPaymentForm({
+  organizationId,
+  workItemId,
+  invoiceId,
+  currency,
+}: {
+  organizationId: string;
+  workItemId: string;
+  invoiceId: string;
+  currency: string;
+}) {
+  const [state, formAction, pending] = useActionState(recordPaymentAction, INITIAL);
+
+  return (
+    <form action={formAction} className="mt-3 flex flex-col gap-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="workItemId" value={workItemId} />
+      <input type="hidden" name="invoiceId" value={invoiceId} />
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        {/* Minor units, for the reason the cost form gives. Signed, and negative is allowed:
+            a payment recorded wrongly is corrected by recording its reverse, because there is
+            no update policy on the table. */}
+        <input
+          name="amountMinor"
+          type="number"
+          required
+          step={1}
+          placeholder={`Amount in minor units (${currency})`}
+          aria-label={`Amount in minor units, ${currency}`}
+          className={INPUT_CLASS}
+        />
+        <input
+          name="note"
+          type="text"
+          maxLength={1000}
+          placeholder="Note, e.g. cash on the driveway"
+          aria-label="Note"
+          className={INPUT_CLASS}
+        />
+        <button
+          type="submit"
+          disabled={pending}
+          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
+        >
+          {pending ? 'Recording…' : 'Record payment'}
+        </button>
+      </div>
 
       {state.error ? (
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">

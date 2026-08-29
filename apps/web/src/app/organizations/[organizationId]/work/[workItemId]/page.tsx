@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CustomFieldValues } from '@/components/custom-field-values';
 import { listAssets } from '@/lib/domain/assets/assets';
+import { getInvoiceForWorkItem, invoiceStanding } from '@/lib/domain/billing/invoices';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
@@ -18,7 +19,9 @@ import {
   AddChecklistItemForm,
   AddPricedLineForm,
   EditWorkItemForm,
+  IssueInvoiceForm,
   RecordCostForm,
+  RecordPaymentForm,
   RecordTimeForm,
   RemovePricedLineForm,
   ToggleChecklistItemForm,
@@ -52,6 +55,7 @@ export default async function WorkItemPage({
     customers,
     locations,
     assets,
+    invoice,
   ] = await Promise.all([
     listChecklistItems(db, { organizationId, workItemId }),
     listTimeEntries(db, { organizationId, workItemId }),
@@ -63,6 +67,7 @@ export default async function WorkItemPage({
     listCustomers(db, { organizationId }),
     listLocations(db, { organizationId }),
     listAssets(db, { organizationId }),
+    getInvoiceForWorkItem(db, { organizationId, workItemId }),
   ]);
 
   // I4: the only total on this page, and the only one anywhere. Nothing here reduces an
@@ -72,6 +77,12 @@ export default async function WorkItemPage({
   // this page still has exactly one price calculation on it (I4).
   const economics = jobEconomics({ lines, costs });
   const mayPrice = organization.capabilities.includes('work_item.price');
+  // Where the invoice stands, derived on every read. There is no `paid` column to disagree
+  // with this, and the total inside it comes from `priceWorkItem` over the invoice's own
+  // snapshotted lines — so this page holds two documents and still one calculation (I4).
+  const standing = invoice ? invoiceStanding(invoice) : null;
+  const mayInvoice = organization.capabilities.includes('invoice.issue');
+  const mayBePaid = organization.capabilities.includes('payment.record');
 
   const mayAdd = organization.capabilities.includes('work_item.create');
   const mayEdit = organization.capabilities.includes('work_item.update');
@@ -300,6 +311,118 @@ export default async function WorkItemPage({
             currency={organization.currency}
           />
         ) : null}
+      </section>
+
+      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
+        <h2 className="text-sm font-medium">Invoice</h2>
+        {/* The quote above can still change after this is issued. That is the point of the
+            invoice being a copy rather than a view — it is what somebody was sent (I8). */}
+
+        {invoice && standing ? (
+          <>
+            <p className="mt-1 text-sm opacity-70">
+              #{invoice.number} to {invoice.billedTo} ·{' '}
+              {new Date(invoice.issuedAt).toLocaleDateString('en-GB', {
+                timeZone: organization.timezone,
+              })}
+              {invoice.dueAt
+                ? ` · due ${new Date(invoice.dueAt).toLocaleDateString('en-GB', {
+                    timeZone: organization.timezone,
+                  })}`
+                : null}
+            </p>
+
+            <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+              {invoice.lines.map((line) => (
+                <li
+                  key={line.id}
+                  className="flex items-baseline justify-between gap-3 py-2 text-sm"
+                >
+                  <span>
+                    {line.description}
+                    <span className="opacity-60">
+                      {' '}
+                      × {line.quantity} {line.unit}
+                    </span>
+                  </span>
+                  {/* No remove control, and no edit. There is no update or delete policy on
+                      `invoice_lines` at all: this document has been sent. */}
+                  <span className="shrink-0 opacity-70">
+                    {formatMoney(line.unitAmountMinor * line.quantity, line.currency)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {standing.total ? (
+              <p className="mt-2 flex justify-between text-sm font-medium">
+                <span>Invoiced</span>
+                <span className="tabular-nums">
+                  {formatMoney(standing.total.totalMinor, standing.total.currency)}
+                </span>
+              </p>
+            ) : null}
+
+            {invoice.payments.length > 0 ? (
+              <ul className="mt-3 divide-y divide-black/10 dark:divide-white/15">
+                {invoice.payments.map((payment) => (
+                  <li key={payment.id} className="flex justify-between gap-3 py-2 text-sm">
+                    <span className="opacity-70">
+                      {new Date(payment.receivedAt).toLocaleDateString('en-GB', {
+                        timeZone: organization.timezone,
+                      })}
+                      {/* A payment that names nobody was written down by a person, which is
+                          what cash is. One that names a processor came from it. */}
+                      {payment.provider ? ` · ${payment.provider}` : ' · recorded by hand'}
+                      {payment.note ? ` · ${payment.note}` : null}
+                    </span>
+                    <span className="shrink-0 tabular-nums">
+                      {formatMoney(payment.amountMinor, payment.currency)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            <p className="mt-2 flex justify-between text-sm font-medium">
+              {/* Paid-ness is this subtraction and nothing else. No status column exists to
+                  say otherwise, which is why it can never say otherwise. */}
+              <span>{standing.settled ? 'Settled' : 'Outstanding'}</span>
+              <span className="tabular-nums">
+                {standing.outstandingMinor === null
+                  ? '—'
+                  : formatMoney(standing.outstandingMinor, invoice.currency)}
+              </span>
+            </p>
+
+            {mayBePaid ? (
+              <RecordPaymentForm
+                organizationId={organizationId}
+                workItemId={workItemId}
+                invoiceId={invoice.id}
+                currency={invoice.currency}
+              />
+            ) : (
+              <p className="mt-3 text-sm opacity-60">
+                Your role cannot record payments here.
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="mt-1 text-sm opacity-60">
+              {price
+                ? 'Not invoiced yet.'
+                : 'There is nothing priced on this job, so there is nothing to invoice.'}
+            </p>
+            {mayInvoice && price ? (
+              <IssueInvoiceForm organizationId={organizationId} workItemId={workItemId} />
+            ) : null}
+            {!mayInvoice ? (
+              <p className="mt-3 text-sm opacity-60">Your role cannot issue invoices here.</p>
+            ) : null}
+          </>
+        )}
       </section>
 
       <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">

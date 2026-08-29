@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
+import { issueInvoice, recordPayment } from '@/lib/domain/billing/invoices';
 import { addChecklistItem, setChecklistItemDone } from '@/lib/domain/work-items/checklists';
 import { addPricedLine, removePricedLine } from '@/lib/domain/pricing/prices';
 import { recordCost, recordTime } from '@/lib/domain/work-items/consumption';
@@ -183,6 +184,60 @@ export async function updateWorkItemAction(
       locationId: String(formData.get('locationId') ?? ''),
       assetId: String(formData.get('assetId') ?? ''),
       custom: customValuesFromFormData(formData),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidate(organizationId, workItemId);
+  return { error: null };
+}
+
+/**
+ * Issue the invoice for this job.
+ *
+ * Notice what this form cannot submit either, and it is more than the priced-line form
+ * withholds: no amount, no lines, no currency and no number. `issue_invoice` copies the quote
+ * and takes the next number for the business, so the only thing a person chooses here is when
+ * it falls due. An invoice whose contents a caller could assert would not be a snapshot.
+ */
+export async function issueInvoiceAction(
+  _previous: WorkItemActionState,
+  formData: FormData,
+): Promise<WorkItemActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const workItemId = String(formData.get('workItemId') ?? '');
+
+  try {
+    await issueInvoice(db, { workItemId, dueAt: String(formData.get('dueAt') ?? '') });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidate(organizationId, workItemId);
+  return { error: null };
+}
+
+export async function recordPaymentAction(
+  _previous: WorkItemActionState,
+  formData: FormData,
+): Promise<WorkItemActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const workItemId = String(formData.get('workItemId') ?? '');
+
+  try {
+    // Minor units, for the reason `recordCostAction` gives. No provider field exists on this
+    // form and none may be added: this path is a person writing down what they were handed,
+    // and a payment that names a processor must have come from one.
+    await recordPayment(db, {
+      invoiceId: String(formData.get('invoiceId') ?? ''),
+      amountMinor: Number(formData.get('amountMinor') ?? Number.NaN),
+      receivedAt: String(formData.get('receivedAt') ?? ''),
+      note: String(formData.get('note') ?? ''),
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };

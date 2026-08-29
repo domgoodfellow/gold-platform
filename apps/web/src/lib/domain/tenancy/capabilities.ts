@@ -27,6 +27,8 @@ export const CAPABILITIES = [
   'price.manage',
   'work_item.price',
   'work_item.update',
+  'invoice.issue',
+  'payment.record',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -61,4 +63,9 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'price.manage': 'Set what this business charges',
   'work_item.price': 'Put priced items on a job',
   'work_item.update': 'Correct a job’s details',
+  // Two rather than one, because they are plausibly two people. Deciding a job is finished
+  // and asking to be paid for it is whoever runs the work; writing down that money arrived is
+  // whoever opens the post.
+  'invoice.issue': 'Invoice a finished job',
+  'payment.record': 'Record a payment against an invoice',
 };
