@@ -28,8 +28,22 @@ const PUBLIC_PATHS = ['/', '/sign-in', '/sign-up'];
  */
 const BOOKING_PREFIX = '/book/';
 
+/**
+ * The portal, on the same terms as booking.
+ *
+ * The token in the path is a credential, and it is checked by `claim_portal_invite` against a
+ * row rather than by anything here -- this only declines to redirect a caller who has no
+ * session yet, because they are about to be given an anonymous one. A stranger reaching this
+ * prefix with an invented token gets a 404 from the page, not access.
+ */
+const PORTAL_PREFIX = '/portal/';
+
 function isPublic(pathname: string): boolean {
-  return PUBLIC_PATHS.includes(pathname) || pathname.startsWith(BOOKING_PREFIX);
+  return (
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname.startsWith(BOOKING_PREFIX) ||
+    pathname.startsWith(PORTAL_PREFIX)
+  );
 }
 
 export async function proxy(request: NextRequest) {

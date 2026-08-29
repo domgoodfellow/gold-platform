@@ -4,7 +4,10 @@ import { CustomFieldValues } from '@/components/custom-field-values';
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { PortalLinkForm } from '@/features/public-profile/portal-link-form';
+import { listPortalInvites } from '@/lib/domain/portal/portal';
 import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
+import { createPortalInviteAction } from './actions';
 import { requireOrganization } from '@/lib/route/organization';
 import { UploadDocumentForm } from './upload-document-form';
 
@@ -29,13 +32,14 @@ export default async function CustomerPage({
     notFound();
   }
 
-  const [documents, definitions, timeline] = await Promise.all([
+  const [documents, definitions, timeline, invites] = await Promise.all([
     listDocuments(db, {
       organizationId,
       attachedTo: { entity: 'customer', id: customerId },
     }),
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
     listCustomerTimeline(db, { organizationId, customerId }),
+    listPortalInvites(db, { organizationId, customerId }),
   ]);
 
   const mayAttach = organization.capabilities.includes('document.create');
@@ -94,6 +98,35 @@ export default async function CustomerPage({
             Your role, {organization.role}, cannot attach documents here.
           </p>
         )}
+      </section>
+
+      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
+        <h2 className="text-sm font-medium">Portal</h2>
+        <p className="mt-1 text-sm opacity-70">
+          A link this customer can open to see their own work and invoices. Anyone holding it is
+          them, so send it the way you would send a document — and withdraw it if it goes
+          astray.
+        </p>
+
+        {mayAttach ? (
+          <PortalLinkForm
+            organizationId={organizationId}
+            customerId={customerId}
+            origin=""
+            createAction={createPortalInviteAction}
+          />
+        ) : (
+          <p className="mt-3 text-sm opacity-70">
+            Your role, {organization.role}, cannot invite customers here.
+          </p>
+        )}
+
+        {invites.length > 0 ? (
+          <p className="mt-3 text-xs opacity-60">
+            {invites.filter((invite) => invite.revokedAt === null).length} active,{' '}
+            {invites.filter((invite) => invite.revokedAt !== null).length} withdrawn.
+          </p>
+        ) : null}
       </section>
 
       <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">

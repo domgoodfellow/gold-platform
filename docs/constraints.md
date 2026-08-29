@@ -973,6 +973,38 @@ gets its column when it has a caller, not before. It will also need a public add
 and `organizations.slug` is where that already is. Nothing else about this model is expected to
 move.
 
+### The portal inherited it, and that prediction held.
+
+The second surface added **one column** — `external_actors.customer_id`, exactly the gap named
+above — and changed nothing else about the axis. It is written by `claim_portal_invite` on
+presentation of a token and by nothing else: no column grant, no update policy, so the attack
+that removed the column from the first draft is still impossible.
+
+**The two surfaces scope differently, and the difference is the reason a column was needed.**
+Booking scopes an outsider to rows *they made*, because a booking visitor creates their own
+customer row and `created_by` identifies it exactly. A customer of ten years made nothing — the
+business did — so the portal scopes them to rows *about them*. Every external policy now reads
+**"rows I made, or rows about me"**, and `app.current_external_customer()` is the companion to
+`app.current_external_tenant()`: same shape, same guarantee, neither returns a set.
+
+**I19's second shape landed here**, as D20 predicted it would: "a customer downloading their own
+contract needs a signed URL minted after a permission check that has no `has_capability` to
+call." The permission check is the read of the `documents` row under the external policy, and
+the object is signed afterwards — the same path a member takes.
+
+**What a link means is stated rather than implied.** Anyone holding it is that customer. That is
+the security model of a link to a shared document, it is the business's to revoke, and it is the
+honest cost of not having a channel to prove control of an address — which is M5's. The token is
+stored rather than hashed, deliberately: a business that has lost the link it sent must be able
+to send the same one again, and hashing would only mean issuing a second while protecting
+nothing.
+
+**A second index is now exempt from I2, under one rule rather than two exceptions.** An
+identifier the outside world *presents* must be resolvable without already knowing which tenant
+it belongs to; an identifier the inside world *uses* is scoped by the tenant that owns it.
+`external_actors (user_id)` and `customer_portal_invites (token)` are both the former, and
+`schema-conformance.test.ts` names each so a third has to argue for itself.
+
 ### D23 — The interface has a decided visual language, harvested from `tire-app-template`
 
 M3 rebuilt every screen M1 and M2 produced, because those screens were a `max-w-2xl` stack of

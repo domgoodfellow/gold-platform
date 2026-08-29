@@ -74,21 +74,35 @@ describe('schema conformance', () => {
             select 1 from pg_attribute o
              where o.attrelid = t.oid and o.attname = 'organization_id' and o.attnum > 0
           )
-          and a.attname <> 'organization_id'`,
+          and a.attname <> 'organization_id'
+        -- Ordered, because the exceptions below are asserted exactly and an unordered
+        -- result would make this test pass or fail on the planner's mood.
+        order by t.relname, i.relname`,
     );
 
-    // **One exception, and it is the opposite constraint rather than a lapse.**
+    // **Two exceptions, and they share one rule rather than being two lapses.**
     //
     // I2 exists so one tenant's uniqueness cannot block another's: two businesses must both be
-    // able to call a status "Booked". `external_actors_one_tenant_per_user` is on `user_id`
-    // alone because it enforces the reverse — that one *actor* can never span two tenants,
-    // which is D22's "always exactly one tenant, never a set". Leading it with
-    // `organization_id` would permit exactly the row it exists to forbid, and
-    // `app.current_external_tenant()` would then have a set to return.
+    // able to call a status "Booked". Both indexes below are the opposite question — **an
+    // identifier the outside world *presents* must be resolvable without already knowing which
+    // tenant it belongs to**, while an identifier the inside world *uses* is scoped by the
+    // tenant that owns it.
     //
-    // Named here rather than excluded by a pattern, so a second such index cannot arrive
-    // quietly by matching a rule somebody loosened.
+    //   * `external_actors_one_tenant_per_user` enforces that one *actor* never spans two
+    //     tenants (D22's "always exactly one tenant, never a set"). Leading it with
+    //     `organization_id` would permit exactly the row it forbids, and
+    //     `app.current_external_tenant()` would then have a set to return.
+    //   * `customer_portal_invites_token_unique` is a secret a customer arrives holding, with
+    //     no tenant in hand to scope it by.
+    //
+    // Named individually rather than excluded by a pattern, so a third cannot arrive quietly
+    // by matching a rule somebody loosened. A new entry here should have to argue for itself.
     expect(rows).toEqual([
+      {
+        table_name: 'customer_portal_invites',
+        index_name: 'customer_portal_invites_token_unique',
+        first: 'token',
+      },
       {
         table_name: 'external_actors',
         index_name: 'external_actors_one_tenant_per_user',

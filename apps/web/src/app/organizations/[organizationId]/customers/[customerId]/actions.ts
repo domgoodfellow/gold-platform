@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
+import { createPortalInvite } from '@/lib/domain/portal/portal';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import { DomainError } from '@/lib/domain/errors';
 
@@ -39,4 +40,32 @@ export async function uploadCustomerDocumentAction(
 
   revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
   return { error: null };
+}
+
+/**
+ * Make a portal link for this customer.
+ *
+ * The token comes back once through the action's own state rather than being written into the
+ * page, because it is a credential the operator is about to send somewhere. It is stored, so a
+ * business that loses it can read it again from its own list — this is a shareable link and
+ * treating it as a password would protect nothing.
+ */
+export async function createPortalInviteAction(
+  _previous: { error: string | null; token: string | null },
+  formData: FormData,
+): Promise<{ error: string | null; token: string | null }> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const customerId = String(formData.get('customerId') ?? '');
+
+  let token: string;
+  try {
+    token = await createPortalInvite(db, { customerId });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message, token: null };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
+  return { error: null, token };
 }

@@ -31,6 +31,28 @@ actions — `invoice.issued` snapshots the number and `payment.recorded` the amo
 because both are terms somebody agreed to rather than vocabulary a tenant can rename.
 
 
+**The customer portal, and D22's prediction holding.** That record said whichever surface went
+first would pay for the model and the other two would inherit it. Booking paid; the portal added
+exactly **one column** — `external_actors.customer_id`, the gap D22 named in advance — and
+changed nothing else about the axis. It is written by one privileged function on presentation of
+a token and by nothing else: no column grant, no update policy, so the attack that removed that
+column from the first draft is still impossible.
+
+**The two surfaces scope differently and that is why the column was needed.** Booking scopes an
+outsider to rows *they made*; a customer of ten years made nothing, because the business did. So
+every external policy now reads "rows I made, or rows about me", with
+`app.current_external_customer()` as the companion to `app.current_external_tenant()` — same
+shape, neither returning a set.
+
+**I19's second shape landed**, exactly as D20 predicted: a customer reading their own document
+through a permission check with no capability to call. The read under the external policy *is*
+the check.
+
+The link is the credential and the page says so. Anyone holding it is that customer — the model
+of a link to a shared document, revocable by the business — because proving control of an email
+address needs a channel, and channels are M5's. The token is stored rather than hashed on
+purpose: a business that lost the link it sent must be able to send the same one again.
+
 **Booking, and the external actor it paid for.** D22 stated four questions and settled none,
 on the grounds that whichever surface went first would pay. Booking went first. An outsider is
 a row binding one `auth.users` id — from anonymous sign-in, so `auth.uid()` is real and I11

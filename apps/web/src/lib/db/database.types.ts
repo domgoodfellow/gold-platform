@@ -135,6 +135,51 @@ export type Database = {
           },
         ]
       }
+      customer_portal_invites: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          id: string
+          organization_id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          id?: string
+          organization_id: string
+          revoked_at?: string | null
+          token: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          id?: string
+          organization_id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_portal_invites_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_portal_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -301,23 +346,33 @@ export type Database = {
       external_actors: {
         Row: {
           created_at: string
+          customer_id: string | null
           id: string
           organization_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          customer_id?: string | null
           id?: string
           organization_id: string
           user_id: string
         }
         Update: {
           created_at?: string
+          customer_id?: string | null
           id?: string
           organization_id?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "external_actors_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "external_actors_organization_id_fkey"
             columns: ["organization_id"]
@@ -1496,6 +1551,7 @@ export type Database = {
         Args: { p_status_id: string; p_work_item_id: string }
         Returns: undefined
       }
+      claim_portal_invite: { Args: { p_token: string }; Returns: string }
       create_asset: {
         Args: {
           p_custom: Json
@@ -1574,6 +1630,7 @@ export type Database = {
         }
         Returns: string
       }
+      create_portal_invite: { Args: { p_customer_id: string }; Returns: string }
       create_price_book_item: {
         Args: {
           p_name: string
