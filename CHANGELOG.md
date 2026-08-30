@@ -5,6 +5,30 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Staff land on the console, and the front door stops pointing into the shell
+
+Two routing facts that were left over from when `/organizations` was the only place to go.
+
+**A staff member signed in and landed on "You do not belong to an organization yet."** True —
+they are members of nothing, which is the axis working — and useless. `/organizations` now
+sends them to `/platform`. It cannot loop with the redirect the other way, because both ask
+`isPlatformStaff` and one answer cannot satisfy both conditions. This is convenience of the
+same kind `proxy.ts` is: delete it and a staff member sees an accurate empty list rather than
+anything they should not.
+
+Worth recording that the boundary was checked rather than assumed, because staff now hold
+`select` on `organizations` and `memberships` with `using (true)`: both `listMyOrganizations`
+and `getOrganization` filter on the caller's own `user_id`, so staff get an empty list and a
+`notFound()` on any tenant route. They cannot wander into a business's shell.
+
+**GOLD's front door said "Organizations" and linked into the operator surface**, which it had
+done since M1 when that was the only other route. It now says what the platform does today and
+offers a sign-in. Deliberately absent: anything about automations, connectors or AI — the
+runtime is M6 and the AI layer is M8, and a front door advertising either would be selling
+what this repository cannot do. Deliberately absent too: prices, for the reason D8 keeps them
+out of `docs/`. A number on a public page is a promise and the first three sales calls will
+move it; the tier *layering* is architecture and is safe to state.
+
 ### The tenant list, and the console it is the whole of
 
 `/platform` renders one row per business: who exists, when they arrived, what they have

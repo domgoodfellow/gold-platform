@@ -4,6 +4,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { AREAS, areaHref } from '@/lib/navigation';
 import { CreateOrganizationForm } from './create-organization-form';
@@ -30,6 +31,18 @@ export default async function OrganizationsPage() {
       redirect('/sign-in');
     }
     throw error;
+  }
+
+  // **Staff belong to no organization, so this page is empty for them and correct for them.**
+  // That is the axis working — `listMyOrganizations` filters on the caller's own membership
+  // rows and they have none — and it is a terrible place to land. Sending them on is
+  // convenience of exactly the kind `proxy.ts` already is: delete this and a staff member sees
+  // an accurate empty list rather than anything they should not.
+  //
+  // It cannot loop with the redirect on `/platform`, which sends a non-staff caller here:
+  // both ask `isPlatformStaff`, and one answer cannot satisfy both conditions.
+  if (await isPlatformStaff(db)) {
+    redirect('/platform');
   }
 
   const organizations = await listMyOrganizations(db);
