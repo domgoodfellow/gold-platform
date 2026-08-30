@@ -5,6 +5,56 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### The tenant list, and the console it is the whole of
+
+`/platform` renders one row per business: who exists, when they arrived, what they have
+switched on, when they last did anything. Those four are M5's own words and they are the
+entire scope — the difference between this and the aggregate layer M7 owns is one `count(*)`
+wide, and what separates them is that this answers *does this tenant exist and is it alive*
+while nothing here answers *how is this tenant doing*.
+
+It reads `platform_tenants`, a view built `security_invoker`. That flag is the whole safety
+argument: a view defaults to running as its owner, which would make it a service-role client
+with extra steps — the thing D14 refuses and D28 refuses again. Running as the caller means
+every policy on `organizations`, `organization_modules` and `events` still applies underneath
+it. Two boundaries, and the test asserts both separately: the grant, which refuses a member
+outright, and the flag, read from `pg_class.reloptions` because nothing about the grant would
+reveal if somebody dropped it and dropping it is one word.
+
+**Each business is rendered in its own zone and its own currency, and nothing is totalled.** A
+console showing every tenant in one timezone would be deciding what Tuesday means for somebody
+in Tokyo (I9); one summing two currencies would be inventing a rate (I10).
+
+`(platform)` is a route group and so a layout boundary, never a security one — the same as
+`(auth)` and `(public)`. The staff check on the page is courtesy, exactly as `proxy.ts` is:
+delete it and a member sees an empty list, which is ugly and still correct.
+
+### Platform staff are a Postgres role
+
+D28's axis, built. `platform_staff` is a Postgres role declared the way `payment_webhook`
+already is, holding `select` on the four tables a console reads and no `insert`, `update` or
+`delete` grant on any table at all. A user listed in the new `platform_staff` table arrives in
+that role through Supabase's custom access token hook, which rewrites the token's `role` claim
+— so identity still reaches Postgres as the caller's own JWT and D17 is applied rather than
+bypassed.
+
+**The invariant is enforced twice and the second half is the one that matters.** No write
+policy names the role, and the role holds no write privilege — so a permissive policy added
+later still hits `permission denied`. The test asserts the message rather than merely a
+failure, because the difference between "a policy declined" and "there is no privilege" is the
+entire guarantee.
+
+Two consequences worth stating rather than discovering. The hook runs for **every** token this
+project issues, so the no-op path is tested explicitly: an ordinary member must still come back
+as `authenticated`, and a regression there would break every suite in the directory. And the
+claim replaces `authenticated` outright, so one human who both runs GOLD and operates a tenant
+needs two sign-ins — which is D28 working as intended, since our people are not in a customer's
+own list of who works there.
+
+Nothing writes `platform_staff` through the application; `infra/supabase/snippets/` holds the
+statement. A screen for it is a *staff write*, which is D28's own trigger to revisit and is not
+spent here.
+
 ### Standing a business up is a domain function
 
 `milestone-m3.test.ts` made its point with a local `configure` helper: one function, a fixed

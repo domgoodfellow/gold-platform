@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { configureBusiness } from '@/lib/domain/onboarding/configure';
+import { isPlatformStaff, listTenants } from '@/lib/domain/platform/tenants';
 
 /**
  * D28's axis: the people who run GOLD rather than a business on it.
@@ -236,5 +237,69 @@ describe('the platform staff axis (D28)', () => {
   it('is invisible to a tenant, who cannot see that the staff list exists', async () => {
     const { error } = await member.db.from('platform_staff').select('user_id');
     expect(error?.message ?? '').toContain('permission denied');
+  });
+
+  it('lists every tenant through the console, in each tenant’s own terms', async () => {
+    const tenants = await listTenants(staff.db);
+
+    const alpha = tenants.find((tenant) => tenant.id === alphaId)!;
+    const beta = tenants.find((tenant) => tenant.id === betaId)!;
+
+    expect(alpha).toBeDefined();
+    expect(beta).toBeDefined();
+
+    // Each business's own zone and currency travel with it. A console that rendered both in
+    // one zone would be deciding what Tuesday means for somebody in Tokyo (I9), and one that
+    // totalled the two currencies would be inventing a rate (I10). It does neither.
+    expect(alpha.currency).toBe('EUR');
+    expect(alpha.timezone).toBe('Europe/Amsterdam');
+    expect(beta.currency).toBe('JPY');
+    expect(beta.timezone).toBe('Asia/Tokyo');
+
+    // What each has switched on, and the fact that something has happened there.
+    expect(alpha.moduleKeys.length).toBeGreaterThan(0);
+    expect(alpha.lastActivityAt).not.toBeNull();
+  });
+
+  it('newest first, so provisioning something puts it at the top', async () => {
+    const tenants = await listTenants(staff.db);
+    const times = tenants.map((tenant) => tenant.createdAt);
+    expect([...times].sort().reverse()).toEqual(times);
+  });
+
+  it('does not let a member reach the console view at all', async () => {
+    // Two boundaries, and this is the outer one: the view is granted to `platform_staff` and
+    // to nobody else, so a member is refused before any policy is consulted.
+    await expect(listTenants(member.db)).rejects.toMatchObject({
+      code: 'platform.tenants_failed',
+    });
+  });
+
+  it('builds that view as security_invoker, so it carries no visibility of its own', async () => {
+    // The inner boundary, and the one worth asserting structurally rather than by behaviour.
+    // A view defaults to running as its *owner*, which would make this a service-role client
+    // with extra steps — exactly what D14 refuses and D28 refuses again. `security_invoker`
+    // makes it execute under the caller's own role, so every policy on `organizations`,
+    // `organization_modules` and `events` still applies underneath it. Nothing about the grant
+    // above would reveal if this flag were dropped, and dropping it is one word.
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    const { rows } = await pg.query<{ reloptions: string[] | null }>(
+      `select c.reloptions
+         from pg_class c
+         join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and c.relname = 'platform_tenants'`,
+    );
+    await pg.end();
+
+    expect(rows[0]?.reloptions ?? []).toContain('security_invoker=true');
+  });
+
+  it('answers the staff question from the database rather than from the session', async () => {
+    // `isPlatformStaff` reads a table only the staff role may read, so the answer is a
+    // policy's answer. A member gets `permission denied`, which is the correct negative rather
+    // than an error worth surfacing — the domain function turns it into `false`.
+    expect(await isPlatformStaff(staff.db)).toBe(true);
+    expect(await isPlatformStaff(member.db)).toBe(false);
   });
 });
