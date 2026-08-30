@@ -42,7 +42,7 @@ An entry nobody could violate is not a constraint. Delete it.
 - **Never create a workspace package with one consumer.** It buys a build step and a
   `dist/` for no isolation. `saas-agent-platform` collapsed `ui`, `shared`, `config`, and
   `assistant-core` for exactly this reason. Code used only by `apps/web` lives in
-  `apps/web/src`.
+  `apps/web`.
 - **Never add a column, table, enum value, or abstraction without a caller in the same
   change.** A field nothing reads is a speculative abstraction that will be maintained,
   migrated, and eventually misinterpreted as meaningful.
@@ -54,7 +54,7 @@ An entry nobody could violate is not a constraint. Delete it.
   caller. A business that might one day want a dashboard is not.
 - **This section's own failure mode, stated so that it stays checkable.** It has removed
   module enablement, dashboard configuration, business rules and terminology overrides — four
-  things, from M3 alone. Three of them return in M4 and M5 with shapes that the removal is
+  things, from M3 alone. Three of them return in M4 and M6 with shapes that the removal is
   what gave them, which is this section working as designed. It is **over-tuned the first
   time something is removed and does not come back**, and the honest response then is to
   weaken these rules rather than defer the same feature a third time. Removals are recorded
@@ -190,9 +190,10 @@ first, and not checked into this tree as frozen source that GOLD imports but nev
 Whether **Pneu3L itself eventually onboards as a GOLD tenant** is a separate question from
 where its code lives, and is deferred to M4. That would be migrating a business, which
 happens through configuration — not migrating a codebase, which is what this decision
-refuses. Until then Pneu3L runs on `tire-app-template`.
+refuses. Until then Pneu3L ran on `tire-app-template`.
 
-**Resolved at M4, and the answer is fresh.** Pneu3L onboards as a GOLD tenant and its rows do
+**Resolved at M4, and the answer is fresh.** Pneu3L is GOLD's first tenant organization — one
+row in `organizations` reached the same way any other business reaches it — and its rows did
 not come with it. The data there is largely mock, and what was worth keeping was never the
 rows: what crosses over is configuration — the service catalogue as price book items, the
 service area, the operating hours, the work item types and their statuses — plus the visual
@@ -218,14 +219,14 @@ that property is what every paragraph below exists to protect.
 
 **Python owns four things, not one.** This record used to say "the intelligence and realtime
 plane", which was too narrow: it made `apps/api/` read as an accessory to be built last, when
-the first of these is needed at M5.
+the first of these is needed at M6.
 
 - **Automation execution** — the scheduled evaluation that asks *what is due, what changed,
-  what crossed a threshold*. First needed, and the reason `apps/api/` arrives at M5 rather
+  what crossed a threshold*. First needed, and the reason `apps/api/` arrives at M6 rather
   than alongside voice.
 - **Webhook ingress** — a vendor calling in with no human session behind it. Stripe at M4 is
   the first, and it is the writer D14 and D17 both name as their trigger to revisit. **This is
-  what brings `apps/api/` forward to M4** rather than M5; see D26, which also records why the
+  what brings `apps/api/` forward to M4** rather than M6; see D26, which also records why the
   handler writes no table of its own.
 - **Intelligence** — embeddings, retrieval, batch analysis, the AI tool loop.
 - **Realtime** — media streams, streaming speech-to-text, the live rebuttal loop. This one
@@ -470,14 +471,14 @@ on working unchanged when `apps/desktop` arrives. `apps/api` is outside the glob
 glob names its members (D3) — stricter than `saas-agent-platform`, whose glob includes
 `services/*` and then relies on `services/api` having no `package.json` for pnpm to skip it.
 
-**Trigger to revisit:** the first genuine second workspace package — M9's `packages/ui`. At
+**Trigger to revisit:** the first genuine second workspace package — M10's `packages/ui`. At
 that point `pnpm -r` rebuilds what did not change, and Turbo's caching starts earning its
 configuration.
 
 ### D14 — Next.js App Router, `@supabase/ssr`, one caller-JWT client per request
 
-Exactly one place constructs a client for a web request — `apps/web/src/lib/db/server.ts` —
-using `createServerClient` with the anon key. `src/proxy.ts` (Next 16's rename of
+Exactly one place constructs a client for a web request — `apps/web/lib/db/server.ts` —
+using `createServerClient` with the anon key. `proxy.ts` (Next 16's rename of
 `middleware`) rotates the refresh token on every request through `lib/db/session.ts`, because
 a Server Component cannot write cookies once the response has begun streaming. `.env.local`
 holds the anon key and nothing else.
@@ -497,7 +498,7 @@ privilege gets a narrow `SECURITY DEFINER` function in a migration — `create_o
 That keeps the privileged surface enumerable in one directory instead of diffuse across the
 application.
 
-**Trigger to revisit:** the first writer with no human caller — M4's Stripe webhook, then M5's
+**Trigger to revisit:** the first writer with no human caller — M4's Stripe webhook, then M6's
 Python plane handling an inbound webhook. That caller gets its own Postgres role and its own
 policies. It does not get service-role.
 
@@ -505,7 +506,7 @@ policies. It does not get service-role.
 
 Migrations are hand-written SQL under `infra/supabase/migrations/`, applied by the Supabase
 CLI, commented for *why*. The TypeScript view of that schema is **generated, not written**:
-`pnpm db:types` writes `apps/web/src/lib/db/database.types.ts` from the live local schema, the
+`pnpm db:types` writes `apps/web/lib/db/database.types.ts` from the live local schema, the
 file is checked in, and `Db` is `SupabaseClient<Database>`.
 
 **Rejected: an ORM.** The load-bearing artifacts here are not tables. They are RLS policies,
@@ -608,7 +609,7 @@ trust, and no second caller needs one.
 an argument to a domain function. A direct PostgREST call is refused exactly as a form is,
 which is what I16 exists to keep true.
 
-**Trigger to revisit:** M5's Python plane needing to write with no human JWT. Per D2 it
+**Trigger to revisit:** M6's Python plane needing to write with no human JWT. Per D2 it
 proposes and TypeScript executes, so this may never arrive — but if it does, it gets its own
 Postgres role and its own policies, not a service-role bypass.
 
@@ -778,6 +779,24 @@ author rather than only a careful one.
 blocks. Its trigger is unchanged, and this slice is evidence toward it rather than a substitute
 for it. `CLAUDE.md`'s layout table lists all four because it describes what
 the directory is *for*, not what is in it.
+
+**Amended again at M5: "marketing" was one word for two surfaces, and only one of them was
+ever blocked.** Everything above defers marketing on the grounds that *every word on a public
+page a business shows the world is a claim that business makes about itself*. That argument is
+about a **tenant's** site and it is correct about one. It says nothing whatever about **GOLD's
+own public site** — the product's front door, its pricing, its contact page — because there the
+business making the claim is GOLD, there is no tenant whose voice could be borrowed, and no
+amount of configuration would make it per-tenant.
+
+The confusion was not hypothetical: `apps/web/app/page.tsx` has rendered GOLD's own words
+since M1 and nobody called it marketing, so the only reading of this record available to the
+next contributor was that the page they were looking at was forbidden. The two now have
+different homes — `(marketing)` is GOLD speaking for itself and `(public)` is a tenant's own
+customers — and `public-profile.test.ts` scans the second and deliberately not the first.
+
+**Unchanged:** the per-tenant marketing surface stays deferred, with the trigger above intact.
+Splitting the word does not unblock it; it stops the block applying to something it never
+governed.
 
 **Trigger to revisit:** a paying tenant needs to take a booking before M3 lands. That is a
 real possibility rather than a hypothetical, and the answer is not to relax this — it is to
@@ -996,7 +1015,7 @@ the object is signed afterwards — the same path a member takes.
 
 **What a link means is stated rather than implied.** Anyone holding it is that customer. That is
 the security model of a link to a shared document, it is the business's to revoke, and it is the
-honest cost of not having a channel to prove control of an address — which is M5's. The token is
+honest cost of not having a channel to prove control of an address — which is M6's. The token is
 stored rather than hashed, deliberately: a business that has lost the link it sent must be able
 to send the same one again, and hashing would only mean issuing a second while protecting
 nothing.
@@ -1025,7 +1044,7 @@ reasoning, cited, never the code, and not all of the reasoning.
   *book this with the least friction*. Those are different enough that one navigation model
   serving both makes both worse.
 - **The information architecture does not change across breakpoints; only its rendering
-  does.** One set of areas — `apps/web/src/lib/navigation.ts` already holds them, and already
+  does.** One set of areas — `apps/web/lib/navigation.ts` already holds them, and already
   asserts that every area has a page and every page an area — with three presentations:
   bottom tab bar on a phone, a rail on a tablet, a persistent sidebar on a desktop. The
   sidebar is the desktop rendering of the IA, never its source.
@@ -1106,13 +1125,13 @@ That milestone adds a host; it does not move `apps/api`.
 
 ### D26 — `apps/api` arrives at M4, and webhook ingress is what brings it
 
-`roadmap.md` said `apps/api/` arrives at M5 for automation execution. D2 said Python owns
+`roadmap.md` said `apps/api/` arrives at M6 for automation execution. D2 said Python owns
 webhook ingress and named Stripe at M4 as the first one. Both could not hold, and M4 could not
 start C3 without settling it. **D2 wins and the roadmap moves: `apps/api/` stands up at M4.**
 
 **What decided it was the layout, not the endpoint.** `docs/starting_conversation.txt` §2 lays
 out `apps/web` and `apps/api` as the two deployables, and D3 already adopts that — "`apps/`
-means a deployable this repository ships". A Next route handler under `apps/web/src/app/api/`
+means a deployable this repository ships". A Next route handler under `apps/web/app/api/`
 would have put a second thing called *api* in the tree, in the app that is explicitly not the
 API, and every future webhook would have had to argue its way out of the same place. The
 directory that already means "the second runtime" is the one a second runtime's work goes in.
@@ -1126,7 +1145,7 @@ repository has said its Python lives.
 **The two Stripe touchpoints split along D2's own line.** Creating a checkout session is an
 operator pressing a button inside a transactional flow, and D2's first sentence gives the
 transactional domain — invoicing included — to TypeScript, so it stays in
-`apps/web/src/lib/adapters/payments/`. Being *called* by Stripe with no session behind it is
+`apps/web/lib/adapters/payments/`. Being *called* by Stripe with no session behind it is
 webhook ingress, and it is `apps/api/app/integrations/stripe/`. **The cost is that the vendor is
 named in two runtimes**, and it is stated here rather than discovered later. What is *not*
 duplicated is the part that would matter: there is exactly one HMAC implementation in this
@@ -1152,7 +1171,7 @@ can never sign in as**, and the timeline reads honestly. Only `id` is required o
 the row costs one insert in a migration. A second shape for I11 would have been a much larger
 decision than it looked, taken to avoid one row.
 
-**Rejected: a Next route handler under `apps/web/src/app/api/`.** Cheaper today, and it puts
+**Rejected: a Next route handler under `apps/web/app/api/`.** Cheaper today, and it puts
 `api` inside `web` — see above.
 
 **Rejected: `apps/api/api/`, and the same reasoning caught it one level down.** Vercel
@@ -1162,10 +1181,10 @@ nests routes under `app/`; the routes are at `apps/api/app/api/` and a three-lin
 configures the default away. A vendor's convention is worth following until it makes the tree
 lie about itself.
 
-**Not a candidate at all: `apps/web/src/hooks/`.** Recorded because the word invites it. A
+**Not a candidate at all: `apps/web/hooks/`.** Recorded because the word invites it. A
 *webhook* is an inbound HTTP request from a vendor; React *hooks* are `useSomething()`
 functions that run inside a component. Next serves routes from `app/` only, so a file under
-`src/hooks/` has no URL — it is not a worse endpoint, it is not an endpoint.
+`hooks/` has no URL — it is not a worse endpoint, it is not an endpoint.
 
 **Rejected: moving the checkout call to Python as well**, so that Stripe is named once. It
 would make an operator's button depend on a second deployment and a contract between them, and
@@ -1175,7 +1194,7 @@ D2 explicitly rejects a full FastAPI domain layer. The duplication that remains 
 **Rejected: service-role for the webhook, "because there is no user".** It is the reflex, it is
 one line, and it turns the one writer with no session into the one writer with no limits.
 
-**What `apps/api` is not, at M4.** Automation execution is still M5 and nothing here
+**What `apps/api` is not, at M4.** Automation execution is still M6 and nothing here
 anticipates it: no scheduler, no `domains/`, no `workers/`. `pnpm-workspace.yaml` still does not
 name it (D3) — pnpm must not manage a Python package. **Its tests do not run in
 `pnpm --filter @gold/web check`**, which is a real gap: that gate is the web app's, and until
@@ -1226,6 +1245,29 @@ authorization function. The source's word is *module* and the sales conversation
 because it has callers today: `navigation.ts` shows every area to every tenant, D21 prices
 partial adoption against a mechanism that does not exist, and `vision.md` bills
 `platform fee + modules + usage` against the same.
+
+**Amended: there is a third object, and leaving it unnamed made the shipped feature inert.**
+This record separated *module* from *engine* and stopped there, which left open what a module
+is separate **from** on the tenant-facing side. M4 answered it wrongly: the first `MODULES`
+list held `work`, `scheduling`, `customers` and `billing` marked `required: true`, every area
+belonged to one of them, and the navigation filter could therefore never remove anything. The
+switch shipped, passed its tests, and changed nothing a business could see.
+
+- **Kernel** — what every tenant has because there is no product without it: work, the
+  schedule, customers, locations, resources, fields, roles, settings. Not sold separately, not
+  switchable, and **not in `MODULES`**. `Area.module` is optional and its absence means this.
+
+A **required module is a contradiction**, because a module is by definition the part a business
+chooses; the phrase is only ever the kernel misfiled. The test for which one a thing is: if no
+business could run here without it, it is kernel, and offering the switch is offering to break
+something. If a real business would decline it — a clinic that services no machines, a firm
+that invoices in Xero — it is a module.
+
+**Consequence:** every entry in `MODULES` can be switched off, so `setModuleEnabled` has no
+refusal left to make. `navigation.test.ts` asserts that at least one area belongs to an
+optional module, which is the claim that would have caught this and which none of its original
+assertions made — they all checked that the two lists agreed, and two lists agree perfectly
+when the filter between them is dead.
 
 ### D27 — A tenant connects their own processor; GOLD never holds their keys and never holds their money
 
@@ -1288,6 +1330,86 @@ authorization flow move. The account types and charge types have been stable for
 what this decision turns on; confirm the current flow against Stripe's documentation rather than
 against this paragraph.
 
+### D28 — Platform staff are a Postgres role, not a membership and not a service key
+
+There is a fourth kind of caller and this repository had no shape for it. Three exist: a
+**member**, scoped by `app.current_tenant_ids()` reading `memberships`; an **external actor**,
+scoped by `app.current_external_tenant()` and bound to exactly one tenant (D22); and a
+**machine writer**, the `payment_webhook` role, which holds no table grant at all and exactly
+one `execute` (D26). Every one of them is scoped *narrowly by construction*. The people who run
+GOLD need the opposite — read across every tenant — and are members of none.
+
+**The staff axis is its own Postgres role with its own policies.** `platform_staff`, declared
+the way `payment_webhook` already is, granted to `authenticator`, with read policies that key
+on the role rather than on membership. This is the shape the *Decided, not yet built* entry
+predicted when it said the console "is an authorization decision before it is a screen".
+
+**It reads. It does not write tenant data.** The invariant lands with the slice, per the rule
+that an invariant with an empty `Enforced by` cell is an intention: a platform-staff path may
+read what it needs and may write nothing that belongs to a tenant. Support that edits a
+customer's row is a different decision with a different audit story, and nobody has asked for
+it.
+
+**Rejected: a service-role client.** It is what most platforms do and D14 already refuses it
+for the general case; the argument is unchanged and gets worse here. A service-role key
+bypasses RLS entirely, so one mistake in one staff route exposes every tenant at once, and the
+blast radius of the console is the whole database rather than the rows it was meant to show.
+
+**Rejected: giving staff a membership in every tenant.** Cheapest by far — it needs no new
+mechanism, because `current_tenant_ids()` would simply return everything. It also writes our
+employees into each customer's own list of who works at their business, makes "who has access
+here" untrue on a screen the customer reads, and puts platform staff inside the same function
+that answers a tenant's authorization questions. A support engineer leaving the company would
+then be a write to every tenant.
+
+**Rejected: a separate reporting service with its own connection.** It is a real option and it
+is bigger than the problem: a second deployable, a second set of credentials and a second copy
+of what a tenant is, to render a list of tenants.
+
+**Naming, which D20 asked someone to settle:** *admin* already means the tenant operator
+surface, so this one is **platform** — `/platform`, `(platform)`, `platform_staff`. The word is
+already how this repository talks about the non-tenant side ("platform noun", "the platform's
+own words").
+
+**Consequence:** the console cannot be built by writing screens first, and M5 exists so it is
+not. **Trigger to revisit:** the first thing platform staff must *write* — a support action, a
+tenant suspended, a module enabled on somebody's behalf. That is a new decision and this record
+does not grant it.
+
+### D29 — A tenant is provisioned, not self-served — until an AI flow does the configuring
+
+`/sign-up` is in `PUBLIC_PATHS`, so any stranger can register and found an organization. That
+was never decided; it is what the first identity slice happened to leave open, and one line in
+`proxy.ts` has been the entire product's onboarding policy ever since.
+
+**GOLD provisions.** When a business is signed, GOLD creates the organization and hands it
+over. That matches what `vision.md` already says the commercial model is — *implementation is a
+real line item, not a loss leader; the discovery-and-configuration step is the product working
+as designed* — and it matches what actually happens on a sales call.
+
+**This is not an alternative to self-serve, and framing it as a fork would be the mistake.**
+Both paths call the same `createOrganization`; there is no second creation path and there must
+never be one. What separates them is who does the configuring, and an empty organization is a
+bad product for a stranger precisely because a new business here is genuinely empty by design —
+no statuses, no types, no hours, because the platform inventing them is what this file forbids.
+**Guided self-serve is therefore blocked on the AI onboarding flow**, which is already M8's
+second criterion: describe a business in prose, receive a proposed configuration, a human
+reviews and applies it. Until something can fill the emptiness, handing it to a stranger ships
+the emptiness.
+
+**Rejected: leaving signup open because closing it is trivial.** It is trivial, which is why
+leaving it open by accident is embarrassing rather than expensive — but a stranger founding a
+tenant on a production deployment is a row in `organizations` we did not agree to hold, and D4
+sells a *Private* deployment tier on exactly the claim that we know whose data is where.
+
+**Rejected: an invitation code.** A shared secret is one forward from being no secret, and it
+would be a third onboarding path to maintain for a volume of tenants that is currently small
+enough to name individually.
+
+**Consequence:** M5 closes the public signup and gives GOLD a way to create a tenant and its
+first membership. **Trigger to revisit:** M8's onboarding criterion landing — at which point
+self-serve is a product decision about pricing and support, not an architectural one.
+
 ## Decided, not yet built
 
 Named so they are not reinvented, and deliberately unbuilt until they have a consumer.
@@ -1296,7 +1418,7 @@ Named so they are not reinvented, and deliberately unbuilt until they have a con
 - **Recurring work generation** — the trigger model it was waiting on now exists.
   `Mechanic_Maintenance` ships it: an append-only `HourReading` log, an interval and a
   `nextDueHours` on each task, and an index on `(active, nextDueHours)` that is the whole
-  "what is due" query. It is worth naming because it is a **third trigger shape**, and M5 is
+  "what is due" query. It is worth naming because it is a **third trigger shape**, and M6 is
   designed around the other two. A schedule fires at a time; weather fires on an external
   event; this fires when *an accumulated counter a human or a sensor advances crosses a
   threshold*. A when/if/then runtime built for events does not express that naturally, and
@@ -1305,16 +1427,10 @@ Named so they are not reinvented, and deliberately unbuilt until they have a con
   provably saved; requires travel cost modelling that does not exist.
 - **Terminology overrides** per tenant — a display-layer concern that needs a second vertical
   before its shape is knowable.
-- **A platform staff console** — one surface spanning every tenant, for the people who run
-  GOLD rather than a business on it: which tenants exist, what they are using, what is
-  failing. `my-builder`'s `app/dashboard/*` is the reference shape. It is deferred because it
-  is an **authorization decision before it is a screen**: `app.current_tenant_ids()`
-  deliberately answers "which tenants is this caller in", and staff are in none of them. D14
-  rejects a service-role client outright, so this needs its own Postgres role with its own
-  policies — the same shape D14's trigger-to-revisit anticipates for a writer with no human
-  caller. Building the screens first would mean discovering that model while laying out a
-  table. Note also that **"admin" already means the tenant operator surface here** (D20); this
-  one needs a different word before it needs a route.
+- **A platform staff console** — **promoted out of this list. See D28 and `roadmap.md` M5.**
+  The entry said it was "an authorization decision before it is a screen" and that it needed
+  its own Postgres role and a word other than *admin*; D28 makes all three of those decisions
+  and M5 is where it is built. `my-builder`'s `app/dashboard/*` remains the reference shape.
 - **Business templates** — a named, cloneable bundle of modules, statuses, fields, and roles,
   so onboarding a field-service business starts from `Field Service` rather than from zero.
   `docs/starting_conversation.txt` calls this the thing that turns four apps into a product,

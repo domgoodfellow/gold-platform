@@ -13,6 +13,7 @@ instead of pointing at it, the set has begun to rot.
 | [docs/constraints.md](docs/constraints.md) | Before any structural change — includes decisions already taken |
 | [docs/domain-model.md](docs/domain-model.md) | You are touching business logic, schema, or auth |
 | [docs/roadmap.md](docs/roadmap.md) | You are deciding whether something belongs now |
+| [docs/walkthrough.md](docs/walkthrough.md) | You need to drive the running application by hand — and for the list of capabilities no screen reaches |
 
 **Status is not tracked in markdown.** Milestone criteria are in `docs/roadmap.md`; task
 state lives on the issue board; shipped work goes in `CHANGELOG.md` on merge. Do not add
@@ -20,8 +21,8 @@ checklists to documents.
 
 ## Current state
 
-**M1's, M2's and M3's acceptance criteria are met**, each demonstrated by one test rather
-than by a table count.
+**M1's, M2's, M3's and M4's acceptance criteria are met**, each demonstrated by one test
+rather than by a table count.
 
 `apps/web/tests/milestone-m1.test.ts` builds two whole businesses from byte-identical input
 in one database and asserts that neither can observe or block the other.
@@ -37,8 +38,16 @@ number, status, field, currency or timezone — an equipment hire yard in Amster
 euro, a clinic in Tokyo trading in yen — through **one** `configure` function containing no
 branch on which of them it is holding. The structure is the milestone and the assertions
 inside it are secondary: had either shape needed a special case, that function could not
-exist. The three invert each other deliberately — M1 runs byte-identical input, M2 runs
-identical input twice, M3 runs maximally different input through identical code.
+exist.
+
+`apps/web/tests/milestone-m4.test.ts` runs one business from a stranger's booking to a settled
+invoice — found, read, booked, scheduled, worked, quoted, invoiced and paid — asserting at every
+step, including the ones where they successfully wrote, that `app.current_tenant_ids()` is empty
+for that stranger. It touches no SQL either.
+
+The four invert each other deliberately — M1 runs byte-identical input, M2 runs identical input
+twice, M3 runs maximally different input through identical code, and M4 runs half of itself as
+somebody who is a member of nothing.
 
 The kernel is `organizations`, `memberships`, `events`, `customers`, `roles`,
 `field_definitions`, `locations`, `customer_locations`, `resources`, `assets`, `documents`,
@@ -105,9 +114,9 @@ Four things about the configuration engine are load-bearing in the same way:
   as `app.check_custom_fields` refusing an unrelated write to a row that was valid when it was
   made.
 
-Two about the interface, which M3 owns and M4 extends:
+Four about the interface, which M3 owns and M4 extends:
 
-- **Every platform noun lives in `apps/web/src/lib/navigation.ts`**, and one string serves as
+- **Every platform noun lives in `apps/web/lib/navigation.ts`**, and one string serves as
   both the navigation entry and the page's `<h1>`, so no *area* page writes a heading of its
   own. A detail route (`/work/{id}`, `/customers/{id}`) does, because its heading is the job's
   title or the customer's name rather than a platform noun — which is why `currentSegment` and
@@ -125,6 +134,27 @@ Two about the interface, which M3 owns and M4 extends:
   navigations without re-rendering it — a page leaning on its parent would be trusting a cache.
   A layout is no more the boundary than a redirect is (I12). Nothing in the navigation is
   capability-gated: each screen shows itself and explains what a role cannot do.
+- **The kernel is not a module, and `MODULES` must never list one that cannot be switched
+  off.** `Area.module` is optional; absent means kernel — work, the schedule, customers,
+  locations, resources, fields, roles and settings, which no business chose and none can
+  decline. What is a module is what a business can genuinely refuse: `billing`, `assets`,
+  `booking`, `portal`, `card_payments`. A `required: true` module is the kernel misfiled, and
+  it is not a naming quibble: the first version of this list marked four that way, every area
+  belonged to one of them, and module enablement shipped unable to change a single line of
+  navigation. `navigation.test.ts` now fails if no area belongs to an optional module —
+  every assertion it had before checked that two lists agreed, and two lists agree perfectly
+  when the filter between them is dead. `constraints.md` D25 carries the full record.
+- **A module that hides an area must hide what that area does elsewhere.** Switching `billing`
+  off removes Pricing *and* the quote, invoice and margin sections from every job screen.
+  Hiding the area alone would be half a switch, which is the failure the booking module
+  already shipped once and `20260829000010` fixed in the database.
+
+**Three domain capabilities have no route, and one of them matters.** `setTypeBookable`,
+`revokePortalInvite` and `assignRole` are tested and reachable from nothing on screen. The
+first means *publishing to the public booking page* is currently something only somebody with
+database access can do — against a milestone whose criterion is that nobody at the business has
+been given any. `docs/walkthrough.md` names all three where an operator would hit them and
+`docs/roadmap.md` M4 records the debt; do not add a fourth without noticing.
 
 **Cancellation was the first place "configuration is enough" was checked and found short.**
 `roadmap.md` recorded that cancelling needed no new code — a status the tenant configures and a
@@ -209,20 +239,30 @@ exist; the rest does not.
 
 ```text
 apps/
-  web/              Next.js — admin, booking and the customer portal; marketing is what the
-                    directory is FOR, not what is in it (D20)
-    src/app/        routes; components with one caller sit beside their route
-    src/features/   UI a second *surface* needs — see its README. Empty until that happens.
-    src/components/ shared controls, extracted at the third caller (D23)
-    src/lib/domain/ the business rules. Nothing in features/ or app/ decides anything.
-    src/lib/adapters/ vendors. Domain code imports the capability, never the implementation.
+  web/              Next.js — every surface a browser reaches, grouped by whose it is (D20)
+    app/            routes; components with one caller sit beside their route
+      (marketing)/  GOLD's own site. GOLD's voice — NOT the per-tenant marketing surface,
+                    which D20 still defers. The two shared one word until M5.
+      (auth)/       sign in, sign up. The one group with a layout — both pages shared it.
+      (public)/     book/{slug} and portal/{token}: a tenant's own customers, a tenant's own
+                    words. `public-profile.test.ts` scans these and no platform sentence
+                    may appear in them.
+      organizations/ the operator shell. Deliberately UNGROUPED: `navigation.test.ts` scans
+                    `[organizationId]/` for areas, and a group folder inside it would hide
+                    its children from that scan.
+    features/       UI a second *surface* needs — see its README. Empty until that happens.
+    components/     shared controls, extracted at the third caller (D23)
+    lib/domain/     the business rules. Nothing in features/ or app/ decides anything.
+    lib/adapters/   vendors. Domain code imports the capability, never the implementation.
+    proxy.ts        Next 16's middleware. Refreshes the session; not the auth boundary (I12).
+    tests/          the suites. They run against a real Postgres — see Commands.
   api/              Python. Webhook ingress today (M4, D26); automation, intelligence and
                     realtime later. Deploys to Vercel as serverless functions (D24)
     app/core/       configuration and the database handle
     app/integrations/ the only place this repo's Python names a vendor
     app/api/        the HTTP entrypoints — one file, one route. NOT `apps/api/api/`:
                     `vercel.json` configures the vendor's default away (see its README)
-  desktop/          Electron shell (M9; not before)
+  desktop/          Electron shell (M10; not before)
 packages/           Empty until a package has two consumers. See constraints.md.
 infra/
   supabase/         migrations, policies, seed
@@ -230,15 +270,20 @@ docs/
 .claude/commands/   The reusable prompts
 ```
 
-**`apps/api` exists as of M4, and it holds one endpoint.** D26 brought it forward from M5:
+**`apps/api` exists as of M4, and it holds one endpoint.** D26 brought it forward from M6:
 Stripe calls in with no human session, D2 gives webhook ingress to Python, and the alternative
-was a route under `apps/web/src/app/api/` — a second thing called *api*, inside the app that is
+was a route under `apps/web/app/api/` — a second thing called *api*, inside the app that is
 not the API. **There is no `api/` directory under `apps/web` and none may be added.** Nothing
-there anticipates M5: no scheduler, no `domains/`, no `workers/`. Its tests are
+there anticipates M6: no scheduler, no `domains/`, no `workers/`. Its tests are
 `python -m pytest apps/api/tests`, and **they are not in the check gate** — a real gap, named
 in `apps/api/README.md` so nobody finds it by shipping through it.
 
-Two layout rules carry reasoning that is easy to lose:
+**A route group is a layout boundary and never a security boundary.** Nothing is protected by
+living in `(auth)` or reachable by living outside it — `proxy.ts` decides what an anonymous
+caller may open, by path, and a group does not change a path. `(platform)` does not exist yet
+and lands with M5, because the staff console is a Postgres role before it is a directory (D28).
+
+Four layout rules carry reasoning that is easy to lose:
 
 - **`apps/` means "a deployable this repository ships."** `apps/web`, `apps/api` and
   eventually `apps/desktop` are all that, which is the layout
@@ -247,6 +292,12 @@ Two layout rules carry reasoning that is easy to lose:
   trade is that a new workspace package must add itself to that file by name (D3).
 - **`packages/` stays empty until something has two consumers.** A workspace package with
   one consumer buys a build step and a `dist/` for no isolation.
+- **There is no `src/` under `apps/web`, and none may be re-added.** `app/`, `components/`,
+  `features/`, `lib/`, `proxy.ts` and `tests/` sit directly under it, which is the layout
+  `docs/starting_conversation.txt` draws. Next supports both and `create-next-app` scaffolded
+  the other one; a directory that contains everything except `tests/` distinguishes nothing,
+  and `apps/web` is already the boundary `src/` was nesting inside. `@/*` resolves to
+  `apps/web/*` in `tsconfig.json` and `vitest.config.mts` — two files, and they must agree.
 
 ## Commands
 
@@ -260,7 +311,7 @@ summarise one.
 | `pnpm --filter @gold/web dev` | Next.js dev server on :3000 |
 | `pnpm db:start` | Local Supabase (needs Docker). Prints the keys; they belong in `infra/.env.test`, which is gitignored. |
 | `pnpm db:reset` | Re-apply every migration from scratch against the local stack |
-| `pnpm db:types` | Regenerate `apps/web/src/lib/db/database.types.ts` from the local schema. The file is checked in; a stale one fails the gate (D15). |
+| `pnpm db:types` | Regenerate `apps/web/lib/db/database.types.ts` from the local schema. The file is checked in; a stale one fails the gate (D15). |
 | `pnpm db:push` | Apply migrations to the linked remote project |
 
 `apps/web` needs `.env.local`; copy `apps/web/.env.example` and fill it from what

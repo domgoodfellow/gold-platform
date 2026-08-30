@@ -32,7 +32,7 @@ import { createWorkItem } from '@/lib/domain/work-items/work-items';
  * that widening it did not widen anything else.
  *
  * **The link is the credential, and that is said out loud.** Anyone holding it is that
- * customer. Proving control of an email address needs a channel, and channels are M5's.
+ * customer. Proving control of an email address needs a channel, and channels are M6's.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';

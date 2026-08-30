@@ -5,7 +5,7 @@ invariants that must hold. If the code and this document disagree, one of them i
 decide which, then fix it. Do not resolve the contradiction by softening the wording here
 until it stops saying anything.
 
-Everything described here lives under `apps/web/src/lib/domain/`. Routes, components, server
+Everything described here lives under `apps/web/lib/domain/`. Routes, components, server
 actions, and AI tools are thin callers.
 
 ## Invariants

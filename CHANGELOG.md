@@ -5,7 +5,74 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
-### M4 — vertical one: Pneu3L
+### `apps/web/src/` is gone
+
+`app/`, `components/`, `features/`, `lib/`, `proxy.ts` and `tests/` sit directly under
+`apps/web`, which is the layout `docs/starting_conversation.txt` draws and the one this
+repository described everywhere except in the tree. Next supports both and `create-next-app`
+scaffolded the other; nothing ever decided it. A `src/` that contains everything except
+`tests/` distinguishes nothing, and `apps/web` was already the boundary it was nesting inside.
+
+`@/*` now resolves to `apps/web/*` in **two** files that must agree — `tsconfig.json` and
+`vitest.config.mts` — and the handful of places that named a path as a string rather than
+importing it moved with the tree: `navigation.test.ts` scanning the route directory,
+`schema-conformance.test.ts` reading the generated types, `public-profile.test.ts` scanning the
+public routes' source, and `db:types` in the root `package.json`. One `src/` reference in
+`constraints.md` D16 is deliberately untouched — it quotes `tire-app-template`'s own test
+imports, and that is a different repository's layout.
+
+### The kernel is not a module, and the platform side becomes M5
+
+**Module enablement shipped in M4 unable to change anything, and the cause was one word.**
+`MODULES` listed `work`, `scheduling`, `customers` and `billing` marked `required: true`. Every
+area in `AREAS` belonged to one of those four, so the filter `areasIn` applies could never
+remove an entry — the switch existed, was tested, and moved nothing an operator could see. A
+required module is a contradiction in terms: a module is by definition the part a business
+*chooses*, so the phrase is only ever the kernel misfiled. `constraints.md` D25 gains the third
+word it was missing — it had separated *module* from *engine* and left open what a module is
+separate **from**, and the answer is the kernel, which is neither.
+
+What a business always has is now simply not in the list. What remains is what a business can
+genuinely decline: `billing`, `assets`, `booking`, `portal`, `card_payments`. `Area.module` is
+optional and absent means kernel; `setModuleEnabled` has no refusal left to make; a founding
+business starts on billing alone, and `assets` is backfilled for every existing organization
+because taking a live tenant's screen away would be this migration deciding something about
+them. **Switching billing off takes Pricing out of the navigation *and* the quote, invoice and
+margin off every job screen** — hiding the area alone would be half a switch, which is the
+failure the booking module already shipped once.
+
+**The test that should have caught it did not, and the reason generalises.** Every assertion in
+`navigation.test.ts` checked that `MODULES` and `AREAS` agreed with each other, and two lists
+agree perfectly when the filter between them is dead. It now fails if no area belongs to an
+optional module — a claim about the feature doing something rather than about the lists
+matching.
+
+**Route groups, and a word D20 had been using for two surfaces.** `apps/web/app` now
+separates `(marketing)` — GOLD's own site, GOLD's voice — from `(public)`, which is a tenant's
+own customers and is what `public-profile.test.ts` scans. D20 defers marketing because *every
+word on a public page a business shows the world is a claim that business makes about itself*,
+which is true of a tenant's site and was never true of ours; `app/page.tsx` had been rendering
+GOLD's own words since M1 with nobody calling it marketing, so the only available reading of
+that record was that the page in front of you was forbidden. The per-tenant marketing surface
+stays deferred with its trigger intact. `(auth)` is the one group that earned a layout — both
+credential pages carried an identical centred `<main>`. `organizations/` is deliberately
+ungrouped, because `navigation.test.ts` scans that directory and a group folder would hide its
+children.
+
+**M5 through M9 shift up one, and the platform side takes M5.** Everything built so far was
+built for a tenant; the people who run GOLD have no surface and watch their own tenants in the
+database vendor's dashboard. **D28** decides that the staff axis is a Postgres role —
+`platform_staff` alongside `payment_webhook` — rejecting a service-role client (D14 already
+refuses it, and one mistake would expose every tenant) and rejecting a membership in every
+tenant (which writes our employees into each customer's own list of who works there). It also
+settles the word D20 asked someone to settle: *admin* is taken, so this is *platform*.
+**D29** decides that a tenant is provisioned rather than self-served: `/sign-up` being open was
+never a decision, only what the first identity slice left in `PUBLIC_PATHS`. Guided self-serve
+is not the alternative — it is M8's onboarding criterion, calling the same
+`createOrganization`, and it is blocked until something can fill the emptiness a new business
+starts with, because that emptiness is deliberate.
+
+### M4 — vertical one: a real business runs on the platform
 
 **M4 is met.** `milestone-m4.test.ts` runs one business end to end — a stranger with no account
 finds it by the name it chose, reads what it offers, takes a slot, and the operator schedules
@@ -18,7 +85,7 @@ somebody who is a member of nothing. It touches no SQL, because "nobody has ever
 database credentials" is a claim about the path.
 
 **`apps/api` exists, and Stripe is what brought it forward.** D2 gives webhook ingress to
-Python and the roadmap put `apps/api/` at M5; both could not hold. D26 settles it in favour of
+Python and the roadmap put `apps/api/` at M6; both could not hold. D26 settles it in favour of
 D2 and the layout: a Next route would have put a second thing called *api* inside the app that
 is not the API. What landed is one endpoint, no scheduler and no `domains/`. The two Stripe
 touchpoints split along D2's own line — creating a checkout session is a transactional flow and
@@ -129,7 +196,7 @@ the check.
 
 The link is the credential and the page says so. Anyone holding it is that customer — the model
 of a link to a shared document, revocable by the business — because proving control of an email
-address needs a channel, and channels are M5's. The token is stored rather than hashed on
+address needs a channel, and channels are M6's. The token is stored rather than hashed on
 purpose: a business that lost the link it sent must be able to send the same one again.
 
 **Booking, and the external actor it paid for.** D22 stated four questions and settled none,
@@ -167,7 +234,7 @@ the same reading of silence that operating hours and the buffer take. The assert
 matters reads the public routes' own source and fails on a hardcoded sentence, so the rule
 survives a careless author.
 
-It is also the first inhabitant of `apps/web/src/features/` — UI that two *surfaces* need, admin
+It is also the first inhabitant of `apps/web/features/` — UI that two *surfaces* need, admin
 editing what booking renders. Route-owned components stay beside their route; a feature moves
 when it has a second surface, which is the bar `constraints.md` sets for extracting a function,
 applied to a directory.
@@ -270,6 +337,18 @@ where it stops, so nobody enforces it here and silently unfixes cancellation.
 I5 and I7 moved together, which is the property that keeps I5 honest: `listSchedule`'s filters
 are the constraint's partial predicate written as a query. One test reads a window as free and
 then commits against it, which is both halves of that agreement in one assertion.
+
+**`docs/walkthrough.md`, and the three capabilities it found with no operator path.** Writing
+down how to reach each milestone's claim with a mouse is what surfaced them: `setTypeBookable`,
+`revokePortalInvite` and `assignRole` are tested, work, and are reachable from no screen. The
+first is the one that bites — a business cannot publish itself to the booking page without
+somebody opening the database, against a criterion that says nobody has to. Recorded in
+`roadmap.md` M4 as a debt rather than closed quietly, with
+`infra/supabase/snippets/publish-bookable-type.sql` making the flow walkable locally and saying
+in its own header that it is evidence of the gap and not a fix for it. The same pass found that
+module enablement cannot currently change the navigation, because every area belongs to a
+required module — the mechanism is right and the case the milestone gave as its caller is not
+yet expressible.
 
 
 ### M3 — the configuration engine
@@ -470,7 +549,7 @@ no test had one tenant's unassigned booking meet another's — is now closed.
 
 **I5 and I6 are enforced.**
 
-- `apps/web/src/lib/domain/scheduling/availability.ts` and the schedule screen.
+- `apps/web/lib/domain/scheduling/availability.ts` and the schedule screen.
 - **I5 is not provable by counting functions.** What makes one calculation hold is that it
   and the constraint agree, so nothing has a reason to grow a second opinion — asserted in
   both directions: a window it calls free can be committed, one it does not cannot.
@@ -940,7 +1019,7 @@ M0's acceptance criterion is met. `/scope` was run against the tenancy kernel ta
 returned five invariants and five decision records with nothing supplied by the operator.
 Its one finding is now D18.
 
-- `pnpm db:types` generates `apps/web/src/lib/db/database.types.ts` from the local schema,
+- `pnpm db:types` generates `apps/web/lib/db/database.types.ts` from the local schema,
   and the file is checked in. `Db` is `SupabaseClient<Database>` rather than an untyped
   client, which deleted a dozen casts of the form `row.id as string` and
   `row.email as string | null` — each one a column type hand-copied out of a migration, and
@@ -1032,7 +1111,7 @@ and `events` merely reference it.
 
 Makes the platform reachable by a person rather than only by its tests.
 
-- `apps/web/src/proxy.ts` and `lib/db/session.ts` — session refresh on every
+- `apps/web/proxy.ts` and `lib/db/session.ts` — session refresh on every
   request, plus a redirect for anonymous callers. The redirect is convenience: the
   server-side guard and RLS remain the authorization boundary, and the redirect target is a
   fixed literal because a `?next=` parameter would be an open redirector.
@@ -1062,7 +1141,7 @@ The first vertical slice: schema, domain, route, UI, guard, test.
   `memberships`, and the append-only `events` table; RLS enabled and forced on all three;
   `app.current_tenant_ids()` as the single tenant resolution point; `public.create_organization`
   as the narrow privileged bootstrap.
-- `apps/web/src/lib/domain/tenancy/` — `listMyOrganizations`, `createOrganization`,
+- `apps/web/lib/domain/tenancy/` — `listMyOrganizations`, `createOrganization`,
   `requireActor`. The route, the server action, and the form are callers and decide nothing.
 - `apps/web/tests/tenancy.test.ts` — two organizations with identical names in one database,
   under two genuinely signed-in users. Verified non-vacuous: three organizations exist while

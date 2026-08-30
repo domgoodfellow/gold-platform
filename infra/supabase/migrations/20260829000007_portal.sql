@@ -10,7 +10,7 @@
 -- nothing on those rows carrying their identity. What binds them is a link the business sent.
 --
 -- **Why a link and not an email sign-in.** Proving control of an address means sending to it,
--- and channels are M5's. A business already has a way to reach its customers; this gives it a
+-- and channels are M6's. A business already has a way to reach its customers; this gives it a
 -- URL to put in whatever it already uses. The consequence is stated rather than hidden: anyone
 -- holding the link is the customer, which is the same security model as a link to a shared
 -- document, and it is the business's to revoke.

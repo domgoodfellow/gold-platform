@@ -130,11 +130,16 @@ describe('what a business has switched on', () => {
     shop = await newBusiness('mod');
   });
 
-  it('starts a new business on the operational core and nothing that publishes', async () => {
+  it('starts a new business on billing and nothing that publishes', async () => {
     const enabled = await listEnabledModules(shop.db, { organizationId: shop.organizationId });
 
-    expect([...enabled].sort()).toEqual(['billing', 'customers', 'scheduling', 'work']);
-    // Publishing a page to the internet is not a default anybody should acquire by signing up.
+    // **`work`, `scheduling` and `customers` are deliberately absent, and their absence is the
+    // point.** They were listed here as required modules, which was the kernel misfiled — see
+    // `navigation.ts`. A business always has them and never switched them on.
+    expect([...enabled].sort()).toEqual(['billing']);
+    // Publishing a page to the internet is not a default anybody should acquire by signing up,
+    // and neither is a module for machines a business may not have.
+    expect(enabled.has('assets')).toBe(false);
     expect(enabled.has('booking')).toBe(false);
     expect(enabled.has('portal')).toBe(false);
     expect(enabled.has('card_payments')).toBe(false);
@@ -225,16 +230,34 @@ describe('what a business has switched on', () => {
     expect((types ?? []).length).toBeGreaterThan(0);
   });
 
-  it('refuses to switch off the operational core', async () => {
-    // Not every module is optional, and a disabled control would say "you could do this if
-    // something changed". There is nothing a business could change.
+  it('lets a business switch off everything it was offered', async () => {
+    // **This test used to assert the opposite**, that `work` could not be switched off. That
+    // was the kernel misfiled as a required module, and the refusal was the platform declining
+    // to break something it should never have offered in the first place. The kernel is no
+    // longer in `MODULES`, so `work` is not a module and there is nothing left that a business
+    // is shown and cannot decline.
     await expect(
       setModuleEnabled(shop.db, {
         organizationId: shop.organizationId,
         key: 'work',
         enabled: false,
       }),
-    ).rejects.toThrow(/cannot be switched off/i);
+    ).rejects.toThrow(/no such module/i);
+
+    await setModuleEnabled(shop.db, {
+      organizationId: shop.organizationId,
+      key: 'billing',
+      enabled: false,
+    });
+    const enabled = await listEnabledModules(shop.db, { organizationId: shop.organizationId });
+    expect(enabled.has('billing')).toBe(false);
+
+    // Put it back: later assertions in this file read what this business has on.
+    await setModuleEnabled(shop.db, {
+      organizationId: shop.organizationId,
+      key: 'billing',
+      enabled: true,
+    });
   });
 
   it('refuses a module this platform does not have', async () => {
@@ -264,7 +287,7 @@ describe('what a business has switched on', () => {
       const enabled = await listEnabledModules(shop.db, {
         organizationId: shop.organizationId,
       });
-      expect(enabled.has('work')).toBe(true);
+      expect(enabled.has('billing')).toBe(true);
 
       await expect(
         setModuleEnabled(shop.db, {

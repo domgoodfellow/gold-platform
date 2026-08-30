@@ -207,9 +207,12 @@ describe('what a business says about itself', () => {
     const withoutComments = (source: string) =>
       source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
+    // Under `(public)` since the route groups landed. That group is a tenant's own customers;
+    // `(marketing)` is GOLD speaking for itself and is deliberately not scanned here — see
+    // that page, and D20, which had been using one word for both.
     const routes = [
-      'src/app/book/[slug]/page.tsx',
-      'src/app/book/[slug]/[workItemId]/page.tsx',
+      'app/(public)/book/[slug]/page.tsx',
+      'app/(public)/book/[slug]/[workItemId]/page.tsx',
     ].map((path) =>
       withoutComments(readFileSync(fileURLToPath(new URL(`../${path}`, import.meta.url)), 'utf8')),
     );

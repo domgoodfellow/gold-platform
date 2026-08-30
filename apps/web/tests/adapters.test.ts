@@ -18,7 +18,8 @@ import { describe, expect, it } from 'vitest';
  * import boundary, and the absence of the word.
  */
 
-const SRC = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+// `apps/web` itself, since there is no `src/` for it to nest inside — see CLAUDE.md's layout.
+const SRC = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const CONNECTION =
   process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 

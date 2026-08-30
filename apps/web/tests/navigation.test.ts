@@ -22,7 +22,7 @@ import {
  * linking to a list.
  */
 
-const ROUTES = fileURLToPath(new URL('../src/app/organizations/[organizationId]', import.meta.url));
+const ROUTES = fileURLToPath(new URL('../app/organizations/[organizationId]', import.meta.url));
 
 /** Direct child route directories that render a page — the areas of one business. */
 function routeSegmentsOnDisk(): string[] {
@@ -121,36 +121,60 @@ describe('modules', () => {
     // A module owning neither an area nor a named surface outside the shell is a line on an
     // invoice with no product behind it. Booking, the portal and card payments own no sidebar
     // entry and are not orphans — they are the reason `outside` exists.
-    const owned = new Set(AREAS.map((area) => area.module));
+    const owned = new Set(AREAS.flatMap((area) => (area.module ? [area.module] : [])));
     const orphans = MODULES.filter((module) => !owned.has(module.key) && !('outside' in module));
     expect(orphans.map((module) => module.key)).toEqual([]);
   });
 
-  it('has every area owned by a module that exists', () => {
-    const keys = new Set(MODULES.map((module) => module.key));
-    const unowned = AREAS.filter((area) => !keys.has(area.module));
-    expect(unowned.map((area) => area.segment)).toEqual([]);
+  it('names only modules that exist', () => {
+    // The other direction. An area may name no module at all — that is the kernel — but an
+    // area naming a key nobody sells is an entry that disappears for every business.
+    const keys = new Set<string>(MODULES.map((module) => module.key));
+    const dangling = AREAS.filter((area) => area.module && !keys.has(area.module));
+    expect(dangling.map((area) => area.segment)).toEqual([]);
+  });
+
+  it('can actually hide something', () => {
+    // **The regression this file exists for now.** The first version of `MODULES` listed the
+    // kernel as four modules marked required, so every area belonged to one of them and the
+    // filter below could never remove an entry — module enablement shipped inert and no test
+    // noticed, because every assertion was about the two lists agreeing rather than about the
+    // feature doing anything. An area owned by an optional module is what makes the switch
+    // real, and `roadmap.md` M4 named the caller: an operator who does not want Assets.
+    const optional = AREAS.filter((area) => area.module);
+    expect(optional.length).toBeGreaterThan(0);
+
+    const withNothingOn = [...areasIn('operational', new Set()), ...areasIn('configuration', new Set())];
+    expect(withNothingOn.length).toBeLessThan(AREAS.length);
   });
 
   it('keeps a business inside its own settings whatever it switches off', () => {
     // Settings is where the switches are. A module that could hide its own switch would be a
-    // business locked out of its account with no way back.
+    // business locked out of its account with no way back, so it belongs to the kernel and
+    // names no module at all.
     const settings = AREAS.find((area) => area.segment === 'settings')!;
-    const owner = MODULES.find((module) => module.key === settings.module)!;
-    expect('required' in owner).toBe(true);
+    expect(settings.module).toBeUndefined();
   });
 
-  it('shows only what a business has switched on', () => {
-    const core = new Set(['work']);
-    const shown = [...areasIn('operational', core), ...areasIn('configuration', core)];
+  it('shows the kernel to a business that has switched everything off', () => {
+    const shown = [...areasIn('operational', new Set()), ...areasIn('configuration', new Set())];
 
-    // Scheduling, Customers and Billing are off in this business, so their areas are absent —
-    // which is *not* the capability gating I12 forbids. A role that cannot configure fields
-    // still sees Custom fields and is told why; a module the business never bought is not
-    // part of that business at all.
-    expect(shown.every((area) => area.module === 'work')).toBe(true);
-    expect(shown.map((area) => area.segment)).toContain('settings');
-    expect(shown.map((area) => area.segment)).not.toContain('schedule');
+    // Nothing enabled, and the business still has work, a schedule, customers and a way back
+    // into its own settings — because none of those was ever sold to it separately.
+    expect(shown.every((area) => area.module === undefined)).toBe(true);
+    for (const segment of ['today', 'work', 'schedule', 'customers', 'settings']) {
+      expect(shown.map((area) => area.segment)).toContain(segment);
+    }
+    // And the two that are modules are gone. This is *not* the capability gating I12 forbids:
+    // a role that cannot configure fields still sees Custom fields and is told why, whereas a
+    // module the business never bought is not part of that business at all.
+    expect(shown.map((area) => area.segment)).not.toContain('pricing');
+    expect(shown.map((area) => area.segment)).not.toContain('assets');
+  });
+
+  it('shows an area once its module is on', () => {
+    const shown = areasIn('configuration', new Set(['billing']));
+    expect(shown.map((area) => area.segment)).toContain('pricing');
 
     // And with nothing passed, everything: a caller with no business in hand means all of it.
     expect(areasIn('operational').length + areasIn('configuration').length).toBe(AREAS.length);

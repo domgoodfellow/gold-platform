@@ -160,7 +160,7 @@ describe('schema conformance', () => {
     // and it fails by naming the table or column that drifted, which is the instruction to
     // run `pnpm db:types`.
     const source = await readFile(
-      new URL('../src/lib/db/database.types.ts', import.meta.url),
+      new URL('../lib/db/database.types.ts', import.meta.url),
       'utf8',
     );
     const declared = declaredColumns(source);

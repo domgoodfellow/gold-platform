@@ -47,3 +47,7 @@ yarn-debug.log*
 # Python bytecode from apps/api.
 __pycache__/
 *.pyc
+.pytest_cache
+
+# Local working copy, not part of the document set.
+docs/starting_conversation.txt
