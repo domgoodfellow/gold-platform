@@ -5,6 +5,41 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Standing a business up is a domain function
+
+`milestone-m3.test.ts` made its point with a local `configure` helper: one function, a fixed
+sequence of domain calls, every word and number taken as data, called twice over an equipment
+hire yard in Amsterdam and a clinic in Tokyo. The claim held and then sat in a test, where
+nothing but a test could call it.
+
+It is now `configureBusiness` in `lib/domain/onboarding/configure.ts`, moved under this
+repository's own rule — *if a second caller needs a rule that is currently inline, extract it
+first, then call it twice*. The second caller is the AI onboarding flow M8 describes and D29
+makes self-serve signup conditional on: describe a business in prose, receive a proposed
+configuration, review it, apply it. `BusinessShape` is what that proposal *is*, which is why it
+is a type rather than an argument list — a proposal has to survive being generated, rendered,
+edited by a human and only then applied.
+
+**The milestone assertion got stronger rather than being relocated.** It reads
+`configureBusiness.toString()` now, and fails if any tenant's name, type, status, role, price
+or field key appears in it — real code rather than a test helper, so it is a claim about the
+platform instead of a claim about one file.
+
+Two things it deliberately does not do. It creates no customer and no job: the test's version
+did, so it had something to assert against, and that was evidence rather than configuration — a
+business that has just been stood up has neither, and inventing one is the platform speaking
+for it. And it is **not atomic**; each call is a transaction and the sequence is not, so a
+failure part-way leaves a partly-configured business. Nothing is lost and nothing is corrupt,
+because that is also the state of a business somebody is configuring by hand. Atomicity means
+one privileged function taking the shape as JSON, which puts the order of these steps in the
+database, and no caller has needed it.
+
+M3's own field-order assertion now claims only that each business got the order it declared.
+The stronger claim — that `position` is assigned explicitly rather than falling out of creation
+order — was always duplicated in `field-forms.test.ts` "renders in the order the tenant chose,
+not the order they were defined", which proves it against a form rearranged after the fact.
+This is the version M3 can honestly make.
+
 ### An anonymous session may not create an organization
 
 **The booking slice's bill, arriving a milestone late.** Enabling anonymous sign-in (D22,

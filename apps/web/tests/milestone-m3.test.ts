@@ -2,28 +2,19 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createCustomer, listCustomers } from '@/lib/domain/customers/customers';
-import {
-  createFieldDefinition,
-  listFieldDefinitions,
-  updateFieldDefinition,
-} from '@/lib/domain/fields/field-definitions';
-import {
-  createPriceBookItem,
-  listPriceBookItems,
-} from '@/lib/domain/pricing/price-book';
+import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { configureBusiness, type BusinessShape } from '@/lib/domain/onboarding/configure';
+import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { addPricedLine, listPricedLines, priceWorkItem } from '@/lib/domain/pricing/prices';
-import { addOperatingHours, listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
-import { createOrganization } from '@/lib/domain/tenancy/organizations';
-import { createRole } from '@/lib/domain/tenancy/roles';
+import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
-import { createWorkItemStatus, listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
+import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import {
   allowedNextStatusIds,
   changeWorkItemStatus,
-  createWorkItemTransition,
   listWorkItemTransitions,
 } from '@/lib/domain/work-items/transitions';
-import { createWorkItemType, listWorkItemTypes } from '@/lib/domain/work-items/types';
+import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
 
 /**
@@ -37,12 +28,20 @@ import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-item
  *   > request.
  *
  * **The structure of this file is the assertion, and the `expect` calls are secondary.**
- * There is exactly one `configure` function below. It performs a fixed sequence of domain
- * calls and takes every word, number, status, field, order, currency, zone and price as
- * *data*. It is then called twice, with two business shapes that share nothing: an equipment
- * hire yard in Amsterdam trading in euro, and a clinic in Tokyo trading in yen. If either
- * shape had needed a branch — a different call, an extra argument, a special case — that
- * function could not exist, and its existence is what "without a pull request" means.
+ * There is exactly one function that configures a business, it is
+ * `configureBusiness` in `lib/domain/onboarding/configure.ts`, and it performs a fixed
+ * sequence of domain calls taking every word, number, status, field, order, currency, zone
+ * and price as *data*. It is called twice below, with two business shapes that share nothing:
+ * an equipment hire yard in Amsterdam trading in euro, and a clinic in Tokyo trading in yen.
+ * If either shape had needed a branch — a different call, an extra argument, a special case —
+ * that function could not exist, and its existence is what "without a pull request" means.
+ *
+ * **It used to live in this file, and moving it strengthened the claim rather than relocating
+ * it.** A `configure` helper inside a test proves that a test can stand up two businesses; a
+ * domain function with a second caller proves the platform can. The second caller is the AI
+ * onboarding flow D29 makes self-serve signup conditional on, and `BusinessShape` is the type
+ * a proposal from it arrives as. The local `configure` below is now only the *evidence* — one
+ * customer, one job, one quote — that these assertions read.
  *
  * That inverts the two milestones before it deliberately. M1 ran **byte-identical** input
  * through one database and proved the two businesses could not see each other. M2 ran
@@ -65,71 +64,67 @@ const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 /**
- * A business shape, as data.
+ * A business shape, plus the evidence this test needs to assert against it.
  *
- * Everything a business differs by. Nothing in this type is a platform decision: the platform
- * supplies `Customer`, `Work Item`, `Resource` and `Event` (vision.md: "what is not
- * negotiable is the primitives") and every word describing them below belongs to the tenant.
+ * `BusinessShape` itself now lives in `lib/domain/onboarding/configure.ts` — the structural
+ * claim this file makes is about a function with no branch in it, and that function is real
+ * code with a second caller rather than a fixture. What is added here is the one customer, one
+ * job and one quote the assertions read: those are evidence, not configuration, and a business
+ * that has just been stood up has neither.
  */
-type BusinessShape = {
-  name: string;
-  timezone: string;
-  currency: string;
-  /** What this business calls the work it does. */
-  typeName: string;
-  /** Its lifecycle, in its own words and its own length. */
-  statuses: string[];
-  /** Which moves are legal, by index into `statuses`. A type with none is frozen (I13). */
-  transitions: [number, number][];
-  /** Its own form, in its own order — the later `position` is applied explicitly. */
-  workItemFields: { key: string; label: string; kind: 'text' | 'number' | 'boolean'; required: boolean }[];
-  customerFields: { key: string; label: string; kind: 'text' | 'number' | 'boolean'; required: boolean }[];
-  /** What it charges for. Amounts are minor units in *its* currency. */
-  prices: { name: string; unit: string; amountMinor: number }[];
-  /** When it is open. An empty list means it has said nothing, and is treated as always open. */
-  hours: { dayOfWeek: number; opensAt: string; closesAt: string }[];
-  /** A role that is not the founder's, with the capabilities this business thinks it needs. */
-  roleName: string;
-  roleCapabilities: string[];
-  /** One customer and one job, in this business's vocabulary. */
+type Evidence = {
+  shape: BusinessShape;
   customerName: string;
   customerCustom: Record<string, string>;
   jobTitle: string;
   jobCustom: Record<string, string>;
-  /** What that job is quoted: an index into `prices`, and how many. */
+  /** What that job is quoted: an index into `shape.prices`, and how many. */
   quote: { price: number; quantity: number }[];
 };
 
 /** An equipment hire yard. Four statuses, a linear-with-a-loop lifecycle, euro, Amsterdam. */
-const HIRE: BusinessShape = {
-  name: 'Meridian Plant Hire',
-  timezone: 'Europe/Amsterdam',
-  currency: 'EUR',
-  typeName: 'Hire',
-  statuses: ['Reserved', 'Out', 'Returned', 'Inspected'],
-  transitions: [
-    [0, 1],
-    [1, 2],
-    [2, 3],
-    // Back to Out: a machine that failed inspection goes out again. A loop, which the clinic
-    // below does not have, and which nothing in the platform knows is unusual.
-    [3, 1],
-  ],
-  workItemFields: [
-    { key: 'site_contact', label: 'Site contact', kind: 'text', required: true },
-    { key: 'deposit_taken', label: 'Deposit taken', kind: 'boolean', required: false },
-  ],
-  customerFields: [{ key: 'account_code', label: 'Account code', kind: 'text', required: false }],
-  prices: [
-    { name: 'Excavator', unit: 'day', amountMinor: 18000 },
-    { name: 'Delivery', unit: 'trip', amountMinor: 7500 },
-  ],
-  hours: [
-    { dayOfWeek: 1, opensAt: '07:00', closesAt: '17:00' },
-    { dayOfWeek: 6, opensAt: '08:00', closesAt: '12:00' },
-  ],
-  roleName: 'Yard Hand',
-  roleCapabilities: ['work_item.create', 'work_item.transition', 'work_item.price'],
+const HIRE: Evidence = {
+  shape: {
+    name: 'Meridian Plant Hire',
+    timezone: 'Europe/Amsterdam',
+    currency: 'EUR',
+    typeName: 'Hire',
+    statuses: ['Reserved', 'Out', 'Returned', 'Inspected'],
+    transitions: [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      // Back to Out: a machine that failed inspection goes out again. A loop, which the clinic
+      // below does not have, and which nothing in the platform knows is unusual.
+      [3, 1],
+    ],
+    // Listed in the order this business wants its form rendered, which is deliberately not
+    // alphabetical and not the order a platform would have guessed.
+    fields: {
+      work_item: [
+        { key: 'deposit_taken', label: 'Deposit taken', kind: 'boolean', required: false },
+        { key: 'site_contact', label: 'Site contact', kind: 'text', required: true },
+      ],
+      customer: [
+        { key: 'account_code', label: 'Account code', kind: 'text', required: false },
+      ],
+    },
+    prices: [
+      { name: 'Excavator', unit: 'day', amountMinor: 18000 },
+      { name: 'Delivery', unit: 'trip', amountMinor: 7500 },
+    ],
+    hours: [
+      { dayOfWeek: 1, opensAt: '07:00', closesAt: '17:00' },
+      { dayOfWeek: 6, opensAt: '08:00', closesAt: '12:00' },
+    ],
+    roles: [
+      {
+        name: 'Yard Hand',
+        capabilities: ['work_item.create', 'work_item.transition', 'work_item.price'],
+      },
+    ],
+    founderDisplayName: 'Founder',
+  },
   customerName: 'Voskuil Groundworks',
   customerCustom: { account_code: 'VOS-114' },
   jobTitle: '8-tonne excavator, Zaandam',
@@ -141,34 +136,43 @@ const HIRE: BusinessShape = {
 };
 
 /** A clinic. Three statuses, no loop, yen — which has no minor unit at all — and Tokyo. */
-const CLINIC: BusinessShape = {
-  name: 'Kessler Klinik',
-  timezone: 'Asia/Tokyo',
-  currency: 'JPY',
-  typeName: 'Consultation',
-  statuses: ['Booked', 'Seen', 'Billed'],
-  transitions: [
-    [0, 1],
-    [1, 2],
-  ],
-  workItemFields: [
-    { key: 'referral_number', label: 'Referral number', kind: 'number', required: false },
-    { key: 'room', label: 'Room', kind: 'text', required: true },
-  ],
-  customerFields: [
-    { key: 'insurer', label: 'Insurer', kind: 'text', required: true },
-    { key: 'consent_on_file', label: 'Consent on file', kind: 'boolean', required: false },
-  ],
-  prices: [
-    // Yen has no minor unit: 12000 here is twelve thousand yen, not one hundred and twenty.
-    { name: 'Consultation', unit: 'appointment', amountMinor: 12000 },
-    { name: 'Home visit', unit: 'visit', amountMinor: 30000 },
-  ],
-  // Says nothing about when it is open, which is a valid answer and means always open. No
-  // seeded week exists to contradict it.
-  hours: [],
-  roleName: 'Receptionist',
-  roleCapabilities: ['customer.create', 'work_item.create', 'work_item.transition'],
+const CLINIC: Evidence = {
+  shape: {
+    name: 'Kessler Klinik',
+    timezone: 'Asia/Tokyo',
+    currency: 'JPY',
+    typeName: 'Consultation',
+    statuses: ['Booked', 'Seen', 'Billed'],
+    transitions: [
+      [0, 1],
+      [1, 2],
+    ],
+    fields: {
+      work_item: [
+        { key: 'room', label: 'Room', kind: 'text', required: true },
+        { key: 'referral_number', label: 'Referral number', kind: 'number', required: false },
+      ],
+      customer: [
+        { key: 'insurer', label: 'Insurer', kind: 'text', required: true },
+        { key: 'consent_on_file', label: 'Consent on file', kind: 'boolean', required: false },
+      ],
+    },
+    prices: [
+      // Yen has no minor unit: 12000 here is twelve thousand yen, not one hundred and twenty.
+      { name: 'Consultation', unit: 'appointment', amountMinor: 12000 },
+      { name: 'Home visit', unit: 'visit', amountMinor: 30000 },
+    ],
+    // Says nothing about when it is open, which is a valid answer and means always open. No
+    // seeded week exists to contradict it.
+    hours: [],
+    roles: [
+      {
+        name: 'Receptionist',
+        capabilities: ['customer.create', 'work_item.create', 'work_item.transition'],
+      },
+    ],
+    founderDisplayName: 'Founder',
+  },
   customerName: 'Haruki Tanabe',
   customerCustom: { insurer: 'Kyosai', consent_on_file: 'on' },
   jobTitle: 'Initial consultation',
@@ -185,7 +189,7 @@ type StoodUp = {
   typeId: string;
   statusIds: string[];
   jobId: string;
-  shape: BusinessShape;
+  evidence: Evidence;
 };
 
 async function signedInUser(label: string): Promise<SupabaseClient> {
@@ -218,88 +222,29 @@ async function signedInUser(label: string): Promise<SupabaseClient> {
  * status count or field kind — the clinic's three statuses and the hire yard's four are the
  * same loop running a different number of times.
  */
-async function configure(db: SupabaseClient, shape: BusinessShape): Promise<StoodUp> {
-  const organizationId = await createOrganization(db, {
-    name: shape.name,
-    displayName: 'Founder',
-    timezone: shape.timezone,
-    currency: shape.currency,
-  });
-
-  // A role that is not the founder's, holding only what this business decided it needs.
-  await createRole(db, {
-    organizationId,
-    name: shape.roleName,
-    capabilities: shape.roleCapabilities,
-  });
-
-  const typeId = await createWorkItemType(db, { organizationId, name: shape.typeName });
-
-  const statusIds: string[] = [];
-  for (const [index, name] of shape.statuses.entries()) {
-    statusIds.push(
-      await createWorkItemStatus(db, { organizationId, typeId, name, position: index }),
-    );
-  }
-
-  for (const [from, to] of shape.transitions) {
-    await createWorkItemTransition(db, {
-      organizationId,
-      typeId,
-      fromStatusId: statusIds[from],
-      toStatusId: statusIds[to],
-    });
-  }
-
-  // The form, then its order. Fields are appended as they are defined, so a business that
-  // wants a different order says so — which is what M3 added to the registry.
-  for (const entityType of ['work_item', 'customer'] as const) {
-    const fields = entityType === 'work_item' ? shape.workItemFields : shape.customerFields;
-    for (const field of fields) {
-      await createFieldDefinition(db, { organizationId, entityType, ...field });
-    }
-    const defined = await listFieldDefinitions(db, { organizationId, entityType });
-    // Reverse what was defined, so the rendered order is demonstrably the tenant's choice
-    // rather than the order things happened to be created in.
-    for (const [index, definition] of [...defined].reverse().entries()) {
-      await updateFieldDefinition(db, {
-        id: definition.id,
-        label: definition.label,
-        required: definition.required,
-        position: index,
-      });
-    }
-  }
-
-  for (const hours of shape.hours) {
-    await addOperatingHours(db, { organizationId, ...hours });
-  }
-
-  for (const price of shape.prices) {
-    await createPriceBookItem(db, {
-      organizationId,
-      name: price.name,
-      unit: price.unit,
-      unitAmountMinor: price.amountMinor,
-    });
-  }
+async function configure(db: SupabaseClient, evidence: Evidence): Promise<StoodUp> {
+  // The whole of the configuration, in one call, with no branch anywhere in it. Everything
+  // below this line is the evidence the assertions read — one customer, one job, one quote —
+  // and none of it is part of standing a business up.
+  const { organizationId, typeId, statusIds } = await configureBusiness(db, evidence.shape);
 
   await createCustomer(db, {
     organizationId,
-    name: shape.customerName,
-    custom: shape.customerCustom,
+    name: evidence.customerName,
+    custom: evidence.customerCustom,
   });
 
   const jobId = await createWorkItem(db, {
     organizationId,
-    title: shape.jobTitle,
+    title: evidence.jobTitle,
     statusId: statusIds[0],
-    custom: shape.jobCustom,
+    custom: evidence.jobCustom,
   });
 
   const catalogue = await listPriceBookItems(db, { organizationId });
-  for (const line of shape.quote) {
-    const item = catalogue.find((candidate) => candidate.name === shape.prices[line.price].name)!;
+  for (const line of evidence.quote) {
+    const wanted = evidence.shape.prices[line.price].name;
+    const item = catalogue.find((candidate) => candidate.name === wanted)!;
     await addPricedLine(db, {
       workItemId: jobId,
       priceBookItemId: item.id,
@@ -307,7 +252,7 @@ async function configure(db: SupabaseClient, shape: BusinessShape): Promise<Stoo
     });
   }
 
-  return { db, organizationId, typeId, statusIds, jobId, shape };
+  return { db, organizationId, typeId, statusIds, jobId, evidence };
 }
 
 let hire: StoodUp;
@@ -401,8 +346,11 @@ describe('M3 — a second business shape, without a pull request', () => {
       entityType: 'work_item',
     });
 
-    // Reversed by `configure`, so this is the order the tenant chose rather than the order
-    // the fields were created in — which is precisely what M3 added.
+    // Each business declared its own order in its own shape, and each got it. That is what
+    // this milestone claims — the form is data — and it is deliberately not the same claim as
+    // "position is assigned explicitly rather than falling out of creation order", which
+    // `field-forms.test.ts` "renders in the order the tenant chose, not the order they were
+    // defined" owns and proves against a form that is rearranged after the fact.
     expect(hireForm.map((f) => f.key)).toEqual(['deposit_taken', 'site_contact']);
     expect(clinicForm.map((f) => f.key)).toEqual(['room', 'referral_number']);
 
@@ -486,33 +434,32 @@ describe('M3 — a second business shape, without a pull request', () => {
   });
 
   it('stood both up with the same code and no migration between them', () => {
-    // The assertion the rest of the file exists to make legible. `configure` ran twice, over
-    // two shapes that share no word, no number, no status, no field, no currency and no zone
-    // — and it contains no branch on which of them it is holding. That is the milestone:
-    // standing up a business is data, not a pull request.
-    const source = configure.toString();
+    // The assertion the rest of the file exists to make legible, and it now reads the domain
+    // layer rather than this file. `configureBusiness` ran twice, over two shapes that share
+    // no word, no number, no status, no field, no currency and no zone — and it contains no
+    // branch on which of them it is holding. That is the milestone: standing up a business is
+    // data, not a pull request. Reading real code rather than a test helper is what makes it a
+    // claim about the platform instead of a claim about this file.
+    const source = configureBusiness.toString();
 
     // Guards the rest of this test against passing because `source` is empty or minified —
     // the same precaution schema-conformance takes before asserting over a catalog.
     expect(source.length).toBeGreaterThan(500);
     expect(source).toContain('createWorkItemStatus');
-    expect(source).toContain('addPricedLine');
+    expect(source).toContain('createPriceBookItem');
 
-    // Guards the rest of this test against passing because `source` is empty or minified —
-    // the same precaution schema-conformance takes before asserting over a catalog.
-    expect(source.length).toBeGreaterThan(500);
-    expect(source).toContain('createWorkItemStatus');
-    expect(source).toContain('addPricedLine');
-
-    expect(source).not.toContain(HIRE.name);
-    expect(source).not.toContain(CLINIC.name);
-    expect(source).not.toContain(HIRE.typeName);
-    expect(source).not.toContain(CLINIC.typeName);
-    for (const currency of [HIRE.currency, CLINIC.currency]) {
-      expect(source).not.toContain(`'${currency}'`);
-    }
-    for (const status of [...HIRE.statuses, ...CLINIC.statuses]) {
-      expect(source).not.toContain(status);
+    const shapes = [HIRE.shape, CLINIC.shape];
+    for (const shape of shapes) {
+      expect(source).not.toContain(shape.name);
+      expect(source).not.toContain(shape.typeName);
+      expect(source).not.toContain(`'${shape.currency}'`);
+      expect(source).not.toContain(shape.timezone);
+      for (const status of shape.statuses) expect(source).not.toContain(status);
+      for (const role of shape.roles) expect(source).not.toContain(role.name);
+      for (const price of shape.prices) expect(source).not.toContain(price.name);
+      for (const fields of Object.values(shape.fields)) {
+        for (const field of fields) expect(source).not.toContain(field.key);
+      }
     }
   });
 });

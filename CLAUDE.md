@@ -35,7 +35,7 @@ the database" is a claim about the path.
 
 `apps/web/tests/milestone-m3.test.ts` stands up two whole businesses that share no word,
 number, status, field, currency or timezone — an equipment hire yard in Amsterdam trading in
-euro, a clinic in Tokyo trading in yen — through **one** `configure` function containing no
+euro, a clinic in Tokyo trading in yen — through **one** `configureBusiness` function containing no
 branch on which of them it is holding. The structure is the milestone and the assertions
 inside it are secondary: had either shape needed a special case, that function could not
 exist.
@@ -113,6 +113,21 @@ Four things about the configuration engine are load-bearing in the same way:
   that key and renaming a key orphans them, and neither fails at the edit — both surface later
   as `app.check_custom_fields` refusing an unrelated write to a row that was valid when it was
   made.
+
+**Standing a business up is one function, and it must never learn what kind of business it
+is holding.** `configureBusiness` (`lib/domain/onboarding/configure.ts`) takes a
+`BusinessShape` — name, zone, currency, the word for its work, its statuses, its transitions,
+its form and that form's order, its prices, its hours, its roles — and performs a fixed
+sequence of domain calls with no branch in it. It was `milestone-m3.test.ts`'s local helper
+until the AI onboarding flow gave it a second caller, and the milestone test now reads *its*
+source and fails on any tenant's word appearing there. A branch on business shape inside it is
+the per-client app studio `vision.md` refuses, arriving as a helper rather than as a fork. Two
+things it deliberately is not: it creates no customer and no job, because a business that has
+just been configured has neither and inventing one would be the platform speaking for it; and
+it is **not atomic**, so a failure part-way leaves a partly-configured business — which is a
+state every screen already handles, because it is also the state of one being configured by
+hand. Making it atomic means putting the order of those steps in the database, and no caller
+has yet needed that.
 
 Four about the interface, which M3 owns and M4 extends:
 
