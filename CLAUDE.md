@@ -329,6 +329,12 @@ summarise one.
 | `pnpm db:types` | Regenerate `apps/web/lib/db/database.types.ts` from the local schema. The file is checked in; a stale one fails the gate (D15). |
 | `pnpm db:push` | Apply migrations to the linked remote project |
 
+**A change to `infra/supabase/config.toml` needs the stack restarted, not reset.** `pnpm
+db:reset` re-applies migrations against the running containers and does not re-read that file,
+so a config change appears to do nothing — `npx supabase stop --workdir infra` then
+`npx supabase start --workdir infra`. This bit once, on the access-token hook that the whole
+platform-staff axis hangs off.
+
 `apps/web` needs `.env.local`; copy `apps/web/.env.example` and fill it from what
 `pnpm db:start` prints. It holds the anon key only — nothing in `apps/web` may hold a
 service-role key.

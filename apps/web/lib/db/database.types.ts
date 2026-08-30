@@ -908,6 +908,24 @@ export type Database = {
           },
         ]
       }
+      platform_staff: {
+        Row: {
+          created_at: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       price_book_items: {
         Row: {
           created_at: string
@@ -1799,6 +1817,7 @@ export type Database = {
         Args: { p_name: string; p_organization_id: string }
         Returns: string
       }
+      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       issue_invoice: {
         Args: { p_due_at: string; p_work_item_id: string }
         Returns: string
