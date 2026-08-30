@@ -5,6 +5,38 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### An anonymous session may not create an organization
+
+**The booking slice's bill, arriving a milestone late.** Enabling anonymous sign-in (D22,
+`20260829000003`) was the right answer and remains one: an outsider reaching `/book/{slug}`
+gets a genuine `auth.uid()`, which is what left I11 and D17 untouched. What it also did, with
+nothing recording it, is enlarge who the word `authenticated` refers to — a Supabase anonymous
+user carries `role: authenticated` in its JWT exactly as a registered one does — and every
+grant already written against that role widened with it.
+
+For all but one function that was harmless. Everything else granted to `authenticated` takes an
+organization id and dies on `app.has_capability`, or reads through a policy keyed to
+`app.current_tenant_ids()`, which is empty for somebody who is a member of nothing.
+`create_organization` is the exception because it is the only function in this schema that
+**bootstraps from nothing**: no organization id, no capability, and a gate that was entirely
+`auth.uid() is not null`. So the sequence was: call the anonymous sign-in endpoint, receive a
+session, create a tenant — no email, no password, no confirmation.
+
+**It was not a leak and RLS held throughout** — such a caller founds their own empty
+organization and could read no existing tenant. What it produced is rows this platform did not
+agree to hold, which is D29's objection to open signup arriving through a door D29 was not
+looking at: that record closes `/sign-up`, and closing `/sign-up` would not have closed this.
+
+The guard reads `auth.users.is_anonymous` rather than the JWT's claim, because Supabase can
+convert an anonymous user to a permanent one and the column flips where an already-minted token
+does not. `tenancy.test.ts` asserts the caller holds a real uid *before* asserting the refusal,
+and matches the message rather than merely a non-null error — without both it would pass for
+the same reason the unauthenticated case beside it does, and keep passing if the guard were
+deleted.
+
+**Whether a *registered* stranger may create a tenant is untouched here.** That is a product
+decision, it belongs to D29, and it is one line in `PUBLIC_PATHS`.
+
 ### `apps/web/src/` is gone
 
 `app/`, `components/`, `features/`, `lib/`, `proxy.ts` and `tests/` sit directly under

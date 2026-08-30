@@ -206,4 +206,39 @@ describe('tenant isolation', () => {
 
     expect(error).not.toBeNull();
   });
+
+  it('refuses an anonymous session, which is a caller with a real uid (D22)', async () => {
+    // The test above passes because there is no session at all. This one is the case that
+    // arrived with booking and was not noticed: `signInAnonymously` produces a genuine
+    // `auth.users` row and a genuine `auth.uid()` -- deliberately, because that is what kept
+    // I11 and D17 intact when D22 was answered -- and it carries `role: authenticated` in its
+    // JWT exactly as a registered user does. `create_organization` gated on `auth.uid() is not
+    // null` and therefore let it through.
+    const visitor = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { error: signInError } = await visitor.auth.signInAnonymously();
+    expect(signInError).toBeNull();
+
+    // Asserted rather than assumed: without this the test would pass for the same reason the
+    // one above it does, and would keep passing if the guard were deleted.
+    const { data: session } = await visitor.auth.getUser();
+    expect(session.user?.id).toBeTruthy();
+    expect(session.user?.is_anonymous).toBe(true);
+
+    const { error } = await visitor.rpc('create_organization', {
+      p_name: 'Ghost Ltd',
+      p_role: 'Owner',
+      p_capabilities: ALL_CAPABILITIES,
+      p_display_name: 'Founder',
+      p_timezone: 'UTC',
+      p_currency: 'EUR',
+    });
+
+    // The message, not merely a failure. `expect(error).not.toBeNull()` would also be
+    // satisfied by a missing parameter or a renamed column, so it would keep passing on the
+    // day the guard stopped being the thing doing the refusing.
+    expect(error?.message).toContain('anonymous session may not create an organization');
+  });
 });
