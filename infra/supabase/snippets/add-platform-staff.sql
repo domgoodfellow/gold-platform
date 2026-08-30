@@ -22,11 +22,38 @@
 -- list of who works at their business — and it means one human who both runs GOLD and operates
 -- a tenant needs two sign-ins.
 
-insert into public.platform_staff (user_id, name)
-select u.id, 'Their name here'
-  from auth.users u
- where u.email = 'them@example.com'
-on conflict (user_id) do nothing;
+-- ---------------------------------------------------------------------------
+-- Add them
+-- ---------------------------------------------------------------------------
+
+-- Edit the two values on the next two lines and run the block.
+--
+-- **It raises rather than doing nothing if the address does not match a user**, which is the
+-- trap the plain `insert ... select` form sets: an email with a typo inserts zero rows and
+-- reports success, and the next thing that happens is somebody signing in, not being staff,
+-- and having nothing to look at. `INSERT 0 0` is not a good error message.
+--
+-- Re-running with a different name corrects the name rather than doing nothing, so a typo in
+-- that half is fixed by editing and running again.
+do $$
+declare
+  v_email text := 'them@example.com';
+  v_name  text := 'Their name here';
+  v_user  uuid;
+begin
+  select u.id into v_user from auth.users u where u.email = v_email;
+
+  if v_user is null then
+    raise exception 'No user with the address %. They have to sign up before they can be staff.', v_email;
+  end if;
+
+  insert into public.platform_staff (user_id, name)
+  values (v_user, v_name)
+  on conflict (user_id) do update set name = excluded.name;
+
+  raise notice '% is platform staff. They must sign in again for their token to carry the role.', v_email;
+end
+$$;
 
 -- Who is staff today.
 select s.name, u.email, s.created_at
