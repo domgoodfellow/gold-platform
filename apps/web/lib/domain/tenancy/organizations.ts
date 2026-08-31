@@ -1,7 +1,7 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from './actor';
-import { ALL_CAPABILITIES, isCapability, type Capability } from './capabilities';
+import { isCapability, type Capability } from '@/lib/domain/tenancy/capabilities';
 
 export type Organization = {
   id: string;
@@ -35,7 +35,12 @@ export type Organization = {
 
 const NAME_MAX = 200;
 
-function normaliseCurrency(value: string): string {
+/**
+ * Shared with the operator door (`platform/provision.ts`), and exported rather than copied for
+ * the reason `CLAUDE.md` gives: a second caller extracts the rule, it never duplicates it. Both
+ * doors onto `createOrganization` normalise identically or they are not one path (D29).
+ */
+export function normaliseCurrency(value: string): string {
   const currency = value.trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) {
     throw new DomainError(
@@ -46,7 +51,7 @@ function normaliseCurrency(value: string): string {
   return currency;
 }
 
-function normaliseName(value: string): string {
+export function normaliseName(value: string): string {
   const name = value.trim();
   if (name.length === 0) {
     throw new DomainError('An organization needs a name.', 'organizations.name_required');
@@ -66,7 +71,8 @@ function normaliseName(value: string): string {
  * A default, not a fixture: it is a row in `roles` from the moment it is created, so a
  * tenant can rename it without a migration (D6).
  */
-const FOUNDING_ROLE = 'Owner';
+/** What the first membership's role is called, through either door. */
+export const FOUNDING_ROLE = 'Owner';
 
 // The embed is hinted with the constraint name because the reference is composite
 // (organization_id, role_id) -> roles (organization_id, id). Naming it keeps the query
@@ -145,6 +151,12 @@ export async function listMyOrganizations(db: Db): Promise<Organization[]> {
     .eq('user_id', actor.id);
 
   if (error) {
+    // Same narrow reading as `getOrganization` below, for the same caller: a role that cannot
+    // read the membership shape is a member of nothing, and "nothing" is a list rather than a
+    // crash. Platform staff hold `select` on `memberships` and none on `roles` (D28), so the
+    // embed above fails for them outright — and `/organizations` should be able to ask this
+    // question of any signed-in caller without knowing which of the four shapes they are.
+    if (error.code === '42501') return [];
     throw new DomainError(error.message, 'organizations.list_failed');
   }
 
@@ -177,6 +189,18 @@ export async function getOrganization(db: Db, id: string): Promise<Organization 
     .limit(1);
 
   if (error) {
+    // **A caller whose role cannot read the membership shape at all has no membership to
+    // find, and the honest answer to "is this business yours" is no rather than a crash.**
+    // Platform staff are the caller this exists for: D28 grants them `select` on `memberships`
+    // and none on `roles`, so the embed above fails outright for them — and a staff member who
+    // types a tenant URL should get the same 404 a stranger gets. Without this,
+    // `requireOrganization` turns only *null* into `notFound()` and a `permission denied`
+    // reached the page as a 500.
+    //
+    // Narrow on purpose: `42501` is insufficient_privilege and nothing else, so every other
+    // failure still surfaces. Swallowing errors generally here would hide exactly the class of
+    // bug this platform relies on RLS to make loud.
+    if (error.code === '42501') return null;
     throw new DomainError(error.message, 'organizations.get_failed');
   }
 
@@ -185,53 +209,16 @@ export async function getOrganization(db: Db, id: string): Promise<Organization 
 }
 
 /**
- * Create an organization and make the acting user its first member.
+ * **There is no `createOrganization` here any more, and its absence is the enforcement.**
  *
- * The four writes — organization, founding role, membership, event — are one transaction
- * inside `public.create_organization`, because a tenant that exists with nobody in it is a
- * row nobody can ever reach again. What the founding role is called and what it may do stay
- * decisions of this layer.
+ * D29 closed founding: `create_organization` holds no grant, so this wrapper had no reachable
+ * caller and a wrapper around a function nobody may execute is worse than nothing — it reads
+ * like a supported path. Standing a business up is `provisionOrganization`
+ * (`lib/domain/platform/provision.ts`), and the SQL function this used to call is still there,
+ * ungranted, waiting for M8 to give self-serve somebody who can do the configuring.
+ *
+ * `normaliseName`, `normaliseCurrency` and `FOUNDING_ROLE` are exported above for that door.
  */
-export async function createOrganization(
-  db: Db,
-  input: { name: string; displayName: string; timezone?: string; currency: string },
-): Promise<string> {
-  await requireActor(db);
-
-  const name = normaliseName(input.name);
-
-  // The founder names themselves here rather than being called "Member": this is the same
-  // per-tenant display name every other membership carries (D19), and the organization's
-  // first person is not a special case.
-  const displayName = input.displayName.trim();
-  if (displayName.length === 0) {
-    throw new DomainError('Your name is required.', 'organizations.display_name_required');
-  }
-
-  const currency = normaliseCurrency(input.currency);
-
-  const { data, error } = await db.rpc('create_organization', {
-    p_name: name,
-    p_role: FOUNDING_ROLE,
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: displayName,
-    // The zone the business thinks in, chosen once at founding. There is no edit path yet
-    // and that is deliberate: changing it needs a settings screen and a capability of its
-    // own, and both wait for a caller. UTC is the honest default rather than the server's
-    // zone, which would make the answer depend on where this happened to be deployed.
-    p_timezone: (input.timezone || 'UTC') as string,
-    // Required, unlike the timezone. UTC is the absence of an assumption about a business;
-    // there is no neutral currency, so the platform never picks one (constraints.md:
-    // "Currency is per-tenant configuration and is never assumed").
-    p_currency: currency,
-  });
-
-  if (error) {
-    throw new DomainError(error.message, 'organizations.create_failed');
-  }
-
-  return data;
-}
 
 /**
  * Change what a business calls itself, the clock it thinks in, what it trades in, and how long

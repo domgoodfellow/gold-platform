@@ -4,6 +4,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { isPlatformStaff, listTenants } from '@/lib/domain/platform/tenants';
+import { ProvisionForm } from './provision-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,13 @@ export default async function PlatformPage() {
       <p className="mt-2 text-sm opacity-70">
         {tenants.length === 1 ? '1 business' : `${tenants.length} businesses`} on GOLD.
       </p>
+
+      {/*
+        The operator door (D29). It sits above the list because provisioning is the thing this
+        console *does* — the list is what it shows. A business arrives here and appears in the
+        table below on the next render, which is `newest first` earning its ordering.
+      */}
+      <ProvisionForm />
 
       {tenants.length === 0 ? (
         <p className="mt-6 text-sm opacity-70">No business has been provisioned yet.</p>

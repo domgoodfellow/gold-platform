@@ -2080,6 +2080,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      provision_organization: {
+        Args: {
+          p_capabilities: string[]
+          p_currency: string
+          p_display_name: string
+          p_name: string
+          p_owner_email: string
+          p_role: string
+          p_timezone: string
+        }
+        Returns: string
+      }
       record_payment: {
         Args: {
           p_amount_minor: number
