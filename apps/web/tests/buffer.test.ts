@@ -4,11 +4,11 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { createResource } from '@/lib/domain/resources/resources';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { scheduleWorkItem, unscheduleWorkItem } from '@/lib/domain/scheduling/schedule';
-import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { getOrganization, updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * Time a resource stays busy after a job, and the fact that it is configuration.
@@ -69,15 +69,13 @@ async function newTenant(label: string): Promise<Tenant> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Founder',
-    p_timezone: 'America/Toronto',
-    p_currency: 'CAD',
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Founder',
+    timezone: 'America/Toronto',
+    currency: 'CAD',
   });
-  if (error) throw error;
 
   const orgId = organizationId as string;
   const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });

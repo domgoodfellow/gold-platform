@@ -9,7 +9,6 @@ import {
 } from '@/lib/domain/fields/field-definitions';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { addOperatingHours } from '@/lib/domain/scheduling/operating-hours';
-import { createOrganization } from '@/lib/domain/tenancy/organizations';
 import { createRole } from '@/lib/domain/tenancy/roles';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemTransition } from '@/lib/domain/work-items/transitions';
@@ -68,11 +67,6 @@ export type ShapeField = {
  * every word describing them here belongs to the tenant.
  */
 export type BusinessShape = {
-  name: string;
-  /** The IANA zone this business thinks in. */
-  timezone: string;
-  /** ISO 4217, this business's own. The platform never picks one (I10). */
-  currency: string;
   /** What this business calls the work it does. */
   typeName: string;
   /** Its lifecycle, in its own words and its own length. */
@@ -94,8 +88,6 @@ export type BusinessShape = {
   hours: { dayOfWeek: number; opensAt: string; closesAt: string }[];
   /** Roles that are not the founder's, holding what this business decided it needs. */
   roles: { name: string; capabilities: string[] }[];
-  /** What the founding member is called here. Per-tenant, never an account name (D19). */
-  founderDisplayName: string;
 };
 
 /** What standing a business up produced, so a caller can carry on working with it. */
@@ -130,24 +122,31 @@ function validateTransitions(shape: BusinessShape): void {
 }
 
 /**
- * Configure a business from a shape.
+ * Configure a business that already exists.
  *
- * The caller becomes the founding member, exactly as `createOrganization` has always made
- * them: this adds no second way of arriving. Who does the *configuring* is what D29 separates
- * provisioning from self-serve on, and both paths end here.
+ * **It no longer creates the business, and the database is what decided that.** The first
+ * version after D29 closed founding stood the business up through the operator door and then
+ * carried on configuring it in the same call — which fails at the second step, because
+ * `createRole` and everything after it run against policies keyed to `app.current_tenant_ids()`
+ * and platform staff are a member of nothing. That is I21 refusing exactly what it says it
+ * refuses: staff may bring a tenant into existence and may not reach into one.
+ *
+ * So standing a business up is two acts by two parties, which is **D29's axis stated as code**:
+ * GOLD creates the business (`provisionOrganization`), and whoever does the configuring
+ * configures it. Today that is the owner, holding their own session. At M8 it is the same call
+ * made after a human reviews a proposal. Neither is a second creation path, and neither can
+ * become one, because nothing here creates anything.
+ *
+ * What has not changed is the part the milestone turns on: a fixed sequence of domain calls
+ * with **no branch on which business it is holding**, which `milestone-m3.test.ts` asserts by
+ * reading this function's own source.
  */
 export async function configureBusiness(
   db: Db,
+  organizationId: string,
   shape: BusinessShape,
 ): Promise<ConfiguredBusiness> {
   validateTransitions(shape);
-
-  const organizationId = await createOrganization(db, {
-    name: shape.name,
-    displayName: shape.founderDisplayName,
-    timezone: shape.timezone,
-    currency: shape.currency,
-  });
 
   const roleIds: string[] = [];
   for (const role of shape.roles) {

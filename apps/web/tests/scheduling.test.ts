@@ -10,6 +10,7 @@ import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
+import { asPlatformStaff, foundBusiness, newAccountEmail } from './helpers/founding';
 
 /**
  * I7 — two work items can never occupy the same resource and window.
@@ -74,15 +75,13 @@ async function newTenant(label: string, timezone: string): Promise<Tenant> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Founder',
-    p_timezone: timezone,
-    p_currency: 'EUR',
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Founder',
+    timezone: timezone,
+    currency: 'EUR',
   });
-  if (error) throw error;
 
   const orgId = organizationId as string;
   const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });
@@ -360,7 +359,11 @@ describe('scheduling', () => {
   });
 
   it('refuses a timezone Postgres does not recognise', async () => {
-    const { error } = await alice.db.rpc('create_organization', {
+    // Asked of the provisioning door — the only one with a grant since D29 (see
+    // `consumption.test.ts` for the same move). The check being exercised is on
+    // `organizations`, so it fires whichever door writes the row.
+    const { error } = await (await asPlatformStaff()).rpc('provision_organization', {
+      p_owner_email: await newAccountEmail('nowhere'),
       p_name: 'Nowhere Ltd',
       p_role: 'Owner',
       p_capabilities: ALL_CAPABILITIES,

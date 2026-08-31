@@ -4,6 +4,7 @@ import { Client } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { configureBusiness } from '@/lib/domain/onboarding/configure';
 import { isPlatformStaff, listTenants } from '@/lib/domain/platform/tenants';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * D28's axis: the people who run GOLD rather than a business on it.
@@ -62,9 +63,11 @@ async function signIn(email: string, password: string): Promise<SupabaseClient> 
   return db;
 }
 
-async function signedInUser(label: string): Promise<{ db: SupabaseClient; userId: string }> {
+async function signedInUser(
+  label: string,
+): Promise<{ db: SupabaseClient; userId: string; email: string }> {
   const { email, password, userId } = await newUser(label);
-  return { db: await signIn(email, password), userId };
+  return { db: await signIn(email, password), userId, email };
 }
 
 /**
@@ -95,7 +98,7 @@ async function signedInStaff(name: string): Promise<{ db: SupabaseClient; userId
 }
 
 let staff: { db: SupabaseClient; userId: string };
-let member: { db: SupabaseClient; userId: string };
+let member: { db: SupabaseClient; userId: string; email: string };
 let alphaId: string;
 let betaId: string;
 
@@ -111,10 +114,15 @@ describe('the platform staff axis (D28)', () => {
     member = await signedInUser('m5-alpha');
     const other = await signedInUser('m5-beta');
 
-    const alpha = await configureBusiness(member.db, {
+    // GOLD creates it; its own owner gives it its shape. Two acts, two sessions (D29).
+    const alphaOrg = await foundBusiness({
+      ownerEmail: member.email,
       name: `Alpha Groundworks ${randomUUID().slice(0, 6)}`,
       timezone: 'Europe/Amsterdam',
       currency: 'EUR',
+      displayName: 'Alpha Founder',
+    });
+    const alpha = await configureBusiness(member.db, alphaOrg, {
       typeName: 'Hire',
       statuses: ['Reserved', 'Out'],
       transitions: [[0, 1]],
@@ -122,14 +130,17 @@ describe('the platform staff axis (D28)', () => {
       prices: [{ name: 'Excavator', unit: 'day', amountMinor: 18000 }],
       hours: [],
       roles: [],
-      founderDisplayName: 'Alpha Founder',
     });
     alphaId = alpha.organizationId;
 
-    const beta = await configureBusiness(other.db, {
+    const betaOrg = await foundBusiness({
+      ownerEmail: other.email,
       name: `Beta Clinic ${randomUUID().slice(0, 6)}`,
       timezone: 'Asia/Tokyo',
       currency: 'JPY',
+      displayName: 'Beta Founder',
+    });
+    const beta = await configureBusiness(other.db, betaOrg, {
       typeName: 'Consultation',
       statuses: ['Booked', 'Seen'],
       transitions: [[0, 1]],
@@ -137,7 +148,6 @@ describe('the platform staff axis (D28)', () => {
       prices: [{ name: 'Consultation', unit: 'appointment', amountMinor: 12000 }],
       hours: [],
       roles: [],
-      founderDisplayName: 'Beta Founder',
     });
     betaId = beta.organizationId;
 

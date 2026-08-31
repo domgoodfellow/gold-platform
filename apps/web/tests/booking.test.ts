@@ -13,11 +13,11 @@ import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { listPricedLines, priceWorkItem } from '@/lib/domain/pricing/prices';
 import { createResource } from '@/lib/domain/resources/resources';
 import { addOperatingHours } from '@/lib/domain/scheduling/operating-hours';
-import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { createWorkItemType, setTypeBookable } from '@/lib/domain/work-items/types';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * D22's axis, and the first surface that pays for it.
@@ -85,15 +85,13 @@ async function newBusiness(label: string, opts: { publish: boolean }): Promise<B
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Owner',
-    p_timezone: ZONE,
-    p_currency: 'CAD',
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Owner',
+    timezone: ZONE,
+    currency: 'CAD',
   });
-  if (error) throw error;
 
   const orgId = organizationId as string;
   const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Tyre change' });

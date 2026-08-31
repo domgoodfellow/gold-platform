@@ -16,6 +16,7 @@ import {
 } from '@/lib/domain/work-items/transitions';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * THE M3 MILESTONE TEST.
@@ -72,8 +73,30 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
  * job and one quote the assertions read: those are evidence, not configuration, and a business
  * that has just been stood up has neither.
  */
+/** The owner a business is handed to. Since D29 closed founding, every business has one. */
+type Owner = { db: SupabaseClient; email: string };
+
 type Evidence = {
+  /**
+   * **`ownerEmail` is not in here, and its absence is what keeps this file honest.** It is the
+   * one field of a `BusinessShape` that is not a fact about the *shape* of a business — it says
+   * who the business belongs to, which is per-run and cannot be a constant. Omitting it means
+   * the two shapes below stay pure descriptions, and the milestone's claim — that these two
+   * businesses share no word, number, status, field, currency or timezone — is still readable
+   * in one place.
+   */
   shape: BusinessShape;
+  /**
+   * Who the business is, as opposed to what shape it has.
+   *
+   * **These four moved out of `BusinessShape` when D29 split creating a business from
+   * configuring one**, and the split is not cosmetic: a name, a zone and a currency are settled
+   * when GOLD provisions the business, and everything in `shape` is settled afterwards by
+   * whoever does the configuring. The milestone's claim is unaffected — these two businesses
+   * still share no word, number, status, field, currency or timezone — it is now readable
+   * across two objects instead of one.
+   */
+  identity: { name: string; timezone: string; currency: string; founderDisplayName: string };
   customerName: string;
   customerCustom: Record<string, string>;
   jobTitle: string;
@@ -84,10 +107,13 @@ type Evidence = {
 
 /** An equipment hire yard. Four statuses, a linear-with-a-loop lifecycle, euro, Amsterdam. */
 const HIRE: Evidence = {
-  shape: {
+  identity: {
     name: 'Meridian Plant Hire',
     timezone: 'Europe/Amsterdam',
     currency: 'EUR',
+    founderDisplayName: 'Founder',
+  },
+  shape: {
     typeName: 'Hire',
     statuses: ['Reserved', 'Out', 'Returned', 'Inspected'],
     transitions: [
@@ -123,7 +149,6 @@ const HIRE: Evidence = {
         capabilities: ['work_item.create', 'work_item.transition', 'work_item.price'],
       },
     ],
-    founderDisplayName: 'Founder',
   },
   customerName: 'Voskuil Groundworks',
   customerCustom: { account_code: 'VOS-114' },
@@ -137,10 +162,13 @@ const HIRE: Evidence = {
 
 /** A clinic. Three statuses, no loop, yen — which has no minor unit at all — and Tokyo. */
 const CLINIC: Evidence = {
-  shape: {
+  identity: {
     name: 'Kessler Klinik',
     timezone: 'Asia/Tokyo',
     currency: 'JPY',
+    founderDisplayName: 'Founder',
+  },
+  shape: {
     typeName: 'Consultation',
     statuses: ['Booked', 'Seen', 'Billed'],
     transitions: [
@@ -171,7 +199,6 @@ const CLINIC: Evidence = {
         capabilities: ['customer.create', 'work_item.create', 'work_item.transition'],
       },
     ],
-    founderDisplayName: 'Founder',
   },
   customerName: 'Haruki Tanabe',
   customerCustom: { insurer: 'Kyosai', consent_on_file: 'on' },
@@ -192,7 +219,7 @@ type StoodUp = {
   evidence: Evidence;
 };
 
-async function signedInUser(label: string): Promise<SupabaseClient> {
+async function signedInUser(label: string): Promise<Owner> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -210,7 +237,7 @@ async function signedInUser(label: string): Promise<SupabaseClient> {
   });
   const { error } = await db.auth.signInWithPassword({ email, password });
   if (error) throw error;
-  return db;
+  return { db, email };
 }
 
 /**
@@ -222,11 +249,19 @@ async function signedInUser(label: string): Promise<SupabaseClient> {
  * status count or field kind — the clinic's three statuses and the hire yard's four are the
  * same loop running a different number of times.
  */
-async function configure(db: SupabaseClient, evidence: Evidence): Promise<StoodUp> {
+async function configure(owner: Owner, evidence: Evidence): Promise<StoodUp> {
+  const db = owner.db;
   // The whole of the configuration, in one call, with no branch anywhere in it. Everything
   // below this line is the evidence the assertions read — one customer, one job, one quote —
   // and none of it is part of standing a business up.
-  const { organizationId, typeId, statusIds } = await configureBusiness(db, evidence.shape);
+  // **Standing it up runs as GOLD; everything after runs as the business.** D29 closed
+  // founding, so a business now comes into existence through the operator door and is handed
+  // to an owner — which changes who makes the call below and nothing about what it does. The
+  // assertion this milestone turns on is unchanged and is at the bottom of this file: that
+  // function's source contains no word belonging to either business.
+  const organizationId = await foundBusiness({ ownerEmail: owner.email, ...evidence.identity,
+    displayName: evidence.identity.founderDisplayName });
+  const { typeId, statusIds } = await configureBusiness(db, organizationId, evidence.shape);
 
   await createCustomer(db, {
     organizationId,
@@ -448,12 +483,11 @@ describe('M3 — a second business shape, without a pull request', () => {
     expect(source).toContain('createWorkItemStatus');
     expect(source).toContain('createPriceBookItem');
 
-    const shapes = [HIRE.shape, CLINIC.shape];
-    for (const shape of shapes) {
-      expect(source).not.toContain(shape.name);
+    for (const { shape, identity } of [HIRE, CLINIC]) {
+      expect(source).not.toContain(identity.name);
       expect(source).not.toContain(shape.typeName);
-      expect(source).not.toContain(`'${shape.currency}'`);
-      expect(source).not.toContain(shape.timezone);
+      expect(source).not.toContain(`'${identity.currency}'`);
+      expect(source).not.toContain(identity.timezone);
       for (const status of shape.statuses) expect(source).not.toContain(status);
       for (const role of shape.roles) expect(source).not.toContain(role.name);
       for (const price of shape.prices) expect(source).not.toContain(price.name);

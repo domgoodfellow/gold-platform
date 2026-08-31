@@ -15,11 +15,13 @@ import {
 } from '@/lib/domain/locations/locations';
 import { createResource, listResources } from '@/lib/domain/resources/resources';
 import { addMember, listMembers } from '@/lib/domain/tenancy/members';
-import { createOrganization, getOrganization } from '@/lib/domain/tenancy/organizations';
+import {
+  getOrganization } from '@/lib/domain/tenancy/organizations';
 import { createRole, listRoles } from '@/lib/domain/tenancy/roles';
 import { createWorkItemStatus, listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * THE M1 MILESTONE TEST.
@@ -124,7 +126,7 @@ async function buildTenant(label: string): Promise<Tenant> {
   const founder = await signUp(`${label}-founder`);
   const staff = await signUp(`${label}-staff`);
 
-  const organizationId = await createOrganization(founder.db, {
+  const organizationId = await foundBusiness({ ownerEmail: founder.email,
     name: SHARED.organizationName,
     displayName: 'The Founder',
     currency: 'EUR',

@@ -3,8 +3,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
-import { createOrganization, getOrganization } from '@/lib/domain/tenancy/organizations';
+import {
+  getOrganization } from '@/lib/domain/tenancy/organizations';
 import { assignRole, createRole, listRoles } from '@/lib/domain/tenancy/roles';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * I12, upgraded. Before this slice it meant "is there an actor"; these tests assert it now
@@ -16,7 +18,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
-type Actor = { db: SupabaseClient; userId: string };
+type Actor = { db: SupabaseClient; userId: string; email: string };
 
 let owner: Actor;
 let organizationId: string;
@@ -42,7 +44,7 @@ async function signUp(label: string): Promise<Actor> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  return { db, userId: created.user.id };
+  return { db, userId: created.user.id, email };
 }
 
 describe('roles and capabilities', () => {
@@ -51,7 +53,7 @@ describe('roles and capabilities', () => {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
     }
     owner = await signUp('owner');
-    organizationId = await createOrganization(owner.db, {
+    organizationId = await foundBusiness({ ownerEmail: owner.email,
       name: `Roles ${randomUUID().slice(0, 6)}`,
       displayName: 'Founder',
       currency: 'EUR',
@@ -101,7 +103,7 @@ describe('roles and capabilities', () => {
 
   it('lets two tenants each have a role of the same name (I2)', async () => {
     const other = await signUp('other');
-    const otherOrganizationId = await createOrganization(other.db, { name: 'Other Ltd', displayName: 'Founder', currency: 'EUR' });
+    const otherOrganizationId = await foundBusiness({ ownerEmail: other.email, name: 'Other Ltd', displayName: 'Founder', currency: 'EUR' });
 
     // Both organizations now hold a role called Owner. If roles_org_name_unique had lost
     // its leading organization_id, the second create_organization would already have failed.

@@ -5,12 +5,12 @@ import { createCustomer } from '@/lib/domain/customers/customers';
 import { createLocation, linkCustomerLocation } from '@/lib/domain/locations/locations';
 import { createResource } from '@/lib/domain/resources/resources';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
-import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
 import { createWorkItemStatus, updateWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemTransition, changeWorkItemStatus } from '@/lib/domain/work-items/transitions';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * The first reader `events` has ever had.
@@ -69,15 +69,13 @@ async function newTenant(label: string): Promise<Tenant> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Dominique',
-    p_timezone: 'America/Toronto',
-    p_currency: 'CAD',
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Dominique',
+    timezone: 'America/Toronto',
+    currency: 'CAD',
   });
-  if (error) throw error;
 
   const orgId = organizationId as string;
   const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });

@@ -20,7 +20,6 @@ import { addOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { createResource } from '@/lib/domain/resources/resources';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
 import {
-  createOrganization,
   getOrganization,
   updateOrganization,
 } from '@/lib/domain/tenancy/organizations';
@@ -34,6 +33,7 @@ import {
 import { addPricedLine, listPricedLines, priceWorkItem } from '@/lib/domain/pricing/prices';
 import { createWorkItemType, setTypeBookable } from '@/lib/domain/work-items/types';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * THE M4 MILESTONE TEST.
@@ -77,7 +77,7 @@ function anonClient(): SupabaseClient {
 }
 
 /** The one privileged call in this file, minting an account. Exactly as every suite does. */
-async function newOperator(): Promise<{ db: SupabaseClient; userId: string }> {
+async function newOperator(): Promise<{ db: SupabaseClient; userId: string; email: string }> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -95,7 +95,7 @@ async function newOperator(): Promise<{ db: SupabaseClient; userId: string }> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  return { db, userId: created.user.id };
+  return { db, userId: created.user.id, email };
 }
 
 /** Which tenants this caller is *in*. For a member, one. For an outsider, none, ever. */
@@ -135,9 +135,14 @@ let pneu: Business;
  * a question the platform asked — which is M3's claim, used here rather than re-proved.
  */
 async function standUpPneu3L(): Promise<Business> {
-  const { db, userId } = await newOperator();
+  const { db, userId, email } = await newOperator();
 
-  const organizationId = await createOrganization(db, {
+  // **Pneu3L is provisioned, because since D29 that is how a business begins.** The milestone's
+  // criterion is unchanged and so is everything below: nobody at this business is ever given
+  // database credentials, and the owner runs every step from here on. What changed is only the
+  // door it came through, which is the distinction that record exists to draw.
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
     name: 'Pneu3L',
     displayName: 'Owner-operator',
     // Montreal, in Canadian dollars. Neither is a default: `organizations.currency` is

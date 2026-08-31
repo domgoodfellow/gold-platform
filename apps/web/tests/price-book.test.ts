@@ -6,9 +6,9 @@ import {
   listPriceBookItems,
   updatePriceBookItem,
 } from '@/lib/domain/pricing/price-book';
-import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * The catalogue: what a business charges for, in its own money.
@@ -54,15 +54,13 @@ async function newTenant(label: string, currency = 'EUR'): Promise<Tenant> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Founder',
-    p_timezone: 'UTC',
-    p_currency: currency,
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Founder',
+    timezone: 'UTC',
+    currency: currency,
   });
-  if (error) throw error;
 
   return { db, userId: created.user.id, organizationId: organizationId as string };
 }
