@@ -64,10 +64,15 @@ channels, and until then a member is somebody who signed up and was then named.
 The second account is also how you see I12 with your own eyes later: a member whose role lacks
 a capability still sees every screen and is told why the form is not theirs.
 
-### 2. Found a business
+### 2. Have a business provisioned for you
 
-`/organizations` → **New organization**. Four fields, and each is a decision rather than a
-formality:
+**This step used to say "found a business", and it cannot any more.** D29 closed founding:
+`/organizations` has no form on it, `create_organization` holds no grant, and a business begins
+when somebody at GOLD provisions it. Sign in as the staff account from *The other side* below,
+provision one for the first of your two sign-ups, then come back and sign in as them.
+
+What the provisioning form asks is four things about the business plus the address it belongs
+to, and each of the four is a decision rather than a formality:
 
 - *What is it called* — the business's name.
 - *What should it call you* — your display name **in this business only** (D19). The founder is
@@ -180,11 +185,62 @@ These are the assertions the milestone tests make, performed by hand:
 
 ---
 
+## The other side: the platform console
+
+Everything above is a tenant. `/platform` is the first screen in this application built for the
+people who run GOLD, and it is the only one you cannot reach by clicking — you have to be put
+into a Postgres role first.
+
+1. **Sign up a third account** at `/sign-up`, normally. The row references `auth.users`, so the
+   person has to exist before they can be staff.
+2. **Run `infra/supabase/snippets/add-platform-staff.sql`** in Studio's SQL editor, with the
+   address and name edited at the top. It raises if the address matches no user rather than
+   inserting zero rows and reporting success.
+3. **Sign out and sign in again.** This is the step that catches people. The role arrives as a
+   claim on the token and the token is minted at sign-in, so somebody promoted while signed in
+   stays `authenticated` until their next one. Nothing is broken; the session is just older than
+   the decision.
+
+Then `/platform` lists every business: when each arrived, what it trades in, what it has
+switched on, and when it last did anything — each rendered in that tenant's own zone and
+currency, because a console showing every business in one timezone would be deciding what
+Tuesday means for somebody in Tokyo.
+
+**Provision a business, which is what this console is for.** *Provision a business* asks the
+four things founding asks plus the one that makes it the operator door: whose business it is.
+That person **must already have an account** — a membership references `auth.users`, so sign
+them up first in a private window, exactly as you would before adding a member. Fill it in and
+the business appears in the list below, newest first.
+
+Then sign in as that owner. They have the whole business — the founding role and every
+capability — and you are not in it: their *People* list has one row and it is not you. Nothing
+in their organization, role or membership records a GOLD user id at all. What does record one is
+their event log, which says the business was provisioned and by whom, because that is a true
+fact about how it began.
+
+**What to actually look at, because the screen is a list and the milestone is not.** Try to
+reach a tenant. Take an organization id off the console and open
+`/organizations/{id}/work` as the staff account: you get a 404, not a page, because
+`getOrganization` filters on the caller's own membership and staff hold none. Then try to write
+anything at all — there is no button, so this one is Studio's SQL editor with the role set — and
+the refusal is `permission denied`, a missing privilege rather than a policy declining. That
+distinction is the whole invariant (I21): no write policy names this role *and* the role holds no
+write grant, so a permissive policy added later still hits a wall.
+
+**One human who both runs GOLD and operates a business needs two accounts.** The hook replaces
+the `role` claim outright, so a staff member who is also a member of an organization loses the
+membership half while signed in — their tenant policies key on `authenticated` and they are no
+longer wearing it. That is D28 working as intended rather than a rough edge: our people are not
+in a customer's own list of who works at their business.
+
+---
+
 ## What you cannot reach from any screen
 
 Three capabilities exist in the domain layer, are covered by tests, and have **no route, no
 form and no button**. This is the honest residue of M4, and it is why a hand-driven booking
-walkthrough stops short:
+walkthrough stops short. A fourth thing needs database access for a different reason, and it is
+recorded under the table because conflating the two would turn a decision into a debt:
 
 | Capability | Function | What its absence blocks |
 |---|---|---|
@@ -197,6 +253,24 @@ locally, and **its existence is the evidence of the gap rather than a fix for it
 business cannot run a SQL snippet, and "nobody at that business has ever been given database
 credentials" is M4's criterion. The test path proves the platform can do this; no operator path
 proves an operator can.
+
+**A fourth thing now needs database access, and it is the one entry here that is not a debt.**
+Adding somebody to `platform_staff` is a hand-run snippet
+(`infra/supabase/snippets/add-platform-staff.sql`) because `platform_staff` has no insert policy
+and no grant to any application role — deliberately. A screen that adds a colleague is a *staff
+write*, and D28's own trigger to revisit is "the first thing platform staff must write". Nothing
+is owed until that decision is made, which is the difference between this snippet and the one
+above it: `publish-bookable-type.sql` stands in for an operator path that M4's criterion says a
+business must have, and this one stands in for nothing, because the person running it is us.
+
+**Provisioning a tenant was the first staff write, and it has landed** (D29) — the decision D28
+deferred, made as narrowly as it could be: one `execute` on `provision_organization`, no table
+privilege, so the role still cannot write anything belonging to a business that already exists.
+
+**Founding is closed, which is why step 2 above reads the way it does.** `create_organization`
+holds no grant, so nobody founds a business from `/organizations` any more — the console is the
+only way one begins. `/sign-up` stays open because an account is not a tenant: the owner has to
+have one before a business can be handed to them.
 
 With that snippet run, the booking half of the walkthrough is: Settings → set a URL name and
 switch *Public booking* on, then open `/book/{slug}` in a private window and take a slot as
@@ -214,3 +288,4 @@ permission on no table whatsoever.
 | `milestone-m2.test.ts` | A non-founder defines a lifecycle and commits work to a resource, twice, identically | Work → statuses and allowed moves, then the schedule |
 | `milestone-m3.test.ts` | Two maximally different businesses configured through one function with no branch | Settings' currency and timezone, on a second business sharing no word with the first |
 | `milestone-m4.test.ts` | A stranger books; the operator schedules, works, invoices and is paid | Steps 7–9 above, plus the booking half once the snippet has run |
+| `milestone-m5.test.ts` | Somebody who runs GOLD sees every business, changes none of them, and hands one over | The console, and the provisioning form on it |

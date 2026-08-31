@@ -61,11 +61,14 @@ export default function Home() {
       <section>
         <p className="text-sm opacity-70">
           {/*
-            Provisioned, not self-served (D29). An empty organization is a bad product for a
-            stranger precisely because a new business here is genuinely empty by design — no
-            statuses, no types, no hours, because the platform inventing them is the thing this
-            product refuses. So the door is a conversation, and it says so rather than showing a
-            sign-up form that would hand somebody the emptiness.
+            Two doors onto one `createOrganization`, and a door opens where somebody is on
+            the far side of it doing the configuring (D29). A new business here is genuinely
+            empty — no statuses, no types, no hours, because the platform inventing them is the
+            thing this product refuses — so handing the emptiness to a stranger with nothing to
+            fill it is not a product. Today the somebody is a person, which is why this says
+            *get in touch* rather than showing a sign-up form. When M8's onboarding flow can
+            take a description of a business and propose its configuration, the self-serve door
+            opens onto the same function and this paragraph changes with it.
           */}
           We set your business up with you. Get in touch and we will configure it against how
           you actually work.
