@@ -3,7 +3,6 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createResource } from '@/lib/domain/resources/resources';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
-import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import {
   getOrganization,
   updateOrganization,
@@ -21,6 +20,7 @@ import {
   renameWorkItemType,
 } from '@/lib/domain/work-items/types';
 import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * The edit paths that shipped write-once, and the two claims that make them safe.
@@ -83,15 +83,13 @@ async function newTenant(label: string): Promise<Tenant> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Founder',
-    p_timezone: 'Europe/Amsterdam',
-    p_currency: 'EUR',
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Founder',
+    timezone: 'Europe/Amsterdam',
+    currency: 'EUR',
   });
-  if (error) throw error;
 
   const orgId = organizationId as string;
   const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });

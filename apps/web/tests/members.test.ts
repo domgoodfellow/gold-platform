@@ -4,11 +4,11 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { createCustomer, listCustomers } from '@/lib/domain/customers/customers';
 import { addMember, listMembers } from '@/lib/domain/tenancy/members';
 import {
-  createOrganization,
   getOrganization,
   listMyOrganizations,
 } from '@/lib/domain/tenancy/organizations';
 import { createRole } from '@/lib/domain/tenancy/roles';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * A second person in an organization — the thing that was impossible until this slice.
@@ -70,7 +70,7 @@ describe('members', () => {
     staff = await signUp('mem-staff');
     stranger = await signUp('mem-stranger');
 
-    organizationId = await createOrganization(owner.db, {
+    organizationId = await foundBusiness({ ownerEmail: owner.email,
       name: `Members ${randomUUID().slice(0, 6)}`,
       displayName: 'Dominic',
       currency: 'EUR',
@@ -83,7 +83,7 @@ describe('members', () => {
       capabilities: ['customer.create'],
     });
 
-    otherOrganizationId = await createOrganization(stranger.db, {
+    otherOrganizationId = await foundBusiness({ ownerEmail: stranger.email,
       name: `Other ${randomUUID().slice(0, 6)}`,
       displayName: 'Someone Else',
       currency: 'EUR',

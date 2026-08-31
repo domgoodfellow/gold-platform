@@ -6,7 +6,7 @@ import { createFieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { createResource } from '@/lib/domain/resources/resources';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
-import { ALL_CAPABILITIES, type Capability } from '@/lib/domain/tenancy/capabilities';
+import { type Capability } from '@/lib/domain/tenancy/capabilities';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { createRole } from '@/lib/domain/tenancy/roles';
 import {
@@ -16,6 +16,7 @@ import {
 import { createWorkItemStatus, updateWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem, listWorkItems, updateWorkItem } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * Correcting a job, and making cancellation free the van.
@@ -87,17 +88,15 @@ async function signUp(
 }
 
 async function newTenant(label: string): Promise<Tenant> {
-  const { db, userId } = await signUp(label);
+  const { db, userId, email } = await signUp(label);
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Founder',
-    p_timezone: 'America/Toronto',
-    p_currency: 'CAD',
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Founder',
+    timezone: 'America/Toronto',
+    currency: 'CAD',
   });
-  if (error) throw error;
 
   const orgId = organizationId as string;
   const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });

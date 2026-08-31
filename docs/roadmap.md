@@ -12,6 +12,39 @@ per layer.
 
 ---
 
+## Order of work
+
+**A milestone number is identity, not sequence.** M0–M10 are cited over three hundred times
+across this repository — in documents, tests and migrations — so renumbering them to express a
+change of order would break every citation in order to record a fact that belongs in one list.
+This is the list.
+
+What drives it is `market.md`: this is a configured-deployment business, and the order below is
+what that model wants built first. It is falsifiable — the first three sales calls can overturn
+it, and if they do, this section changes rather than the numbering.
+
+1. **M5 — the platform side.** Provisioning is the factory floor. Every signed customer walks
+   through it.
+2. **M8 — the AI layer, onboarding first.** Moved ahead of M6 and M7. It is the only build with
+   two beneficiaries: the tenant's self-serve door, and the implementation margin the business
+   model rests on. The rest of M8 keeps its place.
+3. **Tenant marketing and branding.** D20's deferral, revisited — a named revenue line and the
+   third sale to the same customer. **It has no milestone number yet and needs one**;
+   `organization_profiles` is the seed and `tire-app-template`'s `site_content` is the pattern.
+4. **M6 — workflows and automations.** Also the milestone that gives "what is failing" a
+   substrate, which M5's criterion defers to it.
+5. **M7 — reporting and dashboards.**
+6. **M9 — reception and sales.** D5's reasoning is unchanged and nothing in `market.md` moves it.
+7. **M10 — desktop.** No customer has asked.
+
+**GOLD as tenant zero runs alongside all of it and is not a milestone.** GOLD is an operations
+business — customers, work items, scheduling, documents, costs — so it is an ordinary
+organization with ordinary memberships, distinct from the `platform_staff` role D28 keeps out of
+every tenant. The risk it carries: a field our own pipeline wants is *one* caller, and the
+constraint against building for one is right to refuse it.
+
+---
+
 ## M0 — Founding documents
 
 > **Done when:** `/scope` can be run against the first real slice and returns a named
@@ -398,8 +431,8 @@ explicit that it is not a gate on building any of it.
 > **Done when:** somebody who runs GOLD rather than a business on it can see every tenant, what
 > each has switched on, and what is failing — from a surface inside this application, holding no
 > membership in any of them and reaching no tenant's data through a service-role key. And a
-> business that GOLD signed becomes a tenant because GOLD provisioned it, not because a stranger
-> found a signup form.
+> business that GOLD signed becomes a tenant because somebody at GOLD provisioned it — through
+> the same `createOrganization` a self-serve door will call once M8 can do the configuring.
 
 **Everything before this milestone was built for a tenant. This is the first one built for
 us.** M1 through M4 answered "can a business run on this", and the answer is yes — while the
@@ -428,9 +461,16 @@ Covers:
   they have switched on, when they last did anything. Not a dashboard — an aggregate layer is
   M7 and building a second one here is exactly what that milestone exists to prevent.
 - **Operator-provisioned onboarding** (D29). GOLD creates the organization and hands it over,
-  which is what actually happens when a business is signed, and `/sign-up` stops being a door
-  a stranger can walk through. AI-guided self-serve is not the alternative to this — it is
-  M8's second criterion, and it calls the same `createOrganization`.
+  which is what actually happens when a business is signed. **This is one of two doors onto one
+  `createOrganization` rather than an alternative to self-serve**, and the distinction is worth
+  stating because D29 was first written as "provisioned, not self-served" and that named the
+  wrong axis. What decides whether a door may be open is whether somebody is on the far side of
+  it doing the configuring — a new organization here is genuinely empty, and handing the
+  emptiness to somebody with nothing to fill it is not a product. M5 builds the door where that
+  somebody is a person. M8's onboarding flow is the somebody behind the self-serve door and
+  opens it by calling the same function, and it is the *better*-configured of the two rather
+  than the emptier one. What closes here is the **unattended** door: `/sign-up` as it stands,
+  where a stranger founds an organization and nobody is configuring it at all.
 - **GOLD's own public site**, at last distinguished from the marketing surface D20 defers.
   That record blocks a *tenant's* site because every word on it is a claim that business makes
   about itself; this one is GOLD's claim about GOLD, and the argument never applied to it. The
@@ -447,6 +487,60 @@ has on. Charging for it needs a payment relationship with the tenant that does n
 list with one row and the axis would have been designed against a hypothesis. Not later,
 because M6 adds automation that fails silently and M9 adds a second vertical: the first time
 "what is failing" is a real question is the first time nobody can answer it.
+
+**"What is failing" has no substrate, and that quarter of the criterion is deferred to M6
+deliberately rather than skipped.** The console answers three of its four questions — who
+exists, what they have switched on, when they last did anything — and `events` is on the staff
+grant list and has a read policy, so the fourth has somewhere to come from. Nothing reads it for
+failures because nothing *records* one: a failure in this system today is a `DomainError`
+raised, rendered to whoever caused it, and dropped, and there is no failed-thing table anywhere
+in the schema. Building one here would be a table with no writer, which is the speculative
+abstraction `constraints.md` opens by refusing — and the paragraph above is its own argument for
+why the wait is short. M6's automation is the first thing this platform can do that fails with
+nobody watching; a scheduled evaluation that did not fire is a failure no tenant reports and no
+screen shows. **The row lands with the writer, and M6 owns both.** Until then the honest console
+is one that does not claim to answer a question it has no data for.
+
+**Operator provisioning is a staff *write*, and it collides with D28 by design rather than by
+accident.** `20260830000002` grants `platform_staff` `select` and no `insert`, `update` or
+`delete` on any table at all — the second half of the invariant, and the half that survives a
+careless policy author. D28's stated trigger to revisit is "the first thing platform staff must
+*write*", and D29's operator door is that first thing. **This is the two records working, not
+disagreeing**: D28 declined to grant a write before there was one to name, and D29 names it. It
+meant the provisioning slice decided a *shape* before it drew a screen, and it chose the second
+of the two candidates: **one `SECURITY DEFINER` function and no table privilege**, which is what
+the external axis chose the last time a caller needed exactly one write and no table permission
+(`create_booking`, D22). A write grant on `organizations` and `memberships` was the other
+option, and it fails for a reason worth keeping: it is indistinguishable, at the privilege
+level, from letting staff rename a live business and add themselves to it. I21 now carries the
+line that choice draws — staff may bring a tenant into existence and may not reach into one that
+exists.
+
+**The other half closed too, and it cost more than the estimate.** D29's consequence said M5
+"closes `/sign-up`", and taken literally that is not implementable: provisioning names an owner
+who must already have an `auth.users` row — the same precondition `addMember` states out loud —
+and creating that row needs the admin API, which `apps/web` may not hold and must not (D14).
+**An account is not a tenant.** Registration stays open; *founding* is what closed, and it
+closed in the database — `create_organization` holds no grant at all — rather than by removing
+a form, because a missing button is not a boundary (I12).
+
+**Two things it dragged with it, and the second is the interesting one.**
+
+The suite's own idea of how a business begins had to change: twenty-nine test files founded
+their fixtures by calling `create_organization` as an ordinary user, and they now provision
+through `tests/helpers/founding.ts`. That is one place instead of twenty-nine, and the point is
+not tidiness — a founding path only the tests could reach would be the second creation path
+this milestone just spent a migration forbidding.
+
+And **creating a business and configuring one came apart, because the database refused to let
+them stay together.** The first attempt kept `configureBusiness` whole and had it stand the
+business up through the operator door; that fails at the second step, since `createRole` and
+everything after it run against policies keyed to `app.current_tenant_ids()` and platform staff
+are a member of nothing. I21 refusing exactly what it says it refuses. So GOLD creates the
+business and whoever does the configuring configures it — **which is D29's own axis, arriving in
+the code because the schema would not accept anything else.** It is worth recording as
+confirmation rather than as a cost: the separation was not a design preference that could have
+drifted, and the same shape is what M8's self-serve door will need.
 
 ---
 
@@ -585,6 +679,13 @@ References: **`agent-system`** — a receptionist agent and a sales agent over T
 ElevenLabs, with an orchestration service and a tool dispatcher whose split matches D2's — and
 **`nextfund-portal`**, which proved capability tokens, inbound routing, recording and
 transcription.
+
+**GOLD is a user of this milestone, not only its vendor.** Selling configured deployments to
+businesses with no system is outbound calling, which makes GOLD a member of vertical two. As
+tenant zero it switches the module on like any other tenant — no fork, no second path, and a
+dialer we run ourselves is evidence for it that a hypothesis cannot be. What this does *not*
+license is building it early to reach the first customer: the trigger is call volume, and thirty
+calls need a phone and a list.
 
 **Customer intelligence lands here**: lifetime value, outstanding balance, last contact, next
 action. M4 built the history and M7 built the aggregate layer; this is the first caller that

@@ -5,6 +5,246 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Founding closes: every business exists because GOLD made it exist
+
+The other half of D29, and the half M5's criterion turns on. `create_organization` now holds
+**no grant at all** — not for `authenticated`, not for `anon`, and not for platform staff
+either. A business begins one way: somebody at GOLD provisions it.
+
+**It closes in the database, not on a screen.** The form came off `/organizations` too, but that
+is cosmetic; the enforcement is the revoked grant, because a missing button is not a boundary
+(I12) and a direct PostgREST call would have founded a tenant regardless.
+
+**`/sign-up` stays open, and D29's own consequence line was wrong to say otherwise.** Building
+the operator door showed why: provisioning names an owner who must already have an `auth.users`
+row, and creating one needs the admin API `apps/web` may not hold (D14). Close registration and
+provisioning has nobody to hand a business to. **An account is not a tenant** — the same
+precondition `addMember` has always stated out loud. Recorded as an amendment rather than
+quietly reinterpreted.
+
+**The function is not dropped**, because it carries 20260830000001's guard against an anonymous
+session founding a business — found the expensive way, and worth more than the tidiness of
+deleting an ungranted function. It is the self-serve door with no key cut; M8 cuts the key. Since
+that guard is now unreachable from any session, `provisioning.test.ts` asserts the same rule at
+the door that *is* open while `tenancy.test.ts` asserts the outer refusal. Neither alone is the
+guarantee.
+
+### Creating a business and configuring one came apart, because the schema refused otherwise
+
+`configureBusiness` used to create the organization it configured. The first version after
+founding closed simply pointed that call at the operator door — and it fails at the *second*
+step: `createRole` and everything after it run against policies keyed to
+`app.current_tenant_ids()`, and platform staff are a member of nothing. **I21 refusing exactly
+what it says it refuses.**
+
+So `configureBusiness(db, organizationId, shape)`: GOLD creates the business, and whoever does
+the configuring configures it. `BusinessShape` loses `name`, `timezone`, `currency` and
+`founderDisplayName` — those are settled when the business is created — and keeps everything
+that is a fact about its *shape*.
+
+**This is worth recording as confirmation rather than as cost.** "What separates the two doors
+is who does the configuring" was D29's argument in prose; it is now the signature of the
+function, and it got there because the database would not accept anything else. A separation
+that could only have drifted is instead one that cannot compile.
+
+### Every test fixture provisions
+
+Twenty-nine test files founded their tenants by calling `create_organization` as an ordinary
+signed-in user, each with its own copy of the same five lines. They now go through
+`tests/helpers/founding.ts`.
+
+That duplication was not worth fixing while it was accurate. It became worth fixing the moment
+it stopped being: **a founding path only the tests could reach would be the second creation path
+D29 forbids**, and the suite would have been proving the platform worked in a way the platform
+no longer does. Four suites needed more than a fixture swap, and each is a small record of what
+closed — the colliding-names test that proves I2, the two that assert a refused currency and an
+impossible timezone (now asked of the open door), and the anonymous-session guard.
+
+`milestone-m5.test.ts` gained the assertion the milestone actually needed: the owner of a real
+business, holding every capability their business has, still cannot found a second one.
+
+
+### The operator door: GOLD provisions a business and stays out of it
+
+D29's operator door, and **D28's trigger to revisit firing for the first time**. That record
+granted platform staff `select` and nothing else, and said the first thing staff must *write*
+would be a new decision. Provisioning is it.
+
+**What it granted is narrower than the trigger anticipated.** Not a write grant on
+`organizations` and `memberships` — the obvious reading, and indistinguishable at the privilege
+level from letting staff rename a live business and add themselves to it — but one `execute` on
+`provision_organization`, no table privilege, on the `create_booking` shape (D22). The role still
+holds no `insert`, `update` or `delete` on any table.
+
+**I21 gained a clause, because the line moved and pretending it had not would have been the
+worse outcome.** Staff may now bring a tenant into existence, and may still write nothing
+belonging to a tenant that already exists — which holds for a structural reason rather than a
+careful one: no function on this axis takes an organization id, so there is no existing business
+a staff path could name. `provisioning.test.ts` provisions a business and then fails to rename it
+or join it, in one test, because either half alone proves nothing.
+
+**GOLD stays out of what it hands over.** The founding membership is the owner's, and
+`created_by` on the organization, its role and its membership is the owner too — the tenant's own
+rows carry no GOLD user id anywhere, which is the whole of D28's objection to solving this with a
+membership. The event is the deliberate exception: `actor_id` is the staff member, because they
+are who acted, and the readable half is snapshotted into the payload as a name.
+
+**Both doors write `organization.created` and only the payload differs** — D29's correction as a
+row. A test builds one business through each door and compares what came out, because "two doors
+onto one creation path" is a claim that decays quietly: one door gains a default, and a year
+later a provisioned business is a subtly different product.
+
+**Two defects found by writing the tests, both in what this branch had already shipped.**
+`getOrganization` and `listMyOrganizations` embed `roles`, which platform staff hold no `select`
+on — so both threw `permission denied` for a staff caller rather than answering. Since
+`requireOrganization` turns only *null* into `notFound()`, a staff member who typed a tenant URL
+got a **500 where this branch's changelog claimed a 404**. Both now read insufficient_privilege
+as "you are a member of nothing", narrowly — that one SQLSTATE and no other, because swallowing
+errors here would hide the class of bug RLS exists to make loud.
+
+### M5 has a milestone test
+
+`milestone-m5.test.ts`, in the shape the other four established. **It inverts all of them at
+once**: every previous milestone was proved by a caller inside a business, and this one runs
+entirely as a caller inside none — no membership, no role, no capability obtainable — who must
+nevertheless see everything and change nothing.
+
+It holds a connection string for exactly one statement, adding the `platform_staff` row, because
+that is genuinely how a colleague is added (D28 grants no application path). Everything after
+runs on a signed-in session through the anon key, since a milestone about *not* using a
+service-role client cannot be proved with one. Two businesses that share no word, currency or
+zone, one founded by its owner and one provisioned by GOLD; the positive and the negative
+asserted about the same rows in the same test, so they cannot drift apart.
+
+
+### D29 named the wrong axis, and the documents now say what was actually decided
+
+The record was titled *a tenant is provisioned, not self-served*, and the M5 criterion said a
+business becomes a tenant "not because a stranger found a signup form". Both read as a position
+against self-serve. D29's own body says the opposite — both paths call one `createOrganization`
+and there must never be a second — so the title contradicted the record underneath it, which is
+the failure mode `constraints.md` is most exposed to: a heading that gets quoted while the
+reasoning under it goes unread.
+
+**Provisioned and self-served are not two kinds of tenant.** They are two doors onto one
+creation path, and what separates them is who does the configuring — a fact about the far side
+of the door rather than about the tenant. The rule that governs both, identically: a door may be
+open where somebody is doing the configuring, and stays shut where nobody is, because a new
+organization here is genuinely empty and handing the emptiness to somebody with nothing to fill
+it is not a product. Today the somebody behind the operator door is a person. M8's onboarding
+flow is the somebody behind the self-serve door, and it makes that door the *better*-configured
+of the two rather than the emptier one.
+
+What M5 closes is the **unattended** door — `/sign-up` as it stands, where a stranger founds an
+organization and no implementer, proposal or review is on the other side. That is not a position
+on self-serve, and the corrected record says so.
+
+D29 rewritten, the M5 criterion and its onboarding bullet rewritten, and the marketing page's
+comment corrected — it had inherited the old framing verbatim.
+
+### The M5 record: an invariant, a deferral, and a collision that is two records working
+
+Three documents were behind the code.
+
+**I21 exists.** *A platform-staff path may read across every tenant and write nothing that
+belongs to one* — the invariant D28 said would land with the slice, enforced since the slice
+landed and recorded nowhere. Its `Enforced by` cell names both halves, because only one of them
+is a policy: no write policy names the role, *and* the role holds no write grant on any table,
+so a permissive policy added later still hits a missing privilege.
+
+**"What is failing" is deferred to M6, on the record.** The console answers three of M5's four
+questions. It does not answer the fourth because nothing in this schema records a failure — a
+`DomainError` is raised, rendered and dropped — and a failed-thing table here would be a table
+with no writer. M6's automation is the first thing that can fail with nobody watching. The row
+lands with the writer.
+
+**Operator provisioning is a staff write, which is exactly D28's trigger to revisit.** That is
+the two records working rather than disagreeing: D28 declined to grant a write before there was
+one to name, and D29 names it. `roadmap.md` M5 now carries the shape question the slice has to
+answer first — a narrow write grant, or one `SECURITY DEFINER` function on the `create_booking`
+precedent.
+
+`walkthrough.md` gains the console: how to become staff, and the step that catches people —
+the role is a claim on a token minted at sign-in, so somebody promoted while signed in stays
+`authenticated` until their next one. It also records that `add-platform-staff.sql` is **not** a
+fourth entry in *what you cannot reach from any screen*. That table is a debt list; this snippet
+is a decision, because a screen for it is a staff write D28 has not granted.
+
+
+### Staff land on the console, and the front door stops pointing into the shell
+
+Two routing facts that were left over from when `/organizations` was the only place to go.
+
+**A staff member signed in and landed on "You do not belong to an organization yet."** True —
+they are members of nothing, which is the axis working — and useless. `/organizations` now
+sends them to `/platform`. It cannot loop with the redirect the other way, because both ask
+`isPlatformStaff` and one answer cannot satisfy both conditions. This is convenience of the
+same kind `proxy.ts` is: delete it and a staff member sees an accurate empty list rather than
+anything they should not.
+
+Worth recording that the boundary was checked rather than assumed, because staff now hold
+`select` on `organizations` and `memberships` with `using (true)`: both `listMyOrganizations`
+and `getOrganization` filter on the caller's own `user_id`, so staff get an empty list and a
+`notFound()` on any tenant route. They cannot wander into a business's shell.
+
+**GOLD's front door said "Organizations" and linked into the operator surface**, which it had
+done since M1 when that was the only other route. It now says what the platform does today and
+offers a sign-in. Deliberately absent: anything about automations, connectors or AI — the
+runtime is M6 and the AI layer is M8, and a front door advertising either would be selling
+what this repository cannot do. Deliberately absent too: prices, for the reason D8 keeps them
+out of `docs/`. A number on a public page is a promise and the first three sales calls will
+move it; the tier *layering* is architecture and is safe to state.
+
+### The tenant list, and the console it is the whole of
+
+`/platform` renders one row per business: who exists, when they arrived, what they have
+switched on, when they last did anything. Those four are M5's own words and they are the
+entire scope — the difference between this and the aggregate layer M7 owns is one `count(*)`
+wide, and what separates them is that this answers *does this tenant exist and is it alive*
+while nothing here answers *how is this tenant doing*.
+
+It reads `platform_tenants`, a view built `security_invoker`. That flag is the whole safety
+argument: a view defaults to running as its owner, which would make it a service-role client
+with extra steps — the thing D14 refuses and D28 refuses again. Running as the caller means
+every policy on `organizations`, `organization_modules` and `events` still applies underneath
+it. Two boundaries, and the test asserts both separately: the grant, which refuses a member
+outright, and the flag, read from `pg_class.reloptions` because nothing about the grant would
+reveal if somebody dropped it and dropping it is one word.
+
+**Each business is rendered in its own zone and its own currency, and nothing is totalled.** A
+console showing every tenant in one timezone would be deciding what Tuesday means for somebody
+in Tokyo (I9); one summing two currencies would be inventing a rate (I10).
+
+`(platform)` is a route group and so a layout boundary, never a security one — the same as
+`(auth)` and `(public)`. The staff check on the page is courtesy, exactly as `proxy.ts` is:
+delete it and a member sees an empty list, which is ugly and still correct.
+
+### Platform staff are a Postgres role
+
+D28's axis, built. `platform_staff` is a Postgres role declared the way `payment_webhook`
+already is, holding `select` on the four tables a console reads and no `insert`, `update` or
+`delete` grant on any table at all. A user listed in the new `platform_staff` table arrives in
+that role through Supabase's custom access token hook, which rewrites the token's `role` claim
+— so identity still reaches Postgres as the caller's own JWT and D17 is applied rather than
+bypassed.
+
+**The invariant is enforced twice and the second half is the one that matters.** No write
+policy names the role, and the role holds no write privilege — so a permissive policy added
+later still hits `permission denied`. The test asserts the message rather than merely a
+failure, because the difference between "a policy declined" and "there is no privilege" is the
+entire guarantee.
+
+Two consequences worth stating rather than discovering. The hook runs for **every** token this
+project issues, so the no-op path is tested explicitly: an ordinary member must still come back
+as `authenticated`, and a regression there would break every suite in the directory. And the
+claim replaces `authenticated` outright, so one human who both runs GOLD and operates a tenant
+needs two sign-ins — which is D28 working as intended, since our people are not in a customer's
+own list of who works there.
+
+Nothing writes `platform_staff` through the application; `infra/supabase/snippets/` holds the
+statement. A screen for it is a *staff write*, which is D28's own trigger to revisit and is not
+spent here.
+
 ### Standing a business up is a domain function
 
 `milestone-m3.test.ts` made its point with a local `configure` helper: one function, a fixed

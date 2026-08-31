@@ -13,12 +13,12 @@ import {
   priceWorkItem,
   removePricedLine,
 } from '@/lib/domain/pricing/prices';
-import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * I4: there is exactly one price calculation.
@@ -71,15 +71,13 @@ async function newTenant(label: string, currency = 'EUR'): Promise<Tenant> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Founder',
-    p_timezone: 'UTC',
-    p_currency: currency,
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Founder',
+    timezone: 'UTC',
+    currency: currency,
   });
-  if (error) throw error;
 
   const organization = organizationId as string;
   const typeId = await createWorkItemType(db, { organizationId: organization, name: 'Job' });

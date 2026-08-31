@@ -4,9 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { publicProfile, setPublicProfile } from '@/lib/domain/tenancy/profile';
-import { ALL_CAPABILITIES, type Capability } from '@/lib/domain/tenancy/capabilities';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { createRole } from '@/lib/domain/tenancy/roles';
+import { foundBusiness } from './helpers/founding';
+import { type Capability } from '@/lib/domain/tenancy/capabilities';
 
 /**
  * A business's own words, and the rule that made this exist.
@@ -51,18 +52,16 @@ async function signUp(label: string) {
 }
 
 async function newTenant(label: string): Promise<Tenant> {
-  const { db } = await signUp(label);
+  const { db, email } = await signUp(label);
   const name = `${label} Ltd`;
-  const { data, error } = await db.rpc('create_organization', {
-    p_name: name,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Owner',
-    p_timezone: 'America/Toronto',
-    p_currency: 'CAD',
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name,
+    displayName: 'Owner',
+    timezone: 'America/Toronto',
+    currency: 'CAD',
   });
-  if (error) throw error;
-  return { db, organizationId: data as string, name };
+  return { db, organizationId, name };
 }
 
 async function member(tenant: Tenant, label: string, capabilities: Capability[]) {

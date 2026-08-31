@@ -20,6 +20,7 @@ import { getOrganization, updateOrganization } from '@/lib/domain/tenancy/organi
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType, setTypeBookable } from '@/lib/domain/work-items/types';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * Module enablement, and the only claim worth testing about it.
@@ -72,15 +73,13 @@ async function newBusiness(label: string): Promise<Business> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error: createError } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Founder',
-    p_timezone: 'UTC',
-    p_currency: 'EUR',
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Founder',
+    timezone: 'UTC',
+    currency: 'EUR',
   });
-  if (createError) throw createError;
 
   const organization = organizationId as string;
   const typeId = await createWorkItemType(db, { organizationId: organization, name: 'Job' });

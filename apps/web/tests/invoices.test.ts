@@ -20,6 +20,7 @@ import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * Invoicing, and money arriving.
@@ -74,15 +75,13 @@ async function newTenant(label: string, currency = 'CAD'): Promise<Tenant> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Founder',
-    p_timezone: 'America/Toronto',
-    p_currency: currency,
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Founder',
+    timezone: 'America/Toronto',
+    currency: currency,
   });
-  if (error) throw error;
 
   const organization = organizationId as string;
   const typeId = await createWorkItemType(db, { organizationId: organization, name: 'Job' });

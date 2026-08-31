@@ -3,8 +3,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createFieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { createResource, listResources } from '@/lib/domain/resources/resources';
-import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * Resource, the third entity to carry `custom` and the last kernel entity before Work Item.
@@ -47,15 +47,13 @@ async function newTenant(label: string): Promise<Tenant> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Founder',
-    p_timezone: 'UTC',
-    p_currency: 'EUR',
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Founder',
+    timezone: 'UTC',
+    currency: 'EUR',
   });
-  if (error) throw error;
 
   return { db, userId: created.user.id, organizationId: organizationId as string };
 }

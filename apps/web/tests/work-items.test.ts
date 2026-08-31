@@ -6,7 +6,6 @@ import { createCustomer } from '@/lib/domain/customers/customers';
 import { createFieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { createLocation } from '@/lib/domain/locations/locations';
 import { createResource } from '@/lib/domain/resources/resources';
-import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import {
   createWorkItemStatus,
@@ -14,6 +13,7 @@ import {
 } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * Work Item, and I18 four times over.
@@ -67,15 +67,13 @@ async function newTenant(label: string, statusName: string): Promise<Tenant> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Founder',
-    p_timezone: 'UTC',
-    p_currency: 'EUR',
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Founder',
+    timezone: 'UTC',
+    currency: 'EUR',
   });
-  if (error) throw error;
 
   const orgId = organizationId as string;
 

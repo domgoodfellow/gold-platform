@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * The M1 milestone test.
@@ -29,7 +30,7 @@ let alice: Tenant;
 let bob: Tenant;
 let aliceSecondOrganizationId: string;
 
-async function signUp(email: string): Promise<{ db: SupabaseClient; userId: string }> {
+async function signUp(email: string): Promise<{ db: SupabaseClient; userId: string; email: string }> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -48,7 +49,7 @@ async function signUp(email: string): Promise<{ db: SupabaseClient; userId: stri
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  return { db, userId: created.user.id };
+  return { db, userId: created.user.id, email };
 }
 
 describe('tenant isolation', () => {
@@ -66,40 +67,31 @@ describe('tenant isolation', () => {
 
     // Both tenants are created with the SAME name, in the same table, in the same database.
     // If either of these fails, a unique index is missing its leading tenant column (I2).
-    const { data: aOrg, error: aError } = await a.db.rpc('create_organization', {
-      p_name: COLLIDING_NAME,
-      p_role: 'Owner',
-      p_capabilities: ALL_CAPABILITIES,
-      p_display_name: 'Founder',
-    p_timezone: 'UTC',
-    p_currency: 'EUR',
+    const aOrg = await foundBusiness({
+      ownerEmail: a.email,
+      name: COLLIDING_NAME,
+      displayName: 'Founder',
+      currency: 'EUR',
     });
-    expect(aError).toBeNull();
 
-    const { data: bOrg, error: bError } = await b.db.rpc('create_organization', {
-      p_name: COLLIDING_NAME,
-      p_role: 'Owner',
-      p_capabilities: ALL_CAPABILITIES,
-      p_display_name: 'Founder',
-    p_timezone: 'UTC',
-    p_currency: 'EUR',
+    const bOrg = await foundBusiness({
+      ownerEmail: b.email,
+      name: COLLIDING_NAME,
+      displayName: 'Founder',
+      currency: 'EUR',
     });
-    expect(bError).toBeNull();
 
     alice = { db: a.db, userId: a.userId, organizationId: aOrg as string };
     bob = { db: b.db, userId: b.userId, organizationId: bOrg as string };
 
     // Alice in a second organization. Proves memberships_org_user_unique leads with
     // organization_id: were it (user_id, organization_id), this would collide.
-    const { data: aSecond, error: aSecondError } = await a.db.rpc('create_organization', {
-      p_name: 'Alice Overflow Ltd',
-      p_role: 'Owner',
-      p_capabilities: ALL_CAPABILITIES,
-      p_display_name: 'Founder',
-    p_timezone: 'UTC',
-    p_currency: 'EUR',
+    const aSecond = await foundBusiness({
+      ownerEmail: a.email,
+      name: 'Alice Overflow Ltd',
+      displayName: 'Founder',
+      currency: 'EUR',
     });
-    expect(aSecondError).toBeNull();
     aliceSecondOrganizationId = aSecond as string;
   });
 
@@ -141,9 +133,16 @@ describe('tenant isolation', () => {
 
     expect(error).toBeNull();
     expect(data).not.toBeNull();
-    expect(data!.length).toBe(2); // one per organization Alice created
+    expect(data!.length).toBe(2); // one per organization Alice was handed
+
+    // **The actor is whoever acted, and since D29 closed founding that is GOLD** — these
+    // businesses were provisioned rather than founded by Alice. I11 is unchanged and is what
+    // this asserts: every state change names a real `auth.users` id. What it must *not* be is
+    // Alice, because she did not do it, and an event that credits the wrong person is worse
+    // than one that credits somebody the tenant cannot look up.
     for (const event of data!) {
-      expect(event.actor_id).toBe(alice.userId);
+      expect(event.actor_id).toBeTruthy();
+      expect(event.actor_id).not.toBe(alice.userId);
       expect(event.action).toBe('organization.created');
       expect(event.entity_type).toBe('organization');
       expect([alice.organizationId, aliceSecondOrganizationId]).toContain(event.organization_id);
@@ -214,6 +213,14 @@ describe('tenant isolation', () => {
     // I11 and D17 intact when D22 was answered -- and it carries `role: authenticated` in its
     // JWT exactly as a registered user does. `create_organization` gated on `auth.uid() is not
     // null` and therefore let it through.
+    //
+    // **Two guards stand here now and the outer one arrived second.** D29 revoked this
+    // function from `authenticated` outright, so an anonymous caller is refused for the same
+    // reason every caller is: no grant. The `is_anonymous` check inside is still there, still
+    // correct, and now unreachable from any session -- which is why this test asserts the
+    // outer refusal and `provisioning.test.ts` asserts the inner rule at the door that is
+    // actually open. Deleting either would leave the other, and neither alone is the whole
+    // guarantee.
     const visitor = createClient(SUPABASE_URL, ANON_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
@@ -236,9 +243,10 @@ describe('tenant isolation', () => {
       p_currency: 'EUR',
     });
 
-    // The message, not merely a failure. `expect(error).not.toBeNull()` would also be
+    // The message, not merely a failure: `expect(error).not.toBeNull()` would also be
     // satisfied by a missing parameter or a renamed column, so it would keep passing on the
-    // day the guard stopped being the thing doing the refusing.
-    expect(error?.message).toContain('anonymous session may not create an organization');
+    // day the guard stopped being the thing doing the refusing. It reads `permission denied`
+    // rather than the anonymous message because the revoked grant is the outer guard now.
+    expect(error?.message).toContain('permission denied');
   });
 });

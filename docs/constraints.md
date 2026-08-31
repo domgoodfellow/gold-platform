@@ -1376,39 +1376,95 @@ not. **Trigger to revisit:** the first thing platform staff must *write* — a s
 tenant suspended, a module enabled on somebody's behalf. That is a new decision and this record
 does not grant it.
 
-### D29 — A tenant is provisioned, not self-served — until an AI flow does the configuring
+**That trigger has fired once, and what it granted is narrower than the trigger anticipated.**
+D29's operator door is a staff write, and it landed as one `execute` on
+`provision_organization` — no table privilege, on the `create_booking` shape (D22). The
+alternative considered and rejected was a write grant on `organizations` and `memberships`,
+which is the obvious reading of "let staff provision" and would equally have let staff rename a
+live business and add themselves to any of it. **The line the grant draws is the one I21 now
+states**: staff may bring a tenant into existence and may not reach into one that exists, which
+holds because nothing on this axis takes an organization id. The three writes this record
+actually named — a support action, a suspension, a module enabled on somebody's behalf — are all
+still ungranted, and each remains its own decision. A second `execute` is cheap to add and that
+is exactly why the count is worth watching.
+
+### D29 — One creation path, two doors, and a door opens where somebody can do the configuring
 
 `/sign-up` is in `PUBLIC_PATHS`, so any stranger can register and found an organization. That
 was never decided; it is what the first identity slice happened to leave open, and one line in
 `proxy.ts` has been the entire product's onboarding policy ever since.
 
-**GOLD provisions.** When a business is signed, GOLD creates the organization and hands it
-over. That matches what `vision.md` already says the commercial model is — *implementation is a
-real line item, not a loss leader; the discovery-and-configuration step is the product working
-as designed* — and it matches what actually happens on a sales call.
+**This record was first written as "a tenant is provisioned, not self-served", and that
+phrasing was wrong in a way worth leaving visible rather than quietly editing out.** It named
+the wrong axis. Provisioned and self-served are not two kinds of tenant and never were — they
+are two doors onto one `createOrganization`, and a business that came through either is the
+same row under the same policies. What separates them is **who does the configuring**, which is
+a fact about the far side of the door and not about the tenant at all.
 
-**This is not an alternative to self-serve, and framing it as a fork would be the mistake.**
-Both paths call the same `createOrganization`; there is no second creation path and there must
-never be one. What separates them is who does the configuring, and an empty organization is a
-bad product for a stranger precisely because a new business here is genuinely empty by design —
-no statuses, no types, no hours, because the platform inventing them is what this file forbids.
-**Guided self-serve is therefore blocked on the AI onboarding flow**, which is already M8's
-second criterion: describe a business in prose, receive a proposed configuration, a human
-reviews and applies it. Until something can fill the emptiness, handing it to a stranger ships
-the emptiness.
+**A new organization here is empty, and the emptiness is the product.** No statuses, no types,
+no hours, no prices, because the platform inventing them is what this file forbids in its
+never-hardcode list. That is the whole reason a door needs somebody behind it: an empty
+organization handed to somebody with nothing to fill it is not a poor onboarding experience, it
+is not a product.
 
-**Rejected: leaving signup open because closing it is trivial.** It is trivial, which is why
-leaving it open by accident is embarrassing rather than expensive — but a stranger founding a
-tenant on a production deployment is a row in `organizations` we did not agree to hold, and D4
-sells a *Private* deployment tier on exactly the claim that we know whose data is where.
+**So the rule is about the far side, and it governs both doors identically.** A door may be
+open where somebody is doing the configuring, and stays shut where nobody is.
 
-**Rejected: an invitation code.** A shared secret is one forward from being no secret, and it
-would be a third onboarding path to maintain for a volume of tenants that is currently small
-enough to name individually.
+- **The operator door.** GOLD creates the organization and configures it with the business. The
+  somebody is a person, and this is what actually happens on a sales call — it is what
+  `vision.md` already prices: *implementation is a real line item, not a loss leader; the
+  discovery-and-configuration step is the product working as designed*. **M5 builds this door.**
+- **The self-serve door.** A business signs itself up, describes itself in prose, and receives a
+  proposed configuration that a human reviews and applies. The somebody is the AI onboarding
+  flow, already M8's second criterion. **M8 opens this door**, and it opens by calling the same
+  `createOrganization`. There is no second creation path and there must never be one.
 
-**Consequence:** M5 closes the public signup and gives GOLD a way to create a tenant and its
-first membership. **Trigger to revisit:** M8's onboarding criterion landing — at which point
-self-serve is a product decision about pricing and support, not an architectural one.
+**Self-serve is not the lesser product and is not being deferred as one.** It is the door with
+the larger business behind it, and the AI flow is what makes it the *better*-configured of the
+two rather than the emptier one: a proposal drafted from a description of the business and
+reviewed by the person who runs it beats a form filled in by somebody guessing what a status
+is. It waits on that flow and on nothing else.
+
+**What M5 closes is the unattended door** — `/sign-up` as it stands today, where a stranger
+founds an organization and nobody is on the far side of it: no implementer, no proposal, no
+review. Closing it is not a position on self-serve. It is the sentence above applied to the one
+door that currently has nobody behind it.
+
+**Rejected: leaving the unattended door open because closing it is trivial.** It is trivial,
+which is why leaving it open by accident is embarrassing rather than expensive — but a stranger
+founding a tenant on a production deployment is a row in `organizations` we did not agree to
+hold, and D4 sells a *Private* deployment tier on exactly the claim that we know whose data is
+where.
+
+**Rejected: an invitation code as the operator door.** A shared secret is one forward from being
+no secret, and it would be a third onboarding path to maintain for a volume of tenants
+currently small enough to name individually.
+
+**Consequence:** M5 gives GOLD a way to create a tenant and its first membership
+(`provision_organization`, 20260830000004) and revokes every grant on `create_organization`
+(20260830000005). **That provisioning path is a staff *write*, which is exactly D28's trigger to
+revisit**; what it granted is one `execute` and no table privilege.
+
+**Amended by building it: "closes `/sign-up`" was the wrong target.** Provisioning names an
+owner who must already have an `auth.users` row, and creating one needs the admin API that
+`apps/web` may not hold (D14) — so closing registration would leave provisioning nobody to hand
+a business to. **An account is not a tenant.** Registration stays open, exactly as `addMember`
+has always required an address to have an account behind it; what closes is *founding*, and it
+closes in the database rather than by removing a form, because a missing button is not a
+boundary (I12).
+
+**Two things that fell out of building it, both worth keeping.** The function is not dropped:
+it carries 20260830000001's guard against an anonymous session founding a business, which was
+found the expensive way, so the guard is asserted at the open door instead and the revoked grant
+is asserted at the shut one. And **creating a business and configuring one had to come apart**:
+`configureBusiness` used to do both, which cannot work once creation is staff's and
+configuration is not — staff are a member of nothing, so every call after the first fails on
+I21. That separation is this record's own axis arriving in the code, and it is the shape the
+self-serve door will need too.
+
+**Trigger to revisit:** M8's onboarding criterion landing, at which point the self-serve door
+gets a gate rather than a new function, and what is left is a product decision about pricing and
+support rather than an architectural one.
 
 ## Decided, not yet built
 

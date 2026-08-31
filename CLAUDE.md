@@ -10,6 +10,7 @@ instead of pointing at it, the set has begun to rot.
 | Document | Read it when |
 |---|---|
 | [docs/vision.md](docs/vision.md) | You need to know what this product is and refuses to be |
+| [docs/market.md](docs/market.md) | You need to know who buys it, why, and what they pay for |
 | [docs/constraints.md](docs/constraints.md) | Before any structural change — includes decisions already taken |
 | [docs/domain-model.md](docs/domain-model.md) | You are touching business logic, schema, or auth |
 | [docs/roadmap.md](docs/roadmap.md) | You are deciding whether something belongs now |
@@ -114,11 +115,23 @@ Four things about the configuration engine are load-bearing in the same way:
   as `app.check_custom_fields` refusing an unrelated write to a row that was valid when it was
   made.
 
-**Standing a business up is one function, and it must never learn what kind of business it
-is holding.** `configureBusiness` (`lib/domain/onboarding/configure.ts`) takes a
-`BusinessShape` — name, zone, currency, the word for its work, its statuses, its transitions,
-its form and that form's order, its prices, its hours, its roles — and performs a fixed
-sequence of domain calls with no branch in it. It was `milestone-m3.test.ts`'s local helper
+**Standing a business up is two acts by two parties, and the second of them is one function
+that must never learn what kind of business it is holding.** GOLD creates the business —
+`provisionOrganization` — and whoever does the configuring configures it:
+`configureBusiness` (`lib/domain/onboarding/configure.ts`) takes an organization id and a
+`BusinessShape` — the word for its work, its statuses, its transitions, its form and that
+form's order, its prices, its hours, its roles — and performs a fixed sequence of domain calls
+with no branch in it.
+
+**The split is D29's axis, and the database is what forced it rather than a preference.** The
+first version after founding closed stood the business up through the operator door and carried
+on configuring in the same call, which fails at the second step: `createRole` and everything
+after it run against policies keyed to `app.current_tenant_ids()`, and platform staff are a
+member of nothing. That is I21 refusing exactly what it says it refuses — staff may bring a
+tenant into existence and may not reach into one. So a name, a zone and a currency are settled
+when the business is created, and everything in `BusinessShape` is settled afterwards by
+somebody inside it. **Do not put creation back inside this function**; it cannot work, and the
+attempt is what the paragraph above is a record of. It was `milestone-m3.test.ts`'s local helper
 until the AI onboarding flow gave it a second caller, and the milestone test now reads *its*
 source and fails on any tenant's word appearing there. A branch on business shape inside it is
 the per-client app studio `vision.md` refuses, arriving as a helper rather than as a fork. Two
@@ -171,6 +184,13 @@ database access can do — against a milestone whose criterion is that nobody at
 been given any. `docs/walkthrough.md` names all three where an operator would hit them and
 `docs/roadmap.md` M4 records the debt; do not add a fourth without noticing.
 
+**`add-platform-staff.sql` is not that fourth, and the distinction is the point.** Adding a
+colleague to `platform_staff` also needs database access, and it is a *decision* rather than a
+debt: the table has no insert policy and no grant to any application role because a screen for it
+is a staff **write**, which is exactly D28's trigger to revisit and is not spent. Nothing is owed
+until somebody makes it. The first staff write with a real claim is provisioning a tenant (D29),
+which M5 owes.
+
 **Cancellation was the first place "configuration is enough" was checked and found short.**
 `roadmap.md` recorded that cancelling needed no new code — a status the tenant configures and a
 transition into it. That was right about D6 and wrong about I7, whose predicate knew nothing
@@ -205,6 +225,74 @@ easy to undo by accident:
   `create_booking`, one `SECURITY DEFINER` function whose first act is the scope check. Reads
   stay entirely on RLS. Adding a permissive insert policy for this axis would widen the surface
   back to where it started.
+
+**Platform staff are the fourth caller shape, and it is a Postgres role (D28, M5).** A member is
+scoped by `app.current_tenant_ids()`, an external actor by `app.current_external_tenant()`, the
+`payment_webhook` writer by holding no table grant at all — all three narrow by construction.
+Staff need the opposite, read across every tenant, and are members of none, so every policy in
+this database declines for them. The role is `platform_staff`; a user listed in the
+`platform_staff` table arrives in it because `custom_access_token_hook` rewrites their token's
+`role` claim, so identity still reaches Postgres as the caller's own JWT and D17 is applied
+rather than bypassed. Four things are easy to undo by accident:
+
+- **It reads and writes nothing, and that is enforced twice** (I21). No write policy names the
+  role, *and* the role holds no `insert`, `update` or `delete` grant on any table — so a
+  permissive policy added later still hits a missing privilege. `platform-staff.test.ts` asserts
+  the `permission denied` message rather than merely a failure, because the difference between a
+  policy declining and a privilege not existing is the whole guarantee.
+- **`platform_tenants` is `security_invoker` and must stay so.** A view defaults to running as
+  its owner, which would make it the service-role client D14 and D28 both refuse, with extra
+  steps. The test reads `pg_class.reloptions` rather than trusting the definition, because
+  dropping that flag is one word and nothing else about the view would look different.
+- **`using (true)` is correct here and nowhere else.** The narrowing is the role, not the row.
+  A staff policy calling `app.has_capability` would be asking a tenant's authorization question
+  on an axis that has no role to ask about — which is why this axis gets no `app` schema usage.
+- **`platform_staff` carries no `organization_id` and never will**, which puts it outside I2
+  rather than in violation of it: not being scoped to a tenant is the entire point.
+- **The one write staff hold is `provision_organization`, and it is an `execute` rather than a
+  grant** (D29, and D28's trigger to revisit firing once). The role still holds no `insert`,
+  `update` or `delete` on any table. **I21's line is that staff may bring a tenant into existence
+  and may never reach into one that exists** — which holds because no function on this axis takes
+  an organization id. A write grant on `organizations` and `memberships` was the obvious
+  alternative and is indistinguishable, at the privilege level, from letting staff rename a live
+  business and add themselves to it.
+- **The staff member does not become a member of what they provision**, and `created_by` on the
+  organization, its founding role and its membership is the *owner*. The tenant's own rows carry
+  no GOLD user id anywhere, which is the whole of D28's objection to solving this with a
+  membership. The event is the deliberate exception: `actor_id` is the staff member because they
+  are who acted, and the readable half is snapshotted into the payload as a name (I8).
+- **Both doors write `organization.created`, and only the payload differs.** That is D29's
+  correction expressed as a row — provisioned and self-served are two doors onto one creation
+  path, not two kinds of tenant. A reader filtering on the action keeps working; one asking how a
+  business arrived reads `provisioned`. `provisioning.test.ts` builds one business through each
+  door and compares what came out, because "one creation path" is a claim that decays silently.
+
+**Founding is closed, and `/sign-up` is deliberately still open.** `create_organization` holds
+no grant at all (`20260830000005`), so no stranger — and no staff member either — can found a
+business; every organization exists because somebody at GOLD provisioned it. **Registration
+stays open because an account is not a tenant**: provisioning names an owner who must already
+have an `auth.users` row, and creating one needs the admin API `apps/web` may not hold, so
+closing `/sign-up` literally would leave provisioning nobody to hand a business to. D29's
+consequence line said "closes `/sign-up`" and that was the wrong target, recorded rather than
+quietly reinterpreted.
+
+**The function is not dropped and must not be.** It keeps `20260830000001`'s guard — an
+anonymous session may not found a business — which was found the expensive way. It is the
+self-serve door with no key cut for it, and M8 is when the key is cut. Because that guard is now
+unreachable from any session, `provisioning.test.ts` asserts the same rule at the door that *is*
+open, and `tenancy.test.ts` asserts the outer refusal; neither alone is the guarantee.
+
+**Every test fixture provisions.** `apps/web/tests/helpers/founding.ts` is the one place a test
+business comes into existence, replacing twenty-nine local copies — and the point is that the
+suite now exercises the real path rather than a shortcut around it. A founding path only the
+tests could reach would be the second creation path D29 forbids.
+
+**The staff console answers three of M5's four questions, and the fourth is deferred with its
+reason recorded.** Who exists, what they have switched on and when they last did anything are on
+screen; *what is failing* is not, because nothing in this schema records a failure — a
+`DomainError` is raised, rendered and dropped. A failed-thing table here would be a table with no
+writer. M6's automation is the first thing that can fail with nobody watching, and `roadmap.md`
+M5 records the deferral rather than leaving it as a gap somebody finds by looking.
 
 **A recorded cost is still not a price.** `work_item_costs` is an observation about a job that
 happened; a price is a claim the business publishes in advance. They are two tables and
@@ -262,6 +350,9 @@ apps/
       (public)/     book/{slug} and portal/{token}: a tenant's own customers, a tenant's own
                     words. `public-profile.test.ts` scans these and no platform sentence
                     may appear in them.
+      (platform)/   the staff console, for us rather than for a tenant (D28). No sidebar and
+                    no `navigation.ts` entry: those nouns belong to a business and this is
+                    not one.
       organizations/ the operator shell. Deliberately UNGROUPED: `navigation.test.ts` scans
                     `[organizationId]/` for areas, and a group folder inside it would hide
                     its children from that scan.
@@ -295,8 +386,12 @@ in `apps/api/README.md` so nobody finds it by shipping through it.
 
 **A route group is a layout boundary and never a security boundary.** Nothing is protected by
 living in `(auth)` or reachable by living outside it — `proxy.ts` decides what an anonymous
-caller may open, by path, and a group does not change a path. `(platform)` does not exist yet
-and lands with M5, because the staff console is a Postgres role before it is a directory (D28).
+caller may open, by path, and a group does not change a path. `(platform)` is the newest proof:
+it exists as of M5, and what keeps a member out of `/platform` is that `platform_tenants` runs
+`security_invoker` — a member selecting from it sees their own organizations and a stranger sees
+nothing. The staff check on the page is courtesy of the same kind `proxy.ts` is; delete it and
+the page shows a non-staff visitor an empty list, which is ugly and still correct. The console
+was a Postgres role before it was a directory, which is the order D28 required.
 
 Four layout rules carry reasoning that is easy to lose:
 
@@ -328,6 +423,12 @@ summarise one.
 | `pnpm db:reset` | Re-apply every migration from scratch against the local stack |
 | `pnpm db:types` | Regenerate `apps/web/lib/db/database.types.ts` from the local schema. The file is checked in; a stale one fails the gate (D15). |
 | `pnpm db:push` | Apply migrations to the linked remote project |
+
+**A change to `infra/supabase/config.toml` needs the stack restarted, not reset.** `pnpm
+db:reset` re-applies migrations against the running containers and does not re-read that file,
+so a config change appears to do nothing — `npx supabase stop --workdir infra` then
+`npx supabase start --workdir infra`. This bit once, on the access-token hook that the whole
+platform-staff axis hangs off.
 
 `apps/web` needs `.env.local`; copy `apps/web/.env.example` and fill it from what
 `pnpm db:start` prints. It holds the anon key only — nothing in `apps/web` may hold a

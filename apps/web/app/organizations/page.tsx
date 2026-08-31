@@ -4,9 +4,9 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { AREAS, areaHref } from '@/lib/navigation';
-import { CreateOrganizationForm } from './create-organization-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +32,18 @@ export default async function OrganizationsPage() {
     throw error;
   }
 
+  // **Staff belong to no organization, so this page is empty for them and correct for them.**
+  // That is the axis working — `listMyOrganizations` filters on the caller's own membership
+  // rows and they have none — and it is a terrible place to land. Sending them on is
+  // convenience of exactly the kind `proxy.ts` already is: delete this and a staff member sees
+  // an accurate empty list rather than anything they should not.
+  //
+  // It cannot loop with the redirect on `/platform`, which sends a non-staff caller here:
+  // both ask `isPlatformStaff`, and one answer cannot satisfy both conditions.
+  if (await isPlatformStaff(db)) {
+    redirect('/platform');
+  }
+
   const organizations = await listMyOrganizations(db);
 
   return (
@@ -53,7 +65,20 @@ export default async function OrganizationsPage() {
         area is enough — the shell takes it from there.
       */}
       {organizations.length === 0 ? (
-        <p className="mt-4 text-sm opacity-70">You do not belong to an organization yet.</p>
+        // **Founding closed here** (D29). This page used to end in a form that let anybody who
+        // had signed up create a business, which is the unattended door: nobody on the far
+        // side of it doing the configuring, and a new business here is genuinely empty by
+        // design. The sentence says what to do instead rather than only what is missing, and
+        // it is deliberately not a sign-up prompt — the account already exists, which is why
+        // this page rendered at all.
+        <div className="mt-4 max-w-prose">
+          <p className="text-sm opacity-70">You do not belong to a business yet.</p>
+          <p className="mt-2 text-sm opacity-70">
+            Businesses on GOLD are set up with you rather than by you — get in touch and we
+            will configure yours against how you actually work. Once it exists, this is where
+            you will find it.
+          </p>
+        </div>
       ) : (
         <ul className="mt-6 divide-y divide-black/10 dark:divide-white/15">
           {organizations.map((organization) => (
@@ -70,8 +95,6 @@ export default async function OrganizationsPage() {
           ))}
         </ul>
       )}
-
-      <CreateOrganizationForm />
     </main>
   );
 }

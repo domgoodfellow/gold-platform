@@ -1,0 +1,122 @@
+import type { Db } from '@/lib/db/types';
+import { DomainError } from '@/lib/domain/errors';
+import { requireActor } from '@/lib/domain/tenancy/actor';
+
+/**
+ * What the people who run GOLD can see of the businesses running on it.
+ *
+ * **This module never asks `app.has_capability` and never takes an `organizationId`**, and
+ * both absences are the axis rather than an omission. Every other domain module answers *what
+ * may this member do inside this business*; there is no role here to ask about, because
+ * platform staff are members of nothing (D28). The boundary is the Postgres role the caller
+ * arrives in and the policies keyed to it — so a caller who is not staff gets an empty list
+ * from the same code, rather than a different code path that decides.
+ *
+ * That is why there is no `requireStaff()` below. A guard in TypeScript that decided who is
+ * staff would be a second authorization system sitting in front of the real one, and I12 says
+ * plainly that is not authorization. `requireActor` is here for the same reason it is
+ * everywhere else: to turn "no session" into a sentence rather than an empty screen.
+ */
+
+export type Tenant = {
+  id: string;
+  name: string;
+  createdAt: string;
+  /** The zone this business thinks in. Rendered in it, never converted (I9). */
+  timezone: string;
+  /** ISO 4217, theirs. The console never totals across tenants, so it never converts (I10). */
+  currency: string;
+  /** Their public slug, or null if they have never wanted one. */
+  slug: string | null;
+  /** What they have switched on, alphabetical. */
+  moduleKeys: string[];
+  /** When anything last happened here, or null for a business that has done nothing. */
+  lastActivityAt: string | null;
+};
+
+/**
+ * The view's row as Postgres describes it.
+ *
+ * Every column is nullable and none of them is: `id` and `name` are `not null` on
+ * `organizations`, but a view cannot declare that, so the generated types widen. Narrowed
+ * below rather than asserted away — `toTenant` returns null for a row it cannot read, which is
+ * the same shape `organizations.ts` uses for an embed that came back empty.
+ */
+type TenantRow = {
+  id: string | null;
+  name: string | null;
+  created_at: string | null;
+  timezone: string | null;
+  currency: string | null;
+  slug: string | null;
+  module_keys: string[] | null;
+  last_activity_at: string | null;
+};
+
+function toTenant(row: TenantRow): Tenant | null {
+  if (!row.id || !row.name || !row.created_at) return null;
+
+  return {
+    id: row.id,
+    name: row.name,
+    createdAt: row.created_at,
+    // A tenant always has both — `create_organization` requires a currency and defaults the
+    // zone to UTC — so these coalesce to what the database would have stored rather than to a
+    // placeholder that would read as a real answer on screen.
+    timezone: row.timezone ?? 'UTC',
+    currency: row.currency ?? '',
+    slug: row.slug,
+    moduleKeys: row.module_keys ?? [],
+    lastActivityAt: row.last_activity_at,
+  };
+}
+
+/**
+ * Every tenant, newest first.
+ *
+ * **No pagination and no filter, deliberately.** M5 exists partly because a console over one
+ * tenant is a list with one row, and the honest shape of this list today is short enough to
+ * read. A `limit` added before there is anything to scroll is an abstraction with no caller;
+ * the trigger for one is the first time this screen is slow, which is a fact rather than a
+ * guess.
+ */
+export async function listTenants(db: Db): Promise<Tenant[]> {
+  await requireActor(db);
+
+  const { data, error } = await db
+    .from('platform_tenants')
+    .select('id, name, created_at, timezone, currency, slug, module_keys, last_activity_at')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new DomainError(error.message, 'platform.tenants_failed');
+  }
+
+  return (data ?? [])
+    .map(toTenant)
+    .filter((tenant): tenant is Tenant => tenant !== null);
+}
+
+/**
+ * Whether this caller is platform staff.
+ *
+ * **Asked of the database, never of the session.** The role lives in a JWT claim and reading
+ * it here would be the application deciding — the same shape I12 refuses. Instead this reads a
+ * table only the staff role may read, so the answer *is* the policy's answer. A tenant gets
+ * `permission denied`, which is not an error worth surfacing: it is the correct negative.
+ *
+ * It is used to choose between the console and a redirect, which is convenience exactly as
+ * `proxy.ts` is convenience. Nothing is protected by it — the console shows what the caller's
+ * role can read, and for a member that is their own organizations and nothing else.
+ */
+export async function isPlatformStaff(db: Db): Promise<boolean> {
+  const { data } = await db.auth.getUser();
+  if (!data.user) return false;
+
+  const { data: rows } = await db
+    .from('platform_staff')
+    .select('user_id')
+    .eq('user_id', data.user.id);
+
+  return (rows ?? []).length > 0;
+}

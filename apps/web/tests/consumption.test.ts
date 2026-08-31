@@ -19,6 +19,7 @@ import {
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
+import { asPlatformStaff, foundBusiness, newAccountEmail } from './helpers/founding';
 
 /**
  * What a job involves, what it took, and what it cost — and I10.
@@ -67,15 +68,13 @@ async function newTenant(label: string, currency: string): Promise<Tenant> {
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
-  const { data: organizationId, error } = await db.rpc('create_organization', {
-    p_name: `${label} Ltd`,
-    p_role: 'Owner',
-    p_capabilities: ALL_CAPABILITIES,
-    p_display_name: 'Founder',
-    p_timezone: 'UTC',
-    p_currency: currency,
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    displayName: 'Founder',
+    timezone: 'UTC',
+    currency: currency,
   });
-  if (error) throw error;
 
   const orgId = organizationId as string;
   const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });
@@ -113,7 +112,12 @@ describe('checklists, time and cost', () => {
   it('refuses to found an organization with no currency', async () => {
     // There is no neutral currency, so the platform never picks one. Contrast the timezone,
     // which coalesces to UTC because UTC is the absence of an assumption.
-    const { error } = await alice.db.rpc('create_organization', {
+    //
+    // **Asked of the provisioning door**, because since D29 that is the door with a key cut
+    // for it — `create_organization` holds no grant, so asking it this question would test a
+    // missing privilege rather than a missing currency.
+    const { error } = await (await asPlatformStaff()).rpc('provision_organization', {
+      p_owner_email: await newAccountEmail('currencyless'),
       p_name: 'Currencyless Ltd',
       p_role: 'Owner',
       p_capabilities: ALL_CAPABILITIES,

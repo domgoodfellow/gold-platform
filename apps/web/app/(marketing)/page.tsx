@@ -11,20 +11,75 @@ import Link from 'next/link';
  * pages and editable blocks stays deferred with its trigger unchanged; this speaks for the
  * platform, so `public-profile.test.ts` deliberately does not scan it.
  *
- * It has lived at `app/page.tsx` since M1 and nobody called it marketing. Naming the group is
- * what makes the distinction above findable instead of something the next contributor
- * rediscovers by reading D20 and concluding this page is forbidden.
+ * **It says only what is true today, and that is a rule rather than a stage of completion.**
+ * The commercial model `vision.md` describes is three tiers — the management system, an AI
+ * layer over the domain tools, the realtime communications plane — and two of them do not
+ * exist: the automation runtime is M6, the AI layer is M8. A front door advertising either
+ * would be selling something this repository cannot do, which is a worse failure than a thin
+ * page. **No prices**, for the reason D8 keeps them out of `docs/`: they are the least durable
+ * claim this platform makes and the first three sales calls will move them. A number on a
+ * public page is a promise; the layering is architecture and is safe to state.
+ *
+ * There is deliberately **no link into the operator shell**. This page had one to
+ * `/organizations` since M1, back when it was the only other route that existed, and it read
+ * as a front door offering strangers a way into somebody's business. The way in is signing in.
  */
 export default function Home() {
   return (
-    <main className="mx-auto flex max-w-2xl flex-1 flex-col justify-center p-8">
-      <h1 className="text-2xl font-semibold">GOLD</h1>
-      <p className="mt-2 text-sm opacity-70">
-        One engine. Many businesses. Configuration, not forks.
-      </p>
-      <Link href="/organizations" className="mt-6 w-fit underline underline-offset-4">
-        Organizations
-      </Link>
+    <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-10 p-8">
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight">GOLD</h1>
+        <p className="mt-3 text-lg opacity-80">
+          One engine. Many businesses. Configuration, not forks.
+        </p>
+      </header>
+
+      <section className="grid gap-6 sm:grid-cols-3">
+        <div>
+          <h2 className="text-sm font-medium">One shape per business</h2>
+          <p className="mt-1 text-sm opacity-70">
+            Your work, your statuses, your fields, your prices, your hours — configured, not
+            coded. No migration and no deploy to stand a business up.
+          </p>
+        </div>
+        <div>
+          <h2 className="text-sm font-medium">Booked, scheduled, worked, paid</h2>
+          <p className="mt-1 text-sm opacity-70">
+            A public booking page, a schedule nothing can double-book, quotes and invoices, and
+            a portal your customers sign in to.
+          </p>
+        </div>
+        <div>
+          <h2 className="text-sm font-medium">Only what you switch on</h2>
+          <p className="mt-1 text-sm opacity-70">
+            Billing, assets, booking, the portal, card payments. A business that invoices
+            somewhere else runs without that half and keeps everything it recorded.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <p className="text-sm opacity-70">
+          {/*
+            Two doors onto one `createOrganization`, and a door opens where somebody is on
+            the far side of it doing the configuring (D29). A new business here is genuinely
+            empty — no statuses, no types, no hours, because the platform inventing them is the
+            thing this product refuses — so handing the emptiness to a stranger with nothing to
+            fill it is not a product. Today the somebody is a person, which is why this says
+            *get in touch* rather than showing a sign-up form. When M8's onboarding flow can
+            take a description of a business and propose its configuration, the self-serve door
+            opens onto the same function and this paragraph changes with it.
+          */}
+          We set your business up with you. Get in touch and we will configure it against how
+          you actually work.
+        </p>
+        <Link
+          href="/sign-in"
+          className="mt-4 inline-block text-sm underline underline-offset-4"
+        >
+          Sign in
+        </Link>
+      </section>
     </main>
   );
 }

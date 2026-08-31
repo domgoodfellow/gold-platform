@@ -6,7 +6,6 @@ import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
 import { zonedDayRange } from '@/lib/domain/scheduling/window';
 import { addMember } from '@/lib/domain/tenancy/members';
-import { createOrganization } from '@/lib/domain/tenancy/organizations';
 import { createRole } from '@/lib/domain/tenancy/roles';
 import {
   addChecklistItem,
@@ -28,6 +27,7 @@ import {
 } from '@/lib/domain/work-items/transitions';
 import { createWorkItemType, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
 
 /**
  * THE M2 MILESTONE TEST.
@@ -148,7 +148,7 @@ async function buildBusiness(label: string): Promise<Business> {
   const founder = await signUp(`${label}-founder`);
   const operator = await signUp(`${label}-operator`);
 
-  const organizationId = await createOrganization(founder.db, {
+  const organizationId = await foundBusiness({ ownerEmail: founder.email,
     name: SHARED.organizationName,
     displayName: 'The Founder',
     timezone: SHARED.timezone,
