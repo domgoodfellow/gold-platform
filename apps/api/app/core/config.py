@@ -40,3 +40,41 @@ def load_settings() -> Settings | None:
         return None
 
     return Settings(**values)  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
+class RunnerSettings:
+    """What the automation tick needs.
+
+    **Separate from `Settings` above, because the two features are separately configurable.**
+    A deployment that takes cards and runs no automations, or the other way round, is an
+    ordinary deployment — and folding them into one dataclass would mean either switch turning
+    the other off.
+
+    The mail and message providers are deliberately absent: `app.channels.registry` reads its own
+    environment per channel, so a deployment can send email and not text messages without either
+    being half-configured.
+    """
+
+    supabase_url: str
+    supabase_anon_key: str
+    supabase_jwt_secret: str
+    # What Vercel's scheduler presents. Without it the tick is reachable by anybody who knows
+    # the path, which is a stranger able to make this platform send a business's messages.
+    cron_secret: str
+
+
+def load_runner_settings() -> RunnerSettings | None:
+    values = {
+        "supabase_url": os.environ.get("SUPABASE_URL"),
+        "supabase_anon_key": os.environ.get("SUPABASE_ANON_KEY"),
+        # Signs a 60-second token for `automation_runner`, which holds no grant on any table and
+        # three executes. Not the service-role key, which D14 refuses.
+        "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
+        "cron_secret": os.environ.get("CRON_SECRET"),
+    }
+
+    if not all(values.values()):
+        return None
+
+    return RunnerSettings(**values)  # type: ignore[arg-type]

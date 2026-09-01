@@ -1,7 +1,11 @@
+import { paymentProvider } from '@/lib/adapters/payments';
 import type { Db } from '@/lib/db/types';
+import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
 import { DomainError } from '@/lib/domain/errors';
+import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { MODULES, isModuleKey, type ModuleKey } from '@/lib/navigation';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { getOrganization } from '@/lib/domain/tenancy/organizations';
 
 /**
  * What a business has switched on.
@@ -143,4 +147,125 @@ export async function setModuleEnabled(
       );
     }
   }
+}
+
+/**
+ * What a business still has to do before a module it has switched on does anything.
+ *
+ * **This is the second half of D31 and the half with the reasoning in it.** The first half is
+ * a link — every module names where it is configured, and the settings screen renders it. But
+ * a link on its own still lets a business believe it is finished: card payments switched on,
+ * a link to *Getting paid*, and no account connected behind it. So a module that is on is also
+ * asked whether it can actually do the thing it was switched on for, and the answer is a
+ * sentence an operator can act on.
+ *
+ * **It answers only for modules that are on**, because a module a business has not enabled is
+ * not part of that business — there is nobody to tell anything to, and asking would be four
+ * queries for a screen that shows nothing. That is the same distinction the navigation draws
+ * between a module and a capability: a role that cannot price is told why, a module nobody
+ * bought is simply absent (I12).
+ *
+ * **The sentences describe application state, and that is the one thing the platform is
+ * allowed to say.** `constraints.md` forbids the platform putting words in a tenant's mouth —
+ * a tagline, a public claim, a message to a customer. None of that is here. "Nothing is priced
+ * yet" is a fact about this database, in the platform's own voice, on the platform's own
+ * screen.
+ */
+export async function outstandingModuleSetup(
+  db: Db,
+  input: { organizationId: string; enabled: ReadonlySet<ModuleKey> },
+): Promise<Map<ModuleKey, string>> {
+  const outstanding = new Map<ModuleKey, string>();
+
+  // **A module that needs another one and does not have it is the first thing to say**, before
+  // anything about that module's own configuration — there is no point telling a business to
+  // write a weather rule when it has nowhere to write one. Checked from `MODULES` rather than
+  // from the database, because which module needs which is a fact about this platform.
+  for (const sold of MODULES) {
+    if (!input.enabled.has(sold.key)) continue;
+    const needs = 'requires' in sold ? (sold.requires as ModuleKey | undefined) : undefined;
+    if (needs && !input.enabled.has(needs)) {
+      const label = MODULES.find((entry) => entry.key === needs)?.label ?? needs;
+      outstanding.set(
+        sold.key,
+        `This does nothing until ${label} is switched on as well — that is where it is set up.`,
+      );
+    }
+  }
+
+  // Assets and the customer portal are deliberately absent from everything below, and their
+  // absence is an answer rather than an omission. An asset is a record a business keeps, not a
+  // setting it fills in; a portal invitation is sent to one customer from that customer's own
+  // page. Neither has a business-wide thing left undone, so neither can ever be outstanding.
+
+  if (input.enabled.has('billing') && !outstanding.has('billing')) {
+    const prices = await listPriceBookItems(db, { organizationId: input.organizationId });
+    if (prices.length === 0) {
+      outstanding.set('billing', 'Nothing is priced yet, so a job cannot be quoted.');
+    }
+  }
+
+  if (input.enabled.has('booking') && !outstanding.has('booking')) {
+    const organization = await getOrganization(db, input.organizationId);
+
+    // Two conditions and one sentence, most-blocking first: an address with nothing published
+    // is a page that answers for nobody, and something published with no address is a page
+    // nobody can reach. Reporting both at once would be a list where an operator needs a step.
+    if (!organization?.slug) {
+      outstanding.set('booking', 'No public address yet, so there is no page to reach.');
+    } else {
+      // Read directly rather than through `listWorkItemTypes`, which answers a different
+      // question and deliberately returns no booking columns. What "bookable" means is a
+      // published status and a duration, and a constraint keeps the pair complete — so one
+      // non-null status is the whole test (see `20260829000003_external_actor.sql`).
+      const { data, error } = await db
+        .from('work_item_types')
+        .select('id')
+        .eq('organization_id', input.organizationId)
+        .not('booking_status_id', 'is', null)
+        .limit(1);
+
+      if (error) {
+        throw new DomainError(error.message, 'modules.readiness_failed');
+      }
+
+      if ((data ?? []).length === 0) {
+        outstanding.set(
+          'booking',
+          // Stated plainly because it is true and an operator will otherwise spend an
+          // afternoon looking. `roadmap.md` M4 carries the debt and `walkthrough.md` names the
+          // snippet that stands in for the screen.
+          'No kind of work is published to this page yet, and no screen here can publish one.',
+        );
+      }
+    }
+  }
+
+  if (input.enabled.has('card_payments') && !outstanding.has('card_payments')) {
+    const provider = await paymentProvider();
+
+    if (!provider) {
+      // **The case that used to render nothing at all.** A deployment with no processor keys
+      // hid the whole section, so a business could switch card payments on and find an empty
+      // page. It is not this business's fault and not something it can fix, which is exactly
+      // why it has to be said rather than hidden.
+      outstanding.set(
+        'card_payments',
+        'This deployment has no payment processor yet, so there is nothing to connect.',
+      );
+    } else {
+      const account = await getPaymentAccount(db, {
+        organizationId: input.organizationId,
+        provider: provider.name,
+      });
+      if (!account) {
+        outstanding.set(
+          'card_payments',
+          'No account is connected, so nothing can be collected by card.',
+        );
+      }
+    }
+  }
+
+  return outstanding;
 }

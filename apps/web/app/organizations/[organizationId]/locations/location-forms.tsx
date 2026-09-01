@@ -7,6 +7,8 @@ import type { Location } from '@/lib/domain/locations/locations';
 import {
   createLocationAction,
   linkCustomerAction,
+  locationCoordinatesAction,
+  type CoordinatesActionState,
   type LocationActionState,
 } from './actions';
 
@@ -140,6 +142,112 @@ export function LinkCustomerForm({
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">
           {state.error}
         </p>
+      ) : null}
+    </form>
+  );
+}
+
+const NO_COORDINATES: CoordinatesActionState = { error: null, suggested: null, notFound: false };
+
+const COORDINATE_INPUT = 'w-36 rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20';
+
+/**
+ * Where one place is.
+ *
+ * **A lookup fills the fields; it does not save them.** The suggestion arrives as a new
+ * `key` on the inputs, which remounts them with the provider's answer as their starting value —
+ * so a person sees what was found, can correct it, and presses Save. That is the screen half of
+ * the split `locateAddress` makes in the domain layer, and the reason for it is that a
+ * provider's best guess about a customer's site is where a technician gets sent.
+ *
+ * **A deployment with no lookup says so rather than showing nothing** (D31). Two empty boxes and
+ * no explanation is the same silence a switch with no inputs produces: the person cannot tell
+ * whether the feature is missing, broken, or theirs to fill in.
+ */
+export function LocationCoordinatesForm({
+  organizationId,
+  location,
+  mayLookUp,
+}: {
+  organizationId: string;
+  location: Location;
+  /** Whether this deployment can ask anybody. Typing them in works either way. */
+  mayLookUp: boolean;
+}) {
+  const [state, formAction, pending] = useActionState(locationCoordinatesAction, NO_COORDINATES);
+
+  const suggested = state.suggested;
+  // Remounts the two inputs when a suggestion arrives, so they show what was found rather than
+  // what was saved. Without it React keeps the first `defaultValue` for the life of the form.
+  const seed = suggested ? `${suggested.latitude},${suggested.longitude}` : 'saved';
+
+  return (
+    <form action={formAction} className="mt-2 flex flex-wrap items-center gap-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="locationId" value={location.id} />
+      <input type="hidden" name="address" value={location.address} />
+
+      <input
+        key={`lat-${seed}`}
+        name="latitude"
+        type="text"
+        inputMode="decimal"
+        aria-label={`Latitude of ${location.label}`}
+        placeholder="Latitude"
+        defaultValue={suggested?.latitude ?? location.coordinates?.latitude ?? ''}
+        className={COORDINATE_INPUT}
+      />
+      <input
+        key={`lon-${seed}`}
+        name="longitude"
+        type="text"
+        inputMode="decimal"
+        aria-label={`Longitude of ${location.label}`}
+        placeholder="Longitude"
+        defaultValue={suggested?.longitude ?? location.coordinates?.longitude ?? ''}
+        className={COORDINATE_INPUT}
+      />
+
+      <button
+        type="submit"
+        name="intent"
+        value="save"
+        disabled={pending}
+        className="rounded border border-black/15 px-3 py-1 text-sm disabled:opacity-50 dark:border-white/20"
+      >
+        {pending ? '…' : 'Save'}
+      </button>
+
+      {mayLookUp ? (
+        <button
+          type="submit"
+          name="intent"
+          value="look-up"
+          disabled={pending}
+          className="rounded border border-black/15 px-3 py-1 text-sm disabled:opacity-50 dark:border-white/20"
+        >
+          Look up from the address
+        </button>
+      ) : (
+        <span className="text-xs opacity-60">
+          This deployment cannot look an address up, so these are typed in.
+        </span>
+      )}
+
+      {suggested ? (
+        <span className="text-xs opacity-70">Found. Check it, then save.</span>
+      ) : null}
+
+      {state.notFound ? (
+        <span className="text-xs opacity-70">
+          That address was not recognised. Type the coordinates in, or edit the address.
+        </span>
+      ) : null}
+
+      {state.error ? (
+        <span role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {state.error}
+        </span>
       ) : null}
     </form>
   );

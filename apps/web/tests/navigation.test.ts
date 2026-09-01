@@ -1,4 +1,4 @@
-import { readdirSync, existsSync } from 'node:fs';
+import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
@@ -8,6 +8,8 @@ import {
   areaRootSegment,
   areasIn,
   currentSegment,
+  moduleConfiguration,
+  type Module,
 } from '@/lib/navigation';
 
 /**
@@ -178,5 +180,92 @@ describe('modules', () => {
 
     // And with nothing passed, everything: a caller with no business in hand means all of it.
     expect(areasIn('operational').length + areasIn('configuration').length).toBe(AREAS.length);
+  });
+});
+
+/**
+ * Where a module is configured, and why a link is a test rather than a convention.
+ *
+ * **D31, and the failure it was written from.** Card payments could be switched on while the
+ * section that connects an account was not rendered at all: `paymentProvider()` answers null on
+ * a deployment holding no processor keys, and the whole *Getting paid* section sat behind that.
+ * A business turned the switch on and its settings page said nothing. That is the same class of
+ * bug as a module that hides nothing — in both, the operator believes something happened —
+ * except that this one is invisible from inside the code, because every individual piece is
+ * doing what it says.
+ *
+ * So the link is asserted from both ends, exactly as the two navigation lists already are: a
+ * module must name somewhere real, and the somewhere must contain what the module claims it
+ * does.
+ */
+describe('a switch leads to its inputs', () => {
+  it('sends every module somewhere that exists', () => {
+    for (const sold of MODULES) {
+      const area = AREAS.find((entry) => entry.segment === sold.configuredAt.segment);
+      expect(area, `module "${sold.key}" is configured at an area that does not exist`).toBeDefined();
+    }
+  });
+
+  it('never sends a module through an area a second switch can hide without saying so', () => {
+    // A link into an area owned by a *different* module is a dead end waiting for that other
+    // module to be switched off — the same failure arriving by a longer route. The kernel is
+    // always there, and a module's own area is there whenever the link is rendered.
+    //
+    // **One exception, and it has to be declared rather than assumed.** Weather is a module
+    // whose whole expression is a rule, so it is configured inside Automations. That is
+    // permitted only if the module says out loud that it needs the other one — at which point
+    // the settings screen tells a business the requirement is missing, instead of handing them
+    // a link that goes nowhere.
+    for (const sold of MODULES as readonly Module[]) {
+      const area = AREAS.find((entry) => entry.segment === sold.configuredAt.segment)!;
+      if (area.module === undefined || area.module === sold.key) continue;
+
+      expect(
+        sold.requires,
+        `module "${sold.key}" is configured inside "${area.module}" without declaring it needs it`,
+      ).toBe(area.module);
+    }
+  });
+
+  it('names only modules that exist as a requirement', () => {
+    const keys = new Set<string>(MODULES.map((sold) => sold.key));
+    for (const sold of MODULES as readonly Module[]) {
+      if (!sold.requires) continue;
+      expect(keys.has(sold.requires), `module "${sold.key}" needs one that does not exist`).toBe(
+        true,
+      );
+      // A module needing itself would make the settings sentence nonsense and the check vacuous.
+      expect(sold.requires).not.toBe(sold.key);
+    }
+  });
+
+  it('names a section that the page it points at actually has', () => {
+    // The anchor is a claim about a file. Renaming a section is one word and nothing else about
+    // either file would look different, so the two are compared here rather than trusted.
+    // Widened to `Module`, because `as const satisfies` narrows each entry to its own literal
+    // shape and only some of them carry a section at all.
+    for (const sold of MODULES as readonly Module[]) {
+      const { segment, section } = sold.configuredAt;
+      if (!section) continue;
+
+      const source = readFileSync(`${ROUTES}/${segment}/page.tsx`, 'utf8');
+      expect(source, `"${segment}" has no section id="${section}" for module "${sold.key}"`).toContain(
+        `id="${section}"`,
+      );
+    }
+  });
+
+  it('builds a link that says where it goes', () => {
+    const payments = MODULES.find((sold) => sold.key === 'card_payments')!;
+    const where = moduleConfiguration('org-1', payments);
+
+    expect(where.href).toBe('/organizations/org-1/settings#getting-paid');
+    // The area's own word, which is the platform noun this file owns. A link labelled
+    // "configure" would be the one place in the shell where a screen invents a name.
+    expect(where.label).toBe('Settings');
+
+    const billing = MODULES.find((sold) => sold.key === 'billing')!;
+    expect(moduleConfiguration('org-1', billing).href).toBe('/organizations/org-1/pricing');
+    expect(moduleConfiguration('org-1', billing).label).toBe('Pricing');
   });
 });

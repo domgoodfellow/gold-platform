@@ -29,6 +29,7 @@ export const CAPABILITIES = [
   'work_item.update',
   'invoice.issue',
   'payment.record',
+  'automation.manage',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -68,4 +69,8 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   // whoever opens the post.
   'invoice.issue': 'Invoice a finished job',
   'payment.record': 'Record a payment against an invoice',
+  // Its own authority rather than part of managing the business, because it is the one thing a
+  // role can hold that acts when nobody is present. Reading a rule needs nothing: an operator
+  // who cannot write them still has to be able to find out why a job moved on its own.
+  'automation.manage': 'Write the rules this business runs on its own',
 };

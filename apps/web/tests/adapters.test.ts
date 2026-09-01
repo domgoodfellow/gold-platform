@@ -33,7 +33,20 @@ function sources(dir: string): string[] {
 }
 
 /** The providers this repository knows about. Grows with each adapter, never with a caller. */
-const VENDORS = ['stripe', 'twilio', 'elevenlabs', 'openai', 'anthropic'];
+const VENDORS = [
+  'stripe',
+  'twilio',
+  'elevenlabs',
+  'openai',
+  'anthropic',
+  // Geocoding. Named here the day the adapter landed, so the second capability is held to the
+  // same line as the first rather than being trusted because it is small.
+  'nominatim',
+  'openstreetmap',
+];
+
+/** Every capability contract. Each must be free of every provider's vocabulary. */
+const CONTRACTS = ['payments', 'geocoding'];
 
 describe('the adapter boundary (I15)', () => {
   it('has no domain file importing a provider implementation', () => {
@@ -66,18 +79,21 @@ describe('the adapter boundary (I15)', () => {
     expect(offenders.map((file) => file.path)).toEqual([]);
   });
 
-  it('keeps the capability interface free of the provider’s vocabulary', () => {
-    // No `sessionId`, no `paymentIntent`, no `stripe`. A domain function holding a `sessionId`
-    // already knows who its provider is, whatever the type is called.
-    const contract = readFileSync(join(SRC, 'lib', 'adapters', 'payments', 'index.ts'), 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '')
-      .toLowerCase();
+  it('keeps every capability interface free of the provider’s vocabulary', () => {
+    // No `sessionId`, no `paymentIntent`, no `stripe`, no `placeId`. A domain function holding
+    // a `sessionId` already knows who its provider is, whatever the type is called.
+    for (const capability of CONTRACTS) {
+      const contract = readFileSync(join(SRC, 'lib', 'adapters', capability, 'index.ts'), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '')
+        .toLowerCase();
 
-    for (const vendor of VENDORS) {
-      expect(contract).not.toContain(vendor);
+      for (const vendor of VENDORS) {
+        expect(contract, `${capability} names ${vendor}`).not.toContain(vendor);
+      }
+      expect(contract).not.toContain('sessionid');
+      expect(contract).not.toContain('placeid');
     }
-    expect(contract).not.toContain('sessionid');
   });
 });
 

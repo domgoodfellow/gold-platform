@@ -7,6 +7,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { AREAS, areaHref } from '@/lib/navigation';
+import { CreateBusinessForm } from './create-business-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +50,12 @@ export default async function OrganizationsPage() {
   return (
     <main className="mx-auto max-w-2xl p-8">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">Organizations</h1>
+        {/* **The heading says what the page is, which depends on whether you have any.**
+            "Organizations" above a page telling somebody they have none was a title describing
+            a list that was not there. */}
+        <h1 className="text-2xl font-semibold">
+          {organizations.length === 0 ? 'Set up your business' : 'Your businesses'}
+        </h1>
         <form action={signOutAction}>
           <button type="submit" className="text-sm underline underline-offset-4 opacity-70">
             Sign out
@@ -65,19 +71,22 @@ export default async function OrganizationsPage() {
         area is enough — the shell takes it from there.
       */}
       {organizations.length === 0 ? (
-        // **Founding closed here** (D29). This page used to end in a form that let anybody who
-        // had signed up create a business, which is the unattended door: nobody on the far
-        // side of it doing the configuring, and a new business here is genuinely empty by
-        // design. The sentence says what to do instead rather than only what is missing, and
-        // it is deliberately not a sign-up prompt — the account already exists, which is why
-        // this page rendered at all.
+        // **Founding is open again, and both doors are now open at once** (D29, amended). This
+        // page used to end here, with a sentence saying businesses are set up *for* you and
+        // nothing to press — which meant somebody who signed up had no way forward at all. The
+        // argument for closing it was about the *quality* of a self-served business, and what it
+        // actually produced was a door with nothing behind it.
         <div className="mt-4 max-w-prose">
-          <p className="text-sm opacity-70">You do not belong to a business yet.</p>
-          <p className="mt-2 text-sm opacity-70">
-            Businesses on GOLD are set up with you rather than by you — get in touch and we
-            will configure yours against how you actually work. Once it exists, this is where
-            you will find it.
+          <p className="text-sm opacity-70">
+            You do not belong to a business yet. Make one below — it takes three answers, and
+            everything else about how it works is yours to set up afterwards.
           </p>
+          <p className="mt-2 text-sm opacity-70">
+            If you have spoken to us about being set up, we may already have made one for you. It
+            will appear here as soon as it exists, and you do not need to make a second.
+          </p>
+
+          <CreateBusinessForm />
         </div>
       ) : (
         <ul className="mt-6 divide-y divide-black/10 dark:divide-white/15">

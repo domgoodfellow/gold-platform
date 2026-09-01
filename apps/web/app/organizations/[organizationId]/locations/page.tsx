@@ -1,9 +1,14 @@
 import { CustomFieldValues } from '@/components/custom-field-values';
+import { geocodingProvider } from '@/lib/adapters/geocoding';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { requireOrganization } from '@/lib/route/organization';
-import { CreateLocationForm, LinkCustomerForm } from './location-forms';
+import {
+  CreateLocationForm,
+  LinkCustomerForm,
+  LocationCoordinatesForm,
+} from './location-forms';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,10 +18,11 @@ export default async function LocationsPage({
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const [locations, customers, definitions] = await Promise.all([
+  const [locations, customers, definitions, geocoding] = await Promise.all([
     listLocations(db, { organizationId }),
     listCustomers(db, { organizationId }),
     listFieldDefinitions(db, { organizationId, entityType: 'location' }),
+    geocodingProvider(),
   ]);
 
   const mayAdd = organization.capabilities.includes('location.create');
@@ -43,6 +49,23 @@ export default async function LocationsPage({
               ) : null}
 
               <CustomFieldValues definitions={definitions} custom={location.custom} />
+
+              {/* Coordinates are derived from the address and are not part of it, so they sit
+                  under the location rather than inside its line. A place with none is an
+                  ordinary place — nothing here nags, and nothing is filled in on a business's
+                  behalf. What needs them is weather, travel time and service areas, none of
+                  which a business is obliged to use. */}
+              {mayAdd ? (
+                <LocationCoordinatesForm
+                  organizationId={organizationId}
+                  location={location}
+                  mayLookUp={geocoding !== null}
+                />
+              ) : location.coordinates ? (
+                <div className="mt-1 text-sm opacity-70">
+                  {location.coordinates.latitude}, {location.coordinates.longitude}
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

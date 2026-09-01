@@ -5,7 +5,11 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { provisionOrganization } from '@/lib/domain/platform/provision';
 import { listTenants } from '@/lib/domain/platform/tenants';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
-import { getOrganization, listMyOrganizations } from '@/lib/domain/tenancy/organizations';
+import {
+  createOrganization,
+  getOrganization,
+  listMyOrganizations,
+} from '@/lib/domain/tenancy/organizations';
 
 /**
  * The operator door (D29): GOLD creates a business and hands it to its owner.
@@ -283,35 +287,72 @@ describe('the operator door (D29)', () => {
     ).toBe(false);
   });
 
-  it('is the only door: self-serve founding is shut in the database, not on a screen', async () => {
-    // **This test replaced one that walked through both doors.** Until D29 closed founding, it
-    // stood a business up each way and compared what came out, because "two doors onto one
-    // creation path" was a claim that could decay quietly. The claim is now enforced instead of
-    // asserted: there is one path, and the other is a function nobody may execute.
-    const { error } = await stranger.db.rpc('create_organization', {
-      p_name: 'Self Founded Ltd',
+  it('is one of two doors, and both of them work', async () => {
+    // **This walks through both doors again**, which is what it did before founding was closed
+    // and what it has to do now that both are open. "Two doors onto one creation path" is a
+    // claim that decays quietly, so it is asserted rather than assumed: the same business comes
+    // out either way, and only the record of how it arrived differs.
+    const selfFounded = await createOrganization(stranger.db, {
+      name: 'Self Founded Ltd',
+      displayName: 'Me',
+      timezone: 'UTC',
+      currency: 'EUR',
+    });
+    expect(selfFounded).toBeTruthy();
+
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      const { rows } = await pg.query(
+        `select actor_id, payload from public.events
+          where organization_id = $1 and action = 'organization.created'`,
+        [selfFounded],
+      );
+
+      // **The same action, which is what makes them two doors rather than two kinds of tenant.**
+      // A reader filtering on the action keeps working; one asking how a business arrived reads
+      // the payload, where this door records nothing about provisioning because nobody
+      // provisioned it.
+      expect(rows).toHaveLength(1);
+      expect(rows[0].actor_id).toBe(stranger.userId);
+      expect(rows[0].payload.provisioned).toBeUndefined();
+
+      // And the founder is a member of their own business, holding the founding role — the one
+      // thing `provision_organization` cannot express, because it names an owner who is somebody
+      // else.
+      const members = await pg.query(
+        'select user_id, created_by from public.memberships where organization_id = $1',
+        [selfFounded],
+      );
+      expect(members.rows).toEqual([
+        { user_id: stranger.userId, created_by: stranger.userId },
+      ]);
+    } finally {
+      await pg.end();
+    }
+  });
+
+  it('refuses an anonymous session at the door that is open', async () => {
+    // The guard that was found the expensive way, and the reason the function was never
+    // dropped while the grant was revoked. An anonymous visitor from the booking flow arrives
+    // on the same `authenticated` role as anybody who registered — so a grant is not the thing
+    // telling them apart, and this is.
+    const visitor = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { error: signInError } = await visitor.auth.signInAnonymously();
+    if (signInError) throw signInError;
+
+    const { error } = await visitor.rpc('create_organization', {
+      p_name: 'Passing Through Ltd',
       p_role: 'Owner',
       p_capabilities: ALL_CAPABILITIES,
-      p_display_name: 'Me',
+      p_display_name: 'Nobody',
       p_timezone: 'UTC',
       p_currency: 'EUR',
     });
 
-    // `permission denied`, not a policy declining and not a form that is missing. A route is
-    // not the authorization boundary and neither is an absent button (I12); this is the
-    // refusal that survives somebody calling PostgREST directly.
-    expect(error?.message).toMatch(/permission denied/i);
-
-    // Staff hold no execute on it either. The door is shut, rather than moved to our side.
-    const asStaff = await staff.db.rpc('create_organization', {
-      p_name: 'Staff Founded Ltd',
-      p_role: 'Owner',
-      p_capabilities: ALL_CAPABILITIES,
-      p_display_name: 'Me',
-      p_timezone: 'UTC',
-      p_currency: 'EUR',
-    });
-    expect(asStaff.error?.message).toMatch(/permission denied/i);
+    expect(error?.message).toContain('anonymous session may not create an organization');
   });
 
   it('will not hand a business to an anonymous account', async () => {

@@ -37,7 +37,7 @@
 -- that half is fixed by editing and running again.
 do $$
 declare
-  v_email text := 'them@example.com';
+  v_email text := 'domgoodfellow@gmail.com  ';
   v_name  text := 'Their name here';
   v_user  uuid;
 begin

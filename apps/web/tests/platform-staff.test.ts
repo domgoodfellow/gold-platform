@@ -313,3 +313,103 @@ describe('the platform staff axis (D28)', () => {
     expect(await isPlatformStaff(member.db)).toBe(false);
   });
 });
+
+/**
+ * The fourth question, and the half of M5's criterion that was deferred to M6.
+ *
+ * That milestone answered three — who exists, what they have switched on, when they last did
+ * anything — and left this one open with its reason written down: nothing in the schema recorded
+ * a failure, so a failed-thing table would have been a table with no writer. M6 supplies the
+ * writer, and these are the assertions that the reader did not quietly become something wider.
+ */
+describe('what is failing, on the console', () => {
+  it('reads a failure across every tenant, and still writes nothing', async () => {
+    const client = new Client({ connectionString: CONNECTION });
+    await client.connect();
+    try {
+      // Written the way the runtime writes it — through the table directly, over a connection
+      // with no session — because nothing in the application may write a run and this suite must
+      // not be the exception that proves otherwise.
+      await client.query(
+        `insert into public.automation_runs
+           (organization_id, rule_id, rule_name, trigger_kind, subject_type, subject_id, outcome,
+            detail)
+         values ($1, gen_random_uuid(), 'A rule that broke', 'event', 'work_item',
+                 gen_random_uuid(), 'failed', 'something the database said')`,
+        [alphaId],
+      );
+    } finally {
+      await client.end();
+    }
+
+    const { data, error } = await staff.db
+      .from('platform_failures')
+      .select('kind, organization_id, subject, detail')
+      .eq('organization_id', alphaId);
+
+    expect(error).toBeNull();
+    expect(data ?? []).toHaveLength(1);
+    expect(data![0].subject).toBe('A rule that broke');
+    // Verbatim. An interpretation here would be the console guessing at somebody else's error.
+    expect(data![0].detail).toBe('something the database said');
+  });
+
+  it('cannot write a run or a delivery, and fails on privilege rather than on policy', async () => {
+    // I21's second half, extended to the tables M6 added. A permissive policy written later
+    // still hits a missing privilege, which is why the message is asserted and not the failure.
+    const run = await staff.db.from('automation_runs').insert({
+      organization_id: alphaId,
+      rule_id: alphaId,
+      rule_name: 'Invented by staff',
+      trigger_kind: 'event',
+      subject_type: 'work_item',
+      subject_id: alphaId,
+      outcome: 'done',
+    });
+    expect(run.error?.message ?? '').toContain('permission denied');
+
+    const cleared = await staff.db
+      .from('automation_runs')
+      .delete()
+      .eq('organization_id', alphaId);
+    expect(cleared.error?.message ?? '').toContain('permission denied');
+  });
+
+  it('does not read what a business says to its own customers', async () => {
+    // **Deliberately not granted.** A template is what a business says to its own customers and
+    // a reading is what somebody outside said about its sites; neither is needed to know that a
+    // thing failed. The console reads the fact and its cause, and does not read the mail.
+    for (const table of ['message_templates', 'external_readings', 'asset_readings'] as const) {
+      const { error } = await staff.db.from(table).select('id');
+      expect(error?.message ?? '', table).toContain('permission denied');
+    }
+  });
+
+  it('builds the failures view as security_invoker, so it carries no visibility of its own', async () => {
+    // Read from `pg_class` rather than from the definition, for the reason the tenant view's own
+    // test gives: dropping that flag is one word and nothing else about the view would look
+    // different — and without it this becomes the service-role client D14 refuses.
+    const client = new Client({ connectionString: CONNECTION });
+    await client.connect();
+    try {
+      const { rows } = await client.query(
+        `select reloptions from pg_class where relname = 'platform_failures'`,
+      );
+      expect(rows[0].reloptions ?? []).toContain('security_invoker=true');
+    } finally {
+      await client.end();
+    }
+  });
+
+  it('shows a member only their own business’s failures, through the same view', async () => {
+    // One query and one shape for both readers, which is what stops a second idea of "failing"
+    // growing on the tenant's side of the product.
+    const { data, error } = await member.db
+      .from('platform_failures')
+      .select('organization_id');
+
+    expect(error).toBeNull();
+    expect((data ?? []).every((row) => row.organization_id === alphaId)).toBe(true);
+    expect((data ?? []).length).toBeGreaterThan(0);
+  });
+});

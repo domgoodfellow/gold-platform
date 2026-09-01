@@ -14,6 +14,7 @@ import { listMembers } from '@/lib/domain/tenancy/members';
 import {
   listEnabledModules,
   listModuleSettings,
+  outstandingModuleSetup,
   setModuleEnabled,
 } from '@/lib/domain/tenancy/modules';
 import { getOrganization, updateOrganization } from '@/lib/domain/tenancy/organizations';
@@ -441,5 +442,167 @@ describe('a connected payment account', () => {
       .select('id')
       .eq('organization_id', shop.organizationId);
     expect((data ?? []).length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * What a business still has to do, and the switch that used to lead nowhere.
+ *
+ * **The bug this describes is not a broken function — every piece worked.** Card payments could
+ * be switched on while the section that connects an account was never rendered, because it sat
+ * behind a deployment-level check for a processor. The business saw a switch go on and a page
+ * say nothing, which is indistinguishable from having finished. `constraints.md` D31 makes the
+ * rule general: a module names where it is configured, and a module that is on is asked whether
+ * it can actually do the thing it was switched on for.
+ *
+ * A fresh business is founded here rather than reusing the one above, because the helper at the
+ * top of this file deliberately arrives fully set up — a price, a published type and an address
+ * — which is the one state in which none of this has anything to say.
+ */
+describe('what a switched-on module still needs', () => {
+  let bare: { db: SupabaseClient; organizationId: string };
+
+  beforeAll(async () => {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const email = `ready-${randomUUID().slice(0, 8)}@example.test`;
+    const password = `pw-${randomUUID()}`;
+    const { error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (error) throw error;
+
+    const db = anonClient();
+    const { error: signInError } = await db.auth.signInWithPassword({ email, password });
+    if (signInError) throw signInError;
+
+    const organizationId = await foundBusiness({
+      ownerEmail: email,
+      name: 'Ready Ltd',
+      displayName: 'Founder',
+      timezone: 'UTC',
+      currency: 'EUR',
+    });
+
+    bare = { db, organizationId };
+  });
+
+  it('tells a newly provisioned business that nothing is priced yet', async () => {
+    // Billing is the one module a provisioned business arrives with, and it arrives with an
+    // empty catalogue — which is correct (nothing may have a value the platform chose) and is
+    // also the first thing anybody has to do. Saying so is the difference between a business
+    // discovering it at the price of a question and discovering it at the price of a quote.
+    const enabled = await listEnabledModules(bare.db, { organizationId: bare.organizationId });
+    const outstanding = await outstandingModuleSetup(bare.db, {
+      organizationId: bare.organizationId,
+      enabled,
+    });
+
+    expect(outstanding.get('billing')).toBe('Nothing is priced yet, so a job cannot be quoted.');
+  });
+
+  it('says nothing about a module the business has not switched on', async () => {
+    // The distinction that keeps this from becoming a to-do list the platform wrote. A module
+    // nobody bought is not part of that business, so there is nobody to tell anything to — the
+    // same reasoning that keeps its area out of the navigation entirely.
+    const outstanding = await outstandingModuleSetup(bare.db, {
+      organizationId: bare.organizationId,
+      enabled: new Set(),
+    });
+
+    expect(outstanding.size).toBe(0);
+  });
+
+  it('stops asking once the business has done it', async () => {
+    await createPriceBookItem(bare.db, {
+      organizationId: bare.organizationId,
+      name: 'Callout',
+      unit: 'visit',
+      unitAmountMinor: 9_000,
+    });
+
+    const outstanding = await outstandingModuleSetup(bare.db, {
+      organizationId: bare.organizationId,
+      enabled: new Set(['billing'] as const),
+    });
+
+    expect(outstanding.has('billing')).toBe(false);
+  });
+
+  it('walks public booking through both of the things it needs, in order', async () => {
+    await setModuleEnabled(bare.db, {
+      organizationId: bare.organizationId,
+      key: 'booking',
+      enabled: true,
+    });
+
+    const enabled = new Set(['booking'] as const);
+    const before = await outstandingModuleSetup(bare.db, {
+      organizationId: bare.organizationId,
+      enabled,
+    });
+    expect(before.get('booking')).toBe('No public address yet, so there is no page to reach.');
+
+    const organization = await getOrganization(bare.db, bare.organizationId);
+    await updateOrganization(bare.db, {
+      id: bare.organizationId,
+      name: organization!.name,
+      timezone: organization!.timezone,
+      currency: organization!.currency,
+      bufferMinutes: organization!.bufferMinutes,
+      slug: `ready-${randomUUID().slice(0, 6)}`,
+    });
+
+    // An address and nothing published: a page that answers for nobody. **And no screen in this
+    // application can publish one** — `setTypeBookable` is reachable from the domain layer and
+    // from no route, which `walkthrough.md` records as M4's debt. The sentence says so out loud
+    // rather than letting an operator spend an afternoon looking for the control.
+    const addressed = await outstandingModuleSetup(bare.db, {
+      organizationId: bare.organizationId,
+      enabled,
+    });
+    expect(addressed.get('booking')).toBe(
+      'No kind of work is published to this page yet, and no screen here can publish one.',
+    );
+
+    const typeId = await createWorkItemType(bare.db, {
+      organizationId: bare.organizationId,
+      name: 'Fitting',
+    });
+    const statusId = await createWorkItemStatus(bare.db, {
+      organizationId: bare.organizationId,
+      typeId,
+      name: 'Requested',
+      position: 0,
+    });
+    await setTypeBookable(bare.db, { id: typeId, statusId, durationMinutes: 30 });
+
+    const done = await outstandingModuleSetup(bare.db, {
+      organizationId: bare.organizationId,
+      enabled,
+    });
+    expect(done.has('booking')).toBe(false);
+  });
+
+  it('has something to say about card payments with nothing connected', async () => {
+    // **Deliberately not asserting which sentence.** Which of the two applies depends on whether
+    // the deployment running this suite holds processor keys, and that is a property of an
+    // environment rather than of this business. What must hold either way is that the screen is
+    // not silent — silence is the whole of what D31 forbids.
+    await setModuleEnabled(bare.db, {
+      organizationId: bare.organizationId,
+      key: 'card_payments',
+      enabled: true,
+    });
+
+    const outstanding = await outstandingModuleSetup(bare.db, {
+      organizationId: bare.organizationId,
+      enabled: new Set(['card_payments'] as const),
+    });
+
+    expect(outstanding.get('card_payments')).toBeTruthy();
   });
 });

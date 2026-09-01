@@ -7,6 +7,10 @@ import {
   type CustomFieldEntity,
   type FieldKind,
 } from '@/lib/domain/fields/field-definitions';
+import {
+  addAutomationAction,
+  createAutomationRule,
+} from '@/lib/domain/automation/rules';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { addOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { createRole } from '@/lib/domain/tenancy/roles';
@@ -60,6 +64,27 @@ export type ShapeField = {
 };
 
 /**
+ * One rule, as data.
+ *
+ * **Statuses by index, for the reason transitions already are**: a shape is written before
+ * anything has an id, and a name is a string a proposal can get subtly wrong twice.
+ *
+ * Deliberately the smallest rule that is a whole rule — a moment to watch for and a status to
+ * move to. Conditions, messages, timings and counters are all expressible as rows and none of
+ * them is here, because a shape is what somebody stands a business up with and nothing in M6's
+ * two callers has asked to start with a conditional one. Adding a field here later costs
+ * nothing; adding four now would be four fields nobody fills in.
+ */
+export type ShapeAutomation = {
+  /** What this business calls the rule. Rendered as written, never translated. */
+  name: string;
+  /** An `events.action` this platform publishes — see `TRIGGER_EVENTS`. */
+  on: string;
+  /** Which status to move the job into, as an index into `statuses`. */
+  moveTo: number;
+};
+
+/**
  * A business, as data.
  *
  * Nothing in this type is a platform decision. The platform supplies `Customer`, `Work Item`,
@@ -88,6 +113,13 @@ export type BusinessShape = {
   hours: { dayOfWeek: number; opensAt: string; closesAt: string }[];
   /** Roles that are not the founder's, holding what this business decided it needs. */
   roles: { name: string; capabilities: string[] }[];
+  /**
+   * What it does without anybody present.
+   *
+   * Optional, because a business that automates nothing is an ordinary business and a shape
+   * written before M6 existed is still a valid shape.
+   */
+  automations?: ShapeAutomation[];
 };
 
 /** What standing a business up produced, so a caller can carry on working with it. */
@@ -98,6 +130,8 @@ export type ConfiguredBusiness = {
   statusIds: string[];
   roleIds: string[];
   priceBookItemIds: string[];
+  /** In `shape.automations` order, so an index into one indexes the other. */
+  automationRuleIds: string[];
 };
 
 /**
@@ -117,6 +151,22 @@ function validateTransitions(shape: BusinessShape): void {
           'onboarding.transition_out_of_range',
         );
       }
+    }
+  }
+
+  // The same check on the same kind of mistake, for the same caller. A rule naming a status
+  // this shape does not have would otherwise fail on the last call of the sequence, after
+  // everything else had already been written.
+  for (const automation of shape.automations ?? []) {
+    if (
+      !Number.isInteger(automation.moveTo) ||
+      automation.moveTo < 0 ||
+      automation.moveTo >= shape.statuses.length
+    ) {
+      throw new DomainError(
+        `A rule names status ${automation.moveTo}, and this business has ${shape.statuses.length}.`,
+        'onboarding.automation_out_of_range',
+      );
     }
   }
 }
@@ -216,5 +266,25 @@ export async function configureBusiness(
     );
   }
 
-  return { organizationId, typeId, statusIds, roleIds, priceBookItemIds };
+  // Last, because a rule names a status and the statuses are written above it. That is the
+  // only reason for the position — nothing here branches on what the rule says, any more than
+  // anything above branches on what the statuses are called.
+  const automationRuleIds: string[] = [];
+  for (const automation of shape.automations ?? []) {
+    const ruleId = await createAutomationRule(db, {
+      organizationId,
+      name: automation.name,
+      triggerKind: 'event',
+      triggerEventAction: automation.on,
+    });
+    await addAutomationAction(db, {
+      organizationId,
+      ruleId,
+      kind: 'change_status',
+      statusId: statusIds[automation.moveTo],
+    });
+    automationRuleIds.push(ruleId);
+  }
+
+  return { organizationId, typeId, statusIds, roleIds, priceBookItemIds, automationRuleIds };
 }

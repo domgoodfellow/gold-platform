@@ -1,10 +1,11 @@
 import { CustomFieldValues } from '@/components/custom-field-values';
 import { listAssets } from '@/lib/domain/assets/assets';
+import { listAssetReadings } from '@/lib/domain/assets/readings';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { requireOrganization } from '@/lib/route/organization';
-import { CreateAssetForm } from './create-asset-form';
+import { CreateAssetForm, RecordReadingForm } from './create-asset-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,22 @@ export default async function AssetsPage({
   ]);
 
   const mayAdd = organization.capabilities.includes('asset.create');
+
+  // The latest reading per asset, which is what somebody looking at the list wants — the rest of
+  // the log lives under the asset. One query per asset is honest at this size; a list that grows
+  // past a screenful is what would make this a join worth writing.
+  const readings = new Map(
+    await Promise.all(
+      assets.map(async (asset) => {
+        const own = await listAssetReadings(db, {
+          organizationId,
+          assetId: asset.id,
+          limit: 1,
+        });
+        return [asset.id, own[0] ?? null] as const;
+      }),
+    ),
+  );
 
   return (
     <>
@@ -47,6 +64,24 @@ export default async function AssetsPage({
                 </div>
               ) : null}
               <CustomFieldValues definitions={definitions} custom={asset.custom} />
+
+              {/* A counter, and what it last read. Nothing is assumed about what it counts —
+                  hours, miles, cycles — and a machine nobody meters simply has none. */}
+              {readings.get(asset.id) ? (
+                <div className="mt-1 text-sm opacity-70">
+                  Last read {readings.get(asset.id)!.value} {readings.get(asset.id)!.unit} on{' '}
+                  {new Date(readings.get(asset.id)!.readAt).toLocaleDateString('en-GB')}
+                </div>
+              ) : null}
+
+              {mayAdd ? (
+                <RecordReadingForm
+                  organizationId={organizationId}
+                  assetId={asset.id}
+                  assetName={asset.name}
+                  lastUnit={readings.get(asset.id)?.unit ?? ''}
+                />
+              ) : null}
             </li>
           ))}
         </ul>

@@ -66,3 +66,27 @@ python -m pytest apps/api/tests
 ```
 
 ⚠️ **Not covered by `pnpm --filter @gold/web check`.** Run both.
+
+## The automation tick
+
+`/tasks/automation-tick` is the second endpoint and the responsibility `docs/constraints.md` D2
+lists first for this runtime. It arrived with M6, and D24 decides its shape: **a scheduled
+invocation that asks what is due, never a worker daemon.** There is no queue in this process —
+`run_due_automations()` answers a query, and the message queue that does exist is a table.
+
+It runs as `automation_runner`, a Postgres role holding **no grant on any table** and exactly
+five `execute` grants (D30). It cannot read a customer or a job; `queued_messages` hands it an
+address and the finished words a business wrote; `places_to_watch` hands it a point on a map and
+a metric; and recording a delivery or a reading is all it can say back.
+
+`CRON_SECRET` gates it. Without a match the endpoint answers 401, and without the four runner
+settings it answers 404 — the same shape the Stripe handler uses for a deployment with no
+processor.
+
+**Channels are configured one at a time** (`app/channels/registry.py`), and a channel this
+deployment cannot send on is not hidden: the message is recorded as failed with a sentence
+saying so, which an operator reads on the Automations screen. That is D31 applied to a switch
+whose inputs live in a different deployment.
+
+Its tests are in `tests/test_automation_tick.py` and, like the rest of this directory, they are
+**not in `pnpm --filter @gold/web check`** — run `python -m pytest apps/api/tests` alongside it.

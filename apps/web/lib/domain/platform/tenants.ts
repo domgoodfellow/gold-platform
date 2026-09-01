@@ -120,3 +120,55 @@ export async function isPlatformStaff(db: Db): Promise<boolean> {
 
   return (rows ?? []).length > 0;
 }
+
+/**
+ * What is failing, across every tenant this caller can see.
+ *
+ * **The fourth of M5's four questions, arriving with the writer that made it answerable.** That
+ * milestone could say who exists, what they had switched on and when they last did anything, and
+ * not this — because nothing in the schema recorded a failure. An automation is the first thing
+ * this platform does that fails with nobody watching, and `automation_runs` and
+ * `message_deliveries` are where it says so.
+ *
+ * **The same function serves both readers**, and that is the point rather than a saving.
+ * `platform_failures` runs `security_invoker`, so staff see every business and a member sees
+ * their own — one query, one shape, and no second idea of what "failing" means growing on the
+ * tenant's side of the product.
+ */
+export type Failure = {
+  /** `automation` or `message`. Two sources, one question. */
+  kind: string;
+  organizationId: string;
+  occurredAt: string;
+  /** The rule that was running, snapshotted when it ran (I8). */
+  subject: string;
+  /** The database's or the provider's own words. Never this platform's interpretation. */
+  detail: string;
+};
+
+export async function listFailures(
+  db: Db,
+  input: { limit?: number } = {},
+): Promise<Failure[]> {
+  await requireActor(db);
+
+  const { data, error } = await db
+    .from('platform_failures')
+    .select('kind, organization_id, occurred_at, subject, detail')
+    .order('occurred_at', { ascending: false })
+    .limit(input.limit ?? 50);
+
+  if (error) {
+    throw new DomainError(error.message, 'platform.failures_failed');
+  }
+
+  return (data ?? [])
+    .filter((row) => row.kind && row.organization_id && row.occurred_at)
+    .map((row) => ({
+      kind: row.kind as string,
+      organizationId: row.organization_id as string,
+      occurredAt: row.occurred_at as string,
+      subject: (row.subject as string | null) ?? '',
+      detail: (row.detail as string | null) ?? '',
+    }));
+}

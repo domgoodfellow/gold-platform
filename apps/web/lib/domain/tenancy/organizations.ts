@@ -1,7 +1,11 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from './actor';
-import { isCapability, type Capability } from '@/lib/domain/tenancy/capabilities';
+import {
+  ALL_CAPABILITIES,
+  isCapability,
+  type Capability,
+} from '@/lib/domain/tenancy/capabilities';
 
 export type Organization = {
   id: string;
@@ -209,16 +213,84 @@ export async function getOrganization(db: Db, id: string): Promise<Organization 
 }
 
 /**
- * **There is no `createOrganization` here any more, and its absence is the enforcement.**
+ * Found a business, as the person who will own it.
  *
- * D29 closed founding: `create_organization` holds no grant, so this wrapper had no reachable
- * caller and a wrapper around a function nobody may execute is worse than nothing — it reads
- * like a supported path. Standing a business up is `provisionOrganization`
- * (`lib/domain/platform/provision.ts`), and the SQL function this used to call is still there,
- * ungranted, waiting for M8 to give self-serve somebody who can do the configuring.
+ * **This came back, and the reason is worth keeping.** It was removed when D29 closed the
+ * self-serve door on the argument that handing somebody an empty business with nobody helping
+ * them configure it is not a product. That argument was about the *quality* of this door and it
+ * was read as being about its existence — and what it left behind was somebody who signs up,
+ * lands on a page saying they belong to no business, and has no way forward at all. A door with
+ * nothing behind it is the exact failure D31 was written about.
  *
- * `normaliseName`, `normaliseCurrency` and `FOUNDING_ROLE` are exported above for that door.
+ * **The two doors are not alternatives and never were.** `provisionOrganization` is GOLD
+ * creating a business for somebody it has spoken to; this is somebody creating their own. Both
+ * call the same path underneath, both write the same `organization.created` event, and the only
+ * difference is what the payload says about how it arrived. That is D29's own framing — one
+ * creation path, two doors — arriving at last with both of them open.
+ *
+ * **What this cannot do is make the caller anything other than the founder**, which is the one
+ * thing `provisionOrganization` cannot express: that function names an owner who is somebody
+ * else. Neither can substitute for the other, which is why there are two.
  */
+export async function createOrganization(
+  db: Db,
+  input: {
+    name: string;
+    /** What this business calls the person who owns it. Theirs to change afterwards (D6). */
+    role?: string;
+    /** What this person is called inside this business. Per-tenant, never a global profile. */
+    displayName: string;
+    timezone: string;
+    currency: string;
+  },
+): Promise<string> {
+  await requireActor(db);
+
+  const name = normaliseName(input.name);
+  const currency = normaliseCurrency(input.currency);
+  const timezone = input.timezone.trim();
+
+  if (timezone.length === 0) {
+    throw new DomainError('A timezone is required.', 'organizations.timezone_required');
+  }
+
+  const displayName = input.displayName.trim();
+  if (displayName.length === 0) {
+    throw new DomainError('Please give a name for yourself.', 'organizations.display_name_required');
+  }
+
+  const { data, error } = await db.rpc('create_organization', {
+    p_name: name,
+    // The founder holds everything, because at this moment they are the only person here and
+    // there is nobody to divide the work with. What the role is *called* is this business's own
+    // word from the first second, which is why it is an argument rather than a constant in SQL.
+    p_role: (input.role ?? FOUNDING_ROLE).trim() || FOUNDING_ROLE,
+    p_capabilities: ALL_CAPABILITIES,
+    p_display_name: displayName,
+    p_timezone: timezone,
+    p_currency: currency,
+  });
+
+  if (error) {
+    // The guard inside the function: an anonymous session from the booking flow may not found a
+    // business, and neither may anybody the grant does not cover.
+    if (error.code === '42501') {
+      throw new DomainError(
+        'You cannot create a business from this session.',
+        'organizations.forbidden',
+      );
+    }
+    if (error.code === '23514') {
+      throw new DomainError(
+        'That currency or timezone is not one this platform recognises.',
+        'organizations.invalid',
+      );
+    }
+    throw new DomainError(error.message, 'organizations.create_failed');
+  }
+
+  return data;
+}
 
 /**
  * Change what a business calls itself, the clock it thinks in, what it trades in, and how long
