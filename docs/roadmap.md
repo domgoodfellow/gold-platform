@@ -25,17 +25,33 @@ it, and if they do, this section changes rather than the numbering.
 
 1. **M5 — the platform side.** Provisioning is the factory floor. Every signed customer walks
    through it.
-2. **M8 — the AI layer, onboarding first.** Moved ahead of M6 and M7. It is the only build with
-   two beneficiaries: the tenant's self-serve door, and the implementation margin the business
-   model rests on. The rest of M8 keeps its place.
-3. **Tenant marketing and branding.** D20's deferral, revisited — a named revenue line and the
+2. **M6 — workflows and automations.** **Taken ahead of the place this list gave it, and the
+   reason is worth keeping rather than quietly renumbering.** M5 shipped a staff console that
+   could not answer its own fourth question — *what is failing* — because nothing in the schema
+   recorded a failure, and M6 was named as the milestone that would give that question a writer.
+   Finishing a screen that named a question it could not answer beat leaving it standing. It also
+   settled D30, which the AI layer would otherwise have had to settle while holding a second
+   problem.
+3. **M8's second criterion — describe a business, receive a proposed configuration.** The half of
+   the AI layer with a business behind it, and now the half with a door standing open in front of
+   it: `20260901000001` reopened self-serve founding, so a business can sign itself up and reach
+   nothing but the hand-configuration screens. D29 says this flow is the only thing that door
+   waits on. **D32 holds the decisions**, and `milestone-m8.test.ts` demonstrates it.
+4. **Tenant marketing and branding.** D20's deferral, revisited — a named revenue line and the
    third sale to the same customer. **It has no milestone number yet and needs one**;
    `organization_profiles` is the seed and `tire-app-template`'s `site_content` is the pattern.
-4. **M6 — workflows and automations.** Also the milestone that gives "what is failing" a
-   substrate, which M5's criterion defers to it.
 5. **M7 — reporting and dashboards.**
-6. **M9 — reception and sales.** D5's reasoning is unchanged and nothing in `market.md` moves it.
-7. **M10 — desktop.** No customer has asked.
+6. **M8's first criterion — asking the system questions.** It lands after M7 rather than with the
+   rest of its own milestone, and that is the one place the reordering left a genuine dependency:
+   four of the seven commands `starting_conversation.txt` §18 uses as examples are reports, and an
+   AI layer over no aggregate layer either cannot answer them or grows a second aggregate layer
+   inside its tool implementations — which is what I4 and I5 exist to prevent one level up.
+7. **M9 — reception and sales.** D5's reasoning is unchanged and nothing in `market.md` moves it.
+8. **M10 — desktop.** No customer has asked.
+
+**A milestone splitting across this list is new, and M8 is the first.** Its two criteria share a
+number and not a dependency, which is what the numbering was always warned about: the number is
+identity. Nothing is renumbered and both halves keep citing M8.
 
 **GOLD as tenant zero runs alongside all of it and is not a milestone.** GOLD is an operations
 business — customers, work items, scheduling, documents, costs — so it is an ordinary
@@ -700,9 +716,20 @@ employee and by location are that same subtraction grouped four ways, which is w
 starts paying. Building the engine first would have been the abstraction with no caller;
 building the fourth grouping by hand would be the copy.
 
-It lands before the AI layer deliberately. Four of the seven commands `starting_conversation.txt`
-§18 uses as examples — least profitable services, cost trends, parts to order, customers not
-contacted — are reports. An AI layer over no aggregate layer can only answer the other three.
+**It lands before the half of the AI layer that asks questions, and after the half that proposes
+configuration.** Four of the seven commands `starting_conversation.txt` §18 uses as examples —
+least profitable services, cost trends, parts to order, customers not contacted — are reports,
+and an AI layer over no aggregate layer either cannot answer them or grows a second aggregate
+layer inside its tool implementations, which is the failure I4 and I5 exist to prevent one level
+up. Onboarding is the other half and shares none of that: it writes configuration through
+`configureBusiness` and reads no aggregate at all.
+
+**This paragraph said "before the AI layer" for two milestones after that stopped being true.**
+`market.md` moved AI onboarding ahead of both M6 and M7 and the *Order of work* list was
+rewritten to say so; this sentence was not, so one file argued both ways and the stale half sat
+inside the milestone it favoured — which is the kind that gets believed. Corrected here rather
+than quietly, because the correction is the useful part: the dependency was always on *half* of
+M8, and reading it as the whole is what put reporting in front of the onboarding flow.
 
 ---
 
@@ -724,12 +751,64 @@ new business logic, that logic belongs in the domain layer and the tool is a cal
 the system answers questions; configuring it removes the bottleneck of a service business,
 which is standing up the next tenant. It stays inside the guardrail above because a person
 reviews and applies the proposal — the AI proposes configuration, it does not become
-configuration. This is also **Business templates** from *Decided, not yet built*, arriving
-the way that entry demands: as an extract of configuration that has already proven itself,
-rather than a bundle cloned from a guess.
+configuration.
 
 `step-by-roll` is the reference: role, agent, skill, tool, workflow held apart, with a
 capability check on every tool. That separation is I14 already built once.
+
+### The two criteria are built apart, and the second goes first
+
+**They share a milestone number and not a dependency.** Asking the system questions is tools over
+an aggregate layer that does not exist yet; proposing a configuration is one structured call over
+`configureBusiness`, which does. *Order of work* splits them accordingly — onboarding now,
+questions after M7 — and neither is renumbered.
+
+**What onboarding builds.** `configuration_proposals`, a tenant-owned row holding the prose, the
+proposed `BusinessShape`, the gaps the model could not fill and an outcome; a drafting adapter
+under `lib/adapters/drafting/`; and a setup screen where a person reads the proposal, answers what
+it asked, edits anything they disagree with, and applies. Applying calls `configureBusiness`
+unchanged. **`constraints.md` D32 holds the decisions**, three of which are load-bearing: the model
+holds no tool and no database handle, so I14 is satisfied by an absence rather than by a check;
+applying adds no capability, because every step it takes is already gated by a policy; and a failed
+apply is recorded on the row in the database's own words rather than rolled back, because
+atomicity here would mean a second configuration path.
+
+**It is not Business templates, and `configure.ts` already said so before this was written.** A
+template is a named bundle the platform ships and a business starts from; a shape is supplied by
+its caller, and nothing in a proposal is seeded, named or known to the platform in advance. The
+earlier version of this section claimed the opposite — that onboarding *was* that entry arriving
+the way it demanded — and the code contradicted it in its own comments for two milestones. That
+entry stays closed, and what it is still waiting for is unchanged: two businesses configured by
+hand.
+
+**What this half does not build.** No tool loop, no agent, no question answering — that is the
+first criterion. No drafting of message templates, though *Decided, not yet built* is right that
+it belongs here and is the same shape: it is a **second** caller of the drafting capability, and
+this repository builds the first one first.
+
+### It is demonstrated, and the demonstration is an absence
+
+`milestone-m8.test.ts` describes two businesses that share no word — a chimney sweep in Tallinn
+trading in euro, a dive school in Cebu trading in pesos — receives a whole configuration for
+each, and **asserts at that moment that both are still completely empty**. No type, no status, no
+price, no hour, and the same number of roles founding gave them. That is the milestone: the AI
+proposed configuration and did not become configuration, and there is no path by which it could
+have, because the drafting capability holds no database handle at all.
+
+Two further things it proves rather than assumes. **The review is real**: between proposing and
+applying, the test changes the last stage's name to a word the drafting never produced, and that
+is the word in the database afterwards — so a proposal is not what gets applied, the reviewed
+version is. And **neither business's vocabulary appears in the code that handled it**: the test
+reads `configureBusiness`'s source *and* all three files of the drafting adapter, and fails on any
+of their words. M3 makes that claim about the configuring; M8 extends it to the drafting, which is
+the second place a business's specifics could have been smuggled in and one layer further out than
+M3 was watching.
+
+**The drafting is a fixed provider, and that is the honest choice.** What the milestone claims is
+a property of the path — where a proposal lives, what may touch it, who writes — and a test that
+called a real provider would be asserting somebody else's judgement, slowly and for money. That
+the model has nothing to write with is asserted structurally in `proposals.test.ts`, from the
+adapter's imports.
 
 ---
 

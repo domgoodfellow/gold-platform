@@ -477,6 +477,66 @@ export type Database = {
           },
         ]
       }
+      configuration_proposals: {
+        Row: {
+          applied_at: string | null
+          created_at: string
+          created_by: string
+          description: string
+          detail: string | null
+          drafted_by: string
+          gaps: Json
+          id: string
+          organization_id: string
+          outcome: string
+          result: Json | null
+          shape: Json
+        }
+        Insert: {
+          applied_at?: string | null
+          created_at?: string
+          created_by: string
+          description: string
+          detail?: string | null
+          drafted_by: string
+          gaps?: Json
+          id?: string
+          organization_id: string
+          outcome?: string
+          result?: Json | null
+          shape: Json
+        }
+        Update: {
+          applied_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          detail?: string | null
+          drafted_by?: string
+          gaps?: Json
+          id?: string
+          organization_id?: string
+          outcome?: string
+          result?: Json | null
+          shape?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuration_proposals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configuration_proposals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_locations: {
         Row: {
           created_at: string

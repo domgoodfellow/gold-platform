@@ -94,6 +94,28 @@ watch the sidebar change as you flip Assets and Billing: that is the fastest way
 difference between a module and the kernel, and switching Billing off also takes the quote, the
 invoice and the margin off every job screen.
 
+### 2b. The shortcut, if this deployment has one — *Guided setup*
+
+**Optional, and worth doing once in each direction.** Switch **Guided setup** on in Settings and a
+*Guided setup* entry appears at the bottom of the configuration group. It takes one box: describe
+the business in your own words — the work it does, how a job goes from start to finish, what you
+charge for, when you are open — and it hands back a whole proposed setup with questions attached
+about whatever it could not work out.
+
+**Nothing has happened to the business at this point, and that is the thing to check.** Open
+*Work* in another tab before you press Apply: still empty. The proposal is a row, every word of it
+is yours to change on the screen, and only Apply writes anything — through exactly the same calls
+steps 3 to 6 make by hand. Change a stage's name before applying, then go and look at the board:
+your word is there and the drafted one is not.
+
+**If this deployment has no model key, the screen says so** rather than taking three paragraphs
+and refusing them, and points you at the screens below. That is the honest state, not a broken
+one: everything the proposal would have written can be typed in by hand, which is why guided setup
+is a module and not part of the kernel.
+
+Steps 3 to 6 are the hand path. Do them at least once even if the shortcut worked — they are what
+the shortcut is a shortcut *to*, and a proposal that lands part-way leaves you finishing it here.
+
 ### 3. Teach it what work is — *Work*
 
 The Work area is where a business's vocabulary is written, and a brand-new one has none, so the
@@ -343,3 +365,4 @@ permission on no table whatsoever.
 | `milestone-m4.test.ts` | A stranger books; the operator schedules, works, invoices and is paid | Steps 7–9 above, plus the booking half once the snippet has run |
 | `milestone-m5.test.ts` | Somebody who runs GOLD sees every business, changes none of them, and hands one over | The console, and the provisioning form on it |
 | `milestone-m6.test.ts` | A rule written by a person moves a job and writes to a customer with nobody present | Step 11 above, and *What is failing* on the console |
+| `milestone-m8.test.ts` | Prose becomes a whole proposed setup and the business stays empty until a person applies it | Step 2b above — describe the business, then look at *Work* before pressing Apply |

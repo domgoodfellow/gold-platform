@@ -2,6 +2,7 @@ import { paymentProvider } from '@/lib/adapters/payments';
 import type { Db } from '@/lib/db/types';
 import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
 import { DomainError } from '@/lib/domain/errors';
+import { canDraftConfiguration } from '@/lib/domain/onboarding/proposals';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { MODULES, isModuleKey, type ModuleKey } from '@/lib/navigation';
 import { requireActor } from '@/lib/domain/tenancy/actor';
@@ -266,6 +267,22 @@ export async function outstandingModuleSetup(
           'No account is connected, so nothing can be collected by card.',
         );
       }
+    }
+  }
+
+  if (input.enabled.has('drafting') && !outstanding.has('drafting')) {
+    // **The same case as card payments, on a second capability** — and it is worth switching on
+    // the precedent rather than rediscovering it. An installation with no drafting provider can
+    // render the setup screen perfectly and it will refuse every description typed into it,
+    // which from the operator's side is the product being broken rather than unavailable.
+    //
+    // It says what is still true afterwards, because it is: every part of a setup has a screen
+    // that predates this module, and a business told this is not a business that is stuck.
+    if (!(await canDraftConfiguration())) {
+      outstanding.set(
+        'drafting',
+        'This deployment cannot draft a setup, so nothing can be proposed here. Every part of it can still be filled in on the screens above.',
+      );
     }
   }
 

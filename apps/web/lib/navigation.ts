@@ -206,6 +206,16 @@ export const MODULES = [
     requires: 'automations',
   },
   {
+    key: 'drafting',
+    label: 'Guided setup',
+    description:
+      'Describe the business in your own words and get a proposed setup back to read, change and apply. A business that would rather fill in each screen itself runs without it — and every one of those screens exists either way.',
+    // **An area of its own, unlike weather and maintenance**, because what it produces is a
+    // document a person argues with over several sittings rather than a section on somebody
+    // else's page. It is the only module whose whole surface is a thing being drafted.
+    configuredAt: { segment: 'setup' },
+  },
+  {
     key: 'card_payments',
     label: 'Card payments',
     description: 'Ask a processor to collect what is outstanding, rather than only cash.',
@@ -284,6 +294,10 @@ export const AREAS: readonly Area[] = [
   { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations' },
   { segment: 'fields', label: 'Custom fields', group: 'configuration' },
   { segment: 'roles', label: 'People and roles', group: 'configuration' },
+  // Describing the business and reading back a proposed setup. Configuration, and last in that
+  // group on purpose: a business reaches it while standing everything up and rarely again, so
+  // it sits below the screens it fills in rather than above them.
+  { segment: 'setup', label: 'Guided setup', group: 'configuration', module: 'drafting' },
   // Settings names no module, and that is load-bearing rather than incidental: it is where the
   // switches are, so a module able to hide it would be a business locked out of its own
   // account with no way back.

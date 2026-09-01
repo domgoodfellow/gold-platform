@@ -22,8 +22,10 @@ checklists to documents.
 
 ## Current state
 
-**M1's, M2's, M3's, M4's, M5's and M6's acceptance criteria are met**, each demonstrated by one
-test rather than by a table count.
+**M1's, M2's, M3's, M4's, M5's and M6's acceptance criteria are met, and M8's second one is**,
+each demonstrated by one test rather than by a table count. M8's *first* criterion — asking the
+system questions through domain tools — is not built and waits for M7's aggregate layer; see
+`roadmap.md`'s *Order of work*, which splits that milestone across the list.
 
 `apps/web/tests/milestone-m1.test.ts` builds two whole businesses from byte-identical input
 in one database and asserts that neither can observe or block the other.
@@ -54,10 +56,15 @@ write with `permission denied` rather than with a policy declining.
 the world underneath it, and asserts that a job moved and a customer was written to **in a
 transaction with no session in it at all**.
 
+`apps/web/tests/milestone-m8.test.ts` describes a chimney sweep in Tallinn and a dive school in
+Cebu in prose, receives a whole configuration for each — and asserts, at that moment, that both
+businesses are still **completely empty**. Not one status, not one price, not one hour. A person
+then changes a word and applies, and it is the changed word that reaches the database.
+
 They invert each other deliberately — M1 runs byte-identical input, M2 runs identical input
 twice, M3 runs maximally different input through identical code, M4 runs half of itself as
-somebody who is a member of nothing, M5 runs as somebody who is a member of *none* of them, and
-M6 is proved by a person doing nothing.
+somebody who is a member of nothing, M5 runs as somebody who is a member of *none* of them, M6
+is proved by a person doing nothing, and M8 is proved by a machine having done nothing.
 
 The kernel is `organizations`, `memberships`, `events`, `customers`, `roles`,
 `field_definitions`, `locations`, `customer_locations`, `resources`, `assets`, `documents`,
@@ -174,6 +181,38 @@ Four things about the configuration engine are load-bearing in the same way:
   leaves no failed run, because nothing happened. Deliberately not AI; the language model version
   answers a different question and wants these answers underneath it.
 
+**The onboarding proposal is built, and it is M8's second criterion.** A business describes itself
+on `/organizations/{id}/setup`, reads back a proposed `BusinessShape` with the questions the
+drafting could not answer, edits any part of it, and applies it through `configureBusiness` —
+which is the same function `milestone-m3.test.ts` drives, called by the person, with no second
+configuration path anywhere. `configuration_proposals` is the row in between,
+`lib/adapters/drafting/` is the third capability adapter and the first needing a vendor SDK, and
+drafting is a **module** rather than kernel because every part of a setup has a screen that
+predates it. `constraints.md` D32 holds the decisions. What is *not* built is M8's first
+criterion — asking the system questions — which waits for M7's aggregate layer.
+
+Four things are easy to undo by accident:
+
+- **The drafting adapter holds no database handle and no domain writer.** That absence is what
+  I14 rests on here — the model reaches business state through nothing, which is stronger than a
+  tool it may not misuse — and `proposals.test.ts` asserts it from the imports rather than trusting
+  it. What the adapter *may* import is the domain's own constant lists, so its schema cannot fall
+  out of step with what the platform actually supports.
+- **A proposal holds no foreign key to what applying it produces**, asserted from `pg_constraint`,
+  for the reason `work_item_priced_lines` keeps the same absence against the price book (I8).
+- **Only a draft is editable**, and the update policy is what enforces it. The review is meant to
+  be edited — a review a person cannot change is a rubber stamp — and the moment a proposal is
+  applied, failed or discarded the row is frozen, so what was applied cannot be rewritten later to
+  say something else was. Re-applying after a failure is therefore a **new** draft, never an edit.
+- **Applying adds no capability, and a failure is recorded rather than rolled back.** Every step
+  is already gated by the capability it needs, so a member below `price.manage` is refused by
+  `price_book_items`' own policy — the flow checks nothing. `configureBusiness` stays
+  non-atomic: making it atomic means one privileged function taking the shape as JSON, which puts
+  the order of those steps in the database and is the second configuration path D29 forbids one
+  level up. `applyConfigurationProposal` **reads the row rather than trusting the proposal it was
+  handed**, which a test found the hard way — the first version checked a caller's snapshot, and a
+  stale one walked past the guard and re-ran the whole sequence.
+
 **Standing a business up is two acts by two parties, and the second of them is one function
 that must never learn what kind of business it is holding.** GOLD creates the business —
 `provisionOrganization` — and whoever does the configuring configures it:
@@ -191,8 +230,11 @@ tenant into existence and may not reach into one. So a name, a zone and a curren
 when the business is created, and everything in `BusinessShape` is settled afterwards by
 somebody inside it. **Do not put creation back inside this function**; it cannot work, and the
 attempt is what the paragraph above is a record of. It was `milestone-m3.test.ts`'s local helper
-until the AI onboarding flow gave it a second caller, and the milestone test now reads *its*
-source and fails on any tenant's word appearing there. A branch on business shape inside it is
+until it was extracted for the AI onboarding flow to call, and the milestone test now reads *its*
+source and fails on any tenant's word appearing there. **That second caller is not built yet** —
+every caller today is a test — which is a debt this file names rather than a claim it makes: the
+extraction happened ahead of the caller, against this repository's own rule, and D32 is where the
+caller is decided. A branch on business shape inside it is
 the per-client app studio `vision.md` refuses, arriving as a helper rather than as a fork. Two
 things it deliberately is not: it creates no customer and no job, because a business that has
 just been configured has neither and inventing one would be the platform speaking for it; and
