@@ -357,6 +357,53 @@ describe('schema conformance', () => {
     expect(granted.has('work_items.scheduled_during.UPDATE')).toBe(true);
   });
 
+  it('lets no application role empty a table', async () => {
+    // **RLS does not apply to `truncate`**, which is what makes this different from every other
+    // privilege in this schema: a policy is evaluated per row and a column grant per column, and
+    // truncating considers neither. Supabase's default privileges grant it to `anon` and
+    // `authenticated` on every table, so this was true of all forty-five until
+    // `20260902000004` — not reachable through PostgREST, which has no truncate verb, and not a
+    // standard this repository holds anywhere else: `payment_webhook` holds no table grant at
+    // all, precisely so a policy written wrongly later still hits a missing privilege.
+    const { rows } = await db.query(
+      `select table_name, grantee
+         from information_schema.role_table_grants
+        where table_schema = 'public'
+          and privilege_type = 'TRUNCATE'
+          and grantee in ('anon', 'authenticated')`,
+    );
+
+    expect(rows.map((r) => `${r.grantee}:${r.table_name}`)).toEqual([]);
+  });
+
+  it('keeps the internals schema off the API surface', async () => {
+    // **What actually makes `app` unreachable is this line, not the grants inside it.** Several
+    // `app` functions are executable by PUBLIC because no `revoke` was written for them — they
+    // read across tenants and two of them write — and the sweep that found this had to answer
+    // why that is not a hole. The answer is that PostgREST exposes the schemas named here and
+    // nothing else, so there is no request that reaches them; `anon` does not even hold `usage`
+    // on the schema.
+    //
+    // That makes one line of a config file load-bearing for an authorization boundary, which is
+    // worth a test rather than a comment: adding `app` to this list would publish the platform's
+    // internals as REST endpoints, and nothing else in the tree would look different.
+    const config = await readFile(
+      new URL('../../../infra/supabase/config.toml', import.meta.url),
+      'utf8',
+    );
+    const exposed = config
+      .split(/\r?\n/)
+      .find((line) => line.trimStart().startsWith('schemas'));
+
+    expect(exposed, 'config.toml declares no exposed schemas').toBeDefined();
+    expect(exposed).not.toContain('"app"');
+
+    const { rows } = await db.query(
+      `select has_schema_privilege('anon', 'app', 'usage') as anon_usage`,
+    );
+    expect(rows[0].anon_usage).toBe(false);
+  });
+
   it('catches a violation rather than passing by construction', async () => {
     // A negative control. Without this, every assertion above could be querying nothing and
     // nobody would know until the day it mattered.
