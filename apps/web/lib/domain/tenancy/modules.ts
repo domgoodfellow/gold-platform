@@ -232,10 +232,12 @@ export async function outstandingModuleSetup(
       if ((data ?? []).length === 0) {
         outstanding.set(
           'booking',
-          // Stated plainly because it is true and an operator will otherwise spend an
-          // afternoon looking. `roadmap.md` M4 carries the debt and `walkthrough.md` names the
-          // snippet that stands in for the screen.
-          'No kind of work is published to this page yet, and no screen here can publish one.',
+          // **This sentence used to end "and no screen here can publish one", which was the
+          // debt rather than the state.** `setTypeBookable` had no route for two milestones, so
+          // publishing needed database access on a platform whose criterion is that nobody at
+          // the business has been given any. It now names where to go, which is what D31 asks a
+          // module to do for every one of its inputs.
+          'No kind of work is published to this page yet. Publish one on the Work screen, under the kind of work you want to take bookings for.',
         );
       }
     }

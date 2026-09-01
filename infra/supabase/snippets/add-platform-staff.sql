@@ -6,8 +6,9 @@
 -- exactly "the first thing platform staff must write". Until that decision is made, this is
 -- how a colleague is added, and `platform-staff.test.ts` runs the same statement.
 --
--- This is not `publish-bookable-type.sql`, which exists because an operator path is *owed* and
--- missing. Nothing is owed here.
+-- This is not a stand-in for a missing operator path. `publish-bookable-type.sql` was one, and
+-- was deleted the day the Work screen learned to publish a type. Nothing is owed here, so nothing
+-- replaces this.
 --
 -- **The person must already have signed up**, because the row references `auth.users`.
 --

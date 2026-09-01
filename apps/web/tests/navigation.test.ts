@@ -255,6 +255,26 @@ describe('a switch leads to its inputs', () => {
     }
   });
 
+  it('gates the booking module’s per-type surface on the booking module', () => {
+    // **A module hides what it owns everywhere, not only its own area** — the rule switching
+    // `billing` off follows when it takes the quote and the invoice off every job screen.
+    // Publishing a kind of work is the second half of public booking: the address is configured
+    // in Settings, where `configuredAt` points, and *which types are on the page* is configured
+    // per type on the Work screen. Leaving that visible with the module off would be half a
+    // switch, and it is the kind of thing a refactor removes without noticing, because the
+    // control still works.
+    //
+    // Read from source for the reason the section check above is: the alternative is trusting
+    // that whoever moves this section remembers what it was conditional on.
+    const work = readFileSync(`${ROUTES}/work/page.tsx`, 'utf8');
+
+    expect(work).toContain('PublishTypeForm');
+    expect(work, 'the publish section is not gated on the booking module').toMatch(
+      /bookingEnabled\s*\?[\s\S]{0,400}PublishTypeForm/,
+    );
+    expect(work).toContain("enabledModules.has('booking')");
+  });
+
   it('builds a link that says where it goes', () => {
     const payments = MODULES.find((sold) => sold.key === 'card_payments')!;
     const where = moduleConfiguration('org-1', payments);

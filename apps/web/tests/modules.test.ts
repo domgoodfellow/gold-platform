@@ -556,16 +556,17 @@ describe('what a switched-on module still needs', () => {
       slug: `ready-${randomUUID().slice(0, 6)}`,
     });
 
-    // An address and nothing published: a page that answers for nobody. **And no screen in this
-    // application can publish one** — `setTypeBookable` is reachable from the domain layer and
-    // from no route, which `walkthrough.md` records as M4's debt. The sentence says so out loud
-    // rather than letting an operator spend an afternoon looking for the control.
+    // An address and nothing published: a page that answers for nobody. **This sentence used to
+    // end "and no screen here can publish one", which was true and was the debt** —
+    // `setTypeBookable` was reachable from the domain layer and from no route, which
+    // `walkthrough.md` recorded as M4's. Now it names the screen, which is what D31 asks of every
+    // input a module has: a business told what is missing has somewhere to go.
     const addressed = await outstandingModuleSetup(bare.db, {
       organizationId: bare.organizationId,
       enabled,
     });
     expect(addressed.get('booking')).toBe(
-      'No kind of work is published to this page yet, and no screen here can publish one.',
+      'No kind of work is published to this page yet. Publish one on the Work screen, under the kind of work you want to take bookings for.',
     );
 
     const typeId = await createWorkItemType(bare.db, {

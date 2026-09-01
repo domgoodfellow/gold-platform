@@ -296,29 +296,25 @@ recorded under the table because conflating the two would turn a decision into a
 
 | Capability | Function | What its absence blocks |
 |---|---|---|
-| Publish a kind of work to the public booking page | `setTypeBookable` | `/book/{slug}` resolves only for a business that publishes a bookable type, so **the whole booking flow is unreachable by hand** even with the module on and a URL name set. |
 | Withdraw a customer's portal link | `revokePortalInvite` | The portal page's own comment says "the business revokes it". Today the business cannot. |
 | Change an existing member's role | `assignRole` | A role is assigned at the moment somebody is added and never changed afterwards. |
 
-`infra/supabase/snippets/publish-bookable-type.sql` exists so the booking flow can be exercised
-locally, and **its existence is the evidence of the gap rather than a fix for it**: a real
-business cannot run a SQL snippet, and "nobody at that business has ever been given database
-credentials" is M4's criterion. The test path proves the platform can do this; no operator path
-proves an operator can.
-
-**The screen now says so, which is not the same as fixing it.** Switching *Public booking* on and
-setting an address leaves Settings reading "No kind of work is published to this page yet, and no
-screen here can publish one" (D31). An operator is told where the wall is instead of looking for a
-control that does not exist. The debt is unchanged and the afternoon spent hunting for it is not.
+**A third capability was on this list and is not any more.** `setTypeBookable` — publishing a
+kind of work to the public page — was the sharp one, because `/book/{slug}` resolves only for a
+business that publishes something, so the whole booking flow was unreachable by hand. It is now a
+section on the **Work** screen under the selected kind of work, gated on the booking module. The
+stand-in snippet `publish-bookable-type.sql` is deleted, because a snippet beside a screen is a
+second way to do one thing, and Settings no longer says "no screen here can publish one" — it
+says which screen does (D31).
 
 **A fourth thing now needs database access, and it is the one entry here that is not a debt.**
 Adding somebody to `platform_staff` is a hand-run snippet
 (`infra/supabase/snippets/add-platform-staff.sql`) because `platform_staff` has no insert policy
 and no grant to any application role — deliberately. A screen that adds a colleague is a *staff
 write*, and D28's own trigger to revisit is "the first thing platform staff must write". Nothing
-is owed until that decision is made, which is the difference between this snippet and the one
-above it: `publish-bookable-type.sql` stands in for an operator path that M4's criterion says a
-business must have, and this one stands in for nothing, because the person running it is us.
+is owed until that decision is made, which is the difference between this snippet and the two
+capabilities above it: those stand in for operator paths a business must eventually have, and this
+one stands in for nothing, because the person running it is us.
 
 **Provisioning a tenant was the first staff write, and it has landed** (D29) — the decision D28
 deferred, made as narrowly as it could be: one `execute` on `provision_organization`, no table

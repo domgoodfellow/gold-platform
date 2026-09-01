@@ -127,6 +127,51 @@ export async function renameWorkItemType(
 }
 
 /**
+ * What one type publishes, or null when it publishes nothing.
+ *
+ * **A second reader rather than columns added to `listWorkItemTypes`, and deliberately.** That
+ * function answers *what kinds of work does this business have* — it is the board's picker and
+ * the job form's dropdown, and it is called on screens that have nothing to do with the public
+ * page. Widening it would put three booking columns into every one of those, and
+ * `outstandingModuleSetup` already reads the table directly rather than use it, for exactly
+ * this reason.
+ *
+ * It reads one type because the screen configures one at a time.
+ */
+export type TypeBooking = {
+  statusId: string;
+  durationMinutes: number;
+  priceItemId: string | null;
+};
+
+export async function getTypeBooking(
+  db: Db,
+  input: { organizationId: string; typeId: string },
+): Promise<TypeBooking | null> {
+  const { data, error } = await db
+    .from('work_item_types')
+    .select('booking_status_id, booking_duration_minutes, booking_price_item_id')
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.typeId)
+    .maybeSingle();
+
+  if (error) {
+    throw new DomainError(error.message, 'work_item_types.booking_read_failed');
+  }
+
+  // A status and a duration are the whole of what "published" means, and
+  // `work_item_types_bookable_is_complete` keeps the pair together — so one null is enough to
+  // answer, and there is no third state to represent.
+  if (!data?.booking_status_id || data.booking_duration_minutes === null) return null;
+
+  return {
+    statusId: data.booking_status_id,
+    durationMinutes: data.booking_duration_minutes,
+    priceItemId: data.booking_price_item_id,
+  };
+}
+
+/**
  * Publish a type for public booking, or withdraw it.
  *
  * **There is no `bookable` flag**, and that is the design rather than an omission. A type is

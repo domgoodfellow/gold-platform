@@ -384,17 +384,24 @@ sounded like refusing the product when it was only declining a directory. That i
 collision D25 exists to end, and it is recorded here rather than smoothed over because this
 document caused it.
 
-**Three capabilities shipped without an operator path, and that is a debt against this
+**Three capabilities shipped without an operator path, and that was a debt against this
 milestone's own criterion rather than a deferral.** `setTypeBookable`, `revokePortalInvite` and
-`assignRole` exist in the domain layer, are covered by tests, and have no route, form or
-button. The first is the sharp one: a type becomes bookable when a business says which status a
-booking starts in and how long one takes, and there is nowhere on any screen to say it — so
-*publishing to the public booking page* is currently something only somebody with database
-access can do, which is the precise thing "nobody at that business has ever been given database
-credentials" claims nobody has to. The test path proves the platform can do it; no operator
-path proves an operator can. `docs/walkthrough.md` names all three where somebody would hit
-them, and `infra/supabase/snippets/publish-bookable-type.sql` exists to make the flow walkable
-locally — a snippet is not the fix and should be deleted the day a screen does this.
+`assignRole` existed in the domain layer, were covered by tests, and had no route, form or
+button. The first was the sharp one: a type becomes bookable when a business says which status a
+booking starts in and how long one takes, and there was nowhere on any screen to say it — so
+*publishing to the public booking page* was something only somebody with database access could
+do, which is the precise thing "nobody at that business has ever been given database
+credentials" claims nobody has to. The test path proved the platform could do it; no operator
+path proved an operator could.
+
+**`setTypeBookable` is paid.** It is a section on the Work screen under the selected kind of
+work, gated on the booking module — the address is configured in Settings where the module says
+it is, and *which types are on the page* is per type and belongs where the types are.
+`outstandingModuleSetup` used to end that module's sentence with "and no screen here can publish
+one", which was the debt written into the product; it now names the screen.
+`infra/supabase/snippets/publish-bookable-type.sql` is deleted, because a snippet beside a screen
+is a second way to do one thing. **Two remain**, and `docs/walkthrough.md` names both where
+somebody would hit them.
 
 **Module enablement shipped inert, and the cause was a word.** Every area in `AREAS` belonged
 to one of four modules marked `required` — `work`, `scheduling`, `customers`, `billing` — so

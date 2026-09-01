@@ -20,7 +20,7 @@ import {
   changeWorkItemStatus,
   createWorkItemTransition,
 } from '@/lib/domain/work-items/transitions';
-import { createWorkItemType, renameWorkItemType } from '@/lib/domain/work-items/types';
+import { createWorkItemType, renameWorkItemType, setTypeBookable } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
 
 export type WorkActionState = { error: string | null };
@@ -202,6 +202,50 @@ export async function renameTypeAction(
     await renameWorkItemType(db, {
       id: String(formData.get('typeId') ?? ''),
       name: String(formData.get('name') ?? ''),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/work`);
+  return { error: null };
+}
+
+/**
+ * Publish a kind of work to the public booking page, or withdraw it.
+ *
+ * **The route this capability went without for two milestones.** `setTypeBookable` has been
+ * tested and reachable from nothing since the booking slice, which made publishing something
+ * only somebody with database access could do — against a milestone whose criterion is that
+ * nobody at the business has been given any. `market.md` lists it under *What blocks the first
+ * customer*; `walkthrough.md` and `roadmap.md` M4 carried the debt.
+ *
+ * Withdrawing is the same call with nothing selected, because there is no `bookable` flag to
+ * clear — a type is published when it says which status a booking arrives in and how long one
+ * takes, and passing null for the status is how it stops saying so.
+ */
+export async function setTypeBookableAction(
+  _previous: WorkActionState,
+  formData: FormData,
+): Promise<WorkActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const statusId = String(formData.get('statusId') ?? '');
+  const duration = String(formData.get('durationMinutes') ?? '');
+  const priceItemId = String(formData.get('priceItemId') ?? '');
+
+  try {
+    const publishing = formData.get('withdraw') === null && statusId !== '';
+
+    await setTypeBookable(db, {
+      id: String(formData.get('typeId') ?? ''),
+      statusId: publishing ? statusId : null,
+      // Left as typed rather than coerced to a default: `setTypeBookable` refuses a duration
+      // that is not a whole number of minutes, and a caller inventing one here would be the
+      // route deciding something the domain layer owns.
+      durationMinutes: publishing ? Number(duration) : null,
+      priceItemId: publishing && priceItemId !== '' ? priceItemId : null,
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };

@@ -256,12 +256,15 @@ M6 could not put on screen is which channels an installation can actually send o
 is configured in a different deployment — so a message queued for a channel nobody can send is
 recorded as failed with a sentence saying so, rather than silently never arriving.
 
-**Three domain capabilities have no route, and one of them matters.** `setTypeBookable`,
-`revokePortalInvite` and `assignRole` are tested and reachable from nothing on screen. The
-first means *publishing to the public booking page* is currently something only somebody with
-database access can do — against a milestone whose criterion is that nobody at the business has
-been given any. `docs/walkthrough.md` names all three where an operator would hit them and
-`docs/roadmap.md` M4 records the debt; do not add a fourth without noticing.
+**Two domain capabilities have no route, and the one that mattered now has one.**
+`revokePortalInvite` and `assignRole` are tested and reachable from nothing on screen.
+`setTypeBookable` was the third and the sharp one — *publishing to the public booking page* was
+something only somebody with database access could do, against a milestone whose criterion is
+that nobody at the business has been given any. It is now a section on the Work screen, gated on
+the booking module because a module hides what it owns everywhere, and
+`infra/supabase/snippets/publish-bookable-type.sql` is deleted rather than left as a second way
+to do it. `docs/walkthrough.md` names the remaining two where an operator would hit them and
+`docs/roadmap.md` M4 records the debt; do not add a third without noticing.
 
 **`add-platform-staff.sql` is not that fourth, and the distinction is the point.** Adding a
 colleague to `platform_staff` also needs database access, and it is a *decision* rather than a

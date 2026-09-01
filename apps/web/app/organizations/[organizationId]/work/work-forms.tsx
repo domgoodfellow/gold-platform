@@ -5,6 +5,8 @@ import { CustomFieldInputs } from '@/components/custom-field-inputs';
 import { OptionalSelect, type SelectOption } from '@/components/optional-select';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
+import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
+import type { TypeBooking } from '@/lib/domain/work-items/types';
 import type { TypeChecklistItem } from '@/lib/domain/work-items/checklists';
 import {
   addTypeChecklistItemAction,
@@ -16,6 +18,7 @@ import {
   removeTypeChecklistItemAction,
   renameTypeAction,
   scheduleWorkItemAction,
+  setTypeBookableAction,
   updateStatusAction,
   type WorkActionState,
 } from './actions';
@@ -544,6 +547,142 @@ export function TypeChecklistItemRow({
 
       {state.error ? (
         <span role="alert" className="text-red-600 dark:text-red-400">
+          {state.error}
+        </span>
+      ) : null}
+    </form>
+  );
+}
+
+/**
+ * Publish this kind of work to the public booking page, or withdraw it.
+ *
+ * **The screen `market.md` lists under what blocks the first customer.** Until this existed,
+ * `setTypeBookable` was reachable only from a database client, so the whole public booking flow
+ * was unreachable by hand on a platform whose milestone criterion is that nobody at the business
+ * has been given database access.
+ *
+ * Two things it says out loud rather than hiding. A type with **no statuses** cannot be
+ * published at all, because a booking has to arrive somewhere — so the form explains that
+ * instead of offering an empty dropdown. And the price is genuinely optional: a business may
+ * take bookings without publishing what it charges, and saying nothing is different from saying
+ * zero, which is why there is no "0" in the list.
+ */
+export function PublishTypeForm({
+  organizationId,
+  typeId,
+  typeName,
+  statuses,
+  prices,
+  booking,
+  disabled,
+}: {
+  organizationId: string;
+  typeId: string;
+  typeName: string;
+  statuses: WorkItemStatus[];
+  prices: PriceBookItem[];
+  booking: TypeBooking | null;
+  disabled: boolean;
+}) {
+  const [state, formAction, pending] = useActionState(setTypeBookableAction, INITIAL);
+
+  if (statuses.length === 0) {
+    return (
+      <p className="mt-4 text-sm opacity-70">
+        {typeName} has no stages yet, so a booking would have nowhere to arrive. Add one above
+        and this becomes publishable.
+      </p>
+    );
+  }
+
+  return (
+    <form action={formAction} className="mt-4 flex flex-col gap-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="typeId" value={typeId} />
+
+      <p className="text-sm opacity-70">
+        {booking
+          ? `${typeName} is on the public page. A booking arrives in the stage below.`
+          : `${typeName} is not on the public page.`}
+      </p>
+
+      <label className="text-sm">
+        A booking arrives in
+        <select
+          name="statusId"
+          required
+          defaultValue={booking?.statusId ?? ''}
+          disabled={disabled}
+          className={`${INPUT_CLASS} mt-1 block w-full`}
+        >
+          <option value="">Choose a stage</option>
+          {statuses.map((status) => (
+            <option key={status.id} value={status.id}>
+              {status.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="text-sm">
+        and takes, in minutes
+        <input
+          name="durationMinutes"
+          type="number"
+          min={5}
+          max={1440}
+          required
+          defaultValue={booking?.durationMinutes ?? ''}
+          disabled={disabled}
+          className={`${INPUT_CLASS} mt-1 block w-full`}
+        />
+      </label>
+
+      <label className="text-sm">
+        Shown at this price, if you publish one
+        <select
+          name="priceItemId"
+          defaultValue={booking?.priceItemId ?? ''}
+          disabled={disabled}
+          className={`${INPUT_CLASS} mt-1 block w-full`}
+        >
+          <option value="">Do not show a price</option>
+          {prices.map((price) => (
+            <option key={price.id} value={price.id}>
+              {price.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="submit"
+          disabled={disabled || pending}
+          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
+        >
+          {pending ? 'Saving…' : booking ? 'Update what is published' : 'Publish it'}
+        </button>
+
+        {/* Withdrawing is the same call with no status, so it is a second submit button on one
+            form rather than a second form: there is no `bookable` flag to clear. */}
+        {booking ? (
+          <button
+            type="submit"
+            name="withdraw"
+            value="yes"
+            formNoValidate
+            disabled={disabled || pending}
+            className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
+          >
+            Take it off the page
+          </button>
+        ) : null}
+      </div>
+
+      {state.error ? (
+        <span role="alert" className="text-sm text-red-700 dark:text-red-400">
           {state.error}
         </span>
       ) : null}

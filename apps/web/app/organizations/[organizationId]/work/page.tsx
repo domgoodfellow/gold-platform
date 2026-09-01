@@ -4,7 +4,9 @@ import { listAssets } from '@/lib/domain/assets/assets';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
+import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listResources } from '@/lib/domain/resources/resources';
+import { listEnabledModules } from '@/lib/domain/tenancy/modules';
 import { formatWindow } from '@/lib/domain/scheduling/window';
 import { listTypeChecklistItems } from '@/lib/domain/work-items/checklists';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
@@ -12,7 +14,7 @@ import {
   allowedNextStatusIds,
   listWorkItemTransitions,
 } from '@/lib/domain/work-items/transitions';
-import { listWorkItemTypes } from '@/lib/domain/work-items/types';
+import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
 import {
@@ -23,6 +25,7 @@ import {
   CreateWorkItemForm,
   EditStatusForm,
   MoveWorkItemForm,
+  PublishTypeForm,
   RenameTypeForm,
   ScheduleWorkItemForm,
   TypeChecklistItemRow,
@@ -55,6 +58,9 @@ export default async function WorkPage({
     resources,
     assets,
     definitions,
+    prices,
+    booking,
+    enabledModules,
   ] = await Promise.all([
       selectedType
         ? listWorkItemStatuses(db, { organizationId, typeId: selectedType.id })
@@ -73,10 +79,16 @@ export default async function WorkPage({
       listResources(db, { organizationId }),
       listAssets(db, { organizationId }),
       listFieldDefinitions(db, { organizationId, entityType: 'work_item' }),
+      listPriceBookItems(db, { organizationId }),
+      selectedType
+        ? getTypeBooking(db, { organizationId, typeId: selectedType.id })
+        : Promise.resolve(null),
+      listEnabledModules(db, { organizationId }),
     ]);
 
   const mayAdd = organization.capabilities.includes('work_item.create');
   const mayConfigure = organization.capabilities.includes('field.manage');
+  const bookingEnabled = enabledModules.has('booking');
   const mayMove = organization.capabilities.includes('work_item.transition');
   const maySchedule = organization.capabilities.includes('work_item.schedule');
 
@@ -308,6 +320,34 @@ export default async function WorkPage({
               />
             ) : null}
           </section>
+
+          {/* **A module hides what it owns everywhere, not only its own area.** Switching public
+              booking off takes this section away for the same reason switching billing off takes
+              the quote off a job: hiding the area and leaving its controls scattered across other
+              screens is half a switch. The public address itself is configured in Settings, which
+              is where the module says it is set up — this is the per-type half of the same
+              thing, and `outstandingModuleSetup` now names both. */}
+          {bookingEnabled ? (
+            <section className="mt-10 border-t border-black/10 pt-6 dark:border-white/15">
+              <h2 className="text-sm font-medium">Publish to the public booking page</h2>
+              <PublishTypeForm
+                organizationId={organizationId}
+                typeId={selectedType.id}
+                typeName={selectedType.name}
+                statuses={statuses}
+                prices={prices}
+                booking={booking}
+                // Shown to everybody and refused by the database if their role cannot configure
+                // types — I12's rule, and the same one every other form on this page follows.
+                disabled={!mayConfigure}
+              />
+              {!mayConfigure ? (
+                <p className="mt-2 text-sm opacity-70">
+                  Your role, {organization.role}, cannot change what this business publishes.
+                </p>
+              ) : null}
+            </section>
+          ) : null}
 
           {mayConfigure ? (
             <section className="mt-10 border-t border-black/10 pt-6 dark:border-white/15">
