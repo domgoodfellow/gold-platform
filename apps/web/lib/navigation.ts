@@ -62,6 +62,20 @@ export type AreaGroup = 'operational' | 'configuration';
  * behind it. `navigation.test.ts` fails on a module owning nothing and on an area naming a
  * module that does not exist, which is what keeps the two from drifting.
  */
+/**
+ * Where inside one business a module is set up.
+ *
+ * An area, and optionally a section of that area's page — `settings#getting-paid` rather than
+ * a second screen nobody would find. The section is an anchor, so it is also a claim about
+ * what that page contains, and `navigation.test.ts` reads the page's source to hold it.
+ */
+export type ModuleConfiguration = {
+  /** An area segment, which must exist in `AREAS`. */
+  segment: string;
+  /** An `id` on that area's page, when the area is not itself the whole of the configuration. */
+  section?: string;
+};
+
 export type Module = {
   key: string;
   /** What a business sees on the settings screen and, eventually, on an invoice. */
@@ -77,6 +91,50 @@ export type Module = {
    * that a module owns *something*, not that it owns a sidebar entry.
    */
   outside?: string;
+  /**
+   * Where this module is configured, and **it is required of every module** (D31).
+   *
+   * `outside` above answers *what does this module control*; this answers *where does a
+   * business fill it in*, and the two are different questions with different answers. Card
+   * payments controls a button on an invoice and is configured in Settings; public booking
+   * controls a page on the internet and is configured in Settings too, at a different section.
+   *
+   * **The failure this exists to end.** Card payments could be switched on while the section
+   * that connects an account was hidden — `paymentProvider()` returns null on a deployment
+   * holding no processor keys, and the whole section was rendered behind that. A business
+   * turned the switch on and the page said nothing at all. A switch that leads nowhere is
+   * worse than no switch, for the same reason a module that hides nothing is: the operator
+   * believes something happened. So a module names where it is set up, the settings screen
+   * links there the moment it is on, and a deployment that cannot support one yet says so
+   * rather than disappearing.
+   *
+   * The segment must be the kernel or this module's own area. Pointing at an area belonging to
+   * a *different* module would produce a link that a second switch can break — which is the
+   * same class of dead end, arriving by a longer route.
+   */
+  configuredAt: ModuleConfiguration;
+  /**
+   * Another module this one cannot work without.
+   *
+   * **Added because `navigation.test.ts` refused a link, and it was right to.** Weather is a
+   * module by D11's account — a business switches it on and is billed for it — and what it
+   * configures is a *rule*, so its `configuredAt` points into the Automations area. That is a
+   * link a second switch can break, which is the dead end D31 forbids arriving by a longer
+   * route.
+   *
+   * The honest answer is not to move the link but to say the true thing: weather without
+   * automations is not a smaller feature, it is nothing at all. So the dependency is declared,
+   * the settings screen says so when the required module is off, and the test accepts the link
+   * because the business is told rather than left at a dead end.
+   *
+   * This is **not** a way to nest modules generally. It is for a module whose whole expression
+   * is inside another one's surface, and the test refuses the link without it.
+   *
+   * Typed `string` rather than `ModuleKey` for the same reason `key` is: `ModuleKey` is derived
+   * from `MODULES`, so a field on `Module` referring to it would be a type defined in terms of
+   * itself. `navigation.test.ts` checks it names a module that exists.
+   */
+  requires?: string;
 };
 
 export const MODULES = [
@@ -85,12 +143,14 @@ export const MODULES = [
     label: 'Billing',
     description:
       'A price book, quotes, invoices and payments. A business that invoices somewhere else runs without this and keeps every job it recorded.',
+    configuredAt: { segment: 'pricing' },
   },
   {
     key: 'assets',
     label: 'Assets',
     description:
       'The machines, vehicles and equipment a business services or tracks — including ones its customers own.',
+    configuredAt: { segment: 'assets' },
   },
   {
     key: 'booking',
@@ -98,18 +158,59 @@ export const MODULES = [
     description:
       'A page the public can reach, where somebody with no account takes a free slot.',
     outside: 'the public page at /book/{slug}',
+    // The address the page answers on is set in Settings, beside the rest of what this
+    // business says about itself publicly. What is published *to* that page is a kind of
+    // work, and there is no screen for that yet — which is why the readiness sentence for this
+    // module says so out loud rather than leaving an operator to find the silence themselves.
+    configuredAt: { segment: 'settings', section: 'public-page' },
   },
   {
     key: 'portal',
     label: 'Customer portal',
     description: 'A customer signs in by invitation and sees their own work and invoices.',
     outside: 'the customer portal, reached by an invitation this business sends',
+    // Nothing about the portal is configured for the business as a whole: an invitation is
+    // sent to one customer from that customer's own page, which is where this points.
+    configuredAt: { segment: 'customers' },
+  },
+  {
+    key: 'automations',
+    label: 'Automations',
+    description:
+      'Rules this business writes: when something happens, if a job looks a certain way, do this. A business that wants everything decided by a person runs without it.',
+    configuredAt: { segment: 'automations' },
+  },
+  {
+    key: 'weather',
+    label: 'Weather',
+    description:
+      'Conditions at a job’s location, so a rule can move work out of the rain. A business that works indoors runs without it.',
+    // **No area of its own, and D11 is why**: weather owns no entity and no screen. What a
+    // business configures is a rule, so the rule screen is where this is set up — and the
+    // switch links there rather than to a page that would have nothing on it.
+    outside: 'a rule that reads conditions at a job’s location',
+    configuredAt: { segment: 'automations' },
+    // A weather rule *is* an automation rule. There is no version of this that works with
+    // automations switched off, and saying so is better than a link that stops working.
+    requires: 'automations',
+  },
+  {
+    key: 'maintenance',
+    label: 'Maintenance',
+    description:
+      'Counters on machines, and rules that raise work every so many hours or miles. A business whose work is not driven by a meter runs without it.',
+    // Like weather, its whole expression is a rule — so it is set up on the same screen, and it
+    // says out loud that it needs the module that screen belongs to.
+    outside: 'a counter on an asset, and a rule that watches it',
+    configuredAt: { segment: 'automations' },
+    requires: 'automations',
   },
   {
     key: 'card_payments',
     label: 'Card payments',
     description: 'Ask a processor to collect what is outstanding, rather than only cash.',
     outside: 'the card control on an invoice',
+    configuredAt: { segment: 'settings', section: 'getting-paid' },
   },
 ] as const satisfies readonly Module[];
 
@@ -177,6 +278,10 @@ export const AREAS: readonly Area[] = [
   // opens this. Turning it off also takes the priced lines and the invoice off a job screen —
   // see the work item route, which reads the same set.
   { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing' },
+  // What this business does when nobody is looking. Configuration rather than operational: a
+  // rule is written once and revisited rarely, and what it *did* shows up on the job it acted
+  // on, which is where an operator is already looking.
+  { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations' },
   { segment: 'fields', label: 'Custom fields', group: 'configuration' },
   { segment: 'roles', label: 'People and roles', group: 'configuration' },
   // Settings names no module, and that is load-bearing rather than incidental: it is where the
@@ -204,6 +309,30 @@ export function areasIn(group: AreaGroup, enabled?: ReadonlySet<string>): Area[]
 
 export function areaHref(organizationId: string, segment: string): string {
   return `/organizations/${organizationId}/${segment}`;
+}
+
+/**
+ * Where to send somebody who has just switched a module on, and what to call the place.
+ *
+ * One function rather than a href helper and a label lookup, because a link with the wrong
+ * word on it is the same dead end as a link to the wrong place — an operator who reads
+ * "Pricing" and arrives at Settings has been told something untrue about their own product.
+ * The label is the area's own, which is the platform noun this file already owns.
+ */
+export function moduleConfiguration(
+  organizationId: string,
+  module: Module,
+): { href: string; label: string } {
+  const area = AREAS.find((entry) => entry.segment === module.configuredAt.segment);
+  const anchor = module.configuredAt.section ? `#${module.configuredAt.section}` : '';
+
+  return {
+    href: `${areaHref(organizationId, module.configuredAt.segment)}${anchor}`,
+    // A module naming an area that does not exist is a bug `navigation.test.ts` fails on, so
+    // this fallback is never reached in a build that passes. It exists so a mistake renders as
+    // a plain word rather than throwing in front of an operator.
+    label: area?.label ?? module.configuredAt.segment,
+  };
 }
 
 /**

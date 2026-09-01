@@ -1,3 +1,4 @@
+import { geocodingProvider, type Coordinates } from '@/lib/adapters/geocoding';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { resolveCustom, type CustomValues } from '@/lib/domain/fields/field-definitions';
@@ -13,6 +14,14 @@ export type Location = {
   label: string;
   address: string;
   accessNotes: string | null;
+  /**
+   * Where this place is, or null because nobody has said.
+   *
+   * Derived from `address`, which stays the truth. Null is an ordinary answer and carries no
+   * implication that anything is unfinished — a business that never books work against weather
+   * or travel has no reason to fill it in.
+   */
+  coordinates: Coordinates | null;
   /** Tenant-defined fields, governed by this organization's registry (D7). */
   custom: CustomValues;
   /** The customers served here. Many-to-many: a site can serve several. */
@@ -39,7 +48,7 @@ export async function listLocations(
 ): Promise<Location[]> {
   const { data, error } = await db
     .from('locations')
-    .select('id, label, address, access_notes, custom, created_at')
+    .select('id, label, address, access_notes, latitude, longitude, custom, created_at')
     .eq('organization_id', input.organizationId)
     .order('created_at', { ascending: false });
 
@@ -78,6 +87,12 @@ export async function listLocations(
     label: row.label,
     address: row.address,
     accessNotes: row.access_notes,
+    // The database refuses half a point (`locations_coordinates_are_complete`), so one test
+    // covers both columns rather than two that could disagree.
+    coordinates:
+      row.latitude !== null && row.longitude !== null
+        ? { latitude: row.latitude, longitude: row.longitude }
+        : null,
     custom: (row.custom ?? {}) as CustomValues,
     customers: (byLocation.get(row.id) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
     createdAt: row.created_at,
@@ -207,5 +222,125 @@ export async function linkCustomerLocation(
       throw new DomainError('You cannot add locations here.', 'locations.forbidden');
     }
     throw new DomainError(error.message, 'locations.link_failed');
+  }
+}
+
+/**
+ * Where an address is, according to whoever this deployment asks.
+ *
+ * **Separate from writing it down, and the split is the point.** A lookup produces a
+ * suggestion; a person decides whether it is right. Folding the two together would make the
+ * provider's best guess authoritative about a customer's site, which is the kind of quiet
+ * confidence that puts a technician in the wrong street. So this returns a point and touches
+ * nothing, and `setLocationCoordinates` is the write.
+ *
+ * Three answers rather than two, because they need three different sentences on screen: a
+ * point, `null` for an address the provider does not recognise, and a `DomainError` for a
+ * deployment that cannot ask at all.
+ */
+export async function locateAddress(input: { address: string }): Promise<Coordinates | null> {
+  const address = input.address.trim();
+  if (address.length === 0) {
+    throw new DomainError('There is no address to look up.', 'locations.address_required');
+  }
+
+  const provider = await geocodingProvider();
+  if (!provider) {
+    throw new DomainError(
+      'This deployment cannot look an address up, so coordinates are typed in by hand.',
+      'locations.geocoding_unavailable',
+    );
+  }
+
+  try {
+    return await provider.locate({ address });
+  } catch {
+    // Whatever the provider was unhappy about is its own business and not something the person
+    // reading this can act on. What they can do is type the numbers, which the message says.
+    throw new DomainError(
+      'That lookup did not come back. Try again, or type the coordinates in.',
+      'locations.geocoding_failed',
+    );
+  }
+}
+
+/**
+ * Say where a location is — or stop saying.
+ *
+ * **Both numbers or neither, checked here and enforced in the database.** The constraint is the
+ * guarantee (`locations_coordinates_are_complete`); this produces the sentence, which is the
+ * same division of labour `scheduleWorkItem` has with the exclusion constraint.
+ *
+ * Nothing else about a location is writable through this path and nothing else may become so
+ * without its own argument: the column grant carries `latitude` and `longitude` only, so a
+ * label or an address cannot be changed through here, through PostgREST, or through a mistake.
+ * Moving a location to a different address would silently relocate every job ever done there.
+ */
+export async function setLocationCoordinates(
+  db: Db,
+  input: { id: string; latitude: number | null; longitude: number | null },
+): Promise<void> {
+  await requireActor(db);
+
+  const clearing = input.latitude === null && input.longitude === null;
+
+  if (!clearing) {
+    if (input.latitude === null || input.longitude === null) {
+      throw new DomainError(
+        'A place needs both a latitude and a longitude, or neither.',
+        'locations.coordinates_incomplete',
+      );
+    }
+    if (!Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) {
+      throw new DomainError(
+        'Those coordinates are not numbers.',
+        'locations.coordinates_invalid',
+      );
+    }
+    if (input.latitude < -90 || input.latitude > 90) {
+      throw new DomainError(
+        'A latitude runs from -90 to 90.',
+        'locations.latitude_out_of_range',
+      );
+    }
+    if (input.longitude < -180 || input.longitude > 180) {
+      throw new DomainError(
+        'A longitude runs from -180 to 180.',
+        'locations.longitude_out_of_range',
+      );
+    }
+  }
+
+  const { data, error } = await db
+    .from('locations')
+    .update({ latitude: input.latitude, longitude: input.longitude })
+    .eq('id', input.id)
+    // **Returned rows, because a refused update is not an error.** An RLS `update` whose policy
+    // excludes the row matches nothing and reports success — the same trap `setModuleEnabled`
+    // documents, and the reason a role without `location.create` was going to be told it had
+    // saved something it had not.
+    .select('id');
+
+  if (error) {
+    if (error.code === '42501') {
+      throw new DomainError('You cannot change locations here.', 'locations.forbidden');
+    }
+    if (error.code === '23514') {
+      throw new DomainError(
+        'A place needs both a latitude and a longitude, or neither.',
+        'locations.coordinates_incomplete',
+      );
+    }
+    throw new DomainError(error.message, 'locations.update_failed');
+  }
+
+  if ((data ?? []).length === 0) {
+    // No row matched: either it is not this caller's, or their role cannot change it. The two
+    // are indistinguishable from here on purpose — the same reason `requireOrganization` turns
+    // both into a 404.
+    throw new DomainError(
+      'No such location here, or your role cannot change it.',
+      'locations.not_found',
+    );
   }
 }

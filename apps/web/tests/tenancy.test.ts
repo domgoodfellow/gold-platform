@@ -247,6 +247,12 @@ describe('tenant isolation', () => {
     // satisfied by a missing parameter or a renamed column, so it would keep passing on the
     // day the guard stopped being the thing doing the refusing. It reads `permission denied`
     // rather than the anonymous message because the revoked grant is the outer guard now.
-    expect(error?.message).toContain('permission denied');
+    // **The guard inside the function is what refuses now, and that is the point of never
+    // having dropped it.** While self-serve founding was closed, the missing grant refused this
+    // first and the guard was unreachable — which is why the closing migration said out loud
+    // that dropping the function would throw away something found the expensive way. Founding is
+    // open to a registered account again; an anonymous session from the booking flow arrives on
+    // the same `authenticated` role and is stopped by the guard, exactly as intended.
+    expect(error?.message).toContain('anonymous session may not create an organization');
   });
 });

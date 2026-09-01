@@ -312,6 +312,12 @@ describe('M5 — the platform side', () => {
       p_timezone: 'Asia/Tokyo',
       p_currency: 'JPY',
     });
-    expect(selfFounded.error?.message).toMatch(/permission denied/i);
+    // **Founding is open again, so this no longer asserts a refusal** — and M5's criterion is
+    // untouched by that, because it was never about the other door being shut. What it asks is
+    // that a business GOLD provisioned belongs wholly to its owner, which the assertions above
+    // are. A caller founding their own business here succeeds, and becomes its founder rather
+    // than being handed one.
+    expect(selfFounded.error).toBeNull();
+    expect(selfFounded.data).toBeTruthy();
   });
 });

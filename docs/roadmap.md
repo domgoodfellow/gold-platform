@@ -260,8 +260,9 @@ reads through `occupies`, and a business that leaves it at zero has said its job
 back-to-back. A clinic whose real constraint is room turnaround and a hire yard whose constraint
 is nothing at all configure the same column to different numbers, and no line of code knows
 which of them is which. Travel time computed between two specific addresses is the part the
-buffer cannot express; that is a platform capability with a named prerequisite — `locations`
-holds an address string and no coordinates — and not a Pneu3L feature.
+buffer cannot express; that is a platform capability whose named prerequisite has since landed
+— `locations` carries `latitude` and `longitude` as of M6's second slice — and not a Pneu3L
+feature. What is still missing for travel time is the measuring, not the points.
 
 It onboards **fresh** — see `constraints.md` D1, which this milestone resolves. Its rows do
 not migrate; its configuration does. A business arriving through configuration is the claim
@@ -501,6 +502,13 @@ nobody watching; a scheduled evaluation that did not fire is a failure no tenant
 screen shows. **The row lands with the writer, and M6 owns both.** Until then the honest console
 is one that does not claim to answer a question it has no data for.
 
+**Closed by M6, and the shape it took is worth recording: it added no table.** "Give the console
+a failures table" was the obvious move and would have been a second copy of two tables that
+already record their own outcomes — a copy that would drift the first time one of them learned a
+new one. What shipped is a view over `automation_runs` and `message_deliveries`, and the same
+view serves the tenant's own screen, so there is no second idea of what *failing* means growing
+on the other side of the product.
+
 **Operator provisioning is a staff *write*, and it collides with D28 by design rather than by
 accident.** `20260830000002` grants `platform_staff` `select` and no `insert`, `update` or
 `delete` on any table at all — the second half of the invariant, and the half that survives a
@@ -574,16 +582,32 @@ Covers:
   the first: a booking confirmation is one line inside the domain function that creates the
   booking. Weather is the second, and the runtime absorbs the first when it lands — *Never
   duplicate a rule across callers* running on schedule rather than as a rescue.
-- **Three trigger shapes, and they are not the same shape.** A schedule fires at a time. An
+
+  **There was nothing to absorb.** No notification code existed anywhere in `lib/domain` when M6
+  started — M4 shipped no confirmation of any kind, so this described a line that was never
+  written. The correction is better than the plan: a confirmation is now a rule *a business
+  writes*, in its own words, rather than a sentence the platform sends on its behalf. Recorded
+  rather than quietly reinterpreted, because "the runtime absorbs the first caller" was the
+  argument for building the runtime here and it turned out to rest on something that did not
+  exist.
+- **Four trigger shapes, and they are not the same shape.** A schedule fires at a time. An
   external condition fires on a reading from a provider. Maintenance fires when *a counter a
   human or a sensor advances crosses a threshold* — the model `Mechanic_Maintenance` already
   ships, and the one an event-shaped runtime does not express naturally. Designing for the
   second alone is the specific mistake available here.
+
+  **This said three, and the sentence above it assumed a fourth.** A booking confirmation fires
+  on an event, and an event is not a schedule, a reading or a counter — it runs *inside the
+  transaction that caused it*, which is the one thing the other three cannot do. Corrected here
+  rather than quietly built: `event` is the first kind that shipped and the one every other
+  slice was tested against.
 - **Weather is an integration plus rules, and nothing else** (D11). The provider goes behind
   an adapter like any other; the business writes conditions against its answer. What is *not*
-  configuration is the one prerequisite underneath: **`locations` holds an address string and
-  no coordinates.** Nothing can ask a provider for conditions at a place until that is a
-  column or a geocoding adapter, and the same gap blocks travel time and service areas.
+  configuration is the one prerequisite underneath, and it is **built**: `locations` now carries
+  `latitude` and `longitude`, filled in by hand or by a geocoding adapter, and `locations` has
+  the first update policy it has ever had — a column grant carrying those two and nothing else.
+  A place with no point is an ordinary place; nothing is guessed on a business's behalf. The
+  same gap blocked travel time and service areas, and no longer does.
 - **Channels** — email, SMS, and the first outbound voice path, each behind an adapter that
   names a capability rather than a provider. Delivery is idempotent per recipient per reason;
   `Mechanic_Maintenance`'s notification log is the shape, and the failure it prevents is
@@ -597,6 +621,49 @@ Covers:
 `infieldos-main` is the reference for the screens this shape needs — alerts, crews, activity —
 alongside `tire-app-template`'s spec under D23. Reference for the shape, never the code; D1's
 reasoning generalises to both.
+
+### What shipped, and the four things worth knowing about it
+
+**The runtime is in Postgres and the clock is in Python** (`constraints.md` D30). That was the
+one open decision and it was forced rather than chosen: a rule tripped by a stranger's booking
+runs where `app.current_tenant_ids()` is empty, and a rule tripped by the tick runs where there
+is no person at all. Every action is a narrow `security definer` function in the class
+`create_booking` already established, and `automation_runner` holds no grant on any table.
+
+**Its cost is recorded and is not small: no action may search for a free slot.** Searching is
+`freeWindows`, and a second one of those in a second runtime is exactly what I5 forbids — so a
+rescheduling rule shifts by an offset the business typed and the exclusion constraint decides
+whether it lands. A refusal is a recorded failure a dispatcher reads. That is I6 doing the job it
+was written for, and it is also the first thing to revisit if a business asks for the next free
+slot.
+
+**M5's fourth question is answered.** `automation_runs` and `message_deliveries` record their own
+failures with the database's or the provider's own words, and `platform_failures` — a
+`security_invoker` view, like `platform_tenants` — is what the console reads. The deferral was
+right and its reason has expired exactly as predicted: an automation is the first thing this
+platform does that fails with nobody watching.
+
+**Weather and maintenance are modules, and neither is an engine** (D11, D25). There is no weather
+table and no maintenance table: a reading, a threshold a business typed, a counter log and a mark.
+Both are configured on the Automations screen, which is a link a second switch could break — so
+`Module.requires` declares the dependency and the settings screen says what is missing (D31)
+rather than handing anybody a dead end.
+
+**The rules are read back to the business, and that was not in the plan.** `reviewAutomationRules`
+says which rules cannot work — a status nothing can move into, a threshold in a unit no reading
+uses, a message rule on jobs with no customer, two rules fighting over one moment. It exists
+because *what is failing* cannot see the worst cases: a rule that never fires produces no failed
+run, because nothing happened, and on screen that is indistinguishable from a quiet week. None of
+it is AI and none of it should be — it is arithmetic on rows the business already has. The
+language model version answers the harder question (what this will do to the people receiving it)
+and wants these answers underneath it regardless, which is M8.
+
+**What M6 did not build.** A wall-clock schedule ("every Monday at seven") — a report's question
+rather than a job's, with no caller. Conditions on a counter rule — every condition looks at a
+job and a counter rule runs about a machine before one exists, so the domain layer refuses one
+rather than accepting something nobody would consult. A per-tenant sending identity — proving a
+domain per tenant is a real feature and a different one. And chaining: an automation may not
+trigger an automation, because a cycle and a feature are indistinguishable from the rows.
 
 ---
 
@@ -686,6 +753,14 @@ tenant zero it switches the module on like any other tenant — no fork, no seco
 dialer we run ourselves is evidence for it that a hypothesis cannot be. What this does *not*
 license is building it early to reach the first customer: the trigger is call volume, and thirty
 calls need a phone and a list.
+
+**Two-way email lands here, and it is the half of "communications" that is not the dialer.**
+M6 sends; nothing reads. A customer's reply currently goes to somebody's personal inbox and
+leaves the system entirely. Reading a mailbox so a reply attaches to the job it concerns needs an
+authorization against somebody else's account, refreshable tokens, and a matching problem with no
+perfect answer — which is why it waits for the milestone that owns a business's front desk rather
+than being bolted to the sending half. `constraints.md`, *Decided, not yet built*, holds the full
+entry, including the two smaller pieces that land earlier.
 
 **Customer intelligence lands here**: lifetime value, outstanding balance, last contact, next
 action. M4 built the history and M7 built the aggregate layer; this is the first caller that

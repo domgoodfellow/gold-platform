@@ -34,6 +34,61 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_readings: {
+        Row: {
+          asset_id: string
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          read_at: string
+          unit: string
+          value: number
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          read_at?: string
+          unit: string
+          value: number
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          read_at?: string
+          unit?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_readings_asset_same_org"
+            columns: ["organization_id", "asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "asset_readings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_readings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assets: {
         Row: {
           created_at: string
@@ -89,6 +144,332 @@ export type Database = {
           },
           {
             foreignKeyName: "assets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_actions: {
+        Row: {
+          action_kind: string
+          channel: string | null
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          position: number
+          rule_id: string
+          shift_minutes: number | null
+          status_id: string | null
+          template_id: string | null
+          work_item_type_id: string | null
+        }
+        Insert: {
+          action_kind: string
+          channel?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          position?: number
+          rule_id: string
+          shift_minutes?: number | null
+          status_id?: string | null
+          template_id?: string | null
+          work_item_type_id?: string | null
+        }
+        Update: {
+          action_kind?: string
+          channel?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          position?: number
+          rule_id?: string
+          shift_minutes?: number | null
+          status_id?: string | null
+          template_id?: string | null
+          work_item_type_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_actions_new_status_same_type"
+            columns: ["organization_id", "work_item_type_id", "status_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_statuses"
+            referencedColumns: ["organization_id", "type_id", "id"]
+          },
+          {
+            foreignKeyName: "automation_actions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_actions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_actions_rule_same_org"
+            columns: ["organization_id", "rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "automation_actions_status_same_org"
+            columns: ["organization_id", "status_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_statuses"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "automation_actions_template_same_org"
+            columns: ["organization_id", "template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "automation_actions_type_same_org"
+            columns: ["organization_id", "work_item_type_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_types"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      automation_conditions: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          operator: string
+          organization_id: string
+          position: number
+          rule_id: string
+          subject_field: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          operator: string
+          organization_id: string
+          position?: number
+          rule_id: string
+          subject_field: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          operator?: string
+          organization_id?: string
+          position?: number
+          rule_id?: string
+          subject_field?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_conditions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_conditions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_conditions_rule_same_org"
+            columns: ["organization_id", "rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      automation_counter_marks: {
+        Row: {
+          asset_id: string
+          last_value: number
+          organization_id: string
+          rule_id: string
+          updated_at: string
+        }
+        Insert: {
+          asset_id: string
+          last_value: number
+          organization_id: string
+          rule_id: string
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string
+          last_value?: number
+          organization_id?: string
+          rule_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_counter_marks_asset_same_org"
+            columns: ["organization_id", "asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "automation_counter_marks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_counter_marks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_counter_marks_rule_same_org"
+            columns: ["organization_id", "rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      automation_rules: {
+        Row: {
+          created_at: string
+          created_by: string
+          enabled: boolean
+          id: string
+          name: string
+          organization_id: string
+          trigger_comparison: string | null
+          trigger_counter_step: number | null
+          trigger_event_action: string | null
+          trigger_kind: string
+          trigger_metric: string | null
+          trigger_offset_minutes: number | null
+          trigger_threshold: number | null
+          trigger_unit: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          enabled?: boolean
+          id?: string
+          name: string
+          organization_id: string
+          trigger_comparison?: string | null
+          trigger_counter_step?: number | null
+          trigger_event_action?: string | null
+          trigger_kind: string
+          trigger_metric?: string | null
+          trigger_offset_minutes?: number | null
+          trigger_threshold?: number | null
+          trigger_unit?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          organization_id?: string
+          trigger_comparison?: string | null
+          trigger_counter_step?: number | null
+          trigger_event_action?: string | null
+          trigger_kind?: string
+          trigger_metric?: string | null
+          trigger_offset_minutes?: number | null
+          trigger_threshold?: number | null
+          trigger_unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_runs: {
+        Row: {
+          detail: string | null
+          id: string
+          occurred_at: string
+          organization_id: string
+          outcome: string
+          rule_id: string
+          rule_name: string
+          subject_id: string
+          subject_type: string
+          trigger_kind: string
+        }
+        Insert: {
+          detail?: string | null
+          id?: string
+          occurred_at?: string
+          organization_id: string
+          outcome: string
+          rule_id: string
+          rule_name: string
+          subject_id: string
+          subject_type: string
+          trigger_kind: string
+        }
+        Update: {
+          detail?: string | null
+          id?: string
+          occurred_at?: string
+          organization_id?: string
+          outcome?: string
+          rule_id?: string
+          rule_name?: string
+          subject_id?: string
+          subject_type?: string
+          trigger_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_runs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "platform_tenants"
@@ -431,6 +812,61 @@ export type Database = {
           },
         ]
       }
+      external_readings: {
+        Row: {
+          applies_at: string
+          id: string
+          location_id: string
+          metric: string
+          observed_at: string
+          organization_id: string
+          unit: string
+          value: number
+        }
+        Insert: {
+          applies_at: string
+          id?: string
+          location_id: string
+          metric: string
+          observed_at?: string
+          organization_id: string
+          unit: string
+          value: number
+        }
+        Update: {
+          applies_at?: string
+          id?: string
+          location_id?: string
+          metric?: string
+          observed_at?: string
+          organization_id?: string
+          unit?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_readings_location_same_org"
+            columns: ["organization_id", "location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "external_readings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_readings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       field_definitions: {
         Row: {
           created_at: string
@@ -620,6 +1056,8 @@ export type Database = {
           custom: Json
           id: string
           label: string
+          latitude: number | null
+          longitude: number | null
           organization_id: string
         }
         Insert: {
@@ -630,6 +1068,8 @@ export type Database = {
           custom?: Json
           id?: string
           label: string
+          latitude?: number | null
+          longitude?: number | null
           organization_id: string
         }
         Update: {
@@ -640,6 +1080,8 @@ export type Database = {
           custom?: Json
           id?: string
           label?: string
+          latitude?: number | null
+          longitude?: number | null
           organization_id?: string
         }
         Relationships: [
@@ -708,6 +1150,117 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "roles"
             referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      message_deliveries: {
+        Row: {
+          body: string
+          channel: string
+          detail: string | null
+          id: string
+          organization_id: string
+          queued_at: string
+          recipient: string
+          rule_id: string
+          rule_name: string
+          sent_at: string | null
+          state: string
+          subject_id: string
+          subject_line: string
+          subject_type: string
+        }
+        Insert: {
+          body: string
+          channel: string
+          detail?: string | null
+          id?: string
+          organization_id: string
+          queued_at?: string
+          recipient: string
+          rule_id: string
+          rule_name: string
+          sent_at?: string | null
+          state?: string
+          subject_id: string
+          subject_line?: string
+          subject_type: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          detail?: string | null
+          id?: string
+          organization_id?: string
+          queued_at?: string
+          recipient?: string
+          rule_id?: string
+          rule_name?: string
+          sent_at?: string | null
+          state?: string
+          subject_id?: string
+          subject_line?: string
+          subject_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_templates: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          organization_id: string
+          subject: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          organization_id: string
+          subject?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1801,6 +2354,16 @@ export type Database = {
           },
         ]
       }
+      platform_failures: {
+        Row: {
+          detail: string | null
+          kind: string | null
+          occurred_at: string | null
+          organization_id: string | null
+          subject: string | null
+        }
+        Relationships: []
+      }
       platform_tenants: {
         Row: {
           created_at: string | null
@@ -2080,6 +2643,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      places_to_watch: {
+        Args: never
+        Returns: {
+          latitude: number
+          location_id: string
+          longitude: number
+          metric: string
+          needed_at: string
+        }[]
+      }
       provision_organization: {
         Args: {
           p_capabilities: string[]
@@ -2091,6 +2664,24 @@ export type Database = {
           p_timezone: string
         }
         Returns: string
+      }
+      queued_messages: {
+        Args: { p_limit?: number }
+        Returns: {
+          body: string
+          channel: string
+          id: string
+          recipient: string
+          subject_line: string
+        }[]
+      }
+      record_external_readings: {
+        Args: { p_location_id: string; p_readings: Json }
+        Returns: number
+      }
+      record_message_delivery: {
+        Args: { p_detail: string; p_id: string; p_sent: boolean }
+        Returns: undefined
       }
       record_payment: {
         Args: {
@@ -2140,6 +2731,7 @@ export type Database = {
         Args: { p_id: string; p_name: string }
         Returns: undefined
       }
+      run_due_automations: { Args: never; Returns: number }
       schedule_work_item: {
         Args: {
           p_ends_at: string

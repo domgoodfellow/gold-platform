@@ -34,19 +34,32 @@ def _b64(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
 
 
-def machine_token(secret: str, *, now: int | None = None, ttl_seconds: int = 60) -> str:
-    """Mint a short-lived HS256 token for the machine role.
+def machine_token(
+    secret: str,
+    *,
+    role: str = ROLE,
+    sub: str = INTEGRATION_ACTOR,
+    now: int | None = None,
+    ttl_seconds: int = 60,
+) -> str:
+    """Mint a short-lived HS256 token for a machine role.
 
     Short-lived on purpose: issued per request, stored nowhere, and there is nothing that
     would reuse it.
+
+    **The role and the actor are arguments now, and there are two callers.** The second is the
+    automation runner (`app.core.runner`), which is the same idea on a different axis: its own
+    Postgres role, its own tiny set of grants, and its own `auth.users` row that cannot sign in.
+    Generalising this rather than copying it is what keeps there being exactly one place that
+    knows how a machine identifies itself here.
     """
     issued = int(time.time()) if now is None else now
     header = _b64(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
     payload = _b64(
         json.dumps(
             {
-                "role": ROLE,
-                "sub": INTEGRATION_ACTOR,
+                "role": role,
+                "sub": sub,
                 "aud": "authenticated",
                 "iat": issued,
                 "exp": issued + ttl_seconds,

@@ -414,6 +414,25 @@ runtime and of I6 — availability shown to a client is advisory and re-asserted
 before work is committed — precisely because the external world changes between the two. Use
 it as a test case, not as a directory.
 
+**Built in M6, and the record held exactly.** There is no `weather` table, no weather entity and
+no directory named after it. What shipped is `external_readings` — a place, a number, a unit and
+the hour it is about — a `conditions` adapter in `apps/api` naming a capability rather than a
+provider, and four columns on `automation_rules` where a business writes which metric, which way,
+what number and in which unit. Every one of those four is the tenant's; the platform names the
+metrics and nothing else.
+
+**One thing the record did not anticipate: units do not convert, they refuse.** A rule written in
+kilometres per hour takes no notice of a reading in miles per hour — it does not fire at all.
+That is the same refusal `jobEconomics` makes about currency and for the same reason: converting
+has a date, and a date makes this a different kind of software. `automations.test.ts` asserts it
+by feeding the same number in the wrong unit first.
+
+**And the module needed something the module list did not have.** Weather is configured on the
+Automations screen, because a weather rule *is* an automation rule — which is a link a second
+switch can break, the dead end D31 forbids. The honest answer was not to move the link but to say
+the true thing: `Module.requires` declares the dependency, and the settings screen tells a
+business the requirement is missing rather than handing them a link that goes nowhere.
+
 ### D12 — E-commerce operations is a target vertical
 
 **Reversed.** This record previously refused it. The argument was that field service, asset
@@ -1121,6 +1140,14 @@ and it would also split the deployment story for every milestone before the one 
 **Trigger to revisit:** the reception and sales vertical, where a media stream *is* the product.
 That milestone adds a host; it does not move `apps/api`.
 
+**Built in M6, and the shape this record predicted is the shape it took.** `/tasks/automation-tick`
+is a scheduled invocation holding nothing between runs: what is due is a *query*
+(`app.due_scheduled_automations` and `app.due_reading_automations`), and the only queue is a
+table. Running twice is running once, and nothing bookkeeps that — a rule that moves a job to the
+status it is in does nothing, a message already queued hits its unique index, and a rule with a
+run against a job is no longer due. Each of those was true for its own reason before the
+scheduler existed, which is why it needed no state of its own.
+
 ---
 
 ### D26 — `apps/api` arrives at M4, and webhook ingress is what brings it
@@ -1195,7 +1222,11 @@ D2 explicitly rejects a full FastAPI domain layer. The duplication that remains 
 one line, and it turns the one writer with no session into the one writer with no limits.
 
 **What `apps/api` is not, at M4.** Automation execution is still M6 and nothing here
-anticipates it: no scheduler, no `domains/`, no `workers/`. `pnpm-workspace.yaml` still does not
+anticipates it: no scheduler, no `domains/`, no `workers/`. **That sentence stopped being true in
+M6 and is kept rather than deleted, because it is a record of when it changed**: `app/api/`
+gained `automation_tick.py`, `app/channels/` and `app/conditions/` hold two more capability
+contracts, and `vercel.json` gained a `crons` entry. There is still no `domains/` and no
+`workers/` — the second of those is what D24 forbids outright. `pnpm-workspace.yaml` still does not
 name it (D3) — pnpm must not manage a Python package. **Its tests do not run in
 `pnpm --filter @gold/web check`**, which is a real gap: that gate is the web app's, and until
 there is a repository-level one, `python -m pytest apps/api/tests` is run alongside it. Named
@@ -1466,12 +1497,163 @@ self-serve door will need too.
 gets a gate rather than a new function, and what is left is a product decision about pricing and
 support rather than an architectural one.
 
+**Revisited early, and the trigger was not the one predicted.** Somebody signed up and landed on
+a page saying they belonged to no business, with nothing to press and no way forward — because
+the only other way in is a person at GOLD provisioning them, which is not reachable from a
+screen. That is a door with nothing behind it, which is the exact failure D31 was written about
+one day earlier, and it was sitting in the front of the product the whole time.
+
+**What was wrong was the reading, not the record.** This record's own words are *one creation
+path, two doors*, and it says plainly that "provisioned, not self-served" named the wrong axis.
+What it deferred was the **quality** of the self-serve door — a business founded there is emptier
+than one M8's onboarding will produce — and that was read as deferring its **existence**. Those
+are not the same, and the difference is a person who cannot use the product at all.
+
+**So `20260901000001` grants `create_organization` to `authenticated` and both doors are open.**
+Three things did not change: `anon` is still not granted, so an anonymous visitor from the
+booking flow cannot found a business and the guard inside the function refuses one anyway; both
+doors still write one `organization.created` event and differ only in the payload; and
+`provisionOrganization` is still the only way to name an owner who is somebody else, which is the
+one thing self-serve cannot express. `provisioning.test.ts` walks through both doors again and
+compares what came out, which is what it did before this was closed.
+
+**What is still owed is what was actually deferred**: a business founded self-serve is empty, and
+M8's onboarding is what fills it. That was always the real work.
+
+### D30 — Postgres is the seam between the two runtimes
+
+D2 gives the clock, the outside world and automation execution to Python; D24 forbids a daemon;
+D26 forbids an `api/` directory inside `apps/web`; I4 and I5 say there is exactly one price
+calculation and exactly one availability calculation. Those four together decide where an
+automation runs, and this record states the answer before M6 writes a table against it.
+
+**Neither runtime calls the other. The handoff is a row.**
+
+- **`apps/web` (TypeScript)** owns configuration and every write a person makes: the rules a
+  business writes, the templates it authors, the thresholds it types, and the domain layer that
+  already holds `priceWorkItem` and `freeWindows`.
+- **Postgres** holds the rules, the runs and the queued messages, and is the only place an
+  action is *performed* — one narrow `security definer` function per action kind, in the class
+  `create_booking` (D22) and `record_provider_payment` (D26) already established. The triggers
+  that arbitrate a human's write arbitrate an automation's unchanged: `app.check_status_transition`
+  for I13, the exclusion constraint for I7.
+- **`apps/api` (Python)** asks *what is due*, drains one run at a time, and talks to the outside
+  world — sending a message, reading a forecast. It gets its own role, `automation_runner`,
+  holding no table grant and a handful of `execute` grants, which is `payment_webhook`'s shape
+  and is asserted from `information_schema` for the same reason.
+
+**The consequence to accept deliberately: no action may perform a calculation the domain layer
+owns.** An action cannot search for a free slot, because searching *is* `freeWindows` and a
+second copy of it in a second runtime is precisely what I5 exists to forbid. So a rescheduling
+action shifts a job by an offset the business typed, and the exclusion constraint decides
+whether that lands — which is I6 doing the job it was written for, rather than a check that
+would race identically. A refusal is a recorded failure a dispatcher sees, never a silent skip.
+
+**Rejected: a callback into `apps/web`.** Its natural home is a route handler under
+`apps/web/app/api/`, which D26 forbids by name; putting it elsewhere in that tree disguises it
+rather than answering the objection.
+
+**Rejected: the whole runtime in Postgres on `pg_cron`.** It removes Python from the milestone
+and puts a scheduler in the database, against D2's first sentence and D24's design, and it
+leaves outbound email with nowhere to go.
+
+**Rejected for now: actions in TypeScript, called from Python over HTTP.** This is the one with
+a real gain — an action could reuse `freeWindows` and `priceWorkItem` directly, which is the
+only way a rule finds a genuinely free slot. It costs an authenticated machine endpoint inside
+the operator application, a contract between two deployments, and a second thing that can fail
+between them.
+
+**Trigger to revisit:** the first action that must *search* rather than assert. Offsets cover
+what M6's own criterion asks for; a business asking for "move it to the next free slot" is the
+argument for paying that price.
+
+**Amended by building it: there are two ways in, not one.** This record described a scheduler
+asking what is due, which is right about time and readings and wrong about events. A booking
+confirmation that arrives on the next sweep is a confirmation nobody trusts, so an
+event-triggered rule runs **inside the transaction that tripped it**, in a trigger on `events` —
+and a rule tripped by a time or a reading runs from `run_due_automations`, called by the tick.
+Both call the same `app.run_automation` and both write the same `automation_runs` row.
+
+What makes the first safe is the thing that had to be got right: **each rule runs in its own
+subtransaction**. plpgsql's `exception` block is a savepoint, so a rule a business wrote badly
+rolls back its own work, records why, and leaves the customer's booking standing. A rule failing
+must never roll back the write that tripped it, and without that this would have been the worst
+failure this platform could have.
+
+**Two consequences worth naming.** An automation may not trigger an automation — the trigger
+returns immediately when it is already inside one, because chaining is a feature and a cycle is
+an outage and the rows cannot tell them apart. And the runtime needed a way to say *this write is
+a rule acting*: `app.acting_automation()` reads a transaction-local setting written only by
+`app.run_automation`, and `app.check_work_item_update_capability` returns early on it. That is an
+explicit third case beside the `pg_trigger_depth()` one already there, rather than an accident of
+being called from a trigger — the tick calls `run_automation` at depth zero, and would otherwise
+be refused for holding no capability in a business it is a member of nothing in.
+
+**One privilege mistake worth recording, because the test is what found it.** Postgres grants
+`execute` on a new function to PUBLIC, and both scheduler functions are `security definer` — so
+as first written, `queued_messages` would have handed any signed-in member of any business every
+other business's queued messages, addresses and words included. The privilege test caught it
+because it asserts the runner's executes by *excluding* everything PUBLIC can already run, so a
+function left open to everybody vanishes from the list rather than appearing in it. A test that
+listed grants directly would have passed.
+
+---
+
+### D31 — A switch leads to its inputs
+
+A module a business can switch on must name where it is set up, and a business that has switched
+one on must be told what is still missing before it does anything.
+
+**This is written from a shipped failure rather than from a principle.** *Card payments* could be
+switched on while the section that connects an account was not rendered at all: `paymentProvider()`
+answers null on a deployment holding no processor keys, and the whole *Getting paid* section sat
+behind that check. The business turned the switch on and its settings page said nothing — which
+is indistinguishable, from the operator's side, from having finished. It is the same class of
+bug as D25's inert module list: every individual piece did what it said, and the feature did not
+exist.
+
+**What it decides.** `Module.configuredAt` is required of every module in `navigation.ts`,
+naming an area and optionally a section of that area's page. The settings screen renders that
+link the moment a module is on, labelled with the area's own name. `outstandingModuleSetup`
+answers, for the modules a business has enabled, what it still has to do — and a module that is
+*off* is never asked, because it is not part of that business and there is nobody to tell.
+
+**Two lines this does not cross.** It is not capability gating: a role that may not price still
+sees Pricing and is told why the form is not theirs (I12); this hides on a *module*, which D25
+holds apart from a role. And the sentences describe **application state only** — "nothing is
+priced yet" is a fact about this database in the platform's own voice, not a claim put in a
+tenant's mouth, which is the line the public pages hold.
+
+**A deployment that cannot support a module says so.** It does not hide the module, and it does
+not pretend the business is at fault. A business with no processor available to it is told there
+is nothing to connect and that invoices still record cash.
+
+**Enforced by** `navigation.test.ts` — every module names an area that exists, never one owned
+by a *different* module (a link a second switch could break is the same dead end by a longer
+route), and a named section must appear as an `id` in that page's source. `modules.test.ts`
+walks a newly provisioned business through what it is told.
+
+**Consequence for M6:** every module that milestone adds — automations, weather, maintenance —
+arrives with its configuration surface in the same slice. A switch shipped ahead of its inputs
+is now a test failure rather than a judgement call.
+
+---
+
 ## Decided, not yet built
 
 Named so they are not reinvented, and deliberately unbuilt until they have a consumer.
 
 - **Approval workflows** on work items — changes the commitment flow; no caller yet.
-- **Recurring work generation** — the trigger model it was waiting on now exists.
+- **Recurring work generation** — **built in M6.** The third trigger shape this entry warned
+  about is `counter_threshold`: `asset_readings` is the append-only log, `automation_counter_marks`
+  holds the reading a rule last acted at, and `create_work_item` is the action. Two things the
+  entry did not say, both found by building it — **the first reading sets the mark and raises
+  nothing**, because switching a rule on for a machine that has already run nine hundred hours
+  must not raise nine services that were done years ago; and **the mark advances by whole steps
+  rather than to the reading**, so a counter that jumps three intervals leaves two still owing.
+  What is *not* built is recurrence on a calendar — "every first Monday" is a different question
+  with no caller. The original entry, kept for its reasoning:
+  the trigger model it was waiting on now exists.
   `Mechanic_Maintenance` ships it: an append-only `HourReading` log, an interval and a
   `nextDueHours` on each task, and an index on `(active, nextDueHours)` that is the whole
   "what is due" query. It is worth naming because it is a **third trigger shape**, and M6 is
@@ -1479,6 +1661,36 @@ Named so they are not reinvented, and deliberately unbuilt until they have a con
   event; this fires when *an accumulated counter a human or a sensor advances crosses a
   threshold*. A when/if/then runtime built for events does not express that naturally, and
   discovering it after the runtime exists is more expensive than reading it here.
+- **Where a message comes from, and where a reply goes.** Asked for as "all of the above", and
+  it is three things at three distances that share a word.
+
+  **Drafting from what a business already sends.** Point at a mailbox or at documents already in
+  the system, and get template drafts back rather than an empty box. This is the smallest of the
+  three and the only one that changes nothing structural: a template is still a row the business
+  owns and edits, and what arrives is a first draft of one. It belongs with M8, because reading
+  prose and proposing configuration is exactly what that milestone's second criterion already
+  describes — and it is the same shape: propose, a human reviews, then apply.
+
+  **Richer templates.** The five placeholders M6 shipped are the ones every business has. The
+  obvious additions — the amount, the address, who is coming, a reference, a link to the
+  customer's own portal page — are a list rather than a mechanism, and the last is worth more
+  than the rest together: a message that links to the live job beats one describing it. The bar
+  each must clear is that the platform can fill it in *reliably every time*, because a
+  placeholder that is sometimes blank is a sentence that is sometimes nonsense.
+
+  **Two-way email, and this is the large one.** A business's replies currently land in somebody's
+  personal inbox and leave the system. Reading a mailbox so a customer's reply attaches to the
+  job it is about is a different order of work: an authorization grant against somebody else's
+  account, tokens that expire and must be refreshed, a mailbox that is not ours to be careless
+  with, and a matching problem — which job is this reply about — that has no perfect answer.
+  **It belongs to M9**, which is the milestone about a business running its front desk here, and
+  it is the same shape as the dialer: record, understand, assist, automate, delegate. Doing it
+  earlier would mean building the hardest third of a communications feature before the milestone
+  that owns communications.
+
+  What all three share is the rule M6 already holds: **whatever the source, the words a customer
+  reads are the business's** (I24). A draft is a draft until somebody saves it.
+
 - **Group and proximity discounting** — a discount must never exceed what the business
   provably saved; requires travel cost modelling that does not exist.
 - **Terminology overrides** per tenant — a display-layer concern that needs a second vertical

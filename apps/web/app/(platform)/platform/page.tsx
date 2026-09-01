@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
-import { isPlatformStaff, listTenants } from '@/lib/domain/platform/tenants';
+import { isPlatformStaff, listFailures, listTenants } from '@/lib/domain/platform/tenants';
 import { ProvisionForm } from './provision-form';
 
 export const dynamic = 'force-dynamic';
@@ -45,7 +45,7 @@ export default async function PlatformPage() {
     redirect('/organizations');
   }
 
-  const tenants = await listTenants(db);
+  const [tenants, failures] = await Promise.all([listTenants(db), listFailures(db)]);
 
   return (
     <main className="mx-auto max-w-4xl p-8">
@@ -129,6 +129,50 @@ export default async function PlatformPage() {
           </table>
         </div>
       )}
+
+      {/*
+        **The fourth question, and the reason M5 could not answer it.** That milestone said
+        plainly that nothing in this schema recorded a failure — a `DomainError` was raised,
+        rendered to whoever caused it, and dropped — and that building a failed-thing table then
+        would have been a table with no writer. M6's automation is the first thing this platform
+        does that fails with nobody watching, and this reads what it wrote.
+
+        Names the business rather than linking to it: staff hold no membership anywhere, so
+        there is nothing to open. What is here is enough to pick up the phone.
+      */}
+      <section className="mt-10 border-t border-black/10 pt-6 dark:border-white/15">
+        <h2 className="text-sm font-medium">What is failing</h2>
+
+        {failures.length === 0 ? (
+          <p className="mt-2 text-sm opacity-70">
+            Nothing has failed. This counts automations that could not run and messages a
+            provider would not take — the two things that happen with nobody watching.
+          </p>
+        ) : (
+          <ul className="mt-2 divide-y divide-black/10 text-sm dark:divide-white/15">
+            {failures.map((failure, index) => {
+              const tenant = tenants.find((entry) => entry.id === failure.organizationId);
+              return (
+                <li
+                  key={`${failure.occurredAt}-${index}`}
+                  className="flex flex-wrap items-baseline gap-x-3 py-2"
+                >
+                  <span className="tabular-nums opacity-60">
+                    {new Date(failure.occurredAt).toLocaleString('en-CA')}
+                  </span>
+                  <span className="font-medium">{tenant?.name ?? 'a business'}</span>
+                  <span className="opacity-60">{failure.kind}</span>
+                  <span>{failure.subject}</span>
+                  {/* The database's or the provider's own words, kept verbatim. An
+                      interpretation here would be the console guessing at somebody else's
+                      error. */}
+                  <span className="text-red-600 dark:text-red-400">{failure.detail}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }

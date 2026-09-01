@@ -22,8 +22,8 @@ checklists to documents.
 
 ## Current state
 
-**M1's, M2's, M3's and M4's acceptance criteria are met**, each demonstrated by one test
-rather than by a table count.
+**M1's, M2's, M3's, M4's, M5's and M6's acceptance criteria are met**, each demonstrated by one
+test rather than by a table count.
 
 `apps/web/tests/milestone-m1.test.ts` builds two whole businesses from byte-identical input
 in one database and asserts that neither can observe or block the other.
@@ -46,18 +46,29 @@ invoice — found, read, booked, scheduled, worked, quoted, invoiced and paid �
 step, including the ones where they successfully wrote, that `app.current_tenant_ids()` is empty
 for that stranger. It touches no SQL either.
 
-The four invert each other deliberately — M1 runs byte-identical input, M2 runs identical input
-twice, M3 runs maximally different input through identical code, and M4 runs half of itself as
-somebody who is a member of nothing.
+`apps/web/tests/milestone-m5.test.ts` signs in as somebody who runs GOLD rather than a business
+on it, sees every tenant while holding a membership in none, hands one over, and is refused every
+write with `permission denied` rather than with a policy declining.
+
+`apps/web/tests/milestone-m6.test.ts` writes a rule on a business that is already live, changes
+the world underneath it, and asserts that a job moved and a customer was written to **in a
+transaction with no session in it at all**.
+
+They invert each other deliberately — M1 runs byte-identical input, M2 runs identical input
+twice, M3 runs maximally different input through identical code, M4 runs half of itself as
+somebody who is a member of nothing, M5 runs as somebody who is a member of *none* of them, and
+M6 is proved by a person doing nothing.
 
 The kernel is `organizations`, `memberships`, `events`, `customers`, `roles`,
 `field_definitions`, `locations`, `customer_locations`, `resources`, `assets`, `documents`,
 `operating_hours` and — the work engine — `work_item_types`, `work_item_statuses`,
 `work_item_transitions`, `work_items`, `work_item_type_checklist_items`,
 `work_item_checklist_items`, `work_item_time_entries` and `work_item_costs`; and — the
-configuration engine — `price_book_items` and `work_item_priced_lines`; the one tenant
-resolution function and `app.has_capability`; and a vertical slice behind authentication for
-each.
+configuration engine — `price_book_items` and `work_item_priced_lines`; and — the automation
+engine — `automation_rules`, `automation_conditions`, `automation_actions`, `automation_runs`,
+`automation_counter_marks`, `message_templates`, `message_deliveries`, `external_readings` and
+`asset_readings`; the one tenant resolution function and `app.has_capability`; and a vertical
+slice behind authentication for each.
 
 Six things about the work engine are load-bearing and easy to undo by accident:
 
@@ -115,6 +126,53 @@ Four things about the configuration engine are load-bearing in the same way:
   as `app.check_custom_fields` refusing an unrelated write to a row that was valid when it was
   made.
 
+**The automation engine is the third, and eight things about it are load-bearing.**
+
+- **The runtime is in Postgres and the clock is in Python** (D30). A rule tripped by a stranger's
+  booking runs where `app.current_tenant_ids()` is empty; one tripped by the tick runs where
+  there is no person at all. `app.run_automation` is the only thing that performs an action, and
+  `apps/api`'s `/tasks/automation-tick` only asks what is due. Neither runtime calls the other:
+  the handoff is a row.
+- **No action may compute what the domain layer owns** (I22). There is no action that prices
+  anything and none that searches for a free slot, because either would be a second
+  `priceWorkItem` or a second `freeWindows` in a second runtime (I4, I5). A rescheduling rule
+  shifts by an offset the business typed and the exclusion constraint decides whether it lands —
+  I6 doing the job it was written for, and a refusal is a recorded failure rather than a silent
+  skip. This is the cost of D30 and it is the first thing to revisit if a business asks for the
+  next free slot.
+- **Each rule runs in its own subtransaction, and that is what makes an inline runtime safe.** An
+  event-triggered rule runs inside the transaction that tripped it, so a confirmation is
+  immediate; plpgsql's `exception` block is a savepoint, so a rule a business wrote badly rolls
+  back its own work and leaves the customer's booking standing. Removing that block would make a
+  bad rule able to fail a good write, which is the worst failure this platform could have.
+- **An automation may not trigger an automation.** Both triggers return immediately when
+  `app.acting_automation()` is already set. Chaining is a feature and a cycle is an outage, and
+  the rows cannot tell them apart.
+- **`app.acting_automation()` is what lets a rule write past the per-column capability guard**,
+  and it is set only by `app.run_automation` on a transaction-local setting. It is an explicit
+  third case beside `pg_trigger_depth()`, not an accident of being called from a trigger — the
+  tick calls at depth zero. No client can set it: PostgREST issues no `SET`, and no function
+  granted to `authenticated` writes it.
+- **`automation_runs` and `message_deliveries` hold no foreign key to what produced them, and
+  none may be added.** The same absence `work_item_priced_lines` keeps against the price book,
+  for the same reason (I8): both snapshot the rule's name, so what happened survives the rule
+  being renamed or deleted, and a key is how somebody eventually writes the join that makes last
+  month's record report this month's configuration.
+- **Units are compared, never converted.** A weather rule written in one unit takes no notice of
+  a reading in another, and a counter rule counting hours ignores a reading in kilometres. Same
+  refusal `jobEconomics` makes about currency: a conversion has a date.
+- **Nothing the platform sends says anything the tenant did not write** (I24). Five placeholders
+  and no other contribution — no greeting, no signature, no footer, in the resolver or in either
+  sender. The finished words are snapshotted onto the delivery, so editing a template cannot
+  reach into an inbox. The tests compare whole bodies rather than fragments, because a footer is
+  exactly what a `toContain` would miss.
+
+- **The rules are read back to the business** (`reviewAutomationRules`), and it is not a
+  refusal — a rule that looks wrong may be right about statuses somebody is halfway through
+  configuring. It catches what `automation_runs` structurally cannot: a rule that never fires
+  leaves no failed run, because nothing happened. Deliberately not AI; the language model version
+  answers a different question and wants these answers underneath it.
+
 **Standing a business up is two acts by two parties, and the second of them is one function
 that must never learn what kind of business it is holding.** GOLD creates the business —
 `provisionOrganization` — and whoever does the configuring configures it:
@@ -142,7 +200,7 @@ state every screen already handles, because it is also the state of one being co
 hand. Making it atomic means putting the order of those steps in the database, and no caller
 has yet needed that.
 
-Four about the interface, which M3 owns and M4 extends:
+Six about the interface, which M3 owns and M4 extends:
 
 - **Every platform noun lives in `apps/web/lib/navigation.ts`**, and one string serves as
   both the navigation entry and the page's `<h1>`, so no *area* page writes a heading of its
@@ -176,6 +234,26 @@ Four about the interface, which M3 owns and M4 extends:
   off removes Pricing *and* the quote, invoice and margin sections from every job screen.
   Hiding the area alone would be half a switch, which is the failure the booking module
   already shipped once and `20260829000010` fixed in the database.
+- **A module whose whole expression is inside another's surface declares it** (`Module.requires`).
+  Weather and maintenance are both configured on the Automations screen, because a weather rule
+  *is* an automation rule — a link a second switch can break, which is the D31 dead end arriving
+  by a longer route. `navigation.test.ts` refuses that link unless the dependency is declared, at
+  which point the settings screen says what is missing instead.
+- **A switch leads to its inputs, and `Module.configuredAt` is required of every module** (D31).
+  Turning one on renders a link to where it is set up, and `outstandingModuleSetup` says what is
+  still missing before it does anything. This is written from a shipped failure: *Card payments*
+  could be switched on while the section that connects an account was hidden behind
+  `paymentProvider()` returning null on a deployment with no processor keys — the business turned
+  the switch on and the page said nothing, which from the operator's side is what finishing looks
+  like. A deployment that cannot support a module now says so rather than disappearing. Two lines
+  it does not cross: it hides on a *module*, never on a role (I12), and its sentences describe
+  application state only — never a word put in a tenant's mouth.
+
+**Automation added no capability without a screen, and that is the standard now.** Every rule,
+condition, action, template, counter reading and coordinate is written from a form. The one thing
+M6 could not put on screen is which channels an installation can actually send on, because that
+is configured in a different deployment — so a message queued for a channel nobody can send is
+recorded as failed with a sentence saying so, rather than silently never arriving.
 
 **Three domain capabilities have no route, and one of them matters.** `setTypeBookable`,
 `revokePortalInvite` and `assignRole` are tested and reachable from nothing on screen. The
@@ -362,9 +440,12 @@ apps/
     lib/adapters/   vendors. Domain code imports the capability, never the implementation.
     proxy.ts        Next 16's middleware. Refreshes the session; not the auth boundary (I12).
     tests/          the suites. They run against a real Postgres — see Commands.
-  api/              Python. Webhook ingress today (M4, D26); automation, intelligence and
-                    realtime later. Deploys to Vercel as serverless functions (D24)
-    app/core/       configuration and the database handle
+  api/              Python. Webhook ingress (M4, D26) and the automation clock (M6, D24, D30);
+                    intelligence and realtime later. Serverless functions on Vercel — never a
+                    daemon, which D24 forbids outright
+    app/core/       configuration, the database handles, and one place that mints a machine token
+    app/channels/   sending a message to a person, as a capability
+    app/conditions/ what the world is doing at a place, as a capability
     app/integrations/ the only place this repo's Python names a vendor
     app/api/        the HTTP entrypoints — one file, one route. NOT `apps/api/api/`:
                     `vercel.json` configures the vendor's default away (see its README)
@@ -376,13 +457,15 @@ docs/
 .claude/commands/   The reusable prompts
 ```
 
-**`apps/api` exists as of M4, and it holds one endpoint.** D26 brought it forward from M6:
+**`apps/api` exists as of M4, and as of M6 it holds two endpoints.** D26 brought it forward from M6:
 Stripe calls in with no human session, D2 gives webhook ingress to Python, and the alternative
 was a route under `apps/web/app/api/` — a second thing called *api*, inside the app that is
-not the API. **There is no `api/` directory under `apps/web` and none may be added.** Nothing
-there anticipates M6: no scheduler, no `domains/`, no `workers/`. Its tests are
-`python -m pytest apps/api/tests`, and **they are not in the check gate** — a real gap, named
-in `apps/api/README.md` so nobody finds it by shipping through it.
+not the API. **There is no `api/` directory under `apps/web` and none may be added.** M6 added the second:
+`/tasks/automation-tick`, running as `automation_runner` — a Postgres role holding no grant on
+any table and a handful of executes, which is `payment_webhook`'s shape on a second axis. There
+is still no `domains/` and no `workers/`. Its tests are `python -m pytest apps/api/tests`, and
+**they are not in the check gate** — a real gap, named in `apps/api/README.md` so nobody finds it
+by shipping through it.
 
 **A route group is a layout boundary and never a security boundary.** Nothing is protected by
 living in `(auth)` or reachable by living outside it — `proxy.ts` decides what an anonymous

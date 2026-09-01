@@ -7,6 +7,7 @@ import {
   createLocation,
   linkCustomerLocation,
   listLocations,
+  setLocationCoordinates,
 } from '@/lib/domain/locations/locations';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { foundBusiness } from './helpers/founding';
@@ -262,5 +263,111 @@ describe('locations', () => {
     for (const event of data!) {
       expect(event.actor_id).toBe(alice.userId);
     }
+  });
+});
+
+/**
+ * Where a place is, and the first write path this table has ever had.
+ *
+ * `20260827000001` shipped `locations` with insert and select and no update at all, on the
+ * grounds that nothing needed one. M6 needs one: a provider cannot say what the weather is at an
+ * address, and the same gap blocks travel time and service areas.
+ *
+ * **The interesting assertions here are the two refusals**, not the save. A column grant that
+ * carries `latitude` and `longitude` and nothing else is what keeps the rest of that deferral
+ * intact — a label and an address are still write-once, and they must stay so through *every*
+ * path, including a direct PostgREST call that skips the domain layer entirely. Moving a
+ * location to a different address silently relocates every job ever done there.
+ */
+describe('where a location is', () => {
+  it('starts with nothing, because nobody has said', async () => {
+    const [location] = (await listLocations(alice.db, {
+      organizationId: alice.organizationId,
+    })).filter((entry) => entry.id === aliceLocationId);
+
+    // Not an unfinished state and not a prompt. A business that never books against weather or
+    // travel has no reason to fill this in, which is the same reading an empty operating-hours
+    // set gets.
+    expect(location.coordinates).toBeNull();
+  });
+
+  it('records a point, and takes it back', async () => {
+    await setLocationCoordinates(alice.db, {
+      id: aliceLocationId,
+      latitude: 52.370216,
+      longitude: 4.895168,
+    });
+
+    const saved = (await listLocations(alice.db, { organizationId: alice.organizationId })).find(
+      (entry) => entry.id === aliceLocationId,
+    );
+    expect(saved?.coordinates).toEqual({ latitude: 52.370216, longitude: 4.895168 });
+
+    await setLocationCoordinates(alice.db, {
+      id: aliceLocationId,
+      latitude: null,
+      longitude: null,
+    });
+
+    const cleared = (await listLocations(alice.db, { organizationId: alice.organizationId })).find(
+      (entry) => entry.id === aliceLocationId,
+    );
+    // Saying nothing is a thing a business is allowed to say, and needs no separate control.
+    expect(cleared?.coordinates).toBeNull();
+  });
+
+  it('refuses half a point', async () => {
+    await expect(
+      setLocationCoordinates(alice.db, {
+        id: aliceLocationId,
+        latitude: 52.370216,
+        longitude: null,
+      }),
+    ).rejects.toMatchObject({ code: 'locations.coordinates_incomplete' });
+  });
+
+  it('refuses a latitude that is not on the earth', async () => {
+    await expect(
+      setLocationCoordinates(alice.db, {
+        id: aliceLocationId,
+        latitude: 91,
+        longitude: 0,
+      }),
+    ).rejects.toMatchObject({ code: 'locations.latitude_out_of_range' });
+  });
+
+  it('refuses to move another tenant’s location, and says nothing about it', async () => {
+    // The row exists; RLS does not return it, so the update matches nothing. Reported as
+    // absence rather than refusal, because from here the two are the same fact — the same
+    // reading `requireOrganization` gives a 404.
+    await expect(
+      setLocationCoordinates(alice.db, {
+        id: bobLocationId,
+        latitude: 1,
+        longitude: 1,
+      }),
+    ).rejects.toMatchObject({ code: 'locations.not_found' });
+
+    const bobs = await listLocations(bob.db, { organizationId: bob.organizationId });
+    expect(bobs.find((entry) => entry.id === bobLocationId)?.coordinates).toBeNull();
+  });
+
+  it('refuses to change an address through the coordinates path, going around the domain layer', async () => {
+    // **The assertion the column grant exists for.** Nothing in `lib/domain` offers this, so
+    // the only honest way to test it is the way an attacker would reach it: PostgREST directly.
+    const { error } = await alice.db
+      .from('locations')
+      .update({ address: 'Somewhere else entirely' })
+      .eq('id', aliceLocationId);
+
+    expect(error).not.toBeNull();
+    // Not a policy declining — a privilege that does not exist. The difference is the whole
+    // guarantee, which is why the code is asserted rather than merely a failure.
+    expect(error?.code).toBe('42501');
+
+    const unchanged = (await listLocations(alice.db, { organizationId: alice.organizationId })).find(
+      (entry) => entry.id === aliceLocationId,
+    );
+    expect(unchanged?.address).not.toBe('Somewhere else entirely');
   });
 });

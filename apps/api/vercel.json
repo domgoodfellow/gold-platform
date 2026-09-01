@@ -8,6 +8,16 @@
     {
       "source": "/webhooks/stripe",
       "destination": "/app/api/stripe_webhook"
+    },
+    {
+      "source": "/tasks/automation-tick",
+      "destination": "/app/api/automation_tick"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/tasks/automation-tick",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

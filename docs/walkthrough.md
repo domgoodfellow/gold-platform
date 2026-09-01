@@ -235,6 +235,58 @@ in a customer's own list of who works at their business.
 
 ---
 
+### 11. Make it run itself — *Settings*, *Automations*, *Assets*
+
+Everything below is configuration and none of it needs a deploy.
+
+**Switch it on.** Settings → *Automations*. The switch now names where it is set up and links
+there, and tells you what is still missing — which is D31, and the reason the Card payments
+switch used to be a dead end. Switch on *Weather* or *Maintenance* too and each says it needs
+Automations, rather than handing you a link into a screen that is not there.
+
+**Write a rule.** Automations → *New rule*. Name it, pick what sets it off, and press add. It
+arrives inert: no conditions, nothing to do. Then add a condition — the picker offers the parts
+of a job *and this business's own custom fields*, from the registry it already keeps — and add an
+action.
+
+Four kinds of trigger, and they are genuinely four different things:
+
+| Kind | Fires | Runs |
+|---|---|---|
+| when something happens | an event: a job created, booked, moved, scheduled | inside the transaction that caused it |
+| a set time before a job starts | the moment the offset names | on the next tick |
+| when conditions cross a line | a reading at the job's location | on the next tick |
+| every so many hours or miles | a counter reading you record on a machine | inside the write that recorded it |
+
+**Watch it act.** Create a job that matches, and it moves before the page finishes reloading. The
+job's timeline names the rule. Under the rule, *Recently* shows what it did.
+
+**Watch it fail, which is the more interesting half.** Point a rule at a status the type's own
+lifecycle cannot reach from where the job is, and create a matching job. **The job is created
+normally** and the rule records a failure with the database's own sentence in it — that is the
+subtransaction working, and the reason a business's bad rule can never break a customer's
+booking.
+
+**Write a message.** Automations → *What this business says*. Every word is yours; the five
+placeholders are the platform's whole contribution. Add a *tell the customer* action, and a job
+with a customer who has an address queues one. Whether it is actually sent depends on what the
+installation is connected to, and the message itself says which — including "this deployment
+cannot send email messages yet", which is the honest answer rather than silence.
+
+**Record a counter.** Assets → any machine → the reading box. The first reading sets the mark and
+raises nothing, deliberately: switching a rule on for a machine that has already run nine hundred
+hours must not raise nine services that were done years ago. Cross the interval and a job appears,
+titled with the rule's own name and attached to the machine.
+
+**Two things you cannot do by hand**, and both are on purpose. You cannot type a weather reading
+— a business that could would be a business that could make its own rules fire — so exercising
+that path locally means calling `record_external_reading` over a database connection, as
+`milestone-m6.test.ts` does. And the tick that runs timed and weather rules is
+`/tasks/automation-tick` in `apps/api`, which needs `CRON_SECRET`; without it every scheduled rule
+simply waits.
+
+---
+
 ## What you cannot reach from any screen
 
 Three capabilities exist in the domain layer, are covered by tests, and have **no route, no
@@ -253,6 +305,11 @@ locally, and **its existence is the evidence of the gap rather than a fix for it
 business cannot run a SQL snippet, and "nobody at that business has ever been given database
 credentials" is M4's criterion. The test path proves the platform can do this; no operator path
 proves an operator can.
+
+**The screen now says so, which is not the same as fixing it.** Switching *Public booking* on and
+setting an address leaves Settings reading "No kind of work is published to this page yet, and no
+screen here can publish one" (D31). An operator is told where the wall is instead of looking for a
+control that does not exist. The debt is unchanged and the afternoon spent hunting for it is not.
 
 **A fourth thing now needs database access, and it is the one entry here that is not a debt.**
 Adding somebody to `platform_staff` is a hand-run snippet
@@ -289,3 +346,4 @@ permission on no table whatsoever.
 | `milestone-m3.test.ts` | Two maximally different businesses configured through one function with no branch | Settings' currency and timezone, on a second business sharing no word with the first |
 | `milestone-m4.test.ts` | A stranger books; the operator schedules, works, invoices and is paid | Steps 7–9 above, plus the booking half once the snippet has run |
 | `milestone-m5.test.ts` | Somebody who runs GOLD sees every business, changes none of them, and hands one over | The console, and the provisioning form on it |
+| `milestone-m6.test.ts` | A rule written by a person moves a job and writes to a customer with nobody present | Step 11 above, and *What is failing* on the console |

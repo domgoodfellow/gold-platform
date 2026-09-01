@@ -225,6 +225,9 @@ export function ModuleSwitch({
   description,
   enabled,
   mayConfigure,
+  configureHref,
+  configureLabel,
+  outstanding,
 }: {
   organizationId: string;
   moduleKey: string;
@@ -232,6 +235,12 @@ export function ModuleSwitch({
   description: string;
   enabled: boolean;
   mayConfigure: boolean;
+  /** Where this module is set up. Rendered only once it is on — see `navigation.ts` (D31). */
+  configureHref: string;
+  /** The area's own name, so the link says where it goes rather than "configure". */
+  configureLabel: string;
+  /** What is still missing before this module does anything, or null when nothing is. */
+  outstanding: string | null;
 }) {
   const [state, formAction, pending] = useActionState(setModuleEnabledAction, { error: null });
 
@@ -243,6 +252,22 @@ export function ModuleSwitch({
           {enabled ? null : <span className="ml-2 font-normal opacity-60">off</span>}
         </p>
         <p className="text-sm opacity-70">{description}</p>
+
+        {/* **Only once it is on**, and that is the whole rule: a business reading the list of
+            what it could buy is being offered something, and a business that has switched one
+            on is being shown where to finish. Rendering the link for a module that is off
+            would be an invitation into a screen that is not part of this business yet. */}
+        {enabled ? (
+          <p className="mt-1 text-sm">
+            {outstanding ? (
+              <span className="opacity-70">{outstanding} </span>
+            ) : null}
+            <a href={configureHref} className="underline underline-offset-2">
+              {outstanding ? 'Finish' : 'Set up'} in {configureLabel}
+            </a>
+          </p>
+        ) : null}
+
         {state.error ? (
           <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
             {state.error}
