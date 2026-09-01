@@ -993,9 +993,38 @@ the read to fix that would have handed a stranger the customer list.
 So the write side became **one `SECURITY DEFINER` function with the scope check as its first
 act** — the shape D14 already sanctions and `create_organization` already uses, privileged for
 the same reason: there is no tenant to be a member of yet, and here no customer to be one yet.
-The surface got *smaller* rather than larger: an external actor now holds **no insert permission
-on any table at all**, and there is exactly one shape of write they can perform. Reads stayed
-entirely on RLS, which is where a leak would actually live.
+The surface got *smaller* rather than larger: an external actor holds insert permission on
+exactly one table — their own binding — and on nothing else, and there is one shape of write they
+can perform about the business. Reads stayed entirely on RLS, which is where a leak would
+actually live.
+
+**That sentence read "no insert permission on any table at all" for the whole life of this axis,
+and it was never true.** `beginBooking` has always written the binding directly under the
+visitor's own session, because there is nothing to scope against until the binding exists — the
+same chicken-and-egg this record names two paragraphs above, arriving in a place nobody went back
+to re-read. The claim was a description of the intent, and because it was believed, two real
+holes sat behind it until `20260902000002`:
+
+- **The binding named any organization.** `external_actors_insert` checked `user_id = auth.uid()`
+  and nothing else, so any authenticated caller could bind to any tenant. What was actually
+  holding the line is *the shape of the one caller that had been written* — `beginBooking` passes
+  what `booking_organization` resolved — and a policy has to hold against a client that never
+  goes near it. It now calls `app.publishes_bookings`, extracted from `booking_organization` so
+  the slug and the binding cannot answer differently.
+- **`customer_id` was insertable.** `20260829000007` added the column and recorded that it is "in
+  no column grant" — but `20260829000003` had already granted `insert` on the *whole table*, and
+  a column added later inherits a table-wide grant. There was no column grant to be left out of.
+  This is the exact attack this record's third bullet says was designed away: an outsider naming
+  somebody else's customer id *was* that customer for reading, because
+  `app.current_external_customer()` is all `invoices_select_external` and
+  `payments_select_external` narrow on.
+
+**The general lesson, which is worth more than either fix: a table-wide grant is not a column
+grant, and a column added later joins it.** Both migrations were internally coherent and each
+assumed the other had it covered. Any `grant insert on <table>` in this schema is a standing
+promise about every column it will ever have — and a sweep for the same pattern found
+`work_items.scheduled_during`, which was a capability bypass rather than a documentation error.
+See `20260902000003`.
 
 **A third thing was wrong and is worth keeping.** The surface shipped at
 `/book/{organizationId}`, which published a tenant id — and made a *path segment* decide which

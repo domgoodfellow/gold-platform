@@ -299,6 +299,64 @@ describe('schema conformance', () => {
     expect(rows).toEqual([]);
   });
 
+  it('keeps every platform-maintained column out of every grant', async () => {
+    // **Written from a sweep, after the same bug was found twice.** A `grant insert on <table>`
+    // is table-wide: it covers every column that table will ever have, so a column added by a
+    // later migration inherits it silently. Twenty-four columns across nine tables had inherited
+    // one. Three mattered, and in each case a migration's own comment claimed the opposite —
+    // `external_actors.customer_id` was "in no column grant" while a grant from eight migrations
+    // earlier covered it, and `work_items.status_releases_resource` was "in no column grant"
+    // while the same thing was true of it.
+    //
+    // The columns below are the ones the *platform* answers for: derived mirrors, and the diary
+    // window that `app.check_work_item_update_capability` authorizes on update and
+    // `create_booking` writes as the table's owner. Each entry names the privilege it must not
+    // hold, because `scheduled_during` is legitimately updatable and never insertable.
+    //
+    // This asserts the *current* privilege rather than reading the migrations, because the
+    // migrations are what got it wrong: each was locally coherent and the damage was in what
+    // they inherited from each other.
+    const MAINTAINED: [string, string, 'INSERT' | 'UPDATE'][] = [
+      ['work_items', 'occupies', 'INSERT'],
+      ['work_items', 'occupies', 'UPDATE'],
+      ['work_items', 'status_releases_resource', 'INSERT'],
+      ['work_items', 'status_releases_resource', 'UPDATE'],
+      ['work_items', 'scheduled_during', 'INSERT'],
+      ['external_actors', 'customer_id', 'INSERT'],
+      ['external_actors', 'customer_id', 'UPDATE'],
+      // A field definition's meaning. Changing a kind reinterprets every value already stored
+      // under that key and renaming a key orphans them; neither fails at the edit.
+      ['field_definitions', 'kind', 'UPDATE'],
+      ['field_definitions', 'key', 'UPDATE'],
+      // A rule's trigger is what the rule *is*. Editing one turns it into a different rule while
+      // keeping the record of what the old one did.
+      ['automation_rules', 'trigger_kind', 'UPDATE'],
+      ['automation_rules', 'trigger_event_action', 'UPDATE'],
+    ];
+
+    const { rows } = await db.query(
+      `select table_name, column_name, privilege_type
+         from information_schema.column_privileges
+        where table_schema = 'public'
+          and grantee in ('authenticated', 'anon')
+          and privilege_type in ('INSERT', 'UPDATE')`,
+    );
+    const granted = new Set(
+      rows.map((r) => `${r.table_name}.${r.column_name}.${r.privilege_type}`),
+    );
+
+    const offenders = MAINTAINED.filter(([t, c, p]) => granted.has(`${t}.${c}.${p}`)).map(
+      ([t, c, p]) => `${t}.${c} (${p})`,
+    );
+
+    expect(offenders).toEqual([]);
+
+    // Non-vacuous: the query has to be returning something, or the filter above is checking an
+    // empty set and every line of the list is decoration.
+    expect(granted.has('work_items.title.INSERT')).toBe(true);
+    expect(granted.has('work_items.scheduled_during.UPDATE')).toBe(true);
+  });
+
   it('catches a violation rather than passing by construction', async () => {
     // A negative control. Without this, every assertion above could be querying nothing and
     // nobody would know until the day it mattered.

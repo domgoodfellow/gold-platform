@@ -431,12 +431,71 @@ describe('correcting a job, and cancelling one', () => {
 
   it('never lets a caller assert the mirror directly', async () => {
     // `status_releases_resource` is the platform's answer to its own constraint, not a fact
-    // anybody may state. It is outside every column grant in the migration.
+    // anybody may state. It is outside every column grant **for update**.
     const { error } = await acme.db
       .from('work_items')
       .update({ status_releases_resource: false })
       .eq('id', acme.workItemId);
 
     expect(error).not.toBeNull();
+  });
+
+  it('never lets a caller assert the mirror at creation either', async () => {
+    // **The insert side of the same claim, and until `20260902000003` it was not true.**
+    // `work_items` carried a table-wide insert grant from `20260827000003`, so this column —
+    // added two migrations later — inherited one, and the sentence "it is in no column grant"
+    // was true of update and false of insert. Nothing was exploitable, because
+    // `work_items_mirror_status_release` fires `before insert` and overwrote whatever arrived;
+    // what was wrong was that the guarantee rested on a trigger while the documents claimed it
+    // rested on a privilege. Now it rests on both.
+    const { error } = await acme.db.from('work_items').insert({
+      organization_id: acme.organizationId,
+      type_id: acme.typeId,
+      status_id: acme.bookedId,
+      title: 'Claims to release the van',
+      created_by: acme.userId,
+      status_releases_resource: true,
+    });
+
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe('42501');
+  });
+
+  it('refuses to schedule at creation without work_item.schedule', async () => {
+    // **The capability split has to hold at insert as well as at update.**
+    // `app.check_work_item_update_capability` is a `before update` trigger, so the only thing
+    // standing between a caller and a scheduled job at creation is the insert policy — and that
+    // asks for `work_item.create` alone. `scheduled_during` and `resource_id` are both in the
+    // table-wide insert grant, so a clerk who may raise jobs but not put them in the diary could
+    // raise one already in it, occupying a resource nobody let them book.
+    //
+    // The domain layer never does this — `createWorkItem` takes no schedule — which is why it
+    // survived: the shape of the one caller was doing the work a policy should. I12 says a
+    // direct call must be refused exactly as a form is.
+    const clerk = await member(acme, 'wie-clerk', ['work_item.create']);
+
+    const { error } = await clerk.db.from('work_items').insert({
+      organization_id: acme.organizationId,
+      type_id: acme.typeId,
+      status_id: acme.bookedId,
+      title: 'Raised straight into the diary',
+      created_by: clerk.userId,
+      resource_id: acme.resourceId,
+      scheduled_during: '["2026-10-09T09:00:00+00","2026-10-09T10:00:00+00")',
+    });
+
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe('42501');
+
+    // And the same person may still do the half they hold, so what is refused is plainly the
+    // scheduling rather than the creating.
+    const { error: plain } = await clerk.db.from('work_items').insert({
+      organization_id: acme.organizationId,
+      type_id: acme.typeId,
+      status_id: acme.bookedId,
+      title: 'Raised, and left for a dispatcher',
+      created_by: clerk.userId,
+    });
+    expect(plain).toBeNull();
   });
 });

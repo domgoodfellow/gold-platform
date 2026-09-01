@@ -87,7 +87,8 @@ Six things about the work engine are load-bearing and easy to undo by accident:
   snapshotted so configuration cannot reach backwards (I8); this one is the deliberate
   exception, because a tenant marking "Cancelled" as releasing means it about the jobs already
   in it. Snapshotting it would look like enforcing I8 and would silently unfix cancellation.
-  Nobody may write it: it is in no column grant, and two triggers own it.
+  Nobody may write it: it is in no column grant for insert *or* update — `20260902000003` had to
+  revoke a table-wide insert grant to make the first half true — and two triggers own it.
 - **A type with no configured transitions is frozen, not unconstrained** (I13), and the
   guarantee is `app.check_status_transition`, a trigger — the domain layer re-checks only to
   produce the message.
@@ -299,10 +300,26 @@ easy to undo by accident:
   application state. A business that has configured nothing renders its own name and stops.
   `public-profile.test.ts` scans the public routes' source, so this fails at the gate rather
   than in front of a customer.
-- **An external actor holds no insert permission on any table.** Every write goes through
-  `create_booking`, one `SECURITY DEFINER` function whose first act is the scope check. Reads
-  stay entirely on RLS. Adding a permissive insert policy for this axis would widen the surface
-  back to where it started.
+- **An external actor holds insert permission on exactly one table — its own binding — and on
+  nothing else.** Every write *about the business* goes through `create_booking`, one
+  `SECURITY DEFINER` function whose first act is the scope check, and reads stay entirely on RLS.
+  `booking.test.ts` asserts the refusals table by table.
+
+  **This entry used to say "no insert permission on any table", and that was never true.**
+  `beginBooking` has always inserted the binding directly, under the visitor's own session,
+  because there is no scope to check against until the binding exists. The sentence described the
+  design rather than the code, and it hid two real holes for the whole life of the axis, both
+  fixed by `20260902000002`: the insert policy checked `user_id = auth.uid()` and nothing about
+  which organization was named, so any authenticated caller could bind to any tenant; and
+  `customer_id` was insertable, because `20260829000003` granted `insert` on the whole table and
+  the column arrived eight migrations later and inherited it — which made an outsider *be* the
+  customer they named, for reading, since `app.current_external_customer()` is what
+  `invoices_select_external` and `payments_select_external` narrow to and they narrow to nothing
+  else. Two migrations each said the other had it covered.
+- **A binding may only name a business that publishes bookings**, and the predicate is
+  `app.publishes_bookings` — one definition, called by `booking_organization` to resolve a slug
+  and by `external_actors_insert` to admit a binding. It was inline in the first of those until
+  the second needed it, which is the extract-then-call-twice rule arriving at a policy.
 
 **Platform staff are the fourth caller shape, and it is a Postgres role (D28, M5).** A member is
 scoped by `app.current_tenant_ids()`, an external actor by `app.current_external_tenant()`, the
@@ -566,6 +583,13 @@ generated code, and they are non-negotiable:
 - **No column, table, enum value, or abstraction without a caller in the same change.**
 - **Nothing is hardcoded that a business might want different** — statuses, terminology,
   prices, hours, currency. All of it is per-tenant configuration.
+- **A table-wide `grant insert`/`grant update` is a promise about every column that table will
+  ever have.** A column added by a later migration inherits it silently, so a migration that
+  adds a column the caller must not write has to `revoke` and re-`grant` by column — writing "in
+  no column grant" in its own comment does not make it so. This has been found twice
+  (`external_actors.customer_id`, `work_items.scheduled_during`), and both times two migrations
+  were individually correct and each assumed the other had it covered. `schema-conformance.test.ts`
+  now asserts the platform-maintained columns hold no grant.
 - **Money is integer minor units. Time is `timestamptz`.**
 - **A vendor belongs behind an adapter.** Domain code names capabilities, never providers.
 - **An LLM gets domain tools with validation and permissions attached, or it gets nothing.**

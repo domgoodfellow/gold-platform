@@ -563,10 +563,65 @@ describe('booking, by somebody who is a member of nothing', () => {
     expect(data!.every((event) => typeof event.actor_id === 'string')).toBe(true);
   });
 
-  it('shows a business with nothing published no way in', async () => {
+  it('cannot bind itself to a business that publishes nothing', async () => {
     const quiet = await newBusiness('bk-quiet', { publish: false });
-    const db = await visitor(quiet.organizationId);
 
-    expect(await listBookableTypes(db, { organizationId: quiet.organizationId })).toEqual([]);
+    // **This test used to assert something weaker, and the weaker version was the bug.** It
+    // bound a visitor to a business that publishes nothing and checked that they then saw an
+    // empty list — which was true, and which quietly established that the binding itself was
+    // available for the asking. `external_actors_insert` checked only `user_id = auth.uid()`,
+    // so any authenticated caller could write a row naming any organization at all.
+    //
+    // What made that matter is the second half, below: `customer_id` was insertable too, and
+    // twelve read policies narrow on nothing but the binding. Refusing at the door is the
+    // guarantee; an empty list was the consequence of one caller happening to behave.
+    await expect(
+      beginBooking(anonClient(), { organizationId: quiet.organizationId }),
+    ).rejects.toMatchObject({ code: 'booking.begin_failed' });
+
+    // And nothing to see for a visitor who has a session but no binding — which is now the only
+    // state a caller can be in for this business. `anonClient()` alone would prove less than it
+    // looks: with no session at all the role is `anon`, which holds no grant on these tables and
+    // fails on privilege rather than on scope.
+    const unbound = anonClient();
+    await unbound.auth.signInAnonymously();
+    expect(await listBookableTypes(unbound, { organizationId: quiet.organizationId })).toEqual([]);
+  });
+
+  it('cannot claim to be a customer while binding itself', async () => {
+    // **The attack `20260829000007` said was impossible, and was not.** That migration added
+    // `customer_id` and recorded that it is "written only by claim_portal_invite; in no column
+    // grant" — but `20260829000003` had already granted `insert` on the whole table, so a
+    // column added later inherited it. A visitor supplying a customer id *was* that customer,
+    // for reading: `app.current_external_customer()` is what `invoices_select_external` and
+    // `payments_select_external` narrow to, and they narrow to nothing else.
+    //
+    // The grant is column-scoped now, so the write is refused before any policy is consulted.
+    const anonymous = anonClient();
+    await anonymous.auth.signInAnonymously();
+    const { data: user } = await anonymous.auth.getUser();
+
+    const { data: theirCustomer } = await pneu.db
+      .from('customers')
+      .select('id')
+      .eq('organization_id', pneu.organizationId)
+      .limit(1)
+      .single();
+
+    const { error } = await anonymous.from('external_actors').insert({
+      organization_id: pneu.organizationId,
+      user_id: user.user!.id,
+      customer_id: theirCustomer!.id,
+    });
+
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe('42501');
+
+    // The honest half: binding without claiming to be anybody is still permitted, because that
+    // is what a member of the public does on a public page.
+    const { error: plain } = await anonymous
+      .from('external_actors')
+      .insert({ organization_id: pneu.organizationId, user_id: user.user!.id });
+    expect(plain).toBeNull();
   });
 });
