@@ -309,6 +309,36 @@ simply waits.
 
 ---
 
+### 12. Ask it something — *Ask*
+
+Switch *Ask* on in Settings and the area appears beside Today. Type *what work is at risk of being
+late today*.
+
+**What comes back is built from what you can already see.** The loop is in `apps/api` and it
+reaches this database through one function, `public.work_at_risk`, called with your own access
+token — so the answer is your rows, decided by the same policies as every other screen. Worth
+proving to yourself: hand the same question to a colleague on a role with fewer capabilities and
+the answer is the same, because reading here is scoped by membership rather than by capability;
+open the customer portal and ask nothing at all, because that side has no Ask screen and would
+get nothing if it had one.
+
+**It needs two things and says so when it has neither.** `ASSISTANT_API_URL` in `apps/web`, so
+it knows where the loop is; and on that deployment either `ANTHROPIC_API_KEY` or
+`ASSISTANT_BASE_URL` pointing at a local model. Missing the first and the screen says this
+installation cannot answer questions; missing the second and it says so in the far side's own
+words. Neither is a blank box.
+
+**Ask it something it has no tool for** — *which service makes the most money* — and it should
+tell you it cannot answer. That is the shape to check rather than a bug: report-shaped questions
+wait for M7's aggregate layer, and a tool is a `stable` function in Postgres precisely so nobody
+can quietly answer them with arithmetic in the loop instead.
+
+Below the box is every question you have asked, with what each tool returned as a row count. Your
+own only: a colleague's questions are not yours to read, because an answer holds whatever its
+asker could see.
+
+---
+
 ## What you cannot reach from any screen
 
 Three capabilities exist in the domain layer, are covered by tests, and have **no route, no
@@ -366,3 +396,4 @@ permission on no table whatsoever.
 | `milestone-m5.test.ts` | Somebody who runs GOLD sees every business, changes none of them, and hands one over | The console, and the provisioning form on it |
 | `milestone-m6.test.ts` | A rule written by a person moves a job and writes to a customer with nobody present | Step 11 above, and *What is failing* on the console |
 | `milestone-m8.test.ts` | Prose becomes a whole proposed setup and the business stays empty until a person applies it | Step 2b above — describe the business, then look at *Work* before pressing Apply |
+| `ai-tools.test.ts` | A tool cannot write, and cannot read a row its caller could not — including with another business's id in its argument | Step 12 above, and the same question asked from two sides |

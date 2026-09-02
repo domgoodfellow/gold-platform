@@ -5,6 +5,61 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Asking the system questions: M8's first criterion, and it did not wait for M7
+
+An operator asks in plain words on `/organizations/{id}/ask` and gets an answer built by tools
+running **under their own access token**. `constraints.md` D34 holds the decisions.
+
+**A tool is a `stable`, `security invoker` function in Postgres**, not a query in the other
+runtime. `public.work_at_risk` is the first: work whose booked window has passed while its status
+still holds the resource, and work booked for today with nobody assigned. Every threshold in it
+belongs to the tenant — `releases_resource` is the only judgement it uses, so there is no platform
+opinion about lateness and no working day hiding in a definition of risk.
+
+**I14 stops being a promise and becomes a property.** Postgres refuses an `insert`, `update` or
+`delete` inside a non-volatile function, so a tool cannot write. The refusal arrives at
+*execution* rather than at `create function` — checked against a live probe rather than assumed —
+which is why `ai-tools.test.ts` reads `provolatile` for every name in the registry: a tool
+declared `volatile` would have been allowed to.
+
+**The argument is not what narrows.** A model chooses a tool's arguments, so if
+`p_organization_id` were the boundary, the boundary would be a value the model made up. RLS
+decides and the caller's own JWT is what RLS reads: one business's id handed to another
+business's session returns nothing.
+
+**A tool's joins are part of what it discloses**, and this was found by testing rather than
+reasoned out. A portal customer may read their own work items but has never been able to read the
+business's internal board vocabulary — so this tool, which joins `work_item_statuses`, answers
+them nothing at all rather than a narrowed list. Each joined table's own policies apply, so a tool
+answers *less*, never wrongly.
+
+**This axis has no Postgres role.** `payment_webhook` and `automation_runner` each hold one
+because no person is present; here one always is, so `apps/api` forwards the token and mints
+nothing — asserted from its own source.
+
+**`agent_runs` records what was asked and what was said, never what was read.** Each tool call is
+a name, its arguments and a row count. It is **readable only by the person who asked**, which is
+this schema's one departure from *a member sees their business's rows*: an answer holds whatever
+its asker could see, and a tenant-wide history would be a way to read yesterday's answer to a
+question today's policies refuse.
+
+**The loop is provider-blind and ships with two implementations.** `app/ai/loop.py` owns
+iteration, dispatch, the cap and the record; a provider answers *what is the next turn*. Claude is
+the default, and anything speaking chat completions is the other — which is how a business answers
+with a model on its own hardware, and the answer to the fact that a tool result is the first thing
+this platform sends outside that is a business's own rows rather than its own words. No vendor's
+tool-runner is used: it would have meant a second loop and an `agent_runs` row that meant two
+things.
+
+**No aggregate-shaped tool exists, and that is the decision rather than a gap.** Revenue by
+customer and least profitable service wait for M7; until then the assistant says it cannot answer.
+`roadmap.md`'s *Order of work* said this whole criterion waited for M7 and has been corrected: the
+dependency was always the report-shaped half, and a tool that cannot contain a calculation is what
+keeps the distinction from rotting.
+
+**Nothing on this axis writes.** An intended action coming back for a person to approve is the
+next slice.
+
 ### Founding closes: every business exists because GOLD made it exist
 
 The other half of D29, and the half M5's criterion turns on. `create_organization` now holds

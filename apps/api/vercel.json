@@ -12,6 +12,10 @@
     {
       "source": "/tasks/automation-tick",
       "destination": "/app/api/automation_tick"
+    },
+    {
+      "source": "/ai/ask",
+      "destination": "/app/api/ai_ask"
     }
   ],
   "crons": [

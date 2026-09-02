@@ -34,6 +34,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_runs: {
+        Row: {
+          answer: string
+          answered_by: string
+          created_by: string
+          detail: string | null
+          id: string
+          occurred_at: string
+          organization_id: string
+          outcome: string
+          question: string
+          tools: Json
+        }
+        Insert: {
+          answer?: string
+          answered_by: string
+          created_by: string
+          detail?: string | null
+          id?: string
+          occurred_at?: string
+          organization_id: string
+          outcome: string
+          question: string
+          tools?: Json
+        }
+        Update: {
+          answer?: string
+          answered_by?: string
+          created_by?: string
+          detail?: string | null
+          id?: string
+          occurred_at?: string
+          organization_id?: string
+          outcome?: string
+          question?: string
+          tools?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_readings: {
         Row: {
           asset_id: string
@@ -2878,6 +2932,19 @@ export type Database = {
           p_releases_resource: boolean
         }
         Returns: undefined
+      }
+      work_at_risk: {
+        Args: { p_organization_id: string }
+        Returns: {
+          customer: string
+          reason: string
+          resource: string
+          scheduled_from: string
+          scheduled_to: string
+          status: string
+          title: string
+          work_item_id: string
+        }[]
       }
     }
     Enums: {

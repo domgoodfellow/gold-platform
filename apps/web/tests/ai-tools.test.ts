@@ -1,0 +1,399 @@
+import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { Client } from 'pg';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { createCustomer } from '@/lib/domain/customers/customers';
+import { claimPortalInvite, createPortalInvite } from '@/lib/domain/portal/portal';
+import { createResource } from '@/lib/domain/resources/resources';
+import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
+import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
+import { addMember } from '@/lib/domain/tenancy/members';
+import { createRole } from '@/lib/domain/tenancy/roles';
+import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
+import { createWorkItemType } from '@/lib/domain/work-items/types';
+import { createWorkItem } from '@/lib/domain/work-items/work-items';
+import { foundBusiness } from './helpers/founding';
+
+/**
+ * What a tool is, and what keeps one from reading a row its caller could not.
+ *
+ * `constraints.md` D34 holds the reasoning. Two halves are asserted here and they are not the
+ * same claim:
+ *
+ *   * **A tool cannot write, and cannot see past the person who called it.** Not because the
+ *     loop is careful — the loop is in another runtime and another language — but because a tool
+ *     is a `stable`, `security invoker` function in this database, and both of those are facts
+ *     in `pg_proc` that this file reads.
+ *
+ *   * **The argument is not what narrows.** This is the one that matters, and it is the failure
+ *     mode a tool layer invites: a model chooses a tool's arguments, so if `p_organization_id`
+ *     were what kept a caller inside their own business, the protection would be a value the
+ *     model made up. The test below hands one business's id to another business's session and
+ *     to a portal customer, and gets nothing back both times.
+ *
+ * **No model is called here, deliberately.** What D34 decides is structural, and a test that
+ * asked a provider would be asserting somebody else's judgement, slowly and for money. The loop
+ * has its own tests in `apps/api`, which are not in the gate — `apps/api/README.md` names that
+ * gap, and it is the reason everything load-bearing is asserted from this side.
+ */
+
+const REPO = new URL('../../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
+const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+const CONNECTION =
+  process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+
+type Business = {
+  db: SupabaseClient;
+  userId: string;
+  organizationId: string;
+  customerId: string;
+  lateTitle: string;
+};
+
+let yard: Business;
+let clinic: Business;
+
+function anonClient(): SupabaseClient {
+  return createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+/**
+ * Every Postgres function the tool registry names.
+ *
+ * **Read out of the Python source rather than restated here**, because a list of tool names
+ * maintained on both sides of the seam is the hand-kept mirror D2 refuses by name. There is one
+ * registry, it lives where the loop lives, and this file reads it.
+ */
+function registeredTools(): string[] {
+  const source = readFileSync(join(REPO, 'apps', 'api', 'app', 'ai', 'tools.py'), 'utf8');
+  return [...source.matchAll(/function="([a-z_]+)"/g)].map((match) => match[1]);
+}
+
+/** A business with one job that is running late and one that is not. */
+async function newBusiness(label: string): Promise<Business> {
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const email = `${label}-${randomUUID().slice(0, 8)}@example.test`;
+  const password = `pw-${randomUUID()}`;
+
+  const { data: created, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+  if (error) throw error;
+
+  const db = anonClient();
+  const signIn = await db.auth.signInWithPassword({ email, password });
+  if (signIn.error) throw signIn.error;
+
+  const organizationId = await foundBusiness({
+    ownerEmail: email,
+    name: `${label} Ltd`,
+    currency: 'EUR',
+  });
+
+  // Each business's own words, and they share none. What the tool reports back is the tenant's
+  // status name rather than a platform one, which is the same claim M3 makes about configuring.
+  const typeId = await createWorkItemType(db, {
+    organizationId,
+    name: label === 'tool-yard' ? 'Verhuur' : 'Shinsatsu',
+  });
+  const holding = await createWorkItemStatus(db, {
+    organizationId,
+    typeId,
+    name: label === 'tool-yard' ? 'Op de planning' : 'Shinsatsu-chū',
+  });
+
+  const resourceId = await createResource(db, {
+    organizationId,
+    name: label === 'tool-yard' ? 'Kraan' : 'Shinsatsushitsu 1',
+  });
+
+  const customerId = await createCustomer(db, {
+    organizationId,
+    name: `${label} customer`,
+  });
+
+  const lateTitle = `${label} overran`;
+  const late = await createWorkItem(db, {
+    organizationId,
+    title: lateTitle,
+    statusId: holding,
+    customerId,
+  });
+
+  // Yesterday, and still in a status the business has not marked as releasing its resource.
+  const from = new Date(Date.now() - 26 * 60 * 60 * 1000);
+  const to = new Date(Date.now() - 25 * 60 * 60 * 1000);
+  await scheduleWorkItem(db, {
+    workItemId: late,
+    resourceId,
+    startsAt: from.toISOString(),
+    endsAt: to.toISOString(),
+  });
+
+  // A second job about somebody else, so "the portal customer sees only theirs" has something
+  // to hide rather than an empty list that would pass for the wrong reason.
+  const otherCustomerId = await createCustomer(db, {
+    organizationId,
+    name: `${label} somebody else`,
+  });
+  const theirs = await createWorkItem(db, {
+    organizationId,
+    title: `${label} not yours`,
+    statusId: holding,
+    customerId: otherCustomerId,
+  });
+  await scheduleWorkItem(db, {
+    workItemId: theirs,
+    resourceId,
+    startsAt: new Date(Date.now() - 30 * 60 * 60 * 1000).toISOString(),
+    endsAt: new Date(Date.now() - 29 * 60 * 60 * 1000).toISOString(),
+  });
+
+  await setModuleEnabled(db, { organizationId, key: 'portal', enabled: true });
+
+  return { db, userId: created.user.id, organizationId, customerId, lateTitle };
+}
+
+/** One tool call, exactly as the loop makes it: an RPC under the caller's own session. */
+async function askTool(db: SupabaseClient, organizationId: string) {
+  const { data, error } = await db.rpc('work_at_risk', { p_organization_id: organizationId });
+  if (error) throw error;
+  return (data ?? []) as { title: string; status: string; reason: string }[];
+}
+
+describe('a tool is a function in this database (D34)', () => {
+  beforeAll(async () => {
+    if (!ANON_KEY || !SERVICE_ROLE_KEY) {
+      throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
+    }
+    yard = await newBusiness('tool-yard');
+    clinic = await newBusiness('tool-clinic');
+  });
+
+  it('every registered tool exists, cannot write, and runs as its invoker', async () => {
+    const names = registeredTools();
+    // A registry that read as empty would make every assertion below vacuously true, which is
+    // exactly how this kind of test rots.
+    expect(names.length).toBeGreaterThan(0);
+
+    const client = new Client({ connectionString: CONNECTION });
+    await client.connect();
+    try {
+      const { rows } = await client.query(
+        `select p.proname, p.provolatile, p.prosecdef
+           from pg_proc p
+           join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public' and p.proname = any($1::text[])`,
+        [names],
+      );
+
+      expect(rows.map((row) => row.proname).sort()).toEqual([...names].sort());
+
+      for (const row of rows) {
+        // `v` is volatile, which is what Postgres would need for the function to be allowed to
+        // write. `s` (stable) and `i` (immutable) are refused at execution — checked against a
+        // live probe rather than assumed, and the refusal reads *DELETE is not allowed in a
+        // non-volatile function*.
+        expect(row.provolatile, `${row.proname} is volatile`).not.toBe('v');
+        // `security definer` would run the tool as its owner and see every tenant, which is the
+        // whole boundary gone in one keyword.
+        expect(row.prosecdef, `${row.proname} runs as its owner`).toBe(false);
+      }
+    } finally {
+      await client.end();
+    }
+  });
+
+  it('answers each business about its own work, in that business’s own words', async () => {
+    const mine = await askTool(yard.db, yard.organizationId);
+    const theirs = await askTool(clinic.db, clinic.organizationId);
+
+    expect(mine.map((row) => row.title)).toContain(yard.lateTitle);
+    expect(theirs.map((row) => row.title)).toContain(clinic.lateTitle);
+
+    expect(mine.map((row) => row.status)).toContain('Op de planning');
+    expect(theirs.map((row) => row.status)).toContain('Shinsatsu-chū');
+    expect(mine.map((row) => row.status)).not.toContain('Shinsatsu-chū');
+
+    expect(mine.every((row) => row.reason === 'window_passed')).toBe(true);
+  });
+
+  it('returns nothing when handed another business’s id', async () => {
+    // **The assertion this whole design exists for.** The argument came from a model; if it
+    // were what narrowed, a made-up id would be somebody else's data. RLS is what narrows, so
+    // the wrong id is simply an empty answer — and no error, because there is nothing here to
+    // tell the caller that the other business exists.
+    expect(await askTool(yard.db, clinic.organizationId)).toEqual([]);
+    expect(await askTool(clinic.db, yard.organizationId)).toEqual([]);
+  });
+
+  it('answers a portal customer of the same business nothing at all', async () => {
+    // **Same tool, same argument, same business, and a different answer** — which is the whole
+    // demonstration: what a tool can see is decided by whose token it ran under, and by nothing
+    // the tool or the loop did.
+    //
+    // Worth knowing *why* it is empty rather than narrowed, because it was not the expected
+    // result and it is the more useful fact. A portal customer can read their own work items
+    // (`work_items_select_external`) but has never been able to read `work_item_statuses` —
+    // the business's internal board vocabulary is not theirs to see. This tool joins it, so the
+    // join drops every row. **A tool's joins are part of what it discloses**, each joined
+    // table's own policies apply, and a tool assembled from tables a caller can only partly
+    // read answers less rather than answering wrongly.
+    const token = await createPortalInvite(yard.db, { customerId: yard.customerId });
+    const customer = anonClient();
+    await claimPortalInvite(customer, { token });
+
+    const asOperator = await askTool(yard.db, yard.organizationId);
+    const asCustomer = await askTool(customer, yard.organizationId);
+
+    expect(asOperator.map((row) => row.title)).toContain(yard.lateTitle);
+    expect(asOperator.map((row) => row.title)).toContain('tool-yard not yours');
+    expect(asCustomer).toEqual([]);
+  });
+
+  it('returns nothing to somebody who is a member of nothing', async () => {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const email = `tool-stranger-${randomUUID().slice(0, 8)}@example.test`;
+    const password = `pw-${randomUUID()}`;
+    await admin.auth.admin.createUser({ email, password, email_confirm: true });
+
+    const stranger = anonClient();
+    await stranger.auth.signInWithPassword({ email, password });
+
+    expect(await askTool(stranger, yard.organizationId)).toEqual([]);
+  });
+});
+
+describe('a run is recorded, and only its asker may read it', () => {
+  async function record(business: Business, question: string, outcome = 'answered') {
+    return business.db
+      .from('agent_runs')
+      .insert({
+        organization_id: business.organizationId,
+        question,
+        answer: outcome === 'answered' ? 'Two jobs ran past their window.' : '',
+        outcome,
+        detail: outcome === 'failed' ? 'the model declined' : null,
+        tools: [{ tool: 'work_at_risk', arguments: {}, rows: 2, error: '' }],
+        answered_by: 'test',
+        created_by: business.userId,
+      })
+      .select('id')
+      .single();
+  }
+
+  it('holds no foreign key to anything it read (I8)', async () => {
+    const client = new Client({ connectionString: CONNECTION });
+    await client.connect();
+    try {
+      const { rows } = await client.query(
+        `select t.relname as target
+           from pg_constraint c
+           join pg_class s on s.oid = c.conrelid
+           join pg_class t on t.oid = c.confrelid
+          where c.contype = 'f' and s.relname = 'agent_runs'`,
+      );
+
+      // The tenant it belongs to and the person who asked. Nothing to `work_items`, nothing to
+      // `customers`, and nothing to a tool — the same absence `automation_runs` keeps against
+      // its rule, so a record of what was asked cannot start reporting what is true today.
+      expect(rows.map((row) => row.target).sort()).toEqual(['organizations', 'users']);
+    } finally {
+      await client.end();
+    }
+  });
+
+  it('is invisible to a colleague in the same business', async () => {
+    const { data: mine, error } = await record(yard, 'What is late today?');
+    expect(error).toBeNull();
+
+    // A second member of the same business, holding every capability the founder holds.
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const email = `tool-colleague-${randomUUID().slice(0, 8)}@example.test`;
+    const password = `pw-${randomUUID()}`;
+    await admin.auth.admin.createUser({ email, password, email_confirm: true });
+
+    const roleId = await createRole(yard.db, {
+      organizationId: yard.organizationId,
+      name: `colleague-${randomUUID().slice(0, 8)}`,
+      capabilities: ['assistant.ask'],
+    });
+    await addMember(yard.db, {
+      organizationId: yard.organizationId,
+      email,
+      displayName: 'Colleague',
+      roleId,
+    });
+
+    const colleague = anonClient();
+    await colleague.auth.signInWithPassword({ email, password });
+
+    // They can ask their own questions and read their own answers. What they cannot do is read
+    // somebody else's, because an answer holds whatever its asker could see.
+    const { data: seen } = await colleague.from('agent_runs').select('id');
+    expect(seen!.map((row) => row.id)).not.toContain(mine!.id);
+    expect(seen).toEqual([]);
+  });
+
+  it('refuses a member whose role cannot ask', async () => {
+    // A colleague rather than the founder demoted: `roles_last_manager` refuses to leave a
+    // business with nobody able to manage roles, which is a different guarantee and not this
+    // one's business.
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const email = `tool-mute-${randomUUID().slice(0, 8)}@example.test`;
+    const password = `pw-${randomUUID()}`;
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (createError || !created) throw createError;
+
+    const roleId = await createRole(clinic.db, {
+      organizationId: clinic.organizationId,
+      name: `mute-${randomUUID().slice(0, 8)}`,
+      capabilities: ['work_item.transition'],
+    });
+    await addMember(clinic.db, {
+      organizationId: clinic.organizationId,
+      email,
+      displayName: 'Mute',
+      roleId,
+    });
+
+    const mute = anonClient();
+    await mute.auth.signInWithPassword({ email, password });
+
+    const { error } = await mute
+      .from('agent_runs')
+      .insert({
+        organization_id: clinic.organizationId,
+        question: 'What is late today?',
+        answer: 'Something.',
+        outcome: 'answered',
+        tools: [],
+        answered_by: 'test',
+        created_by: created.user.id,
+      })
+      .select('id')
+      .single();
+
+    expect(error).not.toBeNull();
+  });
+});

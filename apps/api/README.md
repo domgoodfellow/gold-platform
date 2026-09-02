@@ -9,31 +9,52 @@ consequential value itself.
 
 ```text
 app/
-  core/                configuration, database handle
+  core/                configuration, database handles, the caller-token client
+  ai/                  the tool loop, the tool registry, the provider registry
+  channels/            sending a message to a person, as a capability
+  conditions/          what the world is doing at a place, as a capability
   integrations/
     stripe/            signature check and event parsing
+    anthropic/         the default model behind the answering capability
+    openai_dialect/    anything speaking chat completions, including a local model
   api/                 HTTP entrypoints — one file, one route
 tests/
 ```
 
-`domains/`, `ai/`, `workers/` — not created until something goes in them.
+`domains/` and `workers/` — not created until something goes in them.
+
+`ai/` exists as of M8's first criterion and holds **no SQL and no arithmetic**. A tool is a
+`stable`, `security invoker` function in Postgres; this package holds its name, its sentence and
+its JSON schema, and the loop that decides when to call it (D34).
 
 ## Routes
 
-| Route                   | Handler                      |
-| ----------------------- | ---------------------------- |
-| `POST /webhooks/stripe` | `app/api/stripe_webhook.py`  |
+| Route                        | Handler                       |
+| ---------------------------- | ----------------------------- |
+| `POST /webhooks/stripe`      | `app/api/stripe_webhook.py`   |
+| `GET/POST /tasks/automation-tick` | `app/api/automation_tick.py` |
+| `POST /ai/ask`               | `app/api/ai_ask.py`           |
 
 ## Environment
 
-All four required, or the handler returns 404.
+Each feature reads its own, and a missing value switches that feature off rather than breaking
+the deployment — a handler with nothing configured returns 404.
 
 | Variable                | Notes                                                                  |
 | ----------------------- | ---------------------------------------------------------------------- |
 | `SUPABASE_URL`          |                                                                        |
 | `SUPABASE_ANON_KEY`     |                                                                        |
-| `SUPABASE_JWT_SECRET`   | Signs a 60s token for the `payment_webhook` role. **Not** service-role. |
+| `SUPABASE_JWT_SECRET`   | Signs a 60s token for the `payment_webhook` and `automation_runner` roles. **Not** service-role. |
 | `STRIPE_WEBHOOK_SECRET` |                                                                        |
+| `CRON_SECRET`           | What the host's scheduler presents to the tick.                        |
+| `ANTHROPIC_API_KEY`     | The default model behind `/ai/ask`.                                    |
+| `ASSISTANT_BASE_URL`    | A chat-completions endpoint to answer with instead — a local model, or anything speaking that dialect. Set, it wins over the default. |
+| `ASSISTANT_MODEL`       | Which model at that endpoint. Defaults to `llama3.1`.                  |
+| `ASSISTANT_API_KEY`     | Optional, for a hosted endpoint that wants one. A model on your own hardware needs none. |
+
+**`/ai/ask` signs nothing.** It forwards the access token of the person who asked, so every read
+it performs happens inside that person's own RLS boundary. There is no role for this axis and no
+secret it could substitute for one (D34).
 
 ## Local development
 

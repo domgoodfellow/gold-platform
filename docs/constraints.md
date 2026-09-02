@@ -1795,6 +1795,126 @@ would mean the numbering has stopped describing the work.
 
 ---
 
+### D34 — A tool is a function in Postgres, run under the caller's own token
+
+M8's *first* criterion — asking the system questions and getting answers through the same domain
+tools a human uses, under that user's permissions — is the first thing this repository builds
+that gives a language model something to call. D32 settled the half with no tool in it, and said
+outright that where a loop runs is a decision it does not take. This is that decision.
+
+**Where the loop runs: `apps/api`, and `apps/web` calls it.** D2's third bullet gives Python
+*intelligence — embeddings, retrieval, batch analysis, the AI tool loop*, and this is the one it
+named. Two things settled it beyond the list. Retrieval, when it arrives, is Python's by every
+argument D2 makes, and a loop in one runtime with embeddings in another is the AI plane split for
+no gain. And a business must be able to answer with a model on its own hardware — Ollama, a
+served checkpoint, anything speaking the same dialect — which is Python's ecosystem and nobody
+else's.
+
+**The cost, stated rather than skirted: D30 says neither runtime calls the other.** This makes
+`apps/web` call `apps/api`, synchronously, while somebody waits. What D30 rejected was the other
+direction — an action runtime calling back into the operator application to *write*, whose
+natural home is a route under `apps/web/app/api/` that D26 forbids by name. This is not that, and
+three things keep it from becoming it: the call carries the operator's own access token and
+nothing else; the far side performs no write at all; and it holds no role, no key and no grant
+with which it could do anything the caller could not do in their browser. A row would have been
+the D30-shaped answer and it cannot work here — a question waits for its answer, and a handoff
+through a table means a person watching a spinner until the next tick.
+
+**A tool is a `stable`, `security invoker` function in this database.** Not a query written in
+Python, and this is the load-bearing decision rather than a matter of taste. *At risk of being
+late* is a definition; a definition living in the other runtime is business logic in the wrong
+place, and the first total computed inside a loop is the second aggregate layer I4 and I5 exist
+to prevent one level up. So Postgres holds the tool and Python holds its name, its sentence and
+its JSON schema. Three consequences worth keeping:
+
+- **The database refuses a write inside it.** An `insert`, `update` or `delete` in a non-volatile
+  function fails when it runs — checked rather than assumed, and the refusal arrives at
+  *execution* rather than at `create function`, in `sql` and `plpgsql` alike. So the catalogue is
+  where this is caught: `ai-tools.test.ts` reads `provolatile` for every registered tool, and one
+  added `volatile` by habit fails the gate. **I14 stops being a promise and becomes a property.**
+- **The argument is not what narrows, and this is the failure mode a tool layer invites.** A
+  model chooses a tool's arguments. If `p_organization_id` were what kept a caller inside their
+  own business, the protection would be a value the model made up. RLS decides, the caller's own
+  JWT is what RLS reads (D17), and handing one business's id to another business's session
+  returns nothing.
+- **A tool's joins are part of what it discloses**, which was found by testing rather than
+  reasoned out in advance. `work_at_risk` joins `work_item_statuses` to report a job's status in
+  the tenant's own words, and a portal customer — who may read their own work items and has never
+  been able to read the business's internal board vocabulary — therefore gets nothing back at all
+  rather than a narrowed list. Each joined table's own policies apply, so a tool built from tables
+  a caller can only partly read answers *less*, never wrongly.
+
+**This axis has no Postgres role, and that absence is the whole security model.**
+`payment_webhook` and `automation_runner` each hold one because no person is present. Here a
+person always is, so the token is forwarded rather than minted, and there is nothing to grant,
+nothing to revoke and nothing to assert from `information_schema`. The alternative — an
+`assistant` role reading across tenants and filtering by an organization id — is the mistake
+above wearing an identity.
+
+**The loop sits above a provider contract, and no vendor's tool-runner is used.** Both SDKs offer
+one and taking it would be less code; it would also put iteration inside one vendor's wrapper, so
+the day a business runs a local model there are two loops, two dispatch paths and an `agent_runs`
+row that means different things depending on who answered. `app/ai/loop.py` owns iteration,
+dispatch, the cap and the record; a provider answers *what is the next turn* and stops. The tests
+drive a fixed provider through that same seam rather than around it, which is what makes the seam
+a fact rather than a plan.
+
+**Two providers ship, and the second is not speculative.** Claude is the default;
+`app/integrations/openai_dialect/` serves anything speaking chat completions, which is how a
+model on a business's own hardware arrives. Selection is by environment, like drafting and
+geocoding — **not per tenant**, because a business supplying its own endpoint and its own key is
+a business holding an account with a vendor, which is D33's axis and a different feature.
+
+**Tenant rows now leave the database, and no other feature has done that.** Drafting sends prose
+a business typed about itself; a tool result is its customers, its jobs and its schedule. Three
+answers: the rows a model sees are exactly the caller's RLS scope and never more; a deployment
+that must send nothing anywhere runs a local provider, which is the real reason the provider seam
+exists in the first slice rather than the fourth; and asking is its own capability,
+`assistant.ask`, backfilled onto `organization.manage` holders — not because a question is
+dangerous, but because it spends money and it discloses, and both are decisions a business takes
+on purpose.
+
+**That capability is checked in the domain layer as well as in the policy, and it is the one place
+in this platform where that is not belt-and-braces.** Everywhere else a domain-side check exists
+only to produce a readable refusal while the policy does the guarding. Here `agent_runs_insert`
+fires *after* the answering has happened, by which point somebody without the capability has
+already spent the deployment's money and sent the business's rows outside. So the guard has to be
+in front of the provider too. The policy remains the guarantee.
+
+**A run is readable by the person who asked, and by nobody else in the business.** The one
+deliberate departure from *a member sees their business's rows*, and it follows from what the row
+holds: an answer contains whatever its asker could see. Reading is membership-scoped everywhere
+in this schema and capability-scoped nowhere — but the portal narrows a customer to their own
+jobs, and an operator's answer can hold rows that narrowing was hiding. A tenant-wide history
+would be a way to read, through yesterday's answer, what today's policies refuse.
+`automation_runs` is tenant-wide for the opposite reason: nobody was present, so what it did is
+everybody's business.
+
+**What the record holds is what was asked and what was said, never what was read.** Tool calls are
+snapshotted as a name, its arguments and a row count. Copying rows in would put tenant data in a
+table whose policies are not the ones protecting the original — an invoice's own rules and a
+portal customer's narrowing both left behind.
+
+**No aggregate-shaped tool exists, and that is a decision rather than a gap.** Revenue by
+customer, least profitable service, cost trends: each needs M7's aggregate layer, and without it
+the only way to answer is arithmetic inside the loop. Until M7 the assistant says it cannot
+answer, which is true and better than a number nobody can reproduce from a screen. **This is also
+why the first criterion no longer waits for M7 in full** — `roadmap.md`'s *Order of work* said it
+did, and the dependency was always on the report-shaped half. A query-shaped question needs
+nothing that does not exist.
+
+**Rejected: the loop in `apps/web`.** Tools would be the domain functions themselves, no token
+would cross a boundary and no second read path would exist. It leaves M9's voice work building a
+second loop in Python, contradicts D2's list rather than carving out of it, and puts a metered,
+minutes-long call inside the operator application's request path.
+
+**Rejected: writes inside the loop.** They arrive as a proposal — an intended action `apps/web`
+validates against a whitelist and executes through the domain functions that already exist, when
+a person presses the button. That is D2's contract and D32's flow one level down, and it is not
+built yet: what ships here reads and changes nothing.
+
+---
+
 ## Decided, not yet built
 
 Named so they are not reinvented, and deliberately unbuilt until they have a consumer.

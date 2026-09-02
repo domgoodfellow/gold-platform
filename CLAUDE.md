@@ -22,10 +22,10 @@ checklists to documents.
 
 ## Current state
 
-**M1's, M2's, M3's, M4's, M5's and M6's acceptance criteria are met, and M8's second one is**,
-each demonstrated by one test rather than by a table count. M8's *first* criterion — asking the
-system questions through domain tools — is not built and waits for M7's aggregate layer; see
-`roadmap.md`'s *Order of work*, which splits that milestone across the list.
+**M1's, M2's, M3's, M4's, M5's, M6's and both of M8's acceptance criteria are met**, each
+demonstrated by one test rather than by a table count. M8's *first* criterion did not wait for
+M7: the dependency was on the report-shaped questions only, and D34 records both the decision and
+what keeps the distinction from rotting.
 
 `apps/web/tests/milestone-m1.test.ts` builds two whole businesses from byte-identical input
 in one database and asserts that neither can observe or block the other.
@@ -74,7 +74,7 @@ The kernel is `organizations`, `memberships`, `events`, `customers`, `roles`,
 configuration engine — `price_book_items` and `work_item_priced_lines`; and — the automation
 engine — `automation_rules`, `automation_conditions`, `automation_actions`, `automation_runs`,
 `automation_counter_marks`, `message_templates`, `message_deliveries`, `external_readings` and
-`asset_readings`; the one tenant resolution function and `app.has_capability`; and a vertical
+`asset_readings`; and — the question tools — `agent_runs` and `public.work_at_risk`; the one tenant resolution function and `app.has_capability`; and a vertical
 slice behind authentication for each.
 
 Six things about the work engine are load-bearing and easy to undo by accident:
@@ -212,6 +212,51 @@ Four things are easy to undo by accident:
   level up. `applyConfigurationProposal` **reads the row rather than trusting the proposal it was
   handed**, which a test found the hard way — the first version checked a caller's snapshot, and a
   stale one walked past the guard and re-ran the whole sequence.
+
+**The question tools are built, and they are M8's first criterion.** An operator asks on
+`/organizations/{id}/ask`, the loop runs in `apps/api`, and every read it performs happens under
+that person's own access token. `constraints.md` D34 holds the decisions. Five things are
+load-bearing:
+
+- **A tool is a `stable`, `security invoker` function in Postgres**, and Python holds only its
+  name, its sentence and its JSON schema. Not a query in the other runtime: *at risk of being
+  late* is a definition, and a definition there is business logic in the wrong place. Postgres
+  refuses a write inside a non-volatile function when it runs — at execution rather than at
+  `create function`, which is why `ai-tools.test.ts` reads `provolatile` for every registered
+  name instead of trusting the migration.
+- **The argument is not what narrows, and this is the failure mode a tool layer invites.** A model
+  chooses a tool's arguments, so protection that a model can pick the value of is no protection.
+  RLS decides and the caller's own JWT is what RLS reads: one business's id handed to another
+  business's session returns nothing.
+- **A tool's joins are part of what it discloses.** `work_at_risk` joins `work_item_statuses`, so
+  a portal customer — who may read their own jobs and never the business's board vocabulary —
+  gets nothing rather than a narrowed list. Each joined table's own policies apply, so a tool
+  answers *less*, never wrongly. Found by testing, not by reasoning.
+- **This axis has no Postgres role, and that absence is the security model.** `payment_webhook`
+  and `automation_runner` hold one because no person is present; here one always is, so
+  `apps/api` forwards the token and mints nothing. An `assistant` role reading across tenants and
+  filtering by an organization id would be the argument mistake above wearing an identity.
+- **A run is readable by the person who asked, and by nobody else in the business** — the one
+  place this schema departs from *a member sees their business's rows*, because an answer holds
+  whatever its asker could see. `agent_runs` records the question, the answer, and each tool call
+  as a name, its arguments and a row count. **Never the rows**, which would put tenant data in a
+  table whose policies are not the ones protecting the original.
+
+Two more that are easy to undo:
+
+- **The loop sits above a provider contract and uses no vendor's tool-runner.** `app/ai/loop.py`
+  owns iteration, dispatch, the cap and the record; a provider answers *what is the next turn*.
+  Taking the SDK's runner would mean a second loop the day a business answers with its own model,
+  and an `agent_runs` row that means two things. Two providers ship: Claude by default, and
+  anything speaking chat completions — which is how a deployment that must send no rows to
+  anybody answers at all.
+- **No aggregate-shaped tool exists, and that is the decision rather than a gap.** Revenue by
+  customer and least profitable service wait for M7; until then the assistant says it cannot
+  answer. A tool that cannot contain a calculation is what makes that hold without discipline.
+
+**Nothing on this axis writes.** The intended-action half — an answer coming back with something
+to do about it, validated in `apps/web` against a whitelist and executed by a person pressing a
+button — is a later slice, and D34's last paragraph is where it is decided.
 
 **Standing a business up is two acts by two parties, and the second of them is one function
 that must never learn what kind of business it is holding.** GOLD creates the business —
@@ -502,10 +547,12 @@ apps/
     lib/adapters/   vendors. Domain code imports the capability, never the implementation.
     proxy.ts        Next 16's middleware. Refreshes the session; not the auth boundary (I12).
     tests/          the suites. They run against a real Postgres — see Commands.
-  api/              Python. Webhook ingress (M4, D26) and the automation clock (M6, D24, D30);
-                    intelligence and realtime later. Serverless functions on Vercel — never a
-                    daemon, which D24 forbids outright
-    app/core/       configuration, the database handles, and one place that mints a machine token
+  api/              Python. Webhook ingress (M4, D26), the automation clock (M6, D24, D30) and
+                    the tool loop (M8, D34); retrieval and realtime later. Serverless functions
+                    on Vercel — never a daemon, which D24 forbids outright
+    app/core/       configuration, the database handles, one place that mints a machine
+                    token — and one that pointedly does not, forwarding a caller's instead
+    app/ai/         the tool loop and the two registries it reads. No SQL, no arithmetic
     app/channels/   sending a message to a person, as a capability
     app/conditions/ what the world is doing at a place, as a capability
     app/integrations/ the only place this repo's Python names a vendor
@@ -519,13 +566,17 @@ docs/
 .claude/commands/   The reusable prompts
 ```
 
-**`apps/api` exists as of M4, and as of M6 it holds two endpoints.** D26 brought it forward from M6:
+**`apps/api` exists as of M4, and as of M8 it holds three endpoints.** D26 brought it forward from M6:
 Stripe calls in with no human session, D2 gives webhook ingress to Python, and the alternative
 was a route under `apps/web/app/api/` — a second thing called *api*, inside the app that is
 not the API. **There is no `api/` directory under `apps/web` and none may be added.** M6 added the second:
 `/tasks/automation-tick`, running as `automation_runner` — a Postgres role holding no grant on
-any table and a handful of executes, which is `payment_webhook`'s shape on a second axis. There
-is still no `domains/` and no `workers/`. Its tests are `python -m pytest apps/api/tests`, and
+any table and a handful of executes, which is `payment_webhook`'s shape on a second axis. M8
+added the third, `/ai/ask`, which breaks that pattern deliberately: it has **no role**, mints
+nothing, and forwards the asking person's own token, because unlike the other two it is called by
+somebody who is sitting there (D34). That is also what brought `app/ai/` — the loop, the tool
+registry, the provider registry — and `app/integrations/anthropic/`, the first vendor SDK in this
+runtime. There is still no `domains/` and no `workers/`. Its tests are `python -m pytest apps/api/tests`, and
 **they are not in the check gate** — a real gap, named in `apps/api/README.md` so nobody finds it
 by shipping through it.
 
