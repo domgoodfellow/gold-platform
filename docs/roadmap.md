@@ -40,6 +40,9 @@ it, and if they do, this section changes rather than the numbering.
 4. **Tenant marketing and branding.** D20's deferral, revisited — a named revenue line and the
    third sale to the same customer. **It has no milestone number yet and needs one**;
    `organization_profiles` is the seed and `tire-app-template`'s `site_content` is the pattern.
+   **A tenant's own integrations (D33) is the second unnumbered entry**, and it waits on a
+   customer naming one rather than on anything in this list. A third would mean the numbering has
+   stopped describing the work.
 5. **M7 — reporting and dashboards.**
 6. **M8's first criterion — asking the system questions.** It lands after M7 rather than with the
    rest of its own milestone, and that is the one place the reordering left a genuine dependency:

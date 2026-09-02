@@ -1744,6 +1744,57 @@ rather than render a form that cannot work.
 
 ---
 
+### D33 — A tenant's own integrations are an axis, and the tenant holds the account
+
+**Six integrations ship today and none of them is this.** Stripe, Twilio, Resend, Open-Meteo,
+Nominatim and Anthropic are all *GOLD's* — we hold the key, the tenant never sees it, and each
+arrived attached to the feature that needed it, behind an adapter naming a capability (I15).
+That is why there is no "integrations milestone" and must not be one: an adapter with no caller
+is the abstraction this file refuses, and D11 says it outright about weather.
+
+**What has no home is the other kind: a business connecting its own accounts.** Sync my Google
+Calendar, push invoices to Xero, import my customer list, read my mailbox. Asked for often enough
+that it will arrive as three unrelated features unless the axis is named once — which is the same
+mistake D22 was written to prevent on the outsider axis, and it is named here for the same reason
+and at the same stage: before the first one is built.
+
+**It is a different mechanism, not a bigger version of the first.** GOLD's integrations need a
+key in an environment variable. A tenant's need an authorization grant against somebody else's
+account, a token that expires and must be refreshed, a place to put the refresh token that is not
+a column anybody can read, a failure surface for the day the grant is revoked, and an answer to
+what happens to the data already synced when it is. None of that exists for a key in an env var.
+
+**There is exactly one precedent and it is the shape to follow: D27's `payment_accounts`.** A
+business authorizes GOLD from its own processor account and what gets stored is an `acct_` id —
+**not a credential**. The money moves on their account and never touches a balance of ours. That
+record's reasoning generalises: *the tenant holds the account, GOLD holds a reference to it*, and
+wherever a vendor permits that shape it is the one to take.
+
+**Three things this record decides now, so the first build does not have to.**
+
+- **A tenant's credential is never a column the application can select.** `payment_accounts`
+  gets away with storing an id because an id is not a secret. A refresh token is, and the first
+  integration that needs one needs somewhere to put it that RLS alone does not protect — which
+  is a decision about encryption or a vault, and it is the reason this is an axis rather than a
+  feature.
+- **A failed grant is a row, not a log line.** The same rule M6 settled for automations (I25):
+  a token that stopped working is a thing the business must be *told*, and a sync that silently
+  stopped is worse than one that never started.
+- **Nothing syncs into a tenant's kernel tables without a person seeing it first.** An import
+  that writes customers directly is configuration arriving from outside with nobody reviewing it
+  — the same argument D32 makes about a drafted configuration, and the same answer: propose, a
+  human reviews, then apply.
+
+**Trigger to build:** a customer asking for a named one. Per `market.md`, every *Assumption* row
+is answered by a sales call rather than a commit, and this is squarely one of them — the
+integration a business names is worth more than the four somebody guessed.
+
+**Consequence:** two things now want a milestone number and have none — this and tenant marketing
+and branding (D20). `roadmap.md`'s *Order of work* carries both as unnumbered entries; a third
+would mean the numbering has stopped describing the work.
+
+---
+
 ## Decided, not yet built
 
 Named so they are not reinvented, and deliberately unbuilt until they have a consumer.
