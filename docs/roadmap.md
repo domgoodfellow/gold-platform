@@ -793,8 +793,11 @@ the tools with no function to call yet, and until then the assistant says it can
 per question readable only by whoever asked; `assistant.ask`; an `assistant` module and an Ask
 screen; and in `apps/api`, a provider-blind loop over a capability contract with two
 implementations — Claude, and anything speaking chat completions, which is how a business answers
-with a model on its own hardware. **What it does not build is a write of any kind.** An intended
-action coming back for a person to approve is the next slice.
+with a model on its own hardware. **The write half is built too**: an answer can carry one
+intended action, recorded as pending and performed by nobody until a person presses a button, at
+which point `apps/web` maps the name through its own whitelist and the domain layer does it under
+that person's session. The loop itself still writes nothing, and there is nothing in it that
+could.
 
 **What onboarding builds.** `configuration_proposals`, a tenant-owned row holding the prose, the
 proposed `BusinessShape`, the gaps the model could not fill and an outcome; a drafting adapter

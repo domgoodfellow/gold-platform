@@ -337,6 +337,14 @@ Below the box is every question you have asked, with what each tool returned as 
 own only: a colleague's questions are not yours to read, because an answer holds whatever its
 asker could see.
 
+**Then ask it to do something about it** — *anything I should move?* If it suggests one, you get
+*Move this job* with the model's own sentence underneath and two buttons. Nothing has happened
+yet: the suggestion is a row, and the job is where it was. Press *Do it* and the same function the
+schedule screen calls runs under your session — so ask a colleague on a role without
+`work_item.schedule` to press it and the refusal is the policy's, shown on the row. Suggest a
+window something else already occupies and the refusal is the exclusion constraint's, in its own
+words. Either way it is decided once: the buttons do not come back.
+
 ---
 
 ## What you cannot reach from any screen

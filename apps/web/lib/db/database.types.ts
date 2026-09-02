@@ -36,6 +36,9 @@ export type Database = {
     Tables: {
       agent_runs: {
         Row: {
+          action_detail: string | null
+          action_outcome: string | null
+          action_taken_at: string | null
           answer: string
           answered_by: string
           created_by: string
@@ -44,10 +47,14 @@ export type Database = {
           occurred_at: string
           organization_id: string
           outcome: string
+          proposed_action: Json | null
           question: string
           tools: Json
         }
         Insert: {
+          action_detail?: string | null
+          action_outcome?: string | null
+          action_taken_at?: string | null
           answer?: string
           answered_by: string
           created_by: string
@@ -56,10 +63,14 @@ export type Database = {
           occurred_at?: string
           organization_id: string
           outcome: string
+          proposed_action?: Json | null
           question: string
           tools?: Json
         }
         Update: {
+          action_detail?: string | null
+          action_outcome?: string | null
+          action_taken_at?: string | null
           answer?: string
           answered_by?: string
           created_by?: string
@@ -68,6 +79,7 @@ export type Database = {
           occurred_at?: string
           organization_id?: string
           outcome?: string
+          proposed_action?: Json | null
           question?: string
           tools?: Json
         }

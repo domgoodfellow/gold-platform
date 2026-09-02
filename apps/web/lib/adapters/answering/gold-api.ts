@@ -1,4 +1,10 @@
-import type { Answer, AnsweringProvider, AnsweringRequest, ToolCallRecord } from './index';
+import type {
+  Answer,
+  AnsweringProvider,
+  AnsweringRequest,
+  ProposedAction,
+  ToolCallRecord,
+} from './index';
 
 /**
  * `apps/api`, as one implementation of the answering capability.
@@ -47,6 +53,7 @@ export function goldApiAnsweringProvider(config: { baseUrl: string }): Answering
         detail?: string;
         answered_by?: string;
         tools?: ToolCallRecord[];
+        action?: ProposedAction | null;
       };
 
       const outcome =
@@ -60,6 +67,7 @@ export function goldApiAnsweringProvider(config: { baseUrl: string }): Answering
         // asked, so a business that moved to its own hardware can see that in the record.
         answeredBy: body.answered_by ?? 'unknown',
         tools: body.tools ?? [],
+        action: body.action ?? null,
       };
     },
   };

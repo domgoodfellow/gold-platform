@@ -57,8 +57,20 @@ customer and least profitable service wait for M7; until then the assistant says
 dependency was always the report-shaped half, and a tool that cannot contain a calculation is what
 keeps the distinction from rotting.
 
-**Nothing on this axis writes.** An intended action coming back for a person to approve is the
-next slice.
+**The loop still writes nothing, and a person can.** An answer may carry one intended action —
+today only *move this job* — recorded on the run as pending and performed by nobody until somebody
+presses the button. `apps/web` holds the whitelist that says what an action name means, so the two
+runtimes may disagree and the disagreement fails closed; an action carries no Postgres function,
+so nothing in the Python plane could perform one; executing adds no capability, because the policy
+on `work_items` refuses exactly as it would for a drag on the schedule and the exclusion
+constraint decides whether the window lands; and a decided action is frozen in the policy rather
+than only in the flow.
+
+**Rescheduling cannot reassign, and a test is why.** The first executor omitted the resource, and
+`scheduleWorkItem` reads an omitted resource as *nobody assigned* — so moving a job quietly took
+the person off it. It now reads the job's current resource and passes it back, and the model is
+given no way to name one: *move this to tomorrow* and *give this to somebody else* are two
+decisions.
 
 ### Founding closes: every business exists because GOLD made it exist
 

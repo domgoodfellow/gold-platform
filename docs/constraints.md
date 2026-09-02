@@ -1908,10 +1908,35 @@ would cross a boundary and no second read path would exist. It leaves M9's voice
 second loop in Python, contradicts D2's list rather than carving out of it, and puts a metered,
 minutes-long call inside the operator application's request path.
 
-**Rejected: writes inside the loop.** They arrive as a proposal — an intended action `apps/web`
-validates against a whitelist and executes through the domain functions that already exist, when
-a person presses the button. That is D2's contract and D32's flow one level down, and it is not
-built yet: what ships here reads and changes nothing.
+**Rejected: writes inside the loop, and this half is built.** An intended action comes back on
+the run as a name and some arguments, and `apps/web` is the authority on what that name means: it
+maps it through a whitelist to a domain function, validates the arguments, and calls it **when a
+person presses the button**, under that person's own session. D2's contract and D32's flow, one
+level down. Four things hold it up:
+
+- **The whitelist is on the executing side, so the two runtimes may disagree and fail closed.** A
+  name the loop produces that `apps/web` does not know is recorded as *this platform cannot do
+  that* rather than dispatched — which is why the list of actions needs no version shared across
+  the seam and no generated contract.
+- **An action carries no Postgres function**, unlike a tool, and the loop treats a name from that
+  list as a stopping point rather than something to call. There is nothing in the Python plane
+  that could perform one. It also stops *before* running the tools in that same turn: a model
+  proposing a move in the breath it asks to look has proposed it without looking.
+- **Executing adds no capability and checks none.** Moving a job is `work_item.schedule`, refused
+  by the policy on `work_items` exactly as it would be for a drag on the schedule. The
+  exclusion constraint decides whether the new window lands (I6), and a refusal is recorded on
+  the run in the database's own words rather than raised.
+- **A decided action is frozen**, in the policy and not only in the flow: `agent_runs_update`
+  stops matching the moment the outcome is anything but `pending`. Asking again is a new
+  question, because a suggestion acted on twice is a job moved twice.
+
+**The first action is rescheduling, and the list grows one per slice with a screen behind it.**
+It is the action D30 already reasoned about: it asserts an instant rather than searching for one,
+so no second `freeWindows` exists in a second runtime. It also **cannot reassign** — the model is
+given no way to name a resource, because *move this to tomorrow* and *give this to somebody else*
+are two decisions. That distinction was found by a test: the first executor omitted the resource,
+and `scheduleWorkItem` reads an omitted resource as *nobody assigned*, so moving a job quietly
+took the person off it.
 
 ---
 

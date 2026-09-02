@@ -254,9 +254,18 @@ Two more that are easy to undo:
   customer and least profitable service wait for M7; until then the assistant says it cannot
   answer. A tool that cannot contain a calculation is what makes that hold without discipline.
 
-**Nothing on this axis writes.** The intended-action half — an answer coming back with something
-to do about it, validated in `apps/web` against a whitelist and executed by a person pressing a
-button — is a later slice, and D34's last paragraph is where it is decided.
+**The loop writes nothing; a person does.** An answer can come back with an intended action —
+today only *move this job* — recorded on the run as `pending` and performed by nobody until
+somebody presses the button, at which point `apps/web` maps the name through **its own**
+whitelist and calls `scheduleWorkItem` under that person's session. Four things are easy to undo:
+the whitelist lives on the executing side, so a name the loop invents fails closed rather than
+dispatching; an action carries no Postgres function, so there is nothing in the Python plane that
+could perform one; executing adds no capability, because the policy on `work_items` refuses
+exactly as it would for a drag on the schedule, and the exclusion constraint decides whether the
+window lands (I6); and a decided action is frozen by `agent_runs_update` rather than only by the
+flow. **Rescheduling deliberately cannot reassign** — a test caught the first executor omitting
+the resource, which `scheduleWorkItem` reads as *nobody assigned*, so moving a job silently took
+the person off it.
 
 **Standing a business up is two acts by two parties, and the second of them is one function
 that must never learn what kind of business it is holding.** GOLD creates the business —

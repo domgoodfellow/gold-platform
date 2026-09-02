@@ -14,6 +14,8 @@ import { createRole } from '@/lib/domain/tenancy/roles';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
+import { decideOnAction } from '@/lib/domain/assistant/questions';
+import { executorFor } from '@/lib/domain/assistant/actions';
 import { foundBusiness } from './helpers/founding';
 
 /**
@@ -52,6 +54,8 @@ type Business = {
   organizationId: string;
   customerId: string;
   lateTitle: string;
+  lateId: string;
+  resourceId: string;
 };
 
 let yard: Business;
@@ -161,7 +165,15 @@ async function newBusiness(label: string): Promise<Business> {
 
   await setModuleEnabled(db, { organizationId, key: 'portal', enabled: true });
 
-  return { db, userId: created.user.id, organizationId, customerId, lateTitle };
+  return {
+    db,
+    userId: created.user.id,
+    organizationId,
+    customerId,
+    lateTitle,
+    lateId: late,
+    resourceId,
+  };
 }
 
 /** One tool call, exactly as the loop makes it: an RPC under the caller's own session. */
@@ -395,5 +407,149 @@ describe('a run is recorded, and only its asker may read it', () => {
       .single();
 
     expect(error).not.toBeNull();
+  });
+});
+
+/**
+ * A write the model asked for and a person allowed.
+ *
+ * **The claim is that nothing happened until somebody said so, and that what then happened went
+ * through the door every other write goes through.** `scheduleWorkItem` is called by
+ * `decideOnAction`, under the deciding person's own session, so the capability check, the
+ * overlap constraint and the buffer are all the ordinary ones — a suggestion is not a shortcut
+ * past any of them.
+ */
+describe('a write is proposed, and a person decides (D34)', () => {
+  /** What the loop would have written: a pending suggestion and nothing else. */
+  async function proposeMove(business: Business, startsAt: string, endsAt: string) {
+    const { data, error } = await business.db
+      .from('agent_runs')
+      .insert({
+        organization_id: business.organizationId,
+        question: 'Anything I should move?',
+        answer: 'That job overran. I would move it to tomorrow morning.',
+        outcome: 'answered',
+        tools: [{ tool: 'work_at_risk', arguments: {}, rows: 1, error: '' }],
+        answered_by: 'test',
+        created_by: business.userId,
+        proposed_action: {
+          name: 'propose_reschedule',
+          arguments: {
+            work_item_id: business.lateId,
+            starts_at: startsAt,
+            ends_at: endsAt,
+            because: 'It ran past its window yesterday.',
+          },
+          because: 'It ran past its window yesterday.',
+        },
+        action_outcome: 'pending',
+      })
+      .select('id')
+      .single();
+
+    expect(error).toBeNull();
+    return data!.id;
+  }
+
+  function tomorrow(hour: number): string {
+    const at = new Date();
+    at.setUTCDate(at.getUTCDate() + 1);
+    at.setUTCHours(hour, 0, 0, 0);
+    return at.toISOString();
+  }
+
+  it('changes nothing until somebody presses the button', async () => {
+    const before = await yard.db
+      .from('work_items')
+      .select('scheduled_during')
+      .eq('id', yard.lateId)
+      .single();
+
+    await proposeMove(yard, tomorrow(9), tomorrow(10));
+
+    const after = await yard.db
+      .from('work_items')
+      .select('scheduled_during')
+      .eq('id', yard.lateId)
+      .single();
+
+    // The whole of the proposal contract in one assertion: the row that says what to do exists,
+    // and the job has not moved.
+    expect(after.data!.scheduled_during).toEqual(before.data!.scheduled_during);
+  });
+
+  it('writes through the domain layer when they do', async () => {
+    const runId = await proposeMove(yard, tomorrow(11), tomorrow(12));
+
+    const decided = await decideOnAction(yard.db, { runId, carryOut: true });
+    expect(decided.actionOutcome).toBe('done');
+
+    const { data } = await yard.db
+      .from('work_items')
+      .select('scheduled_during')
+      .eq('id', yard.lateId)
+      .single();
+
+    // Postgres renders a range with a space rather than a T, so this compares the instant it
+    // holds rather than the text it printed.
+    const from = /^\["([^"]+)"/.exec(data!.scheduled_during as string)?.[1];
+    expect(new Date(from!).toISOString()).toBe(tomorrow(11));
+  });
+
+  it('records the database’s own refusal rather than raising it', async () => {
+    // Somebody else's job already has that resource for that window. `scheduleWorkItem` does not
+    // look before it writes (I6) — the exclusion constraint decides, which is exactly what makes
+    // a proposal safe to offer without searching for a free slot first.
+    const { data: statusRow } = await yard.db
+      .from('work_items')
+      .select('status_id')
+      .eq('id', yard.lateId)
+      .single();
+
+    const rival = await createWorkItem(yard.db, {
+      organizationId: yard.organizationId,
+      title: 'tool-yard rival',
+      statusId: statusRow!.status_id,
+    });
+    await scheduleWorkItem(yard.db, {
+      workItemId: rival,
+      resourceId: yard.resourceId,
+      startsAt: tomorrow(16),
+      endsAt: tomorrow(17),
+    });
+
+    const clash = await proposeMove(yard, tomorrow(16), tomorrow(17));
+    const decided = await decideOnAction(yard.db, { runId: clash, carryOut: true });
+
+    // Recorded, not thrown, and in whoever's words refused it (I25).
+    expect(decided.actionOutcome).toBe('failed');
+    expect(decided.actionDetail).toBeTruthy();
+  });
+
+  it('is frozen once decided', async () => {
+    const runId = await proposeMove(clinic, tomorrow(14), tomorrow(15));
+
+    const declined = await decideOnAction(clinic.db, { runId, carryOut: false });
+    expect(declined.actionOutcome).toBe('declined');
+
+    // Deciding twice would be a job moved twice. Refused here for the message, and refused by
+    // `agent_runs_update` regardless — its `using` clause stops matching the moment the outcome
+    // is anything but pending.
+    await expect(decideOnAction(clinic.db, { runId, carryOut: true })).rejects.toThrow();
+
+    const direct = await clinic.db
+      .from('agent_runs')
+      .update({ action_outcome: 'done', action_taken_at: new Date().toISOString() })
+      .eq('id', runId)
+      .select('id');
+    expect(direct.data).toEqual([]);
+  });
+
+  it('knows only the actions this side can carry out', async () => {
+    // The two runtimes are allowed to disagree, and the disagreement must fail closed: the
+    // whitelist here is the authority, and a name it does not hold is refused rather than
+    // dispatched.
+    expect(executorFor('propose_reschedule')).not.toBeNull();
+    expect(executorFor('delete_everything')).toBeNull();
   });
 });

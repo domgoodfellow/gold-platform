@@ -1,9 +1,15 @@
 import type { Database, Db } from '@/lib/db/types';
 
 type Json = Database['public']['Tables']['agent_runs']['Insert']['tools'];
-import { answeringProvider, type AnswerOutcome, type ToolCallRecord } from '@/lib/adapters/answering';
+import {
+  answeringProvider,
+  type AnswerOutcome,
+  type ProposedAction,
+  type ToolCallRecord,
+} from '@/lib/adapters/answering';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { executorFor } from './actions';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
 
 /**
@@ -25,7 +31,14 @@ import { getOrganization } from '@/lib/domain/tenancy/organizations';
  * can tell you things and change nothing.
  */
 
-export type { ToolCallRecord };
+export type { ProposedAction, ToolCallRecord };
+export { ACTION_LABELS } from './actions';
+
+/**
+ * What became of a suggestion. `pending` is a real state somebody is looking at, which is why
+ * there are four words rather than three.
+ */
+export type ActionOutcome = 'pending' | 'done' | 'declined' | 'failed';
 
 export type AgentRun = {
   id: string;
@@ -40,6 +53,11 @@ export type AgentRun = {
   /** Which model answered. For a person reading this later; decides nothing. */
   answeredBy: string;
   occurredAt: string;
+  /** What it suggested doing, if anything. Nothing has been done until somebody says so. */
+  proposedAction: ProposedAction | null;
+  actionOutcome: ActionOutcome | null;
+  /** The refusal, in the words of whoever refused (I25). */
+  actionDetail: string | null;
 };
 
 const QUESTION_MAX = 2000;
@@ -59,6 +77,9 @@ function toRun(row: {
   tools: unknown;
   answered_by: string;
   occurred_at: string;
+  proposed_action: unknown;
+  action_outcome: string | null;
+  action_detail: string | null;
 }): AgentRun {
   return {
     id: row.id,
@@ -69,10 +90,20 @@ function toRun(row: {
     tools: (row.tools ?? []) as ToolCallRecord[],
     answeredBy: row.answered_by,
     occurredAt: row.occurred_at,
+    proposedAction: (row.proposed_action ?? null) as ProposedAction | null,
+    actionOutcome: isActionOutcome(row.action_outcome) ? row.action_outcome : null,
+    actionDetail: row.action_detail,
   };
 }
 
-const COLUMNS = 'id, question, answer, outcome, detail, tools, answered_by, occurred_at';
+const ACTION_OUTCOMES: ActionOutcome[] = ['pending', 'done', 'declined', 'failed'];
+
+function isActionOutcome(value: string | null): value is ActionOutcome {
+  return value !== null && (ACTION_OUTCOMES as string[]).includes(value);
+}
+
+const COLUMNS =
+  'id, question, answer, outcome, detail, tools, answered_by, occurred_at, proposed_action, action_outcome, action_detail';
 
 /**
  * Whether this deployment can answer anything at all.
@@ -178,6 +209,7 @@ export async function askQuestion(
   let detail: string | null = null;
   let answeredBy = provider.name;
   let tools: ToolCallRecord[] = [];
+  let action: ProposedAction | null = null;
 
   try {
     const answer = await provider.answer({ question, token });
@@ -186,6 +218,10 @@ export async function askQuestion(
     detail = answer.detail;
     answeredBy = answer.answeredBy;
     tools = answer.tools;
+    // **Recorded as pending, never performed.** Whether this platform can carry it out at all is
+    // decided below by the whitelist rather than by whoever suggested it, and whether it *should*
+    // be is decided by the person reading it.
+    action = answer.action && executorFor(answer.action.name) ? answer.action : null;
   } catch (failure) {
     // Their words, not a paraphrase of them (I25). A sentence an operator can act on is the
     // whole value of recording this at all.
@@ -207,12 +243,100 @@ export async function askQuestion(
       tools: tools as unknown as Json,
       answered_by: answeredBy,
       created_by: actor.id,
+      proposed_action: action as unknown as Json,
+      action_outcome: action ? 'pending' : null,
     })
     .select(COLUMNS)
     .single();
 
   if (error) {
     throw new DomainError(error.message, 'assistant.record_failed');
+  }
+
+  return toRun(data);
+}
+
+/**
+ * Carry out what a run suggested, or decline it.
+ *
+ * **The whole of the proposal contract, and it is four short steps.** Read the run back from the
+ * database rather than trusting what a caller handed over — a lesson `applyConfigurationProposal`
+ * learned the hard way, where a stale snapshot walked past the guard and re-ran a whole sequence.
+ * Look the name up in this layer's own whitelist. Call the domain function. Write down what
+ * happened.
+ *
+ * **This adds no capability and checks none.** Moving a job is `work_item.schedule`, refused by
+ * the policy on `work_items` exactly as it would be if the person had dragged it on the schedule.
+ * A check here would be a second copy of that rule in the place least able to keep it current.
+ *
+ * **A refusal is recorded rather than thrown.** The person suggested pressing a button and the
+ * database said no; what they are owed is the sentence it said, on the row, where they are
+ * already looking. The exclusion constraint refusing an overlap is the ordinary case, not a rare
+ * one — which is the point of proposing an instant rather than searching for a free one (I6).
+ */
+export async function decideOnAction(
+  db: Db,
+  input: { runId: string; carryOut: boolean },
+): Promise<AgentRun> {
+  await requireActor(db);
+
+  const { data: current, error: readError } = await db
+    .from('agent_runs')
+    .select(`organization_id, ${COLUMNS}`)
+    .eq('id', input.runId)
+    .single();
+
+  if (readError || !current) {
+    throw new DomainError('No such question.', 'assistant.run_not_found');
+  }
+
+  const run = toRun(current);
+  if (run.actionOutcome !== 'pending') {
+    // Frozen the moment it was decided, in the policy as well as here. Asking again is a new
+    // question, because a suggestion acted on twice is a job moved twice.
+    throw new DomainError('That has already been decided.', 'assistant.action_decided');
+  }
+  if (!run.proposedAction) {
+    throw new DomainError('There is nothing to do here.', 'assistant.no_action');
+  }
+
+  let outcome: ActionOutcome = 'declined';
+  let detail: string | null = null;
+
+  if (input.carryOut) {
+    const executor = executorFor(run.proposedAction.name);
+    if (!executor) {
+      // The two runtimes disagreeing, which is allowed to happen and must fail closed. Recorded
+      // in the platform's own words, because this is a fact about the platform.
+      outcome = 'failed';
+      detail = 'This platform cannot carry out that kind of suggestion.';
+    } else {
+      try {
+        await executor(db, {
+          organizationId: current.organization_id,
+          arguments: run.proposedAction.arguments,
+        });
+        outcome = 'done';
+      } catch (failure) {
+        outcome = 'failed';
+        detail = failure instanceof Error ? failure.message : 'that could not be carried out';
+      }
+    }
+  }
+
+  const { data, error } = await db
+    .from('agent_runs')
+    .update({
+      action_outcome: outcome,
+      action_detail: detail,
+      action_taken_at: new Date().toISOString(),
+    })
+    .eq('id', input.runId)
+    .select(COLUMNS)
+    .single();
+
+  if (error) {
+    throw new DomainError(error.message, 'assistant.decision_failed');
   }
 
   return toRun(data);

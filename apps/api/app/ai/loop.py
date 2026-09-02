@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.ai import AnsweringProvider, Exchange, Tool, ToolCall, ToolResult, Turn
+from app.ai.actions import ACTIONS, action_named
 from app.ai.tools import TOOLS, tool_named
 from app.core.caller import ToolFailed, call_tool
 from app.core.config import AssistantSettings
@@ -49,6 +50,20 @@ class ToolRecord:
 
 
 @dataclass(frozen=True)
+class ProposedAction:
+    """What the model would do about the answer, for a person to decide on.
+
+    **Reported, never performed.** Nothing in this runtime can perform one: an action carries no
+    Postgres function, and the only thing that turns this into a write is somebody in `apps/web`
+    pressing a button, at which point the domain layer does it under their own session (D34).
+    """
+
+    name: str
+    arguments: dict[str, Any]
+    because: str
+
+
+@dataclass(frozen=True)
 class Answer:
     """What to write down, and what to show the person.
 
@@ -66,6 +81,7 @@ class Answer:
     text: str = ""
     detail: str = ""
     tools: list[ToolRecord] = field(default_factory=list)
+    action: ProposedAction | None = None
 
 
 def _run_tool(
@@ -104,10 +120,34 @@ def answer(
     for _ in range(MAX_TURNS):
         try:
             turn = provider.next_turn(
-                question=question, tools=TOOLS, history=tuple(history)
+                # Actions are declared beside the tools because that is how a model is given a
+                # way to say what it would do. What separates them is entirely on this side:
+                # a name in `TOOLS` resolves to a function and runs; a name in `ACTIONS`
+                # resolves to nothing and stops the loop.
+                question=question,
+                tools=TOOLS + ACTIONS,
+                history=tuple(history),
             )
         except Exception as failure:  # noqa: BLE001 - the provider's own words, recorded
             return Answer(outcome="failed", detail=str(failure), tools=performed)
+
+        # **An action ends the turn, and it ends it here rather than after the tools run.** A
+        # model that asks to read something *and* proposes a move in one breath has proposed it
+        # without having read; stopping first means the proposal is always made on what it
+        # already knows.
+        proposal = next(
+            (call for call in turn.calls if action_named(call.name) is not None), None
+        )
+        if proposal is not None:
+            because = str(proposal.arguments.get("because") or "")
+            return Answer(
+                outcome="answered" if (turn.text.strip() or because) else "unanswered",
+                text=turn.text.strip() or because,
+                tools=performed,
+                action=ProposedAction(
+                    name=proposal.name, arguments=proposal.arguments, because=because
+                ),
+            )
 
         if not turn.calls:
             if turn.text.strip():

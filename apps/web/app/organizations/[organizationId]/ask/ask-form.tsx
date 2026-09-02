@@ -1,7 +1,8 @@
 'use client';
 
 import { useActionState } from 'react';
-import { askAction, type AskActionState } from './actions';
+import { ACTION_LABELS, type AgentRun } from '@/lib/domain/assistant/questions';
+import { askAction, decideAction, type AskActionState } from './actions';
 
 const INITIAL: AskActionState = { error: null };
 
@@ -53,5 +54,76 @@ export function AskForm({
         </p>
       )}
     </form>
+  );
+}
+
+/**
+ * A suggestion, and the two answers to it.
+ *
+ * **Nothing has happened when this renders.** The model said what it would do; the platform wrote
+ * that down as a pending decision and stopped. Pressing *Do it* calls the same domain function
+ * the schedule screen calls, under this person's own session — so somebody whose role cannot move
+ * a job is refused by the policy on `work_items`, and the refusal appears here in the database's
+ * own words (D34).
+ *
+ * Both buttons are shown to everybody, which is I12 rather than a shortcut around it: hiding one
+ * would make this component the place that decides, and the policy would still be the place that
+ * does.
+ */
+export function ProposedAction({
+  organizationId,
+  run,
+}: {
+  organizationId: string;
+  run: AgentRun;
+}) {
+  const [state, action, pending] = useActionState(decideAction, INITIAL);
+
+  if (!run.proposedAction || !run.actionOutcome) return null;
+
+  const label = ACTION_LABELS[run.proposedAction.name] ?? run.proposedAction.name;
+
+  if (run.actionOutcome !== 'pending') {
+    return (
+      <p className="mt-2 text-xs opacity-70">
+        {label} —{' '}
+        {run.actionOutcome === 'done'
+          ? 'done'
+          : run.actionOutcome === 'declined'
+            ? 'you said no'
+            : /* Whoever refused, in their own words (I25). */ run.actionDetail}
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded border border-black/15 p-2 dark:border-white/20">
+      <p className="text-sm font-medium">{label}</p>
+      {/* The model's own sentence, shown rather than paraphrased. */}
+      <p className="mt-1 text-sm opacity-80">{run.proposedAction.because}</p>
+
+      <form action={action} className="mt-2 flex flex-wrap items-center gap-2">
+        <input type="hidden" name="organizationId" value={organizationId} />
+        <input type="hidden" name="runId" value={run.id} />
+        <button
+          type="submit"
+          name="decision"
+          value="carry-out"
+          className={BUTTON}
+          disabled={pending}
+        >
+          {pending ? 'Working…' : 'Do it'}
+        </button>
+        <button type="submit" name="decision" value="decline" className={BUTTON} disabled={pending}>
+          No
+        </button>
+      </form>
+
+      {state.error && (
+        <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
+          {state.error}
+        </p>
+      )}
+    </div>
   );
 }

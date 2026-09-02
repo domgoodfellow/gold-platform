@@ -43,6 +43,22 @@ export type ToolCallRecord = {
  */
 export type AnswerOutcome = 'answered' | 'unanswered' | 'failed';
 
+/**
+ * What the model would do about its answer, reported rather than performed.
+ *
+ * **A name and some arguments, and neither is trusted.** The domain layer looks the name up in
+ * its own whitelist and validates the arguments before anything happens, so a name this contract
+ * carries and that whitelist does not know is a recorded refusal rather than a dispatch — which
+ * is what lets the two runtimes disagree safely and is why the list of actions needs no version
+ * shared between them.
+ */
+export type ProposedAction = {
+  name: string;
+  arguments: Record<string, unknown>;
+  /** One sentence for the person deciding, in their own terms. The model's, not ours. */
+  because: string;
+};
+
 export type Answer = {
   outcome: AnswerOutcome;
   /** The finished words. Empty for anything but an answered one. */
@@ -52,6 +68,8 @@ export type Answer = {
   /** Which model answered. For a person reading the record; decides nothing. */
   answeredBy: string;
   tools: ToolCallRecord[];
+  /** What it suggests doing about the answer, if anything. Nothing has been done. */
+  action: ProposedAction | null;
 };
 
 export type AnsweringRequest = {

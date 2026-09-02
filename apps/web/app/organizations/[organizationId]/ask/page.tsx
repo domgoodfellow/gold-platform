@@ -1,6 +1,6 @@
 import { canAnswerQuestions, listAgentRuns } from '@/lib/domain/assistant/questions';
 import { requireOrganization } from '@/lib/route/organization';
-import { AskForm } from './ask-form';
+import { AskForm, ProposedAction } from './ask-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,6 +85,8 @@ export default async function AskPage({
                 {run.outcome === 'failed' && (
                   <p className="mt-2 text-red-600 dark:text-red-400">{run.detail}</p>
                 )}
+
+                <ProposedAction organizationId={organizationId} run={run} />
 
                 <p className="mt-2 text-xs opacity-60">
                   {new Date(run.occurredAt).toLocaleString()} · answered by {run.answeredBy}

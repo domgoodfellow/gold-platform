@@ -79,6 +79,9 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
                 "detail": given.detail,
                 "answered_by": provider.name,
                 "tools": [asdict(record) for record in given.tools],
+                # Reported, and performed by nobody here. `apps/web` looks the name up in its
+                # own whitelist and a person decides (D34).
+                "action": asdict(given.action) if given.action else None,
             },
         )
 

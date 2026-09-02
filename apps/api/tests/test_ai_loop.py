@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.ai import Exchange, Tool, ToolCall, Turn  # noqa: E402
 from app.ai import loop as loop_module  # noqa: E402
+from app.ai.actions import ACTIONS, action_named  # noqa: E402
 from app.ai.loop import MAX_TURNS, answer  # noqa: E402
 from app.ai.tools import TOOLS, tool_named  # noqa: E402
 from app.core import caller  # noqa: E402
@@ -207,3 +208,78 @@ def test_every_tool_names_a_function_and_asks_for_the_business() -> None:
         # It is here so a caller who belongs to two businesses can say which one they mean.
         assert "organization_id" in tool.schema["properties"]
         assert tool.schema["additionalProperties"] is False
+
+
+def test_an_action_stops_the_loop_and_is_never_performed(monkeypatch) -> None:
+    called: list[str] = []
+    monkeypatch.setattr(
+        loop_module, "call_tool", lambda *a, **k: called.append("ran") or []
+    )
+
+    provider = Scripted(
+        Turn(
+            text="That job overran.",
+            calls=(
+                call(
+                    "propose_reschedule",
+                    work_item_id="a-job",
+                    starts_at="2026-09-03T09:00:00Z",
+                    ends_at="2026-09-03T10:00:00Z",
+                    because="It ran past its window yesterday.",
+                ),
+            ),
+        ),
+    )
+
+    given = answer(SETTINGS, provider, question="Anything to move?", token="t")
+
+    assert given.action is not None
+    assert given.action.name == "propose_reschedule"
+    assert given.action.arguments["work_item_id"] == "a-job"
+    assert given.action.because == "It ran past its window yesterday."
+
+    # Nothing was dispatched, and there was nothing to dispatch to: an action resolves to no
+    # Postgres function, and `apps/web` is what turns one into a write when a person says so.
+    assert called == []
+    assert action_named("propose_reschedule").function == ""
+    assert tool_named("propose_reschedule") is None
+
+
+def test_an_action_and_a_read_in_one_breath_stops_before_the_read(monkeypatch) -> None:
+    called: list[str] = []
+    monkeypatch.setattr(
+        loop_module, "call_tool", lambda *a, **k: called.append("ran") or []
+    )
+
+    # A model proposing a move in the same turn it asks to look is proposing it without having
+    # looked. Stopping first means the suggestion a person reads was always made on what the
+    # model already knew.
+    provider = Scripted(
+        Turn(
+            calls=(
+                call("work_at_risk", organization_id="an-id"),
+                call(
+                    "propose_reschedule",
+                    work_item_id="a-job",
+                    starts_at="2026-09-03T09:00:00Z",
+                    ends_at="2026-09-03T10:00:00Z",
+                    because="Because.",
+                ),
+            )
+        ),
+    )
+
+    given = answer(SETTINGS, provider, question="Anything to move?", token="t")
+
+    assert given.action is not None
+    assert called == []
+
+
+def test_actions_are_offered_to_the_model_beside_the_tools() -> None:
+    provider = Scripted(Turn(text="Nothing to do."))
+    answer(SETTINGS, provider, question="How are things?", token="t")
+
+    # Both lists reach the provider; what separates them is entirely on this side.
+    assert {tool.name for tool in TOOLS} | {action.name for action in ACTIONS}
+    for action in ACTIONS:
+        assert action.function == ""
