@@ -1668,6 +1668,133 @@ is now a test failure rather than a judgement call.
 
 ---
 
+### D32 — The model drafts, a person applies, and the proposal is a row between them
+
+M8's second criterion — describe a business in prose, receive a proposed configuration, review
+it, apply it — is the first thing this repository builds that calls a language model. The
+questions that had to be answered before a line of it could be written are not about prompting.
+
+**Where the call runs, and why it is not Python.** D2 gives Python four things and the third is
+*Intelligence — embeddings, retrieval, batch analysis, the AI tool loop*. This is none of them.
+It is one structured call whose output is a `BusinessShape`: a TypeScript type the TypeScript
+domain layer must validate and apply. Putting it behind a process boundary would mean
+hand-maintaining that type on both sides, which is the exact failure D2's own *Rejected* section
+cites from `saas-agent-platform` as its reason not to build a Python domain layer at all. So it
+lives in `apps/web`, behind an adapter, like every other vendor (I15).
+
+**That is a carve-out and not a reversal.** M8's *first* criterion is a genuine tool loop over
+domain services, and where that runs is a decision this record does not take. The distinction
+that matters is that a loop calls domain functions repeatedly and a draft calls none.
+
+**There is no tool loop, and there is no tool.** The model receives a description and returns a
+shape and a list of gaps. It holds no database handle, calls no domain function, and has no
+permitted write path — which is **I14 satisfied by construction rather than by a check**. A tool
+the model may not misuse is a weaker guarantee than a tool that does not exist.
+
+**A proposal is a row, not configuration.** `configuration_proposals` is tenant-owned like
+everything else (I1, I2) and holds the prose it was drafted from, the shape, the gaps and an
+outcome. It **holds no foreign key to what it produced, and none may be added** — the same
+absence `work_item_priced_lines` keeps against the price book and `automation_runs` keeps
+against its rule, for the same reason (I8): a key is how somebody eventually writes the join
+that makes last month's record report this month's configuration.
+
+**Nothing is written until a person applies, and applying needs no new capability.** Apply calls
+`configureBusiness`, whose every step already runs against a policy calling `app.has_capability`.
+A member who may not create a role cannot apply a proposal containing one, and the refusal comes
+from `roles_insert` rather than from anything in the flow. That is I12 and I16 doing what they
+were built for, and it is why this adds one capability — `configuration.propose`, which governs
+drafting — rather than a second authorization axis.
+
+**The review is editable, and that is load-bearing.** A review a person cannot change is a rubber
+stamp, and D29's whole argument for the self-serve door is that a proposal reviewed by the person
+who runs the business beats a form filled in by somebody guessing what a status is. An
+accept-or-reject screen would make the model the configuration rather than the proposer of it.
+
+**A failed apply is recorded, not rolled back.** `configureBusiness` is deliberately not atomic
+and stays so. Its own comment says making it atomic needs *a caller who cannot tolerate the
+partial state*, and this caller looked like one — a person applying a proposal did not write the
+shape. It is not, and the reason is what atomicity would cost: one privileged function taking the
+shape as JSON, which puts the order of those steps in the database and makes **a second
+configuration path**. D29 forbids a second creation path more strongly than it forbids anything
+else; this is the same mistake one level down.
+
+So a failure writes the database's own words onto the proposal row and the partial result beside
+them — `automation_runs`' shape reused (I25) rather than a new idea. The screen already reads the
+business's real configuration in order to render a proposal against it, so *what already exists*
+is information it holds rather than information it must be given: the person sees what landed,
+edits the remainder, and applies again. **None of this is a fallback for a rare case.** A
+partly-configured business is the ordinary state of one being configured by hand, and every
+screen already handles it.
+
+**Rejected: a proposal drafted before the organization exists.** It would have no tenant to be
+scoped to, which puts it outside I2 for no reason, and it would make the AI flow a third door
+onto creation against D29. Founding reopened in `20260901000001`, so the business exists first
+and empty and the proposal is a row inside it.
+
+**Rejected: letting the model apply its own proposal.** Every version of that is a version where
+I14 is enforced by a permission check rather than by an absence, and where the answer to *what
+did it change* is a log rather than a row somebody approved.
+
+**Consequence:** one new dependency (`@anthropic-ai/sdk`) and one new adapter contract
+(`lib/adapters/drafting/`), whose provider `adapters.test.ts` already names in its vendor list —
+so the boundary is held from the first commit rather than from the one that remembers. Drafting
+is a **module** rather than kernel, because a business that declines it configures by hand on
+screens that all exist; D31 therefore applies, and a deployment holding no model key must say so
+rather than render a form that cannot work.
+
+---
+
+### D33 — A tenant's own integrations are an axis, and the tenant holds the account
+
+**Six integrations ship today and none of them is this.** Stripe, Twilio, Resend, Open-Meteo,
+Nominatim and Anthropic are all *GOLD's* — we hold the key, the tenant never sees it, and each
+arrived attached to the feature that needed it, behind an adapter naming a capability (I15).
+That is why there is no "integrations milestone" and must not be one: an adapter with no caller
+is the abstraction this file refuses, and D11 says it outright about weather.
+
+**What has no home is the other kind: a business connecting its own accounts.** Sync my Google
+Calendar, push invoices to Xero, import my customer list, read my mailbox. Asked for often enough
+that it will arrive as three unrelated features unless the axis is named once — which is the same
+mistake D22 was written to prevent on the outsider axis, and it is named here for the same reason
+and at the same stage: before the first one is built.
+
+**It is a different mechanism, not a bigger version of the first.** GOLD's integrations need a
+key in an environment variable. A tenant's need an authorization grant against somebody else's
+account, a token that expires and must be refreshed, a place to put the refresh token that is not
+a column anybody can read, a failure surface for the day the grant is revoked, and an answer to
+what happens to the data already synced when it is. None of that exists for a key in an env var.
+
+**There is exactly one precedent and it is the shape to follow: D27's `payment_accounts`.** A
+business authorizes GOLD from its own processor account and what gets stored is an `acct_` id —
+**not a credential**. The money moves on their account and never touches a balance of ours. That
+record's reasoning generalises: *the tenant holds the account, GOLD holds a reference to it*, and
+wherever a vendor permits that shape it is the one to take.
+
+**Three things this record decides now, so the first build does not have to.**
+
+- **A tenant's credential is never a column the application can select.** `payment_accounts`
+  gets away with storing an id because an id is not a secret. A refresh token is, and the first
+  integration that needs one needs somewhere to put it that RLS alone does not protect — which
+  is a decision about encryption or a vault, and it is the reason this is an axis rather than a
+  feature.
+- **A failed grant is a row, not a log line.** The same rule M6 settled for automations (I25):
+  a token that stopped working is a thing the business must be *told*, and a sync that silently
+  stopped is worse than one that never started.
+- **Nothing syncs into a tenant's kernel tables without a person seeing it first.** An import
+  that writes customers directly is configuration arriving from outside with nobody reviewing it
+  — the same argument D32 makes about a drafted configuration, and the same answer: propose, a
+  human reviews, then apply.
+
+**Trigger to build:** a customer asking for a named one. Per `market.md`, every *Assumption* row
+is answered by a sales call rather than a commit, and this is squarely one of them — the
+integration a business names is worth more than the four somebody guessed.
+
+**Consequence:** two things now want a milestone number and have none — this and tenant marketing
+and branding (D20). `roadmap.md`'s *Order of work* carries both as unnumbered entries; a third
+would mean the numbering has stopped describing the work.
+
+---
+
 ## Decided, not yet built
 
 Named so they are not reinvented, and deliberately unbuilt until they have a consumer.
@@ -1719,6 +1846,20 @@ Named so they are not reinvented, and deliberately unbuilt until they have a con
 
   What all three share is the rule M6 already holds: **whatever the source, the words a customer
   reads are the business's** (I24). A draft is a draft until somebody saves it.
+
+- **A lead is a state of a customer, not a second kind of person.** When M9 brings sales in, the
+  temptation is a `leads` table beside `customers`, and then a `contacts` table beside both — at
+  which point one human being is three rows and every question about them is a union. The entity
+  is the person or company; *lead*, *opportunity* and *customer* are stages of the relationship
+  with them. So `customers` gains a lifecycle rather than a sibling, exactly as work gained one:
+  a stage a tenant configures and names in its own words, because a business with a two-step
+  pipeline and one with seven are the same shape.
+
+  **This is written down before it is built, on the same reasoning as D22.** The cost of finding
+  out afterwards is a migration that has to decide which of three tables a given human was, and
+  by then the CRM timeline hangs off `customers.id`. **Not decided here**: whether a lead is
+  visible in the customer list before it converts, and whether `work_items` may reference one —
+  both are real questions with no caller yet.
 
 - **Group and proximity discounting** — a discount must never exceed what the business
   provably saved; requires travel cost modelling that does not exist.

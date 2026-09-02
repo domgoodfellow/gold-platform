@@ -45,8 +45,15 @@ const VENDORS = [
   'openstreetmap',
 ];
 
-/** Every capability contract. Each must be free of every provider's vocabulary. */
-const CONTRACTS = ['payments', 'geocoding'];
+/**
+ * Every capability contract. Each must be free of every provider's vocabulary.
+ *
+ * `drafting` is the one whose provider was named in `VENDORS` before the adapter existed, which
+ * is the only reason this list and that one are worth keeping apart: the vendor list is what
+ * this repository refuses to say in the wrong place, and it is allowed to run ahead of what has
+ * been built.
+ */
+const CONTRACTS = ['payments', 'geocoding', 'drafting'];
 
 describe('the adapter boundary (I15)', () => {
   it('has no domain file importing a provider implementation', () => {

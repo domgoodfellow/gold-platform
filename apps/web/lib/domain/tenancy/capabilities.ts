@@ -30,6 +30,7 @@ export const CAPABILITIES = [
   'invoice.issue',
   'payment.record',
   'automation.manage',
+  'configuration.propose',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -73,4 +74,9 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   // role can hold that acts when nobody is present. Reading a rule needs nothing: an operator
   // who cannot write them still has to be able to find out why a job moved on its own.
   'automation.manage': 'Write the rules this business runs on its own',
+  // Asking for a proposal, not applying one. Applying is whatever the proposal contains, and
+  // each part of it is already gated by the capability that part needs — somebody who may not
+  // create a role cannot apply a proposal that creates one, and the refusal comes from the
+  // policy on `roles` rather than from anything on this list (D32).
+  'configuration.propose': 'Ask the platform to draft this business’s setup',
 };
