@@ -85,11 +85,30 @@ class Answer:
 
 
 def _run_tool(
-    settings: AssistantSettings, *, token: str, call: ToolCall, tool: Tool
+    settings: AssistantSettings,
+    *,
+    token: str,
+    organization_id: str,
+    call: ToolCall,
+    tool: Tool,
 ) -> tuple[ToolResult, ToolRecord]:
+    # **Which business is filled in here and is not the model's to choose.** It appears in no
+    # schema and no prompt, so there is nothing for a model to get wrong or to be talked into --
+    # and it is written *after* whatever the model sent, so a model that supplies one anyway is
+    # overridden rather than obeyed. RLS decides what any of it can see regardless (D34); this is
+    # what keeps the tool from being handed an id nobody ever told it.
+    # A model naming a business is dropped rather than merged past, so exactly one key says
+    # which one. Merging alone was not enough -- `organization_id` and `p_organization_id` are
+    # different keys, so both landed in the record and it read as though two were sent.
+    supplied = {
+        key: value
+        for key, value in call.arguments.items()
+        if key not in ("organization_id", "p_organization_id")
+    }
+    arguments = {**supplied, "p_organization_id": organization_id}
     try:
         rows = call_tool(
-            settings, token=token, function=tool.function, arguments=call.arguments
+            settings, token=token, function=tool.function, arguments=arguments
         )
     except ToolFailed as refusal:
         # The database's own words, back to the model and onto the record. A model that asked
@@ -97,12 +116,16 @@ def _run_tool(
         # failed run and a blank screen.
         return (
             ToolResult(call=call, error=str(refusal)),
-            ToolRecord(tool=call.name, arguments=call.arguments, rows=0, error=str(refusal)),
+            ToolRecord(tool=call.name, arguments=arguments, rows=0, error=str(refusal)),
         )
 
     return (
         ToolResult(call=call, rows=rows),
-        ToolRecord(tool=call.name, arguments=call.arguments, rows=len(rows)),
+        # **What was sent, not what was asked for**, and the difference is visible the moment a
+        # model supplies an organization id of its own: recording the one it invented would put
+        # a business id in the record that had no bearing on the answer, which is a record that
+        # misleads whoever reads it a year later.
+        ToolRecord(tool=call.name, arguments=arguments, rows=len(rows)),
     )
 
 
@@ -112,6 +135,7 @@ def answer(
     *,
     question: str,
     token: str,
+    organization_id: str,
 ) -> Answer:
     """Run the loop until the provider stops asking for tools, or the cap is reached."""
     history: list[Exchange] = []
@@ -171,7 +195,13 @@ def answer(
                 )
                 continue
 
-            result, record = _run_tool(settings, token=token, call=call, tool=tool)
+            result, record = _run_tool(
+                settings,
+                token=token,
+                organization_id=organization_id,
+                call=call,
+                tool=tool,
+            )
             results.append(result)
             performed.append(record)
 

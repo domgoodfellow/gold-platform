@@ -5,6 +5,38 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Both questions M8 names, one shared definition, and the gate grew a second half
+
+**The second tool.** `public.customers_not_contacted` answers the other question in M8's
+criterion. Thirty days is its caller's argument rather than the platform's opinion, and what
+"contacted" means is *nothing recorded about them* — from the same events the customer's own
+screen shows, so an operator can always click through and see why a name came back.
+
+**It moved a definition rather than copying one.** Which events are about a customer is not
+obvious: almost everything a business remembers happened to a *job*, and one action names the
+customer only in its payload. That rule lived inside `listCustomerTimeline`; a second caller
+means extracting it, so `customer_activity` is a `security_invoker` view both read. The
+timeline's action list deliberately stayed behind — which events are *about* a customer and
+which are worth showing are two questions, and only the first was duplicated.
+
+**Nothing told the model which business it was answering for.** The first tool schemas required
+`organization_id` from a model that had never been given one, so a real call would invent a uuid,
+match nothing, and report success with an empty answer — every layer working, the whole feature
+useless. Found by driving the path end to end rather than by reading it. The loop fills it in
+from the request now; it appears in no schema and no prompt, and an id a model supplies anyway is
+dropped rather than merged past, because two differently-named keys in the record read as though
+two businesses had been named.
+
+**`pnpm check` is the gate now, and it runs both runtimes.** `apps/api` had tests from M4 that
+nothing ran, which was tolerable while that runtime was two handlers deciding nothing and stopped
+being so when the tool loop moved in. The root script runs pnpm recursively and then pytest
+directly, because `apps/api` is deliberately not a workspace member (D3).
+
+**Retrieval is recorded as decided and not built, with the real reason.** Not "no evidence yet":
+this database holds almost no prose. Every free-text column is a line long and `documents` stores
+no extracted text at all, so embeddings would be worse than `ilike`. The trigger is a corpus, and
+only document text extraction or M9's transcripts create one.
+
 ### Asking the system questions: M8's first criterion, and it did not wait for M7
 
 An operator asks in plain words on `/organizations/{id}/ask` and gets an answer built by tools

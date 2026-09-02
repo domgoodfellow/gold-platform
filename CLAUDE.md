@@ -227,7 +227,9 @@ load-bearing:
 - **The argument is not what narrows, and this is the failure mode a tool layer invites.** A model
   chooses a tool's arguments, so protection that a model can pick the value of is no protection.
   RLS decides and the caller's own JWT is what RLS reads: one business's id handed to another
-  business's session returns nothing.
+  business's session returns nothing. **A model is not asked which business either** — the first
+  schemas required an id nothing had ever told it, which makes every answer silently empty; the
+  loop fills it in and drops one a model supplies.
 - **A tool's joins are part of what it discloses.** `work_at_risk` joins `work_item_statuses`, so
   a portal customer — who may read their own jobs and never the business's board vocabulary —
   gets nothing rather than a narrowed list. Each joined table's own policies apply, so a tool
@@ -585,9 +587,10 @@ added the third, `/ai/ask`, which breaks that pattern deliberately: it has **no 
 nothing, and forwards the asking person's own token, because unlike the other two it is called by
 somebody who is sitting there (D34). That is also what brought `app/ai/` — the loop, the tool
 registry, the provider registry — and `app/integrations/anthropic/`, the first vendor SDK in this
-runtime. There is still no `domains/` and no `workers/`. Its tests are `python -m pytest apps/api/tests`, and
-**they are not in the check gate** — a real gap, named in `apps/api/README.md` so nobody finds it
-by shipping through it.
+runtime. There is still no `domains/` and no `workers/`. Its tests are `python -m pytest apps/api/tests`, and **they are
+in the check gate as of M8** — `pnpm check` runs them after the TypeScript half. They were left
+out for two milestones while this runtime was two handlers that decided nothing; the loop
+arriving is what made the gap worth closing rather than naming.
 
 **A route group is a layout boundary and never a security boundary.** Nothing is protected by
 living in `(auth)` or reachable by living outside it — `proxy.ts` decides what an anonymous
@@ -616,13 +619,22 @@ Four layout rules carry reasoning that is easy to lose:
 
 ## Commands
 
-**The check gate is `pnpm --filter @gold/web check`** — typecheck, lint, tests, build, in that
-order. Nothing is done until it passes end to end. Report a failure verbatim; do not
-summarise one.
+**The check gate is `pnpm check`, from the root** — `apps/web`'s typecheck, lint, tests and
+build, then `apps/api`'s pytest. Nothing is done until it passes end to end. Report a failure
+verbatim; do not summarise one.
+
+**It grew the Python half at M8, and the gap it closes was real.** `apps/api` had tests from M4
+and nothing ran them, which was tolerable while that runtime was two handlers that decided
+nothing and stopped being so when the tool loop moved in. The root script runs pnpm recursively
+and then pytest directly, because `apps/api` is deliberately not a pnpm workspace member (D3) —
+so the gate needs Python on the path, and a machine without it fails at the last step rather
+than skipping it silently.
 
 | Command | What it does |
 |---|---|
-| `pnpm --filter @gold/web check` | The gate. Run before calling anything finished. |
+| `pnpm check` | The gate. Both runtimes. Run before calling anything finished. |
+| `pnpm --filter @gold/web check` | The TypeScript half alone, when iterating |
+| `pnpm check:api` | The Python half alone (`python -m pytest apps/api/tests`) |
 | `pnpm --filter @gold/web dev` | Next.js dev server on :3000 |
 | `pnpm db:start` | Local Supabase (needs Docker). Prints the keys; they belong in `infra/.env.test`, which is gitignored. |
 | `pnpm db:reset` | Re-apply every migration from scratch against the local stack |

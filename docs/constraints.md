@@ -1837,6 +1837,16 @@ its JSON schema. Three consequences worth keeping:
   own business, the protection would be a value the model made up. RLS decides, the caller's own
   JWT is what RLS reads (D17), and handing one business's id to another business's session
   returns nothing.
+
+  **And then the model stopped choosing it at all, which is a correction worth recording.** The
+  first version of the tool schemas *required* `organization_id` — from a model that had never
+  been told one. Driving the whole path found it: a model asked for an id it does not have
+  invents a uuid, the tool matches nothing, and every answer comes back empty while every part
+  of the system reports success. The loop now fills it in from the request, it appears in no
+  schema and no prompt, and an id a model supplies anyway is **dropped rather than merged past**
+  — merging alone left two differently-named keys in the record, which read as though two
+  businesses had been named. The RLS argument above is unchanged and still load-bearing: it is
+  what makes an id a *caller* names harmless.
 - **A tool's joins are part of what it discloses**, which was found by testing rather than
   reasoned out in advance. `work_at_risk` joins `work_item_statuses` to report a job's status in
   the tenant's own words, and a portal customer — who may read their own work items and has never
@@ -1895,9 +1905,41 @@ snapshotted as a name, its arguments and a row count. Copying rows in would put 
 table whose policies are not the ones protecting the original — an invoice's own rules and a
 portal customer's narrowing both left behind.
 
+**A tool over a module-owned area must disappear when that module is off, and that rule has no
+caller yet.** CLAUDE.md already holds the half above it — *a module that hides an area must hide
+what that area does elsewhere*, written from the booking module shipping as half a switch. A tool
+is exactly the *elsewhere* that gets forgotten: switching billing off removes Pricing and the
+quote from every job screen, and a tool answering questions about invoices would keep answering
+them. Neither tool built here touches a module-owned area — work, customers and `events` are all
+kernel, which no business chose and none can decline — so there is nothing to enforce and nothing
+is enforced. **The first tool over an invoice, an asset or a booking is when this gets built**,
+and it belongs in the registry beside the tool rather than on the Ask screen, because the screen
+is one module and the tool's subject is another.
+
+**Customer tracking is kernel and a CRM module would sit above it, which is why the second tool
+needs no module.** `customers` is kernel by decision — a business cannot decline having
+customers — and `customers_not_contacted` reads `events`, which is kernel too, and answers
+something an operator can corroborate on the customer's own screen. What would become a CRM
+module in D25's sense is the layer M9 brings: a lifecycle a tenant names, a next action, a
+customer reduced to a number. When that arrives, this tool plausibly moves under it — and the
+rule above is what makes that a line in a registry rather than an excavation.
+
+**Two tools ship — the two questions M8's criterion names — and the second one moved a
+definition.** *Which customers have not been contacted* needs to know which events are about a
+customer, and that rule already existed inside `listCustomerTimeline`: their own events, their
+jobs' events, and the one action that names them only in its payload. A second caller for an
+inline rule means extracting it, so `customer_activity` is a `security_invoker` view both read.
+What deliberately did not move is the timeline's action list, because *which events are about a
+customer* and *which are worth showing on a screen* are two questions and only the first was
+duplicated.
+
 **No aggregate-shaped tool exists, and that is a decision rather than a gap.** Revenue by
 customer, least profitable service, cost trends: each needs M7's aggregate layer, and without it
-the only way to answer is arithmetic inside the loop. Until M7 the assistant says it cannot
+the only way to answer is arithmetic inside the loop. The `max(occurred_at)` inside
+`customers_not_contacted` is not that layer arriving early, and the line is worth stating: M7 is
+about reports a *tenant defines* — entity, fields, filters, grouping, period, chosen and saved by
+an operator. A fixed question with one parameter is not one. When a tenant can choose the
+grouping, the tool calls M7 rather than growing it. Until M7 the assistant says it cannot
 answer, which is true and better than a number nobody can reproduce from a screen. **This is also
 why the first criterion no longer waits for M7 in full** — `roadmap.md`'s *Order of work* said it
 did, and the dependency was always on the report-shaped half. A query-shaped question needs
@@ -1943,6 +1985,33 @@ took the person off it.
 ## Decided, not yet built
 
 Named so they are not reinvented, and deliberately unbuilt until they have a consumer.
+
+- **Retrieval and embeddings over a business's own prose** — the fourth thing D2 gives Python,
+  and the one part of the AI layer M8 deliberately did not build. The reason is not that nobody
+  has asked: **this database holds almost no prose to retrieve.** Every free-text column in it is
+  a line long — `work_items.title`, `locations.access_notes`, `work_item_time_entries.note`,
+  `payments.note`, `work_item_costs.description` — and `documents` stores a storage path, a
+  filename and a size, with **no extracted text at all**. Embeddings over five short columns are
+  worse than `ilike` over the same five, slower to build and impossible to explain to an operator
+  who asks why a row came back.
+
+  So the trigger is a corpus, and exactly two things create one. **Document text extraction** —
+  downloading what a business has attached, parsing it, and storing what it says — which is a
+  slice of its own with its own failure surface, and the point at which a job's paperwork becomes
+  searchable. And **M9's transcripts**, which are the first genuinely long text this platform will
+  hold, arriving with the milestone that owns them.
+
+  What is decided now, so the first build does not have to be: an `embeddings` table is
+  tenant-owned and carries `organization_id` leading every index like everything else (I2); the
+  retrieval tool is one more `stable`, `security invoker` function under the caller's own token,
+  exactly like the two that exist (D34); and **nothing embedded may outlive what it describes** —
+  a vector of a deleted document is a row that answers questions about something the business
+  removed, which is the same objection I8 makes about a snapshot that reaches forwards, inverted.
+
+  **`agent_runs.outcome = 'unanswered'` is the evidence, and it is already being collected.** A
+  question the tools could not answer is recorded distinctly from a failure for exactly this
+  reason. When that list is mostly questions whose answers are sitting in prose, the case is made
+  in a tenant's own words rather than in a guess.
 
 - **Approval workflows** on work items — changes the commitment flow; no caller yet.
 - **Recurring work generation** — **built in M6.** The third trigger shape this entry warned

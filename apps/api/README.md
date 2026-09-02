@@ -83,10 +83,15 @@ Routes live at `app/api/`, not the top-level `api/` Vercel discovers by default 
 ## Test
 
 ```bash
-python -m pytest apps/api/tests
+pnpm check            # both runtimes: apps/web, then these
+python -m pytest apps/api/tests   # these alone, while iterating
 ```
 
-⚠️ **Not covered by `pnpm --filter @gold/web check`.** Run both.
+**In the gate as of M8.** They were not, for two milestones, and the warning that used to sit
+here said so. What changed is what this runtime does: two handlers that decided nothing were
+tolerable outside the gate, and the tool loop is not. The root script runs pytest directly rather
+than through pnpm, because this app is deliberately not a workspace member (D3) — so the gate
+needs Python on the path.
 
 ## The automation tick
 

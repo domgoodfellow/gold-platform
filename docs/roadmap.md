@@ -789,7 +789,10 @@ called under the asking person's own token, so a tool can neither write nor see 
 could not, and cannot contain an aggregate even if somebody wanted it to. What waits for M7 is
 the tools with no function to call yet, and until then the assistant says it cannot answer.
 
-**What the first criterion builds.** `public.work_at_risk`, the first tool; `agent_runs`, a row
+**What the first criterion builds.** Both tools the criterion names — `public.work_at_risk` and
+`public.customers_not_contacted`, the second sitting on `customer_activity`, a view that resolves
+which events are about a customer and that the customer's own timeline now reads too, because a
+second caller for an inline rule means extracting it rather than copying it; `agent_runs`, a row
 per question readable only by whoever asked; `assistant.ask`; an `assistant` module and an Ask
 screen; and in `apps/api`, a provider-blind loop over a capability contract with two
 implementations — Claude, and anything speaking chat completions, which is how a business answers
@@ -837,8 +840,9 @@ somebody who is a member of nothing gets nothing at all.
 **No model is called, deliberately.** What D34 decides is structural, and a test that asked a
 provider would be asserting somebody else's judgement, slowly and for money. The loop's own
 behaviour — the cap, the recorded failure, the row count that is never a row — is tested in
-`apps/api`, which is not in the check gate; that gap is why everything load-bearing above is
-asserted from the side that is.
+`apps/api`, which **joined the check gate in this milestone**: `pnpm check` runs both runtimes,
+and the loop arriving in Python is what made two milestones of tolerating that gap stop being
+tolerable.
 
 ### The second criterion is demonstrated, and the demonstration is an absence
 

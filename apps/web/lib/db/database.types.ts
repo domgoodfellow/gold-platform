@@ -2480,6 +2480,35 @@ export type Database = {
           },
         ]
       }
+      customer_activity: {
+        Row: {
+          action: string | null
+          actor_id: string | null
+          customer_id: string | null
+          entity_id: string | null
+          entity_type: string | null
+          event_id: string | null
+          occurred_at: string | null
+          organization_id: string | null
+          payload: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_failures: {
         Row: {
           detail: string | null
@@ -2757,6 +2786,17 @@ export type Database = {
         Returns: string
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      customers_not_contacted: {
+        Args: { p_days?: number; p_organization_id: string }
+        Returns: {
+          customer_id: string
+          days_since: number
+          email: string
+          last_activity: string
+          name: string
+          phone: string
+        }[]
+      }
       issue_invoice: {
         Args: { p_due_at: string; p_work_item_id: string }
         Returns: string

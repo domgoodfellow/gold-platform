@@ -3,7 +3,8 @@
   "private": true,
   "packageManager": "pnpm@11.4.0",
   "scripts": {
-    "check": "pnpm -r --stream check",
+    "check": "pnpm -r --stream check && pnpm check:api",
+    "check:api": "python -m pytest apps/api/tests -q",
     "db:start": "supabase start --workdir infra",
     "db:reset": "supabase db reset --workdir infra",
     "db:types": "supabase gen types typescript --local --workdir infra > apps/web/lib/db/database.types.ts",

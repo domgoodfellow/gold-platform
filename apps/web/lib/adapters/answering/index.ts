@@ -75,6 +75,15 @@ export type Answer = {
 export type AnsweringRequest = {
   question: string;
   /**
+   * Which business is being asked about.
+   *
+   * **Passed, and never given to the model.** The tools take it, the loop fills it in, and no
+   * schema or prompt mentions it — because an id nothing has told a model is an id it invents.
+   * It is not the boundary either: a caller naming a business they are not a member of gets
+   * empty answers, because RLS decides (D34).
+   */
+  organizationId: string;
+  /**
    * The asking person's own access token.
    *
    * Not an organization id and not a user id: identity reaches the database as the caller's own

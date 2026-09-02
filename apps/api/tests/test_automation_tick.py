@@ -5,8 +5,8 @@ by `apps/web/tests/automations.test.ts`. What belongs here is the half that is a
 process: that it identifies itself as a role holding almost nothing, and that it does not put a
 single word of its own into a message a business wrote.
 
-These do **not** run in `pnpm --filter @gold/web check`. Run `python -m pytest apps/api/tests`
-alongside it — the gap is named in `apps/api/README.md`.
+These run in `pnpm check` from the root, after the TypeScript half. They did not until M8;
+`apps/api/README.md` records what changed.
 """
 
 from __future__ import annotations

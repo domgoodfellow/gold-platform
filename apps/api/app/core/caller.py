@@ -60,7 +60,13 @@ def call_tool(
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },
-        json=arguments,
+        # PostgREST names an argument exactly as the function declares it. Everything a model
+        # supplies is named in the schema's own words, so it is prefixed here rather than in
+        # every schema -- which keeps a tool's description readable to whoever is reading it.
+        json={
+            key if key.startswith("p_") else f"p_{key}": value
+            for key, value in arguments.items()
+        },
         timeout=15.0,
     )
 

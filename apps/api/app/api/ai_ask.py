@@ -57,7 +57,8 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             return
 
         question = (body.get("question") or "").strip()
-        if not question:
+        organization_id = (body.get("organization_id") or "").strip()
+        if not question or not organization_id:
             self._reply(400, {"error": "rejected"})
             return
 
@@ -66,6 +67,9 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             provider,
             question=question,
             token=presented.removeprefix("Bearer "),
+            # Trusted only as far as RLS allows, which is the whole point: a caller naming a
+            # business they are not in gets empty answers rather than somebody else's rows.
+            organization_id=organization_id,
         )
 
         # **The run is not written here.** `apps/web` writes it, under the same session that

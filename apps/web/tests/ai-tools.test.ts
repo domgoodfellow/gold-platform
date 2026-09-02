@@ -183,6 +183,20 @@ async function askTool(db: SupabaseClient, organizationId: string) {
   return (data ?? []) as { title: string; status: string; reason: string }[];
 }
 
+async function askQuiet(db: SupabaseClient, organizationId: string, days: number) {
+  const { data, error } = await db.rpc('customers_not_contacted', {
+    p_organization_id: organizationId,
+    p_days: days,
+  });
+  if (error) throw error;
+  return (data ?? []) as {
+    customer_id: string;
+    name: string;
+    last_activity: string | null;
+    days_since: number | null;
+  }[];
+}
+
 describe('a tool is a function in this database (D34)', () => {
   beforeAll(async () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
@@ -551,5 +565,92 @@ describe('a write is proposed, and a person decides (D34)', () => {
     // dispatched.
     expect(executorFor('propose_reschedule')).not.toBeNull();
     expect(executorFor('delete_everything')).toBeNull();
+  });
+});
+
+/**
+ * The other question M8's criterion names, and the definition it shares with a screen.
+ *
+ * **The interesting assertion is the third one.** Almost everything a business remembers about a
+ * customer happened to a *job*, and one action names the customer only in its payload — so a
+ * naive "events where entity_id = the customer" answers wrongly in two directions. That
+ * resolution now lives in `customer_activity` and is read by both this tool and the customer
+ * timeline, which is the extract-then-call-twice rule arriving at a view.
+ */
+describe('customers nobody has recorded anything about (D34)', () => {
+  it('counts what happened to a customer’s jobs as theirs', async () => {
+    // **The sharp one, and the reason the definition moved.** Almost everything a business
+    // remembers about a customer happened to a *job*. `yard.customerId` has had nothing written
+    // against their own row since they were added, and plenty written against their work — so a
+    // naive "events where entity_id = the customer" would report them as untouched.
+    const quiet = await createCustomer(yard.db, {
+      organizationId: yard.organizationId,
+      name: 'tool-yard quiet',
+    });
+
+    const { data: theirs } = await yard.db
+      .from('customer_activity')
+      .select('action')
+      .eq('organization_id', yard.organizationId)
+      .eq('customer_id', yard.customerId);
+
+    const actions = (theirs ?? []).map((row) => row.action);
+    expect(actions).toContain('work_item.scheduled');
+
+    // And somebody nothing has happened to has exactly the one event that added them.
+    const { data: nothing } = await yard.db
+      .from('customer_activity')
+      .select('action')
+      .eq('organization_id', yard.organizationId)
+      .eq('customer_id', quiet);
+
+    expect((nothing ?? []).map((row) => row.action)).toEqual(['customer.created']);
+  });
+
+  it('lists everybody when no silence is long enough to be excused', async () => {
+    const all = await askQuiet(yard.db, yard.organizationId, 0);
+    const named = all.map((row) => row.customer_id);
+
+    expect(named).toContain(yard.customerId);
+    // Each one carries when something last happened, which is what makes the answer checkable
+    // against the customer's own screen.
+    expect(all.every((row) => row.last_activity !== null)).toBe(true);
+  });
+
+  it('is silent about a business that is not yours', async () => {
+    // The same claim the first tool makes, and it has to be made again: the argument is not
+    // what narrows, on every tool, not just the one that was written first.
+    expect(await askQuiet(yard.db, clinic.organizationId, 0)).toEqual([]);
+    expect(await askQuiet(clinic.db, yard.organizationId, 0)).toEqual([]);
+  });
+
+  it('takes the number of days from its caller rather than from the platform', async () => {
+    // A business that chases weekly and one that chases quarterly are both ordinary, and a
+    // window nothing is older than empties the list. A constant in the function would be the
+    // hardcoding this repository refuses everywhere else.
+    expect(await askQuiet(yard.db, yard.organizationId, 3650)).toEqual([]);
+    expect((await askQuiet(yard.db, yard.organizationId, 0)).length).toBeGreaterThan(0);
+  });
+
+  it('reads the same definition the customer’s own timeline reads', async () => {
+    // Both callers go through `customer_activity`, so an operator can always click into the
+    // customer and see exactly why their name came back. The view is `security_invoker`, which
+    // is what keeps that true rather than making it a second, wider read.
+    const client = new Client({ connectionString: CONNECTION });
+    await client.connect();
+    try {
+      const { rows } = await client.query(
+        `select c.reloptions
+           from pg_class c
+           join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'public' and c.relname = 'customer_activity'`,
+      );
+      // Read from the catalogue rather than from the definition: dropping this flag is one
+      // word, nothing else about the view would look different, and every caller would
+      // silently start reading every tenant.
+      expect(rows[0].reloptions).toContain('security_invoker=true');
+    } finally {
+      await client.end();
+    }
   });
 });

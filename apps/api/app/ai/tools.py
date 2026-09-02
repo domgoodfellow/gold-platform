@@ -1,9 +1,17 @@
 """Which questions this platform can be asked, and which function answers each.
 
-**Deliberately one, and it grows one entry per slice that has a screen behind it.** A tool list
-written ahead of its callers is the speculative abstraction `constraints.md` opens by refusing,
-and here it has a second cost: every tool is a sentence in a prompt, and a model given nine
-plausible tools chooses worse than one given the two that fit.
+**Two, and it grows one entry per slice that has a screen behind it.** A tool list written ahead
+of its callers is the speculative abstraction `constraints.md` opens by refusing, and here it has
+a second cost: every tool is a sentence in a prompt, and a model given nine plausible tools
+chooses worse than one given the two that fit. These two are the two questions M8's criterion
+names, and nothing else is here.
+
+**No tool asks which business, and that was a bug before it was a decision.** Every function
+takes `p_organization_id`, and the first version of this file put it in the schema -- so a model
+was required to supply an id nothing had ever told it. Driving the real path found it: a model
+either invents a uuid, which matches nothing, or asks the person a question they should not have
+to answer. The loop fills it in from the request instead. It is not the model's to choose, and now
+it cannot: the parameter never appears in a prompt, and RLS decides regardless (D34).
 
 **What is missing from this list is missing on purpose.** Anything shaped like a report --
 revenue by customer, least profitable service, cost trends -- gets no tool until M7's aggregate
@@ -25,21 +33,34 @@ WORK_AT_RISK = Tool(
         "assigned. Returns each job's title, its status in this business's own words, its "
         "booked window, and the resource and customer if it has them."
     ),
-    schema={
-        "type": "object",
-        "properties": {
-            "organization_id": {
-                "type": "string",
-                "description": "The business being asked about.",
-            },
-        },
-        "required": ["organization_id"],
-        "additionalProperties": False,
-    },
+    schema={"type": "object", "properties": {}, "additionalProperties": False},
     function="work_at_risk",
 )
 
-TOOLS: tuple[Tool, ...] = (WORK_AT_RISK,)
+CUSTOMERS_NOT_CONTACTED = Tool(
+    name="customers_not_contacted",
+    description=(
+        "Customers this business has recorded nothing about for a while — no job, no visit, no "
+        "invoice, no note. Give the number of days to count as 'a while'. Returns each "
+        "customer's name and contact details, when something last happened, and how many days "
+        "ago that was. Adding a customer is itself something happening, so a newly added one is "
+        "not silent."
+    ),
+    schema={
+        "type": "object",
+        "properties": {
+            "days": {
+                "type": "integer",
+                "description": "How many days of silence counts. Ask the person if unsure.",
+            },
+        },
+        "required": ["days"],
+        "additionalProperties": False,
+    },
+    function="customers_not_contacted",
+)
+
+TOOLS: tuple[Tool, ...] = (WORK_AT_RISK, CUSTOMERS_NOT_CONTACTED)
 
 
 def tool_named(name: str) -> Tool | None:

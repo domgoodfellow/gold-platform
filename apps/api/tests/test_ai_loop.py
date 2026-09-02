@@ -10,8 +10,8 @@ is a fact about this process:
   * it records what a tool was called with and how many rows came back, never the rows;
   * a provider that fails is a recorded failure rather than an exception reaching a person.
 
-These do **not** run in `pnpm --filter @gold/web check`. Run `python -m pytest apps/api/tests`
-alongside it — the gap is named in `apps/api/README.md`.
+These run in `pnpm check` from the root, after the TypeScript half. They did not until M8;
+`apps/api/README.md` records what changed.
 """
 
 from __future__ import annotations
@@ -32,6 +32,7 @@ from app.core.caller import ToolFailed  # noqa: E402
 from app.core.config import AssistantSettings  # noqa: E402
 
 SETTINGS = AssistantSettings(supabase_url="http://db.test", supabase_anon_key="anon")
+ORG = "11111111-1111-4111-8111-111111111111"
 
 
 class Scripted:
@@ -107,18 +108,20 @@ def test_records_what_was_called_and_never_what_came_back(monkeypatch) -> None:
     )
 
     provider = Scripted(
-        Turn(calls=(call("work_at_risk", organization_id="an-id"),)),
+        Turn(calls=(call("work_at_risk"),)),
         Turn(text="One job ran past its window."),
     )
 
-    given = answer(SETTINGS, provider, question="What is late?", token="t")
+    given = answer(SETTINGS, provider, organization_id=ORG, question="What is late?", token="t")
 
     assert given.outcome == "answered"
     assert given.text == "One job ran past its window."
 
     (record,) = given.tools
     assert record.tool == "work_at_risk"
-    assert record.arguments == {"organization_id": "an-id"}
+    # What was *sent*, which is the business the loop filled in — not whatever the model asked
+    # for. A record naming an id that had no bearing on the answer misleads whoever reads it.
+    assert record.arguments == {"p_organization_id": ORG}
     assert record.rows == 1
 
     # The whole of the rule: a row count, and no row. A run is readable by one person and the
@@ -141,7 +144,7 @@ def test_hands_the_databases_refusal_back_rather_than_failing_the_run(monkeypatc
         Turn(text="I could not read that."),
     )
 
-    given = answer(SETTINGS, provider, question="What is late?", token="t")
+    given = answer(SETTINGS, provider, organization_id=ORG, question="What is late?", token="t")
 
     # A question about something the caller may not see is an ordinary event, and the useful
     # answer is the database's own sentence — recorded, and handed back so the model can say so.
@@ -158,7 +161,7 @@ def test_a_name_nothing_matches_is_an_answer_rather_than_a_crash() -> None:
         Turn(text="There is no tool for that yet."),
     )
 
-    given = answer(SETTINGS, provider, question="What sells best?", token="t")
+    given = answer(SETTINGS, provider, organization_id=ORG, question="What sells best?", token="t")
 
     assert given.outcome == "answered"
     assert given.tools[0].error == "no tool by that name"
@@ -177,7 +180,7 @@ def test_stops_at_the_cap(monkeypatch) -> None:
             Insistent.asked += 1
             return Turn(calls=(call("work_at_risk", organization_id="an-id"),))
 
-    given = answer(SETTINGS, Insistent(), question="What is late?", token="t")
+    given = answer(SETTINGS, Insistent(), organization_id=ORG, question="What is late?", token="t")
 
     assert Insistent.asked == MAX_TURNS
     # Nothing broke, so this is not a failure: the loop went round and produced nothing worth
@@ -192,21 +195,22 @@ def test_a_provider_that_fails_is_a_recorded_failure() -> None:
         def next_turn(self, **_kwargs) -> Turn:
             raise RuntimeError("the model declined to answer this")
 
-    given = answer(SETTINGS, Broken(), question="What is late?", token="t")
+    given = answer(SETTINGS, Broken(), organization_id=ORG, question="What is late?", token="t")
 
     assert given.outcome == "failed"
     # Their words, kept verbatim (I25).
     assert given.detail == "the model declined to answer this"
 
 
-def test_every_tool_names_a_function_and_asks_for_the_business() -> None:
+def test_no_tool_asks_the_model_which_business() -> None:
     assert TOOLS
 
     for tool in TOOLS:
         assert tool.function
-        # Which business is an argument on every tool, and it narrows nothing — RLS does that.
-        # It is here so a caller who belongs to two businesses can say which one they mean.
-        assert "organization_id" in tool.schema["properties"]
+        # **Never in a schema and never in a prompt.** A model told nothing about which business
+        # it is answering for will invent an id, which matches nothing — found by driving the
+        # real path. The loop fills it in, and RLS decides regardless.
+        assert "organization_id" not in tool.schema["properties"]
         assert tool.schema["additionalProperties"] is False
 
 
@@ -231,7 +235,7 @@ def test_an_action_stops_the_loop_and_is_never_performed(monkeypatch) -> None:
         ),
     )
 
-    given = answer(SETTINGS, provider, question="Anything to move?", token="t")
+    given = answer(SETTINGS, provider, organization_id=ORG, question="Anything to move?", token="t")
 
     assert given.action is not None
     assert given.action.name == "propose_reschedule"
@@ -269,7 +273,7 @@ def test_an_action_and_a_read_in_one_breath_stops_before_the_read(monkeypatch) -
         ),
     )
 
-    given = answer(SETTINGS, provider, question="Anything to move?", token="t")
+    given = answer(SETTINGS, provider, organization_id=ORG, question="Anything to move?", token="t")
 
     assert given.action is not None
     assert called == []
@@ -277,9 +281,30 @@ def test_an_action_and_a_read_in_one_breath_stops_before_the_read(monkeypatch) -
 
 def test_actions_are_offered_to_the_model_beside_the_tools() -> None:
     provider = Scripted(Turn(text="Nothing to do."))
-    answer(SETTINGS, provider, question="How are things?", token="t")
+    answer(SETTINGS, provider, organization_id=ORG, question="How are things?", token="t")
 
     # Both lists reach the provider; what separates them is entirely on this side.
     assert {tool.name for tool in TOOLS} | {action.name for action in ACTIONS}
     for action in ACTIONS:
         assert action.function == ""
+
+
+def test_fills_in_the_business_and_will_not_let_a_model_override_it(monkeypatch) -> None:
+    sent: list[dict] = []
+
+    def capture(settings, *, token, function, arguments):
+        sent.append(arguments)
+        return []
+
+    monkeypatch.setattr(loop_module, "call_tool", capture)
+
+    # A model naming a business anyway — which is exactly what one would do if it had ever been
+    # asked to, and which it must not be able to make stick.
+    provider = Scripted(
+        Turn(calls=(call("work_at_risk", p_organization_id="somebody-elses"),)),
+        Turn(text="Nothing at risk."),
+    )
+
+    answer(SETTINGS, provider, organization_id=ORG, question="What is late?", token="t")
+
+    assert sent[0]["p_organization_id"] == ORG

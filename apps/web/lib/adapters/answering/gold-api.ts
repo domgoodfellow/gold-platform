@@ -32,7 +32,10 @@ export function goldApiAnsweringProvider(config: { baseUrl: string }): Answering
           // authorization model for everything that happens on the far side.
           authorization: `Bearer ${input.token}`,
         },
-        body: JSON.stringify({ question: input.question }),
+        body: JSON.stringify({
+          question: input.question,
+          organization_id: input.organizationId,
+        }),
         // Long, because a model working through several tools is slow rather than broken; not
         // unbounded, because a request nobody ever answers holds a page open forever.
         signal: AbortSignal.timeout(120_000),

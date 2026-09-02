@@ -212,7 +212,11 @@ export async function askQuestion(
   let action: ProposedAction | null = null;
 
   try {
-    const answer = await provider.answer({ question, token });
+    const answer = await provider.answer({
+      question,
+      token,
+      organizationId: input.organizationId,
+    });
     outcome = answer.outcome;
     text = answer.text;
     detail = answer.detail;
