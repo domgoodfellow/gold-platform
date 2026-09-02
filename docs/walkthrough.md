@@ -323,10 +323,31 @@ open the customer portal and ask nothing at all, because that side has no Ask sc
 get nothing if it had one.
 
 **It needs two things and says so when it has neither.** `ASSISTANT_API_URL` in `apps/web`, so
-it knows where the loop is; and on that deployment either `ANTHROPIC_API_KEY` or
-`ASSISTANT_BASE_URL` pointing at a local model. Missing the first and the screen says this
-installation cannot answer questions; missing the second and it says so in the far side's own
-words. Neither is a blank box.
+it knows where the loop is; and on that deployment a model. Missing the first and the screen says
+this installation cannot answer questions; missing the second and it says so in the far side's
+own words. Neither is a blank box.
+
+**A model on your own machine is the cheapest way to exercise this**, and it is the same path a
+business that will not let its rows leave the building uses in production:
+
+```bash
+ollama pull qwen3.5:9b            # tool-calling is what matters; `ollama list` shows which have it
+# apps/api/.env
+#   ASSISTANT_BASE_URL=http://127.0.0.1:11434/v1
+#   ASSISTANT_MODEL=qwen3.5:9b
+python apps/api/dev.py            # :8787
+# apps/web/.env.local
+#   ASSISTANT_API_URL=http://127.0.0.1:8787
+```
+
+Both settings are required together — there is no default model name, because one that resolves
+to a tag you do not have makes the deployment look configured and answer 404 on every question.
+
+**Try a weak model too, once.** A 9B model answers all three questions above correctly in a few
+seconds. A smaller one will propose moving a job it never looked up, naming it in words where the
+id goes — and what you should see is the suggestion appearing, *Do it* refusing with *that
+suggestion does not name a real job*, and `answered by` on the row naming the model. That is the
+system behaving correctly with a bad answer in it, which is worth seeing once.
 
 **Ask it something it has no tool for** — *which service makes the most money* — and it should
 tell you it cannot answer. That is the shape to check rather than a bug: report-shaped questions

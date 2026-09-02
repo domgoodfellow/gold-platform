@@ -118,6 +118,7 @@ class AnsweringProvider(Protocol):
         question: str,
         tools: tuple[Tool, ...],
         history: tuple["Exchange", ...],
+        context: str = "",
     ) -> Turn:
         """The next turn, given everything that has happened so far.
 
@@ -125,6 +126,11 @@ class AnsweringProvider(Protocol):
         inside an adapter, so the loop can be read in one place and a provider cannot quietly
         become the thing that remembers. It is also what lets the milestone test drive a fixed
         provider through this same seam rather than around it.
+
+        `context` is what the application knows and the model cannot — today's date in the
+        business's own zone. It is deliberately separate from the question rather than glued to
+        the front of it: the question is what somebody typed and is recorded as such, and an
+        implementation that caches a stable prompt prefix needs to know which half is which.
 
         Raises on a provider that is unreachable, unconfigured or failing. An empty `Turn` is
         the other answer: the provider worked and produced nothing to act on.

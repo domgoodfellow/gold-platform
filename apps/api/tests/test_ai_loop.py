@@ -45,7 +45,12 @@ class Scripted:
         self.seen: list[tuple[str, tuple[Exchange, ...]]] = []
 
     def next_turn(
-        self, *, question: str, tools: tuple[Tool, ...], history: tuple[Exchange, ...]
+        self,
+        *,
+        question: str,
+        tools: tuple[Tool, ...],
+        history: tuple[Exchange, ...],
+        context: str = "",
     ) -> Turn:
         self.seen.append((question, history))
         if not self.turns:
@@ -308,3 +313,64 @@ def test_fills_in_the_business_and_will_not_let_a_model_override_it(monkeypatch)
     answer(SETTINGS, provider, organization_id=ORG, question="What is late?", token="t")
 
     assert sent[0]["p_organization_id"] == ORG
+
+
+def test_forwards_only_what_a_tools_schema_offered(monkeypatch) -> None:
+    sent: list[dict] = []
+    monkeypatch.setattr(
+        loop_module,
+        "call_tool",
+        lambda settings, *, token, function, arguments: sent.append(arguments) or [],
+    )
+
+    # Watched happening: a small model invented a `status` argument on a tool whose schema
+    # declares no properties, and PostgREST answered "could not find the function". The schema
+    # is the contract — a word nobody offered is dropped rather than forwarded.
+    provider = Scripted(
+        Turn(calls=(call("work_at_risk", status="booked for today"),)),
+        Turn(text="Two jobs."),
+    )
+
+    answer(SETTINGS, provider, organization_id=ORG, question="What is late?", token="t")
+
+    assert sent[0] == {"p_organization_id": ORG}
+
+
+def test_a_declared_argument_survives(monkeypatch) -> None:
+    sent: list[dict] = []
+    monkeypatch.setattr(
+        loop_module,
+        "call_tool",
+        lambda settings, *, token, function, arguments: sent.append(arguments) or [],
+    )
+
+    provider = Scripted(
+        Turn(calls=(call("customers_not_contacted", days=30, nonsense="drop me"),)),
+        Turn(text="Nobody."),
+    )
+
+    answer(SETTINGS, provider, organization_id=ORG, question="Who is quiet?", token="t")
+
+    assert sent[0] == {"days": 30, "p_organization_id": ORG}
+
+
+def test_the_context_reaches_the_provider() -> None:
+    class Watching:
+        name = "watching"
+        seen = ""
+
+        def next_turn(self, *, question, tools, history, context="") -> Turn:
+            Watching.seen = context
+            return Turn(text="Noted.")
+
+    answer(
+        SETTINGS,
+        Watching(),
+        organization_id=ORG,
+        question="What is late?",
+        token="t",
+        context="Today is Thursday 3 September 2026 in Australia/Brisbane.",
+    )
+
+    # A model has no clock, and "tomorrow" is the most ordinary word an operator will use.
+    assert "Brisbane" in Watching.seen

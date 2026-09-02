@@ -70,6 +70,10 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             # Trusted only as far as RLS allows, which is the whole point: a caller naming a
             # business they are not in gets empty answers rather than somebody else's rows.
             organization_id=organization_id,
+            # What the application knows and a model cannot. Sent by `apps/web`, which is
+            # holding the organization already; asking Postgres for it here would be this
+            # runtime reading business state outside a tool.
+            context=(body.get("context") or "").strip(),
         )
 
         # **The run is not written here.** `apps/web` writes it, under the same session that

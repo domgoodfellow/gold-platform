@@ -97,13 +97,22 @@ def _run_tool(
     # and it is written *after* whatever the model sent, so a model that supplies one anyway is
     # overridden rather than obeyed. RLS decides what any of it can see regardless (D34); this is
     # what keeps the tool from being handed an id nobody ever told it.
-    # A model naming a business is dropped rather than merged past, so exactly one key says
+    # **Only what the schema offered, and a business the model was never asked for.**
+    #
+    # Two filters, both written from watching a real model. A weaker one invented a `status`
+    # argument on a tool whose schema declares no properties at all, and PostgREST answered
+    # *could not find the function* -- a hard failure where the right behaviour was to ignore a
+    # word nobody offered and answer the question. The schema is the contract: anything outside
+    # it was never on the table, so it is dropped rather than forwarded.
+    #
+    # And a model naming a business is dropped rather than merged past, so exactly one key says
     # which one. Merging alone was not enough -- `organization_id` and `p_organization_id` are
     # different keys, so both landed in the record and it read as though two were sent.
+    offered = set(tool.schema.get("properties", {}))
     supplied = {
         key: value
         for key, value in call.arguments.items()
-        if key not in ("organization_id", "p_organization_id")
+        if key in offered and key not in ("organization_id", "p_organization_id")
     }
     arguments = {**supplied, "p_organization_id": organization_id}
     try:
@@ -136,8 +145,16 @@ def answer(
     question: str,
     token: str,
     organization_id: str,
+    context: str = "",
 ) -> Answer:
-    """Run the loop until the provider stops asking for tools, or the cap is reached."""
+    """Run the loop until the provider stops asking for tools, or the cap is reached.
+
+    `context` is what the application knows and a model cannot: today's date, in the business's
+    own zone. Written from watching one propose a move to *9am tomorrow* and produce a date in
+    2024 — a model has no clock, and *tomorrow* is the most ordinary word an operator will use.
+    It is application state rather than anything a tenant said, which is the line that decides
+    what this platform may put into a prompt at all.
+    """
     history: list[Exchange] = []
     performed: list[ToolRecord] = []
 
@@ -151,6 +168,7 @@ def answer(
                 question=question,
                 tools=TOOLS + ACTIONS,
                 history=tuple(history),
+                context=context,
             )
         except Exception as failure:  # noqa: BLE001 - the provider's own words, recorded
             return Answer(outcome="failed", detail=str(failure), tools=performed)

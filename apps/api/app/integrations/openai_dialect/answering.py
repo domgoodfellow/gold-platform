@@ -73,12 +73,19 @@ def dialect_provider(*, base_url: str, model: str, api_key: str | None, name: st
             self.name = name
 
         def next_turn(
-            self, *, question: str, tools: tuple[Tool, ...], history: tuple[Exchange, ...]
+            self,
+            *,
+            question: str,
+            tools: tuple[Tool, ...],
+            history: tuple[Exchange, ...],
+            context: str = "",
         ) -> Turn:
-            messages: list[dict[str, Any]] = [
-                {"role": "system", "content": SYSTEM},
-                {"role": "user", "content": question},
-            ]
+            messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM}]
+            # Its own message rather than glued to the question, so what the person typed stays
+            # what the person typed.
+            if context:
+                messages.append({"role": "system", "content": context})
+            messages.append({"role": "user", "content": question})
 
             for exchange in history:
                 assistant: dict[str, Any] = {

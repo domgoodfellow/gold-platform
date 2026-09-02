@@ -35,6 +35,7 @@ export function goldApiAnsweringProvider(config: { baseUrl: string }): Answering
         body: JSON.stringify({
           question: input.question,
           organization_id: input.organizationId,
+          context: input.context,
         }),
         // Long, because a model working through several tools is slow rather than broken; not
         // unbounded, because a request nobody ever answers holds a page open forever.

@@ -216,6 +216,15 @@ export async function askQuestion(
       question,
       token,
       organizationId: input.organizationId,
+      // **The business's own today, and it is I9 rather than a convenience.** An instant is
+      // absolute; a zone is applied at render, and here the thing rendering is a model that has
+      // been handed a number and no context. `Intl` does the conversion rather than arithmetic
+      // on a Date, because a zone with an offset that changes is exactly where hand-rolled
+      // arithmetic goes wrong.
+      context: `Today is ${new Intl.DateTimeFormat('en-CA', {
+        timeZone: organization.timezone,
+        dateStyle: 'full',
+      }).format(new Date())} in ${organization.timezone}, which is the time zone this business works in. Any date you give must be in that zone.`,
     });
     outcome = answer.outcome;
     text = answer.text;

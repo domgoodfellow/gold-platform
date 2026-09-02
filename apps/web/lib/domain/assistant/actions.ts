@@ -73,8 +73,22 @@ function requiredInstant(
  * exclusion constraint rather than by a check that would race identically (I6). A refusal is
  * recorded on the run and read by the person who suggested pressing the button.
  */
+/** What a uuid looks like. Nothing else can name a row here. */
+const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const rescheduleWorkItem: ActionExecutor = async (db, input) => {
   const workItemId = requiredText(input.arguments, 'work_item_id', 'which job');
+
+  // **A weak model names the job in words rather than by id**, which was watched happening:
+  // `work_item_id` came back as "ID of the Fenwick Road excavator hire job in the system". That
+  // reaches Postgres as a failed cast and an error nobody can act on, so it is caught here for
+  // the sentence rather than for the safety — the write was never going to happen either way.
+  if (!ID.test(workItemId)) {
+    throw new DomainError(
+      'That suggestion does not name a real job, so it cannot be carried out.',
+      'assistant.action_unknown_job',
+    );
+  }
 
   // **The resource is read and passed back, and leaving it out was a bug the tests caught.**
   // `scheduleWorkItem`'s `resourceId` is optional and omitting it means *nobody assigned* rather

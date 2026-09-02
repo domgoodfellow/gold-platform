@@ -91,6 +91,16 @@ export type AnsweringRequest = {
    * be got wrong.
    */
   token: string;
+  /**
+   * What the application knows and a model cannot: today's date, in the business's own zone.
+   *
+   * Written from watching a local model asked to move a job to *9am tomorrow* answer with a date
+   * in 2024. A model has no clock, and *tomorrow* is the most ordinary word an operator will use.
+   *
+   * It carries application state and never a word a tenant wrote, which is the line that decides
+   * what may be put in front of a model at all.
+   */
+  context: string;
 };
 
 export type AnsweringProvider = {

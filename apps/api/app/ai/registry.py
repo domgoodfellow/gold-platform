@@ -29,16 +29,22 @@ from app.ai import AnsweringProvider
 
 def answering_provider() -> AnsweringProvider | None:
     base_url = os.environ.get("ASSISTANT_BASE_URL")
-    if base_url:
+    model = os.environ.get("ASSISTANT_MODEL")
+    # **Both or neither, and the default that used to be here was a trap.** It was `llama3.1`,
+    # which an Ollama installation resolves to `llama3.1:latest` -- a tag a machine holding
+    # `llama3.1:8b` does not have. The deployment would look configured and answer 404 from the
+    # model server on every question. A missing value means the feature is off, which is what
+    # every other setting in this runtime already means.
+    if base_url and model:
         from app.integrations.openai_dialect.answering import dialect_provider
 
         return dialect_provider(
             base_url=base_url,
-            model=os.environ.get("ASSISTANT_MODEL", "llama3.1"),
+            model=model,
             # Absent for a model on your own hardware, present for a hosted endpoint that
             # speaks the same dialect. Neither case is special: it is a header or it is not.
             api_key=os.environ.get("ASSISTANT_API_KEY"),
-            name=os.environ.get("ASSISTANT_MODEL", "llama3.1"),
+            name=model,
         )
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")

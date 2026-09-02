@@ -67,7 +67,12 @@ def anthropic_provider(*, api_key: str):
         name = MODEL
 
         def next_turn(
-            self, *, question: str, tools: tuple[Tool, ...], history: tuple[Exchange, ...]
+            self,
+            *,
+            question: str,
+            tools: tuple[Tool, ...],
+            history: tuple[Exchange, ...],
+            context: str = "",
         ) -> Turn:
             messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
 
@@ -104,7 +109,11 @@ def anthropic_provider(*, api_key: str):
                         "type": "text",
                         "text": SYSTEM,
                         "cache_control": {"type": "ephemeral"},
-                    }
+                    },
+                    # **After the breakpoint, deliberately.** Today's date changes daily and the
+                    # prompt above does not; putting it inside the cached block would throw the
+                    # cache away every midnight for one sentence.
+                    *([{"type": "text", "text": context}] if context else []),
                 ],
                 tools=[
                     {

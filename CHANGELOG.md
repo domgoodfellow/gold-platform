@@ -5,6 +5,34 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Four things a real model found, and a local one is now the cheapest way to run this
+
+Driven end to end against Ollama — `qwen3.5:9b` and `llama3.1:8b` — which is the same path a
+business that will not let its rows leave the building uses in production.
+
+**A tool handed a model an instant, and a model is what renders it.** `work_at_risk` returned
+`timestamptz`, PostgREST serialised UTC, and the answer read an hour wrong for Amsterdam and nine
+for Cebu. Every test passed, because every test founds a business in UTC. The instant stays and
+the business's own wall clock is rendered beside it in Postgres — not by giving a model a zone
+name and letting it do date arithmetic with daylight saving in it.
+
+**A model has no clock.** Asked to move a job to *9am tomorrow*, one answered with a date in 2024.
+Today's date in the business's zone now travels beside the question, after the cached prompt
+prefix rather than inside it.
+
+**The schema is the contract.** A weaker model invented a `status` argument on a tool that
+declares no properties, and PostgREST answered *could not find the function*. Undeclared
+arguments are dropped now, which turned a hard failure into a correct answer for that model.
+
+**A default model name is a trap.** `ASSISTANT_MODEL` defaulted to `llama3.1`, which Ollama
+resolves to `llama3.1:latest` — a tag a machine holding `llama3.1:8b` does not have. Both
+settings are required together.
+
+**And what a weak model does is a product answer rather than a bug.** One proposed moving a job it
+never looked up, naming it *"ID of the Fenwick Road excavator hire job in the system"*. Nothing
+happened, because a write is a proposal; the person is told the suggestion does not name a real
+job; and `answered_by` records which model said it.
+
 ### Both questions M8 names, one shared definition, and the gate grew a second half
 
 **The second tool.** `public.customers_not_contacted` answers the other question in M8's

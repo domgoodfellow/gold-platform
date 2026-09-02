@@ -1945,6 +1945,39 @@ why the first criterion no longer waits for M7 in full** — `roadmap.md`'s *Ord
 did, and the dependency was always on the report-shaped half. A query-shaped question needs
 nothing that does not exist.
 
+**Four things a real model found that reading the code did not, all fixed here.** They are kept
+because each one is invisible until a model is actually asked something, and three of the four
+passed every test this repository had.
+
+- **A tool handed a model an instant, and a model is what renders it.** `work_at_risk` returned
+  `timestamptz`, PostgREST serialised UTC, and the answer read *17:54 to 18:54* — an hour wrong
+  for a business in Amsterdam and nine for one in Cebu. Every test still passed, because every
+  test founds a business in UTC. I9 is unchanged and this is I9 being obeyed: the instant stays,
+  and the business's own wall clock is rendered beside it **in Postgres**, because the
+  alternative is date arithmetic with daylight saving in it, done by a model.
+- **A model has no clock.** Asked to move a job to *9am tomorrow*, one answered with a date in
+  2024. Today's date in the business's zone now travels beside the question as `context` — after
+  the cached prompt prefix, not inside it, since it changes daily and the prompt does not. It is
+  application state and never a word a tenant wrote, which is the line for what may reach a
+  prompt at all.
+- **The schema is the contract, so anything outside it is dropped.** A weaker model invented a
+  `status` argument on a tool whose schema declares no properties, and PostgREST answered *could
+  not find the function* — a hard failure where ignoring a word nobody offered was the right
+  answer. The loop now forwards only declared properties, which is the same filter that drops an
+  organization id.
+- **A default model name is a trap.** `ASSISTANT_MODEL` defaulted to `llama3.1`, which Ollama
+  resolves to `llama3.1:latest` — a tag a machine holding `llama3.1:8b` does not have. The
+  deployment looks configured and answers 404 on every question. Both settings are required
+  together now, because a missing value meaning *off* is what every other setting here means.
+
+**What a weak model does is a product answer rather than a bug.** Below the frontier models, one
+will propose an action for a job it never looked up — naming it *"ID of the Fenwick Road excavator
+hire job in the system"* — and the guardrails hold in the order they were built for: the write is
+a proposal, so nothing happened; the whitelist validates, so the person is told the suggestion
+does not name a real job; and `answered_by` records which model said it. A business that switched
+to its own hardware can see why the answers got worse, which is the whole reason that column
+exists.
+
 **Rejected: the loop in `apps/web`.** Tools would be the domain functions themselves, no token
 would cross a boundary and no second read path would exist. It leaves M9's voice work building a
 second loop in Python, contradicts D2's list rather than carving out of it, and puts a metered,

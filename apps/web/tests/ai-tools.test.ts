@@ -559,6 +559,42 @@ describe('a write is proposed, and a person decides (D34)', () => {
     expect(direct.data).toEqual([]);
   });
 
+  it('refuses a suggestion that names a job in words rather than by id', async () => {
+    // Watched happening with a small local model: it proposed a move and put "ID of the Fenwick
+    // Road excavator hire job in the system" where the id goes, having called no tool at all.
+    // The write was never going to happen; what this buys is a sentence somebody can act on
+    // instead of a failed cast.
+    const { data } = await yard.db
+      .from('agent_runs')
+      .insert({
+        organization_id: yard.organizationId,
+        question: 'Move the excavator job.',
+        answer: 'I would move it to tomorrow.',
+        outcome: 'answered',
+        tools: [],
+        answered_by: 'test',
+        created_by: yard.userId,
+        proposed_action: {
+          name: 'propose_reschedule',
+          because: 'It overran.',
+          arguments: {
+            work_item_id: 'the Fenwick Road excavator hire job',
+            starts_at: tomorrow(9),
+            ends_at: tomorrow(10),
+            because: 'It overran.',
+          },
+        },
+        action_outcome: 'pending',
+      })
+      .select('id')
+      .single();
+
+    const decided = await decideOnAction(yard.db, { runId: data!.id, carryOut: true });
+
+    expect(decided.actionOutcome).toBe('failed');
+    expect(decided.actionDetail).toContain('does not name a real job');
+  });
+
   it('knows only the actions this side can carry out', async () => {
     // The two runtimes are allowed to disagree, and the disagreement must fail closed: the
     // whitelist here is the authority, and a name it does not hold is refused rather than

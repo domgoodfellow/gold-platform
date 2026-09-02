@@ -2793,8 +2793,10 @@ export type Database = {
           days_since: number
           email: string
           last_activity: string
+          last_activity_local: string
           name: string
           phone: string
+          time_zone: string
         }[]
       }
       issue_invoice: {
@@ -2989,11 +2991,14 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: {
           customer: string
+          ends_local: string
           reason: string
           resource: string
           scheduled_from: string
           scheduled_to: string
+          starts_local: string
           status: string
+          time_zone: string
           title: string
           work_item_id: string
         }[]
