@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { Client } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   beginBooking,
@@ -42,6 +43,8 @@ import { foundBusiness } from './helpers/founding';
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+const CONNECTION =
+  process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
 const DATE = '2027-03-15';
 const ZONE = 'America/Toronto';
@@ -623,5 +626,73 @@ describe('booking, by somebody who is a member of nothing', () => {
       .from('external_actors')
       .insert({ organization_id: pneu.organizationId, user_id: user.user!.id });
     expect(plain).toBeNull();
+  });
+
+  it('keeps both availability views running as their owner rather than as the caller', async () => {
+    // **Supabase's advisor reports these two as CRITICAL, and the correct response is this test
+    // rather than the change it is asking for.** `security_invoker = off` means the view runs as
+    // `postgres`, which holds `rolbypassrls` — so no policy on `work_items` or `resources` is
+    // consulted underneath, and the scoping predicate written inside each view is the whole of
+    // what narrows it.
+    //
+    // That is deliberate and it cannot be done another way. Both views exist to publish
+    // *columns*: which resource is busy and when, and which resource ids exist — never a title,
+    // a customer, a status or a price. RLS is row-level, so a policy permitting an outsider to
+    // see those rows would let them read `work_items.title` straight off the table through
+    // PostgREST. Column grants cannot express it either, because a member and an outsider are
+    // both `authenticated`.
+    //
+    // So the advisory is answered here instead: turning the flag on to clear it would return no
+    // rows at all and silently break booking availability, and nothing else in the tree would
+    // look different. `platform_tenants` asserts the opposite flag for the opposite reason, and
+    // the two tests together are what stop one being "corrected" into the other.
+    const pg = new Client({ connectionString: CONNECTION });
+    await pg.connect();
+    try {
+      const { rows } = await pg.query<{ relname: string; reloptions: string[] | null }>(
+        `select c.relname, c.reloptions
+           from pg_class c
+           join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'public'
+            and c.relname in ('resource_commitments', 'bookable_resources')
+          order by c.relname`,
+      );
+
+      expect(rows.map((r) => r.relname)).toEqual(['bookable_resources', 'resource_commitments']);
+      for (const row of rows) {
+        expect(row.reloptions ?? [], row.relname).toContain('security_invoker=off');
+      }
+    } finally {
+      await pg.end();
+    }
+  });
+
+  it('publishes no more than an id and a window from either view', async () => {
+    // The other half, and the half that makes the flag above safe: a definer view is only as
+    // narrow as its column list. This is what would have to change for the disclosure to grow,
+    // and it would change silently — adding `w.title` to the projection is one word and every
+    // test above would still pass.
+    const pg = new Client({ connectionString: CONNECTION });
+    await pg.connect();
+    try {
+      const { rows } = await pg.query<{ table_name: string; column_name: string }>(
+        `select table_name, column_name
+           from information_schema.columns
+          where table_schema = 'public'
+            and table_name in ('resource_commitments', 'bookable_resources')
+          order by table_name, column_name`,
+      );
+
+      const columns = rows.map((r) => `${r.table_name}.${r.column_name}`);
+      expect(columns).toEqual([
+        'bookable_resources.id',
+        'bookable_resources.organization_id',
+        'resource_commitments.occupies',
+        'resource_commitments.organization_id',
+        'resource_commitments.resource_id',
+      ]);
+    } finally {
+      await pg.end();
+    }
   });
 });

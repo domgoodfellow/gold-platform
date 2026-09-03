@@ -5,6 +5,27 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A scope is settled once per statement, not once per row
+
+Twelve policies written for outsiders were charging operators for the privilege. A `stable`
+function in a `using` clause *may* be called once per statement and is not obliged to be — only
+`immutable` folds to a constant — so a bare `app.current_external_tenant()` was evaluated for
+every row a statement touched, and each evaluation read `external_actors`. RLS ORs every
+permissive policy on a table together, so an operator listing a thousand jobs paid a thousand
+lookups to satisfy a policy that permits them nothing at all.
+
+Wrapping each call in a scalar subquery makes it an InitPlan: computed once, before the scan.
+**No policy changes what it permits**, which is the whole risk of the change, and `booking.test.ts`
+and `portal.test.ts` are what say so.
+
+`auth.uid()` was already wrapped everywhere, because Supabase's own advisor knows the `auth`
+functions by name and cannot see a scope function this schema invented. So the rule is now
+asserted by shape rather than by memory: `schema-conformance.test.ts` scans every policy in
+`public` for an unwrapped session scope — including the two `app.` ones the advisor is blind to —
+with a negative control that plants one and confirms the scan sees it. `app.has_capability` is
+deliberately exempt: it takes the row's own column as an argument, so it cannot be lifted out of
+a row, and asserting it would demand a fix that does not exist.
+
 ### Where your question goes, said on the screen that sends it
 
 The assistant is the only feature in this platform that sends a business's rows anywhere, so it

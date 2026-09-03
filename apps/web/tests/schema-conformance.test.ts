@@ -404,6 +404,81 @@ describe('schema conformance', () => {
     expect(rows[0].anon_usage).toBe(false);
   });
 
+  it('settles every session scope once per statement rather than once per row', async () => {
+    // **A `stable` function in a policy may be called once per statement, and is not obliged to
+    // be.** Only `immutable` gets folded to a constant; a bare `app.current_external_tenant()`
+    // in a `using` clause is evaluated for every row the statement touches, and each evaluation
+    // reads `external_actors`. Wrapping it in a scalar subquery with nothing correlated inside
+    // makes it an InitPlan: computed once, before the scan.
+    //
+    // The reason this is a schema-wide scan and not a note on twelve policies is that Supabase's
+    // own advisor checks `auth.uid()` and `auth.jwt()` by name and cannot see a scope function
+    // this schema invented — which is exactly how the two `app.` ones below were written bare
+    // while every `auth.uid()` beside them was wrapped correctly. The rule is about the shape of
+    // a session-scoped function, so the next one is caught without anybody remembering.
+    //
+    // `app.has_capability` is deliberately absent from this list. It takes the row's own
+    // `organization_id` as an argument, so it depends on the row and cannot be lifted out of
+    // one; asserting it here would demand a fix that does not exist.
+    const SCOPES = [
+      'auth.uid',
+      'auth.jwt',
+      'app.current_tenant_ids',
+      'app.current_external_tenant',
+      'app.current_external_customer',
+    ];
+
+    const bareCalls = (expression: string) =>
+      SCOPES.filter((fn) =>
+        new RegExp(String.raw`(?<!\( SELECT )${fn.replace('.', '\\.')}\(`).test(expression),
+      );
+
+    const { rows } = await db.query<{ table_name: string; policy: string; expression: string }>(
+      `select c.relname as table_name,
+              p.polname as policy,
+              coalesce(pg_get_expr(p.polqual, p.polrelid), '')
+                || ' ' || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') as expression
+         from pg_policy p
+         join pg_class c on c.oid = p.polrelid
+         join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public'`,
+    );
+
+    expect(rows.length).toBeGreaterThan(0);
+
+    const unwrapped = rows
+      .flatMap((row) =>
+        bareCalls(row.expression).map((fn) => `${row.table_name}.${row.policy}: ${fn}()`),
+      )
+      .sort();
+
+    expect(unwrapped).toEqual([]);
+  });
+
+  it('catches an unwrapped scope rather than passing by construction', async () => {
+    // The negative control for the scan above, which would otherwise pass on a database whose
+    // policies had all been deleted.
+    await db.query('create table public.__scope_probe (id uuid primary key)');
+    try {
+      await db.query('alter table public.__scope_probe enable row level security');
+      await db.query(
+        `create policy scope_probe_select on public.__scope_probe
+           for select to authenticated using (id = app.current_external_tenant())`,
+      );
+
+      const { rows } = await db.query<{ expression: string }>(
+        `select coalesce(pg_get_expr(p.polqual, p.polrelid), '') as expression
+           from pg_policy p
+           join pg_class c on c.oid = p.polrelid
+          where c.relname = '__scope_probe'`,
+      );
+
+      expect(rows[0].expression).toMatch(/(?<!\( SELECT )app\.current_external_tenant\(/);
+    } finally {
+      await db.query('drop table public.__scope_probe');
+    }
+  });
+
   it('catches a violation rather than passing by construction', async () => {
     // A negative control. Without this, every assertion above could be querying nothing and
     // nobody would know until the day it mattered.
