@@ -736,6 +736,32 @@ layer inside its tool implementations, which is the failure I4 and I5 exist to p
 up. Onboarding is the other half and shares none of that: it writes configuration through
 `configureBusiness` and reads no aggregate at all.
 
+**The criterion is met, and the operational half of *Covers* is not.** `milestone-m7.test.ts` has
+somebody who is not the founder define a report, pin it to a dashboard and share it with a role in
+two businesses that share no word — and then reads `lib/domain/reporting/` and fails on any word
+either tenant chose. `constraints.md` D35 and D36 hold the decisions: an aggregate is a function in
+Postgres pinned to `priceWorkItem` by a correspondence test, and a saved report is a row whose
+audience is a policy.
+
+**What is deferred is the operational report set, and it is deferred into two named gaps rather
+than into a shrug.**
+
+- **Work completed has no date to count it into.** `status_releases_resource` means a resource is
+  free, not that work is done, and M4 refused a platform-owned `is_terminal` on the grounds that
+  it is one tenant-answered question. That question is still unanswered, so *work completed this
+  month* has no honest definition.
+- **This is the same gap that keeps *quoted* out of the financial set**, found from the other end
+  while building the aggregate: a priced line's only date is the instant somebody typed it, which
+  is exactly the asymmetry `20260903000001` closed for costs and invoices. **One
+  tenant-configured completion, with a date maintained on the row the way
+  `status_releases_resource` is, unblocks both.** Neither gap alone was worth the column; the
+  convergence is the argument, and it is why this is written down rather than discovered twice.
+- **Utilisation is where I5 is at risk.** Committed hours per resource is a fact on the row and
+  safe to sum. A *percentage* needs a denominator, and the denominator is opening hours minus
+  commitments — which is `freeWindows`. An aggregate that re-derives it is a second availability
+  calculation in a second runtime, and the honest options are the D35 move (express it twice and
+  pin the two with a correspondence test) or report committed hours and say so.
+
 **Corrected twice, and the second correction is the interesting one.** This paragraph said
 "before the AI layer" for two milestones after that stopped being true; it then said "before the
 half that asks questions", which was also too broad. Question tools shipped ahead of this
