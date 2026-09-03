@@ -14,6 +14,10 @@ import {
   type PeriodPreset,
 } from '@/lib/domain/reporting/financials';
 import {
+  listDashboards,
+  readDashboard,
+} from '@/lib/domain/reporting/dashboards';
+import {
   getReportDefinition,
   listReportDefinitions,
   listReportRoles,
@@ -21,9 +25,14 @@ import {
 import { listResources } from '@/lib/domain/resources/resources';
 import { todayInZone } from '@/lib/domain/scheduling/window';
 import { listRoles } from '@/lib/domain/tenancy/roles';
-import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { requireOrganization } from '@/lib/route/organization';
-import { ReportAudienceForm, SaveReportForm } from './report-forms';
+import { FiguresTable } from './figures-table';
+import {
+  CreateDashboardForm,
+  DashboardContentsForm,
+  ReportAudienceForm,
+  SaveReportForm,
+} from './report-forms';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,7 +55,7 @@ export default async function ReportsPage({
   searchParams,
 }: PageProps<'/organizations/[organizationId]/reports'>) {
   const { organizationId } = await params;
-  const { by, period, customer, resource, location, report } = await searchParams;
+  const { by, period, customer, resource, location, report, dashboard } = await searchParams;
   const { db, organization } = await requireOrganization(organizationId);
 
   // A uuid or nothing. Not validated further here: an id from another business narrows to no
@@ -118,6 +127,33 @@ export default async function ReportsPage({
     mayManage ? listRoles(db, { organizationId }) : Promise.resolve([]),
   ]);
 
+  // **What this caller can see, which is not necessarily what exists.** `dashboards_select`
+  // returns a dashboard only when at least one report pinned to it is one they may read, so a
+  // dashboard made of somebody else's reports is absent rather than empty (D36).
+  const dashboards = await listDashboards(db, { organizationId });
+  const openDashboard = dashboards.find((entry) => entry.id === one(dashboard)) ?? null;
+  const tiles = openDashboard
+    ? await readDashboard(db, { organizationId, dashboardId: openDashboard.id, today })
+    : [];
+
+  // Which reports are already on each dashboard, so the management list can say so. Read
+  // straight from the pins rather than through `readDashboard`, which would run every report on
+  // every dashboard to draw a list of names.
+  const pinnedByDashboard = new Map<string, string[]>();
+  if (mayManage && dashboards.length > 0) {
+    const { data: pins } = await db
+      .from('dashboard_reports')
+      .select('dashboard_id, report_id')
+      .eq('organization_id', organizationId);
+
+    for (const pin of pins ?? []) {
+      pinnedByDashboard.set(pin.dashboard_id, [
+        ...(pinnedByDashboard.get(pin.dashboard_id) ?? []),
+        pin.report_id,
+      ]);
+    }
+  }
+
   const shared = mayManage
     ? await Promise.all(
         definitions.map(async (definition) => ({
@@ -135,6 +171,67 @@ export default async function ReportsPage({
   ].join('');
   const link = (next: { by?: Grouping; period?: PeriodPreset }) =>
     `/organizations/${organizationId}/reports?by=${next.by ?? grouping}&period=${next.period ?? preset}${kept}`;
+
+  const dashboardNav =
+    dashboards.length > 0 ? (
+      <nav className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        <span className="opacity-70">Dashboards:</span>
+        {dashboards.map((entry) => (
+          <Link
+            key={entry.id}
+            href={`/organizations/${organizationId}/reports?dashboard=${entry.id}`}
+            className={entry.id === openDashboard?.id ? 'font-medium' : 'opacity-70'}
+          >
+            {entry.name}
+          </Link>
+        ))}
+        {openDashboard ? (
+          <Link href={`/organizations/${organizationId}/reports`} className="opacity-70">
+            Back to figures
+          </Link>
+        ) : null}
+      </nav>
+    ) : null;
+
+  if (openDashboard) {
+    return (
+      <>
+        <p className="mt-1 text-sm opacity-70">
+          {openDashboard.name} · figures worked out now, in {organization.timezone}.
+        </p>
+
+        {dashboardNav}
+
+        {/*
+          **Each tile is what this viewer may read, and nothing here filters them.** A report
+          pinned to this dashboard that their role does not name is not returned by the
+          database, so it is absent rather than empty — which is why one dashboard can show two
+          people different things with no code deciding it (D36).
+        */}
+        {tiles.length === 0 ? (
+          <p className="mt-8 text-sm opacity-70">
+            Nothing on this dashboard is yours to read. That is not an empty dashboard — it is
+            one built from reports shared with other roles.
+          </p>
+        ) : (
+          <div className="mt-6 flex flex-col gap-8">
+            {tiles.map((tile) => (
+              <section key={tile.report.id}>
+                <h2 className="text-sm font-medium">{tile.report.name}</h2>
+                <p className="mt-1 text-sm opacity-70">
+                  By {GROUPING_LABELS[tile.report.grouping].toLowerCase()},{' '}
+                  {PERIOD_LABELS[tile.report.period].toLowerCase()}
+                </p>
+                <div className="mt-2">
+                  <FiguresTable groups={tile.groups} grouping={tile.report.grouping} />
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -213,6 +310,8 @@ export default async function ReportsPage({
         </button>
       </form>
 
+      {dashboardNav}
+
       {definitions.length > 0 ? (
         <nav className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
           <span className="opacity-70">Saved:</span>
@@ -243,62 +342,8 @@ export default async function ReportsPage({
           no date anybody chose, so there is no honest way to count it into a month.
         </p>
       ) : (
-        <div className="mt-6 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-black/10 text-left dark:border-white/15">
-                <th className="py-2 pr-4 font-medium">{GROUPING_LABELS[grouping]}</th>
-                <th className="py-2 pr-4 text-right font-medium">Invoiced</th>
-                <th className="py-2 pr-4 text-right font-medium">Incurred</th>
-                <th className="py-2 text-right font-medium">Margin</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groups.map((group) => (
-                <tr
-                  key={`${group.groupId ?? group.label ?? 'none'}-${group.currency}`}
-                  className="border-b border-black/5 dark:border-white/10"
-                >
-                  <td className="py-2 pr-4">
-                    {group.label ?? <span className="opacity-70">Not attributed</span>}
-                  </td>
-                  <td className="py-2 pr-4 text-right tabular-nums">
-                    {formatMoney(group.invoicedMinor, group.currency)}
-                  </td>
-                  <td className="py-2 pr-4 text-right tabular-nums">
-                    {group.incurredMinor === null
-                      ? '—'
-                      : formatMoney(group.incurredMinor, group.currency)}
-                  </td>
-                  <td className="py-2 text-right tabular-nums">
-                    {group.marginMinor === null
-                      ? '—'
-                      : formatMoney(group.marginMinor, group.currency)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              {totals.map((total) => (
-                <tr key={total.currency} className="font-medium">
-                  <td className="py-2 pr-4">Total ({total.currency})</td>
-                  <td className="py-2 pr-4 text-right tabular-nums">
-                    {formatMoney(total.invoicedMinor, total.currency)}
-                  </td>
-                  <td className="py-2 pr-4 text-right tabular-nums">
-                    {total.incurredMinor === null
-                      ? '—'
-                      : formatMoney(total.incurredMinor, total.currency)}
-                  </td>
-                  <td className="py-2 text-right tabular-nums">
-                    {total.marginMinor === null
-                      ? '—'
-                      : formatMoney(total.marginMinor, total.currency)}
-                  </td>
-                </tr>
-              ))}
-            </tfoot>
-          </table>
+        <div className="mt-6">
+          <FiguresTable groups={groups} grouping={grouping} />
         </div>
       )}
 
@@ -364,6 +409,35 @@ export default async function ReportsPage({
               </ul>
             </section>
           ) : null}
+
+          <section className="mt-8">
+            <h2 className="text-sm font-medium">Dashboards</h2>
+            <p className="mt-1 text-sm opacity-70">
+              A dashboard is saved reports side by side. It has no audience of its own — somebody
+              sees it when something on it is theirs to read, which is why this platform ships
+              none and a business builds its own.
+            </p>
+
+            <CreateDashboardForm organizationId={organizationId} />
+
+            {dashboards.length > 0 ? (
+              <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+                {dashboards.map((entry) => (
+                  <li key={entry.id}>
+                    <DashboardContentsForm
+                      organizationId={organizationId}
+                      dashboard={entry}
+                      reports={definitions.map((definition) => ({
+                        id: definition.id,
+                        name: definition.name,
+                      }))}
+                      pinned={pinnedByDashboard.get(entry.id) ?? []}
+                    />
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
         </>
       ) : (
         <p className="mt-8 text-sm opacity-70">

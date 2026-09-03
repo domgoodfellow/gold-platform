@@ -22,7 +22,7 @@ checklists to documents.
 
 ## Current state
 
-**M1's, M2's, M3's, M4's, M5's, M6's and both of M8's acceptance criteria are met**, each
+**M1's, M2's, M3's, M4's, M5's, M6's, M7's and both of M8's acceptance criteria are met**, each
 demonstrated by one test rather than by a table count. M8's *first* criterion did not wait for
 M7: the dependency was on the report-shaped questions only, and D34 records both the decision and
 what keeps the distinction from rotting.
@@ -56,6 +56,12 @@ write with `permission denied` rather than with a policy declining.
 the world underneath it, and asserts that a job moved and a customer was written to **in a
 transaction with no session in it at all**.
 
+`apps/web/tests/milestone-m7.test.ts` stands up a dive school in Cebu and a joinery in Tallinn,
+has somebody who is **not the founder** define a report, pin it to a dashboard and share it with a
+role their business named itself — and then reads `lib/domain/reporting/` as text and fails if any
+word either tenant chose appears in it. The figures are secondary; a platform that shipped a
+report called *What the reef brings in* would pass every other assertion in the file.
+
 `apps/web/tests/milestone-m8.test.ts` describes a chimney sweep in Tallinn and a dive school in
 Cebu in prose, receives a whole configuration for each — and asserts, at that moment, that both
 businesses are still **completely empty**. Not one status, not one price, not one hour. A person
@@ -64,7 +70,8 @@ then changes a word and applies, and it is the changed word that reaches the dat
 They invert each other deliberately — M1 runs byte-identical input, M2 runs identical input
 twice, M3 runs maximally different input through identical code, M4 runs half of itself as
 somebody who is a member of nothing, M5 runs as somebody who is a member of *none* of them, M6
-is proved by a person doing nothing, and M8 is proved by a machine having done nothing.
+is proved by a person doing nothing, M7 is proved by a source file not containing two
+businesses' words, and M8 is proved by a machine having done nothing.
 
 The kernel is `organizations`, `memberships`, `events`, `customers`, `roles`,
 `field_definitions`, `locations`, `customer_locations`, `resources`, `assets`, `documents`,
@@ -74,7 +81,9 @@ The kernel is `organizations`, `memberships`, `events`, `customers`, `roles`,
 configuration engine — `price_book_items` and `work_item_priced_lines`; and — the automation
 engine — `automation_rules`, `automation_conditions`, `automation_actions`, `automation_runs`,
 `automation_counter_marks`, `message_templates`, `message_deliveries`, `external_readings` and
-`asset_readings`; and — the question tools — `agent_runs` and `public.work_at_risk`; the one tenant resolution function and `app.has_capability`; and a vertical
+`asset_readings`; and — the question tools — `agent_runs` and `public.work_at_risk`; and — the aggregate
+layer — `public.invoiced_and_incurred`, `report_definitions`, `report_definition_roles`,
+`dashboards` and `dashboard_reports`; the one tenant resolution function and `app.has_capability`; and a vertical
 slice behind authentication for each.
 
 Six things about the work engine are load-bearing and easy to undo by accident:
@@ -355,11 +364,34 @@ error** — found by a test, where clearing an audience you may not manage came 
 changing anything. The check is against the database's own answer rather than a capability read in
 TypeScript.
 
-What is **not** built is the dashboard: pinning reports to a layout, and the four the source names
-as configuration rather than four screens. `today` is deliberately not converted into one — if the
-first dashboard and the machinery for dashboards land together, nothing tests whether that
-machinery could express something that already existed. The operational report set is also unbuilt,
-and it is what takes `requires: 'billing'` off the reporting module.
+**A dashboard is a layout of pinned reports, and it has no audience of its own.** That absence is
+the design: who sees a dashboard follows from which of its reports they can read, asked by
+`dashboards_select` with `report_definitions_select` running inside the subquery under the
+caller's own rights. A second role list would be a second thing to keep in step, and the day the
+two disagreed the answer would be whichever policy ran last. Three consequences:
+
+- **One dashboard shows different people different tiles, with nothing in code deciding it.** A
+  pin whose report a viewer may not read is not returned, so the tile is *absent* rather than
+  rendered empty — and a dashboard none of whose reports are theirs does not appear at all, name
+  included. A filter in a page would be a second, weaker copy of that and must not be added.
+- **The platform seeds no dashboard**, including the four `roadmap.md` names — executive,
+  operations, manager, employee. That entry calls them *configuration rather than four screens*,
+  and shipping them as rows would be the hardcoding `constraints.md` forbids arriving as a
+  convenience, exactly like a starter catalogue or a seeded status list.
+- **A pin cascades when its report goes**, unlike a report's filters, which are `set null`. A
+  tile pointing at a report that no longer exists is not a tile with a hole in it; a report with
+  one fewer filter still means something.
+
+**M7's criterion is met** — an operator defines a report, pins it to a dashboard and shares it
+with a role, with nothing about either in code — and `milestone-m7.test.ts` is what says so.
+`today` is deliberately still not a configured dashboard: if the first dashboard and the machinery
+for dashboards had landed together, nothing would test whether that machinery could express
+something that already existed.
+
+What is **not** built is the operational report set — work completed, utilisation — which is in
+M7's *Covers* rather than its criterion, and it is what takes `requires: 'billing'` off the
+reporting module. It runs into two things this schema does not have, and `roadmap.md` M7 records
+them: work has no completion date, and utilisation needs a denominator that is `freeWindows`.
 
 **Standing a business up is two acts by two parties, and the second of them is one function
 that must never learn what kind of business it is holding.** GOLD creates the business —

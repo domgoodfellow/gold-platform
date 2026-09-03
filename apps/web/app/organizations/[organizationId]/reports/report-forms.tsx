@@ -4,8 +4,11 @@ import { useActionState } from 'react';
 import type { ReportDefinition } from '@/lib/domain/reporting/definitions';
 import type { Filters, Grouping, PeriodPreset } from '@/lib/domain/reporting/financials';
 import {
+  createDashboardAction,
+  deleteDashboardAction,
   deleteReportAction,
   saveReportAction,
+  setPinAction,
   setReportRolesAction,
   type ReportState,
 } from './actions';
@@ -143,5 +146,118 @@ export function ReportAudienceForm({
         ) : null}
       </form>
     </div>
+  );
+}
+
+/** Naming a new dashboard. The platform seeds none, including the four M7's source lists. */
+export function CreateDashboardForm({ organizationId }: { organizationId: string }) {
+  const [state, formAction, pending] = useActionState(createDashboardAction, INITIAL);
+
+  return (
+    <form action={formAction} className="mt-4 flex flex-col gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input type="hidden" name="organizationId" value={organizationId} />
+        <input
+          name="name"
+          type="text"
+          required
+          maxLength={120}
+          placeholder="What you call this dashboard"
+          className={`${FIELD} sm:flex-1`}
+        />
+        <button type="submit" disabled={pending} className={BUTTON}>
+          {pending ? 'Adding…' : 'Add a dashboard'}
+        </button>
+      </div>
+      {state.error ? <p className="text-sm text-red-700 dark:text-red-400">{state.error}</p> : null}
+    </form>
+  );
+}
+
+/**
+ * What is on one dashboard, and removing it.
+ *
+ * A checkbox per saved report, each its own small form, because pinning is one decision and a
+ * page of tick boxes with a single Save is a page where somebody loses four changes to a stray
+ * click on the fifth.
+ */
+export function DashboardContentsForm({
+  organizationId,
+  dashboard,
+  reports,
+  pinned,
+}: {
+  organizationId: string;
+  dashboard: { id: string; name: string };
+  reports: { id: string; name: string }[];
+  pinned: string[];
+}) {
+  const [removal, removeAction, removing] = useActionState(deleteDashboardAction, INITIAL);
+
+  return (
+    <div className="py-3">
+      <div className="font-medium">{dashboard.name}</div>
+
+      {reports.length === 0 ? (
+        <p className="mt-1 text-sm opacity-70">
+          Save a report above and it can go on here.
+        </p>
+      ) : (
+        <ul className="mt-2 flex flex-col gap-1 text-sm">
+          {reports.map((report) => (
+            <li key={report.id}>
+              <PinForm
+                organizationId={organizationId}
+                dashboardId={dashboard.id}
+                report={report}
+                pinned={pinned.includes(report.id)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form action={removeAction} className="mt-2">
+        <input type="hidden" name="organizationId" value={organizationId} />
+        <input type="hidden" name="dashboardId" value={dashboard.id} />
+        <button type="submit" disabled={removing} className="text-sm underline opacity-70">
+          {removing ? 'Removing…' : 'Remove this dashboard'}
+        </button>
+        {removal.error ? (
+          <p className="text-sm text-red-700 dark:text-red-400">{removal.error}</p>
+        ) : null}
+      </form>
+    </div>
+  );
+}
+
+function PinForm({
+  organizationId,
+  dashboardId,
+  report,
+  pinned,
+}: {
+  organizationId: string;
+  dashboardId: string;
+  report: { id: string; name: string };
+  pinned: boolean;
+}) {
+  const [state, formAction, working] = useActionState(setPinAction, INITIAL);
+
+  return (
+    <form action={formAction} className="flex items-center gap-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="dashboardId" value={dashboardId} />
+      <input type="hidden" name="reportId" value={report.id} />
+      {/* What it is now, so the action knows which way to move it. */}
+      <input type="hidden" name="pinned" value={pinned ? 'yes' : 'no'} />
+      <button type="submit" disabled={working} className="underline opacity-70">
+        {pinned ? 'Take off' : 'Put on'}
+      </button>
+      <span className={pinned ? 'font-medium' : 'opacity-70'}>{report.name}</span>
+      {state.error ? (
+        <span className="text-red-700 dark:text-red-400">{state.error}</span>
+      ) : null}
+    </form>
   );
 }

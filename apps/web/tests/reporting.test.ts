@@ -6,6 +6,13 @@ import { createCustomer } from '@/lib/domain/customers/customers';
 import { createPriceBookItem, updatePriceBookItem } from '@/lib/domain/pricing/price-book';
 import { priceWorkItem } from '@/lib/domain/pricing/prices';
 import {
+  createDashboard,
+  listDashboards,
+  pinReport,
+  readDashboard,
+} from '@/lib/domain/reporting/dashboards';
+import {
+  deleteReportDefinition,
   getReportDefinition,
   listReportDefinitions,
   runReportDefinition,
@@ -766,5 +773,181 @@ describe('a report a business saved', () => {
         period: 'all',
       }),
     ).rejects.toMatchObject({ code: 'reports.name_taken' });
+  });
+});
+
+/**
+ * A dashboard, and the audience it does not have.
+ *
+ * **The claim worth testing is the absence.** A dashboard holds no role list; who sees it follows
+ * from which of its reports they can read, asked by `dashboards_select` with
+ * `report_definitions_select` running inside the subquery. So the assertions below are about what
+ * three different people get from one row: every tile, one tile, and no dashboard at all.
+ *
+ * That last one is the property a second role list would have broken. A dashboard of somebody
+ * else's reports is **absent**, not empty — its name does not leak either.
+ */
+describe('a dashboard', () => {
+  let owner: Tenant;
+  let readerDb: SupabaseClient;
+  let strangerDb: SupabaseClient;
+  let dashboardId: string;
+  let sharedReportId: string;
+  let privateReportId: string;
+
+  async function joinAs(
+    tenant: Tenant,
+    label: string,
+    capabilities: string[],
+  ): Promise<{ db: SupabaseClient; roleId: string }> {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const email = `${label}-${randomUUID().slice(0, 8)}@example.test`;
+    const password = `pw-${randomUUID()}`;
+    const { error: createError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (createError) throw createError;
+
+    const roleId = await createRole(tenant.db, {
+      organizationId: tenant.organizationId,
+      name: label,
+      capabilities,
+    });
+    await addMember(tenant.db, {
+      organizationId: tenant.organizationId,
+      email,
+      displayName: label,
+      roleId,
+    });
+
+    const db = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { error: signInError } = await db.auth.signInWithPassword({ email, password });
+    if (signInError) throw signInError;
+
+    return { db, roleId };
+  }
+
+  beforeAll(async () => {
+    owner = await newTenant('dash-owner');
+    await billedJob(owner, { title: 'A job', issuedAt: '2026-08-14T04:00:00.000Z' });
+
+    const reader = await joinAs(owner, 'dash-reader', ['report.read']);
+    readerDb = reader.db;
+    const stranger = await joinAs(owner, 'dash-stranger', ['report.read']);
+    strangerDb = stranger.db;
+
+    sharedReportId = await saveReportDefinition(owner.db, {
+      organizationId: owner.organizationId,
+      name: 'Everyone’s',
+      grouping: 'service',
+      period: 'all',
+    });
+    privateReportId = await saveReportDefinition(owner.db, {
+      organizationId: owner.organizationId,
+      name: 'Owner’s only',
+      grouping: 'customer',
+      period: 'all',
+    });
+
+    await setReportRoles(owner.db, {
+      organizationId: owner.organizationId,
+      reportId: sharedReportId,
+      roleIds: [reader.roleId],
+    });
+
+    dashboardId = await createDashboard(owner.db, {
+      organizationId: owner.organizationId,
+      name: 'The board',
+    });
+    await pinReport(owner.db, {
+      organizationId: owner.organizationId,
+      dashboardId,
+      reportId: sharedReportId,
+      position: 0,
+    });
+    await pinReport(owner.db, {
+      organizationId: owner.organizationId,
+      dashboardId,
+      reportId: privateReportId,
+      position: 1,
+    });
+  });
+
+  it('shows its author every tile, each through the one aggregate', async () => {
+    const tiles = await readDashboard(owner.db, {
+      organizationId: owner.organizationId,
+      dashboardId,
+      today: '2026-08-30',
+    });
+
+    expect(tiles.map((tile) => tile.report.name)).toEqual(['Everyone’s', 'Owner’s only']);
+    // Not a stored figure anywhere: each tile is `runReportDefinition`, which is the aggregate.
+    expect(tiles[0].groups[0]?.invoicedMinor).toBe(12_000);
+  });
+
+  it('shows one person two tiles and another person one, from the same row (D36)', async () => {
+    const forReader = await readDashboard(readerDb, {
+      organizationId: owner.organizationId,
+      dashboardId,
+      today: '2026-08-30',
+    });
+
+    // The pin to the owner's private report is not returned, so the tile is absent rather than
+    // rendered empty — and nothing in application code decided that.
+    expect(forReader.map((tile) => tile.report.name)).toEqual(['Everyone’s']);
+    expect(forReader[0].groups[0]?.invoicedMinor).toBe(12_000);
+  });
+
+  it('does not exist for somebody none of its reports are for', async () => {
+    // **The property a second role list would have broken.** This member holds `report.read` and
+    // can see the business's figures on the ad-hoc screen; what they cannot see is that this
+    // dashboard exists, because nothing on it is theirs.
+    const visible = await listDashboards(strangerDb, { organizationId: owner.organizationId });
+    expect(visible).toEqual([]);
+
+    const tiles = await readDashboard(strangerDb, {
+      organizationId: owner.organizationId,
+      dashboardId,
+      today: '2026-08-30',
+    });
+    expect(tiles).toEqual([]);
+  });
+
+  it('appears for the reader it has something for, by name', async () => {
+    const visible = await listDashboards(readerDb, { organizationId: owner.organizationId });
+    expect(visible.map((entry) => entry.name)).toEqual(['The board']);
+  });
+
+  it('refuses a member who may read figures but not author one (I16)', async () => {
+    await expect(
+      createDashboard(readerDb, { organizationId: owner.organizationId, name: 'Mine' }),
+    ).rejects.toMatchObject({ code: 'dashboards.create_failed' });
+
+    await expect(
+      pinReport(readerDb, {
+        organizationId: owner.organizationId,
+        dashboardId,
+        reportId: sharedReportId,
+      }),
+    ).rejects.toMatchObject({ code: 'dashboards.pin_failed' });
+  });
+
+  it('loses a tile when the report behind it goes, rather than keeping a gap', async () => {
+    // `cascade` rather than `set null` on the pin: a tile pointing at a report that no longer
+    // exists is not a tile with a hole in it, it is not a tile.
+    await deleteReportDefinition(owner.db, { id: privateReportId });
+
+    const tiles = await readDashboard(owner.db, {
+      organizationId: owner.organizationId,
+      dashboardId,
+      today: '2026-08-30',
+    });
+    expect(tiles.map((tile) => tile.report.name)).toEqual(['Everyone’s']);
   });
 });

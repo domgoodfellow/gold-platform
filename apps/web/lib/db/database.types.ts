@@ -756,6 +756,104 @@ export type Database = {
           },
         ]
       }
+      dashboard_reports: {
+        Row: {
+          created_at: string
+          created_by: string
+          dashboard_id: string
+          id: string
+          organization_id: string
+          position: number
+          report_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          dashboard_id: string
+          id?: string
+          organization_id: string
+          position?: number
+          report_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          dashboard_id?: string
+          id?: string
+          organization_id?: string
+          position?: number
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_reports_dashboard_same_org"
+            columns: ["organization_id", "dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "dashboards"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dashboard_reports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_reports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_reports_report_same_org"
+            columns: ["organization_id", "report_id"]
+            isOneToOne: false
+            referencedRelation: "report_definitions"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      dashboards: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboards_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboards_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           asset_id: string | null
