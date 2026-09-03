@@ -326,11 +326,40 @@ change. `constraints.md` D35 holds the decisions. Five things are load-bearing:
   in a function since M1. Expect the first live tenant to notice that **a capability is never
   granted retroactively**: hand-configured roles need it adding on the Roles screen.
 
-What is **not** built is the rest of M7: a report is not yet a row a tenant saves, and there is no
-dashboard and no audience. Both are decisions that depend on this one working, and D35 declines to
-take them early. `today` is deliberately not converted into a configured dashboard — if the first
-dashboard and the machinery for dashboards land together, nothing tests whether that machinery
-could express something that already existed.
+**A report is a row now, and its audience is a policy** (D36, M7's second and third slices).
+`report_definitions` holds a grouping, a period and up to three filters — and nothing else,
+because for this report set the entity *is* the grouping, the fields are the three money columns
+and the calculation is the subtraction. Four of the six things `starting_conversation.txt` §17
+lists are already fixed, so what remains is three columns and a check constraint rather than a
+query language. Four things are easy to undo:
+
+- **A saved report is arguments, and running one calls the same aggregate.** `runReportDefinition`
+  passes the stored grouping, period and filters to `invoiced_and_incurred` and does nothing else.
+  A saved report that grew its own query would be a second answer to a question that already has
+  one, and it would arrive looking like an optimisation — `reporting.test.ts` compares whole rows
+  from the saved path and the ad-hoc path.
+- **The audience is `report_definitions_select` and must never become a filter in a page.** A
+  report shared with a role the caller does not hold returns *no row*, which is what lets a
+  dashboard render what each viewer can read with nothing in code deciding it. A listing narrowed
+  in TypeScript would be a second, weaker copy of that rule.
+- **A filter is a typed column with a composite key, never JSON** (I18). One JSONB column would
+  have been less work and would have accepted another business's customer id, producing an empty
+  report nobody could explain instead of a refusal.
+- **`report.manage` is authoring and `report.read` is reading**, and they are plausibly two
+  people. `report.manage` sees every report deliberately: somebody who can create and share one
+  can recreate it in ten seconds, so hiding it protects nothing and would make a report
+  undeletable by the person meant to delete it.
+
+`setReportRoles` re-reads what it removed, because **a delete RLS filters to nothing is not an
+error** — found by a test, where clearing an audience you may not manage came back clean without
+changing anything. The check is against the database's own answer rather than a capability read in
+TypeScript.
+
+What is **not** built is the dashboard: pinning reports to a layout, and the four the source names
+as configuration rather than four screens. `today` is deliberately not converted into one — if the
+first dashboard and the machinery for dashboards land together, nothing tests whether that
+machinery could express something that already existed. The operational report set is also unbuilt,
+and it is what takes `requires: 'billing'` off the reporting module.
 
 **Standing a business up is two acts by two parties, and the second of them is one function
 that must never learn what kind of business it is holding.** GOLD creates the business —

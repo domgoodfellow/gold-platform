@@ -6,12 +6,20 @@ import { createCustomer } from '@/lib/domain/customers/customers';
 import { createPriceBookItem, updatePriceBookItem } from '@/lib/domain/pricing/price-book';
 import { priceWorkItem } from '@/lib/domain/pricing/prices';
 import {
+  getReportDefinition,
+  listReportDefinitions,
+  runReportDefinition,
+  saveReportDefinition,
+  setReportRoles,
+} from '@/lib/domain/reporting/definitions';
+import {
   listInvoicedAndIncurred,
   periodFor,
   totalsByCurrency,
   type FinancialGroup,
 } from '@/lib/domain/reporting/financials';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
+import { addMember } from '@/lib/domain/tenancy/members';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { addPricedLine } from '@/lib/domain/pricing/prices';
 import { recordCost } from '@/lib/domain/work-items/consumption';
@@ -231,6 +239,22 @@ describe('what a business billed, and what its work consumed', () => {
     expect(harbour!.invoicedMinor).toBe(48_000);
     expect(harbour!.incurredMinor).toBe(9_000);
     expect(harbour!.marginMinor).toBe(39_000);
+  });
+
+  it('narrows to one customer, and takes that customer’s costs with it (D36)', async () => {
+    // **A filter narrows jobs, not amounts**, which is why both halves of the aggregate read the
+    // grouping keys off the work item. A filter that kept a job's revenue and dropped its costs
+    // would report a margin for work that was only partly counted — plausible, and wrong.
+    const groups = await listInvoicedAndIncurred(acme.db, {
+      organizationId: acme.organizationId,
+      grouping: 'service',
+      filters: { customerId: acmeCustomerId },
+    });
+
+    // The walk-in job had no customer, so its 24 000 is gone; what remains is this customer's
+    // two jobs. The cost travelled with them even though the grouping is by service, where a
+    // cost is not reported — it is still excluded from the rows, not merely from the column.
+    expect(find(groups, 'Callout')?.invoicedMinor).toBe(48_000);
   });
 
   it('groups work attributed to nobody rather than leaving it out of the totals', async () => {
@@ -533,5 +557,214 @@ describe('a period total', () => {
     expect(totals).toEqual([
       { currency: 'PHP', invoicedMinor: 1_500, incurredMinor: null, marginMinor: null },
     ]);
+  });
+});
+
+/**
+ * A saved report, and who it is for.
+ *
+ * **The claim that matters is that a saved report is arguments** (D36). It holds no figures and
+ * no query, so opening one takes the same road the ad-hoc screen takes — asserted below by
+ * running both and comparing whole rows, because a second read path is the thing this design is
+ * most likely to grow.
+ *
+ * The rest is the audience, and it is asserted as an *absent row* rather than as a hidden
+ * control. A report a role may not see returns nothing from `report_definitions_select`, which
+ * is what lets a dashboard render what each viewer can read with nothing in code deciding it.
+ */
+describe('a report a business saved', () => {
+  let owner: Tenant;
+  let outsiderDb: SupabaseClient;
+  let readerDb: SupabaseClient;
+  let readerRoleId: string;
+  let reportId: string;
+
+  async function joinAs(
+    tenant: Tenant,
+    label: string,
+    capabilities: string[],
+  ): Promise<{ db: SupabaseClient; roleId: string }> {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const email = `${label}-${randomUUID().slice(0, 8)}@example.test`;
+    const password = `pw-${randomUUID()}`;
+    const { error: createError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (createError) throw createError;
+
+    const roleId = await createRole(tenant.db, {
+      organizationId: tenant.organizationId,
+      name: label,
+      capabilities,
+    });
+    await addMember(tenant.db, {
+      organizationId: tenant.organizationId,
+      email,
+      displayName: label,
+      roleId,
+    });
+
+    const db = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { error: signInError } = await db.auth.signInWithPassword({ email, password });
+    if (signInError) throw signInError;
+
+    return { db, roleId };
+  }
+
+  beforeAll(async () => {
+    owner = await newTenant('def-owner');
+    const customerId = await createCustomer(owner.db, {
+      organizationId: owner.organizationId,
+      name: 'Pier Works',
+    });
+    await billedJob(owner, {
+      title: 'Hull inspection',
+      customerId,
+      quantity: 2,
+      issuedAt: '2026-08-12T04:00:00.000Z',
+      cost: { amountMinor: 3_000, incurredAt: '2026-08-11T04:00:00.000Z' },
+    });
+
+    // Two people who are not the founder. Both may read figures; neither may author a report.
+    const reader = await joinAs(owner, 'reader', ['report.read']);
+    readerDb = reader.db;
+    readerRoleId = reader.roleId;
+
+    const outsider = await joinAs(owner, 'outsider', ['report.read']);
+    outsiderDb = outsider.db;
+
+    reportId = await saveReportDefinition(owner.db, {
+      organizationId: owner.organizationId,
+      name: 'Billing by service',
+      grouping: 'service',
+      period: 'all',
+    });
+  });
+
+  it('runs through the same aggregate the ad-hoc view runs through (D35, D36)', async () => {
+    // **The load-bearing test of this slice.** A saved report that grew its own query would be a
+    // second answer to a question that already has one, and it would look like an optimisation
+    // on the day somebody wrote it. Whole rows compared, not a total.
+    const definition = await getReportDefinition(owner.db, {
+      organizationId: owner.organizationId,
+      id: reportId,
+    });
+
+    const throughTheDefinition = await runReportDefinition(owner.db, {
+      organizationId: owner.organizationId,
+      definition: definition!,
+      today: '2026-08-30',
+    });
+
+    const throughTheScreen = await listInvoicedAndIncurred(owner.db, {
+      organizationId: owner.organizationId,
+      grouping: 'service',
+      period: periodFor('all', '2026-08-30'),
+    });
+
+    expect(throughTheDefinition).toEqual(throughTheScreen);
+    expect(throughTheDefinition[0]?.invoicedMinor).toBe(24_000);
+  });
+
+  it('shows a report to nobody until it names a role', async () => {
+    // Not a hidden button: the row is not returned. Both of these members hold `report.read`
+    // and can see the business's figures on the ad-hoc screen — what they cannot see is
+    // somebody else's saved report.
+    expect(
+      await listReportDefinitions(readerDb, { organizationId: owner.organizationId }),
+    ).toEqual([]);
+    expect(
+      await getReportDefinition(readerDb, { organizationId: owner.organizationId, id: reportId }),
+    ).toBeNull();
+  });
+
+  it('shows it to the role it names, and to nobody else (D36)', async () => {
+    await setReportRoles(owner.db, {
+      organizationId: owner.organizationId,
+      reportId,
+      roleIds: [readerRoleId],
+    });
+
+    const forReader = await listReportDefinitions(readerDb, {
+      organizationId: owner.organizationId,
+    });
+    expect(forReader.map((row) => row.name)).toEqual(['Billing by service']);
+
+    // The other member holds the same capability and a different role, which is the whole of
+    // what separates them.
+    expect(
+      await listReportDefinitions(outsiderDb, { organizationId: owner.organizationId }),
+    ).toEqual([]);
+  });
+
+  it('lets somebody who is shared a report run it, and get the author’s figures', async () => {
+    const definition = await getReportDefinition(readerDb, {
+      organizationId: owner.organizationId,
+      id: reportId,
+    });
+    expect(definition).not.toBeNull();
+
+    const rows = await runReportDefinition(readerDb, {
+      organizationId: owner.organizationId,
+      definition: definition!,
+      today: '2026-08-30',
+    });
+    expect(rows[0]?.invoicedMinor).toBe(24_000);
+  });
+
+  it('refuses a member who may read figures but not author a report (I16)', async () => {
+    await expect(
+      saveReportDefinition(readerDb, {
+        organizationId: owner.organizationId,
+        name: 'Mine now',
+        grouping: 'customer',
+        period: 'all',
+      }),
+    ).rejects.toMatchObject({ code: 'reports.save_failed' });
+
+    await expect(
+      setReportRoles(readerDb, {
+        organizationId: owner.organizationId,
+        reportId,
+        roleIds: [],
+      }),
+    ).rejects.toMatchObject({ code: 'reports.share_failed' });
+  });
+
+  it('cannot be filtered to another business’s customer (I18)', async () => {
+    // The composite key refuses it, so the row cannot be written at all. A JSON filter column
+    // would have accepted this and produced an empty report nobody could explain.
+    const stranger = await newTenant('def-stranger');
+    const theirCustomer = await createCustomer(stranger.db, {
+      organizationId: stranger.organizationId,
+      name: 'Not yours',
+    });
+
+    await expect(
+      saveReportDefinition(owner.db, {
+        organizationId: owner.organizationId,
+        name: 'Somebody else’s customer',
+        grouping: 'service',
+        period: 'all',
+        filters: { customerId: theirCustomer },
+      }),
+    ).rejects.toMatchObject({ code: 'reports.save_failed' });
+  });
+
+  it('refuses a second report with the same name (I2)', async () => {
+    await expect(
+      saveReportDefinition(owner.db, {
+        organizationId: owner.organizationId,
+        name: 'billing BY service',
+        grouping: 'customer',
+        period: 'all',
+      }),
+    ).rejects.toMatchObject({ code: 'reports.name_taken' });
   });
 });

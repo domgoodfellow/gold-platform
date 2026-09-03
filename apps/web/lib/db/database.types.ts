@@ -1779,6 +1779,144 @@ export type Database = {
           },
         ]
       }
+      report_definition_roles: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          report_id: string
+          role_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          report_id: string
+          role_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          report_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_definition_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definition_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definition_roles_report_same_org"
+            columns: ["organization_id", "report_id"]
+            isOneToOne: false
+            referencedRelation: "report_definitions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "report_definition_roles_role_same_org"
+            columns: ["organization_id", "role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      report_definitions: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string | null
+          grouping: string
+          id: string
+          location_id: string | null
+          name: string
+          organization_id: string
+          period: string
+          resource_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id?: string | null
+          grouping: string
+          id?: string
+          location_id?: string | null
+          name: string
+          organization_id: string
+          period: string
+          resource_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string | null
+          grouping?: string
+          id?: string
+          location_id?: string | null
+          name?: string
+          organization_id?: string
+          period?: string
+          resource_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_definitions_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "report_definitions_location_same_org"
+            columns: ["organization_id", "location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "report_definitions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definitions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definitions_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "bookable_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "report_definitions_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       resources: {
         Row: {
           created_at: string
@@ -2801,9 +2939,12 @@ export type Database = {
       }
       invoiced_and_incurred: {
         Args: {
+          p_customer_id?: string
           p_from?: string
           p_grouping: string
+          p_location_id?: string
           p_organization_id: string
+          p_resource_id?: string
           p_to?: string
         }
         Returns: {

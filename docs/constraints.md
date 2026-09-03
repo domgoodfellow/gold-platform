@@ -2135,7 +2135,83 @@ and moves the transactional domain's arithmetic out of the runtime D2 gives it.
 
 **A report definition in this record.** What a saved report may express, and who may see one, is
 the next slice's decision and depends on this one working. Deciding it here would be deciding it
-without a caller.
+without a caller. **D36 is that decision**, taken once the aggregate above was running.
+
+---
+
+### D36 — A saved report is a row with an audience, and the audience is a policy
+
+M7's criterion is that an operator defines a report, pins it to a dashboard and shares it with a
+role, with nothing about that report existing in code. D35 settled where the figures come from.
+This settles what a saved one may say and who may see it.
+
+**A definition holds a grouping, a period and up to three filters. There is no query language.**
+`starting_conversation.txt` §17 lists *entity, fields, filters, grouping, calculations, time
+period*, and for this report set four of those six are already fixed: the entity **is** the
+grouping, the fields are invoiced, incurred and margin, and the calculation is the subtraction
+D35 owns. What is left is a grouping, a period and an optional entity to narrow to — three
+columns and a check constraint, not a builder.
+
+That is a claim about *this* report set rather than about reporting in general, and it is the
+reason to write it down: the moment a report set arrives whose fields are not fixed, this record
+is where the argument for a builder has to be made rather than assumed. **A filter is a typed
+column with a composite foreign key** (I18), never JSON — a filter naming a customer of another
+business must be unrepresentable rather than merely unusual.
+
+**A filter narrows jobs, not amounts.** Both halves of the aggregate take their grouping keys and
+their filters from the work item, so a job's revenue and its costs are counted together or not at
+all. A filter that kept one half would report a margin for work that was only partly counted,
+which is the worst kind of wrong: plausible.
+
+**A saved report produces its figures by calling the same aggregate**, with its stored grouping,
+period and filters as arguments. This is D35's rule one level up and the thing most likely to be
+undone by a well-meaning optimisation: a saved report that grew its own query would be a second
+answer to a question that already has one, and `reporting.test.ts` asserts that a saved report and
+the ad-hoc screen return identical rows for identical inputs.
+
+#### The audience
+
+**A report names roles, and an RLS policy is what enforces it.** A report a role may not see
+returns no row, so no screen can leak it, no direct call can, and a dashboard built on top of it
+renders what each viewer can read without anything in code deciding that. A filter in a page
+would be a second, weaker copy of this and must not be added.
+
+Three consequences worth keeping:
+
+- **`app.current_role_id` is `security definer`, for the reason `app.current_tenant_ids` is.** A
+  policy that read `memberships` under RLS to find the caller's role is how recursion arrives.
+  It takes the organization as an argument and is therefore evaluated per row rather than hoisted
+  — the same cost `app.has_capability` already carries, and acceptable for a table holding tens of
+  rows rather than thousands.
+- **The sharing table is readable by any member of the business, and the definition is not.** A
+  policy on `report_definitions` that consulted a `report_definition_roles` only its own audience
+  could read would be circular. What that discloses is which role ids a report id is shared with;
+  what stays hidden is the report — its name, its grouping, its figures. The narrower thing is
+  the one that matters and it is the one protected.
+- **`report.manage` sees every report in the business**, deliberately. Somebody who can create and
+  share reports can create the same report again in ten seconds, so hiding one from them protects
+  nothing and would only make a report undeletable by the person meant to manage it.
+
+**Two capabilities rather than one.** `report.read` is reading figures (D35, and
+`20260903000003` for why an aggregate is gated where a row is not); `report.manage` is authoring
+a definition that other people will see. They are plausibly two people — the second is closer to
+`role.manage` than to reading a number — and `report.manage` gets a policy on a real table, so it
+satisfies I16 the ordinary way.
+
+#### Rejected
+
+**Filters as JSON.** One column instead of three, and it accepts a customer id belonging to
+another business, a key nothing reads, and a shape that drifts from what the aggregate accepts.
+D7 gives JSONB to *tenant-declared* custom fields; a filter is platform vocabulary.
+
+**A report private to whoever saved it, shared row by row.** More precise, and it makes *the
+executive dashboard* something a person owns rather than something the business has — so it
+leaves with them. Roles already express "the people who do this job here", which is what a report
+audience actually means.
+
+**`report.read` sees every saved report.** Simplest, and it puts one team's margins in front of
+everybody holding the capability, which is exactly what "shares it with a role" was asking not to
+happen.
 
 ---
 

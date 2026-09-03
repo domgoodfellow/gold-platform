@@ -33,6 +33,7 @@ export const CAPABILITIES = [
   'configuration.propose',
   'assistant.ask',
   'report.read',
+  'report.manage',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -90,4 +91,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   // invoice on the job it belongs to; what this grants is seeing a year of them added up, which
   // exists in no row and is a decision a business takes about who sees the book.
   'report.read': 'See what this business has billed and what its work cost',
+  // Authoring rather than reading: saving a report other people will see is closer to managing
+  // roles than to looking at a number, and it is plausibly a different person.
+  'report.manage': 'Save reports and choose which roles see them',
 };

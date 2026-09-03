@@ -121,15 +121,43 @@ export function periodFor(preset: PeriodPreset, today: string): Period {
   };
 }
 
+/**
+ * One entity to narrow to, or none.
+ *
+ * Three optional ids rather than a filter language, because for this report set there is
+ * nothing else to express: the entity is the grouping, the fields are the money columns, and
+ * the calculation is the subtraction (D36). A filter narrows the *jobs* considered, so a job's
+ * revenue and its costs are always counted together or not at all.
+ */
+export type Filters = {
+  customerId?: string | null;
+  resourceId?: string | null;
+  locationId?: string | null;
+};
+
+export const FILTER_LABELS: Record<keyof Filters, string> = {
+  customerId: 'Customer',
+  resourceId: 'Resource',
+  locationId: 'Location',
+};
+
 export async function listInvoicedAndIncurred(
   db: Db,
-  input: { organizationId: string; grouping: Grouping; period?: Period },
+  input: {
+    organizationId: string;
+    grouping: Grouping;
+    period?: Period;
+    filters?: Filters;
+  },
 ): Promise<FinancialGroup[]> {
   const { data, error } = await db.rpc('invoiced_and_incurred', {
     p_organization_id: input.organizationId,
     p_grouping: input.grouping,
     p_from: input.period?.from ?? undefined,
     p_to: input.period?.to ?? undefined,
+    p_customer_id: input.filters?.customerId ?? undefined,
+    p_resource_id: input.filters?.resourceId ?? undefined,
+    p_location_id: input.filters?.locationId ?? undefined,
   });
 
   if (error) {
