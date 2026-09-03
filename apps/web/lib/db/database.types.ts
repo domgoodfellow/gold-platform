@@ -2900,6 +2900,20 @@ export type Database = {
         Returns: undefined
       }
       run_due_automations: { Args: never; Returns: number }
+      schedule_ahead: {
+        Args: { p_days?: number; p_organization_id: string }
+        Returns: {
+          customer: string
+          ends_local: string
+          resource: string
+          starts_at: string
+          starts_local: string
+          status: string
+          time_zone: string
+          title: string
+          work_item_id: string
+        }[]
+      }
       schedule_work_item: {
         Args: {
           p_ends_at: string

@@ -32,6 +32,18 @@ export type ActionExecutor = (
   input: { organizationId: string; arguments: Record<string, unknown> },
 ) => Promise<void>;
 
+/**
+ * Whether this suggestion could be carried out at all, separately from carrying it out.
+ *
+ * **Two callers, so it is extracted rather than inlined in the executor** — the ordinary rule.
+ * One is the executor itself, a moment before it writes. The other is the recording of the run:
+ * a suggestion that could never work should not reach a person as a button that will fail when
+ * they press it, and the only way to know that at record time is to run the same checks.
+ *
+ * Throws a `DomainError` whose message is for whoever is reading the screen.
+ */
+export type ActionValidator = (values: Record<string, unknown>) => void;
+
 function requiredText(
   values: Record<string, unknown>,
   key: string,
@@ -76,19 +88,35 @@ function requiredInstant(
 /** What a uuid looks like. Nothing else can name a row here. */
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const rescheduleWorkItem: ActionExecutor = async (db, input) => {
-  const workItemId = requiredText(input.arguments, 'work_item_id', 'which job');
-
-  // **A weak model names the job in words rather than by id**, which was watched happening:
-  // `work_item_id` came back as "ID of the Fenwick Road excavator hire job in the system". That
-  // reaches Postgres as a failed cast and an error nobody can act on, so it is caught here for
-  // the sentence rather than for the safety — the write was never going to happen either way.
+/**
+ * Everything about a proposed move that can be judged without touching the database.
+ *
+ * **A weak model names the job in words rather than by id**, which was watched happening:
+ * `work_item_id` came back as "ID of the Fenwick Road excavator hire job in the system". Run at
+ * record time, this is what keeps that from ever appearing as a button.
+ */
+const validateReschedule: ActionValidator = (values) => {
+  const workItemId = requiredText(values, 'work_item_id', 'which job');
   if (!ID.test(workItemId)) {
     throw new DomainError(
       'That suggestion does not name a real job, so it cannot be carried out.',
       'assistant.action_unknown_job',
     );
   }
+
+  const starts = requiredInstant(values, 'starts_at', 'start');
+  const ends = requiredInstant(values, 'ends_at', 'end');
+  if (Date.parse(ends) <= Date.parse(starts)) {
+    throw new DomainError(
+      'That suggestion ends before it starts, so it cannot be carried out.',
+      'assistant.action_backwards',
+    );
+  }
+};
+
+const rescheduleWorkItem: ActionExecutor = async (db, input) => {
+  validateReschedule(input.arguments);
+  const workItemId = requiredText(input.arguments, 'work_item_id', 'which job');
 
   // **The resource is read and passed back, and leaving it out was a bug the tests caught.**
   // `scheduleWorkItem`'s `resourceId` is optional and omitting it means *nobody assigned* rather
@@ -114,8 +142,8 @@ const rescheduleWorkItem: ActionExecutor = async (db, input) => {
   });
 };
 
-const EXECUTORS: Record<string, ActionExecutor> = {
-  propose_reschedule: rescheduleWorkItem,
+const ACTIONS: Record<string, { validate: ActionValidator; execute: ActionExecutor }> = {
+  propose_reschedule: { validate: validateReschedule, execute: rescheduleWorkItem },
 };
 
 /**
@@ -126,7 +154,28 @@ const EXECUTORS: Record<string, ActionExecutor> = {
  * not an error in this system.
  */
 export function executorFor(name: string): ActionExecutor | null {
-  return EXECUTORS[name] ?? null;
+  return ACTIONS[name]?.execute ?? null;
+}
+
+/**
+ * Why this suggestion could not be carried out, or `null` if it could.
+ *
+ * Returns rather than throws, because its caller is deciding what to write down rather than
+ * refusing something somebody asked for.
+ */
+export function reasonActionCannotRun(
+  name: string,
+  values: Record<string, unknown>,
+): string | null {
+  const action = ACTIONS[name];
+  if (!action) return 'This platform cannot carry out that kind of suggestion.';
+
+  try {
+    action.validate(values);
+  } catch (error) {
+    return error instanceof DomainError ? error.message : 'That cannot be carried out.';
+  }
+  return null;
 }
 
 /**

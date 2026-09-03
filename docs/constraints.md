@@ -1970,13 +1970,29 @@ passed every test this repository had.
   deployment looks configured and answers 404 on every question. Both settings are required
   together now, because a missing value meaning *off* is what every other setting here means.
 
-**What a weak model does is a product answer rather than a bug.** Below the frontier models, one
-will propose an action for a job it never looked up — naming it *"ID of the Fenwick Road excavator
-hire job in the system"* — and the guardrails hold in the order they were built for: the write is
-a proposal, so nothing happened; the whitelist validates, so the person is told the suggestion
-does not name a real job; and `answered_by` records which model said it. A business that switched
-to its own hardware can see why the answers got worse, which is the whole reason that column
-exists.
+**Half of what a weak model got wrong was an underbuilt foundation, and that half was fixed.**
+The first read of the `llama3.1:8b` run was *this model is not good enough*, and three of its four
+failures were not about the model at all: it invented an argument because the schema was not
+enforced, it produced a date in 2024 because nothing told it the date, and it guessed at a time
+because **no tool could tell it what was already booked**. That last one is why
+`public.schedule_ahead` exists — the two tools before it answer *what is wrong* and none answered
+*what does the week look like*, which is the first thing anybody moving a job wants to know. It
+returns rows and not availability, so it is not a second `freeWindows` (I5): a model may propose a
+time that looks free and the exclusion constraint still decides (I6).
+
+**The remaining half is the model, and the honest thing is to let it show.** With everything above
+in place, `qwen3.5:9b` asked to move a job calls `work_at_risk`, takes the id out of the result,
+and produces a suggestion somebody can press. `llama3.1:8b` cannot chain those two steps — it
+proposes a move for a job it never looked up, putting a description where the id goes, and firmer
+wording only changed *which* wrong thing it put there. That is a ceiling rather than a defect, and
+the platform's job is to make it harmless rather than to hide it.
+
+**So a suggestion is judged when it is written, not when somebody presses.** The whitelist's
+validators are extracted and run twice — once as the run is recorded and once before the write —
+so a suggestion that could only ever fail is stored as `failed` with the reason beside it and
+never appears as a control. Showing a *Do it* button whose only outcome is a refusal asks somebody
+to discover the problem by causing it. `answered_by` names the model on every row, so a business
+that changed models can see why its answers changed, which is the whole reason that column exists.
 
 **Rejected: the loop in `apps/web`.** Tools would be the domain functions themselves, no token
 would cross a boundary and no second read path would exist. It leaves M9's voice work building a

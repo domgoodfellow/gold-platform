@@ -5,6 +5,37 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A calendar tool, a suggestion judged before it is offered, and Gemini for free
+
+**Half of what the weak model got wrong was an underbuilt foundation.** Reading the first
+`llama3.1:8b` run as *this model is not good enough* was wrong about three of its four failures:
+it invented an argument because the schema was not enforced, dated things 2024 because nothing
+told it the date, and guessed at a time because **no tool could tell it what was already booked**.
+
+**`public.schedule_ahead` is that missing tool** — what is in the diary over the next few days, in
+the business's own hours. It returns rows and not availability, so it is not a second `freeWindows`
+(I5): a model may propose a time that looks free and the exclusion constraint still decides (I6).
+
+**A suggestion is judged when it is written, not when somebody presses it.** The whitelist's
+validators are extracted and run twice, so one that could only ever fail is recorded as `failed`
+with the reason beside it and never appears as a control. Finding the two missing column grants
+took one attempt, because this table's insert grant is by column — the discipline working rather
+than failing.
+
+**Every test founded a business in UTC, which is why a whole class of defect was invisible.** Both
+businesses in `ai-tools.test.ts` now think in a real zone — America/New_York and Asia/Tokyo — and
+the rendered wall clock is asserted against the instant it came from.
+
+**With all of it in place, a 9B model does the whole chain**: asked to move a job it calls
+`work_at_risk`, takes the id from the result, and produces a suggestion somebody can press.
+`llama3.1:8b` still cannot chain those two steps, and firmer wording only changed which wrong
+thing it put where the id goes. That is a ceiling rather than a defect, and it is recorded rather
+than hidden.
+
+**Gemini needs no new code.** Its OpenAI-compatible endpoint is three settings on the existing
+chat-completions provider, which is the point of naming an adapter for the dialect rather than for
+a vendor.
+
 ### Four things a real model found, and a local one is now the cheapest way to run this
 
 Driven end to end against Ollama — `qwen3.5:9b` and `llama3.1:8b` — which is the same path a

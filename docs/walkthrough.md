@@ -343,11 +343,20 @@ python apps/api/dev.py            # :8787
 Both settings are required together — there is no default model name, because one that resolves
 to a tag you do not have makes the deployment look configured and answer 404 on every question.
 
-**Try a weak model too, once.** A 9B model answers all three questions above correctly in a few
-seconds. A smaller one will propose moving a job it never looked up, naming it in words where the
-id goes — and what you should see is the suggestion appearing, *Do it* refusing with *that
-suggestion does not name a real job*, and `answered by` on the row naming the model. That is the
-system behaving correctly with a bad answer in it, which is worth seeing once.
+**Anything hosted that speaks the same dialect is the same three settings**, including Gemini's
+OpenAI-compatible endpoint — `https://generativelanguage.googleapis.com/v1beta/openai` with a
+model and a key. Worth knowing before pointing it at real data: a free tier is usually free
+because the provider may train on what you send, and a tool result is a business's customers and
+jobs.
+
+**Try a weak model too, once.** `qwen3.5:9b` answers every question above correctly in a few
+seconds, and asked to move a job it calls `work_at_risk` first, takes the id from the result, and
+produces a suggestion you can press. `llama3.1:8b` cannot chain those two steps: it proposes a
+move for a job it never looked up, putting a description where the id goes. What you should see
+then is the suggestion recorded as **failed with the reason beside it and no button** — judged
+when the answer was written rather than when somebody presses. `answered by` names the model, so
+a business that changed models can see why the answers changed. That is the system behaving
+correctly with a bad answer in it, and it is worth seeing once.
 
 **Ask it something it has no tool for** — *which service makes the most money* — and it should
 tell you it cannot answer. That is the shape to check rather than a bug: report-shaped questions

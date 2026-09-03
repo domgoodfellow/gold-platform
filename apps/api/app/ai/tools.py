@@ -1,10 +1,12 @@
 """Which questions this platform can be asked, and which function answers each.
 
-**Two, and it grows one entry per slice that has a screen behind it.** A tool list written ahead
+**Three, and the list grows one entry per slice that has a screen behind it.** A tool list written ahead
 of its callers is the speculative abstraction `constraints.md` opens by refusing, and here it has
 a second cost: every tool is a sentence in a prompt, and a model given nine plausible tools
-chooses worse than one given the two that fit. These two are the two questions M8's criterion
-names, and nothing else is here.
+chooses worse than one given the few that fit. Two of these are the questions M8's criterion
+names. The third is here because watching a model handle *move it to 9am tomorrow* showed it had
+no way to find out what was already booked, so it guessed — which is a foundation problem rather
+than a model problem, and the fix is a tool rather than a firmer instruction.
 
 **No tool asks which business, and that was a bug before it was a decision.** Every function
 takes `p_organization_id`, and the first version of this file put it in the schema -- so a model
@@ -60,7 +62,30 @@ CUSTOMERS_NOT_CONTACTED = Tool(
     function="customers_not_contacted",
 )
 
-TOOLS: tuple[Tool, ...] = (WORK_AT_RISK, CUSTOMERS_NOT_CONTACTED)
+SCHEDULE_AHEAD = Tool(
+    name="schedule_ahead",
+    description=(
+        "What is already booked over the next few days, in this business's own hours: each "
+        "job's title, its stage, when it starts and ends, and which resource and customer it "
+        "is for. Use this before suggesting a new time for anything, so the time you suggest "
+        "is one you have checked rather than guessed. It does not tell you what is free — it "
+        "tells you what is taken."
+    ),
+    schema={
+        "type": "object",
+        "properties": {
+            "days": {
+                "type": "integer",
+                "description": "How many days ahead to look, counting from today.",
+            },
+        },
+        "required": ["days"],
+        "additionalProperties": False,
+    },
+    function="schedule_ahead",
+)
+
+TOOLS: tuple[Tool, ...] = (WORK_AT_RISK, CUSTOMERS_NOT_CONTACTED, SCHEDULE_AHEAD)
 
 
 def tool_named(name: str) -> Tool | None:

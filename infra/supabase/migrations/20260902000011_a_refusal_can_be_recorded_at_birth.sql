@@ -1,0 +1,21 @@
+-- Two columns a run may now be born with, because a suggestion can be refused before anybody
+-- sees it.
+--
+-- `20260902000007` granted `insert` on `proposed_action` and `action_outcome` only, because at
+-- the time an action could arrive in exactly one state: pending. That changed when a small local
+-- model proposed moving a job it had never looked up, naming it in words where the id goes --
+-- showing that as a *Do it* button asks somebody to press a control whose only outcome is a
+-- refusal. So the whitelist judges the suggestion when the run is recorded, and a suggestion that
+-- could never work is written as `failed` with the reason beside it.
+--
+-- **The missing grants were found by the feature failing, which is the column discipline working
+-- rather than failing.** The insert grant on this table is by column, so adding two values to an
+-- insert produced `permission denied for table agent_runs` on the first real attempt -- loudly,
+-- at the boundary, in development. A table-wide grant would have accepted them silently, which
+-- is the failure CLAUDE.md records having found twice already.
+--
+-- Nothing else opens. `question`, `answer`, `tools` and `answered_by` remain the only account of
+-- what happened, `created_by` and `organization_id` remain unwritable after the fact, and the
+-- update grant is unchanged: a decided action still cannot be reopened.
+
+grant insert (action_detail, action_taken_at) on public.agent_runs to authenticated;

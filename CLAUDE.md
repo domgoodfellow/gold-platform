@@ -255,6 +255,15 @@ Two more that are easy to undo:
 - **No aggregate-shaped tool exists, and that is the decision rather than a gap.** Revenue by
   customer and least profitable service wait for M7; until then the assistant says it cannot
   answer. A tool that cannot contain a calculation is what makes that hold without discipline.
+- **`schedule_ahead` returns what is booked and never what is free**, which is what keeps it from
+  being a second `freeWindows` in a second runtime (I5). It exists because a model asked to move a
+  job had no way to see the diary and guessed; a model may now propose a time that looks free, and
+  the exclusion constraint still decides whether it lands (I6).
+- **A suggestion is judged when it is written, not when somebody presses.** The whitelist's
+  validators are extracted and run twice — recording a run, and executing the action — so one that
+  could only ever fail is stored as `failed` with its reason and never appears as a button.
+  Offering a control whose only outcome is a refusal asks somebody to find the problem by causing
+  it. Below the frontier models this is the ordinary case, not the rare one.
 
 **The loop writes nothing; a person does.** An answer can come back with an intended action —
 today only *move this job* — recorded on the run as `pending` and performed by nobody until
@@ -463,20 +472,32 @@ rather than bypassed. Four things are easy to undo by accident:
   business arrived reads `provisioned`. `provisioning.test.ts` builds one business through each
   door and compares what came out, because "one creation path" is a claim that decays silently.
 
-**Founding is closed, and `/sign-up` is deliberately still open.** `create_organization` holds
-no grant at all (`20260830000005`), so no stranger — and no staff member either — can found a
-business; every organization exists because somebody at GOLD provisioned it. **Registration
-stays open because an account is not a tenant**: provisioning names an owner who must already
-have an `auth.users` row, and creating one needs the admin API `apps/web` may not hold, so
-closing `/sign-up` literally would leave provisioning nobody to hand a business to. D29's
-consequence line said "closes `/sign-up`" and that was the wrong target, recorded rather than
-quietly reinterpreted.
+**Founding is open to a registered account, and closed to everybody else.**
+`create_organization` is granted to `authenticated` and to nothing else (`20260901000001`), so
+a business comes into existence either because somebody at GOLD provisioned it or because
+somebody who registered with an address founded it — two doors onto one creation path, which is
+D29's actual axis. **Registration stays open because an account is not a tenant**: provisioning
+names an owner who must already have an `auth.users` row, and creating one needs the admin API
+`apps/web` may not hold, so closing `/sign-up` literally would leave provisioning nobody to hand
+a business to. D29's consequence line said "closes `/sign-up`" and that was the wrong target,
+recorded rather than quietly reinterpreted.
 
-**The function is not dropped and must not be.** It keeps `20260830000001`'s guard — an
-anonymous session may not found a business — which was found the expensive way. It is the
-self-serve door with no key cut for it, and M8 is when the key is cut. Because that guard is now
-unreachable from any session, `provisioning.test.ts` asserts the same rule at the door that *is*
-open, and `tenancy.test.ts` asserts the outer refusal; neither alone is the guarantee.
+**This paragraph said the opposite for a day and the code was right.** `20260830000005` revoked
+the grant on D29's argument — an empty business with nobody on the far side doing the
+configuring is not a product — and `20260901000001` put it back on the argument that migration
+could not see: somebody who signs up gets a page saying they belong to no business and, with the
+grant revoked, **no way forward at all**. Closing a door is only honest when the person standing
+at it can get in another way, and being provisioned is not something they can reach from a
+screen. Supabase's advisor reports this function as executable by signed-in users, and that is
+the design rather than a breach.
+
+**The function is not dropped and must not be, and its guard is now the one doing the
+refusing.** It keeps `20260830000001`'s guard — an anonymous session may not found a business —
+which was found the expensive way. An anonymous visitor from the booking flow arrives on the
+same `authenticated` role as a registered one (D22), so while the grant was revoked that guard
+was unreachable and the missing grant refused first; now it is the outer guard again.
+`tenancy.test.ts` asserts the message rather than merely a failure, and `provisioning.test.ts`
+asserts the same rule at the door a person actually uses; neither alone is the guarantee.
 
 **Every test fixture provisions.** `apps/web/tests/helpers/founding.ts` is the one place a test
 business comes into existence, replacing twenty-nine local copies — and the point is that the

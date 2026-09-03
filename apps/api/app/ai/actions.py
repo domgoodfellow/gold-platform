@@ -32,8 +32,13 @@ RESCHEDULE_WORK_ITEM = Tool(
     name="propose_reschedule",
     description=(
         "Suggest moving one job to a different time. This does not move it: the person you are "
-        "answering sees the suggestion and decides. Give the exact start and end you mean, as "
-        "instants. Only suggest this when you have read the job's current window with a tool."
+        "answering sees the suggestion and decides.\n\n"
+        "work_item_id must be an id you have seen in a tool result in this conversation — never "
+        "a description of the job. If you do not have the id, find it first: work_at_risk lists "
+        "jobs that have overrun or have nobody assigned, and schedule_ahead lists what is booked "
+        "from today onwards. A suggestion naming a job in words is thrown away and nobody sees "
+        "it.\n\n"
+        "Give the exact start and end you mean, as instants including the offset."
     ),
     schema={
         "type": "object",

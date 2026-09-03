@@ -9,7 +9,7 @@ import {
 } from '@/lib/adapters/answering';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
-import { executorFor } from './actions';
+import { executorFor, reasonActionCannotRun } from './actions';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
 
 /**
@@ -210,6 +210,7 @@ export async function askQuestion(
   let answeredBy = provider.name;
   let tools: ToolCallRecord[] = [];
   let action: ProposedAction | null = null;
+  let actionRefusal: string | null = null;
 
   try {
     const answer = await provider.answer({
@@ -231,10 +232,12 @@ export async function askQuestion(
     detail = answer.detail;
     answeredBy = answer.answeredBy;
     tools = answer.tools;
-    // **Recorded as pending, never performed.** Whether this platform can carry it out at all is
-    // decided below by the whitelist rather than by whoever suggested it, and whether it *should*
-    // be is decided by the person reading it.
-    action = answer.action && executorFor(answer.action.name) ? answer.action : null;
+    // **Recorded as pending, never performed** — but only if it could be carried out at all.
+    // Whether this platform knows the action, and whether its arguments make sense, is decided
+    // here by the whitelist rather than by whoever suggested it; whether it *should* happen is
+    // decided by the person reading it.
+    action = answer.action;
+    actionRefusal = action ? reasonActionCannotRun(action.name, action.arguments) : null;
   } catch (failure) {
     // Their words, not a paraphrase of them (I25). A sentence an operator can act on is the
     // whole value of recording this at all.
@@ -257,7 +260,14 @@ export async function askQuestion(
       answered_by: answeredBy,
       created_by: actor.id,
       proposed_action: action as unknown as Json,
-      action_outcome: action ? 'pending' : null,
+      // **A suggestion that cannot work is recorded as having failed, not offered as a button.**
+      // Watched with a small local model: it proposed moving a job it had never looked up,
+      // naming it in words where the id goes. Showing that as *Do it* asks somebody to press a
+      // control whose only outcome is a refusal — so the refusal happens now, the suggestion
+      // stays visible with the reason beside it, and nothing is offered that cannot be done.
+      action_outcome: action ? (actionRefusal ? 'failed' : 'pending') : null,
+      action_detail: actionRefusal,
+      action_taken_at: action && actionRefusal ? new Date().toISOString() : null,
     })
     .select(COLUMNS)
     .single();

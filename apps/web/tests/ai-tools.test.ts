@@ -15,7 +15,7 @@ import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { decideOnAction } from '@/lib/domain/assistant/questions';
-import { executorFor } from '@/lib/domain/assistant/actions';
+import { executorFor, reasonActionCannotRun } from '@/lib/domain/assistant/actions';
 import { foundBusiness } from './helpers/founding';
 
 /**
@@ -98,10 +98,15 @@ async function newBusiness(label: string): Promise<Business> {
   const signIn = await db.auth.signInWithPassword({ email, password });
   if (signIn.error) throw signIn.error;
 
+  // **Neither business thinks in UTC, and that is the point.** Every test in this repository
+  // founded a UTC business until a real model was asked a real question and answered an hour
+  // wrong for Amsterdam and nine for Cebu — a whole class of defect that a UTC fixture cannot
+  // see, because in UTC the rendered time and the instant are the same string.
   const organizationId = await foundBusiness({
     ownerEmail: email,
     name: `${label} Ltd`,
     currency: 'EUR',
+    timezone: label === 'tool-yard' ? 'America/New_York' : 'Asia/Tokyo',
   });
 
   // Each business's own words, and they share none. What the tool reports back is the tenant's
@@ -180,7 +185,14 @@ async function newBusiness(label: string): Promise<Business> {
 async function askTool(db: SupabaseClient, organizationId: string) {
   const { data, error } = await db.rpc('work_at_risk', { p_organization_id: organizationId });
   if (error) throw error;
-  return (data ?? []) as { title: string; status: string; reason: string }[];
+  return (data ?? []) as {
+    title: string;
+    status: string;
+    reason: string;
+    scheduled_from: string;
+    starts_local: string;
+    time_zone: string;
+  }[];
 }
 
 async function askQuiet(db: SupabaseClient, organizationId: string, days: number) {
@@ -252,6 +264,28 @@ describe('a tool is a function in this database (D34)', () => {
     expect(mine.map((row) => row.status)).not.toContain('Shinsatsu-chū');
 
     expect(mine.every((row) => row.reason === 'window_passed')).toBe(true);
+  });
+
+  it('answers in the business’s own hours, not in UTC', async () => {
+    // **The regression that a real model found and no test could.** A tool hands a model an
+    // instant and the model is what renders it — so the business's own wall clock is rendered
+    // here, in Postgres, rather than by giving a model a zone name and hoping it does date
+    // arithmetic with daylight saving in it correctly.
+    for (const business of [yard, clinic]) {
+      const [row] = await askTool(business.db, business.organizationId);
+      expect(row).toBeDefined();
+
+      const expected = new Intl.DateTimeFormat('sv-SE', {
+        timeZone: row.time_zone,
+        dateStyle: 'short',
+        timeStyle: 'short',
+      }).format(new Date(row.scheduled_from));
+
+      expect(row.starts_local).toBe(expected);
+      // And it is genuinely not the UTC string, or this assertion would pass on a UTC tenant
+      // while the defect it exists for sat untouched.
+      expect(row.starts_local).not.toBe(row.scheduled_from.slice(0, 16).replace('T', ' '));
+    }
   });
 
   it('returns nothing when handed another business’s id', async () => {
@@ -601,6 +635,62 @@ describe('a write is proposed, and a person decides (D34)', () => {
     // dispatched.
     expect(executorFor('propose_reschedule')).not.toBeNull();
     expect(executorFor('delete_everything')).toBeNull();
+  });
+
+  it('judges a suggestion before it is ever offered as a button', async () => {
+    // **The same checks the executor runs, run at record time.** A suggestion that could only
+    // ever fail should not reach somebody as a control they can press — watched with a small
+    // local model naming a job in words where the id goes.
+    const good = {
+      work_item_id: yard.lateId,
+      starts_at: '2026-09-04T09:00:00+10:00',
+      ends_at: '2026-09-04T10:00:00+10:00',
+      because: 'It overran.',
+    };
+    expect(reasonActionCannotRun('propose_reschedule', good)).toBeNull();
+
+    expect(
+      reasonActionCannotRun('propose_reschedule', {
+        ...good,
+        work_item_id: 'the Fenwick Road excavator hire job',
+      }),
+    ).toContain('does not name a real job');
+
+    expect(
+      reasonActionCannotRun('propose_reschedule', { ...good, starts_at: 'tomorrow morning' }),
+    ).toContain('not a time');
+
+    // Ends before it starts: refused here rather than by the domain function, so the sentence
+    // arrives while somebody is still reading the suggestion.
+    expect(
+      reasonActionCannotRun('propose_reschedule', {
+        ...good,
+        ends_at: '2026-09-04T08:00:00+10:00',
+      }),
+    ).toContain('ends before it starts');
+
+    expect(reasonActionCannotRun('delete_everything', good)).toContain('cannot carry out');
+  });
+
+  it('shows the week ahead in the business’s own hours, and computes no availability', async () => {
+    const { data, error } = await yard.db.rpc('schedule_ahead', {
+      p_organization_id: yard.organizationId,
+      p_days: 7,
+    });
+    expect(error).toBeNull();
+
+    const booked = (data ?? []) as { title: string; starts_local: string; time_zone: string }[];
+    // The overran job ended yesterday, so the week ahead does not carry it; what it carries is
+    // work that has not finished yet.
+    expect(booked.every((row) => row.time_zone === 'America/New_York')).toBe(true);
+    for (const row of booked) {
+      expect(row.starts_local).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+    }
+
+    // **It answers what is taken, never what is free.** There is one availability calculation
+    // in this platform and it is not here (I5) — a tool that returned free windows would be a
+    // second one, in a second runtime, which is precisely what D30 refused for automations.
+    expect(Object.keys(booked[0] ?? {})).not.toContain('free');
   });
 });
 
