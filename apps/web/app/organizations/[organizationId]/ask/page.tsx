@@ -41,6 +41,44 @@ export default async function AskPage({
         anything.
       </p>
 
+      {/* **Where the data goes, said on the screen that sends it.**
+          This is the only feature in the platform that sends a business's rows anywhere, so it is
+          the only screen that has to say so — in the platform's own voice about application
+          state, which is the one thing it may describe (D34).
+
+          A `<details>` rather than a hover tooltip: a tooltip is unreachable on a phone, invisible
+          to a keyboard, and this is exactly the sentence somebody needs on the device they are
+          standing on a site with. No JavaScript, so it works on a server-rendered page. */}
+      <details className="group mt-2 max-w-2xl text-xs opacity-70">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className="grid h-4 w-4 place-items-center rounded-full border border-current text-[10px] leading-none"
+          >
+            ?
+          </span>
+          <span className="underline underline-offset-2">Where your question goes</span>
+        </summary>
+
+        <div className="mt-2 space-y-2 border-l border-black/15 pl-3 dark:border-white/20">
+          <p>
+            Your question, and the rows read to answer it, are sent to whichever model this
+            installation is set up with. Each answer below records which one replied.
+          </p>
+          <p>
+            A model running on this installation&rsquo;s own hardware sends nothing outside it. A
+            hosted one does, and a <strong>free tier is usually free because the provider may keep
+            what it receives and train on it</strong> — which makes it suitable for trying this out
+            and not for a real customer&rsquo;s details. Whoever runs this installation chooses,
+            and can tell you which it is.
+          </p>
+          <p>
+            A model is never shown more than you can see yourself: every answer is assembled under
+            your own sign-in, from the same records these screens show you.
+          </p>
+        </div>
+      </details>
+
       {!canAnswer && (
         <p className="mt-4 max-w-2xl rounded border border-black/15 p-3 text-sm dark:border-white/20">
           This installation has nothing configured to answer questions, so nothing can be asked

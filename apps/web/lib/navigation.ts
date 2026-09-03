@@ -218,8 +218,13 @@ export const MODULES = [
   {
     key: 'assistant',
     label: 'Ask',
+    // **The one module description that says where data goes, because it is the one module that
+    // sends any.** Everything else in this list runs entirely inside this installation. Switching
+    // this on is the moment somebody decides that questions and the rows answering them may leave
+    // the database, so it is the moment they should be told — not a paragraph in a README read by
+    // whoever deployed it.
     description:
-      'Ask about this business in plain words and get an answer built from what you can already see. It reads and changes nothing, and a business that would rather look at the screens itself runs without it.',
+      'Ask about this business in plain words and get an answer built from what you can already see. It reads and changes nothing. Questions, and the rows read to answer them, are sent to whichever model this installation uses — see the note on the Ask screen. A business that would rather look at the screens itself runs without it.',
     // **Its own working surface, which no other module's `configuredAt` points at.** There is
     // nothing to configure: no threshold, no key, no template. What the switch leads to is the
     // page where the thing happens, and if this deployment cannot answer questions that page

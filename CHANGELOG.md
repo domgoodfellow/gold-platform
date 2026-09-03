@@ -5,6 +5,24 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Where your question goes, said on the screen that sends it
+
+The assistant is the only feature in this platform that sends a business's rows anywhere, so it
+is the only screen that has to say so. Two places, chosen because they are the two moments
+somebody decides:
+
+**At the switch.** The module's description on the settings screen now says that questions, and
+the rows read to answer them, are sent to whichever model the installation uses.
+
+**On the Ask screen**, as a small `?` that opens: which model replied is recorded on every answer;
+a model on the installation's own hardware sends nothing outside it; and a **free tier is usually
+free because the provider may keep what it receives and train on it**, which makes it right for
+trying this out and wrong for a real customer's details.
+
+A `<details>` rather than a hover tooltip. A tooltip is unreachable on a phone and invisible to a
+keyboard, and this is exactly the sentence somebody needs on the device they are standing on a
+site with. No JavaScript, so it works on a server-rendered page.
+
 ### A calendar tool, a suggestion judged before it is offered, and Gemini for free
 
 **Half of what the weak model got wrong was an underbuilt foundation.** Reading the first
