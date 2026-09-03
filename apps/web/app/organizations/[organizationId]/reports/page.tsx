@@ -48,6 +48,27 @@ export default async function ReportsPage({
       ? (period as PeriodPreset)
       : 'year';
 
+  // **A courtesy, not the guard.** `invoiced_and_incurred` raises `42501` for a caller without
+  // `report.read`, so somebody reaching this page's data another way is refused by the database
+  // exactly as they would be here. What this avoids is showing a role an error where a sentence
+  // is the honest answer (I12).
+  const mayRead = organization.capabilities.includes('report.read');
+
+  if (!mayRead) {
+    return (
+      <>
+        <p className="mt-1 text-sm opacity-70">
+          What this business has invoiced, and what its work has consumed.
+        </p>
+        <p className="mt-8 text-sm opacity-70">
+          Your role, {organization.role}, cannot see this business’s figures. Reading a total is
+          a different thing from reading the rows behind it — anybody here can open one invoice
+          on the job it belongs to, and this page adds a year of them up.
+        </p>
+      </>
+    );
+  }
+
   // This business's today, so "this month" begins where the business is (I9).
   const today = todayInZone(organization.timezone);
   const groups = await listInvoicedAndIncurred(db, {

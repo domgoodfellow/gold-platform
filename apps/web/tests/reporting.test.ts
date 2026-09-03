@@ -12,6 +12,7 @@ import {
   type FinancialGroup,
 } from '@/lib/domain/reporting/financials';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
+import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { addPricedLine } from '@/lib/domain/pricing/prices';
 import { recordCost } from '@/lib/domain/work-items/consumption';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
@@ -372,14 +373,99 @@ describe('what a business billed, and what its work consumed', () => {
 
   it('is narrowed by the caller’s own session, never by the id it was handed (D34)', async () => {
     // The failure a tool layer invites: if the organization id were what kept a caller inside
-    // their own business, the protection would be a value the caller chose. It is not — RLS
-    // reads the caller's own JWT, so another business's id in this session returns nothing.
-    const groups = await listInvoicedAndIncurred(rival.db, {
+    // their own business, the protection would be a value the caller chose. It is not.
+    //
+    // **This used to assert an empty list and now asserts a refusal, because the guard moved
+    // earlier.** `app.has_capability` is keyed to the caller's own memberships, so a caller
+    // naming another business is stopped before a single row is read rather than after RLS has
+    // filtered them all away. Stronger, and worth recording rather than quietly rewriting.
+    await expect(
+      listInvoicedAndIncurred(rival.db, {
+        organizationId: acme.organizationId,
+        grouping: 'customer',
+      }),
+    ).rejects.toThrow(/may not read/);
+
+    // And a business that does not exist is refused identically. Somebody probing this cannot
+    // tell a real tenant they may not read from a uuid nobody has ever used, which is the same
+    // property `booking_organization` keeps when it answers null for two different reasons.
+    await expect(
+      listInvoicedAndIncurred(rival.db, {
+        organizationId: randomUUID(),
+        grouping: 'customer',
+      }),
+    ).rejects.toThrow(/may not read/);
+  });
+
+  it('shows a member only their own business’s figures, with another’s in the same database', async () => {
+    // The other half of the same claim, now that the refusal above no longer exercises it: two
+    // tenants have invoices in one database and `acme`'s totals are `acme`'s alone. The
+    // correspondence test would already fail if this were untrue — it matches an exact figure —
+    // but that reads as an arithmetic assertion and this reads as the tenancy one it also is.
+    const theirCustomer = await createCustomer(rival.db, {
+      organizationId: rival.organizationId,
+      name: 'Somebody else entirely',
+    });
+    await billedJob(rival, {
+      title: 'Not acme’s',
+      customerId: theirCustomer,
+      issuedAt: '2026-08-11T04:00:00.000Z',
+    });
+
+    const groups = await listInvoicedAndIncurred(acme.db, {
       organizationId: acme.organizationId,
       grouping: 'customer',
     });
 
-    expect(groups).toEqual([]);
+    expect(groups.map((group) => group.label)).not.toContain('Somebody else entirely');
+    // The unattributed bucket is the one a leak would inflate without adding a label, so it is
+    // asserted at the figure test 3 established rather than merely being present.
+    expect(find(groups, null)?.invoicedMinor).toBe(24_000);
+  });
+
+  it('refuses a member who does not hold report.read, in the database (I16)', async () => {
+    // **A whole tenant of its own, because this demotes the only member it has.** The
+    // capabilities left are plainly not nothing — this member can create work, price it and
+    // invoice it, which means they can open every invoice this report adds up, one at a time.
+    // What they cannot do is see them added up, and that is the distinction
+    // `20260903000003` exists to make: a total is a disclosure that exists in no row.
+    //
+    // Asserted against the function rather than against the page, because hiding a page is a
+    // courtesy and the refusal has to survive somebody calling the RPC directly (I12).
+    const limited = await newTenant('rep-limited');
+    const roleId = await createRole(limited.db, {
+      organizationId: limited.organizationId,
+      name: 'Coordinator',
+      capabilities: [
+        'role.manage',
+        'work_item.create',
+        'work_item.price',
+        'price.manage',
+        'invoice.issue',
+      ],
+    });
+    const { data: membership } = await limited.db
+      .from('memberships')
+      .select('id')
+      .eq('organization_id', limited.organizationId)
+      .single();
+    await assignRole(limited.db, { membershipId: membership!.id, roleId });
+
+    await expect(
+      listInvoicedAndIncurred(limited.db, {
+        organizationId: limited.organizationId,
+        grouping: 'customer',
+      }),
+    ).rejects.toMatchObject({ code: 'reporting.financials_failed' });
+
+    // The rows themselves are untouched, which is the half that makes the distinction real
+    // rather than a slogan: this member still reads every invoice the report would have summed.
+    const { data: invoices, error } = await limited.db
+      .from('invoices')
+      .select('id')
+      .eq('organization_id', limited.organizationId);
+    expect(error).toBeNull();
+    expect(invoices).toEqual([]);
   });
 
   it('refuses a grouping it does not implement, rather than answering something else', async () => {

@@ -130,12 +130,24 @@ describe('schema conformance', () => {
     expect(rows).toEqual([]);
   });
 
-  it('backs every declared capability with a database policy (I16)', async () => {
+  it('backs every declared capability with a database policy or a database function (I16)', async () => {
     // A capability enforced only in TypeScript is a capability a direct RPC call ignores.
     // This asserts each one named in code appears in some policy's USING or WITH CHECK, so
-    // adding an entry to CAPABILITIES without the policy that gives it teeth fails here
+    // adding an entry to CAPABILITIES without the thing that gives it teeth fails here
     // rather than shipping as a promise the UI makes and the database does not keep.
-    const { rows } = await db.query<{ expression: string }>(
+    //
+    // **Function bodies count too, and that is a clarification rather than a loosening.** What
+    // this invariant forbids is enforcement that lives outside the database, where a direct call
+    // walks past it. A function that raises on `app.has_capability` is inside it and is refused
+    // just as hard — `add_member_by_email` has enforced `role.manage` that way since M1, because
+    // `auth.users` is not readable and no policy could have expressed it.
+    //
+    // `report.read` is the case that made this explicit. It gates an aggregate, and an aggregate
+    // has no rows to put a policy on: the invoices and costs underneath it must stay readable by
+    // any member, because a job screen shows them. What is gated is the summing, and the summing
+    // is a function. `20260903000003` records why that is a real disclosure rather than a second
+    // gate over rows somebody could already read.
+    const { rows: policies } = await db.query<{ expression: string }>(
       `select coalesce(pg_get_expr(p.polqual, p.polrelid), '')
               || ' '
               || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') as expression
@@ -145,12 +157,45 @@ describe('schema conformance', () => {
         where n.nspname = 'public'`,
     );
 
-    const allPolicies = rows.map((r) => r.expression).join(' ');
+    // Only where the capability is actually consulted. Matching `has_capability` in the same
+    // body is what keeps this from passing on a function that merely mentions the string in a
+    // comment, which would make the whole assertion decorative.
+    const { rows: functions } = await db.query<{ body: string }>(
+      `select p.prosrc as body
+         from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname in ('public', 'app')
+          and p.prosrc like '%has_capability%'`,
+    );
+
+    const enforcement = [
+      ...policies.map((r) => r.expression),
+      ...functions.map((r) => r.body),
+    ].join(' ');
+
     const unenforced = CAPABILITIES.filter(
-      (capability) => !allPolicies.includes(`'${capability}'`),
+      (capability) => !enforcement.includes(`'${capability}'`),
     );
 
     expect(unenforced).toEqual([]);
+  });
+
+  it('catches a capability nothing enforces, rather than passing by construction', async () => {
+    // The negative control for the check above. Without it, widening the search from policies to
+    // function bodies could have made the assertion unfalsifiable and nobody would know.
+    const { rows: policies } = await db.query<{ expression: string }>(
+      `select coalesce(pg_get_expr(p.polqual, p.polrelid), '') as expression from pg_policy p`,
+    );
+    const { rows: functions } = await db.query<{ body: string }>(
+      `select p.prosrc as body from pg_proc p where p.prosrc like '%has_capability%'`,
+    );
+
+    const enforcement = [
+      ...policies.map((r) => r.expression),
+      ...functions.map((r) => r.body),
+    ].join(' ');
+
+    expect(enforcement).not.toContain(`'report.write_everything'`);
   });
 
   it('keeps the generated database types current with the schema (D15)', async () => {

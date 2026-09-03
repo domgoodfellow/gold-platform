@@ -315,6 +315,16 @@ change. `constraints.md` D35 holds the decisions. Five things are load-bearing:
   materialized view — I4's own record names a stored subtotal as the thing that becomes a second
   opinion, and a materialized one is that with a performance excuse. Nothing has measured a slow
   query yet.
+- **`report.read` gates the summing, not the rows, and it is checked inside the function.**
+  `20260902000006` said a capability over what a tool reaches would be a mistake, because a tool
+  reshapes rows its caller could already read; that is right about rows and an aggregate has
+  none. *What this business billed each customer this year* is in no table and cannot be
+  assembled one row at a time, so it is a disclosure that did not previously exist. The invoices
+  and costs underneath stay readable by every member because a job screen shows them.
+  `schema-conformance.test.ts` therefore reads **function bodies as well as policies** for I16 —
+  a clarification rather than a loosening, since `add_member_by_email` has enforced `role.manage`
+  in a function since M1. Expect the first live tenant to notice that **a capability is never
+  granted retroactively**: hand-configured roles need it adding on the Roles screen.
 
 What is **not** built is the rest of M7: a report is not yet a row a tenant saves, and there is no
 dashboard and no audience. Both are decisions that depend on this one working, and D35 declines to
