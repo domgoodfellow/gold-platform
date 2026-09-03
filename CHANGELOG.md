@@ -5,6 +5,35 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A cost and an invoice say when they happened, not when somebody typed them in
+
+**An asymmetry closed rather than a feature added.** `record_payment` has taken a caller-supplied
+`p_received_at` since invoices arrived and coalesces it to `now()`; its two hand-entered siblings
+never got the argument. So a fuel receipt from last Thursday was stamped with the moment somebody
+got round to entering it, and an invoice for work finished last month was dated today.
+
+Both tables already knew these were two clocks — `work_item_costs` carries `incurred_at` *and*
+`created_at`, `invoices` carries `issued_at` beside it — and only the platform's own one was ever
+writable, which left the other a slower copy of it. `recordCost` now takes `incurredAt` and
+`issueInvoice` takes `issuedAt`, both optional, both coalesced in the database so an unfilled
+field means the instant the row was written rather than midnight of a day some process guessed
+at from its own clock.
+
+**The payment form was missing the input its action always read.** `recordPaymentAction` has
+passed `receivedAt` through since M4 with nothing on screen to fill it, so every hand-entered
+payment was stamped with the moment it was typed. All three date fields now exist.
+
+Numbers still follow the order invoices were raised in rather than the dates on them, and a test
+asserts it: a business that back-dates out of order gets a number that does not match its date,
+which is theirs to notice, because numbering by date would mean renumbering documents already
+sent.
+
+**What this deliberately does not touch is `created_at` anywhere, and `events.occurred_at`.**
+Those are this platform's own record of when a row appeared and when somebody acted. A caller
+that can set them is a caller that can write a customer dated before the business existed and an
+event log that is not a log. A business wanting to record when somebody *became* a customer has
+custom fields for it, which is the answer that does not cost the trail its meaning.
+
 ### A scope is settled once per statement, not once per row
 
 Twelve policies written for outsiders were charging operators for the privilege. A `stable`

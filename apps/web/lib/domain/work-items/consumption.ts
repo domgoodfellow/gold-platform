@@ -176,10 +176,21 @@ export async function listCosts(
  * The currency is not an argument. `record_work_item_cost` reads it from the organization and
  * writes it onto the row, so a caller cannot assert what a business trades in, and a later
  * change of currency does not silently reinterpret what this job cost (I8).
+ *
+ * **`incurredAt` is when the cost happened, not when it was entered**, and it is optional
+ * because most costs are entered as they happen. The row has always carried both dates and
+ * only `created_at` was ever writable, which made a receipt from last Tuesday claim to be from
+ * whenever somebody got round to it. `recordPayment` has taken this argument since invoices
+ * arrived; this is the same one, on the sibling that was overlooked.
  */
 export async function recordCost(
   db: Db,
-  input: { workItemId: string; description: string; amountMinor: number },
+  input: {
+    workItemId: string;
+    description: string;
+    amountMinor: number;
+    incurredAt?: string | null;
+  },
 ): Promise<string> {
   await requireActor(db);
 
@@ -204,10 +215,23 @@ export async function recordCost(
     throw new DomainError('A cost of nothing is not a cost.', 'costs.amount_zero');
   }
 
+  // Null means "now", decided in the database rather than here, so a cost entered as it
+  // happens carries the instant the row was written rather than one this process guessed.
+  let incurredAt: string | null = null;
+  if (input.incurredAt) {
+    const incurred = new Date(input.incurredAt);
+    if (Number.isNaN(incurred.getTime())) {
+      throw new DomainError('That is not a date.', 'costs.incurred_invalid');
+    }
+    incurredAt = incurred.toISOString();
+  }
+
   const { data, error } = await db.rpc('record_work_item_cost', {
     p_work_item_id: input.workItemId,
     p_description: description,
     p_amount_minor: input.amountMinor,
+    // D15: Postgres records no nullability for a function argument.
+    p_incurred_at: incurredAt as string,
   });
 
   if (error) {

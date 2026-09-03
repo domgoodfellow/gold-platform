@@ -2800,7 +2800,7 @@ export type Database = {
         }[]
       }
       issue_invoice: {
-        Args: { p_due_at: string; p_work_item_id: string }
+        Args: { p_due_at: string; p_issued_at: string; p_work_item_id: string }
         Returns: string
       }
       link_customer_location: {
@@ -2875,6 +2875,7 @@ export type Database = {
         Args: {
           p_amount_minor: number
           p_description: string
+          p_incurred_at: string
           p_work_item_id: string
         }
         Returns: string
