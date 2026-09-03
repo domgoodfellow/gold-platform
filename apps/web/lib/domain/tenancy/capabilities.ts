@@ -31,6 +31,7 @@ export const CAPABILITIES = [
   'payment.record',
   'automation.manage',
   'configuration.propose',
+  'assistant.ask',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -79,4 +80,9 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   // create a role cannot apply a proposal that creates one, and the refusal comes from the
   // policy on `roles` rather than from anything on this list (D32).
   'configuration.propose': 'Ask the platform to draft this business’s setup',
+  // Its own authority, and not because a question is dangerous — a tool reads nothing its
+  // caller could not already read. It is because asking spends this deployment's money and
+  // sends this business's rows to whoever answers, and both are decisions somebody takes on
+  // purpose rather than inherit.
+  'assistant.ask': 'Ask the platform questions about this business',
 };

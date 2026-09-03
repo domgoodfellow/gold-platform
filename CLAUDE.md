@@ -22,10 +22,10 @@ checklists to documents.
 
 ## Current state
 
-**M1's, M2's, M3's, M4's, M5's and M6's acceptance criteria are met, and M8's second one is**,
-each demonstrated by one test rather than by a table count. M8's *first* criterion — asking the
-system questions through domain tools — is not built and waits for M7's aggregate layer; see
-`roadmap.md`'s *Order of work*, which splits that milestone across the list.
+**M1's, M2's, M3's, M4's, M5's, M6's and both of M8's acceptance criteria are met**, each
+demonstrated by one test rather than by a table count. M8's *first* criterion did not wait for
+M7: the dependency was on the report-shaped questions only, and D34 records both the decision and
+what keeps the distinction from rotting.
 
 `apps/web/tests/milestone-m1.test.ts` builds two whole businesses from byte-identical input
 in one database and asserts that neither can observe or block the other.
@@ -74,7 +74,7 @@ The kernel is `organizations`, `memberships`, `events`, `customers`, `roles`,
 configuration engine — `price_book_items` and `work_item_priced_lines`; and — the automation
 engine — `automation_rules`, `automation_conditions`, `automation_actions`, `automation_runs`,
 `automation_counter_marks`, `message_templates`, `message_deliveries`, `external_readings` and
-`asset_readings`; the one tenant resolution function and `app.has_capability`; and a vertical
+`asset_readings`; and — the question tools — `agent_runs` and `public.work_at_risk`; the one tenant resolution function and `app.has_capability`; and a vertical
 slice behind authentication for each.
 
 Six things about the work engine are load-bearing and easy to undo by accident:
@@ -212,6 +212,71 @@ Four things are easy to undo by accident:
   level up. `applyConfigurationProposal` **reads the row rather than trusting the proposal it was
   handed**, which a test found the hard way — the first version checked a caller's snapshot, and a
   stale one walked past the guard and re-ran the whole sequence.
+
+**The question tools are built, and they are M8's first criterion.** An operator asks on
+`/organizations/{id}/ask`, the loop runs in `apps/api`, and every read it performs happens under
+that person's own access token. `constraints.md` D34 holds the decisions. Five things are
+load-bearing:
+
+- **A tool is a `stable`, `security invoker` function in Postgres**, and Python holds only its
+  name, its sentence and its JSON schema. Not a query in the other runtime: *at risk of being
+  late* is a definition, and a definition there is business logic in the wrong place. Postgres
+  refuses a write inside a non-volatile function when it runs — at execution rather than at
+  `create function`, which is why `ai-tools.test.ts` reads `provolatile` for every registered
+  name instead of trusting the migration.
+- **The argument is not what narrows, and this is the failure mode a tool layer invites.** A model
+  chooses a tool's arguments, so protection that a model can pick the value of is no protection.
+  RLS decides and the caller's own JWT is what RLS reads: one business's id handed to another
+  business's session returns nothing. **A model is not asked which business either** — the first
+  schemas required an id nothing had ever told it, which makes every answer silently empty; the
+  loop fills it in and drops one a model supplies.
+- **A tool's joins are part of what it discloses.** `work_at_risk` joins `work_item_statuses`, so
+  a portal customer — who may read their own jobs and never the business's board vocabulary —
+  gets nothing rather than a narrowed list. Each joined table's own policies apply, so a tool
+  answers *less*, never wrongly. Found by testing, not by reasoning.
+- **This axis has no Postgres role, and that absence is the security model.** `payment_webhook`
+  and `automation_runner` hold one because no person is present; here one always is, so
+  `apps/api` forwards the token and mints nothing. An `assistant` role reading across tenants and
+  filtering by an organization id would be the argument mistake above wearing an identity.
+- **A run is readable by the person who asked, and by nobody else in the business** — the one
+  place this schema departs from *a member sees their business's rows*, because an answer holds
+  whatever its asker could see. `agent_runs` records the question, the answer, and each tool call
+  as a name, its arguments and a row count. **Never the rows**, which would put tenant data in a
+  table whose policies are not the ones protecting the original.
+
+Two more that are easy to undo:
+
+- **The loop sits above a provider contract and uses no vendor's tool-runner.** `app/ai/loop.py`
+  owns iteration, dispatch, the cap and the record; a provider answers *what is the next turn*.
+  Taking the SDK's runner would mean a second loop the day a business answers with its own model,
+  and an `agent_runs` row that means two things. Two providers ship: Claude by default, and
+  anything speaking chat completions — which is how a deployment that must send no rows to
+  anybody answers at all.
+- **No aggregate-shaped tool exists, and that is the decision rather than a gap.** Revenue by
+  customer and least profitable service wait for M7; until then the assistant says it cannot
+  answer. A tool that cannot contain a calculation is what makes that hold without discipline.
+- **`schedule_ahead` returns what is booked and never what is free**, which is what keeps it from
+  being a second `freeWindows` in a second runtime (I5). It exists because a model asked to move a
+  job had no way to see the diary and guessed; a model may now propose a time that looks free, and
+  the exclusion constraint still decides whether it lands (I6).
+- **A suggestion is judged when it is written, not when somebody presses.** The whitelist's
+  validators are extracted and run twice — recording a run, and executing the action — so one that
+  could only ever fail is stored as `failed` with its reason and never appears as a button.
+  Offering a control whose only outcome is a refusal asks somebody to find the problem by causing
+  it. Below the frontier models this is the ordinary case, not the rare one.
+
+**The loop writes nothing; a person does.** An answer can come back with an intended action —
+today only *move this job* — recorded on the run as `pending` and performed by nobody until
+somebody presses the button, at which point `apps/web` maps the name through **its own**
+whitelist and calls `scheduleWorkItem` under that person's session. Four things are easy to undo:
+the whitelist lives on the executing side, so a name the loop invents fails closed rather than
+dispatching; an action carries no Postgres function, so there is nothing in the Python plane that
+could perform one; executing adds no capability, because the policy on `work_items` refuses
+exactly as it would for a drag on the schedule, and the exclusion constraint decides whether the
+window lands (I6); and a decided action is frozen by `agent_runs_update` rather than only by the
+flow. **Rescheduling deliberately cannot reassign** — a test caught the first executor omitting
+the resource, which `scheduleWorkItem` reads as *nobody assigned*, so moving a job silently took
+the person off it.
 
 **Standing a business up is two acts by two parties, and the second of them is one function
 that must never learn what kind of business it is holding.** GOLD creates the business —
@@ -407,20 +472,32 @@ rather than bypassed. Four things are easy to undo by accident:
   business arrived reads `provisioned`. `provisioning.test.ts` builds one business through each
   door and compares what came out, because "one creation path" is a claim that decays silently.
 
-**Founding is closed, and `/sign-up` is deliberately still open.** `create_organization` holds
-no grant at all (`20260830000005`), so no stranger — and no staff member either — can found a
-business; every organization exists because somebody at GOLD provisioned it. **Registration
-stays open because an account is not a tenant**: provisioning names an owner who must already
-have an `auth.users` row, and creating one needs the admin API `apps/web` may not hold, so
-closing `/sign-up` literally would leave provisioning nobody to hand a business to. D29's
-consequence line said "closes `/sign-up`" and that was the wrong target, recorded rather than
-quietly reinterpreted.
+**Founding is open to a registered account, and closed to everybody else.**
+`create_organization` is granted to `authenticated` and to nothing else (`20260901000001`), so
+a business comes into existence either because somebody at GOLD provisioned it or because
+somebody who registered with an address founded it — two doors onto one creation path, which is
+D29's actual axis. **Registration stays open because an account is not a tenant**: provisioning
+names an owner who must already have an `auth.users` row, and creating one needs the admin API
+`apps/web` may not hold, so closing `/sign-up` literally would leave provisioning nobody to hand
+a business to. D29's consequence line said "closes `/sign-up`" and that was the wrong target,
+recorded rather than quietly reinterpreted.
 
-**The function is not dropped and must not be.** It keeps `20260830000001`'s guard — an
-anonymous session may not found a business — which was found the expensive way. It is the
-self-serve door with no key cut for it, and M8 is when the key is cut. Because that guard is now
-unreachable from any session, `provisioning.test.ts` asserts the same rule at the door that *is*
-open, and `tenancy.test.ts` asserts the outer refusal; neither alone is the guarantee.
+**This paragraph said the opposite for a day and the code was right.** `20260830000005` revoked
+the grant on D29's argument — an empty business with nobody on the far side doing the
+configuring is not a product — and `20260901000001` put it back on the argument that migration
+could not see: somebody who signs up gets a page saying they belong to no business and, with the
+grant revoked, **no way forward at all**. Closing a door is only honest when the person standing
+at it can get in another way, and being provisioned is not something they can reach from a
+screen. Supabase's advisor reports this function as executable by signed-in users, and that is
+the design rather than a breach.
+
+**The function is not dropped and must not be, and its guard is now the one doing the
+refusing.** It keeps `20260830000001`'s guard — an anonymous session may not found a business —
+which was found the expensive way. An anonymous visitor from the booking flow arrives on the
+same `authenticated` role as a registered one (D22), so while the grant was revoked that guard
+was unreachable and the missing grant refused first; now it is the outer guard again.
+`tenancy.test.ts` asserts the message rather than merely a failure, and `provisioning.test.ts`
+asserts the same rule at the door a person actually uses; neither alone is the guarantee.
 
 **Every test fixture provisions.** `apps/web/tests/helpers/founding.ts` is the one place a test
 business comes into existence, replacing twenty-nine local copies — and the point is that the
@@ -502,10 +579,12 @@ apps/
     lib/adapters/   vendors. Domain code imports the capability, never the implementation.
     proxy.ts        Next 16's middleware. Refreshes the session; not the auth boundary (I12).
     tests/          the suites. They run against a real Postgres — see Commands.
-  api/              Python. Webhook ingress (M4, D26) and the automation clock (M6, D24, D30);
-                    intelligence and realtime later. Serverless functions on Vercel — never a
-                    daemon, which D24 forbids outright
-    app/core/       configuration, the database handles, and one place that mints a machine token
+  api/              Python. Webhook ingress (M4, D26), the automation clock (M6, D24, D30) and
+                    the tool loop (M8, D34); retrieval and realtime later. Serverless functions
+                    on Vercel — never a daemon, which D24 forbids outright
+    app/core/       configuration, the database handles, one place that mints a machine
+                    token — and one that pointedly does not, forwarding a caller's instead
+    app/ai/         the tool loop and the two registries it reads. No SQL, no arithmetic
     app/channels/   sending a message to a person, as a capability
     app/conditions/ what the world is doing at a place, as a capability
     app/integrations/ the only place this repo's Python names a vendor
@@ -519,15 +598,20 @@ docs/
 .claude/commands/   The reusable prompts
 ```
 
-**`apps/api` exists as of M4, and as of M6 it holds two endpoints.** D26 brought it forward from M6:
+**`apps/api` exists as of M4, and as of M8 it holds three endpoints.** D26 brought it forward from M6:
 Stripe calls in with no human session, D2 gives webhook ingress to Python, and the alternative
 was a route under `apps/web/app/api/` — a second thing called *api*, inside the app that is
 not the API. **There is no `api/` directory under `apps/web` and none may be added.** M6 added the second:
 `/tasks/automation-tick`, running as `automation_runner` — a Postgres role holding no grant on
-any table and a handful of executes, which is `payment_webhook`'s shape on a second axis. There
-is still no `domains/` and no `workers/`. Its tests are `python -m pytest apps/api/tests`, and
-**they are not in the check gate** — a real gap, named in `apps/api/README.md` so nobody finds it
-by shipping through it.
+any table and a handful of executes, which is `payment_webhook`'s shape on a second axis. M8
+added the third, `/ai/ask`, which breaks that pattern deliberately: it has **no role**, mints
+nothing, and forwards the asking person's own token, because unlike the other two it is called by
+somebody who is sitting there (D34). That is also what brought `app/ai/` — the loop, the tool
+registry, the provider registry — and `app/integrations/anthropic/`, the first vendor SDK in this
+runtime. There is still no `domains/` and no `workers/`. Its tests are `python -m pytest apps/api/tests`, and **they are
+in the check gate as of M8** — `pnpm check` runs them after the TypeScript half. They were left
+out for two milestones while this runtime was two handlers that decided nothing; the loop
+arriving is what made the gap worth closing rather than naming.
 
 **A route group is a layout boundary and never a security boundary.** Nothing is protected by
 living in `(auth)` or reachable by living outside it — `proxy.ts` decides what an anonymous
@@ -556,13 +640,22 @@ Four layout rules carry reasoning that is easy to lose:
 
 ## Commands
 
-**The check gate is `pnpm --filter @gold/web check`** — typecheck, lint, tests, build, in that
-order. Nothing is done until it passes end to end. Report a failure verbatim; do not
-summarise one.
+**The check gate is `pnpm check`, from the root** — `apps/web`'s typecheck, lint, tests and
+build, then `apps/api`'s pytest. Nothing is done until it passes end to end. Report a failure
+verbatim; do not summarise one.
+
+**It grew the Python half at M8, and the gap it closes was real.** `apps/api` had tests from M4
+and nothing ran them, which was tolerable while that runtime was two handlers that decided
+nothing and stopped being so when the tool loop moved in. The root script runs pnpm recursively
+and then pytest directly, because `apps/api` is deliberately not a pnpm workspace member (D3) —
+so the gate needs Python on the path, and a machine without it fails at the last step rather
+than skipping it silently.
 
 | Command | What it does |
 |---|---|
-| `pnpm --filter @gold/web check` | The gate. Run before calling anything finished. |
+| `pnpm check` | The gate. Both runtimes. Run before calling anything finished. |
+| `pnpm --filter @gold/web check` | The TypeScript half alone, when iterating |
+| `pnpm check:api` | The Python half alone (`python -m pytest apps/api/tests`) |
 | `pnpm --filter @gold/web dev` | Next.js dev server on :3000 |
 | `pnpm db:start` | Local Supabase (needs Docker). Prints the keys; they belong in `infra/.env.test`, which is gitignored. |
 | `pnpm db:reset` | Re-apply every migration from scratch against the local stack |

@@ -34,6 +34,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_runs: {
+        Row: {
+          action_detail: string | null
+          action_outcome: string | null
+          action_taken_at: string | null
+          answer: string
+          answered_by: string
+          created_by: string
+          detail: string | null
+          id: string
+          occurred_at: string
+          organization_id: string
+          outcome: string
+          proposed_action: Json | null
+          question: string
+          tools: Json
+        }
+        Insert: {
+          action_detail?: string | null
+          action_outcome?: string | null
+          action_taken_at?: string | null
+          answer?: string
+          answered_by: string
+          created_by: string
+          detail?: string | null
+          id?: string
+          occurred_at?: string
+          organization_id: string
+          outcome: string
+          proposed_action?: Json | null
+          question: string
+          tools?: Json
+        }
+        Update: {
+          action_detail?: string | null
+          action_outcome?: string | null
+          action_taken_at?: string | null
+          answer?: string
+          answered_by?: string
+          created_by?: string
+          detail?: string | null
+          id?: string
+          occurred_at?: string
+          organization_id?: string
+          outcome?: string
+          proposed_action?: Json | null
+          question?: string
+          tools?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_readings: {
         Row: {
           asset_id: string
@@ -2414,6 +2480,35 @@ export type Database = {
           },
         ]
       }
+      customer_activity: {
+        Row: {
+          action: string | null
+          actor_id: string | null
+          customer_id: string | null
+          entity_id: string | null
+          entity_type: string | null
+          event_id: string | null
+          occurred_at: string | null
+          organization_id: string | null
+          payload: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_failures: {
         Row: {
           detail: string | null
@@ -2691,8 +2786,21 @@ export type Database = {
         Returns: string
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      customers_not_contacted: {
+        Args: { p_days?: number; p_organization_id: string }
+        Returns: {
+          customer_id: string
+          days_since: number
+          email: string
+          last_activity: string
+          last_activity_local: string
+          name: string
+          phone: string
+          time_zone: string
+        }[]
+      }
       issue_invoice: {
-        Args: { p_due_at: string; p_work_item_id: string }
+        Args: { p_due_at: string; p_issued_at: string; p_work_item_id: string }
         Returns: string
       }
       link_customer_location: {
@@ -2767,6 +2875,7 @@ export type Database = {
         Args: {
           p_amount_minor: number
           p_description: string
+          p_incurred_at: string
           p_work_item_id: string
         }
         Returns: string
@@ -2792,6 +2901,20 @@ export type Database = {
         Returns: undefined
       }
       run_due_automations: { Args: never; Returns: number }
+      schedule_ahead: {
+        Args: { p_days?: number; p_organization_id: string }
+        Returns: {
+          customer: string
+          ends_local: string
+          resource: string
+          starts_at: string
+          starts_local: string
+          status: string
+          time_zone: string
+          title: string
+          work_item_id: string
+        }[]
+      }
       schedule_work_item: {
         Args: {
           p_ends_at: string
@@ -2878,6 +3001,22 @@ export type Database = {
           p_releases_resource: boolean
         }
         Returns: undefined
+      }
+      work_at_risk: {
+        Args: { p_organization_id: string }
+        Returns: {
+          customer: string
+          ends_local: string
+          reason: string
+          resource: string
+          scheduled_from: string
+          scheduled_to: string
+          starts_local: string
+          status: string
+          time_zone: string
+          title: string
+          work_item_id: string
+        }[]
       }
     }
     Enums: {

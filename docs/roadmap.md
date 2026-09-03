@@ -43,12 +43,21 @@ it, and if they do, this section changes rather than the numbering.
    **A tenant's own integrations (D33) is the second unnumbered entry**, and it waits on a
    customer naming one rather than on anything in this list. A third would mean the numbering has
    stopped describing the work.
-5. **M7 — reporting and dashboards.**
-6. **M8's first criterion — asking the system questions.** It lands after M7 rather than with the
-   rest of its own milestone, and that is the one place the reordering left a genuine dependency:
-   four of the seven commands `starting_conversation.txt` §18 uses as examples are reports, and an
-   AI layer over no aggregate layer either cannot answer them or grows a second aggregate layer
-   inside its tool implementations — which is what I4 and I5 exist to prevent one level up.
+5. **M8's first criterion — asking the system questions. Built, and it did not wait for M7.**
+   This entry said it lands *after* M7, and that was right about the dependency and wrong about
+   its size. Four of the seven commands `starting_conversation.txt` §18 uses as examples are
+   reports, and an AI layer over no aggregate layer either cannot answer those or grows a second
+   aggregate layer inside its tool implementations — which is what I4 and I5 exist to prevent one
+   level up. But *what work is at risk of being late today* is a query over `work_items` and needs
+   nothing that does not exist, and the two shapes of question were never the same dependency.
+
+   **What keeps the distinction honest is that a tool cannot contain a calculation.** A tool is a
+   `stable`, `security invoker` function in Postgres (D34), so the failure this entry feared is
+   structurally unavailable: there is no aggregate-shaped tool, a question needing one is answered
+   *I cannot answer that*, and the tool that answers it gets written when M7's aggregate layer
+   exists for it to call.
+6. **M7 — reporting and dashboards.** Now the thing that unlocks the report-shaped half of the
+   question tools, rather than the whole of them.
 7. **M9 — reception and sales.** D5's reasoning is unchanged and nothing in `market.md` moves it.
 8. **M10 — desktop.** No customer has asked.
 
@@ -719,15 +728,22 @@ employee and by location are that same subtraction grouped four ways, which is w
 starts paying. Building the engine first would have been the abstraction with no caller;
 building the fourth grouping by hand would be the copy.
 
-**It lands before the half of the AI layer that asks questions, and after the half that proposes
-configuration.** Four of the seven commands `starting_conversation.txt` §18 uses as examples —
+**It lands before the *report-shaped* half of the AI layer's questions, and after both the half
+that proposes configuration and the half that asks about work.** Four of the seven commands `starting_conversation.txt` §18 uses as examples —
 least profitable services, cost trends, parts to order, customers not contacted — are reports,
 and an AI layer over no aggregate layer either cannot answer them or grows a second aggregate
 layer inside its tool implementations, which is the failure I4 and I5 exist to prevent one level
 up. Onboarding is the other half and shares none of that: it writes configuration through
 `configureBusiness` and reads no aggregate at all.
 
-**This paragraph said "before the AI layer" for two milestones after that stopped being true.**
+**Corrected twice, and the second correction is the interesting one.** This paragraph said
+"before the AI layer" for two milestones after that stopped being true; it then said "before the
+half that asks questions", which was also too broad. Question tools shipped ahead of this
+milestone because a query is not a report, and what stops that from becoming the failure feared
+below is D34: a tool is a `stable` function in Postgres, so a tool implementation cannot hold an
+aggregate at all. What M7 unlocks is the tools that have no function to call yet.
+
+**The original correction, kept for its reasoning.**
 `market.md` moved AI onboarding ahead of both M6 and M7 and the *Order of work* list was
 rewritten to say so; this sentence was not, so one file argued both ways and the stale half sat
 inside the milestone it favoured — which is the kind that gets believed. Corrected here rather
@@ -756,15 +772,35 @@ which is standing up the next tenant. It stays inside the guardrail above becaus
 reviews and applies the proposal — the AI proposes configuration, it does not become
 configuration.
 
-`step-by-roll` is the reference: role, agent, skill, tool, workflow held apart, with a
+`C:\Users\domin\Documents\step-by-roll` is the reference: role, agent, skill, tool, workflow held apart, with a
 capability check on every tool. That separation is I14 already built once.
 
-### The two criteria are built apart, and the second goes first
+### The two criteria are built apart, and the second went first
 
-**They share a milestone number and not a dependency.** Asking the system questions is tools over
-an aggregate layer that does not exist yet; proposing a configuration is one structured call over
-`configureBusiness`, which does. *Order of work* splits them accordingly — onboarding now,
-questions after M7 — and neither is renumbered.
+**They share a milestone number and not a dependency.** Proposing a configuration is one
+structured call over `configureBusiness`; asking the system questions is a tool loop. *Order of
+work* split them accordingly and neither is renumbered.
+
+**Both are now built.** The reason given here for putting questions last — that they are "tools
+over an aggregate layer that does not exist yet" — was true of the report-shaped ones and not of
+the rest. *What work is at risk of being late today* is a query over `work_items`. D34 holds the
+decisions; the short version is that a tool is a `stable`, `security invoker` function in Postgres
+called under the asking person's own token, so a tool can neither write nor see a row its caller
+could not, and cannot contain an aggregate even if somebody wanted it to. What waits for M7 is
+the tools with no function to call yet, and until then the assistant says it cannot answer.
+
+**What the first criterion builds.** Both tools the criterion names — `public.work_at_risk` and
+`public.customers_not_contacted`, the second sitting on `customer_activity`, a view that resolves
+which events are about a customer and that the customer's own timeline now reads too, because a
+second caller for an inline rule means extracting it rather than copying it; `agent_runs`, a row
+per question readable only by whoever asked; `assistant.ask`; an `assistant` module and an Ask
+screen; and in `apps/api`, a provider-blind loop over a capability contract with two
+implementations — Claude, and anything speaking chat completions, which is how a business answers
+with a model on its own hardware. **The write half is built too**: an answer can carry one
+intended action, recorded as pending and performed by nobody until a person presses a button, at
+which point `apps/web` maps the name through its own whitelist and the domain layer does it under
+that person's session. The loop itself still writes nothing, and there is nothing in it that
+could.
 
 **What onboarding builds.** `configuration_proposals`, a tenant-owned row holding the prose, the
 proposed `BusinessShape`, the gaps the model could not fill and an outcome; a drafting adapter
@@ -789,7 +825,26 @@ first criterion. No drafting of message templates, though *Decided, not yet buil
 it belongs here and is the same shape: it is a **second** caller of the drafting capability, and
 this repository builds the first one first.
 
-### It is demonstrated, and the demonstration is an absence
+### The first criterion is demonstrated by what a tool cannot do
+
+`ai-tools.test.ts` is its demonstration, and like the others it turns on an absence rather than on
+a happy path. It reads the tool registry out of the Python source — one registry, not a list kept
+on both sides of the seam — and asserts from `pg_proc` that every name in it resolves to a
+function that is not `volatile` and does not run as its owner. Then it asks the same question from
+four sides of one database: two businesses get their own work back in their own words; each gets
+**nothing** when handed the other's organization id, which is the assertion the whole design
+exists for, because a model chooses that argument; a portal customer of the right business gets
+nothing either, since the tool joins a table the portal has never been allowed to read; and
+somebody who is a member of nothing gets nothing at all.
+
+**No model is called, deliberately.** What D34 decides is structural, and a test that asked a
+provider would be asserting somebody else's judgement, slowly and for money. The loop's own
+behaviour — the cap, the recorded failure, the row count that is never a row — is tested in
+`apps/api`, which **joined the check gate in this milestone**: `pnpm check` runs both runtimes,
+and the loop arriving in Python is what made two milestones of tolerating that gap stop being
+tolerable.
+
+### The second criterion is demonstrated, and the demonstration is an absence
 
 `milestone-m8.test.ts` describes two businesses that share no word — a chimney sweep in Tallinn
 trading in euro, a dive school in Cebu trading in pesos — receives a whole configuration for

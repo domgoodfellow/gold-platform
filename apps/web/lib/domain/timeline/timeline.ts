@@ -204,42 +204,29 @@ export async function listCustomerTimeline(
   }
 
   const workItems = new Map((jobs ?? []).map((job) => [job.id, job.title]));
-  const subjects = [input.customerId, ...workItems.keys()];
 
-  const SELECT = 'id, action, payload, occurred_at, actor_id, entity_id';
+  // **Which events are about this customer is no longer decided here.** It was, until the
+  // question tools needed the same answer, and `20260902000008` moved it into
+  // `customer_activity` — the customer's own events, their jobs' events, and the one action
+  // that names them only in its payload. Two callers, one definition; the two queries and the
+  // manual merge this used to do are what that view now does.
+  //
+  // What stays here is the action list, because *which of those are worth showing* is this
+  // screen's decision rather than a fact about the data.
+  const { data, error } = await db
+    .from('customer_activity')
+    .select('event_id, action, payload, occurred_at, actor_id, entity_id')
+    .eq('organization_id', input.organizationId)
+    .eq('customer_id', input.customerId)
+    .in('action', CUSTOMER_ACTIONS as unknown as string[])
+    .order('occurred_at', { ascending: false })
+    .limit(limit);
 
-  const [subject, linked] = await Promise.all([
-    db
-      .from('events')
-      .select(SELECT)
-      .eq('organization_id', input.organizationId)
-      .in('entity_id', subjects)
-      .in('action', CUSTOMER_ACTIONS as unknown as string[])
-      .order('occurred_at', { ascending: false })
-      .limit(limit),
-    // The one action this customer is the *object* of rather than the subject. Filtered on
-    // the payload because that is where the writer put the customer id; see the note above
-    // on why this is a fact about append-only tables rather than a mistake to correct.
-    db
-      .from('events')
-      .select(SELECT)
-      .eq('organization_id', input.organizationId)
-      .eq('action', 'location.linked')
-      .eq('payload->>customer_id', input.customerId)
-      .order('occurred_at', { ascending: false })
-      .limit(limit),
-  ]);
-
-  if (subject.error) {
-    throw new DomainError(subject.error.message, 'timeline.list_failed');
-  }
-  if (linked.error) {
-    throw new DomainError(linked.error.message, 'timeline.list_failed');
+  if (error) {
+    throw new DomainError(error.message, 'timeline.list_failed');
   }
 
-  const rows = [...(subject.data ?? []), ...(linked.data ?? [])]
-    .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at))
-    .slice(0, limit) as EventRow[];
+  const rows = (data ?? []).map((row) => ({ ...row, id: row.event_id })) as EventRow[];
   if (rows.length === 0) return [];
 
   // The tenant's current words, and who its people are. Three reads rather than three joins:

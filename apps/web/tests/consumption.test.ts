@@ -321,6 +321,54 @@ describe('checklists, time and cost', () => {
     expect(Object.keys(cost)).not.toContain('organizationCurrency');
   });
 
+  it('carries the date a cost was incurred, not the date somebody typed it', async () => {
+    // The case this exists for: a fuel receipt from last Thursday, entered today. Before the
+    // parameter existed `incurred_at` was a slower copy of `created_at` — the column was
+    // there and nothing could write it, so every cost claimed to be from whenever its
+    // paperwork caught up.
+    const lastThursday = '2026-08-20T11:30:00.000Z';
+
+    await recordCost(alice.db, {
+      workItemId: alice.workItemId,
+      description: 'Diesel, last Thursday',
+      amountMinor: 8_900,
+      incurredAt: lastThursday,
+    });
+
+    const costs = await listCosts(alice.db, {
+      organizationId: alice.organizationId,
+      workItemId: alice.workItemId,
+    });
+    const entered = costs.find((cost) => cost.description === 'Diesel, last Thursday');
+
+    expect(entered).toBeDefined();
+    expect(new Date(entered!.incurredAt).toISOString()).toBe(lastThursday);
+  });
+
+  it('leaves the date to the database when none is given', async () => {
+    // Not merely "some date": the point is that an unfilled field means the instant the row
+    // was written, decided by Postgres, rather than midnight of a day the calling process
+    // worked out from its own clock and its own zone.
+    const before = Date.now();
+
+    await recordCost(alice.db, {
+      workItemId: alice.workItemId,
+      description: 'Entered as it happened',
+      amountMinor: 1_500,
+    });
+
+    const costs = await listCosts(alice.db, {
+      organizationId: alice.organizationId,
+      workItemId: alice.workItemId,
+    });
+    const now = costs.find((cost) => cost.description === 'Entered as it happened');
+    const at = new Date(now!.incurredAt).getTime();
+
+    // A minute either side, because the test process and the database are two clocks.
+    expect(at).toBeGreaterThan(before - 60_000);
+    expect(at).toBeLessThan(Date.now() + 60_000);
+  });
+
   it('refuses a non-integer or zero amount', async () => {
     await expect(
       recordCost(alice.db, {

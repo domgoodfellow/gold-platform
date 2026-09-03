@@ -1795,9 +1795,272 @@ would mean the numbering has stopped describing the work.
 
 ---
 
+### D34 — A tool is a function in Postgres, run under the caller's own token
+
+M8's *first* criterion — asking the system questions and getting answers through the same domain
+tools a human uses, under that user's permissions — is the first thing this repository builds
+that gives a language model something to call. D32 settled the half with no tool in it, and said
+outright that where a loop runs is a decision it does not take. This is that decision.
+
+**Where the loop runs: `apps/api`, and `apps/web` calls it.** D2's third bullet gives Python
+*intelligence — embeddings, retrieval, batch analysis, the AI tool loop*, and this is the one it
+named. Two things settled it beyond the list. Retrieval, when it arrives, is Python's by every
+argument D2 makes, and a loop in one runtime with embeddings in another is the AI plane split for
+no gain. And a business must be able to answer with a model on its own hardware — Ollama, a
+served checkpoint, anything speaking the same dialect — which is Python's ecosystem and nobody
+else's.
+
+**The cost, stated rather than skirted: D30 says neither runtime calls the other.** This makes
+`apps/web` call `apps/api`, synchronously, while somebody waits. What D30 rejected was the other
+direction — an action runtime calling back into the operator application to *write*, whose
+natural home is a route under `apps/web/app/api/` that D26 forbids by name. This is not that, and
+three things keep it from becoming it: the call carries the operator's own access token and
+nothing else; the far side performs no write at all; and it holds no role, no key and no grant
+with which it could do anything the caller could not do in their browser. A row would have been
+the D30-shaped answer and it cannot work here — a question waits for its answer, and a handoff
+through a table means a person watching a spinner until the next tick.
+
+**A tool is a `stable`, `security invoker` function in this database.** Not a query written in
+Python, and this is the load-bearing decision rather than a matter of taste. *At risk of being
+late* is a definition; a definition living in the other runtime is business logic in the wrong
+place, and the first total computed inside a loop is the second aggregate layer I4 and I5 exist
+to prevent one level up. So Postgres holds the tool and Python holds its name, its sentence and
+its JSON schema. Three consequences worth keeping:
+
+- **The database refuses a write inside it.** An `insert`, `update` or `delete` in a non-volatile
+  function fails when it runs — checked rather than assumed, and the refusal arrives at
+  *execution* rather than at `create function`, in `sql` and `plpgsql` alike. So the catalogue is
+  where this is caught: `ai-tools.test.ts` reads `provolatile` for every registered tool, and one
+  added `volatile` by habit fails the gate. **I14 stops being a promise and becomes a property.**
+- **The argument is not what narrows, and this is the failure mode a tool layer invites.** A
+  model chooses a tool's arguments. If `p_organization_id` were what kept a caller inside their
+  own business, the protection would be a value the model made up. RLS decides, the caller's own
+  JWT is what RLS reads (D17), and handing one business's id to another business's session
+  returns nothing.
+
+  **And then the model stopped choosing it at all, which is a correction worth recording.** The
+  first version of the tool schemas *required* `organization_id` — from a model that had never
+  been told one. Driving the whole path found it: a model asked for an id it does not have
+  invents a uuid, the tool matches nothing, and every answer comes back empty while every part
+  of the system reports success. The loop now fills it in from the request, it appears in no
+  schema and no prompt, and an id a model supplies anyway is **dropped rather than merged past**
+  — merging alone left two differently-named keys in the record, which read as though two
+  businesses had been named. The RLS argument above is unchanged and still load-bearing: it is
+  what makes an id a *caller* names harmless.
+- **A tool's joins are part of what it discloses**, which was found by testing rather than
+  reasoned out in advance. `work_at_risk` joins `work_item_statuses` to report a job's status in
+  the tenant's own words, and a portal customer — who may read their own work items and has never
+  been able to read the business's internal board vocabulary — therefore gets nothing back at all
+  rather than a narrowed list. Each joined table's own policies apply, so a tool built from tables
+  a caller can only partly read answers *less*, never wrongly.
+
+**This axis has no Postgres role, and that absence is the whole security model.**
+`payment_webhook` and `automation_runner` each hold one because no person is present. Here a
+person always is, so the token is forwarded rather than minted, and there is nothing to grant,
+nothing to revoke and nothing to assert from `information_schema`. The alternative — an
+`assistant` role reading across tenants and filtering by an organization id — is the mistake
+above wearing an identity.
+
+**The loop sits above a provider contract, and no vendor's tool-runner is used.** Both SDKs offer
+one and taking it would be less code; it would also put iteration inside one vendor's wrapper, so
+the day a business runs a local model there are two loops, two dispatch paths and an `agent_runs`
+row that means different things depending on who answered. `app/ai/loop.py` owns iteration,
+dispatch, the cap and the record; a provider answers *what is the next turn* and stops. The tests
+drive a fixed provider through that same seam rather than around it, which is what makes the seam
+a fact rather than a plan.
+
+**Two providers ship, and the second is not speculative.** Claude is the default;
+`app/integrations/openai_dialect/` serves anything speaking chat completions, which is how a
+model on a business's own hardware arrives. Selection is by environment, like drafting and
+geocoding — **not per tenant**, because a business supplying its own endpoint and its own key is
+a business holding an account with a vendor, which is D33's axis and a different feature.
+
+**Tenant rows now leave the database, and no other feature has done that.** Drafting sends prose
+a business typed about itself; a tool result is its customers, its jobs and its schedule. Three
+answers: the rows a model sees are exactly the caller's RLS scope and never more; a deployment
+that must send nothing anywhere runs a local provider, which is the real reason the provider seam
+exists in the first slice rather than the fourth; and asking is its own capability,
+`assistant.ask`, backfilled onto `organization.manage` holders — not because a question is
+dangerous, but because it spends money and it discloses, and both are decisions a business takes
+on purpose.
+
+**That capability is checked in the domain layer as well as in the policy, and it is the one place
+in this platform where that is not belt-and-braces.** Everywhere else a domain-side check exists
+only to produce a readable refusal while the policy does the guarding. Here `agent_runs_insert`
+fires *after* the answering has happened, by which point somebody without the capability has
+already spent the deployment's money and sent the business's rows outside. So the guard has to be
+in front of the provider too. The policy remains the guarantee.
+
+**A run is readable by the person who asked, and by nobody else in the business.** The one
+deliberate departure from *a member sees their business's rows*, and it follows from what the row
+holds: an answer contains whatever its asker could see. Reading is membership-scoped everywhere
+in this schema and capability-scoped nowhere — but the portal narrows a customer to their own
+jobs, and an operator's answer can hold rows that narrowing was hiding. A tenant-wide history
+would be a way to read, through yesterday's answer, what today's policies refuse.
+`automation_runs` is tenant-wide for the opposite reason: nobody was present, so what it did is
+everybody's business.
+
+**What the record holds is what was asked and what was said, never what was read.** Tool calls are
+snapshotted as a name, its arguments and a row count. Copying rows in would put tenant data in a
+table whose policies are not the ones protecting the original — an invoice's own rules and a
+portal customer's narrowing both left behind.
+
+**A tool over a module-owned area must disappear when that module is off, and that rule has no
+caller yet.** CLAUDE.md already holds the half above it — *a module that hides an area must hide
+what that area does elsewhere*, written from the booking module shipping as half a switch. A tool
+is exactly the *elsewhere* that gets forgotten: switching billing off removes Pricing and the
+quote from every job screen, and a tool answering questions about invoices would keep answering
+them. Neither tool built here touches a module-owned area — work, customers and `events` are all
+kernel, which no business chose and none can decline — so there is nothing to enforce and nothing
+is enforced. **The first tool over an invoice, an asset or a booking is when this gets built**,
+and it belongs in the registry beside the tool rather than on the Ask screen, because the screen
+is one module and the tool's subject is another.
+
+**Customer tracking is kernel and a CRM module would sit above it, which is why the second tool
+needs no module.** `customers` is kernel by decision — a business cannot decline having
+customers — and `customers_not_contacted` reads `events`, which is kernel too, and answers
+something an operator can corroborate on the customer's own screen. What would become a CRM
+module in D25's sense is the layer M9 brings: a lifecycle a tenant names, a next action, a
+customer reduced to a number. When that arrives, this tool plausibly moves under it — and the
+rule above is what makes that a line in a registry rather than an excavation.
+
+**Two tools ship — the two questions M8's criterion names — and the second one moved a
+definition.** *Which customers have not been contacted* needs to know which events are about a
+customer, and that rule already existed inside `listCustomerTimeline`: their own events, their
+jobs' events, and the one action that names them only in its payload. A second caller for an
+inline rule means extracting it, so `customer_activity` is a `security_invoker` view both read.
+What deliberately did not move is the timeline's action list, because *which events are about a
+customer* and *which are worth showing on a screen* are two questions and only the first was
+duplicated.
+
+**No aggregate-shaped tool exists, and that is a decision rather than a gap.** Revenue by
+customer, least profitable service, cost trends: each needs M7's aggregate layer, and without it
+the only way to answer is arithmetic inside the loop. The `max(occurred_at)` inside
+`customers_not_contacted` is not that layer arriving early, and the line is worth stating: M7 is
+about reports a *tenant defines* — entity, fields, filters, grouping, period, chosen and saved by
+an operator. A fixed question with one parameter is not one. When a tenant can choose the
+grouping, the tool calls M7 rather than growing it. Until M7 the assistant says it cannot
+answer, which is true and better than a number nobody can reproduce from a screen. **This is also
+why the first criterion no longer waits for M7 in full** — `roadmap.md`'s *Order of work* said it
+did, and the dependency was always on the report-shaped half. A query-shaped question needs
+nothing that does not exist.
+
+**Four things a real model found that reading the code did not, all fixed here.** They are kept
+because each one is invisible until a model is actually asked something, and three of the four
+passed every test this repository had.
+
+- **A tool handed a model an instant, and a model is what renders it.** `work_at_risk` returned
+  `timestamptz`, PostgREST serialised UTC, and the answer read *17:54 to 18:54* — an hour wrong
+  for a business in Amsterdam and nine for one in Cebu. Every test still passed, because every
+  test founds a business in UTC. I9 is unchanged and this is I9 being obeyed: the instant stays,
+  and the business's own wall clock is rendered beside it **in Postgres**, because the
+  alternative is date arithmetic with daylight saving in it, done by a model.
+- **A model has no clock.** Asked to move a job to *9am tomorrow*, one answered with a date in
+  2024. Today's date in the business's zone now travels beside the question as `context` — after
+  the cached prompt prefix, not inside it, since it changes daily and the prompt does not. It is
+  application state and never a word a tenant wrote, which is the line for what may reach a
+  prompt at all.
+- **The schema is the contract, so anything outside it is dropped.** A weaker model invented a
+  `status` argument on a tool whose schema declares no properties, and PostgREST answered *could
+  not find the function* — a hard failure where ignoring a word nobody offered was the right
+  answer. The loop now forwards only declared properties, which is the same filter that drops an
+  organization id.
+- **A default model name is a trap.** `ASSISTANT_MODEL` defaulted to `llama3.1`, which Ollama
+  resolves to `llama3.1:latest` — a tag a machine holding `llama3.1:8b` does not have. The
+  deployment looks configured and answers 404 on every question. Both settings are required
+  together now, because a missing value meaning *off* is what every other setting here means.
+
+**Half of what a weak model got wrong was an underbuilt foundation, and that half was fixed.**
+The first read of the `llama3.1:8b` run was *this model is not good enough*, and three of its four
+failures were not about the model at all: it invented an argument because the schema was not
+enforced, it produced a date in 2024 because nothing told it the date, and it guessed at a time
+because **no tool could tell it what was already booked**. That last one is why
+`public.schedule_ahead` exists — the two tools before it answer *what is wrong* and none answered
+*what does the week look like*, which is the first thing anybody moving a job wants to know. It
+returns rows and not availability, so it is not a second `freeWindows` (I5): a model may propose a
+time that looks free and the exclusion constraint still decides (I6).
+
+**The remaining half is the model, and the honest thing is to let it show.** With everything above
+in place, `qwen3.5:9b` asked to move a job calls `work_at_risk`, takes the id out of the result,
+and produces a suggestion somebody can press. `llama3.1:8b` cannot chain those two steps — it
+proposes a move for a job it never looked up, putting a description where the id goes, and firmer
+wording only changed *which* wrong thing it put there. That is a ceiling rather than a defect, and
+the platform's job is to make it harmless rather than to hide it.
+
+**So a suggestion is judged when it is written, not when somebody presses.** The whitelist's
+validators are extracted and run twice — once as the run is recorded and once before the write —
+so a suggestion that could only ever fail is stored as `failed` with the reason beside it and
+never appears as a control. Showing a *Do it* button whose only outcome is a refusal asks somebody
+to discover the problem by causing it. `answered_by` names the model on every row, so a business
+that changed models can see why its answers changed, which is the whole reason that column exists.
+
+**Rejected: the loop in `apps/web`.** Tools would be the domain functions themselves, no token
+would cross a boundary and no second read path would exist. It leaves M9's voice work building a
+second loop in Python, contradicts D2's list rather than carving out of it, and puts a metered,
+minutes-long call inside the operator application's request path.
+
+**Rejected: writes inside the loop, and this half is built.** An intended action comes back on
+the run as a name and some arguments, and `apps/web` is the authority on what that name means: it
+maps it through a whitelist to a domain function, validates the arguments, and calls it **when a
+person presses the button**, under that person's own session. D2's contract and D32's flow, one
+level down. Four things hold it up:
+
+- **The whitelist is on the executing side, so the two runtimes may disagree and fail closed.** A
+  name the loop produces that `apps/web` does not know is recorded as *this platform cannot do
+  that* rather than dispatched — which is why the list of actions needs no version shared across
+  the seam and no generated contract.
+- **An action carries no Postgres function**, unlike a tool, and the loop treats a name from that
+  list as a stopping point rather than something to call. There is nothing in the Python plane
+  that could perform one. It also stops *before* running the tools in that same turn: a model
+  proposing a move in the breath it asks to look has proposed it without looking.
+- **Executing adds no capability and checks none.** Moving a job is `work_item.schedule`, refused
+  by the policy on `work_items` exactly as it would be for a drag on the schedule. The
+  exclusion constraint decides whether the new window lands (I6), and a refusal is recorded on
+  the run in the database's own words rather than raised.
+- **A decided action is frozen**, in the policy and not only in the flow: `agent_runs_update`
+  stops matching the moment the outcome is anything but `pending`. Asking again is a new
+  question, because a suggestion acted on twice is a job moved twice.
+
+**The first action is rescheduling, and the list grows one per slice with a screen behind it.**
+It is the action D30 already reasoned about: it asserts an instant rather than searching for one,
+so no second `freeWindows` exists in a second runtime. It also **cannot reassign** — the model is
+given no way to name a resource, because *move this to tomorrow* and *give this to somebody else*
+are two decisions. That distinction was found by a test: the first executor omitted the resource,
+and `scheduleWorkItem` reads an omitted resource as *nobody assigned*, so moving a job quietly
+took the person off it.
+
+---
+
 ## Decided, not yet built
 
 Named so they are not reinvented, and deliberately unbuilt until they have a consumer.
+
+- **Retrieval and embeddings over a business's own prose** — the fourth thing D2 gives Python,
+  and the one part of the AI layer M8 deliberately did not build. The reason is not that nobody
+  has asked: **this database holds almost no prose to retrieve.** Every free-text column in it is
+  a line long — `work_items.title`, `locations.access_notes`, `work_item_time_entries.note`,
+  `payments.note`, `work_item_costs.description` — and `documents` stores a storage path, a
+  filename and a size, with **no extracted text at all**. Embeddings over five short columns are
+  worse than `ilike` over the same five, slower to build and impossible to explain to an operator
+  who asks why a row came back.
+
+  So the trigger is a corpus, and exactly two things create one. **Document text extraction** —
+  downloading what a business has attached, parsing it, and storing what it says — which is a
+  slice of its own with its own failure surface, and the point at which a job's paperwork becomes
+  searchable. And **M9's transcripts**, which are the first genuinely long text this platform will
+  hold, arriving with the milestone that owns them.
+
+  What is decided now, so the first build does not have to be: an `embeddings` table is
+  tenant-owned and carries `organization_id` leading every index like everything else (I2); the
+  retrieval tool is one more `stable`, `security invoker` function under the caller's own token,
+  exactly like the two that exist (D34); and **nothing embedded may outlive what it describes** —
+  a vector of a deleted document is a row that answers questions about something the business
+  removed, which is the same objection I8 makes about a snapshot that reaches forwards, inverted.
+
+  **`agent_runs.outcome = 'unanswered'` is the evidence, and it is already being collected.** A
+  question the tools could not answer is recorded distinctly from a failure for exactly this
+  reason. When that list is mostly questions whose answers are sitting in prose, the case is made
+  in a tenant's own words rather than in a guess.
 
 - **Approval workflows** on work items — changes the commitment flow; no caller yet.
 - **Recurring work generation** — **built in M6.** The third trigger shape this entry warned

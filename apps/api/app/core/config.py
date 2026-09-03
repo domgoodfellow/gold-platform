@@ -64,6 +64,36 @@ class RunnerSettings:
     cron_secret: str
 
 
+@dataclass(frozen=True)
+class AssistantSettings:
+    """What answering a question needs, and it is deliberately the shortest of the three.
+
+    **No JWT secret.** The other two dataclasses hold one because they mint a token for a
+    machine role; this feature forwards the operator's own and has nothing to sign (D34). A
+    deployment that can answer questions therefore holds strictly less than one that can send a
+    message, which is the right way round.
+
+    **No model key either.** `app.ai.registry` reads its own environment per provider, exactly as
+    `app.channels.registry` does per channel -- so a deployment answering with a local model
+    holds no vendor key at all, and nothing here has to be told which case it is in.
+    """
+
+    supabase_url: str
+    supabase_anon_key: str
+
+
+def load_assistant_settings() -> AssistantSettings | None:
+    values = {
+        "supabase_url": os.environ.get("SUPABASE_URL"),
+        "supabase_anon_key": os.environ.get("SUPABASE_ANON_KEY"),
+    }
+
+    if not all(values.values()):
+        return None
+
+    return AssistantSettings(**values)  # type: ignore[arg-type]
+
+
 def load_runner_settings() -> RunnerSettings | None:
     values = {
         "supabase_url": os.environ.get("SUPABASE_URL"),

@@ -216,6 +216,22 @@ export const MODULES = [
     configuredAt: { segment: 'setup' },
   },
   {
+    key: 'assistant',
+    label: 'Ask',
+    // **The one module description that says where data goes, because it is the one module that
+    // sends any.** Everything else in this list runs entirely inside this installation. Switching
+    // this on is the moment somebody decides that questions and the rows answering them may leave
+    // the database, so it is the moment they should be told — not a paragraph in a README read by
+    // whoever deployed it.
+    description:
+      'Ask about this business in plain words and get an answer built from what you can already see. It reads and changes nothing. Questions, and the rows read to answer them, are sent to whichever model this installation uses — see the note on the Ask screen. A business that would rather look at the screens itself runs without it.',
+    // **Its own working surface, which no other module's `configuredAt` points at.** There is
+    // nothing to configure: no threshold, no key, no template. What the switch leads to is the
+    // page where the thing happens, and if this deployment cannot answer questions that page
+    // says so in the far side's own words rather than showing an empty box (D31).
+    configuredAt: { segment: 'ask' },
+  },
+  {
     key: 'card_payments',
     label: 'Card payments',
     description: 'Ask a processor to collect what is outstanding, rather than only cash.',
@@ -279,6 +295,11 @@ export const AREAS: readonly Area[] = [
   { segment: 'work', label: 'Work', group: 'operational' },
   { segment: 'schedule', label: 'Schedule', group: 'operational' },
   { segment: 'customers', label: 'Customers', group: 'operational' },
+  // Operational rather than configuration, and beside the screens it answers about: asking
+  // "what is at risk of being late" is something somebody does in the middle of a shift, not
+  // something they set up once. Nothing is configured here at all, which makes this the first
+  // module whose `configuredAt` points at its own working surface.
+  { segment: 'ask', label: 'Ask', group: 'operational', module: 'assistant' },
   { segment: 'locations', label: 'Locations', group: 'operational' },
   // A clinic services nothing it can point at; a machinery company is nothing else. This is
   // the area that made the difference between kernel and module concrete enough to fix.

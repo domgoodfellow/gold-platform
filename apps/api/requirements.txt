@@ -2,3 +2,12 @@
 # the standard library plus one client -- see `integrations/stripe/signature.py` for why no
 # vendor SDK is used here either.
 httpx==0.28.1
+
+# The one vendor SDK in this runtime, and the exception is deliberate. Stripe is hand-rolled
+# above because that integration is an HMAC and one POST; this one is content blocks, tool calls,
+# thinking and typed errors, which is what an SDK is actually for. The chat-completions provider
+# beside it -- the one a local model arrives through -- needs no library at all.
+#
+# It brings `httpx2`, which is a different distribution from the `httpx` pinned above rather than
+# a conflicting version of it. Both are installed and neither moves.
+anthropic==1.3.0

@@ -115,6 +115,10 @@ export async function recordCostAction(
       workItemId,
       description: String(formData.get('description') ?? ''),
       amountMinor: Number(formData.get('amountMinor') ?? Number.NaN),
+      // Empty is falsy and becomes null in the domain layer, which leaves the date to the
+      // database. An unfilled date field must mean "now", never midnight of some day this
+      // process guessed at from its own clock.
+      incurredAt: String(formData.get('incurredAt') ?? ''),
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
@@ -222,7 +226,11 @@ export async function issueInvoiceAction(
   const workItemId = String(formData.get('workItemId') ?? '');
 
   try {
-    await issueInvoice(db, { workItemId, dueAt: String(formData.get('dueAt') ?? '') });
+    await issueInvoice(db, {
+      workItemId,
+      issuedAt: String(formData.get('issuedAt') ?? ''),
+      dueAt: String(formData.get('dueAt') ?? ''),
+    });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;

@@ -309,6 +309,74 @@ simply waits.
 
 ---
 
+### 12. Ask it something — *Ask*
+
+Switch *Ask* on in Settings and the area appears beside Today. Type *what work is at risk of being
+late today*.
+
+**What comes back is built from what you can already see.** The loop is in `apps/api` and it
+reaches this database through one function, `public.work_at_risk`, called with your own access
+token — so the answer is your rows, decided by the same policies as every other screen. Worth
+proving to yourself: hand the same question to a colleague on a role with fewer capabilities and
+the answer is the same, because reading here is scoped by membership rather than by capability;
+open the customer portal and ask nothing at all, because that side has no Ask screen and would
+get nothing if it had one.
+
+**It needs two things and says so when it has neither.** `ASSISTANT_API_URL` in `apps/web`, so
+it knows where the loop is; and on that deployment a model. Missing the first and the screen says
+this installation cannot answer questions; missing the second and it says so in the far side's
+own words. Neither is a blank box.
+
+**A model on your own machine is the cheapest way to exercise this**, and it is the same path a
+business that will not let its rows leave the building uses in production:
+
+```bash
+ollama pull qwen3.5:9b            # tool-calling is what matters; `ollama list` shows which have it
+# apps/api/.env
+#   ASSISTANT_BASE_URL=http://127.0.0.1:11434/v1
+#   ASSISTANT_MODEL=qwen3.5:9b
+python apps/api/dev.py            # :8787
+# apps/web/.env.local
+#   ASSISTANT_API_URL=http://127.0.0.1:8787
+```
+
+Both settings are required together — there is no default model name, because one that resolves
+to a tag you do not have makes the deployment look configured and answer 404 on every question.
+
+**Anything hosted that speaks the same dialect is the same three settings**, including Gemini's
+OpenAI-compatible endpoint — `https://generativelanguage.googleapis.com/v1beta/openai` with a
+model and a key. Worth knowing before pointing it at real data: a free tier is usually free
+because the provider may train on what you send, and a tool result is a business's customers and
+jobs.
+
+**Try a weak model too, once.** `qwen3.5:9b` answers every question above correctly in a few
+seconds, and asked to move a job it calls `work_at_risk` first, takes the id from the result, and
+produces a suggestion you can press. `llama3.1:8b` cannot chain those two steps: it proposes a
+move for a job it never looked up, putting a description where the id goes. What you should see
+then is the suggestion recorded as **failed with the reason beside it and no button** — judged
+when the answer was written rather than when somebody presses. `answered by` names the model, so
+a business that changed models can see why the answers changed. That is the system behaving
+correctly with a bad answer in it, and it is worth seeing once.
+
+**Ask it something it has no tool for** — *which service makes the most money* — and it should
+tell you it cannot answer. That is the shape to check rather than a bug: report-shaped questions
+wait for M7's aggregate layer, and a tool is a `stable` function in Postgres precisely so nobody
+can quietly answer them with arithmetic in the loop instead.
+
+Below the box is every question you have asked, with what each tool returned as a row count. Your
+own only: a colleague's questions are not yours to read, because an answer holds whatever its
+asker could see.
+
+**Then ask it to do something about it** — *anything I should move?* If it suggests one, you get
+*Move this job* with the model's own sentence underneath and two buttons. Nothing has happened
+yet: the suggestion is a row, and the job is where it was. Press *Do it* and the same function the
+schedule screen calls runs under your session — so ask a colleague on a role without
+`work_item.schedule` to press it and the refusal is the policy's, shown on the row. Suggest a
+window something else already occupies and the refusal is the exclusion constraint's, in its own
+words. Either way it is decided once: the buttons do not come back.
+
+---
+
 ## What you cannot reach from any screen
 
 Three capabilities exist in the domain layer, are covered by tests, and have **no route, no
@@ -366,3 +434,4 @@ permission on no table whatsoever.
 | `milestone-m5.test.ts` | Somebody who runs GOLD sees every business, changes none of them, and hands one over | The console, and the provisioning form on it |
 | `milestone-m6.test.ts` | A rule written by a person moves a job and writes to a customer with nobody present | Step 11 above, and *What is failing* on the console |
 | `milestone-m8.test.ts` | Prose becomes a whole proposed setup and the business stays empty until a person applies it | Step 2b above — describe the business, then look at *Work* before pressing Apply |
+| `ai-tools.test.ts` | A tool cannot write, and cannot read a row its caller could not — including with another business's id in its argument | Step 12 above, and the same question asked from two sides |

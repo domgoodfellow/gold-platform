@@ -224,15 +224,31 @@ export async function listPayments(
  *
  * Neither the lines nor the currency nor the number are arguments, and none of them can be.
  * `issue_invoice` copies the quote, snapshots its currency, and takes the next number for that
- * business — so a caller chooses *which job* and *when it is due*, and nothing else. The same
- * distinction `addPricedLine` draws between quoting from a price book and typing a number onto
- * an invoice, applied to the invoice itself.
+ * business — so a caller chooses *which job*, *what date it bears* and *when it is due*, and
+ * nothing else. The same distinction `addPricedLine` draws between quoting from a price book
+ * and typing a number onto an invoice, applied to the invoice itself.
+ *
+ * **`issuedAt` is the date on the document**, optional because an invoice raised today is
+ * dated today. It exists for the ordinary case of billing in arrears — work finished last
+ * month, invoiced in the month it belongs to. Note that numbers still follow the order
+ * invoices were raised in rather than the dates on them, which is a thing a business that
+ * back-dates out of order has to notice for itself; see the migration for why numbering by
+ * date would be worse.
  */
 export async function issueInvoice(
   db: Db,
-  input: { workItemId: string; dueAt?: string | null },
+  input: { workItemId: string; issuedAt?: string | null; dueAt?: string | null },
 ): Promise<string> {
   await requireActor(db);
+
+  let issuedAt: string | null = null;
+  if (input.issuedAt) {
+    const issued = new Date(input.issuedAt);
+    if (Number.isNaN(issued.getTime())) {
+      throw new DomainError('That is not a date.', 'invoices.issued_invalid');
+    }
+    issuedAt = issued.toISOString();
+  }
 
   let dueAt: string | null = null;
   if (input.dueAt) {
@@ -246,6 +262,7 @@ export async function issueInvoice(
   const { data, error } = await db.rpc('issue_invoice', {
     p_work_item_id: input.workItemId,
     // D15: Postgres records no nullability for a function argument.
+    p_issued_at: issuedAt as string,
     p_due_at: dueAt as string,
   });
 

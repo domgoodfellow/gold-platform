@@ -311,6 +311,63 @@ describe('invoicing a job', () => {
     expect(actions).toContain('invoice.issued');
     expect(actions).toContain('payment.recorded');
   });
+
+  it('bears the date it is issued for, which need not be today', async () => {
+    // Billing in arrears: the work finished in August and the invoice belongs to August, even
+    // though somebody raised it in September.
+    const job = await quotedJob(alice, 'August work, September paperwork');
+    const inAugust = '2026-08-31T16:00:00.000Z';
+
+    await issueInvoice(alice.db, { workItemId: job, issuedAt: inAugust });
+
+    const invoice = await getInvoiceForWorkItem(alice.db, {
+      organizationId: alice.organizationId,
+      workItemId: job,
+    });
+
+    expect(new Date(invoice!.issuedAt).toISOString()).toBe(inAugust);
+  });
+
+  it('is dated now when nothing says otherwise', async () => {
+    const before = Date.now();
+    const job = await quotedJob(alice, 'Raised as the work finished');
+
+    await issueInvoice(alice.db, { workItemId: job });
+
+    const invoice = await getInvoiceForWorkItem(alice.db, {
+      organizationId: alice.organizationId,
+      workItemId: job,
+    });
+    const at = new Date(invoice!.issuedAt).getTime();
+
+    expect(at).toBeGreaterThan(before - 60_000);
+    expect(at).toBeLessThan(Date.now() + 60_000);
+  });
+
+  it('numbers by the order invoices were raised, never by the dates on them', async () => {
+    // The consequence of the field above, asserted rather than left to be discovered. A
+    // business that back-dates out of order gets a number that does not follow its date —
+    // which is the business's to notice, because numbering by date would mean renumbering
+    // documents that have already been sent.
+    const later = await quotedJob(alice, 'Raised first, dated last');
+    const earlier = await quotedJob(alice, 'Raised second, dated first');
+
+    await issueInvoice(alice.db, { workItemId: later, issuedAt: '2026-08-30T09:00:00.000Z' });
+    await issueInvoice(alice.db, { workItemId: earlier, issuedAt: '2026-08-01T09:00:00.000Z' });
+
+    const read = async (workItemId: string) =>
+      (await getInvoiceForWorkItem(alice.db, {
+        organizationId: alice.organizationId,
+        workItemId,
+      }))!;
+
+    const first = await read(later);
+    const second = await read(earlier);
+
+    // The one raised first holds the lower number despite bearing the later date.
+    expect(second.number).toBeGreaterThan(first.number);
+    expect(new Date(second.issuedAt).getTime()).toBeLessThan(new Date(first.issuedAt).getTime());
+  });
 });
 
 describe('money arriving', () => {
