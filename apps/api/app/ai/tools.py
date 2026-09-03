@@ -1,12 +1,13 @@
 """Which questions this platform can be asked, and which function answers each.
 
-**Three, and the list grows one entry per slice that has a screen behind it.** A tool list written ahead
+**Four, and the list grows one entry per slice that has a screen behind it.** A tool list written ahead
 of its callers is the speculative abstraction `constraints.md` opens by refusing, and here it has
 a second cost: every tool is a sentence in a prompt, and a model given nine plausible tools
 chooses worse than one given the few that fit. Two of these are the questions M8's criterion
 names. The third is here because watching a model handle *move it to 9am tomorrow* showed it had
 no way to find out what was already booked, so it guessed — which is a foundation problem rather
-than a model problem, and the fix is a tool rather than a firmer instruction.
+than a model problem, and the fix is a tool rather than a firmer instruction. The fourth is the
+aggregate, and it has a screen behind it in the same change (D35).
 
 **No tool asks which business, and that was a bug before it was a decision.** Every function
 takes `p_organization_id`, and the first version of this file put it in the schema -- so a model
@@ -15,12 +16,17 @@ either invents a uuid, which matches nothing, or asks the person a question they
 to answer. The loop fills it in from the request instead. It is not the model's to choose, and now
 it cannot: the parameter never appears in a prompt, and RLS decides regardless (D34).
 
-**What is missing from this list is missing on purpose.** Anything shaped like a report --
-revenue by customer, least profitable service, cost trends -- gets no tool until M7's aggregate
-layer exists. Without it, the only way to answer such a question is arithmetic inside the loop,
-which is the second aggregate layer I4 and I5 exist to prevent one level up. Until then the
-assistant says it cannot answer that, which is a true sentence and a better one than a number
-nobody can reproduce from a screen.
+**The report-shaped half arrived, and it arrived as a function rather than as arithmetic here.**
+This list said for two milestones that revenue by customer got no tool until M7's aggregate layer
+existed, because the only other way to answer was a total computed inside the loop -- the second
+aggregate layer I4 and I5 exist to prevent one level up. `invoiced_and_incurred` is that layer,
+and the reason it can be a tool at all is that it is the same `stable`, `security invoker`
+function shape as everything else here (D35).
+
+**What is still missing is missing on purpose.** *Cost trends* is a shape this returns one period
+of rather than a series, and *least profitable service* is a question this cannot answer at all --
+grouping by service returns no cost, because a cost belongs to a job and a service is one line on
+one. The assistant says so rather than dividing something plausible.
 """
 
 from __future__ import annotations
@@ -85,7 +91,56 @@ SCHEDULE_AHEAD = Tool(
     function="schedule_ahead",
 )
 
-TOOLS: tuple[Tool, ...] = (WORK_AT_RISK, CUSTOMERS_NOT_CONTACTED, SCHEDULE_AHEAD)
+INVOICED_AND_INCURRED = Tool(
+    name="invoiced_and_incurred",
+    description=(
+        "What this business has billed and what its work has consumed, grouped by customer, "
+        "service, resource or location, and totalled within each currency separately. Invoiced "
+        "counts an invoice on the day it was issued; incurred counts a cost on the day it was "
+        "incurred. Work that has been priced but not yet invoiced is not counted at all, so say "
+        "'invoiced' rather than 'revenue' when reporting these numbers. Grouping by service "
+        "returns no cost and no margin, because a cost belongs to a job rather than to one line "
+        "on it -- if asked which service is least profitable, say that this cannot be worked out "
+        "rather than estimating it."
+    ),
+    schema={
+        "type": "object",
+        "properties": {
+            "grouping": {
+                "type": "string",
+                "enum": ["customer", "service", "resource", "location"],
+                "description": "What to group the figures by.",
+            },
+            # Dates, and the business's own zone is applied to them in the database. A model is
+            # told today's date in that zone and nothing else -- it never converts, which is the
+            # rule `20260902000009` arrived at from the other direction.
+            "from": {
+                "type": "string",
+                "description": (
+                    "First day to count, as YYYY-MM-DD, in this business's own dates. "
+                    "Omit for no start."
+                ),
+            },
+            "to": {
+                "type": "string",
+                "description": (
+                    "First day *not* to count, as YYYY-MM-DD. For all of August, pass "
+                    "2026-09-01. Omit for no end."
+                ),
+            },
+        },
+        "required": ["grouping"],
+        "additionalProperties": False,
+    },
+    function="invoiced_and_incurred",
+)
+
+TOOLS: tuple[Tool, ...] = (
+    WORK_AT_RISK,
+    CUSTOMERS_NOT_CONTACTED,
+    SCHEDULE_AHEAD,
+    INVOICED_AND_INCURRED,
+)
 
 
 def tool_named(name: str) -> Tool | None:

@@ -2031,6 +2031,114 @@ took the person off it.
 
 ---
 
+### D35 — An aggregate is a function in Postgres, and the calculation it agrees with stays in TypeScript
+
+M7 is reporting, and the first question it has to answer is where a total lives. Getting this
+wrong produces the second aggregate layer I4 and I5 exist to prevent one level up, and D34
+already said so in passing: "the first total computed inside a loop is the second aggregate
+layer". This is the decision that sentence was pointing at.
+
+**An aggregate is a `stable`, `security invoker` function in this database**, exactly the shape
+D34 gives a tool — because a report *is* a tool as soon as somebody asks the assistant for it,
+and a report that exists as TypeScript only would have to be written twice the day it does. It is
+narrowed by RLS rather than by its arguments, its joins are part of what it discloses, and the
+catalogue is where that is enforced. Everything D34 says about a tool applies here unchanged.
+
+**That is two callers in the same change, and two callers is what licenses it at all.** The
+screen and the assistant both read the same function. One caller would have made this the
+speculative abstraction *Scope and abstraction* opens by refusing; the rule about extracting a
+rule at the second caller is what this satisfies.
+
+#### Why this does not put a second price calculation in the database
+
+It does, in the narrow sense, and the honest answer is that this platform already keeps one rule
+in two expressions and has a mechanism for it.
+
+**`priceWorkItem` stays the definition and moves nowhere.** It is pure, synchronous, and takes
+lines its caller already read; making it call the database would be a round trip for arithmetic
+on data already in hand, and it would invert D2's split. What `invoiceStanding` already
+demonstrates is that the rule was never "one query" — that function calls `priceWorkItem` on
+*invoice* lines rather than quote lines, so the shape is **one calculation, fed different lines**.
+An aggregate selects and groups lines. That part is database work.
+
+**What keeps the two expressions one rule is a correspondence test, and I5 is the precedent
+rather than an analogy.** The availability predicate genuinely exists twice — as
+`work_items_resource_not_double_booked` and as `listSchedule`'s filters — and I5 is held up not by
+deleting one but by `availability.test.ts` asserting they agree in both directions. I4 is now held
+the same way: `reporting.test.ts` prices the same jobs through `priceWorkItem` and through the
+aggregate and fails on any disagreement. The day a minimum charge, a tax or a rounding rule lands
+in `priceWorkItem`, that test fails — which is precisely the event I4 was written to catch, and
+the reason it must fail loudly rather than be updated to match.
+
+**A total may not be stored.** No `subtotal`, `revenue` or `margin` column on any table, and no
+materialized view in the first build. I4's own record names a stored subtotal as the thing that
+becomes a second opinion, and a materialized one is that with a performance excuse attached.
+Nothing has measured a slow query yet.
+
+#### The words, because "revenue" is four different facts
+
+Naming these apart is most of the design, and each is dated by a business date a person controls
+rather than by when somebody typed it in — an asymmetry closed for costs and invoices in the
+commit immediately before this record.
+
+- **Invoiced** — what a business has billed. `invoices.issued_at`, snapshotted lines, a
+  snapshotted `billed_to`. **Built.**
+- **Incurred** — what a job consumed. `work_item_costs.incurred_at`, with the currency snapshotted
+  onto each row. **Built.**
+- **Margin** — invoiced minus incurred, within one currency. **Built**, and see below.
+- **Received** — what has actually arrived. `payments.received_at`, which has carried a
+  caller-supplied date since M4. **Not built**: it is one more column of the same shape, and it
+  lands when somebody asks for a cash view rather than because the column exists.
+- **Quoted** — what has been priced onto jobs, invoiced or not. **Not built, and the reason is the
+  finding.** A priced line's only date is `created_at`, which is when somebody typed it — exactly
+  the asymmetry the preceding commit closed everywhere else. Reporting quoted work over a period
+  would reintroduce it. **The gap is a business date on a quote**, and it is its own slice with
+  its own caller, not a column added here on speculation.
+
+**This matters more than it looks, because it decides who gets a report at all.** A business that
+prices here and invoices in another system has nothing invoiced, and under this record sees an
+empty report rather than a wrong one. That may turn out to be most of them, and finding out is
+the point: an empty report from a real business is the caller that earns *quoted* its date.
+
+#### Three shapes that are decided rather than incidental
+
+- **A group is keyed by an entity and a currency, and never by an entity alone.** Amounts carry
+  the currency they were recorded in (I8, I10), so a business that changed what it trades in has
+  two rows for one customer and no single figure. This is `totalCost`'s choice one level up.
+
+  **It differs from `jobEconomics` deliberately.** That function returns `null` for margin across
+  currencies because a job screen wants one number and there is not one. A report is a table, and
+  a row per currency is the honest presentation of the same refusal. Neither converts, which is
+  the rule both are obeying.
+
+- **Every grouping key is a snapshot.** Service is `invoice_lines.description`, customer is
+  `invoices.billed_to`, and neither joins back to `price_book_items` or reads a customer's name as
+  it is today. That absence is the whole of what I8's enforcement consists of, and a report
+  grouped by today's catalogue would make last year's figures move when somebody renames a
+  service. Where an id is carried too, it is for the screen to link with, never for the grouping.
+
+- **Margin groups three ways and revenue groups four.** A cost sits on a job; a service is a line
+  on one. Attributing a job's costs across its lines needs an allocation rule, and this platform
+  has no basis to invent one. So grouping by service returns revenue with an absent cost and an
+  absent margin, and the screen says why — the same shape `jobEconomics` uses when it cannot
+  subtract.
+
+#### Rejected
+
+**The aggregate in TypeScript.** I4 is trivially satisfied and the assistant gets nothing to call,
+because D34 says a tool is a Postgres function. M7's stated purpose is unlocking the
+report-shaped tools; an aggregate they cannot reach does not do it.
+
+**Moving `priceWorkItem` into Postgres.** It makes I4 single again with no correspondence test
+needed, and it costs a round trip for every price on every screen, turns a pure function async,
+and moves the transactional domain's arithmetic out of the runtime D2 gives it.
+
+**A report definition in this record.** What a saved report may express, and who may see one, is
+the next slice's decision and depends on this one working. Deciding it here would be deciding it
+without a caller.
+
+---
+
 ## Decided, not yet built
 
 Named so they are not reinvented, and deliberately unbuilt until they have a consumer.

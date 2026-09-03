@@ -252,9 +252,13 @@ Two more that are easy to undo:
   and an `agent_runs` row that means two things. Two providers ship: Claude by default, and
   anything speaking chat completions — which is how a deployment that must send no rows to
   anybody answers at all.
-- **No aggregate-shaped tool exists, and that is the decision rather than a gap.** Revenue by
-  customer and least profitable service wait for M7; until then the assistant says it cannot
-  answer. A tool that cannot contain a calculation is what makes that hold without discipline.
+- **The aggregate-shaped tool is `invoiced_and_incurred`, and it is a tool because it is a
+  function** (D35). This entry used to say no such tool existed and that report-shaped questions
+  waited for M7; the aggregate layer arriving is what retired that. What has not changed is why
+  it was safe to wait: a tool cannot contain a calculation, so the alternative was never a worse
+  tool — it was no answer, which the assistant said out loud. *Least profitable service* is still
+  refused, and now for a reason in the data rather than a missing layer: grouping by service
+  returns no cost, because a cost belongs to a job and a service is one line on one.
 - **`schedule_ahead` returns what is booked and never what is free**, which is what keeps it from
   being a second `freeWindows` in a second runtime (I5). It exists because a model asked to move a
   job had no way to see the diary and guessed; a model may now propose a time that looks free, and
@@ -277,6 +281,46 @@ window lands (I6); and a decided action is frozen by `agent_runs_update` rather 
 flow. **Rescheduling deliberately cannot reassign** — a test caught the first executor omitting
 the resource, which `scheduleWorkItem` reads as *nobody assigned*, so moving a job silently took
 the person off it.
+
+**The aggregate layer is built, and it is M7's first slice.** `public.invoiced_and_incurred` is
+one `stable`, `security invoker` function — D34's shape for a tool, because a report *is* one the
+moment somebody asks the assistant for it — read by the Reports screen and by the loop in the same
+change. `constraints.md` D35 holds the decisions. Five things are load-bearing:
+
+- **`priceWorkItem` stays the price calculation and moves nowhere, and a correspondence test is
+  what makes that true rather than a claim.** The aggregate expresses the same rule in SQL, which
+  I4 forbids unless the two are pinned together — so `reporting.test.ts` totals the same invoices
+  through both and fails on any disagreement. **This is I5's mechanism, not a new one**: the
+  availability predicate has always lived in a constraint *and* in `listSchedule`'s filters, held
+  honest by a test that they agree. When a minimum charge, a tax or a rounding rule lands in
+  `priceWorkItem`, that test fails — which is the event I4 exists to catch. Repair it by teaching
+  the aggregate the rule, never by relaxing the assertion.
+- **It says *invoiced* and never *revenue*, and that word is the design.** Four financial facts
+  live here and only two are dated by something a person chose: invoiced (`invoices.issued_at`)
+  and incurred (`work_item_costs.incurred_at`). *Received* is a third and waits for a caller
+  wanting a cash view. *Quoted* is the fourth and **cannot be reported over a period at all** — a
+  priced line's only date is the instant somebody typed it, which is the asymmetry
+  `20260903000001` closed everywhere else. So a business that prices here and invoices elsewhere
+  sees an **empty report**, which is the honest answer and may describe most of them; that empty
+  report in front of a real business is the caller that earns a quote its own date. Do not add the
+  column before it.
+- **A group is keyed by an entity *and* a currency.** Two rows for one customer is what a business
+  that changed what it trades in actually has, and it is the refusal `jobEconomics` expresses as a
+  `null` margin — a job screen wants one number, a report is a table. Neither converts.
+- **Margin groups three ways and revenue four.** A cost sits on a job; a service is a line on one.
+  Grouping by service returns an absent cost and an absent margin rather than zero, because
+  splitting a job's costs across its lines means inventing an allocation rule. That is also why
+  the assistant still refuses *least profitable service*.
+- **No total is stored, and none may be.** No `subtotal`, `revenue` or `margin` column and no
+  materialized view — I4's own record names a stored subtotal as the thing that becomes a second
+  opinion, and a materialized one is that with a performance excuse. Nothing has measured a slow
+  query yet.
+
+What is **not** built is the rest of M7: a report is not yet a row a tenant saves, and there is no
+dashboard and no audience. Both are decisions that depend on this one working, and D35 declines to
+take them early. `today` is deliberately not converted into a configured dashboard — if the first
+dashboard and the machinery for dashboards land together, nothing tests whether that machinery
+could express something that already existed.
 
 **Standing a business up is two acts by two parties, and the second of them is one function
 that must never learn what kind of business it is holding.** GOLD creates the business —

@@ -232,6 +232,22 @@ export const MODULES = [
     configuredAt: { segment: 'ask' },
   },
   {
+    key: 'reporting',
+    label: 'Reporting',
+    description:
+      'What this business billed and what its work consumed, grouped by customer, service, resource or location. A business that reads its numbers in its accounting software runs without it.',
+    // Its own working surface, like Ask: there is no threshold and no key to fill in, so the
+    // switch leads to where the figures are rather than to a settings section (D31).
+    configuredAt: { segment: 'reports' },
+    // **True today rather than forever, and declared because it is true today.** Everything this
+    // module reports is money — invoiced from `invoices`, and a margin, both of which billing
+    // owns and both of which billing being off already removes from a job screen. With billing
+    // off this page has nothing on it at all, which is the dead end D31 exists to end. When the
+    // operational reports arrive — work completed, utilisation, neither of which needs an
+    // invoice — this line comes off, and that removal is the evidence that they landed.
+    requires: 'billing',
+  },
+  {
     key: 'card_payments',
     label: 'Card payments',
     description: 'Ask a processor to collect what is outstanding, rather than only cash.',
@@ -305,6 +321,11 @@ export const AREAS: readonly Area[] = [
   // the area that made the difference between kernel and module concrete enough to fix.
   { segment: 'assets', label: 'Assets', group: 'operational', module: 'assets' },
   { segment: 'resources', label: 'Resources', group: 'operational' },
+  // Last in the operational group, and operational rather than configuration on purpose:
+  // nothing here is set up, and reading what a month came to is something a business does
+  // periodically rather than something it configures once. It sits below the daily screens
+  // because it is not part of the loop that gets work done.
+  { segment: 'reports', label: 'Reports', group: 'operational', module: 'reporting' },
   // A business that quotes and invoices in another system runs everything else here and never
   // opens this. Turning it off also takes the priced lines and the invoice off a job screen —
   // see the work item route, which reads the same set.

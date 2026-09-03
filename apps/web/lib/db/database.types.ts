@@ -2799,6 +2799,22 @@ export type Database = {
           time_zone: string
         }[]
       }
+      invoiced_and_incurred: {
+        Args: {
+          p_from?: string
+          p_grouping: string
+          p_organization_id: string
+          p_to?: string
+        }
+        Returns: {
+          currency: string
+          group_id: string
+          group_label: string
+          incurred_minor: number
+          invoiced_minor: number
+          margin_minor: number
+        }[]
+      }
       issue_invoice: {
         Args: { p_due_at: string; p_issued_at: string; p_work_item_id: string }
         Returns: string
