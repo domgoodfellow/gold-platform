@@ -4,8 +4,8 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 import {
   runReportDefinition,
   type ReportDefinition,
+  type ReportResult,
 } from '@/lib/domain/reporting/definitions';
-import type { FinancialGroup } from '@/lib/domain/reporting/financials';
 
 /**
  * A dashboard: saved reports, in an order a business chose.
@@ -29,11 +29,12 @@ export type Dashboard = {
   createdAt: string;
 };
 
-/** One tile: a saved report and the figures it stands for right now. */
+/** One tile: a saved report and what it stands for right now. */
 export type DashboardTile = {
   report: ReportDefinition;
   position: number;
-  groups: FinancialGroup[];
+  /** Whatever that report measures, discriminated — a tile of money and a tile of jobs. */
+  result: ReportResult;
 };
 
 const NAME_MAX = 120;
@@ -162,8 +163,8 @@ export async function unpinReport(
 /**
  * What a dashboard shows this caller, right now.
  *
- * **Each tile is `runReportDefinition`**, which is `invoiced_and_incurred` — so a dashboard is
- * one more caller of the one aggregate and never a query of its own (D35). The reports it can
+ * **Each tile is `runReportDefinition`**, so a dashboard is one more caller of whichever
+ * aggregate that report names and never a query of its own (D35). The reports it can
  * see are whatever `dashboard_reports_select` returned, which is the audience doing its work;
  * a viewer with access to two of five pinned reports gets two tiles and is told nothing about
  * the other three.
@@ -175,7 +176,7 @@ export async function readDashboard(
   const { data, error } = await db
     .from('dashboard_reports')
     .select(
-      'position, report:report_definitions!dashboard_reports_report_same_org (id, name, grouping, period, customer_id, resource_id, location_id, created_at)',
+      'position, report:report_definitions!dashboard_reports_report_same_org (id, name, measure, grouping, period, customer_id, resource_id, location_id, created_at)',
     )
     .eq('organization_id', input.organizationId)
     .eq('dashboard_id', input.dashboardId)
@@ -197,6 +198,7 @@ export async function readDashboard(
         report: {
           id: report.id,
           name: report.name,
+          measure: report.measure,
           grouping: report.grouping,
           period: report.period,
           filters: {
@@ -213,7 +215,7 @@ export async function readDashboard(
   return Promise.all(
     pinned.map(async (tile) => ({
       ...tile,
-      groups: await runReportDefinition(db, {
+      result: await runReportDefinition(db, {
         organizationId: input.organizationId,
         definition: tile.report,
         today: input.today,

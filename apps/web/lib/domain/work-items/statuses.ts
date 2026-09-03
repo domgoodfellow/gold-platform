@@ -30,6 +30,20 @@ export type WorkItemStatus = {
    * migration for why a constraint predicate cannot read it from here.
    */
   releasesResource: boolean;
+  /**
+   * Whether moving work into this status means the work was done.
+   *
+   * **The second question the platform asks about a status, and it is separate from the first
+   * on purpose.** "Cancelled" releases the van and is not completed work; "Awaiting parts"
+   * holds the van and is not completed work either. One flag could not have said both, which
+   * is exactly why M4 refused a single `isTerminal` and answered the question it actually had.
+   *
+   * Nothing reads it at the moment work moves. It is read afterwards, against the event log,
+   * by `work_marked_complete` — so changing the answer re-reads history rather than rewriting
+   * it, and a business that decides "Delivered" was always the finish line sees last year
+   * counted correctly the moment it says so.
+   */
+  marksComplete: boolean;
 };
 
 const NAME_MAX = 64;
@@ -47,7 +61,7 @@ export async function listWorkItemStatuses(
 ): Promise<WorkItemStatus[]> {
   const { data, error } = await db
     .from('work_item_statuses')
-    .select('id, name, position, releases_resource')
+    .select('id, name, position, releases_resource, marks_complete')
     .eq('organization_id', input.organizationId)
     .eq('type_id', input.typeId)
     .order('position', { ascending: true })
@@ -62,6 +76,7 @@ export async function listWorkItemStatuses(
     name: row.name,
     position: row.position,
     releasesResource: row.releases_resource,
+    marksComplete: row.marks_complete,
   }));
 }
 
@@ -149,7 +164,13 @@ export async function createWorkItemStatus(
  */
 export async function updateWorkItemStatus(
   db: Db,
-  input: { id: string; name: string; position: number; releasesResource: boolean },
+  input: {
+    id: string;
+    name: string;
+    position: number;
+    releasesResource: boolean;
+    marksComplete: boolean;
+  },
 ): Promise<void> {
   await requireActor(db);
 
@@ -175,6 +196,7 @@ export async function updateWorkItemStatus(
     p_name: name,
     p_position: input.position,
     p_releases_resource: input.releasesResource,
+    p_marks_complete: input.marksComplete,
   });
 
   if (error) {

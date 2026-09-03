@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getInvoiceForWorkItem, issueInvoice } from '@/lib/domain/billing/invoices';
 import { createCustomer } from '@/lib/domain/customers/customers';
+import { listWorkMarkedComplete } from '@/lib/domain/reporting/completion';
 import { createPriceBookItem, updatePriceBookItem } from '@/lib/domain/pricing/price-book';
 import { priceWorkItem } from '@/lib/domain/pricing/prices';
 import {
@@ -21,18 +22,22 @@ import {
 } from '@/lib/domain/reporting/definitions';
 import {
   listInvoicedAndIncurred,
-  periodFor,
   totalsByCurrency,
   type FinancialGroup,
 } from '@/lib/domain/reporting/financials';
+import { periodFor } from '@/lib/domain/reporting/shape';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { addPricedLine } from '@/lib/domain/pricing/prices';
 import { recordCost } from '@/lib/domain/work-items/consumption';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
-import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
-import { createWorkItemType } from '@/lib/domain/work-items/types';
+import { createWorkItemStatus, updateWorkItemStatus } from '@/lib/domain/work-items/statuses';
+import {
+  changeWorkItemStatus,
+  createWorkItemTransition,
+} from '@/lib/domain/work-items/transitions';
+import { createWorkItemType, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { foundBusiness } from './helpers/founding';
 
 /**
@@ -649,6 +654,7 @@ describe('a report a business saved', () => {
     reportId = await saveReportDefinition(owner.db, {
       organizationId: owner.organizationId,
       name: 'Billing by service',
+      measure: 'invoiced_and_incurred',
       grouping: 'service',
       period: 'all',
     });
@@ -675,8 +681,9 @@ describe('a report a business saved', () => {
       period: periodFor('all', '2026-08-30'),
     });
 
-    expect(throughTheDefinition).toEqual(throughTheScreen);
-    expect(throughTheDefinition[0]?.invoicedMinor).toBe(24_000);
+    expect(throughTheDefinition.measure).toBe('invoiced_and_incurred');
+    expect(throughTheDefinition.groups).toEqual(throughTheScreen);
+    expect(throughTheDefinition.groups[0]).toMatchObject({ invoicedMinor: 24_000 });
   });
 
   it('shows a report to nobody until it names a role', async () => {
@@ -717,12 +724,12 @@ describe('a report a business saved', () => {
     });
     expect(definition).not.toBeNull();
 
-    const rows = await runReportDefinition(readerDb, {
+    const result = await runReportDefinition(readerDb, {
       organizationId: owner.organizationId,
       definition: definition!,
       today: '2026-08-30',
     });
-    expect(rows[0]?.invoicedMinor).toBe(24_000);
+    expect(result.groups[0]).toMatchObject({ invoicedMinor: 24_000 });
   });
 
   it('refuses a member who may read figures but not author a report (I16)', async () => {
@@ -730,6 +737,7 @@ describe('a report a business saved', () => {
       saveReportDefinition(readerDb, {
         organizationId: owner.organizationId,
         name: 'Mine now',
+        measure: 'invoiced_and_incurred',
         grouping: 'customer',
         period: 'all',
       }),
@@ -757,6 +765,7 @@ describe('a report a business saved', () => {
       saveReportDefinition(owner.db, {
         organizationId: owner.organizationId,
         name: 'Somebody else’s customer',
+        measure: 'invoiced_and_incurred',
         grouping: 'service',
         period: 'all',
         filters: { customerId: theirCustomer },
@@ -769,6 +778,7 @@ describe('a report a business saved', () => {
       saveReportDefinition(owner.db, {
         organizationId: owner.organizationId,
         name: 'billing BY service',
+        measure: 'invoiced_and_incurred',
         grouping: 'customer',
         period: 'all',
       }),
@@ -845,12 +855,14 @@ describe('a dashboard', () => {
     sharedReportId = await saveReportDefinition(owner.db, {
       organizationId: owner.organizationId,
       name: 'Everyone’s',
+      measure: 'invoiced_and_incurred',
       grouping: 'service',
       period: 'all',
     });
     privateReportId = await saveReportDefinition(owner.db, {
       organizationId: owner.organizationId,
       name: 'Owner’s only',
+      measure: 'invoiced_and_incurred',
       grouping: 'customer',
       period: 'all',
     });
@@ -888,7 +900,7 @@ describe('a dashboard', () => {
 
     expect(tiles.map((tile) => tile.report.name)).toEqual(['Everyone’s', 'Owner’s only']);
     // Not a stored figure anywhere: each tile is `runReportDefinition`, which is the aggregate.
-    expect(tiles[0].groups[0]?.invoicedMinor).toBe(12_000);
+    expect(tiles[0].result.groups[0]).toMatchObject({ invoicedMinor: 12_000 });
   });
 
   it('shows one person two tiles and another person one, from the same row (D36)', async () => {
@@ -901,7 +913,7 @@ describe('a dashboard', () => {
     // The pin to the owner's private report is not returned, so the tile is absent rather than
     // rendered empty — and nothing in application code decided that.
     expect(forReader.map((tile) => tile.report.name)).toEqual(['Everyone’s']);
-    expect(forReader[0].groups[0]?.invoicedMinor).toBe(12_000);
+    expect(forReader[0].result.groups[0]).toMatchObject({ invoicedMinor: 12_000 });
   });
 
   it('does not exist for somebody none of its reports are for', async () => {
@@ -949,5 +961,225 @@ describe('a dashboard', () => {
       today: '2026-08-30',
     });
     expect(tiles.map((tile) => tile.report.name)).toEqual(['Everyone’s']);
+  });
+});
+
+/**
+ * How much work a business marked finished.
+ *
+ * **The second measure, and the first that is not money** — which is what takes `requires:
+ * 'billing'` off the reporting module. What is worth testing here is not the arithmetic but the
+ * three refusals it is built on.
+ *
+ * *Which status means finished is the tenant's answer*, and a business that has said nothing
+ * reports nothing rather than everything. *`releases_resource` is not that answer* — Cancelled
+ * frees the van and is not completed work, which is exactly why M4 declined to answer both
+ * questions with one flag. And a job finished, reopened and finished again inside one period
+ * **counts once**, because counting the moves would make a business that corrects a mistake look
+ * busier than one that does not.
+ */
+describe('work a business marked finished', () => {
+  let shop: Tenant;
+  let doneId: string;
+  let cancelledId: string;
+  let openId: string;
+  let customerId: string;
+
+  beforeAll(async () => {
+    shop = await newTenant('done-shop');
+
+    const [type] = await listWorkItemTypes(shop.db, { organizationId: shop.organizationId });
+    openId = shop.statusId;
+
+    doneId = await createWorkItemStatus(shop.db, {
+      organizationId: shop.organizationId,
+      typeId: type.id,
+      name: 'Finished',
+      position: 1,
+    });
+    cancelledId = await createWorkItemStatus(shop.db, {
+      organizationId: shop.organizationId,
+      typeId: type.id,
+      name: 'Cancelled',
+      position: 2,
+    });
+
+    // Every move has to be legal before it can be made (I13).
+    for (const to of [doneId, cancelledId]) {
+      await createWorkItemTransition(shop.db, {
+        organizationId: shop.organizationId,
+        typeId: type.id,
+        fromStatusId: openId,
+        toStatusId: to,
+      });
+      await createWorkItemTransition(shop.db, {
+        organizationId: shop.organizationId,
+        typeId: type.id,
+        fromStatusId: to,
+        toStatusId: openId,
+      });
+    }
+
+    customerId = await createCustomer(shop.db, {
+      organizationId: shop.organizationId,
+      name: 'Regular client',
+    });
+  });
+
+  async function job(title: string): Promise<string> {
+    return createWorkItem(shop.db, {
+      organizationId: shop.organizationId,
+      statusId: openId,
+      title,
+      customerId,
+    });
+  }
+
+  it('reports nothing until the business says which status means finished', async () => {
+    // **Not zero because nothing happened — nothing because nothing was asked.** A business that
+    // has not answered is not a business with no completed work, and the screen says so.
+    const finished = await job('Done but unclaimed');
+    await changeWorkItemStatus(shop.db, { workItemId: finished, toStatusId: doneId });
+
+    expect(
+      await listWorkMarkedComplete(shop.db, {
+        organizationId: shop.organizationId,
+        grouping: 'customer',
+      }),
+    ).toEqual([]);
+  });
+
+  it('counts work once the business answers, and reaches back over what already happened', async () => {
+    // **Read against the event log rather than stamped at the moment work moved**, so answering
+    // the question later counts history correctly instead of only counting what happens next.
+    // A business that decides "Finished" was always the finish line sees last year immediately.
+    await updateWorkItemStatus(shop.db, {
+      id: doneId,
+      name: 'Finished',
+      position: 1,
+      releasesResource: false,
+      marksComplete: true,
+    });
+
+    const groups = await listWorkMarkedComplete(shop.db, {
+      organizationId: shop.organizationId,
+      grouping: 'customer',
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].label).toBe('Regular client');
+    expect(groups[0].jobs).toBe(1);
+  });
+
+  it('does not treat freeing the resource as finishing the work (M4)', async () => {
+    // The distinction M4 refused to collapse, asserted rather than described. Cancelled releases
+    // the van; it is not work anybody did.
+    await updateWorkItemStatus(shop.db, {
+      id: cancelledId,
+      name: 'Cancelled',
+      position: 2,
+      releasesResource: true,
+      marksComplete: false,
+    });
+
+    const abandoned = await job('Called off');
+    await changeWorkItemStatus(shop.db, { workItemId: abandoned, toStatusId: cancelledId });
+
+    const groups = await listWorkMarkedComplete(shop.db, {
+      organizationId: shop.organizationId,
+      grouping: 'customer',
+    });
+    expect(groups[0].jobs).toBe(1);
+  });
+
+  it('counts a job once however many times it was finished', async () => {
+    // Finished, reopened, finished again. One job was done, and counting the moves would make
+    // correcting a mistake look like extra work.
+    const reworked = await job('Twice over');
+    await changeWorkItemStatus(shop.db, { workItemId: reworked, toStatusId: doneId });
+    await changeWorkItemStatus(shop.db, { workItemId: reworked, toStatusId: openId });
+    await changeWorkItemStatus(shop.db, { workItemId: reworked, toStatusId: doneId });
+
+    const groups = await listWorkMarkedComplete(shop.db, {
+      organizationId: shop.organizationId,
+      grouping: 'customer',
+    });
+    expect(groups[0].jobs).toBe(2);
+  });
+
+  it('refuses a grouping it cannot answer, at the aggregate and when saving one', async () => {
+    // A job is finished as a whole; splitting one completion across the priced lines on it would
+    // mean inventing a rule about how — the same refusal the money report makes about cost per
+    // service. Refused twice: at execution, and when somebody tries to *store* the pair, so a
+    // report whose only outcome is a failure is never put on a screen as a thing to click.
+    await expect(
+      listWorkMarkedComplete(shop.db, {
+        organizationId: shop.organizationId,
+        grouping: 'service',
+      }),
+    ).rejects.toMatchObject({ code: 'reporting.completion_failed' });
+
+    await expect(
+      saveReportDefinition(shop.db, {
+        organizationId: shop.organizationId,
+        name: 'Finished by service',
+        measure: 'work_marked_complete',
+        grouping: 'service',
+        period: 'all',
+      }),
+    ).rejects.toMatchObject({ code: 'reports.grouping_unanswerable' });
+  });
+
+  it('is gated by report.read like every other total', async () => {
+    const limited = await newTenant('done-limited');
+    const roleId = await createRole(limited.db, {
+      organizationId: limited.organizationId,
+      name: 'Coordinator',
+      capabilities: ['role.manage', 'work_item.create', 'work_item.transition'],
+    });
+    const { data: membership } = await limited.db
+      .from('memberships')
+      .select('id')
+      .eq('organization_id', limited.organizationId)
+      .single();
+    await assignRole(limited.db, { membershipId: membership!.id, roleId });
+
+    await expect(
+      listWorkMarkedComplete(limited.db, {
+        organizationId: limited.organizationId,
+        grouping: 'customer',
+      }),
+    ).rejects.toMatchObject({ code: 'reporting.completion_failed' });
+  });
+
+  it('is saveable, and a saved one runs through the same aggregate', async () => {
+    const reportId = await saveReportDefinition(shop.db, {
+      organizationId: shop.organizationId,
+      name: 'Finished by customer',
+      measure: 'work_marked_complete',
+      grouping: 'customer',
+      period: 'all',
+    });
+
+    const definition = await getReportDefinition(shop.db, {
+      organizationId: shop.organizationId,
+      id: reportId,
+    });
+    expect(definition?.measure).toBe('work_marked_complete');
+
+    const result = await runReportDefinition(shop.db, {
+      organizationId: shop.organizationId,
+      definition: definition!,
+      today: '2026-09-03',
+    });
+
+    expect(result.measure).toBe('work_marked_complete');
+    if (result.measure !== 'work_marked_complete') throw new Error('wrong measure');
+    expect(result.groups).toEqual(
+      await listWorkMarkedComplete(shop.db, {
+        organizationId: shop.organizationId,
+        grouping: 'customer',
+      }),
+    );
   });
 });

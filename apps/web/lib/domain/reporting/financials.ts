@@ -1,5 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import type { Filters, Grouping, Period } from '@/lib/domain/reporting/shape';
 
 /**
  * What a business billed and what its work consumed, grouped.
@@ -13,35 +14,20 @@ import { DomainError } from '@/lib/domain/errors';
  * **"Revenue" is not a word this module uses, and that is the design.** Four financial facts
  * live in this database and only two of them are dated by something a person chose:
  * *invoiced*, from `invoices.issued_at`, and *incurred*, from `work_item_costs.incurred_at`.
- * *Received* is a third and waits for somebody wanting a cash view. *Quoted* is the fourth and
- * cannot be reported over a period at all, because a priced line's only date is the instant
- * somebody typed it — which is the finding D35 records rather than a column added on
- * speculation.
+ * *Received* is a third and waits for somebody wanting a cash view.
+ *
+ * **The fourth is *quoted*, and this comment used to say it could not be reported at all.** That
+ * was wrong and `roadmap.md` M7 carries the correction: `work_item.line_added` and
+ * `work_item.line_removed` are both recorded with `occurred_at`, so *what we quoted in August* is
+ * answerable with no schema change. What it needs is a decision between two different questions —
+ * what was quoted **during** a period, and what stands quoted and unbilled **as at** a date —
+ * and neither has a caller yet.
  *
  * The consequence is stated rather than hidden: **a business that prices here and invoices
  * somewhere else sees an empty report.** That is the correct answer under this design and it
  * may describe most of them, at which point an empty report in front of a real business is the
- * caller that earns a quote its own date.
+ * caller that decides which of those two questions it wanted.
  */
-
-/**
- * What a figure can be grouped by.
- *
- * Platform vocabulary rather than tenant configuration, exactly like `CAPABILITIES`: each entry
- * names a grouping the database actually implements, and adding one means writing the SQL.
- * The tenant's own words appear *inside* a grouping — their customers, their services — never
- * as one of these.
- */
-export const GROUPINGS = ['customer', 'service', 'resource', 'location'] as const;
-
-export type Grouping = (typeof GROUPINGS)[number];
-
-export const GROUPING_LABELS: Record<Grouping, string> = {
-  customer: 'Customer',
-  service: 'Service',
-  resource: 'Resource',
-  location: 'Location',
-};
 
 /**
  * One group, within one currency.
@@ -71,74 +57,6 @@ export type FinancialGroup = {
   /** Null when the question is not defined — grouping by service, where a cost has no line. */
   incurredMinor: number | null;
   marginMinor: number | null;
-};
-
-/**
- * A period, half-open, as two dates in `YYYY-MM-DD`.
- *
- * Dates rather than instants: the aggregate applies the business's own zone to both ends, from
- * the row that holds it. Both optional — absent means everything on that side.
- */
-export type Period = { from?: string; to?: string };
-
-export const PERIODS = ['month', 'year', 'all'] as const;
-
-export type PeriodPreset = (typeof PERIODS)[number];
-
-export const PERIOD_LABELS: Record<PeriodPreset, string> = {
-  month: 'This month',
-  year: 'This year',
-  all: 'Everything',
-};
-
-/**
- * A preset turned into two dates.
- *
- * **Dates, not instants, and the conversion deliberately does not happen here** (I9). Where a
- * month begins depends on where the business is, and the aggregate applies the tenant's own
- * zone to both ends — once, from the row that holds it. Converting on this side would put the
- * same arithmetic in every caller, and one of those callers is a language model.
- *
- * What this needs the zone for is only *which* month: a tenant in Auckland and one in Montréal
- * are on different dates for most of the server's day, so `today` comes from `todayInZone`.
- *
- * Half-open, matching the aggregate: the first day is included and the last is not, so a month
- * and the month after it share a boundary and count nothing twice.
- */
-export function periodFor(preset: PeriodPreset, today: string): Period {
-  if (preset === 'all') return {};
-
-  const [year, month] = today.split('-').map(Number);
-  const pad = (value: number) => String(value).padStart(2, '0');
-
-  if (preset === 'year') {
-    return { from: `${year}-01-01`, to: `${year + 1}-01-01` };
-  }
-
-  return {
-    from: `${year}-${pad(month)}-01`,
-    to: month === 12 ? `${year + 1}-01-01` : `${year}-${pad(month + 1)}-01`,
-  };
-}
-
-/**
- * One entity to narrow to, or none.
- *
- * Three optional ids rather than a filter language, because for this report set there is
- * nothing else to express: the entity is the grouping, the fields are the money columns, and
- * the calculation is the subtraction (D36). A filter narrows the *jobs* considered, so a job's
- * revenue and its costs are always counted together or not at all.
- */
-export type Filters = {
-  customerId?: string | null;
-  resourceId?: string | null;
-  locationId?: string | null;
-};
-
-export const FILTER_LABELS: Record<keyof Filters, string> = {
-  customerId: 'Customer',
-  resourceId: 'Resource',
-  locationId: 'Location',
 };
 
 export async function listInvoicedAndIncurred(

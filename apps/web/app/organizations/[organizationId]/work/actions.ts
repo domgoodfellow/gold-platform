@@ -270,6 +270,7 @@ export async function updateStatusAction(
       position: Number(formData.get('position') ?? Number.NaN),
       // An unchecked checkbox submits nothing at all, which is the false this needs.
       releasesResource: formData.get('releasesResource') === '1',
+      marksComplete: formData.get('marksComplete') === '1',
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };

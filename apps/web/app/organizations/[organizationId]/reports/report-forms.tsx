@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import type { ReportDefinition } from '@/lib/domain/reporting/definitions';
-import type { Filters, Grouping, PeriodPreset } from '@/lib/domain/reporting/financials';
+import type { Filters, Grouping, Measure, PeriodPreset } from '@/lib/domain/reporting/shape';
 import {
   createDashboardAction,
   deleteDashboardAction,
@@ -26,11 +26,13 @@ const BUTTON = 'rounded border border-black/15 px-3 py-1 text-sm dark:border-whi
  */
 export function SaveReportForm({
   organizationId,
+  measure,
   grouping,
   period,
   filters,
 }: {
   organizationId: string;
+  measure: Measure;
   grouping: Grouping;
   period: PeriodPreset;
   filters: Filters;
@@ -40,6 +42,7 @@ export function SaveReportForm({
   return (
     <form action={formAction} className="mt-8 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="measure" value={measure} />
       <input type="hidden" name="grouping" value={grouping} />
       <input type="hidden" name="period" value={period} />
       <input type="hidden" name="customer" value={filters.customerId ?? ''} />
@@ -95,6 +98,7 @@ export function ReportAudienceForm({
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{report.name}</span>
           <span className="text-sm opacity-70">
+            {report.measure === 'work_marked_complete' ? 'work marked complete' : 'billed and spent'}{' '}
             by {report.grouping}, {report.period}
           </span>
         </div>

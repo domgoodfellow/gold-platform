@@ -196,6 +196,7 @@ describe('M7 — a business defines its own reports and dashboards', () => {
       const reportId = await saveReportDefinition(business.operator, {
         organizationId: business.organizationId,
         name: shape.report,
+        measure: 'invoiced_and_incurred',
         grouping: 'service',
         period: 'all',
       });
@@ -227,9 +228,13 @@ describe('M7 — a business defines its own reports and dashboards', () => {
       });
 
       expect(tiles.map((tile) => tile.report.name)).toEqual([shape.report]);
-      expect(tiles[0].groups[0]?.label).toBe(shape.service);
-      expect(tiles[0].groups[0]?.currency).toBe(shape.currency);
-      expect(tiles[0].groups[0]?.invoicedMinor).toBe(60_000);
+
+      const figures = tiles[0].result;
+      expect(figures.measure).toBe('invoiced_and_incurred');
+      if (figures.measure !== 'invoiced_and_incurred') throw new Error('wrong measure');
+      expect(figures.groups[0]?.label).toBe(shape.service);
+      expect(figures.groups[0]?.currency).toBe(shape.currency);
+      expect(figures.groups[0]?.invoicedMinor).toBe(60_000);
     }
   });
 

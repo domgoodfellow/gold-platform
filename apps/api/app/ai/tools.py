@@ -1,13 +1,13 @@
 """Which questions this platform can be asked, and which function answers each.
 
-**Four, and the list grows one entry per slice that has a screen behind it.** A tool list written ahead
+**Five, and the list grows one entry per slice that has a screen behind it.** A tool list written ahead
 of its callers is the speculative abstraction `constraints.md` opens by refusing, and here it has
 a second cost: every tool is a sentence in a prompt, and a model given nine plausible tools
 chooses worse than one given the few that fit. Two of these are the questions M8's criterion
 names. The third is here because watching a model handle *move it to 9am tomorrow* showed it had
 no way to find out what was already booked, so it guessed — which is a foundation problem rather
-than a model problem, and the fix is a tool rather than a firmer instruction. The fourth is the
-aggregate, and it has a screen behind it in the same change (D35).
+than a model problem, and the fix is a tool rather than a firmer instruction. The last two are the
+aggregates, each with a screen behind it in the same change (D35).
 
 **No tool asks which business, and that was a bug before it was a decision.** Every function
 takes `p_organization_id`, and the first version of this file put it in the schema -- so a model
@@ -135,11 +135,53 @@ INVOICED_AND_INCURRED = Tool(
     function="invoiced_and_incurred",
 )
 
+WORK_MARKED_COMPLETE = Tool(
+    name="work_marked_complete",
+    description=(
+        "How many jobs this business moved into a status it marks as finished, in a period, "
+        "grouped by customer, resource or location. Counts jobs rather than status changes, so "
+        "a job finished, reopened and finished again in the same period counts once. Say "
+        "'marked complete' rather than 'completed': this is when somebody recorded the job as "
+        "done, not when the work stopped. If the business has not said which of its statuses "
+        "means finished, this returns nothing -- say so rather than reporting no work."
+    ),
+    schema={
+        "type": "object",
+        "properties": {
+            "grouping": {
+                "type": "string",
+                # No service: a job is finished as a whole, and splitting one completion across
+                # the priced lines on it would mean inventing a rule about how.
+                "enum": ["customer", "resource", "location"],
+                "description": "What to group the counts by.",
+            },
+            "from": {
+                "type": "string",
+                "description": (
+                    "First day to count, as YYYY-MM-DD, in this business's own dates. "
+                    "Omit for no start."
+                ),
+            },
+            "to": {
+                "type": "string",
+                "description": (
+                    "First day *not* to count, as YYYY-MM-DD. For all of August, pass "
+                    "2026-09-01. Omit for no end."
+                ),
+            },
+        },
+        "required": ["grouping"],
+        "additionalProperties": False,
+    },
+    function="work_marked_complete",
+)
+
 TOOLS: tuple[Tool, ...] = (
     WORK_AT_RISK,
     CUSTOMERS_NOT_CONTACTED,
     SCHEDULE_AHEAD,
     INVOICED_AND_INCURRED,
+    WORK_MARKED_COMPLETE,
 )
 
 

@@ -180,6 +180,7 @@ describe('a customer’s history', () => {
       name: 'Complété',
       position: 1,
       releasesResource: false,
+      marksComplete: false,
     });
 
     // The event is unchanged and append-only; what changed is the row it points at. A

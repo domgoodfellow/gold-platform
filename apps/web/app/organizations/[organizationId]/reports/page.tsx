@@ -1,18 +1,21 @@
 import Link from 'next/link';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listLocations } from '@/lib/domain/locations/locations';
+import { listInvoicedAndIncurred, totalsByCurrency } from '@/lib/domain/reporting/financials';
+import { listWorkMarkedComplete } from '@/lib/domain/reporting/completion';
 import {
-  GROUPINGS,
+  GROUPINGS_FOR,
   GROUPING_LABELS,
+  MEASURES,
+  MEASURE_LABELS,
   PERIODS,
   PERIOD_LABELS,
-  listInvoicedAndIncurred,
   periodFor,
-  totalsByCurrency,
   type Filters,
   type Grouping,
+  type Measure,
   type PeriodPreset,
-} from '@/lib/domain/reporting/financials';
+} from '@/lib/domain/reporting/shape';
 import {
   listDashboards,
   readDashboard,
@@ -26,7 +29,7 @@ import { listResources } from '@/lib/domain/resources/resources';
 import { todayInZone } from '@/lib/domain/scheduling/window';
 import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireOrganization } from '@/lib/route/organization';
-import { FiguresTable } from './figures-table';
+import { FiguresTable, JobsTable } from './report-tables';
 import {
   CreateDashboardForm,
   DashboardContentsForm,
@@ -55,7 +58,8 @@ export default async function ReportsPage({
   searchParams,
 }: PageProps<'/organizations/[organizationId]/reports'>) {
   const { organizationId } = await params;
-  const { by, period, customer, resource, location, report, dashboard } = await searchParams;
+  const { by, of: ofMeasure, period, customer, resource, location, report, dashboard } =
+    await searchParams;
   const { db, organization } = await requireOrganization(organizationId);
 
   // A uuid or nothing. Not validated further here: an id from another business narrows to no
@@ -89,11 +93,20 @@ export default async function ReportsPage({
   const savedId = one(report);
   const saved = savedId ? await getReportDefinition(db, { organizationId, id: savedId }) : null;
 
+  const measure: Measure =
+    saved?.measure ??
+    (typeof ofMeasure === 'string' && (MEASURES as readonly string[]).includes(ofMeasure)
+      ? (ofMeasure as Measure)
+      : 'invoiced_and_incurred');
+
+  // **Only the groupings this measure can answer**, so a grouping that would return nothing is
+  // not offered and a stale link falls back rather than showing an empty table with no reason.
+  const answerable = GROUPINGS_FOR[measure];
   const grouping: Grouping =
     saved?.grouping ??
-    (typeof by === 'string' && (GROUPINGS as readonly string[]).includes(by)
+    (typeof by === 'string' && (answerable as readonly string[]).includes(by)
       ? (by as Grouping)
-      : 'customer');
+      : answerable[0]);
 
   const preset: PeriodPreset =
     saved?.period ??
@@ -111,15 +124,17 @@ export default async function ReportsPage({
 
   // This business's today, so "this month" begins where the business is (I9).
   const today = todayInZone(organization.timezone);
-  const [groups, customers, resources, locations, definitions, roles] = await Promise.all([
+  const args = { organizationId, grouping, period: periodFor(preset, today), filters };
+  const [result, customers, resources, locations, definitions, roles] = await Promise.all([
     // **The saved report and the ad-hoc view take the same road.** A saved report is arguments,
     // so opening one narrows to the same call rather than to a second query (D35, D36).
-    listInvoicedAndIncurred(db, {
-      organizationId,
-      grouping,
-      period: periodFor(preset, today),
-      filters,
-    }),
+    measure === 'work_marked_complete'
+      ? listWorkMarkedComplete(db, args).then(
+          (groups) => ({ measure, groups }) as const,
+        )
+      : listInvoicedAndIncurred(db, args).then(
+          (groups) => ({ measure: 'invoiced_and_incurred' as const, groups }),
+        ),
     listCustomers(db, { organizationId }),
     listResources(db, { organizationId }),
     listLocations(db, { organizationId }),
@@ -163,14 +178,20 @@ export default async function ReportsPage({
       )
     : [];
 
-  const totals = totalsByCurrency(groups);
+  const groups = result.groups;
+  const totals = result.measure === 'invoiced_and_incurred' ? totalsByCurrency(result.groups) : [];
   const kept = [
     filters.customerId ? `&customer=${filters.customerId}` : '',
     filters.resourceId ? `&resource=${filters.resourceId}` : '',
     filters.locationId ? `&location=${filters.locationId}` : '',
   ].join('');
-  const link = (next: { by?: Grouping; period?: PeriodPreset }) =>
-    `/organizations/${organizationId}/reports?by=${next.by ?? grouping}&period=${next.period ?? preset}${kept}`;
+  const link = (next: { by?: Grouping; of?: Measure; period?: PeriodPreset }) => {
+    // A measure change resets the grouping to one that measure can answer, rather than carrying
+    // an unanswerable pair into a link somebody might keep.
+    const nextMeasure = next.of ?? measure;
+    const nextGrouping = next.by ?? (next.of ? GROUPINGS_FOR[next.of][0] : grouping);
+    return `/organizations/${organizationId}/reports?of=${nextMeasure}&by=${nextGrouping}&period=${next.period ?? preset}${kept}`;
+  };
 
   const dashboardNav =
     dashboards.length > 0 ? (
@@ -219,11 +240,16 @@ export default async function ReportsPage({
               <section key={tile.report.id}>
                 <h2 className="text-sm font-medium">{tile.report.name}</h2>
                 <p className="mt-1 text-sm opacity-70">
-                  By {GROUPING_LABELS[tile.report.grouping].toLowerCase()},{' '}
+                  {MEASURE_LABELS[tile.report.measure]} by{' '}
+                  {GROUPING_LABELS[tile.report.grouping].toLowerCase()},{' '}
                   {PERIOD_LABELS[tile.report.period].toLowerCase()}
                 </p>
                 <div className="mt-2">
-                  <FiguresTable groups={tile.groups} grouping={tile.report.grouping} />
+                  {tile.result.measure === 'work_marked_complete' ? (
+                    <JobsTable groups={tile.result.groups} grouping={tile.report.grouping} />
+                  ) : (
+                    <FiguresTable groups={tile.result.groups} grouping={tile.report.grouping} />
+                  )}
                 </div>
               </section>
             ))}
@@ -242,7 +268,23 @@ export default async function ReportsPage({
       </p>
 
       <nav className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-        {GROUPINGS.map((option) => (
+        {MEASURES.map((option) => (
+          <Link
+            key={option}
+            href={link({ of: option })}
+            className={option === measure ? 'font-medium' : 'opacity-70'}
+          >
+            {MEASURE_LABELS[option]}
+          </Link>
+        ))}
+      </nav>
+
+      {/*
+        Only the groupings this measure can answer. Completed work has no service grouping — a
+        job is finished as a whole — so it is not offered rather than offered and then empty.
+      */}
+      <nav className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        {answerable.map((option) => (
           <Link
             key={option}
             href={link({ by: option })}
@@ -343,7 +385,11 @@ export default async function ReportsPage({
         </p>
       ) : (
         <div className="mt-6">
-          <FiguresTable groups={groups} grouping={grouping} />
+          {result.measure === 'work_marked_complete' ? (
+            <JobsTable groups={result.groups} grouping={grouping} />
+          ) : (
+            <FiguresTable groups={result.groups} grouping={grouping} />
+          )}
         </div>
       )}
 
@@ -382,6 +428,7 @@ export default async function ReportsPage({
         <>
           <SaveReportForm
             organizationId={organizationId}
+            measure={measure}
             grouping={grouping}
             period={preset}
             filters={filters}

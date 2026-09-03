@@ -743,24 +743,38 @@ either tenant chose. `constraints.md` D35 and D36 hold the decisions: an aggrega
 Postgres pinned to `priceWorkItem` by a correspondence test, and a saved report is a row whose
 audience is a policy.
 
-**What is deferred is the operational report set, and it is deferred into two named gaps rather
-than into a shrug.**
+**What is deferred is the operational report set, and this entry said two wrong things about why
+before anybody checked.** Both are corrected here rather than quietly rewritten, because the
+corrections are more useful than the original claims.
 
-- **Work completed has no date to count it into.** `status_releases_resource` means a resource is
-  free, not that work is done, and M4 refused a platform-owned `is_terminal` on the grounds that
-  it is one tenant-answered question. That question is still unanswered, so *work completed this
-  month* has no honest definition.
-- **This is the same gap that keeps *quoted* out of the financial set**, found from the other end
-  while building the aggregate: a priced line's only date is the instant somebody typed it, which
-  is exactly the asymmetry `20260903000001` closed for costs and invoices. **One
-  tenant-configured completion, with a date maintained on the row the way
-  `status_releases_resource` is, unblocks both.** Neither gap alone was worth the column; the
-  convergence is the argument, and it is why this is written down rather than discovered twice.
-- **Utilisation is where I5 is at risk.** Committed hours per resource is a fact on the row and
-  safe to sum. A *percentage* needs a denominator, and the denominator is opening hours minus
-  commitments — which is `freeWindows`. An aggregate that re-derives it is a second availability
-  calculation in a second runtime, and the honest options are the D35 move (express it twice and
-  pin the two with a correspondence test) or report committed hours and say so.
+- **It said work completed has no date. It has one.** `events.occurred_at` is not null,
+  `change_work_item_status` writes `work_item.status_changed` carrying `from_status_id` and
+  `to_status_id`, and `customer_activity` is already the precedent for reading that log to answer
+  a business question. Every move a job has ever made is timestamped. **What is missing is which
+  status the business calls finished**, which is a question and not a column.
+- **It said M4's refusal of `is_terminal` was the blocker. It is the template.** M4 refused
+  answering one specific need — does cancelling free the resource — with one general platform
+  concept, and answered it with a tenant question instead. The same shape applies here, and it is
+  also why `releases_resource` cannot be borrowed: **Cancelled releases the resource and is not
+  completed work.** Two questions about one status, which is exactly what M4 was right not to
+  collapse.
+- **The remaining honesty is in the word.** `occurred_at` defaults to `now()` and nothing passes a
+  value, so the log records when somebody *marked* a job finished rather than when work stopped.
+  That is reportable as long as the report says so — *work marked complete*, on the same
+  discipline that made the financial set say invoiced rather than revenue.
+- **It said one completion column would also unblock *quoted* revenue. It would not.** That claim
+  was built on the first mistake. `work_item.line_added` and `work_item.line_removed` are both
+  recorded with `occurred_at`, and a line's `created_at` is the same instant — so *what we quoted
+  in August* is answerable with no schema change at all. What quoted revenue actually needs is a
+  decision between two questions: what was quoted **during** a period, and what stands quoted and
+  unbilled **as at** a date, which needs reconstruction from those two events. They are unrelated
+  to completion and smaller than this entry claimed.
+- **Utilisation is where I5 is at risk, and this part stands.** Committed hours per resource is a
+  sum over `occupies` — but only for rows matching the exclusion constraint's partial predicate,
+  which makes it the *third* expression of that predicate after the constraint and
+  `listSchedule`. So even the safe version needs the D35 correspondence move. A *percentage*
+  needs a denominator that is `freeWindows`, and an aggregate re-deriving it would be a second
+  availability calculation. Neither option is chosen here.
 
 **Corrected twice, and the second correction is the interesting one.** This paragraph said
 "before the AI layer" for two milestones after that stopped being true; it then said "before the

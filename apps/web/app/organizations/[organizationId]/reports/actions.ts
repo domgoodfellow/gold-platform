@@ -14,7 +14,7 @@ import {
   saveReportDefinition,
   setReportRoles,
 } from '@/lib/domain/reporting/definitions';
-import type { Grouping, PeriodPreset } from '@/lib/domain/reporting/financials';
+import type { Grouping, Measure, PeriodPreset } from '@/lib/domain/reporting/shape';
 
 export type ReportState = { error: string | null };
 
@@ -45,6 +45,7 @@ export async function saveReportAction(
     await saveReportDefinition(db, {
       organizationId,
       name: String(formData.get('name') ?? ''),
+      measure: String(formData.get('measure') ?? '') as Measure,
       grouping: String(formData.get('grouping') ?? '') as Grouping,
       period: String(formData.get('period') ?? '') as PeriodPreset,
       filters: {

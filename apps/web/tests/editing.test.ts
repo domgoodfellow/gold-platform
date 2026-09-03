@@ -156,6 +156,7 @@ describe('editing configuration that shipped write-once', () => {
       name: 'Scheduled',
       position: 0,
       releasesResource: false,
+      marksComplete: false,
     });
 
     const [item] = await listWorkItems(alice.db, {
@@ -180,12 +181,14 @@ describe('editing configuration that shipped write-once', () => {
       name: 'Complete',
       position: 0,
       releasesResource: false,
+      marksComplete: false,
     });
     await updateWorkItemStatus(alice.db, {
       id: alice.statusId,
       name: 'Scheduled',
       position: 1,
       releasesResource: false,
+      marksComplete: false,
     });
 
     const statuses = await listWorkItemStatuses(alice.db, {
@@ -202,6 +205,7 @@ describe('editing configuration that shipped write-once', () => {
         name: 'complete',
         position: 1,
         releasesResource: false,
+      marksComplete: false,
       }),
     ).rejects.toMatchObject({ code: 'statuses.name_taken' });
   });

@@ -1,16 +1,19 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { listWorkMarkedComplete, type CompletionGroup } from '@/lib/domain/reporting/completion';
+import { listInvoicedAndIncurred, type FinancialGroup } from '@/lib/domain/reporting/financials';
 import {
   GROUPINGS,
+  GROUPINGS_FOR,
+  MEASURES,
   PERIODS,
-  listInvoicedAndIncurred,
   periodFor,
-  type FinancialGroup,
   type Filters,
   type Grouping,
+  type Measure,
   type PeriodPreset,
-} from '@/lib/domain/reporting/financials';
+} from '@/lib/domain/reporting/shape';
 
 /**
  * A report a business saved, and running one.
@@ -35,6 +38,16 @@ export type ReportDefinition = {
   id: string;
   /** The business's own word for it. The platform ships none. */
   name: string;
+  /**
+   * Which aggregate this report is of.
+   *
+   * **The column D36 said would come, and the argument it said would have to be made is still
+   * not made.** That record permits a grouping, a period and filters *for this report set*, and
+   * says the day a set arrives whose fields are not fixed is when a query language has to be
+   * argued for. The fields stay fixed **per measure**, so what a report gained is one more value
+   * from a closed list.
+   */
+  measure: Measure;
   grouping: Grouping;
   period: PeriodPreset;
   filters: Filters;
@@ -60,6 +73,7 @@ function cleanName(value: string): string {
 function rowToDefinition(row: {
   id: string;
   name: string;
+  measure: string;
   grouping: string;
   period: string;
   customer_id: string | null;
@@ -70,6 +84,7 @@ function rowToDefinition(row: {
   return {
     id: row.id,
     name: row.name,
+    measure: row.measure as Measure,
     grouping: row.grouping as Grouping,
     period: row.period as PeriodPreset,
     filters: {
@@ -81,7 +96,8 @@ function rowToDefinition(row: {
   };
 }
 
-const COLUMNS = 'id, name, grouping, period, customer_id, resource_id, location_id, created_at';
+const COLUMNS =
+  'id, name, measure, grouping, period, customer_id, resource_id, location_id, created_at';
 
 export async function listReportDefinitions(
   db: Db,
@@ -126,6 +142,7 @@ export async function saveReportDefinition(
   input: {
     organizationId: string;
     name: string;
+    measure: Measure;
     grouping: Grouping;
     period: PeriodPreset;
     filters?: Filters;
@@ -134,9 +151,22 @@ export async function saveReportDefinition(
   await requireActor(db);
 
   // Re-checked here to produce a sentence, exactly as `changeWorkItemStatus` re-checks a
-  // transition the trigger already guarantees. The check constraint is the guarantee.
+  // transition the trigger already guarantees. The check constraints are the guarantee.
+  if (!MEASURES.includes(input.measure)) {
+    throw new DomainError('That is not something this platform reports on.', 'reports.measure');
+  }
   if (!GROUPINGS.includes(input.grouping)) {
     throw new DomainError('That is not a grouping this platform reports on.', 'reports.grouping');
+  }
+  // **A pair that can never answer, refused where somebody can read why.** Completed work has no
+  // service grouping — a job is finished as a whole — and `report_definitions_grouping_answerable`
+  // refuses the row regardless. Storing it would put a report on screen whose only outcome is a
+  // failure, which is D34's reasoning about judging a suggestion when it is written.
+  if (!GROUPINGS_FOR[input.measure].includes(input.grouping)) {
+    throw new DomainError(
+      'That grouping cannot answer that question, so there would be nothing to show.',
+      'reports.grouping_unanswerable',
+    );
   }
   if (!PERIODS.includes(input.period)) {
     throw new DomainError('That is not a period this platform reports on.', 'reports.period');
@@ -149,6 +179,7 @@ export async function saveReportDefinition(
     .insert({
       organization_id: input.organizationId,
       name: cleanName(input.name),
+      measure: input.measure,
       grouping: input.grouping,
       period: input.period,
       customer_id: input.filters?.customerId ?? null,
@@ -283,20 +314,42 @@ export async function setReportRoles(
 }
 
 /**
- * The figures a saved report stands for.
+ * What a saved report stands for, right now.
  *
- * **It calls the one aggregate with what the row stored, and does nothing else** (D35, D36).
- * There is no second query here and there must never be one: a saved report is arguments, and
- * the answer to those arguments already has exactly one source.
+ * **A discriminated union rather than one shape**, because the two measures genuinely differ: one
+ * is money in a currency, the other is a count of jobs. Flattening them into a shared row with
+ * nullable columns would produce a type whose invalid states outnumber its valid ones, and a
+ * screen that had to guess which half to read.
+ *
+ * **Each branch calls the one aggregate for its question and does nothing else** (D35, D36). The
+ * dispatch is the whole of what this function adds; there is no second query here and there must
+ * never be one, because a saved report is arguments and the answer to those arguments already has
+ * exactly one source.
  */
+export type ReportResult =
+  | { measure: 'invoiced_and_incurred'; groups: FinancialGroup[] }
+  | { measure: 'work_marked_complete'; groups: CompletionGroup[] };
+
 export async function runReportDefinition(
   db: Db,
   input: { organizationId: string; definition: ReportDefinition; today: string },
-): Promise<FinancialGroup[]> {
-  return listInvoicedAndIncurred(db, {
+): Promise<ReportResult> {
+  const args = {
     organizationId: input.organizationId,
     grouping: input.definition.grouping,
     period: periodFor(input.definition.period, input.today),
     filters: input.definition.filters,
-  });
+  };
+
+  if (input.definition.measure === 'work_marked_complete') {
+    return {
+      measure: 'work_marked_complete',
+      groups: await listWorkMarkedComplete(db, args),
+    };
+  }
+
+  return {
+    measure: 'invoiced_and_incurred',
+    groups: await listInvoicedAndIncurred(db, args),
+  };
 }

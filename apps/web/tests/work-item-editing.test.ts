@@ -375,6 +375,7 @@ describe('correcting a job, and cancelling one', () => {
       name: 'Cancelled',
       position: 1,
       releasesResource: true,
+      marksComplete: false,
     });
 
     // The availability calculation now agrees (I5) — the cancelled job is no longer busy.
@@ -425,6 +426,7 @@ describe('correcting a job, and cancelling one', () => {
         name: 'Cancelled',
         position: 1,
         releasesResource: false,
+      marksComplete: false,
       }),
     ).rejects.toMatchObject({ code: 'statuses.release_conflict' });
   });

@@ -1941,6 +1941,7 @@ export type Database = {
           grouping: string
           id: string
           location_id: string | null
+          measure: string
           name: string
           organization_id: string
           period: string
@@ -1953,6 +1954,7 @@ export type Database = {
           grouping: string
           id?: string
           location_id?: string | null
+          measure?: string
           name: string
           organization_id: string
           period: string
@@ -1965,6 +1967,7 @@ export type Database = {
           grouping?: string
           id?: string
           location_id?: string | null
+          measure?: string
           name?: string
           organization_id?: string
           period?: string
@@ -2267,6 +2270,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          marks_complete: boolean
           name: string
           organization_id: string
           position: number
@@ -2277,6 +2281,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          marks_complete?: boolean
           name: string
           organization_id: string
           position?: number
@@ -2287,6 +2292,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          marks_complete?: boolean
           name?: string
           organization_id?: string
           position?: number
@@ -3251,6 +3257,7 @@ export type Database = {
       update_work_item_status: {
         Args: {
           p_id: string
+          p_marks_complete: boolean
           p_name: string
           p_position: number
           p_releases_resource: boolean
@@ -3271,6 +3278,22 @@ export type Database = {
           time_zone: string
           title: string
           work_item_id: string
+        }[]
+      }
+      work_marked_complete: {
+        Args: {
+          p_customer_id?: string
+          p_from?: string
+          p_grouping: string
+          p_location_id?: string
+          p_organization_id: string
+          p_resource_id?: string
+          p_to?: string
+        }
+        Returns: {
+          group_id: string
+          group_label: string
+          jobs: number
         }[]
       }
     }

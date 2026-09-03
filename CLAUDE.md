@@ -388,10 +388,38 @@ with a role, with nothing about either in code — and `milestone-m7.test.ts` is
 for dashboards had landed together, nothing would test whether that machinery could express
 something that already existed.
 
-What is **not** built is the operational report set — work completed, utilisation — which is in
-M7's *Covers* rather than its criterion, and it is what takes `requires: 'billing'` off the
-reporting module. It runs into two things this schema does not have, and `roadmap.md` M7 records
-them: work has no completion date, and utilisation needs a denominator that is `freeWindows`.
+**A second measure is built, and it is the first that is not money.** *Work marked complete* is
+`public.work_marked_complete`, and shipping it is what took `requires: 'billing'` off the
+reporting module — a business that invoices somewhere else now has something to read. Four things
+are load-bearing:
+
+- **Which status means finished is the tenant's answer** (`work_item_statuses.marks_complete`),
+  and it is a **second** question rather than a reuse of `releases_resource`. Cancelled frees the
+  resource and is not completed work; one flag could not have said both, which is exactly why M4
+  refused a platform-owned `is_terminal`. **This is M4's shape, not M4 being overturned.**
+- **It reads the event log, not the work item.** A job's current status says what is true now;
+  *finished in August* is a question about what happened then, and only `events` knows. So
+  answering the question later counts history correctly rather than only what happens next —
+  and the consequence is on screen: a job finished in August and reopened in September was
+  finished in August.
+- **It counts jobs, not events.** A job finished, reopened and finished again inside one period
+  was done once; counting the moves would make a business that corrects a mistake look busier
+  than one that does not.
+- **`marked` is the honest word.** `events.occurred_at` records when somebody moved the job, not
+  when the work stopped — the same discipline that makes the financial set say invoiced. The
+  other instant is a caller-supplied date on `change_work_item_status` and its own slice.
+
+`report_definitions.measure` arrived with it, and it is **D36 predicting its own extension**: the
+fields stay fixed *per measure*, so a report gained one value from a closed list rather than a
+query language. `GROUPINGS_FOR` is what says completed work has no service grouping — a job is
+finished as a whole — and a report that could only ever fail is refused when it is **saved**
+rather than when somebody clicks it, which is D34's reasoning about intended actions.
+
+**Two claims this file made and had to withdraw** are recorded in `roadmap.md` M7 rather than
+quietly fixed: work completed was never missing a date, and that missing answer had nothing to do
+with quoted revenue, which needs no new column at all. What is still unbuilt is **utilisation**,
+which is where I5 is at risk — committed hours is the third expression of the exclusion
+constraint's predicate, and a percentage needs a denominator that is `freeWindows`.
 
 **Standing a business up is two acts by two parties, and the second of them is one function
 that must never learn what kind of business it is holding.** GOLD creates the business —

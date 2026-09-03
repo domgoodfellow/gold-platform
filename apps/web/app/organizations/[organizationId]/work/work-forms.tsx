@@ -449,10 +449,11 @@ export function EditStatusForm({
         aria-label={`Position of status ${status.name}`}
         className="w-20 rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
       />
-      {/* The one question the platform asks about a status, and it is the tenant's to answer.
-          Not `is_terminal`: this does not ask what the word means, only whether work sitting
-          in it still occupies the van. Ticking it here frees the slot on every job already in
-          this status, which is the whole point — see the migration. */}
+      {/* The two questions the platform asks about a status, and both are the tenant's to
+          answer. Neither is `is_terminal`: that would be the platform deciding what a word
+          means, and these ask about two different consequences of it. "Cancelled" frees the
+          van and is not finished work; "Awaiting parts" holds the van and is not finished
+          work either — one flag could not have said both, which is why M4 refused one. */}
       <label className="flex items-center gap-1.5 text-xs opacity-80">
         <input
           name="releasesResource"
@@ -462,6 +463,18 @@ export function EditStatusForm({
           aria-label={`Work in ${status.name} releases its resource`}
         />
         Frees the resource
+      </label>
+      {/* Read afterwards against the event log rather than at the moment work moves, so
+          answering this later counts history correctly rather than only what happens next. */}
+      <label className="flex items-center gap-1.5 text-xs opacity-80">
+        <input
+          name="marksComplete"
+          type="checkbox"
+          value="1"
+          defaultChecked={status.marksComplete}
+          aria-label={`Moving work into ${status.name} means it was finished`}
+        />
+        Means finished
       </label>
       <button
         type="submit"
