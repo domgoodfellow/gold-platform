@@ -1027,22 +1027,6 @@ describe('conditions at a job', () => {
       const [always] = await listAutomationRules(one.db, { organizationId: one.organizationId });
       await updateAutomationRule(one.db, { id: always.id, enabled: false });
 
-      const ruleId = await createAutomationRule(one.db, {
-        organizationId: one.organizationId,
-        name: 'Push it back an hour',
-        triggerKind: 'external_reading',
-        triggerMetric: 'precipitation',
-        triggerComparison: 'above',
-        triggerThreshold: 1,
-        triggerUnit: 'mm',
-      });
-      await addAutomationAction(one.db, {
-        organizationId: one.organizationId,
-        ruleId,
-        kind: 'shift_schedule',
-        shiftMinutes: 60,
-      });
-
       const starts = new Date(Date.now() + 10 * 60 * 60 * 1000);
       const ends = new Date(Date.now() + 11 * 60 * 60 * 1000);
 
@@ -1076,6 +1060,29 @@ describe('conditions at a job', () => {
         resourceId,
         startsAt: new Date(starts.getTime() + 60 * 60 * 1000).toISOString(),
         endsAt: new Date(ends.getTime() + 60 * 60 * 1000).toISOString(),
+      });
+
+      // **The rule is written after the fixture, and that ordering is load-bearing.** The test
+      // above leaves a 4mm reading at this location, so this rule is *due the instant it
+      // exists* — and `run_due_automations()` is global while vitest runs files in parallel, so
+      // any tick from any other suite could fire it. Created earlier, it shifted `blocked`
+      // forward an hour into the slot `inTheWay` was about to take, and the fixture failed to
+      // build with the double-booking message this test exists to produce later. Intermittent,
+      // because it needed a concurrent tick to land in that window.
+      const ruleId = await createAutomationRule(one.db, {
+        organizationId: one.organizationId,
+        name: 'Push it back an hour',
+        triggerKind: 'external_reading',
+        triggerMetric: 'precipitation',
+        triggerComparison: 'above',
+        triggerThreshold: 1,
+        triggerUnit: 'mm',
+      });
+      await addAutomationAction(one.db, {
+        organizationId: one.organizationId,
+        ruleId,
+        kind: 'shift_schedule',
+        shiftMinutes: 60,
       });
 
       await client.query(

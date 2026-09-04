@@ -5,6 +5,181 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A rule armed before its fixture was built could move the fixture
+
+`automations.test.ts` went red once in a full run and passed alone and on re-runs, which is the
+shape of a race rather than a bug. *Records a failure when the slot it would move into is taken*
+created its rule first and its two jobs second — and the test above it leaves a 4mm reading at the
+same location, so that rule was **due the instant it existed**. `run_due_automations()` is global
+and vitest runs files in parallel, so a tick from any other suite could fire it between the two
+jobs being scheduled, shift the first an hour forward into the slot the second was about to take,
+and fail the fixture with the double-booking message the test exists to produce later.
+
+The rule is now written after the fixture. Nothing about what the test asserts changes: it is due
+at the tick the test itself calls, which is where it was always meant to fire.
+
+**Worth naming rather than only fixing**: a global tick and parallel test files means any suite
+can fire any other suite's armed rules. Nothing else currently arms a rule and then builds around
+it, and this is the reason not to.
+
+### Committed time, and one predicate written a third time
+
+What counts as a resource being busy is `work_items_resource_not_double_booked`'s partial
+predicate, and it already lived in two places: the exclusion constraint, and `listSchedule`'s
+filters. I5 is held up by `availability.test.ts` asserting those two agree in both directions
+rather than by either having been deleted. `public.time_committed` is the third expression, and it
+is admitted on exactly the terms D35 set for the second price calculation — `reporting.test.ts`
+runs the same jobs through `listSchedule` and through the aggregate and fails on any disagreement,
+including across a status change that frees a resource, so the correspondence is held through a
+change rather than only at rest.
+
+**The utilisation percentage is refused rather than deferred, and the distinction is the point.**
+Its denominator is opening hours minus commitments, which is `freeWindows` — the one availability
+calculation. A rule expressed twice and pinned by a test is safe; a second answer to *what is
+free* is not, because that answer is the one somebody books against. A rule with two authorities
+is not a rule. So the platform reports the time and a business dividing it by its own opening
+hours is doing arithmetic this platform did not invent for it.
+
+Two things tests found. Time is **clipped to the period**, because a job crossing a month boundary
+belongs to both months in the proportion it held and counting it whole in each reports more time
+than exists. And the correspondence test first compared a UTC day against the aggregate's
+tenant-zoned one and passed by luck — a booking late in the UTC day fell outside the Manila one
+and said so.
+
+`formatMinutes` is the one place minutes become words, and gives hours and minutes rather than
+decimal hours: *7h 30m* is what a timesheet reads like, and 7.5 invites being multiplied by a rate.
+
+### A business says which status means finished, and two claims are withdrawn
+
+**The corrections first, because a plan was built on them.** `roadmap.md` said work completed had
+no date to count it into. It has one — `events.occurred_at` is not null and
+`change_work_item_status` has written `work_item.status_changed` with both status ids since M2 —
+and what was missing is which status a business calls finished, which is a question and not a
+column. It also said M4's refusal of a platform-owned `is_terminal` was the blocker; it is the
+**template**, and it is also why `releases_resource` cannot be borrowed: Cancelled frees the
+resource and is not completed work, and one flag could not have said both. And it said one
+completion column would unblock quoted revenue too, which rested on the first mistake —
+`work_item.line_added` and `work_item.line_removed` both carry `occurred_at`, so that question
+needs no new column at all.
+
+**What shipped is the second measure, and the first that is not money** — which took
+`requires: 'billing'` off the reporting module, its removal being the evidence promised when that
+line was written. `work_item_statuses.marks_complete` is the tenant's answer;
+`public.work_marked_complete` reads the event log against it.
+
+It reads the log rather than the work item, so answering the question later counts history
+correctly rather than only what happens next. It counts **jobs, not events**, so a job finished,
+reopened and finished again in one period counts once and correcting a mistake does not look like
+extra work. It has no service grouping, because a job is finished as a whole. And it says
+**marked** complete: `occurred_at` holds when somebody moved the job, not when the work stopped.
+
+`report_definitions.measure` arrives with it, and it is D36 predicting its own extension — the
+fields stay fixed *per measure*, so a report gained one value from a closed list rather than a
+query language. An unanswerable pair is refused when a report is **saved** rather than when
+somebody clicks it.
+
+### A dashboard shows each person what is theirs to read
+
+A dashboard holds no audience and needs none: `dashboards_select` asks whether any pinned report
+comes back, with `report_definitions_select` running inside the subquery under the caller's own
+rights. A second role list would be a second thing to keep in step, and the day the two disagreed
+the answer would be whichever policy ran last.
+
+One dashboard, three people: its author sees every tile, somebody a single report is shared with
+sees that tile and is told nothing about the others, and somebody none of it is for **does not see
+the dashboard at all** — not empty, absent, name included. Nothing in application code decides any
+of that, so a filter in a page must never be added beside it.
+
+**The platform seeds no dashboard**, including the four `roadmap.md` names. That entry calls them
+configuration rather than four screens, and shipping them as rows would be the hardcoding
+`constraints.md` forbids arriving as a convenience.
+
+**M7's criterion is met**, and `milestone-m7.test.ts` is what says so: a dive school in Cebu and a
+joinery in Tallinn, a non-founder in each defining a report, pinning it and sharing it with a role
+their business named — and then the reporting layer read as text, failing on any word either
+tenant chose. The figures are secondary; a platform that shipped a report called *What the reef
+brings in* would pass every other assertion in the file.
+
+### A report is a row, its filters are columns, and its audience is a policy
+
+A definition holds a grouping, a period and up to three filters, and there is no query language.
+`starting_conversation.txt` §17 lists six things and four of them are already fixed for this
+report set: the entity *is* the grouping, the fields are invoiced, incurred and margin, and the
+calculation is the subtraction D35 owns. That is a claim about this report set rather than about
+reporting, which is why D36 writes it down — the day a set arrives whose fields are not fixed is
+when the argument for a builder has to be made rather than assumed.
+
+**Filters are typed columns with composite keys, never JSON** (I18). One JSONB column would have
+been a third of the work and would have accepted a customer belonging to another business,
+producing an empty report nobody could explain instead of a refusal. A filter narrows *jobs*, so a
+job's revenue and its costs are counted together or not at all.
+
+Running a saved report calls the same aggregate the ad-hoc screen calls — D35's rule one level up,
+and the thing this design is most likely to grow out of. The audience is
+`report_definitions_select`, so a report shared with a role the caller does not hold returns no
+row. `app.current_role_id` is `security definer` for the reason `app.current_tenant_ids` is.
+
+**A delete that RLS filters to nothing is not an error**, found by a test: clearing an audience you
+may not manage came back clean without changing anything. `setReportRoles` now compares what was
+there with what went, which is the database's own answer rather than a capability read in
+TypeScript.
+
+### A total is a different disclosure from a row
+
+`report.read`, and the record it has to reconcile with. `20260902000006` said there is no
+capability for what the tools reach and that adding one would be a mistake, because a tool runs
+`security invoker` under the caller's own token and returns rows their own screens already show
+them. That reasoning is sound and its subject is **rows**.
+
+An aggregate has none. *What this business billed each customer this year* is in no table and
+cannot be assembled by reading rows one at a time — a member can open one invoice, and one invoice
+is not the book. The line between the two records is whether the answer exists as a row anywhere.
+
+The check is in the function because there is nothing to put a policy on: the invoices, their
+lines and the costs must stay readable by every member, because a job screen shows all three.
+`schema-conformance.test.ts` therefore reads function bodies as well as policy expressions when it
+checks I16 — a clarification rather than a relaxation, since `add_member_by_email` has enforced
+`role.manage` in a function since M1 because `auth.users` is not readable and no policy could have
+said it. The search is narrowed to bodies that mention `has_capability`, and a negative control
+asserts the check still fails for a capability nothing enforces.
+
+Expect the first live tenant to meet the consequence: **a capability is never granted
+retroactively.** Founding roles hold everything; a role somebody configured by hand sees the
+Reports page explain itself until this is added on the Roles screen.
+
+### The aggregate layer, and it refuses to say "revenue"
+
+`public.invoiced_and_incurred` is one `stable`, `security invoker` function — D34's shape for a
+tool, because a report *is* one the moment somebody asks the assistant for it — read by a new
+Reports screen and by the loop in the same change. Two callers is what licenses it existing at
+all.
+
+**D35 records why this is not a second price calculation.** It is one rule expressed twice, which
+I4 forbids unless the two are pinned together, so `reporting.test.ts` totals the same invoices
+through `priceWorkItem` and through the aggregate and fails on any disagreement. That is I5's
+mechanism rather than an exception to I4: the availability predicate has always lived in a
+constraint *and* in a query, held honest by a test that they agree. When a minimum charge or a tax
+lands in `priceWorkItem` that test fails, which is the event I4 was written to catch — repair it
+by teaching the aggregate, never by relaxing the assertion.
+
+**"Revenue" is four facts and only two are dated by a person.** Invoiced comes from
+`invoices.issued_at` and incurred from `work_item_costs.incurred_at`. Received is named and
+unbuilt. Quoted is named and needs a decision between two questions rather than a column. So a
+business that prices here and invoices elsewhere sees an empty report, and the page says why —
+which is the honest answer and may describe most of them.
+
+A group is keyed by an entity **and** a currency, so a business that changed what it trades in
+gets two rows for one customer rather than a figure in neither — the refusal `jobEconomics`
+expresses as a null margin, expressed here as a table. Grouping by service returns no cost,
+because a cost belongs to a job and a service is one line on it, which is also why the assistant
+still refuses *least profitable service*. And the period is two dates the database zones itself:
+`20260902000009` found a tool handing a model a UTC instant for a business in Cebu, and pushing
+that conversion out to callers would put date arithmetic with daylight saving in it inside a
+language model.
+
+No total is stored and none may be. I4's own record names a stored subtotal as the thing that
+becomes a second opinion, and a materialized view is that with a performance excuse.
+
 ### A cost and an invoice say when they happened, not when somebody typed them in
 
 **An asymmetry closed rather than a feature added.** `record_payment` has taken a caller-supplied
