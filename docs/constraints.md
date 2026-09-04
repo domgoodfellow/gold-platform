@@ -2326,6 +2326,48 @@ an event log that is not a log. The consequence to accept is that figures groupe
 happened* look real in a demo and figures grouped by *when a record was created* are a single
 spike.
 
+#### Amended by M7, which landed hours after this was written
+
+This record's whole argument is that a dashboard over four jobs entered this afternoon says
+nothing about whether it is the right dashboard. M7 shipped the dashboards, so the script now has
+to produce something worth looking at on them — three things, and the third is the interesting
+one.
+
+**A status marked complete, with jobs in it.** `work_item_statuses.marks_complete` is the
+tenant's answer to *which of your words means finished*, and `work_marked_complete` reports
+nothing without it. A demo whose businesses never answered it shows an empty second measure and
+reads as a broken feature rather than an unanswered question.
+
+**At least one saved report and one dashboard per business.** M7's machinery is a report
+definition and a pin, and a demo that stops at the ad-hoc screen leaves both invisible in the one
+command that exists so somebody can look. The two businesses should differ here as they differ
+everywhere else — a different grouping, a different measure — because what is being shown is that
+the platform ships neither.
+
+**The three measures spread differently, and that is the honest thing to show rather than hide.**
+The paragraph above already predicted the shape: what is backdatable looks real and what is not
+is a single spike. M7 put one measure on each side of that line and one in the middle.
+
+- **Billed and spent spreads properly.** `issued_at` and `incurred_at` are caller-supplied, so
+  invoices and costs land across months and the period switcher does something. A script that
+  invoiced everything today would make *this month* and *this year* identical and the switcher
+  pointless — so spreading them is a requirement of this script, not a flourish.
+- **Time committed spreads properly too**, because it reads `occupies`, which `scheduleWorkItem`
+  takes as instants.
+- **Work marked complete is the spike.** It reads `events.occurred_at`, which nothing may
+  backdate and which this record has already refused to make writable. Every completion in a
+  demo therefore dates from the afternoon it ran.
+
+**That last one is left as it is.** The temptation is to make the demo look better by relaxing
+the rule, and the rule is right: an event log a caller can date is not a log. What the script owes
+instead is not to mislead — the businesses it creates are days old, so a completion report showing
+everything on one day is telling the truth about them.
+
+**The reduced role keeps exactly the three capabilities named above**, and it now demonstrates one
+more thing for free: it holds neither `report.read` nor `report.manage`, so signing in as that
+person shows the Reports screen explaining what their role cannot see rather than erroring or
+disappearing. That is the I12 pattern this record already wanted visible, on the newest screen.
+
 #### What it deliberately leaves out
 
 No booking through `/book/{slug}` and no portal invitation, because the interesting part of both
