@@ -820,10 +820,21 @@ than skipping it silently.
 | `pnpm --filter @gold/web check` | The TypeScript half alone, when iterating |
 | `pnpm check:api` | The Python half alone (`python -m pytest apps/api/tests`) |
 | `pnpm --filter @gold/web dev` | Next.js dev server on :3000 |
+| `pnpm demo` | Two populated businesses, in one command. Localhost only; refuses a database that already holds organizations (D37). |
+| `pnpm demo:fresh` | `db:reset` and then `demo`. What you want after a walkthrough. |
 | `pnpm db:start` | Local Supabase (needs Docker). Prints the keys; they belong in `infra/.env.test`, which is gitignored. |
 | `pnpm db:reset` | Re-apply every migration from scratch against the local stack |
 | `pnpm db:types` | Regenerate `apps/web/lib/db/database.types.ts` from the local schema. The file is checked in; a stale one fails the gate (D15). |
 | `pnpm db:push` | Apply migrations to the linked remote project |
+
+**The demo script is not a fixture and not a seed, and it is covered by the gate on purpose.**
+`apps/web/scripts/demo/` calls the domain layer through `@/`, so `pnpm typecheck` reads it and it
+**breaks the gate the day a domain signature changes** — which is the whole reason it lives under
+`apps/web` rather than in `snippets/`. `run.ts` contains no branch on which business it is
+holding; everything that differs between the two lives in `businesses.ts`. If it ever needs
+`if (business.name === …)`, that data model is wrong. D37 holds the decisions, including why a
+`seed.sql` is refused: it would run inside the suite's own resets, and the suites would stop
+exercising a genuinely empty database.
 
 **A change to `infra/supabase/config.toml` needs the stack restarted, not reset.** `pnpm
 db:reset` re-applies migrations against the running containers and does not re-read that file,

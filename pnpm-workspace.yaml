@@ -6,6 +6,11 @@ packages:
 # Merged up from the nested apps/web/pnpm-workspace.yaml that create-next-app wrote.
 # A pnpm-workspace.yaml inside a package makes that directory its own workspace root and
 # detaches it from the monorepo, so there must be exactly one, here.
+# pnpm blocks install scripts until each is answered, and an unanswered one makes *every*
+# pnpm command exit 1 — which is how `pnpm demo:fresh` failed the first time it was run.
 allowBuilds:
+  # `tsx` runs the demo script (D37) and will not start without esbuild's platform binary,
+  # which is what this script fetches. Answering false here is answering "no demo".
+  esbuild: true
   sharp: false
   unrs-resolver: false

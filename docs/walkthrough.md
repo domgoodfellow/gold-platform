@@ -37,6 +37,40 @@ organization here is genuinely empty, and the emptiness is the product working.
 
 ---
 
+## The short way in: `pnpm demo`
+
+Everything below this section is the long way, and it is the one to read when you want to know
+what the product asks of somebody standing a business up. When what you want is **screens with
+something on them**, there is one command:
+
+```bash
+pnpm demo:fresh    # reset the database, then populate it
+pnpm demo          # populate a database that is already empty
+```
+
+It stands up two businesses that share no word — an equipment hire yard in Amsterdam trading in
+euro and a clinic in Tokyo trading in yen — with jobs in every state, invoices and costs spread
+across three months, saved reports and a dashboard each. It prints their URLs, the accounts, and
+the one password they all share, so you copy an address into `/sign-in` and click.
+
+Four things worth knowing before you rely on it:
+
+- **It is not a seed and nothing about it runs automatically.** Every row it writes comes from a
+  real domain call under a real session, so the paragraph above stays true: a database you have
+  not run this against is genuinely empty. `constraints.md` D37 records why that distinction is
+  worth a script instead of a `seed.sql`.
+- **It refuses to run against anything but localhost**, and refuses a database that already holds
+  organizations rather than half-building a second copy.
+- **Sign in as the second account in each business.** They hold three capabilities and nothing
+  else, which is the fastest way to see that hiding a control is a courtesy and the policy is the
+  guard — every screen renders and the forms they cannot use explain themselves.
+- **One report is a spike and the others are spread, and that is honest.** Invoices, costs and
+  booked time carry dates a caller chose, so those figures run across months. *Work marked
+  complete* reads the event log, which nothing may backdate, so every completion is dated the
+  afternoon you ran the script. The businesses really are that young.
+
+---
+
 ## Standing it up
 
 1. `pnpm db:start` — needs Docker. It prints an API URL, an anon key and a service-role key.
