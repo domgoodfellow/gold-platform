@@ -20,7 +20,11 @@
  * the database actually implements as a function, and adding one means writing the SQL. A
  * business does not invent a measure; it picks one and says how to group it.
  */
-export const MEASURES = ['invoiced_and_incurred', 'work_marked_complete'] as const;
+export const MEASURES = [
+  'invoiced_and_incurred',
+  'work_marked_complete',
+  'time_committed',
+] as const;
 
 export type Measure = (typeof MEASURES)[number];
 
@@ -31,6 +35,12 @@ export const MEASURE_LABELS: Record<Measure, string> = {
   // stopped. Saying *completed* would claim a precision this platform does not have, on the same
   // discipline that makes the financial set say invoiced rather than revenue.
   'work_marked_complete': 'Work marked complete',
+  // **The numerator of utilisation, and named as what it is.** A percentage would need opening
+  // hours minus commitments as its denominator, which is `freeWindows` — the one availability
+  // calculation — and an aggregate re-deriving that would be the second answer to *what is free*
+  // that I5 exists to forbid. A business dividing this by its own opening hours is doing
+  // arithmetic this platform did not invent for it.
+  'time_committed': 'Time committed',
 };
 
 /**
@@ -55,13 +65,15 @@ export const GROUPING_LABELS: Record<Grouping, string> = {
  *
  * **Not every measure answers every grouping, and the absences are facts rather than gaps.**
  * Money grouped by service reports no cost, because a cost belongs to a job and a service is one
- * line on it. Completed work has no service grouping at all: a job is finished as a whole, and
- * splitting one completion across the lines on it would be inventing a rule about how — the same
- * refusal, arriving at a count instead of an amount.
+ * line on it. Neither of the other two has a service grouping at all: a job is finished as a
+ * whole and books a resource as a whole, and splitting either across the lines on it would be
+ * inventing a rule about how — the same refusal, arriving at a count and at a duration instead
+ * of an amount.
  */
 export const GROUPINGS_FOR: Record<Measure, readonly Grouping[]> = {
   'invoiced_and_incurred': GROUPINGS,
   'work_marked_complete': ['customer', 'resource', 'location'],
+  'time_committed': ['customer', 'resource', 'location'],
 };
 
 /**

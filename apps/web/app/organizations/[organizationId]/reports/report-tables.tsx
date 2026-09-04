@@ -1,3 +1,8 @@
+import {
+  formatMinutes,
+  totalMinutes,
+  type CommitmentGroup,
+} from '@/lib/domain/reporting/commitment';
 import { totalJobs, type CompletionGroup } from '@/lib/domain/reporting/completion';
 import { totalsByCurrency, type FinancialGroup } from '@/lib/domain/reporting/financials';
 import { GROUPING_LABELS, type Grouping } from '@/lib/domain/reporting/shape';
@@ -127,6 +132,53 @@ export function JobsTable({
           <tr className="font-medium">
             <td className="py-2 pr-4">Total</td>
             <td className="py-2 text-right tabular-nums">{totalJobs(groups)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * How much resource time a business committed, drawn.
+ *
+ * One total rather than a set, because a duration has no currency. `formatMinutes` is the one
+ * place minutes become words — hours and minutes rather than decimal hours, because *7h 30m* is
+ * what a timesheet reads like and 7.5 invites being multiplied by a rate.
+ */
+export function CommittedTimeTable({
+  groups,
+  grouping,
+}: {
+  groups: CommitmentGroup[];
+  grouping: Grouping;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-black/10 text-left dark:border-white/15">
+            <th className="py-2 pr-4 font-medium">{GROUPING_LABELS[grouping]}</th>
+            <th className="py-2 text-right font-medium">Time committed</th>
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((group) => (
+            <tr
+              key={group.groupId ?? group.label ?? 'none'}
+              className="border-b border-black/5 dark:border-white/10"
+            >
+              <td className="py-2 pr-4">
+                {group.label ?? <span className="opacity-70">Not attributed</span>}
+              </td>
+              <td className="py-2 text-right tabular-nums">{formatMinutes(group.minutes)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="font-medium">
+            <td className="py-2 pr-4">Total</td>
+            <td className="py-2 text-right tabular-nums">{formatMinutes(totalMinutes(groups))}</td>
           </tr>
         </tfoot>
       </table>

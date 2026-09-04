@@ -1,13 +1,13 @@
 """Which questions this platform can be asked, and which function answers each.
 
-**Five, and the list grows one entry per slice that has a screen behind it.** A tool list written ahead
+**Six, and the list grows one entry per slice that has a screen behind it.** A tool list written ahead
 of its callers is the speculative abstraction `constraints.md` opens by refusing, and here it has
 a second cost: every tool is a sentence in a prompt, and a model given nine plausible tools
 chooses worse than one given the few that fit. Two of these are the questions M8's criterion
 names. The third is here because watching a model handle *move it to 9am tomorrow* showed it had
 no way to find out what was already booked, so it guessed — which is a foundation problem rather
-than a model problem, and the fix is a tool rather than a firmer instruction. The last two are the
-aggregates, each with a screen behind it in the same change (D35).
+than a model problem, and the fix is a tool rather than a firmer instruction. The last three are
+the aggregates, each with a screen behind it in the same change (D35).
 
 **No tool asks which business, and that was a bug before it was a decision.** Every function
 takes `p_organization_id`, and the first version of this file put it in the schema -- so a model
@@ -176,12 +176,52 @@ WORK_MARKED_COMPLETE = Tool(
     function="work_marked_complete",
 )
 
+TIME_COMMITTED = Tool(
+    name="time_committed",
+    description=(
+        "How many minutes of resource time this business has committed in a period, grouped by "
+        "customer, resource or location, clipped to that period so a job spanning a boundary "
+        "counts in each part only for the time it held. Work whose status the business says "
+        "frees the resource is not counted. **This is not utilisation and must not be reported "
+        "as a percentage**: dividing it needs the business's opening hours, which this cannot "
+        "see -- give the time and let the person divide it if they want to."
+    ),
+    schema={
+        "type": "object",
+        "properties": {
+            "grouping": {
+                "type": "string",
+                "enum": ["customer", "resource", "location"],
+                "description": "What to group the time by.",
+            },
+            "from": {
+                "type": "string",
+                "description": (
+                    "First day to count, as YYYY-MM-DD, in this business's own dates. "
+                    "Omit for no start."
+                ),
+            },
+            "to": {
+                "type": "string",
+                "description": (
+                    "First day *not* to count, as YYYY-MM-DD. For all of August, pass "
+                    "2026-09-01. Omit for no end."
+                ),
+            },
+        },
+        "required": ["grouping"],
+        "additionalProperties": False,
+    },
+    function="time_committed",
+)
+
 TOOLS: tuple[Tool, ...] = (
     WORK_AT_RISK,
     CUSTOMERS_NOT_CONTACTED,
     SCHEDULE_AHEAD,
     INVOICED_AND_INCURRED,
     WORK_MARKED_COMPLETE,
+    TIME_COMMITTED,
 )
 
 

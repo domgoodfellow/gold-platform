@@ -3210,6 +3210,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      time_committed: {
+        Args: {
+          p_customer_id?: string
+          p_from?: string
+          p_grouping: string
+          p_location_id?: string
+          p_organization_id: string
+          p_resource_id?: string
+          p_to?: string
+        }
+        Returns: {
+          group_id: string
+          group_label: string
+          minutes: number
+        }[]
+      }
       unschedule_work_item: {
         Args: { p_work_item_id: string }
         Returns: undefined

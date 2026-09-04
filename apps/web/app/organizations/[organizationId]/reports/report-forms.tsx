@@ -2,7 +2,13 @@
 
 import { useActionState } from 'react';
 import type { ReportDefinition } from '@/lib/domain/reporting/definitions';
-import type { Filters, Grouping, Measure, PeriodPreset } from '@/lib/domain/reporting/shape';
+import {
+  MEASURE_LABELS,
+  type Filters,
+  type Grouping,
+  type Measure,
+  type PeriodPreset,
+} from '@/lib/domain/reporting/shape';
 import {
   createDashboardAction,
   deleteDashboardAction,
@@ -98,8 +104,8 @@ export function ReportAudienceForm({
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{report.name}</span>
           <span className="text-sm opacity-70">
-            {report.measure === 'work_marked_complete' ? 'work marked complete' : 'billed and spent'}{' '}
-            by {report.grouping}, {report.period}
+            {MEASURE_LABELS[report.measure].toLowerCase()} by {report.grouping},{' '}
+            {report.period}
           </span>
         </div>
 

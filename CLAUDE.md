@@ -415,11 +415,29 @@ query language. `GROUPINGS_FOR` is what says completed work has no service group
 finished as a whole — and a report that could only ever fail is refused when it is **saved**
 rather than when somebody clicks it, which is D34's reasoning about intended actions.
 
+**The third measure is committed time, and it is the one that had to argue for itself.** What
+counts as a commitment is `work_items_resource_not_double_booked`'s partial predicate, which
+already lived in two places — the constraint and `listSchedule`'s filters, held together by
+`availability.test.ts` agreeing in both directions. `public.time_committed` is the **third**
+expression, admitted on exactly D35's terms: `reporting.test.ts` runs the same jobs through
+`listSchedule` and through the aggregate and fails on any disagreement, including through a status
+change that frees a resource. A clause added to one of the three and not the others breaks I5
+rather than a test.
+
+- **It is the numerator of utilisation and deliberately not utilisation.** A percentage needs
+  opening hours minus commitments, which is `freeWindows` — and a second answer to *what is free*
+  is what I5 forbids outright. No correspondence test would make that safe, because the second
+  answer is the one somebody books against. So the platform gives the time and a business that
+  wants a percentage divides by its own hours.
+- **Time is clipped to the period.** A job crossing a month boundary belongs to both months in
+  the proportion it held; counting it whole in each reports more time than exists.
+- **`formatMinutes` is the one place minutes become words**, and it gives hours and minutes
+  rather than decimal hours — *7h 30m* is what a timesheet reads like, and 7.5 invites being
+  multiplied by a rate.
+
 **Two claims this file made and had to withdraw** are recorded in `roadmap.md` M7 rather than
 quietly fixed: work completed was never missing a date, and that missing answer had nothing to do
-with quoted revenue, which needs no new column at all. What is still unbuilt is **utilisation**,
-which is where I5 is at risk — committed hours is the third expression of the exclusion
-constraint's predicate, and a percentage needs a denominator that is `freeWindows`.
+with quoted revenue, which needs no new column at all.
 
 **Standing a business up is two acts by two parties, and the second of them is one function
 that must never learn what kind of business it is holding.** GOLD creates the business —

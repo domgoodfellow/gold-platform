@@ -3,6 +3,11 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getInvoiceForWorkItem, issueInvoice } from '@/lib/domain/billing/invoices';
 import { createCustomer } from '@/lib/domain/customers/customers';
+import {
+  formatMinutes,
+  listTimeCommitted,
+  totalMinutes,
+} from '@/lib/domain/reporting/commitment';
 import { listWorkMarkedComplete } from '@/lib/domain/reporting/completion';
 import { createPriceBookItem, updatePriceBookItem } from '@/lib/domain/pricing/price-book';
 import { priceWorkItem } from '@/lib/domain/pricing/prices';
@@ -26,6 +31,10 @@ import {
   type FinancialGroup,
 } from '@/lib/domain/reporting/financials';
 import { periodFor } from '@/lib/domain/reporting/shape';
+import { createResource } from '@/lib/domain/resources/resources';
+import { listSchedule } from '@/lib/domain/scheduling/availability';
+import { zonedDayRange } from '@/lib/domain/scheduling/window';
+import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
@@ -1181,5 +1190,208 @@ describe('work a business marked finished', () => {
         grouping: 'customer',
       }),
     );
+  });
+});
+
+/**
+ * How much resource time a business committed.
+ *
+ * **The correspondence is the test and everything else is secondary.** What counts as a
+ * commitment is `work_items_resource_not_double_booked`'s partial predicate, and it now lives in
+ * three places: the exclusion constraint, `listSchedule`'s filters, and `time_committed`. D35
+ * permits that only while they agree, which is I5's own mechanism — `availability.test.ts` already
+ * holds the first two together in both directions, and this holds the third to them.
+ *
+ * **A failure here is not a broken test.** It means a clause reached one expression and not the
+ * others, which is the event I5 was written to catch. Repair it by teaching the aggregate what
+ * the constraint learned, never by relaxing the assertion.
+ *
+ * What is deliberately absent is utilisation. A percentage needs opening hours minus commitments,
+ * which is `freeWindows`, and a second answer to *what is free* is what I5 forbids outright — no
+ * correspondence test would make that safe, because the second answer is the one somebody books
+ * against.
+ */
+describe('time a business has committed', () => {
+  const DAY = '2027-04-12';
+  // **The business's day, not the server's**, and the first draft of this suite used a UTC one.
+  // The aggregate zones its two dates from the organization's own row, so a correspondence test
+  // reading a UTC day would compare two different windows and pass by luck — which it did, until
+  // a booking late in the UTC day fell outside the Manila one and said so.
+  const ZONE_WINDOW = zonedDayRange(DAY, ZONE);
+
+  let yard: Tenant;
+  let vanId: string;
+  let releasedId: string;
+
+  beforeAll(async () => {
+    yard = await newTenant('time-yard');
+    vanId = await createResource(yard.db, {
+      organizationId: yard.organizationId,
+      name: 'Van one',
+    });
+
+    const [type] = await listWorkItemTypes(yard.db, { organizationId: yard.organizationId });
+    releasedId = await createWorkItemStatus(yard.db, {
+      organizationId: yard.organizationId,
+      typeId: type.id,
+      name: 'Called off',
+      position: 3,
+    });
+    await createWorkItemTransition(yard.db, {
+      organizationId: yard.organizationId,
+      typeId: type.id,
+      fromStatusId: yard.statusId,
+      toStatusId: releasedId,
+    });
+    await updateWorkItemStatus(yard.db, {
+      id: releasedId,
+      name: 'Called off',
+      position: 3,
+      releasesResource: true,
+      marksComplete: false,
+    });
+  });
+
+  async function booked(title: string, from: string, to: string): Promise<string> {
+    const id = await createWorkItem(yard.db, {
+      organizationId: yard.organizationId,
+      statusId: yard.statusId,
+      title,
+    });
+    await scheduleWorkItem(yard.db, {
+      workItemId: id,
+      resourceId: vanId,
+      startsAt: from,
+      endsAt: to,
+    });
+    return id;
+  }
+
+  it('agrees with the one availability calculation, on the same jobs (I5, D35)', async () => {
+    // **The load-bearing test of this slice.** Two hours and ninety minutes, on one van, on one
+    // day. `listSchedule` reads the commitments through the domain layer; `time_committed` reads
+    // them in SQL. Both are the same predicate and they have to answer identically.
+    await booked('Morning', '2027-04-12T08:00:00.000Z', '2027-04-12T10:00:00.000Z');
+    await booked('Afternoon', '2027-04-12T13:00:00.000Z', '2027-04-12T14:30:00.000Z');
+
+    const schedule = await listSchedule(yard.db, {
+      organizationId: yard.organizationId,
+      within: ZONE_WINDOW,
+    });
+
+    const throughTheSchedule = schedule
+      .flatMap((entry) => entry.booked)
+      .reduce((total, entry) => {
+        // Clipped to the window, which is what the aggregate does and what the schedule leaves
+        // to its caller. Stated here rather than assumed, so the rule is visible in the test.
+        const from = Math.max(
+          new Date(entry.occupied.startsAt).getTime(),
+          new Date(ZONE_WINDOW.startsAt).getTime(),
+        );
+        const to = Math.min(
+          new Date(entry.occupied.endsAt).getTime(),
+          new Date(ZONE_WINDOW.endsAt).getTime(),
+        );
+        return total + Math.max(0, to - from) / 60_000;
+      }, 0);
+
+    const throughTheAggregate = await listTimeCommitted(yard.db, {
+      organizationId: yard.organizationId,
+      grouping: 'resource',
+      period: { from: DAY, to: '2027-04-13' },
+    });
+
+    expect(throughTheSchedule).toBe(210);
+    expect(totalMinutes(throughTheAggregate)).toBe(throughTheSchedule);
+    expect(throughTheAggregate[0].label).toBe('Van one');
+  });
+
+  it('stops counting work whose status the business says frees the resource', async () => {
+    // The third clause of the predicate, and the one a tenant can change under it. The exclusion
+    // constraint stops enforcing on this row and the schedule stops drawing it; the aggregate
+    // has to stop counting it in the same breath, or a business that cancels a job reports time
+    // it did not spend.
+    const abandoned = await booked(
+      'Called off later',
+      '2027-04-12T11:00:00.000Z',
+      '2027-04-12T12:00:00.000Z',
+    );
+
+    const before = await listTimeCommitted(yard.db, {
+      organizationId: yard.organizationId,
+      grouping: 'resource',
+      period: { from: DAY, to: '2027-04-13' },
+    });
+    expect(totalMinutes(before)).toBe(270);
+
+    await changeWorkItemStatus(yard.db, { workItemId: abandoned, toStatusId: releasedId });
+
+    const after = await listTimeCommitted(yard.db, {
+      organizationId: yard.organizationId,
+      grouping: 'resource',
+      period: { from: DAY, to: '2027-04-13' },
+    });
+    expect(totalMinutes(after)).toBe(210);
+
+    // And the schedule agrees, which is the correspondence holding through a change rather than
+    // only at rest.
+    const schedule = await listSchedule(yard.db, {
+      organizationId: yard.organizationId,
+      within: ZONE_WINDOW,
+    });
+    expect(schedule.flatMap((entry) => entry.booked)).toHaveLength(2);
+  });
+
+  it('splits a job across the months it actually occupied', async () => {
+    // Counting the whole window into both months would report more committed time than exists.
+    const spanning = await newTenant('time-span');
+    const van = await createResource(spanning.db, {
+      organizationId: spanning.organizationId,
+      name: 'Night shift',
+    });
+    const id = await createWorkItem(spanning.db, {
+      organizationId: spanning.organizationId,
+      statusId: spanning.statusId,
+      title: 'Over the boundary',
+    });
+    // 22:00 to 02:00 Manila, which straddles midnight on the first of the month there.
+    await scheduleWorkItem(spanning.db, {
+      workItemId: id,
+      resourceId: van,
+      startsAt: '2027-04-30T14:00:00.000Z',
+      endsAt: '2027-04-30T18:00:00.000Z',
+    });
+
+    const april = await listTimeCommitted(spanning.db, {
+      organizationId: spanning.organizationId,
+      grouping: 'resource',
+      period: { from: '2027-04-01', to: '2027-05-01' },
+    });
+    const may = await listTimeCommitted(spanning.db, {
+      organizationId: spanning.organizationId,
+      grouping: 'resource',
+      period: { from: '2027-05-01', to: '2027-06-01' },
+    });
+
+    // Four hours in total, and each month gets the part it held rather than all of it.
+    expect(totalMinutes(april) + totalMinutes(may)).toBe(240);
+    expect(totalMinutes(april)).toBeGreaterThan(0);
+    expect(totalMinutes(may)).toBeGreaterThan(0);
+  });
+
+  it('is gated by report.read, and refuses a grouping it cannot answer', async () => {
+    await expect(
+      listTimeCommitted(yard.db, {
+        organizationId: yard.organizationId,
+        grouping: 'service',
+      }),
+    ).rejects.toMatchObject({ code: 'reporting.commitment_failed' });
+  });
+
+  it('reads minutes as a timesheet does, not as a decimal to be multiplied', () => {
+    expect(formatMinutes(0)).toBe('0m');
+    expect(formatMinutes(45)).toBe('45m');
+    expect(formatMinutes(120)).toBe('2h');
+    expect(formatMinutes(210)).toBe('3h 30m');
   });
 });

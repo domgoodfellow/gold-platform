@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { listInvoicedAndIncurred, totalsByCurrency } from '@/lib/domain/reporting/financials';
+import { listTimeCommitted } from '@/lib/domain/reporting/commitment';
 import { listWorkMarkedComplete } from '@/lib/domain/reporting/completion';
 import {
   GROUPINGS_FOR,
@@ -29,7 +30,7 @@ import { listResources } from '@/lib/domain/resources/resources';
 import { todayInZone } from '@/lib/domain/scheduling/window';
 import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireOrganization } from '@/lib/route/organization';
-import { FiguresTable, JobsTable } from './report-tables';
+import { CommittedTimeTable, FiguresTable, JobsTable } from './report-tables';
 import {
   CreateDashboardForm,
   DashboardContentsForm,
@@ -129,12 +130,12 @@ export default async function ReportsPage({
     // **The saved report and the ad-hoc view take the same road.** A saved report is arguments,
     // so opening one narrows to the same call rather than to a second query (D35, D36).
     measure === 'work_marked_complete'
-      ? listWorkMarkedComplete(db, args).then(
-          (groups) => ({ measure, groups }) as const,
-        )
-      : listInvoicedAndIncurred(db, args).then(
-          (groups) => ({ measure: 'invoiced_and_incurred' as const, groups }),
-        ),
+      ? listWorkMarkedComplete(db, args).then((groups) => ({ measure, groups }) as const)
+      : measure === 'time_committed'
+        ? listTimeCommitted(db, args).then((groups) => ({ measure, groups }) as const)
+        : listInvoicedAndIncurred(db, args).then(
+            (groups) => ({ measure: 'invoiced_and_incurred' as const, groups }),
+          ),
     listCustomers(db, { organizationId }),
     listResources(db, { organizationId }),
     listLocations(db, { organizationId }),
@@ -247,6 +248,11 @@ export default async function ReportsPage({
                 <div className="mt-2">
                   {tile.result.measure === 'work_marked_complete' ? (
                     <JobsTable groups={tile.result.groups} grouping={tile.report.grouping} />
+                  ) : tile.result.measure === 'time_committed' ? (
+                    <CommittedTimeTable
+                      groups={tile.result.groups}
+                      grouping={tile.report.grouping}
+                    />
                   ) : (
                     <FiguresTable groups={tile.result.groups} grouping={tile.report.grouping} />
                   )}
@@ -387,6 +393,8 @@ export default async function ReportsPage({
         <div className="mt-6">
           {result.measure === 'work_marked_complete' ? (
             <JobsTable groups={result.groups} grouping={grouping} />
+          ) : result.measure === 'time_committed' ? (
+            <CommittedTimeTable groups={result.groups} grouping={grouping} />
           ) : (
             <FiguresTable groups={result.groups} grouping={grouping} />
           )}

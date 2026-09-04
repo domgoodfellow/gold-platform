@@ -1,6 +1,7 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { listTimeCommitted, type CommitmentGroup } from '@/lib/domain/reporting/commitment';
 import { listWorkMarkedComplete, type CompletionGroup } from '@/lib/domain/reporting/completion';
 import { listInvoicedAndIncurred, type FinancialGroup } from '@/lib/domain/reporting/financials';
 import {
@@ -328,7 +329,8 @@ export async function setReportRoles(
  */
 export type ReportResult =
   | { measure: 'invoiced_and_incurred'; groups: FinancialGroup[] }
-  | { measure: 'work_marked_complete'; groups: CompletionGroup[] };
+  | { measure: 'work_marked_complete'; groups: CompletionGroup[] }
+  | { measure: 'time_committed'; groups: CommitmentGroup[] };
 
 export async function runReportDefinition(
   db: Db,
@@ -346,6 +348,10 @@ export async function runReportDefinition(
       measure: 'work_marked_complete',
       groups: await listWorkMarkedComplete(db, args),
     };
+  }
+
+  if (input.definition.measure === 'time_committed') {
+    return { measure: 'time_committed', groups: await listTimeCommitted(db, args) };
   }
 
   return {

@@ -769,12 +769,19 @@ corrections are more useful than the original claims.
   decision between two questions: what was quoted **during** a period, and what stands quoted and
   unbilled **as at** a date, which needs reconstruction from those two events. They are unrelated
   to completion and smaller than this entry claimed.
-- **Utilisation is where I5 is at risk, and this part stands.** Committed hours per resource is a
-  sum over `occupies` — but only for rows matching the exclusion constraint's partial predicate,
-  which makes it the *third* expression of that predicate after the constraint and
-  `listSchedule`. So even the safe version needs the D35 correspondence move. A *percentage*
-  needs a denominator that is `freeWindows`, and an aggregate re-deriving it would be a second
-  availability calculation. Neither option is chosen here.
+- **Utilisation was where I5 was at risk, and the safe half is built.** `public.time_committed`
+  sums `occupies` for rows matching the exclusion constraint's partial predicate, which makes it
+  the *third* expression of that predicate after the constraint and `listSchedule` — admitted on
+  D35's terms and pinned by a correspondence test that runs the same jobs through both and holds
+  through a status change that frees a resource.
+
+  **The percentage is not built and is not a deferral.** Its denominator is opening hours minus
+  commitments, which is `freeWindows`, and an aggregate re-deriving that would be a second answer
+  to *what is free*. No correspondence test would make that one safe, because the second answer
+  is the one somebody books against — which is the difference between a rule expressed twice and
+  a rule that has two authorities. A business dividing committed time by its own opening hours is
+  doing arithmetic this platform did not invent for it, and that is where the division belongs
+  until something makes a better case.
 
 **Corrected twice, and the second correction is the interesting one.** This paragraph said
 "before the AI layer" for two milestones after that stopped being true; it then said "before the
