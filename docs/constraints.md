@@ -2215,6 +2215,141 @@ happen.
 
 ---
 
+### D37 — A demo business is a script that runs the real path, never a seed file
+
+Standing a business up by hand is about twenty minutes of typing before there is a board with
+anything on it, and `pnpm db:reset` erases it. That is a real obstacle to *looking* at the
+interface, which is how M7's dashboards and every later client surface get argued about — a
+dashboard over four jobs entered this afternoon says nothing about whether it is the right
+dashboard. So there is a want for a populated business in one command.
+
+**It cannot be `seed.sql`, and the reason is not procedural.** `db:reset` applies a seed file
+automatically, so every reset and every test run would begin with the platform having chosen
+somebody's statuses, hours and vocabulary — the thing this file forbids in its never-hardcode
+list. `walkthrough.md` is right that a new organization being genuinely empty *is* the product
+working. A script you run on purpose is a different object: nothing is seeded, and the emptiness
+of a fresh database is untouched.
+
+#### Where it lives and how it runs
+
+```text
+apps/web/scripts/demo/
+  run.ts          the sequence, the guard, the printed output
+  businesses.ts   the data — two businesses, entirely words and numbers
+```
+
+Under `apps/web` because it calls the domain layer through the `@/` alias. That placement buys
+something real: `tsconfig.json` includes `**/*.ts`, so `pnpm typecheck` covers the script for
+free and **it breaks the gate the day a domain signature changes**. That is what is wanted from a
+second caller, and it is the difference between this and a snippet in `snippets/` that quietly
+rots.
+
+It needs a TypeScript runner. `vite-node` is not in the tree and vitest 4 does not expose it, so
+this wants `tsx` as a devDependency of `apps/web` — the alternative is making it a test file,
+which would put demo data inside `pnpm check`.
+
+```json
+"demo": "pnpm --filter @gold/web demo",
+"demo:fresh": "pnpm db:reset && pnpm --filter @gold/web demo"
+```
+
+It reads `infra/.env.test` the way `tests/setup.ts` does, and needs both of the things in there:
+the service-role key to create accounts **with passwords it writes down** — the suites generate
+one and throw it away, which is why Studio's user list cannot sign anybody in — and a direct
+connection for the `platform_staff` row, which no application path may write (D28).
+
+#### The guard, which is the first thing it does
+
+If the Supabase URL is not `127.0.0.1` or `localhost`, refuse and exit. Not a warning. This
+creates users with a published password and writes into a live schema; the accident it prevents
+is somebody's `infra/.env.test` pointing at a linked project.
+
+#### What it creates
+
+**Two businesses that share no word**, on the same principle `milestone-m3.test.ts` runs on and
+for the same reason: what a person is checking while clicking around is that the platform has no
+opinion. An equipment hire yard in Amsterdam trading in euro and a clinic in Tokyo trading in yen
+is the illustration rather than the requirement — yen being zero-decimal exercises the money
+formatting, and the specific words are the caller's to change, because they live in
+`businesses.ts` and nowhere else.
+
+**The modules each has switched on differ deliberately.** Signing into one and then the other
+shows a sidebar of a different length, which is the fastest way to see the module/kernel line
+(D25) — the distinction that shipped broken once.
+
+Per business, `businesses.ts` holds a `BusinessShape` — exactly the type `configureBusiness`
+takes, so the script joins `applyConfigurationProposal` as a second caller of that function from
+outside the test suite — plus an owner, one member on a reduced role, resources, customers with
+locations, and jobs in every state: unscheduled, scheduled, worked, quoted, invoiced, part-paid.
+
+**The reduced role is worth getting right.** `work_item.create`, `work_item.transition`,
+`work_item.record` and nothing else. Signing in as that person is how I12 is seen rather than
+read about: every screen renders and the forms they cannot use explain themselves, which is the
+pattern every future screen inherits.
+
+#### The order, and the one property that matters
+
+Accounts, then the staff member (the row before the sign-in, because the role claim is minted at
+sign-in), then per business: `provisionOrganization` as staff, sign in as the owner,
+`setModuleEnabled`, `configureBusiness`, then resources, customers, locations, jobs, schedules,
+status moves, time, costs, priced lines, invoices and payments. Every one is a real domain call
+under a real session; the only SQL is the `platform_staff` row.
+
+**`run.ts` must contain no branch on which business it is holding.** If it ever needs
+`if (business.name === …)`, the data model in `businesses.ts` is wrong. That is the discipline
+`configureBusiness` already keeps, and it makes the script a small piece of evidence rather than
+only a convenience.
+
+It prints each business's URL with its accounts and the one password, so a person copies an
+address into `/sign-in` and clicks.
+
+#### Re-runs, and the history it can have
+
+**It refuses to run against a database that already holds organizations** and says to use
+`demo:fresh`. Otherwise a second run dies part-way on `customers_org_email_unique` or a duplicate
+address, leaving half a business — worse than a clear refusal at the start.
+
+**What can be backdated is now most of what matters, and closing that gap was a real change
+rather than a demo accommodation.** `scheduleWorkItem`, `recordTime` and `recordPayment` always
+took their own instants. `recordCost` and `issueInvoice` did not, so costs and invoices claimed
+to be from whenever their paperwork caught up — and the objection to adding the parameter
+(*a domain change whose only caller is a script*) dissolved on inspection: `record_payment` had
+taken `p_received_at` since M4, both tables already carried the second timestamp, and a business
+entering last week's receipt is an ordinary operator, not a demo. It shipped with its callers on
+the job screen.
+
+**What stays un-backdatable is `created_at` everywhere and `events.occurred_at`**, so a demo's
+customers, jobs and timeline entries all date from the afternoon it was run. That is deliberate,
+not a remaining gap: those are the platform's own record of when a row appeared and when somebody
+acted, and a caller that can set them can write a customer dated before the business existed and
+an event log that is not a log. The consequence to accept is that figures grouped by *when work
+happened* look real in a demo and figures grouped by *when a record was created* are a single
+spike.
+
+#### What it deliberately leaves out
+
+No booking through `/book/{slug}` and no portal invitation, because the interesting part of both
+is being a stranger with no account and a script doing it skips the thing worth watching. No
+automation runs, because a rule that has already fired is far less informative than watching one
+fire.
+
+#### Rejected
+
+**A `seed.sql`.** The reason above, and one more: it would run inside the test suite's own
+resets, so the suites would stop exercising a genuinely empty database.
+
+**Backdating `created_at` and `events.occurred_at` directly over the privileged connection.**
+Fast, and it would give a demo a fully convincing past. It also rewrites the audit trail, and the
+weaker version of the objection is worth recording: no domain function writes those columns, so
+doing it is not bypassing a domain rule — there is no rule to bypass. What it bypasses is the
+meaning of the log, which is enough.
+
+**A fixture helper shared with the test suite.** `tests/helpers/founding.ts` already provisions,
+and reaching for it here would tie the suite's fixtures to a demo's needs. The script calls the
+same domain functions; that is the sharing that matters.
+
+---
+
 ## Decided, not yet built
 
 Named so they are not reinvented, and deliberately unbuilt until they have a consumer.

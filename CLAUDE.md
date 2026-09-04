@@ -457,10 +457,12 @@ when the business is created, and everything in `BusinessShape` is settled after
 somebody inside it. **Do not put creation back inside this function**; it cannot work, and the
 attempt is what the paragraph above is a record of. It was `milestone-m3.test.ts`'s local helper
 until it was extracted for the AI onboarding flow to call, and the milestone test now reads *its*
-source and fails on any tenant's word appearing there. **That second caller is not built yet** —
-every caller today is a test — which is a debt this file names rather than a claim it makes: the
-extraction happened ahead of the caller, against this repository's own rule, and D32 is where the
-caller is decided. A branch on business shape inside it is
+source and fails on any tenant's word appearing there. **That second caller is built**, and it is
+`applyConfigurationProposal` — a person pressing Apply on `/organizations/{id}/setup`, under their
+own session. This paragraph recorded the opposite for as long as the debt was real: the extraction
+happened ahead of its caller, against this repository's own rule, and D32 was where the caller was
+decided. It is left as a record of the order rather than deleted, because the rule it broke is
+still the rule. A branch on business shape inside it is
 the per-client app studio `vision.md` refuses, arriving as a helper rather than as a fork. Two
 things it deliberately is not: it creates no customer and no job, because a business that has
 just been configured has neither and inventing one would be the platform speaking for it; and
