@@ -1,8 +1,11 @@
 'use client';
 
+import { SectionHeading } from '@/components/containers/section';
+import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
-import { CustomFieldInputs } from '@/components/custom-field-inputs';
-import { OptionalSelect, type SelectOption } from '@/components/optional-select';
+import { CustomFieldInputs } from '@/components/custom-fields/inputs';
+import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
@@ -25,8 +28,6 @@ import {
 
 const INITIAL: WorkActionState = { error: null };
 
-const INPUT_CLASS = 'flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20';
-
 export function CreateWorkItemForm({
   organizationId,
   statuses,
@@ -48,10 +49,10 @@ export function CreateWorkItemForm({
 
   if (statuses.length === 0) {
     return (
-      <p className="mt-8 text-sm opacity-70">
+      <Hint className="mt-8">
         Add a status below before recording work. A work item without a state is not on the
         board.
-      </p>
+      </Hint>
     );
   }
 
@@ -59,28 +60,28 @@ export function CreateWorkItemForm({
     <form action={formAction} className="mt-8 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <h2 className="text-sm font-medium">New work item</h2>
+      <SectionHeading>New work item</SectionHeading>
 
       {/* The type is not submitted. It follows from the status, and the statuses offered here
           are already this type's — so a form that also carried the type would be carrying a
           value that could contradict the one beside it. */}
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="title"
           type="text"
           required
           maxLength={300}
           placeholder="What needs doing"
           aria-label="Title"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <select name="statusId" aria-label="Status" className={INPUT_CLASS}>
+        <SelectInput name="statusId" aria-label="Status" className="flex-1">
           {statuses.map((status) => (
             <option key={status.id} value={status.id}>
               {status.name}
             </option>
           ))}
-        </select>
+        </SelectInput>
       </div>
 
       {/* All three optional: internal work has no customer, a workshop job has no site, and
@@ -99,19 +100,11 @@ export function CreateWorkItemForm({
 
       <CustomFieldInputs definitions={definitions} />
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Adding…' : 'Add work item'}
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -131,29 +124,21 @@ export function CreateStatusForm({
       <input type="hidden" name="typeId" value={typeId} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="name"
           type="text"
           required
           maxLength={64}
           placeholder="Status name, e.g. Awaiting parts"
           aria-label="Status name"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
-        >
+        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Adding…' : 'Add status'}
-        </button>
+        </Button>
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -166,29 +151,21 @@ export function CreateTypeForm({ organizationId }: { organizationId: string }) {
       <input type="hidden" name="organizationId" value={organizationId} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="name"
           type="text"
           required
           maxLength={64}
           placeholder="Type name, e.g. Installation"
           aria-label="Type name"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
-        >
+        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Adding…' : 'Add type'}
-        </button>
+        </Button>
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -222,23 +199,20 @@ export function MoveWorkItemForm({
       <input type="hidden" name="workItemId" value={workItemId} />
 
       {moves.map((move) => (
-        <button
+        <Button
           key={move.id}
           type="submit"
           name="toStatusId"
           value={move.id}
           disabled={pending}
-          className="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-50 dark:border-white/20"
+          tone="secondary"
+          size="tiny"
         >
           → {move.name}
-        </button>
+        </Button>
       ))}
 
-      {state.error ? (
-        <p role="alert" className="w-full text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert" className="w-full">{state.error}</ErrorText>
     </form>
   );
 }
@@ -256,9 +230,9 @@ export function CreateTransitionForm({
 
   if (statuses.length < 2) {
     return (
-      <p className="mt-2 text-sm opacity-70">
+      <Hint className="mt-2">
         Add a second status before wiring moves between them.
-      </p>
+      </Hint>
     );
   }
 
@@ -268,37 +242,29 @@ export function CreateTransitionForm({
       <input type="hidden" name="typeId" value={typeId} />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <select name="fromStatusId" aria-label="Move from" className={INPUT_CLASS}>
+        <SelectInput name="fromStatusId" aria-label="Move from" className="flex-1">
           {statuses.map((status) => (
             <option key={status.id} value={status.id}>
               {status.name}
             </option>
           ))}
-        </select>
-        <span aria-hidden className="opacity-60">
+        </SelectInput>
+        <span aria-hidden className="text-subtle">
           →
         </span>
-        <select name="toStatusId" aria-label="Move to" className={INPUT_CLASS}>
+        <SelectInput name="toStatusId" aria-label="Move to" className="flex-1">
           {statuses.map((status) => (
             <option key={status.id} value={status.id}>
               {status.name}
             </option>
           ))}
-        </select>
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
-        >
+        </SelectInput>
+        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Allowing…' : 'Allow move'}
-        </button>
+        </Button>
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -329,44 +295,37 @@ export function ScheduleWorkItemForm({
       <input type="hidden" name="workItemId" value={workItemId} />
 
       <div className="flex flex-wrap items-center gap-2">
-        <input
+        <TextInput
           name="startsAt"
           type="datetime-local"
           aria-label="Starts at"
-          className="rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+          className="px-2 py-1 text-xs"
         />
-        <input
+        <TextInput
           name="endsAt"
           type="datetime-local"
           aria-label="Ends at"
-          className="rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+          className="px-2 py-1 text-xs"
         />
         <OptionalSelect name="resourceId" label="Assign to" options={resources} />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-50 dark:border-white/20"
-        >
+        <Button type="submit" disabled={pending} tone="secondary" size="tiny">
           {pending ? 'Scheduling…' : 'Schedule'}
-        </button>
+        </Button>
         {scheduled ? (
-          <button
+          <Button
             type="submit"
             name="clear"
             value="1"
             disabled={pending}
-            className="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-50 dark:border-white/20"
+            tone="secondary"
+            size="tiny"
           >
             Clear
-          </button>
+          </Button>
         ) : null}
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -388,29 +347,21 @@ export function RenameTypeForm({
       <input type="hidden" name="typeId" value={typeId} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="name"
           type="text"
           required
           maxLength={64}
           defaultValue={name}
           aria-label="Type name"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
-        >
+        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Renaming…' : 'Rename'}
-        </button>
+        </Button>
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -430,16 +381,16 @@ export function EditStatusForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="statusId" value={status.id} />
 
-      <input
+      <TextInput
         name="name"
         type="text"
         required
         maxLength={64}
         defaultValue={status.name}
         aria-label={`Name of status ${status.name}`}
-        className="rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
+        size="small"
       />
-      <input
+      <TextInput
         name="position"
         type="number"
         required
@@ -447,7 +398,8 @@ export function EditStatusForm({
         step={1}
         defaultValue={status.position}
         aria-label={`Position of status ${status.name}`}
-        className="w-20 rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
+        size="small"
+        className="w-20"
       />
       {/* The two questions the platform asks about a status, and both are the tenant's to
           answer. Neither is `is_terminal`: that would be the platform deciding what a word
@@ -476,16 +428,12 @@ export function EditStatusForm({
         />
         Means finished
       </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-50 dark:border-white/20"
-      >
+      <Button type="submit" disabled={pending} tone="secondary" size="tiny">
         Save
-      </button>
+      </Button>
 
       {state.error ? (
-        <span role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <span role="alert" className="text-sm text-danger">
           {state.error}
         </span>
       ) : null}
@@ -508,29 +456,21 @@ export function AddTypeChecklistItemForm({
       <input type="hidden" name="typeId" value={typeId} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="label"
           type="text"
           required
           maxLength={200}
           placeholder="A step every job of this kind involves"
           aria-label="Template step"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
-        >
+        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Adding…' : 'Add step'}
-        </button>
+        </Button>
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -550,16 +490,12 @@ export function TypeChecklistItemRow({
       <input type="hidden" name="id" value={item.id} />
 
       <span className="flex-1">{item.label}</span>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-50 dark:border-white/20"
-      >
+      <Button type="submit" disabled={pending} tone="secondary" size="tiny">
         Remove
-      </button>
+      </Button>
 
       {state.error ? (
-        <span role="alert" className="text-red-600 dark:text-red-400">
+        <span role="alert" className="text-danger">
           {state.error}
         </span>
       ) : null}
@@ -602,10 +538,10 @@ export function PublishTypeForm({
 
   if (statuses.length === 0) {
     return (
-      <p className="mt-4 text-sm opacity-70">
+      <Hint className="mt-4">
         {typeName} has no stages yet, so a booking would have nowhere to arrive. Add one above
         and this becomes publishable.
-      </p>
+      </Hint>
     );
   }
 
@@ -614,20 +550,20 @@ export function PublishTypeForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="typeId" value={typeId} />
 
-      <p className="text-sm opacity-70">
+      <Hint>
         {booking
           ? `${typeName} is on the public page. A booking arrives in the stage below.`
           : `${typeName} is not on the public page.`}
-      </p>
+      </Hint>
 
       <label className="text-sm">
         A booking arrives in
-        <select
+        <SelectInput
           name="statusId"
           required
           defaultValue={booking?.statusId ?? ''}
           disabled={disabled}
-          className={`${INPUT_CLASS} mt-1 block w-full`}
+          className="flex-1 mt-1 block w-full"
         >
           <option value="">Choose a stage</option>
           {statuses.map((status) => (
@@ -635,12 +571,12 @@ export function PublishTypeForm({
               {status.name}
             </option>
           ))}
-        </select>
+        </SelectInput>
       </label>
 
       <label className="text-sm">
         and takes, in minutes
-        <input
+        <TextInput
           name="durationMinutes"
           type="number"
           min={5}
@@ -648,17 +584,17 @@ export function PublishTypeForm({
           required
           defaultValue={booking?.durationMinutes ?? ''}
           disabled={disabled}
-          className={`${INPUT_CLASS} mt-1 block w-full`}
+          className="flex-1 mt-1 block w-full"
         />
       </label>
 
       <label className="text-sm">
         Shown at this price, if you publish one
-        <select
+        <SelectInput
           name="priceItemId"
           defaultValue={booking?.priceItemId ?? ''}
           disabled={disabled}
-          className={`${INPUT_CLASS} mt-1 block w-full`}
+          className="flex-1 mt-1 block w-full"
         >
           <option value="">Do not show a price</option>
           {prices.map((price) => (
@@ -666,36 +602,33 @@ export function PublishTypeForm({
               {price.name}
             </option>
           ))}
-        </select>
+        </SelectInput>
       </label>
 
       <div className="flex flex-wrap gap-2">
-        <button
-          type="submit"
-          disabled={disabled || pending}
-          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
-        >
+        <Button type="submit" disabled={disabled || pending} tone="secondary" className="w-fit">
           {pending ? 'Saving…' : booking ? 'Update what is published' : 'Publish it'}
-        </button>
+        </Button>
 
         {/* Withdrawing is the same call with no status, so it is a second submit button on one
             form rather than a second form: there is no `bookable` flag to clear. */}
         {booking ? (
-          <button
+          <Button
             type="submit"
             name="withdraw"
             value="yes"
             formNoValidate
             disabled={disabled || pending}
-            className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
+            tone="secondary"
+            className="w-fit"
           >
             Take it off the page
-          </button>
+          </Button>
         ) : null}
       </div>
 
       {state.error ? (
-        <span role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <span role="alert" className="text-sm text-danger">
           {state.error}
         </span>
       ) : null}

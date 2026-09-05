@@ -1,4 +1,7 @@
-import { CustomFieldValues } from '@/components/custom-field-values';
+import { Disclosure } from '@/components/containers/card';
+import { Hint } from '@/components/controls/inputs';
+import { DataTable } from '@/components/display/table';
+import { CustomFieldValues } from '@/components/custom-fields/values';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listResources } from '@/lib/domain/resources/resources';
 import { requireOrganization } from '@/lib/route/organization';
@@ -21,22 +24,9 @@ export default async function ResourcesPage({
 
   return (
     <>
-      <p className="text-sm opacity-70">
+      <Hint>
         People, vehicles and equipment that work is scheduled against.
-      </p>
-
-      {resources.length === 0 ? (
-        <p className="mt-6 text-sm opacity-70">No resources yet.</p>
-      ) : (
-        <ul className="mt-6 divide-y divide-black/10 dark:divide-white/15">
-          {resources.map((resource) => (
-            <li key={resource.id} className="py-3">
-              <div className="font-medium">{resource.name}</div>
-              <CustomFieldValues definitions={definitions} custom={resource.custom} />
-            </li>
-          ))}
-        </ul>
-      )}
+      </Hint>
 
       {/*
         Hiding the form is a courtesy, not the guard. `resources_insert` requires
@@ -44,12 +34,36 @@ export default async function ResourcesPage({
         refused there (constraints.md: hiding a UI element is not authorization).
       */}
       {mayAdd ? (
-        <CreateResourceForm organizationId={organizationId} definitions={definitions} />
+        <Disclosure summary="Add a resource" defaultOpen={resources.length === 0} className="mt-6">
+          <CreateResourceForm organizationId={organizationId} definitions={definitions} />
+        </Disclosure>
       ) : (
-        <p className="mt-8 text-sm opacity-70">
+        <Hint className="mt-6">
           Your role, {organization.role}, cannot add resources here.
-        </p>
+        </Hint>
       )}
+
+      <div className="mt-6">
+        <DataTable
+          rows={resources}
+          rowKey={(resource) => resource.id}
+          empty="No resources yet."
+          columns={[
+            { key: 'name', header: 'Name', emphasis: 'primary', cell: (r) => r.name },
+            ...(definitions.length > 0
+              ? [
+                  {
+                    key: 'custom',
+                    header: 'Details',
+                    cell: (r: (typeof resources)[number]) => (
+                      <CustomFieldValues definitions={definitions} custom={r.custom} />
+                    ),
+                  },
+                ]
+              : []),
+          ]}
+        />
+      </div>
     </>
   );
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import { Button } from '@/components/controls/button';
+import { ErrorText, TextInput } from '@/components/controls/inputs';
 import { useActionState } from 'react';
 
 export type PortalLinkState = { error: string | null; token: string | null };
@@ -37,31 +39,23 @@ export function PortalLinkForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="customerId" value={customerId} />
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded border border-black/15 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-white/20"
-      >
+      <Button type="submit" disabled={pending} tone="secondary" size="small" className="w-fit">
         {pending ? 'Making a link…' : 'Make a portal link'}
-      </button>
+      </Button>
 
       {state.token ? (
         <label className="flex flex-col gap-1 text-sm">
-          <span className="opacity-70">Send this to the customer. Anyone holding it is them.</span>
-          <input
+          <span className="text-muted">Send this to the customer. Anyone holding it is them.</span>
+          <TextInput
             readOnly
             value={`${origin}/portal/${state.token}`}
             onFocus={(event) => event.currentTarget.select()}
-            className="w-full rounded border border-black/15 px-3 py-2 font-mono text-xs dark:border-white/20"
+            className="w-full font-mono text-xs"
           />
         </label>
       ) : null}
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }

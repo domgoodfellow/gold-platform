@@ -1,7 +1,10 @@
 'use client';
 
+import { SectionHeading } from '@/components/containers/section';
+import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
-import { CustomFieldInputs } from '@/components/custom-field-inputs';
+import { CustomFieldInputs } from '@/components/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { Location } from '@/lib/domain/locations/locations';
 import {
@@ -13,8 +16,6 @@ import {
 } from './actions';
 
 const INITIAL: LocationActionState = { error: null };
-
-const INPUT_CLASS = 'flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20';
 
 export function CreateLocationForm({
   organizationId,
@@ -29,53 +30,44 @@ export function CreateLocationForm({
     <form action={formAction} className="mt-8 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <h2 className="text-sm font-medium">New location</h2>
+      <SectionHeading>New location</SectionHeading>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="label"
           type="text"
           required
           maxLength={200}
           placeholder="Label, e.g. North depot"
           aria-label="Label"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <input
+        <TextInput
           name="address"
           type="text"
           required
           maxLength={500}
           placeholder="Address"
           aria-label="Address"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
       </div>
 
-      <textarea
+      <TextArea
         name="accessNotes"
         rows={2}
         maxLength={2000}
         placeholder="Access notes (optional) — gate codes, key safe, who to ask for"
         aria-label="Access notes"
-        className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
       />
 
       <CustomFieldInputs definitions={definitions} />
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Adding…' : 'Add location'}
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -93,9 +85,9 @@ export function LinkCustomerForm({
 
   if (locations.length === 0 || customers.length === 0) {
     return (
-      <p className="mt-8 text-sm opacity-70">
+      <Hint className="mt-8">
         Add a customer and a location before linking them.
-      </p>
+      </Hint>
     );
   }
 
@@ -103,53 +95,35 @@ export function LinkCustomerForm({
     <form action={formAction} className="mt-8 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <h2 className="text-sm font-medium">Serve a customer from a location</h2>
+      <SectionHeading>Serve a customer from a location</SectionHeading>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <select
-          name="customerId"
-          aria-label="Customer"
-          className="flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20"
-        >
+        <SelectInput name="customerId" aria-label="Customer" className="flex-1">
           {customers.map((customer) => (
             <option key={customer.id} value={customer.id}>
               {customer.name}
             </option>
           ))}
-        </select>
-        <select
-          name="locationId"
-          aria-label="Location"
-          className="flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20"
-        >
+        </SelectInput>
+        <SelectInput name="locationId" aria-label="Location" className="flex-1">
           {locations.map((location) => (
             <option key={location.id} value={location.id}>
               {location.label}
             </option>
           ))}
-        </select>
+        </SelectInput>
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Linking…' : 'Link'}
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
 
 const NO_COORDINATES: CoordinatesActionState = { error: null, suggested: null, notFound: false };
-
-const COORDINATE_INPUT = 'w-36 rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20';
 
 /**
  * Where one place is.
@@ -187,7 +161,7 @@ export function LocationCoordinatesForm({
       <input type="hidden" name="locationId" value={location.id} />
       <input type="hidden" name="address" value={location.address} />
 
-      <input
+      <TextInput
         key={`lat-${seed}`}
         name="latitude"
         type="text"
@@ -195,9 +169,10 @@ export function LocationCoordinatesForm({
         aria-label={`Latitude of ${location.label}`}
         placeholder="Latitude"
         defaultValue={suggested?.latitude ?? location.coordinates?.latitude ?? ''}
-        className={COORDINATE_INPUT}
+        size="small"
+        className="w-36"
       />
-      <input
+      <TextInput
         key={`lon-${seed}`}
         name="longitude"
         type="text"
@@ -205,47 +180,50 @@ export function LocationCoordinatesForm({
         aria-label={`Longitude of ${location.label}`}
         placeholder="Longitude"
         defaultValue={suggested?.longitude ?? location.coordinates?.longitude ?? ''}
-        className={COORDINATE_INPUT}
+        size="small"
+        className="w-36"
       />
 
-      <button
+      <Button
         type="submit"
         name="intent"
         value="save"
         disabled={pending}
-        className="rounded border border-black/15 px-3 py-1 text-sm disabled:opacity-50 dark:border-white/20"
+        tone="secondary"
+        size="small"
       >
         {pending ? '…' : 'Save'}
-      </button>
+      </Button>
 
       {mayLookUp ? (
-        <button
+        <Button
           type="submit"
           name="intent"
           value="look-up"
           disabled={pending}
-          className="rounded border border-black/15 px-3 py-1 text-sm disabled:opacity-50 dark:border-white/20"
+          tone="secondary"
+          size="small"
         >
           Look up from the address
-        </button>
+        </Button>
       ) : (
-        <span className="text-xs opacity-60">
+        <span className="text-xs text-subtle">
           This deployment cannot look an address up, so these are typed in.
         </span>
       )}
 
       {suggested ? (
-        <span className="text-xs opacity-70">Found. Check it, then save.</span>
+        <span className="text-xs text-muted">Found. Check it, then save.</span>
       ) : null}
 
       {state.notFound ? (
-        <span className="text-xs opacity-70">
+        <span className="text-xs text-muted">
           That address was not recognised. Type the coordinates in, or edit the address.
         </span>
       ) : null}
 
       {state.error ? (
-        <span role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <span role="alert" className="text-sm text-danger">
           {state.error}
         </span>
       ) : null}

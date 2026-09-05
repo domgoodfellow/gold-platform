@@ -1,3 +1,6 @@
+import { Button } from '@/components/controls/button';
+import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
+import { Hint, SelectInput } from '@/components/controls/inputs';
 import Link from 'next/link';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listLocations } from '@/lib/domain/locations/locations';
@@ -76,14 +79,14 @@ export default async function ReportsPage({
   if (!organization.capabilities.includes('report.read')) {
     return (
       <>
-        <p className="mt-1 text-sm opacity-70">
+        <Hint className="mt-1">
           What this business has invoiced, and what its work has consumed.
-        </p>
-        <p className="mt-8 text-sm opacity-70">
+        </Hint>
+        <Hint className="mt-8">
           Your role, {organization.role}, cannot see this business’s figures. Reading a total is
           a different thing from reading the rows behind it — anybody here can open one invoice
           on the job it belongs to, and this page adds a year of them up.
-        </p>
+        </Hint>
       </>
     );
   }
@@ -197,18 +200,18 @@ export default async function ReportsPage({
   const dashboardNav =
     dashboards.length > 0 ? (
       <nav className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-        <span className="opacity-70">Dashboards:</span>
+        <span className="text-muted">Dashboards:</span>
         {dashboards.map((entry) => (
           <Link
             key={entry.id}
             href={`/organizations/${organizationId}/reports?dashboard=${entry.id}`}
-            className={entry.id === openDashboard?.id ? 'font-medium' : 'opacity-70'}
+            className={entry.id === openDashboard?.id ? 'font-medium' : 'text-muted'}
           >
             {entry.name}
           </Link>
         ))}
         {openDashboard ? (
-          <Link href={`/organizations/${organizationId}/reports`} className="opacity-70">
+          <Link href={`/organizations/${organizationId}/reports`} className="text-muted">
             Back to figures
           </Link>
         ) : null}
@@ -218,9 +221,9 @@ export default async function ReportsPage({
   if (openDashboard) {
     return (
       <>
-        <p className="mt-1 text-sm opacity-70">
+        <Hint className="mt-1">
           {openDashboard.name} · figures worked out now, in {organization.timezone}.
-        </p>
+        </Hint>
 
         {dashboardNav}
 
@@ -231,20 +234,20 @@ export default async function ReportsPage({
           people different things with no code deciding it (D36).
         */}
         {tiles.length === 0 ? (
-          <p className="mt-8 text-sm opacity-70">
+          <EmptyState className="mt-8">
             Nothing on this dashboard is yours to read. That is not an empty dashboard — it is
             one built from reports shared with other roles.
-          </p>
+          </EmptyState>
         ) : (
           <div className="mt-6 flex flex-col gap-8">
             {tiles.map((tile) => (
               <section key={tile.report.id}>
-                <h2 className="text-sm font-medium">{tile.report.name}</h2>
-                <p className="mt-1 text-sm opacity-70">
+                <SectionHeading>{tile.report.name}</SectionHeading>
+                <Hint className="mt-1">
                   {MEASURE_LABELS[tile.report.measure]} by{' '}
                   {GROUPING_LABELS[tile.report.grouping].toLowerCase()},{' '}
                   {PERIOD_LABELS[tile.report.period].toLowerCase()}
-                </p>
+                </Hint>
                 <div className="mt-2">
                   {tile.result.measure === 'work_marked_complete' ? (
                     <JobsTable groups={tile.result.groups} grouping={tile.report.grouping} />
@@ -267,18 +270,18 @@ export default async function ReportsPage({
 
   return (
     <>
-      <p className="mt-1 text-sm opacity-70">
+      <Hint className="mt-1">
         What this business has invoiced, and what its work has consumed. Dated by the day on the
         invoice and the day the cost was incurred — not the day either was typed in. Times read
         in {organization.timezone}.
-      </p>
+      </Hint>
 
       <nav className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm">
         {MEASURES.map((option) => (
           <Link
             key={option}
             href={link({ of: option })}
-            className={option === measure ? 'font-medium' : 'opacity-70'}
+            className={option === measure ? 'font-medium' : 'text-muted'}
           >
             {MEASURE_LABELS[option]}
           </Link>
@@ -294,7 +297,7 @@ export default async function ReportsPage({
           <Link
             key={option}
             href={link({ by: option })}
-            className={option === grouping ? 'font-medium' : 'opacity-70'}
+            className={option === grouping ? 'font-medium' : 'text-muted'}
           >
             By {GROUPING_LABELS[option].toLowerCase()}
           </Link>
@@ -306,7 +309,7 @@ export default async function ReportsPage({
           <Link
             key={option}
             href={link({ period: option })}
-            className={option === preset ? 'font-medium' : 'opacity-70'}
+            className={option === preset ? 'font-medium' : 'text-muted'}
           >
             {PERIOD_LABELS[option]}
           </Link>
@@ -329,8 +332,8 @@ export default async function ReportsPage({
           ] as const
         ).map(([name, heading, options]) => (
           <label key={name} className="flex flex-col gap-1">
-            <span className="opacity-70">{heading}</span>
-            <select
+            <span className="text-muted">{heading}</span>
+            <SelectInput
               name={name}
               defaultValue={
                 (name === 'customer'
@@ -339,7 +342,7 @@ export default async function ReportsPage({
                     ? filters.resourceId
                     : filters.locationId) ?? ''
               }
-              className="rounded border border-black/15 bg-transparent px-2 py-1 dark:border-white/20"
+              className="bg-transparent px-2 py-1"
             >
               <option value="">Any</option>
               {options.map((option) => (
@@ -347,33 +350,30 @@ export default async function ReportsPage({
                   {option.label}
                 </option>
               ))}
-            </select>
+            </SelectInput>
           </label>
         ))}
-        <button
-          type="submit"
-          className="rounded border border-black/15 px-3 py-1 dark:border-white/20"
-        >
+        <Button type="submit" tone="secondary" size="small">
           Narrow
-        </button>
+        </Button>
       </form>
 
       {dashboardNav}
 
       {definitions.length > 0 ? (
         <nav className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-          <span className="opacity-70">Saved:</span>
+          <span className="text-muted">Saved:</span>
           {definitions.map((definition) => (
             <Link
               key={definition.id}
               href={`/organizations/${organizationId}/reports?report=${definition.id}`}
-              className={definition.id === saved?.id ? 'font-medium' : 'opacity-70'}
+              className={definition.id === saved?.id ? 'font-medium' : 'text-muted'}
             >
               {definition.name}
             </Link>
           ))}
           {saved ? (
-            <Link href={`/organizations/${organizationId}/reports`} className="opacity-70">
+            <Link href={`/organizations/${organizationId}/reports`} className="text-muted">
               Clear
             </Link>
           ) : null}
@@ -381,14 +381,14 @@ export default async function ReportsPage({
       ) : null}
 
       {groups.length === 0 ? (
-        <p className="mt-8 text-sm opacity-70">
+        <EmptyState className="mt-8">
           Nothing invoiced in this period
           {filters.customerId || filters.resourceId || filters.locationId
             ? ' for what you have narrowed to'
             : ''}
           . Work that has been priced but not yet invoiced does not appear here — a quote carries
           no date anybody chose, so there is no honest way to count it into a month.
-        </p>
+        </EmptyState>
       ) : (
         <div className="mt-6">
           {result.measure === 'work_marked_complete' ? (
@@ -407,25 +407,25 @@ export default async function ReportsPage({
         recorded in D35 rather than a limitation somebody forgot to fix.
       */}
       {grouping === 'service' ? (
-        <p className="mt-4 text-sm opacity-70">
+        <Hint className="mt-4">
           A service has no cost of its own. What a job consumed is recorded against the job, and
           splitting it across the lines on that job would mean inventing a rule about how — so
           this grouping shows what was billed and nothing else.
-        </p>
+        </Hint>
       ) : null}
 
       {totals.length > 1 ? (
-        <p className="mt-4 text-sm opacity-70">
+        <Hint className="mt-4">
           This business has traded in more than one currency, so each is totalled separately.
           Nothing is converted, because a conversion needs a rate and a rate has a date.
-        </p>
+        </Hint>
       ) : null}
 
       {groups.some((group) => group.label === null) ? (
-        <p className="mt-4 text-sm opacity-70">
+        <Hint className="mt-4">
           Work with nothing recorded in this column is grouped together rather than left out, so
           the totals still add up to what was actually billed.
-        </p>
+        </Hint>
       ) : null}
 
       {/*
@@ -444,13 +444,13 @@ export default async function ReportsPage({
 
           {definitions.length > 0 ? (
             <section className="mt-8">
-              <h2 className="text-sm font-medium">Saved reports, and who sees them</h2>
-              <p className="mt-1 text-sm opacity-70">
+              <SectionHeading>Saved reports, and who sees them</SectionHeading>
+              <Hint className="mt-1">
                 A report is for the roles ticked below. Somebody whose role is not ticked does
                 not see it at all — the report is not hidden from them, it is not theirs to
                 read.
-              </p>
-              <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+              </Hint>
+              <DividedList className="mt-2">
                 {definitions.map((definition) => (
                   <li key={definition.id}>
                     <ReportAudienceForm
@@ -461,22 +461,22 @@ export default async function ReportsPage({
                     />
                   </li>
                 ))}
-              </ul>
+              </DividedList>
             </section>
           ) : null}
 
           <section className="mt-8">
-            <h2 className="text-sm font-medium">Dashboards</h2>
-            <p className="mt-1 text-sm opacity-70">
+            <SectionHeading>Dashboards</SectionHeading>
+            <Hint className="mt-1">
               A dashboard is saved reports side by side. It has no audience of its own — somebody
               sees it when something on it is theirs to read, which is why this platform ships
               none and a business builds its own.
-            </p>
+            </Hint>
 
             <CreateDashboardForm organizationId={organizationId} />
 
             {dashboards.length > 0 ? (
-              <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+              <DividedList className="mt-2">
                 {dashboards.map((entry) => (
                   <li key={entry.id}>
                     <DashboardContentsForm
@@ -490,14 +490,14 @@ export default async function ReportsPage({
                     />
                   </li>
                 ))}
-              </ul>
+              </DividedList>
             ) : null}
           </section>
         </>
       ) : (
-        <p className="mt-8 text-sm opacity-70">
+        <Hint className="mt-8">
           Your role, {organization.role}, cannot save reports or choose who sees them.
-        </p>
+        </Hint>
       )}
     </>
   );

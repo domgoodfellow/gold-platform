@@ -1,7 +1,10 @@
 'use client';
 
+import { SectionHeading } from '@/components/containers/section';
+import { ErrorText, TextInput } from '@/components/controls/inputs';
+import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
-import { CustomFieldInputs } from '@/components/custom-field-inputs';
+import { CustomFieldInputs } from '@/components/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { createResourceAction, type CreateResourceState } from './actions';
 
@@ -20,33 +23,24 @@ export function CreateResourceForm({
     <form action={formAction} className="mt-8 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <h2 className="text-sm font-medium">New resource</h2>
+      <SectionHeading>New resource</SectionHeading>
 
-      <input
+      <TextInput
         name="name"
         type="text"
         required
         maxLength={200}
         placeholder="Name, e.g. Sam Okafor, or Van 3"
         aria-label="Name"
-        className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
       />
 
       <CustomFieldInputs definitions={definitions} />
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Adding…' : 'Add resource'}
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }

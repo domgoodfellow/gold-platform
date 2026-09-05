@@ -1,11 +1,11 @@
 'use client';
 
+import { ErrorText, Hint, TextArea, TextInput } from '@/components/controls/inputs';
+import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
 import type { PublicProfile } from '@/lib/domain/tenancy/profile';
 
 export type ProfileActionState = { error: string | null };
-
-const INPUT_CLASS = 'w-full rounded border border-black/15 px-3 py-2 dark:border-white/20';
 
 /**
  * The editor for what a business says about itself.
@@ -40,92 +40,84 @@ export function ProfileForm({
 
       <label className="flex flex-col gap-1 text-sm">
         <span>Name shown to customers</span>
-        <input
+        <TextInput
           name="displayName"
           type="text"
           maxLength={200}
           defaultValue={profile.displayName}
-          className={INPUT_CLASS}
+          className="w-full"
         />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
         <span>Tagline</span>
-        <input
+        <TextInput
           name="tagline"
           type="text"
           maxLength={200}
           defaultValue={profile.tagline ?? ''}
-          className={INPUT_CLASS}
+          className="w-full"
         />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
         <span>About this business</span>
-        <textarea
+        <TextArea
           name="intro"
           rows={4}
           maxLength={2000}
           defaultValue={profile.intro ?? ''}
-          className={INPUT_CLASS}
+          className="w-full"
         />
       </label>
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <label className="flex flex-1 flex-col gap-1 text-sm">
           <span>Phone</span>
-          <input
+          <TextInput
             name="contactPhone"
             type="tel"
             maxLength={50}
             defaultValue={profile.contactPhone ?? ''}
-            className={INPUT_CLASS}
+            className="w-full"
           />
         </label>
         <label className="flex flex-1 flex-col gap-1 text-sm">
           <span>Email</span>
-          <input
+          <TextInput
             name="contactEmail"
             type="email"
             maxLength={200}
             defaultValue={profile.contactEmail ?? ''}
-            className={INPUT_CLASS}
+            className="w-full"
           />
         </label>
       </div>
 
       <label className="flex flex-col gap-1 text-sm">
         <span>Address</span>
-        <input
+        <TextInput
           name="address"
           type="text"
           maxLength={500}
           defaultValue={profile.address ?? ''}
-          className={INPUT_CLASS}
+          className="w-full"
         />
       </label>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Saving…' : 'Save'}
-      </button>
+      </Button>
 
       {/* Where it appears, or that it does not yet. A business with no public address has
           written copy nobody can reach, and saying so is worth more than hiding the form. */}
-      <p className="text-xs opacity-70">
+      <Hint className="text-xs">
         {slug
           ? `Shown at /book/${slug}`
           : 'Set a public booking address above to give this page somewhere to live.'}
-      </p>
+      </Hint>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }

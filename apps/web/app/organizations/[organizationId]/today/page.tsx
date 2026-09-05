@@ -1,3 +1,7 @@
+import { Badge, Stat, StatRow } from '@/components/display/data';
+import { Hint } from '@/components/controls/inputs';
+import { EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { DataTable } from '@/components/display/table';
 import Link from 'next/link';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { formatWindow, todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
@@ -58,19 +62,33 @@ export default async function TodayPage({
 
   return (
     <>
-      <p className="text-sm opacity-70">
+      <Hint>
         {new Intl.DateTimeFormat('en-GB', {
           dateStyle: 'full',
           timeZone: organization.timezone,
         }).format(new Date(`${date}T12:00:00Z`))}{' '}
         · times in {organization.timezone}
-      </p>
+      </Hint>
 
-      <section className="mt-6">
-        <h2 className="text-sm font-medium">Committed today</h2>
+      {/* **Two counts and no third.** How much is on today and how much is waiting are the two
+          things this screen already answers in prose, said once at the top so the answer does
+          not depend on scrolling. There is deliberately no *overdue*, no percentage and no
+          comparison with yesterday: each would be the platform judging a day it knows nothing
+          about, and a business that books a week ahead has a healthy pile of unscheduled work. */}
+      <StatRow className="mt-4">
+        <Stat label="Committed today" value={committed.length} />
+        <Stat
+          label="Waiting to be scheduled"
+          value={unscheduled.length}
+          note={unscheduled.length > 0 ? 'No time, or nobody assigned' : undefined}
+        />
+      </StatRow>
+
+      <section className="mt-8">
+        <SectionHeading>Committed today</SectionHeading>
 
         {committed.length === 0 ? (
-          <p className="mt-1 text-sm opacity-60">
+          <EmptyState weight="subtle" className="mt-1">
             Nothing is scheduled for today.{' '}
             <Link
               href={`/organizations/${organizationId}/schedule`}
@@ -78,76 +96,119 @@ export default async function TodayPage({
             >
               Open the schedule
             </Link>
-          </p>
+          </EmptyState>
         ) : (
-          <ol className="mt-2 divide-y divide-black/10 dark:divide-white/15">
-            {committed.map((booking) => {
-              const item = byId.get(booking.workItemId);
-              return (
-                <li key={booking.workItemId} className="py-3">
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-sm tabular-nums opacity-70">
+          <div className="mt-2">
+            <DataTable
+              rows={committed}
+              rowKey={(booking) => booking.workItemId}
+              empty="Nothing is scheduled for today."
+              columns={[
+                {
+                  key: 'window',
+                  header: 'When',
+                  // I9: the instant is absolute in the database and rendered in the business's
+                  // zone, never the server's or the reader's.
+                  cell: (booking) => (
+                    <span className="tabular-nums">
                       {formatWindow(booking.window, organization.timezone)}
                     </span>
+                  ),
+                },
+                {
+                  key: 'title',
+                  header: 'Job',
+                  emphasis: 'primary',
+                  cell: (booking) => (
                     <Link
                       href={`/organizations/${organizationId}/work/${booking.workItemId}`}
-                      className="font-medium underline underline-offset-4"
+                      className="underline underline-offset-4"
                     >
                       {booking.title}
                     </Link>
-                  </div>
-                  <div className="mt-0.5 text-sm opacity-70">
-                    {[
-                      booking.resource,
-                      // The tenant's own word for the state, read from the row (D6).
-                      item?.status.label,
-                      item?.customer?.label,
-                      item?.location?.label,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+                  ),
+                },
+                {
+                  key: 'status',
+                  header: 'Stage',
+                  // The tenant's own word for the state, read from the row and rendered as
+                  // written (D6). Neutral, because the platform does not know what it means.
+                  cell: (booking) => {
+                    const label = byId.get(booking.workItemId)?.status.label;
+                    return label ? <Badge>{label}</Badge> : null;
+                  },
+                },
+                { key: 'resource', header: 'Who', cell: (booking) => booking.resource },
+                {
+                  key: 'where',
+                  header: 'Customer and place',
+                  emphasis: 'secondary',
+                  cell: (booking) => {
+                    const item = byId.get(booking.workItemId);
+                    return (
+                      [item?.customer?.label, item?.location?.label]
+                        .filter(Boolean)
+                        .join(' · ') || null
+                    );
+                  },
+                },
+              ]}
+            />
+          </div>
         )}
       </section>
 
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Waiting to be scheduled</h2>
+      <Section className="mt-8">
+        <SectionHeading>Waiting to be scheduled</SectionHeading>
 
         {unscheduled.length === 0 ? (
-          <p className="mt-1 text-sm opacity-60">Nothing is waiting.</p>
+          <EmptyState weight="subtle" className="mt-1">Nothing is waiting.</EmptyState>
         ) : (
-          <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
-            {unscheduled.slice(0, 10).map((item) => (
-              <li key={item.id} className="py-2">
-                <Link
-                  href={`/organizations/${organizationId}/work/${item.id}`}
-                  className="text-sm font-medium underline underline-offset-4"
-                >
-                  {item.title}
-                </Link>
-                <div className="text-sm opacity-70">
-                  {[item.status.label, item.customer?.label].filter(Boolean).join(' · ')}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-2">
+            <DataTable
+              rows={unscheduled.slice(0, 10)}
+              rowKey={(item) => item.id}
+              empty="Nothing is waiting."
+              columns={[
+                {
+                  key: 'title',
+                  header: 'Job',
+                  emphasis: 'primary',
+                  cell: (item) => (
+                    <Link
+                      href={`/organizations/${organizationId}/work/${item.id}`}
+                      className="underline underline-offset-4"
+                    >
+                      {item.title}
+                    </Link>
+                  ),
+                },
+                {
+                  key: 'status',
+                  header: 'Stage',
+                  cell: (item) => <Badge>{item.status.label}</Badge>,
+                },
+                {
+                  key: 'customer',
+                  header: 'Customer',
+                  cell: (item) => item.customer?.label ?? null,
+                },
+              ]}
+            />
+          </div>
         )}
 
         {unscheduled.length > 10 ? (
-          <p className="mt-3 text-sm opacity-70">
+          <Hint className="mt-3">
             <Link
               href={`/organizations/${organizationId}/work`}
               className="underline underline-offset-4"
             >
               {unscheduled.length - 10} more in Work
             </Link>
-          </p>
+          </Hint>
         ) : null}
-      </section>
+      </Section>
     </>
   );
 }

@@ -26,7 +26,7 @@ export function CustomFieldValues({
   }
 
   return (
-    <dl className="mt-1 flex flex-wrap gap-x-4 text-sm opacity-70">
+    <dl className="mt-1 flex flex-wrap gap-x-4 text-sm text-muted">
       {present.map((definition) => {
         const value = custom[definition.key];
         return (

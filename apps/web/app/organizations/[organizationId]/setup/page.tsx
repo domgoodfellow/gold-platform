@@ -1,3 +1,5 @@
+import { EmptyState } from '@/components/containers/section';
+import { Hint } from '@/components/controls/inputs';
 import {
   canDraftConfiguration,
   currentConfigurationProposal,
@@ -43,24 +45,24 @@ export default async function SetupPage({
 
   return (
     <>
-      <p className="mt-6 max-w-2xl text-sm opacity-70">
+      <Hint className="mt-6 max-w-2xl">
         Say what this business does, in your own words, and get a setup back to read and change
         before any of it takes effect. Everything it proposes can also be filled in by hand on the
         other screens.
-      </p>
+      </Hint>
 
       {/* Application state in the platform's own voice, which is the one thing it may describe.
           A deployment with no drafting behind it says so rather than rendering a box that takes
           three paragraphs and then refuses them (D31). */}
       {!canDraft && (
-        <p className="mt-4 max-w-2xl rounded border border-black/15 p-3 text-sm dark:border-white/20">
+        <p className="mt-4 max-w-2xl rounded border border-border p-3 text-sm">
           This installation cannot draft a setup, so nothing can be proposed here. Every part of
           it can still be filled in on the other screens.
         </p>
       )}
 
       {canDraft && !mayPropose && (
-        <p className="mt-4 max-w-2xl rounded border border-black/15 p-3 text-sm dark:border-white/20">
+        <p className="mt-4 max-w-2xl rounded border border-border p-3 text-sm">
           Your role, {organization.role}, cannot ask for a setup to be drafted here.
         </p>
       )}
@@ -77,9 +79,9 @@ export default async function SetupPage({
         <ProposalReview organizationId={organizationId} proposal={proposal} />
       ) : (
         canDraft && (
-          <p className="mt-6 max-w-2xl text-sm opacity-70">
+          <EmptyState className="mt-6 max-w-2xl">
             Nothing is waiting to be reviewed.
-          </p>
+          </EmptyState>
         )
       )}
 

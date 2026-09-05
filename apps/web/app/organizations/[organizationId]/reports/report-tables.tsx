@@ -1,3 +1,4 @@
+import { TableCell, TableHeaderCell, TableScroll } from '@/components/display/table';
 import {
   formatMinutes,
   totalMinutes,
@@ -32,14 +33,14 @@ export function FiguresTable({
   const totals = totalsByCurrency(groups);
 
   return (
-    <div className="overflow-x-auto">
+    <TableScroll>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-black/10 text-left dark:border-white/15">
-            <th className="py-2 pr-4 font-medium">{GROUPING_LABELS[grouping]}</th>
-            <th className="py-2 pr-4 text-right font-medium">Invoiced</th>
-            <th className="py-2 pr-4 text-right font-medium">Incurred</th>
-            <th className="py-2 text-right font-medium">Margin</th>
+          <tr className="border-b border-border text-left">
+            <TableHeaderCell>{GROUPING_LABELS[grouping]}</TableHeaderCell>
+            <TableHeaderCell numeric>Invoiced</TableHeaderCell>
+            <TableHeaderCell numeric>Incurred</TableHeaderCell>
+            <TableHeaderCell numeric className="pr-0">Margin</TableHeaderCell>
           </tr>
         </thead>
         <tbody>
@@ -48,47 +49,47 @@ export function FiguresTable({
               key={`${group.groupId ?? group.label ?? 'none'}-${group.currency}`}
               className="border-b border-black/5 dark:border-white/10"
             >
-              <td className="py-2 pr-4">
-                {group.label ?? <span className="opacity-70">Not attributed</span>}
-              </td>
-              <td className="py-2 pr-4 text-right tabular-nums">
+              <TableCell>
+                {group.label ?? <span className="text-muted">Not attributed</span>}
+              </TableCell>
+              <TableCell numeric>
                 {formatMoney(group.invoicedMinor, group.currency)}
-              </td>
-              <td className="py-2 pr-4 text-right tabular-nums">
+              </TableCell>
+              <TableCell numeric>
                 {group.incurredMinor === null
                   ? '—'
                   : formatMoney(group.incurredMinor, group.currency)}
-              </td>
-              <td className="py-2 text-right tabular-nums">
+              </TableCell>
+              <TableCell numeric className="pr-0">
                 {group.marginMinor === null
                   ? '—'
                   : formatMoney(group.marginMinor, group.currency)}
-              </td>
+              </TableCell>
             </tr>
           ))}
         </tbody>
         <tfoot>
           {totals.map((total) => (
             <tr key={total.currency} className="font-medium">
-              <td className="py-2 pr-4">Total ({total.currency})</td>
-              <td className="py-2 pr-4 text-right tabular-nums">
+              <TableCell>Total ({total.currency})</TableCell>
+              <TableCell numeric>
                 {formatMoney(total.invoicedMinor, total.currency)}
-              </td>
-              <td className="py-2 pr-4 text-right tabular-nums">
+              </TableCell>
+              <TableCell numeric>
                 {total.incurredMinor === null
                   ? '—'
                   : formatMoney(total.incurredMinor, total.currency)}
-              </td>
-              <td className="py-2 text-right tabular-nums">
+              </TableCell>
+              <TableCell numeric className="pr-0">
                 {total.marginMinor === null
                   ? '—'
                   : formatMoney(total.marginMinor, total.currency)}
-              </td>
+              </TableCell>
             </tr>
           ))}
         </tfoot>
       </table>
-    </div>
+    </TableScroll>
   );
 }
 
@@ -107,12 +108,12 @@ export function JobsTable({
   grouping: Grouping;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <TableScroll>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-black/10 text-left dark:border-white/15">
-            <th className="py-2 pr-4 font-medium">{GROUPING_LABELS[grouping]}</th>
-            <th className="py-2 text-right font-medium">Jobs marked complete</th>
+          <tr className="border-b border-border text-left">
+            <TableHeaderCell>{GROUPING_LABELS[grouping]}</TableHeaderCell>
+            <TableHeaderCell numeric className="pr-0">Jobs marked complete</TableHeaderCell>
           </tr>
         </thead>
         <tbody>
@@ -121,21 +122,21 @@ export function JobsTable({
               key={group.groupId ?? group.label ?? 'none'}
               className="border-b border-black/5 dark:border-white/10"
             >
-              <td className="py-2 pr-4">
-                {group.label ?? <span className="opacity-70">Not attributed</span>}
-              </td>
-              <td className="py-2 text-right tabular-nums">{group.jobs}</td>
+              <TableCell>
+                {group.label ?? <span className="text-muted">Not attributed</span>}
+              </TableCell>
+              <TableCell numeric className="pr-0">{group.jobs}</TableCell>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="font-medium">
-            <td className="py-2 pr-4">Total</td>
-            <td className="py-2 text-right tabular-nums">{totalJobs(groups)}</td>
+            <TableCell>Total</TableCell>
+            <TableCell numeric className="pr-0">{totalJobs(groups)}</TableCell>
           </tr>
         </tfoot>
       </table>
-    </div>
+    </TableScroll>
   );
 }
 
@@ -154,12 +155,12 @@ export function CommittedTimeTable({
   grouping: Grouping;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <TableScroll>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-black/10 text-left dark:border-white/15">
-            <th className="py-2 pr-4 font-medium">{GROUPING_LABELS[grouping]}</th>
-            <th className="py-2 text-right font-medium">Time committed</th>
+          <tr className="border-b border-border text-left">
+            <TableHeaderCell>{GROUPING_LABELS[grouping]}</TableHeaderCell>
+            <TableHeaderCell numeric className="pr-0">Time committed</TableHeaderCell>
           </tr>
         </thead>
         <tbody>
@@ -168,20 +169,20 @@ export function CommittedTimeTable({
               key={group.groupId ?? group.label ?? 'none'}
               className="border-b border-black/5 dark:border-white/10"
             >
-              <td className="py-2 pr-4">
-                {group.label ?? <span className="opacity-70">Not attributed</span>}
-              </td>
-              <td className="py-2 text-right tabular-nums">{formatMinutes(group.minutes)}</td>
+              <TableCell>
+                {group.label ?? <span className="text-muted">Not attributed</span>}
+              </TableCell>
+              <TableCell numeric className="pr-0">{formatMinutes(group.minutes)}</TableCell>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="font-medium">
-            <td className="py-2 pr-4">Total</td>
-            <td className="py-2 text-right tabular-nums">{formatMinutes(totalMinutes(groups))}</td>
+            <TableCell>Total</TableCell>
+            <TableCell numeric className="pr-0">{formatMinutes(totalMinutes(groups))}</TableCell>
           </tr>
         </tfoot>
       </table>
-    </div>
+    </TableScroll>
   );
 }

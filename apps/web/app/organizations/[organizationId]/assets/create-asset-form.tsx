@@ -1,8 +1,11 @@
 'use client';
 
+import { SectionHeading } from '@/components/containers/section';
+import { ErrorText, TextInput } from '@/components/controls/inputs';
+import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
-import { CustomFieldInputs } from '@/components/custom-field-inputs';
-import { OptionalSelect, type SelectOption } from '@/components/optional-select';
+import { CustomFieldInputs } from '@/components/custom-fields/inputs';
+import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { recordReadingAction, createAssetAction, type CreateAssetState } from './actions';
 
@@ -25,16 +28,15 @@ export function CreateAssetForm({
     <form action={formAction} className="mt-8 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <h2 className="text-sm font-medium">New asset</h2>
+      <SectionHeading>New asset</SectionHeading>
 
-      <input
+      <TextInput
         name="name"
         type="text"
         required
         maxLength={200}
         placeholder="Name, e.g. Compressor A, or Unit 4 boiler"
         aria-label="Name"
-        className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
       />
 
       {/* Both optional: customer-owned equipment names its owner, the tenant's own plant
@@ -46,19 +48,11 @@ export function CreateAssetForm({
 
       <CustomFieldInputs definitions={definitions} />
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Adding…' : 'Add asset'}
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -92,7 +86,7 @@ export function RecordReadingForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="assetId" value={assetId} />
 
-      <input
+      <TextInput
         name="value"
         type="number"
         step="any"
@@ -100,9 +94,10 @@ export function RecordReadingForm({
         required
         aria-label={`Counter reading for ${assetName}`}
         placeholder="reading"
-        className="w-28 rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
+        size="small"
+        className="w-28"
       />
-      <input
+      <TextInput
         name="unit"
         type="text"
         required
@@ -110,18 +105,15 @@ export function RecordReadingForm({
         defaultValue={lastUnit}
         aria-label={`Unit for ${assetName}`}
         placeholder="hours"
-        className="w-24 rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
+        size="small"
+        className="w-24"
       />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-black/15 px-3 py-1 text-sm disabled:opacity-50 dark:border-white/20"
-      >
+      <Button type="submit" disabled={pending} tone="secondary" size="small">
         {pending ? '…' : 'Record'}
-      </button>
+      </Button>
 
       {state.error ? (
-        <span role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <span role="alert" className="text-sm text-danger">
           {state.error}
         </span>
       ) : null}

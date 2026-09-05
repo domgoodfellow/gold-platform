@@ -5,6 +5,84 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A row says what can be done to it, and a table stops being a table on a phone
+
+The control set that landed with `ui-spec.md` fixed how a screen was *spelled* — one button, one
+input, seven colour roles — and left untouched what the screens were actually made of. Every list
+was a link with two lines of middle-dot-separated text under it, every create form rendered
+permanently at the bottom of the screen it belonged to, and the two real tables were wrapped in
+`overflow-x-auto`.
+
+**What a row is for.** *Ana · Riverside · Van 2* asks a reader to work out which of those is the
+customer and which is the van, and it is genuinely ambiguous when a customer is named after a
+place. Every value now carries the word for what it is, and `actions` is a slot on `DataTable`
+rather than a column — because the question a list answers is not *what are these* but *what do I
+do about them*. Recording a meter reading is on the asset's row; setting coordinates is on the
+location's; moving a job on is on the job.
+
+**Below `md` a table is a list of cards.** A scrolling table on a phone puts the columns that
+matter off the right-hand edge and asks somebody to drag a grid sideways to find out what a
+number refers to. Each card is the primary column as a heading and every other column as a
+labelled pair — including the `secondary` ones the wide table drops, so the phone shows *more*
+about each row rather than less. Both renderings map one `columns` array, and one is in the
+accessibility tree at a time, which is the precedent `OrgNav` set.
+
+**Sizing is by available space rather than by breakpoint.** The work board and the schedule use
+`repeat(auto-fill, minmax(…, 1fr))`, so a business with two vans gets two columns and one with
+nine gets three, with nothing in the code deciding which.
+
+**A create form is available, not permanent.** `Disclosure` is `<details>` and `<summary>` — the
+browser opens it, closes it, focuses it and reaches it by keyboard, so there is no state, no focus
+trap and no escape-key handler of ours. `OrgNav` refused a drawer on exactly that reasoning; the
+element that does all four already ships. It opens by default only when the list behind it is
+empty, because then the form *is* the screen.
+
+The work board is the sharpest case: each job rendered two whole forms, so a status holding ten
+jobs was forty controls and the jobs were whatever was left between them. Moving a job on stays
+visible, since that is what happens most; scheduling is several fields done once, so it is behind
+a disclosure.
+
+**Two things this spec claimed that had quietly stopped being true**, fixed in the code rather
+than softened in the document. §4 said no link in the application was styled as a button — the
+schedule's day controls, the payment connect link and the booking slots each spelled one out, so
+`ButtonLink` exists now, on an anchor, because *go somewhere* and *submit something* must not be
+the same element. And §4 named the signup screen's hand-written focus ring as "a real gap" that
+belonged in `inputs.tsx`; it is there, on `focus-visible`, so every control in the application has
+it instead of four on one screen.
+
+Also on the schedule: a booked window links to its job, which it never did — a dispatcher looking
+at one was a step away from wanting it and had to go to Work and find it by name — and a day is
+picked rather than clicked past one at a time.
+
+**The public surfaces get the same treatment**, which matters more there than anywhere: the
+booking page draws a card per service and its chosen slot takes the business's own colour, and the
+portal's work list is a table that becomes cards on the phone most customers open it on.
+
+### `components/` is a design system again, and `features/` grew by counting surfaces
+
+Fourteen files sat flat in `components/`, and about half of them were not components in the sense
+the other half were: `org-shell` is one surface's navigation, `credentials-form` is one route
+group's form, `brand-style` renders a tenant's colour. A directory described as "shared controls"
+held all three.
+
+The sub-folders are `docs/ui-spec.md`'s own sections — `controls/`, `containers/`, `display/` —
+so a file is under the heading somebody would have looked it up by, rather than under a taxonomy
+invented for the directory.
+
+**What moved out is the more useful half of the change, and each move was decided by counting
+surfaces rather than by what a file sounds like.** `features/README.md` sets the bar at a *second*
+surface, so `brand-style` (the operator shell, booking, the portal) and `locale-fields` (the
+platform console, admin settings, pricing) qualified and went. `credentials-form` and `org-shell`
+serve exactly one surface each and went the other way entirely — beside the routes that render
+them, because a shared directory holding one surface's chrome means less than one that does not.
+
+**`custom-fields/` is the case that tests the rule.** It knows exactly what a `FieldDefinition`
+is, which makes it the most domain-shaped thing in the directory — and every caller is the admin
+surface, so it stayed. Sounding like a feature is not the test.
+
+That README also moved: it was titled `# features/` and living inside `public-profile/`, so it
+described a directory from inside one of its inhabitants.
+
 ### A business looks like itself, and cannot make its own screens unreadable
 
 D23 rejected a per-tenant theme by name and sent it to D20's marketing surface. Two of the three

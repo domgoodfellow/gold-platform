@@ -1,8 +1,10 @@
 'use client';
 
+import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
+import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
-import { CustomFieldInputs } from '@/components/custom-field-inputs';
-import { OptionalSelect, type SelectOption } from '@/components/optional-select';
+import { CustomFieldInputs } from '@/components/custom-fields/inputs';
+import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
 import type { CustomValues, FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
@@ -21,9 +23,6 @@ import {
 } from './actions';
 
 const INITIAL: WorkItemActionState = { error: null };
-
-const INPUT_CLASS = 'flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20';
-const SMALL_INPUT = 'rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20';
 
 export function ToggleChecklistItemForm({
   organizationId,
@@ -47,18 +46,13 @@ export function ToggleChecklistItemForm({
       <input type="hidden" name="checklistItemId" value={checklistItemId} />
       <input type="hidden" name="done" value={done ? '0' : '1'} />
 
-      <button
-        type="submit"
-        disabled={pending}
-        aria-pressed={done}
-        className={`${SMALL_INPUT} disabled:opacity-50`}
-      >
+      <Button type="submit" disabled={pending} aria-pressed={done} tone="secondary" size="tiny">
         {done ? '☑' : '☐'}
-      </button>
-      <span className={done ? 'text-sm line-through opacity-60' : 'text-sm'}>{label}</span>
+      </Button>
+      <span className={done ? 'text-sm line-through text-subtle' : 'text-sm'}>{label}</span>
 
       {state.error ? (
-        <span role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <span role="alert" className="text-sm text-danger">
           {state.error}
         </span>
       ) : null}
@@ -84,29 +78,21 @@ export function AddChecklistItemForm({
       <input type="hidden" name="position" value={position} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="label"
           type="text"
           required
           maxLength={200}
           placeholder="A step, e.g. Photograph the meter"
           aria-label="Step"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
-        >
+        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Adding…' : 'Add step'}
-        </button>
+        </Button>
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -128,34 +114,36 @@ export function RecordTimeForm({
       <input type="hidden" name="workItemId" value={workItemId} />
 
       <div className="flex flex-wrap items-center gap-2">
-        <input name="startedAt" type="datetime-local" aria-label="Started at" className={SMALL_INPUT} />
-        <input name="endedAt" type="datetime-local" aria-label="Ended at" className={SMALL_INPUT} />
+        <TextInput
+          name="startedAt"
+          type="datetime-local"
+          aria-label="Started at"
+          className="px-2 py-1 text-xs"
+        />
+        <TextInput
+          name="endedAt"
+          type="datetime-local"
+          aria-label="Ended at"
+          className="px-2 py-1 text-xs"
+        />
         <OptionalSelect name="resourceId" label="Worked by" options={resources} />
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="note"
           type="text"
           maxLength={1000}
           placeholder="What was done (optional)"
           aria-label="Note"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
-        >
+        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Recording…' : 'Record time'}
-        </button>
+        </Button>
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -177,52 +165,44 @@ export function RecordCostForm({
       <input type="hidden" name="workItemId" value={workItemId} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="description"
           type="text"
           required
           maxLength={200}
           placeholder="What was spent on, e.g. Replacement valve"
           aria-label="Description"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
         {/* Minor units, asked for as minor units. The alternative — accepting 12.50 and
             multiplying by 100 — is where a rounding bug enters and is not found until a
             reconciliation months later. The currency is the organization's and is not a
             field here: a caller does not assert what a business trades in. */}
-        <input
+        <TextInput
           name="amountMinor"
           type="number"
           required
           step={1}
           placeholder={`Amount in minor units (${currency})`}
           aria-label={`Amount in minor units, ${currency}`}
-          className={INPUT_CLASS}
+          className="flex-1"
         />
         {/* Optional, and empty means today. A receipt is often entered days after the fuel
             was bought, and before this field the row claimed to be from whenever somebody
             got round to typing it. The table has always had somewhere to put the real date;
             nothing could write it. */}
-        <input
+        <TextInput
           name="incurredAt"
           type="date"
           aria-label="Date the cost was incurred"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
-        >
+        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Recording…' : 'Record cost'}
-        </button>
+        </Button>
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -251,19 +231,20 @@ export function AddPricedLineForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="workItemId" value={workItemId} />
 
-      <select
+      <SelectInput
         name="priceBookItemId"
         required
         aria-label="Priced item"
-        className="min-w-0 flex-1 rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
+        size="small"
+        className="min-w-0 flex-1"
       >
         {items.map((item) => (
           <option key={item.id} value={item.id}>
             {item.name} · per {item.unit}
           </option>
         ))}
-      </select>
-      <input
+      </SelectInput>
+      <TextInput
         name="quantity"
         type="number"
         required
@@ -271,21 +252,14 @@ export function AddPricedLineForm({
         step={1}
         defaultValue={1}
         aria-label="Quantity"
-        className="w-20 rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
+        size="small"
+        className="w-20"
       />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-50 dark:border-white/20"
-      >
+      <Button type="submit" disabled={pending} tone="secondary" size="tiny">
         {pending ? 'Adding…' : 'Add to quote'}
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="w-full text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert" className="w-full">{state.error}</ErrorText>
     </form>
   );
 }
@@ -309,16 +283,18 @@ export function RemovePricedLineForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="workItemId" value={workItemId} />
       <input type="hidden" name="lineId" value={lineId} />
-      <button
+      <Button
         type="submit"
         disabled={pending}
         aria-label={`Remove ${description}`}
-        className="text-xs underline underline-offset-4 opacity-60 disabled:opacity-30"
+        tone="text"
+        size="tiny"
+        className="opacity-60 disabled:opacity-30"
       >
         Remove
-      </button>
+      </Button>
       {state.error ? (
-        <span role="alert" className="ml-2 text-xs text-red-600 dark:text-red-400">
+        <span role="alert" className="ml-2 text-xs text-danger">
           {state.error}
         </span>
       ) : null}
@@ -360,14 +336,14 @@ export function EditWorkItemForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="workItemId" value={workItem.id} />
 
-      <input
+      <TextInput
         name="title"
         type="text"
         required
         maxLength={300}
         defaultValue={workItem.title}
         aria-label="Title"
-        className={INPUT_CLASS}
+        className="flex-1"
       />
 
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -388,19 +364,11 @@ export function EditWorkItemForm({
 
       <CustomFieldInputs definitions={definitions} values={workItem.custom as CustomValues} />
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Saving…' : 'Save details'}
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -436,31 +404,23 @@ export function IssueInvoiceForm({
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <label className="flex flex-1 items-center gap-2 text-sm">
-          <span className="opacity-70">Dated</span>
+          <span className="text-muted">Dated</span>
           {/* Optional, and empty means today — which is what every invoice raised as the work
               finishes wants. It is here for the business that bills a month in arrears. */}
-          <input name="issuedAt" type="date" aria-label="Invoice date" className={INPUT_CLASS} />
+          <TextInput name="issuedAt" type="date" aria-label="Invoice date" className="flex-1" />
         </label>
         <label className="flex flex-1 items-center gap-2 text-sm">
-          <span className="opacity-70">Due</span>
+          <span className="text-muted">Due</span>
           {/* Optional. A business that invoices on delivery has no due date to give, and an
               invented default would be this platform deciding that business's terms. */}
-          <input name="dueAt" type="date" aria-label="Due date" className={INPUT_CLASS} />
+          <TextInput name="dueAt" type="date" aria-label="Due date" className="flex-1" />
         </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
-        >
+        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Issuing…' : 'Issue invoice'}
-        </button>
+        </Button>
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -495,48 +455,40 @@ export function RecordPaymentForm({
         {/* Minor units, for the reason the cost form gives. Signed, and negative is allowed:
             a payment recorded wrongly is corrected by recording its reverse, because there is
             no update policy on the table. */}
-        <input
+        <TextInput
           name="amountMinor"
           type="number"
           required
           step={1}
           placeholder={`Amount in minor units (${currency})`}
           aria-label={`Amount in minor units, ${currency}`}
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <input
+        <TextInput
           name="note"
           type="text"
           maxLength={1000}
           placeholder="Note, e.g. cash on the driveway"
           aria-label="Note"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
         {/* **This field was missing and its action always read it.** `recordPaymentAction` has
             passed `receivedAt` since invoices arrived, and there was nothing on screen to fill
             it, so every payment was stamped with the moment it was entered — the same gap the
             cost and invoice forms above just closed, on the one of the three whose domain
             function already took the argument. Optional; empty means now. */}
-        <input
+        <TextInput
           name="receivedAt"
           type="date"
           aria-label="Date the payment was received"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-fit rounded border border-black/15 px-4 py-2 disabled:opacity-50 dark:border-white/20"
-        >
+        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Recording…' : 'Record payment'}
-        </button>
+        </Button>
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -569,13 +521,9 @@ export function RequestCardPaymentForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="workItemId" value={workItemId} />
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded border border-black/15 px-4 py-2 text-sm disabled:opacity-50 dark:border-white/20"
-      >
+      <Button type="submit" disabled={pending} tone="secondary" className="w-fit text-sm">
         {pending ? 'Asking…' : 'Take card payment'}
-      </button>
+      </Button>
 
       {state.payUrl ? (
         <p className="text-sm">
@@ -587,18 +535,14 @@ export function RequestCardPaymentForm({
           >
             Payment link
           </a>
-          <span className="opacity-60">
+          <span className="text-subtle">
             {' '}
             — send this to the customer. Nothing is recorded until the processor confirms it.
           </span>
         </p>
       ) : null}
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }

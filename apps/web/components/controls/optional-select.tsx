@@ -1,5 +1,6 @@
 'use client';
 
+import { SelectInput } from '@/components/controls/inputs';
 export type SelectOption = { id: string; label: string };
 
 /**
@@ -25,18 +26,13 @@ export function OptionalSelect({
   value?: string | null;
 }) {
   return (
-    <select
-      name={name}
-      defaultValue={value ?? ''}
-      aria-label={label}
-      className="flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20"
-    >
+    <SelectInput name={name} defaultValue={value ?? ''} aria-label={label} className="flex-1">
       <option value="">{label} — none</option>
       {options.map((option) => (
         <option key={option.id} value={option.id}>
           {option.label}
         </option>
       ))}
-    </select>
+    </SelectInput>
   );
 }

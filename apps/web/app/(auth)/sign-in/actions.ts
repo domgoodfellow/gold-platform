@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signInWithPassword } from '@/lib/domain/identity/credentials';
-import type { CredentialsState } from '@/components/credentials-form';
+import type { CredentialsState } from '../credentials-form';
 
 export async function signInAction(
   _previous: CredentialsState,

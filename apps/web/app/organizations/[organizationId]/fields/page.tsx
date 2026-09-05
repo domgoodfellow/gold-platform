@@ -1,3 +1,6 @@
+import { Hint } from '@/components/controls/inputs';
+import { Disclosure } from '@/components/containers/card';
+import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
 import { requireOrganization } from '@/lib/route/organization';
 import {
   CUSTOM_FIELD_ENTITIES,
@@ -33,19 +36,19 @@ export default async function FieldsPage({
   return (
     <>
       {total === 0 ? (
-        <p className="mt-6 text-sm opacity-70">
+        <EmptyState className="mt-6">
           No custom fields yet. Anything you define here appears on that entity&apos;s form.
-        </p>
+        </EmptyState>
       ) : (
         byEntity
           .filter(([, definitions]) => definitions.length > 0)
           .map(([entityType, definitions]) => (
             <section key={entityType} className="mt-6">
-              <h2 className="text-sm font-medium">{CUSTOM_FIELD_ENTITY_LABELS[entityType]}</h2>
+              <SectionHeading>{CUSTOM_FIELD_ENTITY_LABELS[entityType]}</SectionHeading>
               {/* In the tenant's own order, which is the order the entity's form renders
                   in. Editing the number here is what "custom forms" means on this screen —
                   there is no separate form designer, because the registry *is* the form. */}
-              <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+              <DividedList className="mt-2">
                 {definitions.map((definition) => (
                   <li key={definition.id}>
                     {mayManage ? (
@@ -56,7 +59,7 @@ export default async function FieldsPage({
                     ) : (
                       <div className="py-3">
                         <div className="font-medium">{definition.label}</div>
-                        <div className="text-sm opacity-70">
+                        <div className="text-sm text-muted">
                           {[
                             definition.key,
                             FIELD_KIND_LABELS[definition.kind],
@@ -69,7 +72,7 @@ export default async function FieldsPage({
                     )}
                   </li>
                 ))}
-              </ul>
+              </DividedList>
             </section>
           ))
       )}
@@ -80,11 +83,13 @@ export default async function FieldsPage({
         there (constraints.md: hiding a UI element is not authorization).
       */}
       {mayManage ? (
-        <CreateFieldForm organizationId={organizationId} />
+        <Disclosure summary="Define a field" defaultOpen={total === 0} className="mt-8">
+          <CreateFieldForm organizationId={organizationId} />
+        </Disclosure>
       ) : (
-        <p className="mt-8 text-sm opacity-70">
+        <Hint className="mt-8">
           Your role, {organization.role}, cannot define fields here.
-        </p>
+        </Hint>
       )}
     </>
   );

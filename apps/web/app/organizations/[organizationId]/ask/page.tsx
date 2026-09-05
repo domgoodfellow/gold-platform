@@ -1,3 +1,5 @@
+import { ErrorText, Hint } from '@/components/controls/inputs';
+import { EmptyState, SectionHeading } from '@/components/containers/section';
 import { canAnswerQuestions, listAgentRuns } from '@/lib/domain/assistant/questions';
 import { requireOrganization } from '@/lib/route/organization';
 import { AskForm, ProposedAction } from './ask-form';
@@ -36,10 +38,10 @@ export default async function AskPage({
 
   return (
     <>
-      <p className="mt-6 max-w-2xl text-sm opacity-70">
+      <Hint className="mt-6 max-w-2xl">
         Answers are built from what you can already see on the other screens. Nothing here changes
         anything.
-      </p>
+      </Hint>
 
       {/* **Where the data goes, said on the screen that sends it.**
           This is the only feature in the platform that sends a business's rows anywhere, so it is
@@ -49,7 +51,7 @@ export default async function AskPage({
           A `<details>` rather than a hover tooltip: a tooltip is unreachable on a phone, invisible
           to a keyboard, and this is exactly the sentence somebody needs on the device they are
           standing on a site with. No JavaScript, so it works on a server-rendered page. */}
-      <details className="group mt-2 max-w-2xl text-xs opacity-70">
+      <details className="group mt-2 max-w-2xl text-xs text-muted">
         <summary className="inline-flex cursor-pointer list-none items-center gap-1.5">
           <span
             aria-hidden="true"
@@ -60,7 +62,7 @@ export default async function AskPage({
           <span className="underline underline-offset-2">Where your question goes</span>
         </summary>
 
-        <div className="mt-2 space-y-2 border-l border-black/15 pl-3 dark:border-white/20">
+        <div className="mt-2 space-y-2 border-l border-border pl-3">
           <p>
             Your question, and the rows read to answer it, are sent to whichever model this
             installation is set up with. Each answer below records which one replied.
@@ -80,14 +82,14 @@ export default async function AskPage({
       </details>
 
       {!canAnswer && (
-        <p className="mt-4 max-w-2xl rounded border border-black/15 p-3 text-sm dark:border-white/20">
+        <p className="mt-4 max-w-2xl rounded border border-border p-3 text-sm">
           This installation has nothing configured to answer questions, so nothing can be asked
           here yet. Everything it would look at is on the Work and Schedule screens.
         </p>
       )}
 
       {canAnswer && !mayAsk && (
-        <p className="mt-4 max-w-2xl rounded border border-black/15 p-3 text-sm dark:border-white/20">
+        <p className="mt-4 max-w-2xl rounded border border-border p-3 text-sm">
           Your role, {organization.role}, cannot ask the platform questions.
         </p>
       )}
@@ -95,16 +97,16 @@ export default async function AskPage({
       {canAnswer && <AskForm organizationId={organizationId} disabled={!mayAsk} />}
 
       <section className="mt-8 max-w-2xl">
-        <h2 className="text-sm font-medium">What you have asked</h2>
+        <SectionHeading>What you have asked</SectionHeading>
 
         {runs.length === 0 ? (
-          <p className="mt-2 text-sm opacity-70">Nothing yet.</p>
+          <EmptyState className="mt-2">Nothing yet.</EmptyState>
         ) : (
           <ul className="mt-2 space-y-4">
             {runs.map((run) => (
               <li
                 key={run.id}
-                className="rounded border border-black/15 p-3 text-sm dark:border-white/20"
+                className="rounded border border-border p-3 text-sm"
               >
                 <p className="font-medium">{run.question}</p>
 
@@ -113,20 +115,20 @@ export default async function AskPage({
                 )}
 
                 {run.outcome === 'unanswered' && (
-                  <p className="mt-2 opacity-70">
+                  <EmptyState className="mt-2">
                     Nothing came back for this one. Nothing went wrong — there was no answer to be
                     had from what this platform can look at.
-                  </p>
+                  </EmptyState>
                 )}
 
                 {/* Whoever refused, in their own words. Never a paraphrase (I25). */}
                 {run.outcome === 'failed' && (
-                  <p className="mt-2 text-red-600 dark:text-red-400">{run.detail}</p>
+                  <ErrorText className="mt-2">{run.detail}</ErrorText>
                 )}
 
                 <ProposedAction organizationId={organizationId} run={run} />
 
-                <p className="mt-2 text-xs opacity-60">
+                <Hint weight="subtle" className="mt-2 text-xs">
                   {new Date(run.occurredAt).toLocaleString()} · answered by {run.answeredBy}
                   {run.tools.length > 0 && (
                     <>
@@ -139,7 +141,7 @@ export default async function AskPage({
                         .join(', ')}
                     </>
                   )}
-                </p>
+                </Hint>
               </li>
             ))}
           </ul>

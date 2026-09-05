@@ -1,14 +1,13 @@
 'use client';
 
+import { Button } from '@/components/controls/button';
+import { Card } from '@/components/containers/card';
+import { ErrorText, Hint, TextArea } from '@/components/controls/inputs';
 import { useActionState } from 'react';
 import { ACTION_LABELS, type AgentRun } from '@/lib/domain/assistant/questions';
 import { askAction, decideAction, type AskActionState } from './actions';
 
 const INITIAL: AskActionState = { error: null };
-
-const INPUT = 'rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20';
-const BUTTON =
-  'rounded border border-black/15 px-3 py-1 text-sm disabled:opacity-50 dark:border-white/20';
 
 /**
  * One box, and the answer appears in the history below it.
@@ -35,23 +34,30 @@ export function AskForm({
         Ask about this business — what is at risk of being late today, what is booked with nobody
         assigned.
       </label>
-      <textarea
+      <TextArea
         id="question"
         name="question"
         rows={3}
         required
         disabled={disabled}
-        className={`${INPUT} mt-2 w-full`}
+        size="small"
+        className="mt-2 w-full"
       />
 
-      <button type="submit" className={`${BUTTON} mt-2`} disabled={disabled || pending}>
+      <Button
+        type="submit"
+        disabled={disabled || pending}
+        tone="secondary"
+        size="small"
+        className="mt-2"
+      >
         {pending ? 'Asking…' : 'Ask'}
-      </button>
+      </Button>
 
       {state.error && (
-        <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
+        <ErrorText role="alert" className="mt-1">
           {state.error}
-        </p>
+        </ErrorText>
       )}
     </form>
   );
@@ -85,19 +91,19 @@ export function ProposedAction({
 
   if (run.actionOutcome !== 'pending') {
     return (
-      <p className="mt-2 text-xs opacity-70">
+      <Hint className="mt-2 text-xs">
         {label} —{' '}
         {run.actionOutcome === 'done'
           ? 'done'
           : run.actionOutcome === 'declined'
             ? 'you said no'
             : /* Whoever refused, in their own words (I25). */ run.actionDetail}
-      </p>
+      </Hint>
     );
   }
 
   return (
-    <div className="mt-3 rounded border border-black/15 p-2 dark:border-white/20">
+    <Card className="mt-3 p-2">
       <p className="text-sm font-medium">{label}</p>
       {/* The model's own sentence, shown rather than paraphrased. */}
       <p className="mt-1 text-sm opacity-80">{run.proposedAction.because}</p>
@@ -105,25 +111,33 @@ export function ProposedAction({
       <form action={action} className="mt-2 flex flex-wrap items-center gap-2">
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="runId" value={run.id} />
-        <button
+        <Button
           type="submit"
           name="decision"
           value="carry-out"
-          className={BUTTON}
           disabled={pending}
+          tone="secondary"
+          size="small"
         >
           {pending ? 'Working…' : 'Do it'}
-        </button>
-        <button type="submit" name="decision" value="decline" className={BUTTON} disabled={pending}>
+        </Button>
+        <Button
+          type="submit"
+          name="decision"
+          value="decline"
+          disabled={pending}
+          tone="secondary"
+          size="small"
+        >
           No
-        </button>
+        </Button>
       </form>
 
       {state.error && (
-        <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
+        <ErrorText role="alert" className="mt-1">
           {state.error}
-        </p>
+        </ErrorText>
       )}
-    </div>
+    </Card>
   );
 }

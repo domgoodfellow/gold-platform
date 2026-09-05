@@ -1,3 +1,5 @@
+import { Hint } from '@/components/controls/inputs';
+import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
 import { listAutomationRules, listAutomationRuns } from '@/lib/domain/automation/rules';
 import { reviewAutomationRules } from '@/lib/domain/automation/review';
 import {
@@ -67,18 +69,18 @@ export default async function AutomationsPage({
 
   return (
     <>
-      <p className="mt-6 max-w-2xl text-sm opacity-70">
+      <Hint className="mt-6 max-w-2xl">
         A rule watches for something happening, checks whether the job looks the way you describe,
         and then does something. Every condition has to hold — two rules is how you say
         &ldquo;or&rdquo;. Nothing here runs on a job this business has not already agreed can move
         that way: a rule is refused by the same lifecycle a person is, and the refusal is recorded
         below.
-      </p>
+      </Hint>
 
       {rules.length === 0 ? (
-        <p className="mt-6 text-sm opacity-70">
+        <EmptyState className="mt-6">
           No rules yet. Nothing happens on its own until this business says it should.
-        </p>
+        </EmptyState>
       ) : (
         <div className="mt-6 flex flex-col gap-6">
           {rules.map((rule) => (
@@ -103,10 +105,10 @@ export default async function AutomationsPage({
       {mayManage ? (
         <CreateAutomationRuleForm organizationId={organizationId} />
       ) : (
-        <p className="mt-8 text-sm opacity-70">
+        <Hint className="mt-8">
           Your role, {organization.role}, cannot write rules here. You can see what they are and
           what they have done, because a job that moves on its own should never be a mystery.
-        </p>
+        </Hint>
       )}
 
       <MessageTemplateSection
@@ -118,30 +120,30 @@ export default async function AutomationsPage({
       />
 
       {runs.length > 0 ? (
-        <section className="mt-10 border-t border-black/10 pt-6 dark:border-white/15">
-          <h2 className="text-sm font-medium">What the rules have done</h2>
-          <p className="mt-1 text-sm opacity-70">
+        <Section className="mt-10">
+          <SectionHeading>What the rules have done</SectionHeading>
+          <Hint className="mt-1">
             Newest first. A rule that did not apply records nothing — what is here is what
             happened.
-          </p>
-          <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+          </Hint>
+          <DividedList className="mt-2">
             {runs.map((run) => (
               <li key={run.id} className="flex flex-wrap items-baseline gap-x-3 py-2 text-sm">
-                <span className="opacity-60">
+                <span className="text-subtle">
                   {new Date(run.occurredAt).toLocaleString('en-GB')}
                 </span>
                 <span className="font-medium">{run.ruleName}</span>
                 {run.outcome === 'failed' ? (
-                  <span className="text-red-600 dark:text-red-400">
+                  <span className="text-danger">
                     failed — {run.detail}
                   </span>
                 ) : (
-                  <span className="opacity-70">ran</span>
+                  <span className="text-muted">ran</span>
                 )}
               </li>
             ))}
-          </ul>
-        </section>
+          </DividedList>
+        </Section>
       ) : null}
     </>
   );

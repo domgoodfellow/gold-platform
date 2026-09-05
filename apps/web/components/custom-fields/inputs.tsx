@@ -1,12 +1,11 @@
 'use client';
 
+import { TextInput } from '@/components/controls/inputs';
 import {
   CUSTOM_FIELD_PREFIX,
   type CustomValues,
   type FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
-
-const INPUT_CLASS = 'flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20';
 
 /**
  * The inputs for whatever fields a tenant has defined for one entity.
@@ -48,7 +47,7 @@ export function CustomFieldInputs({
         }
 
         return (
-          <input
+          <TextInput
             key={definition.id}
             name={name}
             type={definition.kind === 'number' ? 'number' : 'text'}
@@ -59,7 +58,7 @@ export function CustomFieldInputs({
               definition.required ? definition.label : `${definition.label} (optional)`
             }
             aria-label={definition.label}
-            className={INPUT_CLASS}
+            className="flex-1"
           />
         );
       })}

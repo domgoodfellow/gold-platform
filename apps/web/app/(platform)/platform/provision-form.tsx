@@ -1,12 +1,13 @@
 'use client';
 
+import { Button } from '@/components/controls/button';
+import { SectionHeading } from '@/components/containers/section';
+import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import { useActionState } from 'react';
-import { CurrencyField, TimeZoneField } from '@/components/locale-fields';
+import { CurrencyField, TimeZoneField } from '@/features/locale/locale-fields';
 import { provisionOrganizationAction, type ProvisionState } from './actions';
 
 const INITIAL: ProvisionState = { error: null, provisioned: null };
-
-const INPUT_CLASS = 'rounded border border-black/15 px-3 py-2 dark:border-white/20';
 
 /**
  * Handing a business over, which is what actually happens at the end of a sales call.
@@ -25,35 +26,33 @@ export function ProvisionForm() {
 
   return (
     <form action={formAction} className="mt-8 flex flex-col gap-4">
-      <h2 className="text-sm font-medium">Provision a business</h2>
+      <SectionHeading>Provision a business</SectionHeading>
 
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="flex flex-1 flex-col gap-1">
-          <label htmlFor="name" className="text-sm font-medium">
+          <FieldLabel htmlFor="name">
             What is it called?
-          </label>
-          <input
+          </FieldLabel>
+          <TextInput
             id="name"
             name="name"
             type="text"
             required
             maxLength={200}
             placeholder="Northern Plant Services"
-            className={INPUT_CLASS}
           />
         </div>
 
         <div className="flex flex-1 flex-col gap-1">
-          <label htmlFor="ownerEmail" className="text-sm font-medium">
+          <FieldLabel htmlFor="ownerEmail">
             Who does it belong to?
-          </label>
-          <input
+          </FieldLabel>
+          <TextInput
             id="ownerEmail"
             name="ownerEmail"
             type="email"
             required
             placeholder="sam@northernplant.example"
-            className={INPUT_CLASS}
           />
           {/*
             The precondition is real and is stated rather than discovered: a membership
@@ -61,29 +60,28 @@ export function ProvisionForm() {
             `addMember` says, and creating the account for them would need the admin API, which
             this app may not hold.
           */}
-          <p className="text-xs opacity-60">
+          <Hint weight="subtle" className="text-xs">
             They need an account already — ask them to sign up first.
-          </p>
+          </Hint>
         </div>
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="flex flex-1 flex-col gap-1">
-          <label htmlFor="displayName" className="text-sm font-medium">
+          <FieldLabel htmlFor="displayName">
             What should it call them?
-          </label>
-          <input
+          </FieldLabel>
+          <TextInput
             id="displayName"
             name="displayName"
             type="text"
             required
             maxLength={120}
             placeholder="Sam Okafor"
-            className={INPUT_CLASS}
           />
-          <p className="text-xs opacity-60">
+          <Hint weight="subtle" className="text-xs">
             Only this business sees this name (D19).
-          </p>
+          </Hint>
         </div>
 
         {/*
@@ -100,24 +98,22 @@ export function ProvisionForm() {
         <div className="flex-1" />
       </div>
 
-      {state.error ? (
-        <p className="text-sm text-red-700 dark:text-red-400">{state.error}</p>
-      ) : null}
+      <ErrorText>{state.error}</ErrorText>
 
       {state.provisioned ? (
-        <p className="text-sm opacity-70">
+        <Hint>
           {state.provisioned} exists and belongs to its owner. It is empty — no statuses, no
           types, no hours — which is the next conversation rather than a fault.
-        </p>
+        </Hint>
       ) : null}
 
-      <button
+      <Button
         type="submit"
         disabled={pending}
-        className="w-fit rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        className="w-fit text-sm dark:bg-white dark:text-black"
       >
         {pending ? 'Provisioning…' : 'Provision'}
-      </button>
+      </Button>
     </form>
   );
 }

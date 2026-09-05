@@ -1,5 +1,8 @@
 'use client';
 
+import { SectionHeading } from '@/components/containers/section';
+import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
+import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
 import {
   CUSTOM_FIELD_ENTITIES,
@@ -17,8 +20,6 @@ import {
 
 const INITIAL: CreateFieldState = { error: null };
 const EDIT_INITIAL: UpdateFieldState = { error: null };
-const CELL = 'rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20';
-
 export function CreateFieldForm({ organizationId }: { organizationId: string }) {
   const [state, formAction, pending] = useActionState(createFieldAction, INITIAL);
 
@@ -26,32 +27,32 @@ export function CreateFieldForm({ organizationId }: { organizationId: string }) 
     <form action={formAction} className="mt-8 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <h2 className="text-sm font-medium">New field</h2>
+      <SectionHeading>New field</SectionHeading>
 
-      <select
+      <SelectInput
         name="entityType"
         defaultValue="customer"
         aria-label="Applies to"
-        className="w-fit rounded border border-black/15 px-3 py-2 dark:border-white/20"
+        className="w-fit"
       >
         {CUSTOM_FIELD_ENTITIES.map((entity) => (
           <option key={entity} value={entity}>
             {CUSTOM_FIELD_ENTITY_LABELS[entity]}
           </option>
         ))}
-      </select>
+      </SelectInput>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="label"
           type="text"
           required
           maxLength={100}
           placeholder="Label, e.g. VAT number"
           aria-label="Label"
-          className="flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20"
+          className="flex-1"
         />
-        <input
+        <TextInput
           name="key"
           type="text"
           required
@@ -60,20 +61,15 @@ export function CreateFieldForm({ organizationId }: { organizationId: string }) 
           placeholder="Key, e.g. vat_number"
           aria-label="Key"
           title="Starts with a letter; lowercase letters, numbers and underscores only."
-          className="flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20"
+          className="flex-1"
         />
-        <select
-          name="kind"
-          defaultValue="text"
-          aria-label="Type"
-          className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
-        >
+        <SelectInput name="kind" defaultValue="text" aria-label="Type">
           {FIELD_KINDS.map((kind) => (
             <option key={kind} value={kind}>
               {FIELD_KIND_LABELS[kind]}
             </option>
           ))}
-        </select>
+        </SelectInput>
       </div>
 
       <label className="flex w-fit items-center gap-2 text-sm">
@@ -81,19 +77,11 @@ export function CreateFieldForm({ organizationId }: { organizationId: string }) 
         Required
       </label>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Adding…' : 'Add field'}
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -124,7 +112,7 @@ export function EditFieldForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="fieldId" value={definition.id} />
 
-      <input
+      <TextInput
         name="position"
         type="number"
         required
@@ -132,37 +120,31 @@ export function EditFieldForm({
         step={1}
         defaultValue={definition.position}
         aria-label={`Position of ${definition.label}`}
-        className={`w-16 ${CELL}`}
+        size="small"
+        className="w-16"
       />
-      <input
+      <TextInput
         name="label"
         type="text"
         required
         maxLength={100}
         defaultValue={definition.label}
         aria-label={`Label of ${definition.label}`}
-        className={`min-w-0 flex-1 ${CELL}`}
+        size="small"
+        className="min-w-0 flex-1"
       />
-      <code className="text-xs opacity-60">
+      <code className="text-xs text-subtle">
         {definition.key} · {FIELD_KIND_LABELS[definition.kind]}
       </code>
       <label className="flex items-center gap-1 text-sm">
         <input name="required" type="checkbox" defaultChecked={definition.required} />
         Required
       </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-50 dark:border-white/20"
-      >
+      <Button type="submit" disabled={pending} tone="secondary" size="tiny">
         Save
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="w-full text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert" className="w-full">{state.error}</ErrorText>
     </form>
   );
 }

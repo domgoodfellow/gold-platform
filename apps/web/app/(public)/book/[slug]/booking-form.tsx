@@ -1,12 +1,12 @@
 'use client';
 
+import { ErrorText, TextInput } from '@/components/controls/inputs';
+import { Button } from '@/components/controls/button';
 import { useActionState, useState } from 'react';
 import type { Slot } from '@/lib/domain/booking/booking';
 import { bookAction, type BookingActionState } from './actions';
 
 const INITIAL: BookingActionState = { error: null };
-const INPUT_CLASS = 'w-full rounded border border-black/15 px-3 py-2 dark:border-white/20';
-
 /**
  * One primary action, which D23 asks of every screen and this one takes literally.
  *
@@ -50,18 +50,18 @@ export function BookingForm({
           const current = chosen?.startsAt === slot.startsAt;
           return (
             <li key={slot.startsAt}>
-              <button
+              {/* **The chosen slot takes the business's own colour**, which is the one place
+                  on this page a visitor is choosing something rather than reading it. `tone`
+                  is exactly the ternary this used to spell out by hand. */}
+              <Button
                 type="button"
                 onClick={() => setChosen(slot)}
                 aria-pressed={current}
-                className={
-                  current
-                    ? 'rounded bg-foreground px-3 py-1.5 text-sm text-background'
-                    : 'rounded border border-black/15 px-3 py-1.5 text-sm dark:border-white/20'
-                }
+                tone={current ? 'primary' : 'secondary'}
+                size="small"
               >
                 {time.format(new Date(slot.startsAt))}
-              </button>
+              </Button>
             </li>
           );
         })}
@@ -69,27 +69,25 @@ export function BookingForm({
 
       {chosen ? (
         <div className="flex flex-col gap-2">
-          <input name="name" type="text" required placeholder="Your name" className={INPUT_CLASS} />
+          <TextInput
+            name="name"
+            type="text"
+            required
+            placeholder="Your name"
+            className="w-full"
+          />
           {/* Either reaches you, and the domain layer insists on one of them — a booking
               nobody can be contacted about is not a booking. */}
-          <input name="email" type="email" placeholder="Email" className={INPUT_CLASS} />
-          <input name="phone" type="tel" placeholder="Phone" className={INPUT_CLASS} />
+          <TextInput name="email" type="email" placeholder="Email" className="w-full" />
+          <TextInput name="phone" type="tel" placeholder="Phone" className="w-full" />
 
-          <button
-            type="submit"
-            disabled={pending}
-            className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-          >
+          <Button type="submit" disabled={pending} className="w-fit">
             {pending ? 'Booking…' : `Book ${time.format(new Date(chosen.startsAt))}`}
-          </button>
+          </Button>
         </div>
       ) : null}
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }

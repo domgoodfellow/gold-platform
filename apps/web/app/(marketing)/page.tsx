@@ -1,3 +1,5 @@
+import { Hint } from '@/components/controls/inputs';
+import { SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
 
 /**
@@ -36,30 +38,30 @@ export default function Home() {
 
       <section className="grid gap-6 sm:grid-cols-3">
         <div>
-          <h2 className="text-sm font-medium">One shape per business</h2>
-          <p className="mt-1 text-sm opacity-70">
+          <SectionHeading>One shape per business</SectionHeading>
+          <Hint className="mt-1">
             Your work, your statuses, your fields, your prices, your hours — configured, not
             coded. No migration and no deploy to stand a business up.
-          </p>
+          </Hint>
         </div>
         <div>
-          <h2 className="text-sm font-medium">Booked, scheduled, worked, paid</h2>
-          <p className="mt-1 text-sm opacity-70">
+          <SectionHeading>Booked, scheduled, worked, paid</SectionHeading>
+          <Hint className="mt-1">
             A public booking page, a schedule nothing can double-book, quotes and invoices, and
             a portal your customers sign in to.
-          </p>
+          </Hint>
         </div>
         <div>
-          <h2 className="text-sm font-medium">Only what you switch on</h2>
-          <p className="mt-1 text-sm opacity-70">
+          <SectionHeading>Only what you switch on</SectionHeading>
+          <Hint className="mt-1">
             Billing, assets, booking, the portal, card payments. A business that invoices
             somewhere else runs without that half and keeps everything it recorded.
-          </p>
+          </Hint>
         </div>
       </section>
 
       <section>
-        <p className="text-sm opacity-70">
+        <Hint>
           {/*
             Two doors onto one `createOrganization`, and a door opens where somebody is on
             the far side of it doing the configuring (D29). A new business here is genuinely
@@ -72,7 +74,7 @@ export default function Home() {
           */}
           We set your business up with you. Get in touch and we will configure it against how
           you actually work.
-        </p>
+        </Hint>
         <Link
           href="/sign-in"
           className="mt-4 inline-block text-sm underline underline-offset-4"

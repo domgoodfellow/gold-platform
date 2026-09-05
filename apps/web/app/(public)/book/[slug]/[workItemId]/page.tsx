@@ -1,3 +1,4 @@
+import { Hint } from '@/components/controls/inputs';
 import { notFound } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { PublicHeader } from '@/features/public-profile/public-header';
@@ -63,12 +64,12 @@ export default async function BookingConfirmationPage({
 
       <dl className="mt-8 flex flex-col gap-3 text-sm">
         <div>
-          <dt className="opacity-60">What</dt>
+          <dt className="text-subtle">What</dt>
           <dd className="font-medium">{item.data.title}</dd>
         </div>
         {window ? (
           <div>
-            <dt className="opacity-60">When</dt>
+            <dt className="text-subtle">When</dt>
             {/* I9: an absolute instant, rendered in the business's zone rather than the
                 reader's — the appointment is at the shop's clock, wherever the phone is. */}
             <dd className="font-medium">{formatWindow(window, organization.data.timezone)}</dd>
@@ -76,7 +77,7 @@ export default async function BookingConfirmationPage({
         ) : null}
         {status ? (
           <div>
-            <dt className="opacity-60">Status</dt>
+            <dt className="text-subtle">Status</dt>
             {/* The tenant's own word, rendered as written. The platform does not know what it
                 means and never translates it (D6). */}
             <dd className="font-medium">{status.name}</dd>
@@ -84,13 +85,13 @@ export default async function BookingConfirmationPage({
         ) : null}
         {price ? (
           <div>
-            <dt className="opacity-60">Price</dt>
+            <dt className="text-subtle">Price</dt>
             <dd className="font-medium">{formatMoney(price.totalMinor, price.currency)}</dd>
           </div>
         ) : null}
       </dl>
 
-      <p className="mt-10 text-xs opacity-60">Keep this page to check your booking.</p>
+      <Hint weight="subtle" className="mt-10 text-xs">Keep this page to check your booking.</Hint>
     </main>
   );
 }

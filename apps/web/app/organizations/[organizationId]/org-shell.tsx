@@ -1,5 +1,6 @@
 'use client';
 
+import { PageHeading } from '@/components/containers/section';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -87,7 +88,7 @@ export function OrgNav({
           with padding so the last row of a screen is never sitting underneath this. */}
       <nav
         aria-label="This business"
-        className="fixed inset-x-0 bottom-0 z-10 border-t border-black/10 bg-background md:hidden dark:border-white/15"
+        className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background md:hidden"
       >
         <ul className="flex gap-1 overflow-x-auto p-2">
           {/* Ungrouped on a phone — the rule between operational and configuration is the
@@ -116,7 +117,7 @@ export function OrgNav({
             className={
               index === 0
                 ? 'flex flex-col gap-1'
-                : 'mt-3 flex flex-col gap-1 border-t border-black/10 pt-3 dark:border-white/15'
+                : 'mt-3 flex flex-col gap-1 border-t border-border pt-3 '
             }
           >
             {areasIn(group, enabled).map((area) => (
@@ -150,5 +151,5 @@ export function AreaHeading() {
   const area = AREAS.find((candidate) => candidate.segment === segment);
   if (!area) return null;
 
-  return <h1 className="text-2xl font-semibold">{area.label}</h1>;
+  return <PageHeading>{area.label}</PageHeading>;
 }

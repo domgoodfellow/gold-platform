@@ -1,5 +1,9 @@
 'use client';
 
+import { DividedList, EmptyState, GroupHeading, Section, SectionHeading } from '@/components/containers/section';
+import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { Button } from '@/components/controls/button';
+import { Card } from '@/components/containers/card';
 import { useActionState } from 'react';
 import {
   ACTION_KINDS,
@@ -36,19 +40,15 @@ import {
 
 const INITIAL: AutomationActionState = { error: null };
 
-const INPUT = 'rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20';
-const BUTTON =
-  'rounded border border-black/15 px-3 py-1 text-sm disabled:opacity-50 dark:border-white/20';
-
 /** A status this business has, named by its kind of work so two "Booked" are told apart. */
 export type StatusChoice = { id: string; label: string };
 
 function Error({ state }: { state: AutomationActionState }) {
   if (!state.error) return null;
   return (
-    <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
+    <ErrorText role="alert" className="mt-1">
       {state.error}
-    </p>
+    </ErrorText>
   );
 }
 
@@ -84,7 +84,7 @@ export function AutomationRuleCard({
   const trigger = TRIGGER_EVENTS.find((entry) => entry.action === rule.triggerEventAction);
 
   return (
-    <article className="rounded border border-black/10 p-4 dark:border-white/15">
+    <Card as="article">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <div className="min-w-0">
           {/* The name is the heading and the input at once for somebody who can change it —
@@ -94,13 +94,13 @@ export function AutomationRuleCard({
           ) : (
             <h2 className="font-medium">{rule.name}</h2>
           )}
-          {rule.enabled ? null : <span className="text-sm opacity-60">off</span>}
-          <p className="text-sm opacity-70">
+          {rule.enabled ? null : <span className="text-sm text-subtle">off</span>}
+          <Hint>
             {/* The trigger is not editable and the column grant refuses it: changing what a rule
                 watches for makes it a different rule while keeping the record of what the old
                 one did. */}
             {describeTrigger(rule, trigger?.label)}
-          </p>
+          </Hint>
         </div>
 
         {mayManage ? (
@@ -126,11 +126,11 @@ export function AutomationRuleCard({
       ) : null}
 
       <section className="mt-4">
-        <h3 className="text-xs uppercase tracking-wide opacity-60">If</h3>
+        <GroupHeading>If</GroupHeading>
         {rule.conditions.length === 0 ? (
-          <p className="mt-1 text-sm opacity-70">
+          <EmptyState className="mt-1">
             No conditions, so this runs every time.
-          </p>
+          </EmptyState>
         ) : (
           <ul className="mt-1 flex flex-col gap-1">
             {rule.conditions.map((condition) => {
@@ -172,18 +172,18 @@ export function AutomationRuleCard({
             exists, so there is nothing here to compare — and the domain layer refuses to add a
             condition rather than accepting one nobody would ever consult. */}
         {rule.triggerKind === 'counter_threshold' ? (
-          <p className="mt-1 text-sm opacity-70">
+          <Hint className="mt-1">
             This rule runs about a machine rather than a job, so there is nothing to compare yet.
-          </p>
+          </Hint>
         ) : null}
       </section>
 
       <section className="mt-4">
-        <h3 className="text-xs uppercase tracking-wide opacity-60">Then</h3>
+        <GroupHeading>Then</GroupHeading>
         {rule.actions.length === 0 ? (
-          <p className="mt-1 text-sm opacity-70">
+          <EmptyState className="mt-1">
             Nothing yet, so this rule does nothing. It is watching and will keep watching.
-          </p>
+          </EmptyState>
         ) : (
           <ul className="mt-1 flex flex-col gap-1">
             {rule.actions.map((action) => (
@@ -212,25 +212,25 @@ export function AutomationRuleCard({
       </section>
 
       {runs.length > 0 ? (
-        <section className="mt-4 border-t border-black/10 pt-3 dark:border-white/15">
-          <h3 className="text-xs uppercase tracking-wide opacity-60">Recently</h3>
+        <section className="mt-4 border-t border-border pt-3">
+          <GroupHeading>Recently</GroupHeading>
           <ul className="mt-1 flex flex-col gap-1 text-sm">
             {runs.map((run) => (
               <li key={run.id} className="flex flex-wrap gap-x-2">
-                <span className="opacity-60">
+                <span className="text-subtle">
                   {new Date(run.occurredAt).toLocaleString('en-GB')}
                 </span>
                 {run.outcome === 'failed' ? (
-                  <span className="text-red-600 dark:text-red-400">failed — {run.detail}</span>
+                  <span className="text-danger">failed — {run.detail}</span>
                 ) : (
-                  <span className="opacity-70">ran</span>
+                  <span className="text-muted">ran</span>
                 )}
               </li>
             ))}
           </ul>
         </section>
       ) : null}
-    </article>
+    </Card>
   );
 }
 
@@ -339,9 +339,9 @@ function EnableSwitch({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="ruleId" value={rule.id} />
       <input type="hidden" name="enabled" value={rule.enabled ? '0' : '1'} />
-      <button type="submit" disabled={pending} className={BUTTON}>
+      <Button type="submit" disabled={pending} tone="secondary" size="small">
         {pending ? '…' : rule.enabled ? 'Switch off' : 'Switch on'}
-      </button>
+      </Button>
       <Error state={state} />
     </form>
   );
@@ -354,9 +354,9 @@ function DeleteRule({ organizationId, rule }: { organizationId: string; rule: Au
     <form action={formAction}>
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="ruleId" value={rule.id} />
-      <button type="submit" disabled={pending} className={BUTTON}>
+      <Button type="submit" disabled={pending} tone="secondary" size="small">
         {pending ? '…' : 'Remove'}
-      </button>
+      </Button>
       <Error state={state} />
     </form>
   );
@@ -375,9 +375,9 @@ function RemoveCondition({
     <form action={formAction} className="inline">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="conditionId" value={conditionId} />
-      <button type="submit" disabled={pending} className="text-xs underline opacity-60">
+      <Button type="submit" disabled={pending} tone="text" size="tiny">
         remove
-      </button>
+      </Button>
       <Error state={state} />
     </form>
   );
@@ -396,9 +396,9 @@ function RemoveAction({
     <form action={formAction} className="inline">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="actionId" value={actionId} />
-      <button type="submit" disabled={pending} className="text-xs underline opacity-60">
+      <Button type="submit" disabled={pending} tone="text" size="tiny">
         remove
-      </button>
+      </Button>
       <Error state={state} />
     </form>
   );
@@ -422,7 +422,7 @@ function AddCondition({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="ruleId" value={rule.id} />
 
-      <select name="subjectField" aria-label="Part of the job" className={INPUT}>
+      <SelectInput name="subjectField" aria-label="Part of the job" size="small">
         {CONDITION_FIELDS.map((entry) => (
           <option key={entry.field} value={entry.field}>
             {entry.label}
@@ -435,25 +435,25 @@ function AddCondition({
             {definition.label}
           </option>
         ))}
-      </select>
+      </SelectInput>
 
-      <select name="operator" aria-label="Comparison" className={INPUT}>
+      <SelectInput name="operator" aria-label="Comparison" size="small">
         {OPERATORS.map((entry) => (
           <option key={entry.operator} value={entry.operator}>
             {entry.label}
           </option>
         ))}
-      </select>
+      </SelectInput>
 
       {/* One free-text box and one status picker, because a value is either an id this business
           owns or something somebody types. Leaving both is what the presence operators want. */}
-      <input
+      <TextInput
         name="value"
         type="text"
         aria-label="Value"
         placeholder="value"
         list={`statuses-${rule.id}`}
-        className={INPUT}
+        size="small"
       />
       <datalist id={`statuses-${rule.id}`}>
         {statuses.map((status) => (
@@ -463,9 +463,9 @@ function AddCondition({
         ))}
       </datalist>
 
-      <button type="submit" disabled={pending} className={BUTTON}>
+      <Button type="submit" disabled={pending} tone="secondary" size="small">
         {pending ? '…' : 'Add condition'}
-      </button>
+      </Button>
       <Error state={state} />
     </form>
   );
@@ -495,49 +495,49 @@ function AddAction({
           which is where the rule that each kind carries only what it needs already lives. A
           control that rewrote itself as the picker changed would be more moving parts than a
           business choosing between two actions is asking for. */}
-      <select name="kind" aria-label="What to do" className={INPUT}>
+      <SelectInput name="kind" aria-label="What to do" size="small">
         {ACTION_KINDS.map((entry) => (
           <option key={entry.kind} value={entry.kind}>
             {entry.label}
           </option>
         ))}
-      </select>
+      </SelectInput>
 
-      <select name="statusId" aria-label="Status" className={INPUT}>
+      <SelectInput name="statusId" aria-label="Status" size="small">
         {statuses.map((status) => (
           <option key={status.id} value={status.id}>
             {status.label}
           </option>
         ))}
-      </select>
+      </SelectInput>
 
-      <select name="templateId" aria-label="Message" className={INPUT}>
+      <SelectInput name="templateId" aria-label="Message" size="small">
         {templates.map((template) => (
           <option key={template.id} value={template.id}>
             {template.name}
           </option>
         ))}
-      </select>
+      </SelectInput>
 
-      <select name="channel" aria-label="How to reach them" className={INPUT}>
+      <SelectInput name="channel" aria-label="How to reach them" size="small">
         {CHANNELS.map((entry) => (
           <option key={entry.channel} value={entry.channel}>
             {entry.label}
           </option>
         ))}
-      </select>
+      </SelectInput>
 
-      <select name="typeId" aria-label="Kind of work" className={INPUT}>
+      <SelectInput name="typeId" aria-label="Kind of work" size="small">
         {types.map((type) => (
           <option key={type.id} value={type.id}>
             {type.name}
           </option>
         ))}
-      </select>
+      </SelectInput>
 
       {/* Signed, and negative brings a job forward. A business moving work away from bad
           weather types a positive number; one pulling it earlier types a negative one. */}
-      <input
+      <TextInput
         name="shiftMinutes"
         type="number"
         min={-20160}
@@ -545,21 +545,22 @@ function AddAction({
         step={1}
         defaultValue={1440}
         aria-label="Minutes to move it by"
-        className={`${INPUT} w-32`}
+        size="small"
+        className="w-32"
       />
 
-      <button type="submit" disabled={pending} className={BUTTON}>
+      <Button type="submit" disabled={pending} tone="secondary" size="small">
         {pending ? '…' : 'Add action'}
-      </button>
+      </Button>
 
       {statuses.length === 0 ? (
-        <span className="text-xs opacity-70">
+        <span className="text-xs text-muted">
           This business has no statuses yet, so there is nowhere for a rule to move a job.
         </span>
       ) : null}
 
       {templates.length === 0 ? (
-        <span className="text-xs opacity-70">
+        <span className="text-xs text-muted">
           No messages written yet, so there is nothing to send. Write one below.
         </span>
       ) : null}
@@ -591,18 +592,15 @@ export function MessageTemplateSection({
   role: string;
 }) {
   return (
-    <section
-      id="messages"
-      className="mt-10 scroll-mt-6 border-t border-black/10 pt-6 dark:border-white/15"
-    >
-      <h2 className="text-sm font-medium">What this business says</h2>
-      <p className="mt-1 max-w-2xl text-sm opacity-70">
+    <Section id="messages" className="mt-10 scroll-mt-6">
+      <SectionHeading>What this business says</SectionHeading>
+      <Hint className="mt-1 max-w-2xl">
         Every word a customer reads is written here. The platform adds nothing — no greeting, no
         signature, no footer — and puts values where you write{' '}
         {PLACEHOLDERS.map((entry) => entry.token).join(', ')}. A message already sent keeps the
         words it was sent with, so editing one of these changes only what happens next.
-      </p>
-      <p className="mt-1 max-w-2xl text-sm opacity-70">
+      </Hint>
+      <Hint className="mt-1 max-w-2xl">
         {/* Whether this installation can actually send on a channel is a fact about the sending
             service rather than about this business, and this screen cannot see it. Rather than
             imply everything works, it says where the answer appears: on the message itself, the
@@ -610,10 +608,10 @@ export function MessageTemplateSection({
         Whether messages can be sent at all depends on what this installation is connected to.
         Each one below says what happened to it, including when there was nothing to send it
         with.
-      </p>
+      </Hint>
 
       {templates.length === 0 ? (
-        <p className="mt-3 text-sm opacity-70">Nothing written yet.</p>
+        <EmptyState className="mt-3">Nothing written yet.</EmptyState>
       ) : (
         <div className="mt-3 flex flex-col gap-4">
           {templates.map((template) =>
@@ -626,8 +624,8 @@ export function MessageTemplateSection({
             ) : (
               <article key={template.id} className="text-sm">
                 <p className="font-medium">{template.name}</p>
-                {template.subject ? <p className="opacity-70">{template.subject}</p> : null}
-                <p className="whitespace-pre-wrap opacity-70">{template.body}</p>
+                {template.subject ? <Hint>{template.subject}</Hint> : null}
+                <Hint className="whitespace-pre-wrap">{template.body}</Hint>
               </article>
             ),
           )}
@@ -637,42 +635,42 @@ export function MessageTemplateSection({
       {mayManage ? (
         <NewTemplateForm organizationId={organizationId} />
       ) : (
-        <p className="mt-3 text-sm opacity-70">
+        <Hint className="mt-3">
           Your role, {role}, cannot change what this business says.
-        </p>
+        </Hint>
       )}
 
       {deliveries.length > 0 ? (
         <div className="mt-6">
-          <h3 className="text-xs uppercase tracking-wide opacity-60">Sent</h3>
-          <ul className="mt-1 divide-y divide-black/10 text-sm dark:divide-white/15">
+          <GroupHeading>Sent</GroupHeading>
+          <DividedList className="mt-1 text-sm">
             {deliveries.map((delivery) => (
               <li key={delivery.id} className="flex flex-wrap items-baseline gap-x-3 py-2">
-                <span className="opacity-60">
+                <span className="text-subtle">
                   {new Date(delivery.queuedAt).toLocaleString('en-GB')}
                 </span>
                 <span>{delivery.recipient}</span>
-                <span className="opacity-70">{delivery.ruleName}</span>
+                <span className="text-muted">{delivery.ruleName}</span>
                 {delivery.state === 'failed' ? (
-                  <span className="text-red-600 dark:text-red-400">
+                  <span className="text-danger">
                     failed — {delivery.detail}
                   </span>
                 ) : (
-                  <span className="opacity-60">{delivery.state}</span>
+                  <span className="text-subtle">{delivery.state}</span>
                 )}
               </li>
             ))}
-          </ul>
+          </DividedList>
         </div>
       ) : null}
-    </section>
+    </Section>
   );
 }
 
 function TemplateFields({ template }: { template?: MessageTemplate }) {
   return (
     <>
-      <input
+      <TextInput
         name="name"
         type="text"
         required
@@ -680,18 +678,18 @@ function TemplateFields({ template }: { template?: MessageTemplate }) {
         defaultValue={template?.name}
         aria-label="What this message is for"
         placeholder="What this message is for"
-        className={INPUT}
+        size="small"
       />
-      <input
+      <TextInput
         name="subject"
         type="text"
         maxLength={300}
         defaultValue={template?.subject}
         aria-label="Subject line"
         placeholder="Subject line, for email"
-        className={INPUT}
+        size="small"
       />
-      <textarea
+      <TextArea
         name="body"
         required
         maxLength={4000}
@@ -699,7 +697,8 @@ function TemplateFields({ template }: { template?: MessageTemplate }) {
         defaultValue={template?.body}
         aria-label="What it says"
         placeholder="What it says"
-        className={`${INPUT} w-full`}
+        size="small"
+        className="w-full"
       />
     </>
   );
@@ -711,11 +710,11 @@ function NewTemplateForm({ organizationId }: { organizationId: string }) {
   return (
     <form action={formAction} className="mt-4 flex max-w-2xl flex-col gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
-      <h3 className="text-xs uppercase tracking-wide opacity-60">New message</h3>
+      <GroupHeading>New message</GroupHeading>
       <TemplateFields />
-      <button type="submit" disabled={pending} className={`${BUTTON} w-fit`}>
+      <Button type="submit" disabled={pending} tone="secondary" size="small" className="w-fit">
         {pending ? 'Adding…' : 'Add message'}
-      </button>
+      </Button>
       <Error state={state} />
     </form>
   );
@@ -737,18 +736,18 @@ function EditTemplateForm({
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="templateId" value={template.id} />
         <TemplateFields template={template} />
-        <button type="submit" disabled={pending} className={`${BUTTON} w-fit`}>
+        <Button type="submit" disabled={pending} tone="secondary" size="small" className="w-fit">
           {pending ? '…' : 'Save'}
-        </button>
+        </Button>
         <Error state={state} />
       </form>
 
       <form action={removeAction}>
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="templateId" value={template.id} />
-        <button type="submit" disabled={removing} className="text-xs underline opacity-60">
+        <Button type="submit" disabled={removing} tone="text" size="tiny">
           remove
-        </button>
+        </Button>
         <Error state={removeState} />
       </form>
     </div>
@@ -762,38 +761,39 @@ export function CreateAutomationRuleForm({ organizationId }: { organizationId: s
     <form action={formAction} className="mt-8 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <h2 className="text-sm font-medium">New rule</h2>
+      <SectionHeading>New rule</SectionHeading>
 
       <div className="flex flex-wrap items-center gap-2">
-        <input
+        <TextInput
           name="name"
           type="text"
           required
           maxLength={120}
           aria-label="What this rule is for"
           placeholder="What this rule is for"
-          className={`${INPUT} flex-1`}
+          size="small"
+          className="flex-1"
         />
 
         {/* All three controls, submitted together and sorted out by the domain layer, which is
             where the rule that each kind carries only what it needs already lives. */}
-        <select name="triggerKind" aria-label="What sets it off" className={INPUT}>
+        <SelectInput name="triggerKind" aria-label="What sets it off" size="small">
           {TRIGGER_KINDS.map((entry) => (
             <option key={entry.kind} value={entry.kind}>
               {entry.label}
             </option>
           ))}
-        </select>
+        </SelectInput>
 
-        <select name="triggerEventAction" aria-label="Which moment" className={INPUT}>
+        <SelectInput name="triggerEventAction" aria-label="Which moment" size="small">
           {TRIGGER_EVENTS.map((entry) => (
             <option key={entry.action} value={entry.action}>
               {entry.label}
             </option>
           ))}
-        </select>
+        </SelectInput>
 
-        <input
+        <TextInput
           name="triggerMinutesBefore"
           type="number"
           min={0}
@@ -801,69 +801,73 @@ export function CreateAutomationRuleForm({ organizationId }: { organizationId: s
           step={1}
           defaultValue={120}
           aria-label="Minutes before the job starts"
-          className={`${INPUT} w-32`}
+          size="small"
+          className="w-32"
         />
 
-        <select name="triggerMetric" aria-label="What is measured" className={INPUT}>
+        <SelectInput name="triggerMetric" aria-label="What is measured" size="small">
           {METRICS.map((entry) => (
             <option key={entry.metric} value={entry.metric}>
               {entry.label}
             </option>
           ))}
-        </select>
+        </SelectInput>
 
-        <select name="triggerComparison" aria-label="Which way" className={INPUT}>
+        <SelectInput name="triggerComparison" aria-label="Which way" size="small">
           {COMPARISONS.map((entry) => (
             <option key={entry.comparison} value={entry.comparison}>
               {entry.label}
             </option>
           ))}
-        </select>
+        </SelectInput>
 
-        <input
+        <TextInput
           name="triggerThreshold"
           type="number"
           step="any"
           defaultValue={0}
           aria-label="The line"
-          className={`${INPUT} w-24`}
+          size="small"
+          className="w-24"
         />
 
         {/* Typed, never offered from a list, and never converted. A threshold in the wrong unit
             is a rule about something else, and the comparison in the database refuses to make
             it rather than quietly meeting it halfway. */}
-        <input
+        <TextInput
           name="triggerUnit"
           type="text"
           maxLength={16}
           placeholder="unit"
           aria-label="Unit"
-          className={`${INPUT} w-24`}
+          size="small"
+          className="w-24"
         />
 
-        <input
+        <TextInput
           name="triggerCounterStep"
           type="number"
           step="any"
           min={0}
           placeholder="every"
           aria-label="Counter interval"
-          className={`${INPUT} w-24`}
+          size="small"
+          className="w-24"
         />
 
-        <button type="submit" disabled={pending} className={BUTTON}>
+        <Button type="submit" disabled={pending} tone="secondary" size="small">
           {pending ? 'Adding…' : 'Add rule'}
-        </button>
+        </Button>
       </div>
 
-      <p className="text-sm opacity-70">
+      <Hint>
         Each kind uses only the boxes that belong to it: minutes before the job for a timed
         rule, and what is measured, which way, where the line is and in what unit for a
         conditions rule, and an interval for one that watches a counter on a machine. The unit
         is yours and is shared by the last two — nothing converts between units, so a threshold
         in one and a reading in another never meet. A rule starts with no conditions and nothing to
         do, which means it runs and changes nothing.
-      </p>
+      </Hint>
 
       <Error state={state} />
     </form>
@@ -884,18 +888,19 @@ function RenameRuleForm({
     <form action={formAction} className="flex items-center gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="ruleId" value={rule.id} />
-      <input
+      <TextInput
         name="name"
         type="text"
         required
         maxLength={120}
         defaultValue={rule.name}
         aria-label="Rule name"
-        className={`${INPUT} font-medium`}
+        size="small"
+        className="font-medium"
       />
-      <button type="submit" disabled={pending} className="text-xs underline opacity-60">
+      <Button type="submit" disabled={pending} tone="text" size="tiny">
         {pending ? '…' : 'rename'}
-      </button>
+      </Button>
       <Error state={state} />
     </form>
   );

@@ -1,3 +1,8 @@
+import { Button, ButtonLink } from '@/components/controls/button';
+import { Card } from '@/components/containers/card';
+import { Toolbar } from '@/components/display/data';
+import { Hint } from '@/components/controls/inputs';
+import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { formatWindow, todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
@@ -49,7 +54,7 @@ export default async function SchedulePage({
     <>
       {/* I9: every window below is an absolute instant rendered in this business's own
           zone, so naming the zone is part of reading the day rather than decoration. */}
-      <p className="text-sm opacity-70">
+      <Hint>
         Times shown in {organization.timezone} ·{' '}
         <Link
           href={`/organizations/${organizationId}/settings`}
@@ -57,64 +62,102 @@ export default async function SchedulePage({
         >
           Opening hours
         </Link>
-      </p>
+      </Hint>
 
-      <nav className="mt-4 flex items-center gap-3 text-sm" aria-label="Day">
-        <Link
-          href={`/organizations/${organizationId}/schedule?on=${shift(-1)}`}
-          className="rounded border border-black/15 px-3 py-1 dark:border-white/20"
-        >
-          ← Previous
-        </Link>
-        <span className="font-medium">{date}</span>
-        <Link
-          href={`/organizations/${organizationId}/schedule?on=${shift(1)}`}
-          className="rounded border border-black/15 px-3 py-1 dark:border-white/20"
-        >
-          Next →
-        </Link>
-      </nav>
+      {/* **A day is picked, not scrolled to.** Previous and Next were the whole of it, so
+          getting to next Tuesday was six clicks and getting back to today was counting. The
+          date input is the browser's own picker, and *Today* is the one destination that is
+          always worth a single control on a screen about days. */}
+      <Toolbar className="mt-4" aria-label="Day">
+        <form className="flex flex-wrap items-center gap-2">
+          <ButtonLink
+            href={`/organizations/${organizationId}/schedule?on=${shift(-1)}`}
+            size="small"
+          >
+            ← Previous
+          </ButtonLink>
+          <input
+            type="date"
+            name="on"
+            defaultValue={date}
+            aria-label="Show this day"
+            className="rounded border border-border px-3 py-1 text-sm"
+          />
+          <Button type="submit" tone="secondary" size="small">
+            Show
+          </Button>
+          <ButtonLink
+            href={`/organizations/${organizationId}/schedule?on=${shift(1)}`}
+            size="small"
+          >
+            Next →
+          </ButtonLink>
+        </form>
+
+        {date === todayInZone(organization.timezone) ? null : (
+          <Link
+            href={`/organizations/${organizationId}/schedule`}
+            className="text-sm underline underline-offset-4"
+          >
+            Back to today
+          </Link>
+        )}
+      </Toolbar>
 
       {schedule.length === 0 ? (
-        <p className="mt-6 text-sm opacity-70">
+        <EmptyState className="mt-6">
           Nothing to schedule against yet. A resource is whoever or whatever work occupies for
           a window — a technician, a van, a machine.
-        </p>
+        </EmptyState>
       ) : (
-        schedule.map((entry) => (
-          <section key={entry.resource.id} className="mt-6">
-            <h2 className="text-sm font-medium">{entry.resource.name}</h2>
+        /* One card per resource, laid out by the space available rather than by a breakpoint:
+           a business with two vans gets two columns on a laptop and one on a phone, and a
+           business with nine gets three, with nothing here deciding which. */
+        <div className="mt-6 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(20rem,1fr))]">
+          {schedule.map((entry) => (
+            <Card key={entry.resource.id} className="flex flex-col">
+              <SectionHeading>{entry.resource.name}</SectionHeading>
 
-            {entry.booked.length === 0 ? (
-              <p className="mt-1 text-sm opacity-60">Nothing booked.</p>
-            ) : (
-              <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
-                {entry.booked.map((booking) => (
-                  <li key={booking.workItemId} className="py-2">
-                    <div className="font-medium">{booking.title}</div>
-                    <div className="text-sm opacity-70">
-                      {formatWindow(booking.window, organization.timezone)}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+              {entry.booked.length === 0 ? (
+                <EmptyState weight="subtle" className="mt-2">Nothing booked.</EmptyState>
+              ) : (
+                <DividedList className="mt-2">
+                  {entry.booked.map((booking) => (
+                    <li key={booking.workItemId} className="py-2">
+                      {/* **The job is a link now, and it was not.** A dispatcher looking at a
+                          booked window is one step from wanting the job it belongs to, and
+                          reaching it meant going to Work and finding it by name. */}
+                      <Link
+                        href={`/organizations/${organizationId}/work/${booking.workItemId}`}
+                        className="font-medium underline underline-offset-4"
+                      >
+                        {booking.title}
+                      </Link>
+                      <div className="text-sm tabular-nums text-muted">
+                        {formatWindow(booking.window, organization.timezone)}
+                      </div>
+                    </li>
+                  ))}
+                </DividedList>
+              )}
 
-            {/* Advisory, and labelled as such, because it is (I6). By the time anyone acts on
-                it the world may have moved; the exclusion constraint is what decides. */}
-            {/* Free time is what the business is open for, minus what is committed. With no
-                opening hours set that is the whole day — "no claim" rather than "closed". */}
-            <p className="mt-2 text-sm opacity-60">
-              Free (advisory):{' '}
-              {entry.free.length === 0
-                ? 'nothing left today'
-                : entry.free
-                    .map((window) => formatWindow(window, organization.timezone))
-                    .join(' · ')}
-            </p>
-          </section>
-        ))
+              {/* Advisory, and labelled as such, because it is (I6). By the time anyone acts on
+                  it the world may have moved; the exclusion constraint is what decides. */}
+              {/* Free time is what the business is open for, minus what is committed. With no
+                  opening hours set that is the whole day — "no claim" rather than "closed". */}
+              <Hint weight="subtle" className="mt-3 border-t border-border pt-2">
+                Free (advisory):{' '}
+                {entry.free.length === 0
+                  ? 'nothing left today'
+                  : entry.free
+                      .map((window) => formatWindow(window, organization.timezone))
+                      .join(' · ')}
+              </Hint>
+            </Card>
+          ))}
+        </div>
       )}
+
     </>
   );
 }

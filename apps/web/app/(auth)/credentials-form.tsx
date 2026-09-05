@@ -1,5 +1,7 @@
 'use client';
 
+import { ErrorText, FieldLabel, TextInput } from '@/components/controls/inputs';
+import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
 
 export type CredentialsState = { error: string | null };
@@ -32,30 +34,22 @@ export function CredentialsForm({
   return (
     <form action={formAction} className="mt-6 flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <label htmlFor="email" className="text-sm font-medium">
+        <FieldLabel htmlFor="email">
           Email
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
-        />
+        </FieldLabel>
+        <TextInput id="email" name="email" type="email" required autoComplete="email" />
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="password" className="text-sm font-medium">
+        <FieldLabel htmlFor="password">
           Password
-        </label>
-        <input
+        </FieldLabel>
+        <TextInput
           id="password"
           name="password"
           type="password"
           required
           autoComplete={passwordAutoComplete}
-          className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
         />
       </div>
 
@@ -63,33 +57,24 @@ export function CredentialsForm({
           collects the second reading. */}
       {confirmPassword ? (
         <div className="flex flex-col gap-1">
-          <label htmlFor="passwordConfirmation" className="text-sm font-medium">
+          <FieldLabel htmlFor="passwordConfirmation">
             Confirm password
-          </label>
-          <input
+          </FieldLabel>
+          <TextInput
             id="passwordConfirmation"
             name="passwordConfirmation"
             type="password"
             required
             autoComplete="new-password"
-            className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
           />
         </div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? pendingLabel : submitLabel}
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }

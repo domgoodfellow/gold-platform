@@ -1,5 +1,6 @@
 'use client';
 
+import { FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { useMemo } from 'react';
 
 /**
@@ -20,8 +21,6 @@ import { useMemo } from 'react';
  * an invented shortlist. An empty box asks the operator a question; a wrong shortlist answers
  * it for them.
  */
-
-const SELECT_CLASS = 'rounded border border-black/15 px-3 py-2 dark:border-white/20';
 
 function supported(key: 'timeZone' | 'currency'): string[] | null {
   try {
@@ -54,32 +53,31 @@ export function TimeZoneField({
 
   return (
     <div className="flex flex-1 flex-col gap-1">
-      <label htmlFor="timezone" className="text-sm font-medium">
+      <FieldLabel htmlFor="timezone">
         {label}
-      </label>
+      </FieldLabel>
       {zones ? (
-        <select id="timezone" name="timezone" defaultValue={current} className={SELECT_CLASS}>
+        <SelectInput id="timezone" name="timezone" defaultValue={current}>
           {zones.map((zone) => (
             <option key={zone} value={zone}>
               {zone.replace(/_/g, ' ')}
             </option>
           ))}
-        </select>
+        </SelectInput>
       ) : (
-        <input
+        <TextInput
           id="timezone"
           name="timezone"
           type="text"
           required
           defaultValue={current}
           placeholder="Europe/Amsterdam"
-          className={SELECT_CLASS}
         />
       )}
-      <p className="text-xs opacity-60">
+      <Hint weight="subtle" className="text-xs">
         The clock your staff read. Every booking is stored as an absolute instant and shown in
         this zone.
-      </p>
+      </Hint>
     </div>
   );
 }
@@ -97,17 +95,11 @@ export function CurrencyField({ defaultValue }: { defaultValue?: string }) {
 
   return (
     <div className="flex flex-1 flex-col gap-1">
-      <label htmlFor="currency" className="text-sm font-medium">
+      <FieldLabel htmlFor="currency">
         What does it trade in?
-      </label>
+      </FieldLabel>
       {codes ? (
-        <select
-          id="currency"
-          name="currency"
-          required
-          defaultValue={defaultValue ?? ''}
-          className={SELECT_CLASS}
-        >
+        <SelectInput id="currency" name="currency" required defaultValue={defaultValue ?? ''}>
           {/* No preselection when founding. There is no neutral currency, so the platform
               does not offer one — and deriving it from the timezone above would be the
               assumption this whole field exists to avoid. */}
@@ -124,9 +116,9 @@ export function CurrencyField({ defaultValue }: { defaultValue?: string }) {
               </option>
             );
           })}
-        </select>
+        </SelectInput>
       ) : (
-        <input
+        <TextInput
           id="currency"
           name="currency"
           type="text"
@@ -135,13 +127,13 @@ export function CurrencyField({ defaultValue }: { defaultValue?: string }) {
           minLength={3}
           defaultValue={defaultValue}
           placeholder="EUR"
-          className={`${SELECT_CLASS} uppercase`}
+          className="uppercase"
         />
       )}
-      <p className="text-xs opacity-60">
+      <Hint weight="subtle" className="text-xs">
         Recorded on every amount as it is written, so changing this later never reinterprets
         what past work cost.
-      </p>
+      </Hint>
     </div>
   );
 }

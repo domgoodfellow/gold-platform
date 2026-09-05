@@ -1,4 +1,7 @@
-import { CustomFieldValues } from '@/components/custom-field-values';
+import { Disclosure } from '@/components/containers/card';
+import { Hint } from '@/components/controls/inputs';
+import { DataTable } from '@/components/display/table';
+import { CustomFieldValues } from '@/components/custom-fields/values';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listAssetReadings } from '@/lib/domain/assets/readings';
 import { listCustomers } from '@/lib/domain/customers/customers';
@@ -42,67 +45,95 @@ export default async function AssetsPage({
 
   return (
     <>
-      <p className="text-sm opacity-70">
+      <Hint>
         What work is about — machines, vehicles, properties, customer-owned equipment.
-      </p>
-
-      {assets.length === 0 ? (
-        <p className="mt-6 text-sm opacity-70">No assets yet.</p>
-      ) : (
-        <ul className="mt-6 divide-y divide-black/10 dark:divide-white/15">
-          {assets.map((asset) => (
-            <li key={asset.id} className="py-3">
-              <div className="font-medium">{asset.name}</div>
-              {asset.customer || asset.location ? (
-                <div className="text-sm opacity-70">
-                  {[
-                    asset.customer ? `Owned by ${asset.customer.label}` : null,
-                    asset.location ? `at ${asset.location.label}` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </div>
-              ) : null}
-              <CustomFieldValues definitions={definitions} custom={asset.custom} />
-
-              {/* A counter, and what it last read. Nothing is assumed about what it counts —
-                  hours, miles, cycles — and a machine nobody meters simply has none. */}
-              {readings.get(asset.id) ? (
-                <div className="mt-1 text-sm opacity-70">
-                  Last read {readings.get(asset.id)!.value} {readings.get(asset.id)!.unit} on{' '}
-                  {new Date(readings.get(asset.id)!.readAt).toLocaleDateString('en-GB')}
-                </div>
-              ) : null}
-
-              {mayAdd ? (
-                <RecordReadingForm
-                  organizationId={organizationId}
-                  assetId={asset.id}
-                  assetName={asset.name}
-                  lastUnit={readings.get(asset.id)?.unit ?? ''}
-                />
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
+      </Hint>
 
       {/*
         Hiding the form is a courtesy, not the guard. `assets_insert` requires asset.create in
         the database (constraints.md: hiding a UI element is not authorization).
       */}
       {mayAdd ? (
-        <CreateAssetForm
-          organizationId={organizationId}
-          customers={customers.map((c) => ({ id: c.id, label: c.name }))}
-          locations={locations.map((l) => ({ id: l.id, label: l.label }))}
-          definitions={definitions}
-        />
+        <Disclosure summary="Add an asset" defaultOpen={assets.length === 0} className="mt-6">
+          <CreateAssetForm
+            organizationId={organizationId}
+            customers={customers.map((c) => ({ id: c.id, label: c.name }))}
+            locations={locations.map((l) => ({ id: l.id, label: l.label }))}
+            definitions={definitions}
+          />
+        </Disclosure>
       ) : (
-        <p className="mt-8 text-sm opacity-70">
+        <Hint className="mt-6">
           Your role, {organization.role}, cannot add assets here.
-        </p>
+        </Hint>
       )}
+
+      <div className="mt-6">
+        <DataTable
+          rows={assets}
+          rowKey={(asset) => asset.id}
+          empty="No assets yet."
+          // **Recording a reading is the action a list of assets implies**, which is why it is
+          // the row action rather than a form under every entry. Nothing is assumed about what
+          // a counter counts — hours, miles, cycles — and a machine nobody meters has none.
+          actions={
+            mayAdd
+              ? (asset) => (
+                  <RecordReadingForm
+                    organizationId={organizationId}
+                    assetId={asset.id}
+                    assetName={asset.name}
+                    lastUnit={readings.get(asset.id)?.unit ?? ''}
+                  />
+                )
+              : undefined
+          }
+          columns={[
+            { key: 'name', header: 'Asset', emphasis: 'primary', cell: (asset) => asset.name },
+            {
+              key: 'where',
+              header: 'Whose, and where',
+              cell: (asset) =>
+                [
+                  asset.customer ? `Owned by ${asset.customer.label}` : null,
+                  asset.location ? `at ${asset.location.label}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ') || null,
+            },
+            {
+              key: 'reading',
+              header: 'Last read',
+              cell: (asset) => {
+                const reading = readings.get(asset.id);
+                if (!reading) return <span className="text-subtle">—</span>;
+                return (
+                  <span className="tabular-nums">
+                    {reading.value} {reading.unit}
+                    <span className="text-muted">
+                      {' '}
+                      · {new Date(reading.readAt).toLocaleDateString('en-GB')}
+                    </span>
+                  </span>
+                );
+              },
+            },
+            ...(definitions.length > 0
+              ? [
+                  {
+                    key: 'custom',
+                    header: 'Details',
+                    emphasis: 'secondary' as const,
+                    cell: (asset: (typeof assets)[number]) => (
+                      <CustomFieldValues definitions={definitions} custom={asset.custom} />
+                    ),
+                  },
+                ]
+              : []),
+          ]}
+        />
+      </div>
+
     </>
   );
 }
