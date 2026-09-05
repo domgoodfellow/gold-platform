@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -209,12 +209,29 @@ describe('what a business says about itself', () => {
     // Under `(public)` since the route groups landed. That group is a tenant's own customers;
     // `(marketing)` is GOLD speaking for itself and is deliberately not scanned here — see
     // that page, and D20, which had been using one word for both.
-    const routes = [
-      'app/(public)/book/[slug]/page.tsx',
-      'app/(public)/book/[slug]/[workItemId]/page.tsx',
-    ].map((path) =>
-      withoutComments(readFileSync(fileURLToPath(new URL(`../${path}`, import.meta.url)), 'utf8')),
-    );
+    //
+    // **Every file under the group, found by walking it — not a list.** This was two paths
+    // written out by hand, which meant the guard covered the two files somebody remembered and
+    // nothing else: the customer portal renders the same header and was never scanned at all,
+    // and the first `loading.tsx` added to the booking route would have been outside it too.
+    // A guard whose reach depends on a later author remembering to extend it is a guard for
+    // careful authors, and this file's own docblock claims the opposite.
+    const group = fileURLToPath(new URL('../app/(public)', import.meta.url));
+
+    const sourcesUnder = (directory: string): string[] =>
+      readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        const full = `${directory}/${entry.name}`;
+        if (entry.isDirectory()) return sourcesUnder(full);
+        return entry.name.endsWith('.tsx') || entry.name.endsWith('.ts')
+          ? [withoutComments(readFileSync(full, 'utf8'))]
+          : [];
+      });
+
+    const routes = sourcesUnder(group);
+
+    // A guard that scans nothing passes silently, which is the one way this could rot without
+    // anybody noticing. The count is not asserted — files come and go — but emptiness is.
+    expect(routes.length).toBeGreaterThan(0);
 
     // Phrases that speak *for* a business rather than about the system. Each was on the page
     // before this slice existed, which is why they are the examples.

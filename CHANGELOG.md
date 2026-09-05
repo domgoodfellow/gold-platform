@@ -5,6 +5,52 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Nothing streamed, and an unhandled error took the whole route
+
+Every screen here is `force-dynamic` and awaits several reads under RLS before it can render
+anything, and there was no `loading.tsx` or `error.tsx` anywhere in the application. So a person
+moving between Work and Customers looked at the *previous* screen for the whole of that wait with
+no sign anything was happening, and anything that threw took the entire page including the
+navigation.
+
+The shell survives. `loading.js` and `error.js` sit *inside* the layout above them, so the sidebar,
+the business's name and its brand stay on screen and only the content column changes. The skeleton
+draws bars rather than a silhouette of the page it stands in for: these screens are shaped by what
+each tenant configured, and a business with three custom fields and one with none do not share an
+outline.
+
+`error.tsx` is for the unexpected half only — a refusal a person can act on is a `DomainError`
+caught by the action that raised it and rendered beside the control that caused it. It shows
+`error.digest` and not `error.message`, because Next forwards a generic message for anything thrown
+in a Server Component *precisely so* server detail cannot reach a browser; the digest is the half
+that matches the server log.
+
+`not-found.tsx` is the one worth reading. `requireOrganization` calls `notFound()` for two reasons
+it must not tell apart: the business does not exist, or it exists and the caller holds no
+membership in it. RLS answers both with no row, and that identical answer **is** the security
+property — a page saying *this exists but is not yours* would confirm a tenant's existence to an
+outsider one URL at a time.
+
+`global-error.tsx` replaces the document, so `globals.css` never loads and every class in
+`components/` would do nothing. Its styles are inline and plain, and no tenant brand is applied:
+the code that knows whose page this is, is the code that just failed.
+
+**The prop is `retry`, not `reset`.** Next 16 renamed it, and `AGENTS.md`'s standing warning that
+this version diverges from training data is why the bundled docs were read rather than it being
+written from memory — `reset` would have typechecked as an unused prop and produced a dead button.
+
+### The public copy guard covered two files somebody remembered
+
+`public-profile.test.ts` reads public route source and fails on a sentence the platform puts in a
+business's mouth — its own docblock says it is the test that "survives a careless author". It was
+scanning a hardcoded list of two paths, so the customer portal renders the same header and was
+never scanned at all, and the first `loading.tsx` added to the booking route would have fallen
+outside it too.
+
+It walks `app/(public)` now. Verified non-vacuous by planting *Welcome* in the portal and watching
+it fail — in a file the old guard could not see — and it asserts it scanned something, because a
+guard that reads nothing passes quietly.
+
 ### A row says what can be done to it, and a table stops being a table on a phone
 
 The control set that landed with `ui-spec.md` fixed how a screen was *spelled* — one button, one
