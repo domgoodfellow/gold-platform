@@ -5,6 +5,44 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A business looks like itself, and cannot make its own screens unreadable
+
+D23 rejected a per-tenant theme by name and sent it to D20's marketing surface. Two of the three
+things it said were right — the shape (colour, lettering, logo) and the insistence that a theme is
+worthless until every control reads a role instead of a literal. The third was wrong: a per-tenant
+*site* needs a paying tenant asking for one, while a business looking like itself on the screens it
+already has needs no such evidence, and the cost of not having it was paid daily on a surface that
+read as a specification rather than as a product.
+
+`brand_settings` holds **one** colour, a lettering pair from a closed list and a logo. It renders by
+overriding three CSS roles on the operator shell and both public surfaces. Not one control changed,
+which is the ground already laid by `ui-spec.md` §3 being collected rather than a coincidence.
+
+**One colour and not five.** The `mamouandco` table D23 records has five colour roles, and that
+shape does not survive being handed to somebody who is not a designer: five colours is five ways to
+put unreadable text on your own screens. `lib/domain/branding/palette.ts` derives the rest against
+WCAG AA — a button's label is black or white by measurement, and the colour used as a *link* moves
+in lightness, hue intact, until it reads on the page behind it. There is one such calculation and
+there may not be a second, on I4 and I5's grounds. `branding.test.ts` asserts it over ten colours
+including pure yellow, white, and the mid grey where black and white are equally bad, in both
+schemes.
+
+**What a tenant may not recolour is as decided as what it may.** The page, the rules, the hint text
+and `danger` stay the platform's. A business overriding its own page background can make its own
+text vanish, and a tenant recolouring what a refusal looks like is §7's mistake wearing a brand.
+
+The `brand` bucket is the one public bucket in this database. *Never serve a private file from a
+durable public URL* is a rule about files whose **existence** is confidential — every example it
+gives is one — and a logo is the opposite kind of object. Who may **write** is unchanged, enforced
+by the same tenant-id path prefix `documents` uses.
+
+Drafting proposes a voice and a brand alongside the rest of a setup, and `configureBusiness` writes
+them last — after everything gated by a different capability, so a member who may configure the
+work but not rename the business gets the whole operational setup and is refused only at the end.
+The drafting adapter is told not to write a claim the business did not make, and not to invent a
+colour: a tagline you made up is on a page a customer reads, and a colour you made up is on every
+screen they look at.
+
 ### Signing up asks two questions
 
 The first screen somebody meets asked four things at once: a business name, their own name, an IANA

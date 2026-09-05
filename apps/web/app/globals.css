@@ -1,13 +1,63 @@
 @import "tailwindcss";
 
+/* The colour roles. `docs/ui-spec.md` §3 says why each one exists; this file is where the
+   values live and is the only place they may. A role is named for what it is used for, never
+   for a business meaning -- there is no `success` and no `pending`, because a status is a row
+   the tenant owns and the platform does not know what it means (D23, ui-spec §7).
+
+   Two muted levels rather than one: the screens already used `opacity-70` and `opacity-60` as
+   distinct weights, so the roles record a distinction that was being made by hand. */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* A control or card sitting on the page. Equal to the page in light, lifted in dark --
+     which is why it is a role rather than an alias for --background. */
+  --surface: #ffffff;
+
+  /* The rule between things. Was `black/10 dark:white/15` at 24 hand-written call sites. */
+  --border: rgb(0 0 0 / 0.12);
+
+  /* Hint and help text, and the second, quieter weight beneath it. */
+  --muted: rgb(23 23 23 / 0.7);
+  --subtle: rgb(23 23 23 / 0.6);
+
+  /* A refusal, an error, a destructive action. The screens spelled this as red-600 in some
+     places and red-700 in others; one role is the point. */
+  --danger: #dc2626;
+
+  /* The three roles a tenant's own colour lands in, and their defaults are the platform's own
+     look rather than a colour. A business that has chosen nothing renders exactly as this
+     application did before brands existed -- `--accent` resolving to the foreground is what
+     makes the primary button unchanged -- so there is no "unbranded" styling to maintain
+     separately from the branded one.
+
+     `BrandStyle` overrides these three and nothing else. Every other role above stays the
+     platform's, which is the whole of how a tenant gets its colour without being able to make
+     its own screens unreadable: see `lib/domain/branding/palette.ts`. */
+  --accent: var(--foreground);
+  --on-accent: var(--background);
+  /* The accent used as *text*. Separate from --accent because a colour that is legible as a
+     button is not necessarily legible as a link, and the adjustment differs per scheme. */
+  --accent-text: var(--foreground);
+
+  /* Lettering. A tenant picks a pair from a closed list; both default to what the root layout
+     already loads, so choosing nothing changes nothing. */
+  --font-heading: var(--font-geist-sans), system-ui, sans-serif;
+  --font-body: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-danger: var(--danger);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-accent-text: var(--accent-text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -16,6 +66,11 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --surface: #141414;
+    --border: rgb(255 255 255 / 0.16);
+    --muted: rgb(237 237 237 / 0.7);
+    --subtle: rgb(237 237 237 / 0.6);
+    --danger: #f87171;
   }
 }
 
@@ -23,6 +78,14 @@ body {
   background: var(--background);
   color: var(--foreground);
   /* The scaffold hardcoded Arial here, which silently discarded the Geist faces loaded in
-     layout.tsx and mapped to --font-sans just above. Use the variable it defines. */
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+     layout.tsx and mapped to --font-sans just above. Use the variable it defines -- now
+     through --font-body, which defaults to exactly that. */
+  font-family: var(--font-body);
+}
+
+/* Headings take the other half of the pair. An element selector rather than a class, because
+   the alternative is remembering to put one on all 52 `SectionHeading`s and every `<h1>` a
+   detail route renders -- and a brand that applies to most headings is worse than none. */
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
 }

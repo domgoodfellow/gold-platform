@@ -1,5 +1,9 @@
 'use client';
 
+import { Button } from '@/components/controls/button';
+import { Card } from '@/components/containers/card';
+import { EmptyState, SectionHeading } from '@/components/containers/section';
+import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { useActionState, useState } from 'react';
 import {
   CAPABILITIES,
@@ -15,6 +19,7 @@ import {
   type FieldKind,
 } from '@/lib/domain/fields/field-definitions';
 import { TRIGGER_EVENTS } from '@/lib/domain/automation/rules';
+import { FONT_KEYS, FONT_LABELS } from '@/lib/domain/branding/palette';
 import type { BusinessShape, ShapeField } from '@/lib/domain/onboarding/configure';
 import type { ConfigurationProposal } from '@/lib/domain/onboarding/proposals';
 import {
@@ -26,10 +31,6 @@ import {
 } from './actions';
 
 const INITIAL: SetupActionState = { error: null };
-
-const INPUT = 'rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20';
-const BUTTON =
-  'rounded border border-black/15 px-3 py-1 text-sm disabled:opacity-50 dark:border-white/20';
 
 /** ISO 8601, which is what `addOperatingHours` refuses anything else for. */
 const DAYS = [
@@ -45,9 +46,9 @@ const DAYS = [
 function Error({ state }: { state: SetupActionState }) {
   if (!state.error) return null;
   return (
-    <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
+    <ErrorText role="alert" className="mt-1">
       {state.error}
-    </p>
+    </ErrorText>
   );
 }
 
@@ -88,18 +89,25 @@ export function DescribeForm({
           ? 'Answer anything below, or say what to change. What you have already agreed to is kept.'
           : 'Describe the business in your own words — the work it does, how a job goes from start to finish, what you charge for, when you are open.'}
       </label>
-      <textarea
+      <TextArea
         id="description"
         name="description"
         rows={refining ? 4 : 8}
         required
         disabled={disabled}
-        className={`${INPUT} mt-2 w-full`}
+        size="small"
+        className="mt-2 w-full"
       />
 
-      <button type="submit" className={`${BUTTON} mt-2`} disabled={disabled || pending}>
+      <Button
+        type="submit"
+        disabled={disabled || pending}
+        tone="secondary"
+        size="small"
+        className="mt-2"
+      >
         {pending ? 'Drafting…' : refining ? 'Redraft' : 'Draft a setup'}
-      </button>
+      </Button>
       <Error state={state} />
     </form>
   );
@@ -110,9 +118,9 @@ function Row({ children, onRemove }: { children: React.ReactNode; onRemove: () =
   return (
     <div className="flex flex-wrap items-center gap-2">
       {children}
-      <button type="button" className={BUTTON} onClick={onRemove}>
+      <Button type="button" onClick={onRemove} tone="secondary" size="small">
         Remove
-      </button>
+      </Button>
     </div>
   );
 }
@@ -153,7 +161,7 @@ export function ProposalReview({
   return (
     <div className="mt-6">
       {proposal.gaps.length > 0 && (
-        <section className="rounded border border-black/15 p-3 dark:border-white/20">
+        <Card>
           <h3 className="text-sm font-medium">What this still needs from you</h3>
           {/* Rendered as written. The platform asked these questions and owns their words, but
               it does not answer them — an unfilled gap stays unfilled rather than being guessed
@@ -161,23 +169,23 @@ export function ProposalReview({
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
             {proposal.gaps.map((gap, index) => (
               <li key={`${gap.field}-${index}`}>
-                <span className="opacity-60">{gap.field}: </span>
+                <span className="text-subtle">{gap.field}: </span>
                 {gap.question}
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-sm opacity-70">
+          <Hint className="mt-2">
             Answer these in the box above and redraft, or fill them in below yourself.
-          </p>
-        </section>
+          </Hint>
+        </Card>
       )}
 
       <Section title="What you call the work">
-        <input
-          className={INPUT}
+        <TextInput
           value={shape.typeName}
           aria-label="What you call the work"
           onChange={(event) => set('typeName', event.target.value)}
+          size="small"
         />
       </Section>
 
@@ -207,8 +215,7 @@ export function ProposalReview({
               }))
             }
           >
-            <input
-              className={INPUT}
+            <TextInput
               value={status}
               aria-label={`Stage ${index + 1}`}
               onChange={(event) =>
@@ -217,25 +224,27 @@ export function ProposalReview({
                   shape.statuses.map((entry, at) => (at === index ? event.target.value : entry)),
                 )
               }
+              size="small"
             />
           </Row>
         ))}
-        <button
+        <Button
           type="button"
-          className={BUTTON}
           onClick={() => set('statuses', [...shape.statuses, ''])}
+          tone="secondary"
+          size="small"
         >
           Add a stage
-        </button>
+        </Button>
       </Section>
 
       <Section title="Which moves are allowed">
         {/* A type with no moves is frozen rather than unconstrained (I13), so an empty list here
             is a real answer and the screen says which one it is. */}
         {shape.transitions.length === 0 && (
-          <p className="text-sm opacity-70">
+          <EmptyState>
             None yet, which means work cannot move between stages at all until you add some.
-          </p>
+          </EmptyState>
         )}
         {shape.transitions.map(([from, to], index) => (
           <Row
@@ -248,9 +257,8 @@ export function ProposalReview({
             }
           >
             {([['from', from], ['to', to]] as const).map(([which, value]) => (
-              <select
+              <SelectInput
                 key={which}
-                className={INPUT}
                 value={value}
                 aria-label={`Move ${index + 1} ${which}`}
                 onChange={(event) =>
@@ -265,24 +273,26 @@ export function ProposalReview({
                     ) as [number, number][],
                   )
                 }
+                size="small"
               >
                 {shape.statuses.map((status, at) => (
                   <option key={at} value={at}>
                     {status || `Stage ${at + 1}`}
                   </option>
                 ))}
-              </select>
+              </SelectInput>
             ))}
           </Row>
         ))}
-        <button
+        <Button
           type="button"
-          className={BUTTON}
           disabled={shape.statuses.length < 2}
           onClick={() => set('transitions', [...shape.transitions, [0, 1]])}
+          tone="secondary"
+          size="small"
         >
           Add a move
-        </button>
+        </Button>
       </Section>
 
       <Section title="What you charge for">
@@ -296,8 +306,7 @@ export function ProposalReview({
               )
             }
           >
-            <input
-              className={INPUT}
+            <TextInput
               value={price.name}
               aria-label={`Item ${index + 1} name`}
               onChange={(event) =>
@@ -308,9 +317,9 @@ export function ProposalReview({
                   ),
                 )
               }
+              size="small"
             />
-            <input
-              className={INPUT}
+            <TextInput
               value={price.unit}
               aria-label={`Item ${index + 1} unit`}
               placeholder="hour, visit, each"
@@ -322,11 +331,11 @@ export function ProposalReview({
                   ),
                 )
               }
+              size="small"
             />
             {/* Minor units, uncomverted and undivided (I10). The label says so rather than the
                 screen guessing at a decimal point that means nothing in a currency without one. */}
-            <input
-              className={INPUT}
+            <TextInput
               type="number"
               value={price.amountMinor}
               aria-label={`Item ${index + 1} amount in minor units`}
@@ -338,25 +347,27 @@ export function ProposalReview({
                   ),
                 )
               }
+              size="small"
             />
           </Row>
         ))}
-        <button
+        <Button
           type="button"
-          className={BUTTON}
           onClick={() =>
             set('prices', [...shape.prices, { name: '', unit: '', amountMinor: 0 }])
           }
+          tone="secondary"
+          size="small"
         >
           Add something you charge for
-        </button>
+        </Button>
       </Section>
 
       <Section title="When you are open">
         {shape.hours.length === 0 && (
-          <p className="text-sm opacity-70">
+          <EmptyState>
             Nothing set, which is treated as always open. Nothing here assumes a working week.
-          </p>
+          </EmptyState>
         )}
         {shape.hours.map((entry, index) => (
           <Row
@@ -368,8 +379,7 @@ export function ProposalReview({
               )
             }
           >
-            <select
-              className={INPUT}
+            <SelectInput
               value={entry.dayOfWeek}
               aria-label={`Opening ${index + 1} day`}
               onChange={(event) =>
@@ -380,17 +390,17 @@ export function ProposalReview({
                   ),
                 )
               }
+              size="small"
             >
               {DAYS.map((day) => (
                 <option key={day.value} value={day.value}>
                   {day.label}
                 </option>
               ))}
-            </select>
+            </SelectInput>
             {(['opensAt', 'closesAt'] as const).map((which) => (
-              <input
+              <TextInput
                 key={which}
-                className={INPUT}
                 type="time"
                 value={entry[which].slice(0, 5)}
                 aria-label={`Opening ${index + 1} ${which === 'opensAt' ? 'from' : 'until'}`}
@@ -402,24 +412,26 @@ export function ProposalReview({
                     ),
                   )
                 }
+                size="small"
               />
             ))}
           </Row>
         ))}
-        <button
+        <Button
           type="button"
-          className={BUTTON}
           onClick={() =>
             set('hours', [...shape.hours, { dayOfWeek: 1, opensAt: '09:00', closesAt: '17:00' }])
           }
+          tone="secondary"
+          size="small"
         >
           Add a day
-        </button>
+        </Button>
       </Section>
 
       <Section title="Roles besides your own">
         {shape.roles.map((role, index) => (
-          <div key={index} className="rounded border border-black/15 p-2 dark:border-white/20">
+          <div key={index} className="rounded border border-border p-2">
             <Row
               onRemove={() =>
                 set(
@@ -428,8 +440,7 @@ export function ProposalReview({
                 )
               }
             >
-              <input
-                className={INPUT}
+              <TextInput
                 value={role.name}
                 aria-label={`Role ${index + 1} name`}
                 onChange={(event) =>
@@ -440,6 +451,7 @@ export function ProposalReview({
                     ),
                   )
                 }
+                size="small"
               />
             </Row>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
@@ -471,19 +483,20 @@ export function ProposalReview({
             </div>
           </div>
         ))}
-        <button
+        <Button
           type="button"
-          className={BUTTON}
           onClick={() => set('roles', [...shape.roles, { name: '', capabilities: [] }])}
+          tone="secondary"
+          size="small"
         >
           Add a role
-        </button>
+        </Button>
       </Section>
 
       <Section title="What else you record">
         {CUSTOM_FIELD_ENTITIES.map((entity) => (
           <div key={entity}>
-            <p className="text-sm opacity-70">{CUSTOM_FIELD_ENTITY_LABELS[entity]}</p>
+            <Hint>{CUSTOM_FIELD_ENTITY_LABELS[entity]}</Hint>
             {fieldsFor(entity).map((field, index) => (
               <Row
                 key={index}
@@ -494,8 +507,7 @@ export function ProposalReview({
                   )
                 }
               >
-                <input
-                  className={INPUT}
+                <TextInput
                   value={field.label}
                   aria-label={`${entity} field ${index + 1} label`}
                   onChange={(event) =>
@@ -506,11 +518,12 @@ export function ProposalReview({
                       ),
                     )
                   }
+                  size="small"
                 />
                 {/* `key` and `kind` are shown and not editable, because they are not editable by
                     anyone through any path once written — the column grant refuses them. Letting
                     somebody change one here would be a form that works until it is applied. */}
-                <span className="text-sm opacity-60">
+                <span className="text-sm text-subtle">
                   {field.key} · {FIELD_KIND_LABELS[field.kind as FieldKind]}
                 </span>
                 <label className="text-sm">
@@ -531,9 +544,8 @@ export function ProposalReview({
                 </label>
               </Row>
             ))}
-            <button
+            <Button
               type="button"
-              className={`${BUTTON} mt-1`}
               onClick={() =>
                 setFields(entity, [
                   ...fieldsFor(entity),
@@ -545,9 +557,12 @@ export function ProposalReview({
                   },
                 ])
               }
+              tone="secondary"
+              size="small"
+              className="mt-1"
             >
               Add to {CUSTOM_FIELD_ENTITY_LABELS[entity].toLowerCase()}
-            </button>
+            </Button>
           </div>
         ))}
       </Section>
@@ -563,8 +578,7 @@ export function ProposalReview({
               )
             }
           >
-            <input
-              className={INPUT}
+            <TextInput
               value={rule.name}
               aria-label={`Rule ${index + 1} name`}
               onChange={(event) =>
@@ -575,9 +589,9 @@ export function ProposalReview({
                   ),
                 )
               }
+              size="small"
             />
-            <select
-              className={INPUT}
+            <SelectInput
               value={rule.on}
               aria-label={`Rule ${index + 1} trigger`}
               onChange={(event) =>
@@ -588,15 +602,15 @@ export function ProposalReview({
                   ),
                 )
               }
+              size="small"
             >
               {TRIGGER_EVENTS.map((event) => (
                 <option key={event.action} value={event.action}>
                   When {event.label}
                 </option>
               ))}
-            </select>
-            <select
-              className={INPUT}
+            </SelectInput>
+            <SelectInput
               value={rule.moveTo}
               aria-label={`Rule ${index + 1} destination`}
               onChange={(event) =>
@@ -607,18 +621,18 @@ export function ProposalReview({
                   ),
                 )
               }
+              size="small"
             >
               {shape.statuses.map((status, at) => (
                 <option key={at} value={at}>
                   move it to {status || `Stage ${at + 1}`}
                 </option>
               ))}
-            </select>
+            </SelectInput>
           </Row>
         ))}
-        <button
+        <Button
           type="button"
-          className={BUTTON}
           disabled={shape.statuses.length === 0}
           onClick={() =>
             set('automations', [
@@ -626,43 +640,158 @@ export function ProposalReview({
               { name: '', on: TRIGGER_EVENTS[0].action, moveTo: 0 },
             ])
           }
+          tone="secondary"
+          size="small"
         >
           Add a rule
-        </button>
+        </Button>
       </Section>
 
-      <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-black/10 pt-4 dark:border-white/15">
+      {/* **The two parts of a proposal that are about how the business appears rather than how
+          it works**, and they are last on purpose: somebody reviewing a setup is deciding
+          whether the stages and the prices are right, and a colour picker above that would be
+          the least consequential thing on the screen sitting at the top of it. */}
+      <Section title="What you say about yourself">
+        <Hint weight="subtle">
+          Shown to customers on your public page, above anything else. Yours to write — the
+          platform adds nothing to it, and leaving it empty shows your name and nothing else.
+        </Hint>
+        <TextInput
+          value={shape.voice?.tagline ?? ''}
+          aria-label="Tagline"
+          placeholder="One line under your name"
+          onChange={(event) =>
+            set('voice', {
+              tagline: event.target.value,
+              intro: shape.voice?.intro ?? '',
+            })
+          }
+          size="small"
+          className="w-full"
+        />
+        <TextArea
+          value={shape.voice?.intro ?? ''}
+          aria-label="Introduction"
+          rows={3}
+          placeholder="A short paragraph a customer reads before booking"
+          onChange={(event) =>
+            set('voice', {
+              tagline: shape.voice?.tagline ?? '',
+              intro: event.target.value,
+            })
+          }
+          size="small"
+          className="w-full"
+        />
+      </Section>
+
+      <Section title="How it looks">
+        <Hint weight="subtle">
+          Your colour is used for buttons and links, on these screens and on your public page.
+          Everything else stays as it is, and the colour is darkened automatically wherever it
+          would be hard to read — so nothing you choose here can make your own screens
+          illegible.
+        </Hint>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="color"
+            aria-label="Your colour"
+            value={shape.brand?.accent || '#000000'}
+            onChange={(event) =>
+              set('brand', {
+                accent: event.target.value,
+                headingFont: shape.brand?.headingFont ?? 'sans',
+                bodyFont: shape.brand?.bodyFont ?? 'sans',
+              })
+            }
+            className="h-8 w-10 cursor-pointer rounded border border-border bg-transparent"
+          />
+          <TextInput
+            value={shape.brand?.accent ?? ''}
+            aria-label="Your colour, as a hex value"
+            placeholder="#1f6feb"
+            maxLength={7}
+            onChange={(event) =>
+              set('brand', {
+                accent: event.target.value,
+                headingFont: shape.brand?.headingFont ?? 'sans',
+                bodyFont: shape.brand?.bodyFont ?? 'sans',
+              })
+            }
+            size="small"
+            className="w-28 font-mono"
+          />
+          <SelectInput
+            value={shape.brand?.headingFont ?? 'sans'}
+            aria-label="Heading lettering"
+            onChange={(event) =>
+              set('brand', {
+                accent: shape.brand?.accent ?? '',
+                headingFont: event.target.value,
+                bodyFont: shape.brand?.bodyFont ?? 'sans',
+              })
+            }
+            size="small"
+          >
+            {FONT_KEYS.map((key) => (
+              <option key={key} value={key}>
+                Headings: {FONT_LABELS[key]}
+              </option>
+            ))}
+          </SelectInput>
+          <SelectInput
+            value={shape.brand?.bodyFont ?? 'sans'}
+            aria-label="Body lettering"
+            onChange={(event) =>
+              set('brand', {
+                accent: shape.brand?.accent ?? '',
+                headingFont: shape.brand?.headingFont ?? 'sans',
+                bodyFont: event.target.value,
+              })
+            }
+            size="small"
+          >
+            {FONT_KEYS.map((key) => (
+              <option key={key} value={key}>
+                Text: {FONT_LABELS[key]}
+              </option>
+            ))}
+          </SelectInput>
+        </div>
+      </Section>
+
+      <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-4">
         <form action={save}>
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="proposalId" value={proposal.id} />
           <input type="hidden" name="shape" value={JSON.stringify(shape)} />
-          <button type="submit" className={BUTTON} disabled={saving}>
+          <Button type="submit" disabled={saving} tone="secondary" size="small">
             {saving ? 'Saving…' : 'Save changes'}
-          </button>
+          </Button>
         </form>
 
         <form action={apply}>
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="proposalId" value={proposal.id} />
-          <button type="submit" className={BUTTON} disabled={applying}>
+          <Button type="submit" disabled={applying} tone="secondary" size="small">
             {applying ? 'Applying…' : 'Apply this setup'}
-          </button>
+          </Button>
         </form>
 
         <form action={discard}>
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="proposalId" value={proposal.id} />
-          <button type="submit" className={BUTTON} disabled={discarding}>
+          <Button type="submit" disabled={discarding} tone="secondary" size="small">
             Discard
-          </button>
+          </Button>
         </form>
       </div>
 
       {/* Save first, then apply — said out loud because the two buttons sit together and a
           person who edited and pressed Apply would otherwise apply what they started with. */}
-      <p className="mt-2 text-sm opacity-70">
+      <Hint className="mt-2">
         Applying uses the last saved version. Save your changes first if you have made any.
-      </p>
+      </Hint>
 
       <Error state={saveState} />
       <Error state={applyState} />
@@ -683,20 +812,20 @@ export function ProposalHistory({ proposals }: { proposals: ConfigurationProposa
   if (proposals.length === 0) return null;
 
   return (
-    <section className="mt-10 border-t border-black/10 pt-4 dark:border-white/15">
-      <h2 className="text-sm font-medium">What has been proposed before</h2>
+    <section className="mt-10 border-t border-border pt-4">
+      <SectionHeading>What has been proposed before</SectionHeading>
       <ul className="mt-2 space-y-3">
         {proposals.map((proposal) => (
           <li key={proposal.id} className="text-sm">
-            <span className="opacity-60">
+            <span className="text-subtle">
               {new Date(proposal.createdAt).toLocaleString()} · {proposal.outcome} · drafted by{' '}
               {proposal.draftedBy}
             </span>
             <p className="mt-1 max-w-2xl whitespace-pre-wrap opacity-80">{proposal.description}</p>
             {proposal.detail && (
-              <p className="mt-1 max-w-2xl text-red-600 dark:text-red-400">
+              <ErrorText className="mt-1 max-w-2xl">
                 Stopped part-way: {proposal.detail}
-              </p>
+              </ErrorText>
             )}
           </li>
         ))}

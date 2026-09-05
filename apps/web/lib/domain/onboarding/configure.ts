@@ -11,9 +11,11 @@ import {
   addAutomationAction,
   createAutomationRule,
 } from '@/lib/domain/automation/rules';
+import { setBrand } from '@/lib/domain/branding/brand';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { addOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { createRole } from '@/lib/domain/tenancy/roles';
+import { publicProfile, setPublicProfile } from '@/lib/domain/tenancy/profile';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemTransition } from '@/lib/domain/work-items/transitions';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
@@ -120,6 +122,26 @@ export type BusinessShape = {
    * written before M6 existed is still a valid shape.
    */
   automations?: ShapeAutomation[];
+  /**
+   * What it says about itself, in its own words.
+   *
+   * **The only part of a shape that is prose rather than structure**, and it is here for the
+   * reason `constraints.md` forbids hardcoding a claim a business makes about itself: a public
+   * page with no tagline renders a name and stops, which is honest and blank. A business that
+   * has just described itself in a paragraph has already said the thing that belongs there.
+   *
+   * Optional, and empty strings clear rather than write. A shape written before this existed is
+   * still a valid shape.
+   */
+  voice?: { tagline: string; intro: string };
+  /**
+   * How it looks: one colour and a pair of lettering choices.
+   *
+   * Optional for the same reason. **No branch on what kind of business this is** — a colour is
+   * a colour whoever chose it, which is what lets this field sit inside a function that must
+   * never learn what it is holding.
+   */
+  brand?: { accent: string; headingFont: string; bodyFont: string };
 };
 
 /** What standing a business up produced, so a caller can carry on working with it. */
@@ -284,6 +306,44 @@ export async function configureBusiness(
       statusId: statusIds[automation.moveTo],
     });
     automationRuleIds.push(ruleId);
+  }
+
+  // **Last, and after everything that can fail on a capability.** How a business looks and what
+  // it says about itself are `organization.manage`, while everything above is a different
+  // capability each — so a member configuring a business they may operate but not rename gets
+  // the whole operational setup and is refused only here, rather than being refused first and
+  // getting nothing.
+  //
+  // Nothing branches on the content. A tagline is written because the shape carried one, not
+  // because of what it says.
+  if (shape.voice) {
+    // **Read first, because `setPublicProfile` writes the whole row.** A shape carries two of
+    // its six fields, so passing empty strings for the rest would clear a phone number this
+    // business had already typed in — which is exactly the failure mode a form that forgets a
+    // hidden field has, arriving through a domain call instead.
+    const existing = await publicProfile(db, { organizationId, fallbackName: '' });
+
+    await setPublicProfile(db, {
+      organizationId,
+      // Not part of the voice: a business's public display name is `organizations.name` until
+      // it says otherwise, and having the drafting propose a second name for the same business
+      // is how two names start disagreeing.
+      displayName: existing.displayName,
+      tagline: shape.voice.tagline,
+      intro: shape.voice.intro,
+      contactEmail: existing.contactEmail ?? '',
+      contactPhone: existing.contactPhone ?? '',
+      address: existing.address ?? '',
+    });
+  }
+
+  if (shape.brand) {
+    await setBrand(db, {
+      organizationId,
+      accent: shape.brand.accent,
+      headingFont: shape.brand.headingFont,
+      bodyFont: shape.brand.bodyFont,
+    });
   }
 
   return { organizationId, typeId, statusIds, roleIds, priceBookItemIds, automationRuleIds };

@@ -9,6 +9,7 @@ import {
   addOperatingHours,
   removeOperatingHours,
 } from '@/lib/domain/scheduling/operating-hours';
+import { removeLogo, setBrand, uploadLogo } from '@/lib/domain/branding/brand';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { setPublicProfile } from '@/lib/domain/tenancy/profile';
 
@@ -170,5 +171,78 @@ export async function disconnectPaymentAccountAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/settings`);
+  return { error: null };
+}
+
+export type BrandState = { error: string | null };
+
+/**
+ * Choose a colour and a pair of lettering choices.
+ *
+ * **Revalidates the layout, not the page.** A brand is rendered by the shell — the roles come
+ * from `BrandStyle` in `layout.tsx` — so revalidating only this screen would save a colour and
+ * show the old one everywhere including the form that just saved it.
+ */
+export async function updateBrandAction(
+  _previous: BrandState,
+  formData: FormData,
+): Promise<BrandState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await setBrand(db, {
+      organizationId,
+      accent: String(formData.get('accent') ?? ''),
+      headingFont: String(formData.get('headingFont') ?? ''),
+      bodyFont: String(formData.get('bodyFont') ?? ''),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
+  return { error: null };
+}
+
+export async function uploadLogoAction(
+  _previous: BrandState,
+  formData: FormData,
+): Promise<BrandState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const file = formData.get('logo');
+
+  if (!(file instanceof File)) {
+    return { error: 'Choose an image to upload.' };
+  }
+
+  try {
+    await uploadLogo(db, { organizationId, file });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
+  return { error: null };
+}
+
+export async function removeLogoAction(
+  _previous: BrandState,
+  formData: FormData,
+): Promise<BrandState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await removeLogo(db, { organizationId });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
   return { error: null };
 }

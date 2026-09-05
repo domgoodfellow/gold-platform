@@ -1,12 +1,16 @@
+import { Hint } from '@/components/controls/inputs';
+import { DividedList, Section, SectionHeading } from '@/components/containers/section';
 import { ProfileForm } from '@/features/public-profile/profile-form';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { paymentProvider } from '@/lib/adapters/payments';
 import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
 import { listModuleSettings, outstandingModuleSetup } from '@/lib/domain/tenancy/modules';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
+import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { moduleConfiguration } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { updateProfileAction } from './actions';
+import { BrandForm, LogoForm } from './brand-forms';
 import {
   AddOperatingHoursForm,
   OperatingHoursRow,
@@ -32,11 +36,12 @@ export default async function SettingsPage({
   const { db, organization } = await requireOrganization(organizationId);
 
   const provider = await paymentProvider();
-  const [hours, profile, modules, paymentAccount] = await Promise.all([
+  const [hours, profile, modules, paymentAccount, brand] = await Promise.all([
     listOperatingHours(db, { organizationId }),
     publicProfile(db, { organizationId, fallbackName: organization.name }),
     listModuleSettings(db, { organizationId }),
     provider ? getPaymentAccount(db, { organizationId, provider: provider.name }) : null,
+    getBrand(db, { organizationId }),
   ]);
 
   // What is still missing for the modules this business has on (D31). Asked after the list,
@@ -55,16 +60,13 @@ export default async function SettingsPage({
       {/* The section ids here are anchors a module's switch links to (D31), so they are part
           of `navigation.ts`'s `configuredAt` contract rather than decoration.
           `navigation.test.ts` reads this file and fails on one that has been renamed away. */}
-      <section
-        id="public-page"
-        className="mt-8 scroll-mt-6 border-t border-black/10 pt-6 dark:border-white/15"
-      >
-        <h2 className="text-sm font-medium">Public page</h2>
-        <p className="mt-1 text-sm opacity-70">
+      <Section id="public-page" className="mt-8 scroll-mt-6">
+        <SectionHeading>Public page</SectionHeading>
+        <Hint className="mt-1">
           What customers see before they book. Everything here is this business&rsquo;s own
           words — the platform writes none of it, and a page left empty shows the business name
           and nothing else.
-        </p>
+        </Hint>
 
         {mayManage ? (
           <ProfileForm
@@ -74,19 +76,46 @@ export default async function SettingsPage({
             action={updateProfileAction}
           />
         ) : (
-          <p className="mt-4 text-sm opacity-70">
+          <Hint className="mt-4">
             Your role, {organization.role}, cannot change what this business says about itself.
-          </p>
+          </Hint>
         )}
-      </section>
+      </Section>
 
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">This business</h2>
-        <p className="mt-1 text-sm opacity-70">
+      {/* **Above *This business* and below *Public page*, which is where it belongs.** A brand
+          is a claim a business makes about itself in the same way a tagline is, and it is read
+          by the same person in the same sitting — while the section below is about clocks and
+          currencies, which is a different kind of question entirely. */}
+      <Section className="mt-8">
+        <SectionHeading>How this business looks</SectionHeading>
+        <Hint className="mt-1">
+          Your colour, your lettering and your logo, on these screens and on any page your
+          customers see. The page itself stays readable whatever you choose — a colour is used
+          for buttons and links, and darkened automatically where it would be hard to read.
+        </Hint>
+
+        {mayManage ? (
+          <>
+            <BrandForm organizationId={organizationId} brand={brand} />
+            <LogoForm
+              organizationId={organizationId}
+              logoUrl={brand.logoPath ? logoUrl(db, brand.logoPath) : null}
+            />
+          </>
+        ) : (
+          <Hint className="mt-4">
+            Your role, {organization.role}, cannot change how this business looks.
+          </Hint>
+        )}
+      </Section>
+
+      <Section className="mt-8">
+        <SectionHeading>This business</SectionHeading>
+        <Hint className="mt-1">
           Changing the currency does not reinterpret what past jobs cost, and changing the
           timezone does not move any booking — each amount carries the currency it was
           recorded in, and every scheduled window is an absolute instant.
-        </p>
+        </Hint>
 
         {mayManage ? (
           <OrganizationSettingsForm
@@ -98,22 +127,22 @@ export default async function SettingsPage({
             currency={organization.currency}
           />
         ) : (
-          <p className="mt-2 text-sm opacity-70">
+          <Hint className="mt-2">
             Your role, {organization.role}, cannot change these.
-          </p>
+          </Hint>
         )}
-      </section>
+      </Section>
 
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Opening hours</h2>
-        <p className="mt-1 text-sm opacity-70">
+      <Section className="mt-8">
+        <SectionHeading>Opening hours</SectionHeading>
+        <Hint className="mt-1">
           {hours.length === 0
             ? 'None set, so the schedule treats every hour as available. Nothing here is assumed — which days this business works, and when, are yours to say.'
             : `Used by the schedule to work out what is free. Times are read in ${organization.timezone}.`}
-        </p>
+        </Hint>
 
         {hours.length > 0 ? (
-          <div className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+          <DividedList as="div" className="mt-2">
             {hours.map((entry) =>
               mayConfigure ? (
                 <OperatingHoursRow
@@ -122,22 +151,22 @@ export default async function SettingsPage({
                   hours={entry}
                 />
               ) : (
-                <p key={entry.id} className="py-2 text-sm opacity-70">
+                <Hint key={entry.id} className="py-2">
                   {entry.opensAt.slice(0, 5)}–{entry.closesAt.slice(0, 5)}
-                </p>
+                </Hint>
               ),
             )}
-          </div>
+          </DividedList>
         ) : null}
 
         {mayConfigure ? (
           <AddOperatingHoursForm organizationId={organizationId} />
         ) : (
-          <p className="mt-2 text-sm opacity-70">
+          <Hint className="mt-2">
             Your role, {organization.role}, cannot set opening hours.
-          </p>
+          </Hint>
         )}
-      </section>
+      </Section>
 
       {/* **Shown whenever this business has card payments on — including when the deployment
           has no processor at all**, which is the change D31 exists for. This section used to be
@@ -147,17 +176,14 @@ export default async function SettingsPage({
           card payments on still sees nothing, and that is the opposite case — the module is not
           part of that business, so there is nobody to explain anything to. */}
       {enabled.has('card_payments') ? (
-        <section
-          id="getting-paid"
-          className="mt-8 scroll-mt-6 border-t border-black/10 pt-6 dark:border-white/15"
-        >
-          <h2 className="text-sm font-medium">Getting paid</h2>
-          <p className="mt-1 text-sm opacity-70">
+        <Section id="getting-paid" className="mt-8 scroll-mt-6">
+          <SectionHeading>Getting paid</SectionHeading>
+          <Hint className="mt-1">
             Card payments go directly to this business. GOLD never holds the money, and this
             business keeps its own account with the payment provider.
-          </p>
+          </Hint>
           {provider ? (
-            <div className="mt-2 border-t border-black/10 dark:border-white/15">
+            <div className="mt-2 border-t border-border">
               <PaymentAccountRow
                 organizationId={organizationId}
                 provider={provider.name}
@@ -167,28 +193,28 @@ export default async function SettingsPage({
               />
             </div>
           ) : (
-            <p className="mt-2 text-sm opacity-70">
+            <Hint className="mt-2">
               This deployment has no payment processor yet, so there is no account to connect.
               Nothing is wrong with this business&rsquo;s settings and there is nothing to do
               here until one is configured. Invoices still record cash and bank payments.
-            </p>
+            </Hint>
           )}
-        </section>
+        </Section>
       ) : null}
 
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">What this business uses</h2>
+      <Section className="mt-8">
+        <SectionHeading>What this business uses</SectionHeading>
         {/* Modules: what this business switched on and is billed for, not what a role may do
             (`constraints.md` D25). Switching one off removes its area from the navigation and
             removes nothing it produced — a business that stops offering public booking keeps
             every job somebody booked. */}
-        <p className="mt-1 text-sm opacity-70">
+        <Hint className="mt-1">
           Turning something off hides it from this business. Nothing it has already recorded is
           removed. What every business gets — work, the schedule, customers, people and these
           settings — is not listed here, because it was never sold separately.
-        </p>
+        </Hint>
 
-        <div className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+        <DividedList as="div" className="mt-2">
           {modules.map(({ module, enabledAt }) => {
             // D31: a switch leads to its inputs. Resolved here rather than in the client
             // component because where a module is configured is `navigation.ts`'s answer, not a
@@ -210,14 +236,14 @@ export default async function SettingsPage({
               />
             );
           })}
-        </div>
+        </DividedList>
 
         {mayManage ? null : (
-          <p className="mt-2 text-sm opacity-70">
+          <Hint className="mt-2">
             Your role, {organization.role}, cannot change what this business uses.
-          </p>
+          </Hint>
         )}
-      </section>
+      </Section>
     </>
   );
 }

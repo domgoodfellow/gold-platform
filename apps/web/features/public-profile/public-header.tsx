@@ -1,3 +1,5 @@
+import { Hint } from '@/components/controls/inputs';
+import { PageHeading } from '@/components/containers/section';
 import type { PublicProfile } from '@/lib/domain/tenancy/profile';
 
 /**
@@ -14,13 +16,34 @@ import type { PublicProfile } from '@/lib/domain/tenancy/profile';
  * Lives in `features/` rather than beside a route because two surfaces need it — booking
  * renders it, admin previews what it will look like — and D23 says one component file
  * extended, never a parallel set per surface.
+ *
+ * **The logo is the one thing here the business did not write in words**, and it is the same
+ * kind of claim: a mark a business puts on its own page. It is optional exactly as every line
+ * below it is, so a business that has uploaded nothing renders its name and stops, unchanged.
  */
-export function PublicHeader({ profile }: { profile: PublicProfile }) {
+export function PublicHeader({
+  profile,
+  logoUrl = null,
+}: {
+  profile: PublicProfile;
+  logoUrl?: string | null;
+}) {
   const contacts = [profile.contactPhone, profile.contactEmail, profile.address].filter(Boolean);
 
   return (
     <header>
-      <h1 className="text-2xl font-semibold">{profile.displayName}</h1>
+      {logoUrl ? (
+        // A tenant's own upload in a public bucket, not a build-time asset, and `next/image`
+        // would need every deployment's storage host named in its config.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoUrl}
+          alt=""
+          className="mb-4 max-h-16 w-auto max-w-64 object-contain"
+        />
+      ) : null}
+
+      <PageHeading>{profile.displayName}</PageHeading>
 
       {profile.tagline ? <p className="mt-1 text-sm opacity-80">{profile.tagline}</p> : null}
 
@@ -30,7 +53,7 @@ export function PublicHeader({ profile }: { profile: PublicProfile }) {
       ) : null}
 
       {contacts.length > 0 ? (
-        <p className="mt-4 text-sm opacity-70">{contacts.join(' · ')}</p>
+        <Hint className="mt-4">{contacts.join(' · ')}</Hint>
       ) : null}
     </header>
   );

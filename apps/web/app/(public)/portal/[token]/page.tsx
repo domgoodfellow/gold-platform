@@ -1,5 +1,10 @@
+import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
 import { notFound } from 'next/navigation';
+import { BrandStyle } from '@/features/branding/brand-style';
+import { Badge } from '@/components/display/data';
+import { DataTable } from '@/components/display/table';
 import { PublicHeader } from '@/features/public-profile/public-header';
+import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
 import { invoiceStanding, listInvoiceLines, listPayments } from '@/lib/domain/billing/invoices';
 import { claimPortalInvite } from '@/lib/domain/portal/portal';
@@ -51,7 +56,7 @@ export default async function PortalPage({ params }: PageProps<'/portal/[token]'
     notFound();
   }
 
-  const [profile, items, invoices] = await Promise.all([
+  const [profile, items, invoices, brand] = await Promise.all([
     publicProfile(db, { organizationId, fallbackName: organization.name }),
     db
       .from('work_items')
@@ -62,6 +67,7 @@ export default async function PortalPage({ params }: PageProps<'/portal/[token]'
     db.from('invoices').select('id, number, currency, issued_at').order('issued_at', {
       ascending: false,
     }),
+    getBrand(db, { organizationId }),
   ]);
 
   // The standing of each invoice, from the one calculation. Read per invoice rather than in
@@ -78,47 +84,65 @@ export default async function PortalPage({ params }: PageProps<'/portal/[token]'
   );
 
   return (
-    <main className="mx-auto max-w-xl p-6 sm:p-8">
-      <PublicHeader profile={profile} />
+    // `data-brand` scopes the roles `BrandStyle` writes. A public page is the surface a brand
+    // is most for: this is the page a business puts on the side of a van.
+    <main data-brand className="mx-auto max-w-xl p-6 sm:p-8">
+      <BrandStyle brand={brand} />
+      <PublicHeader
+        profile={profile}
+        logoUrl={brand.logoPath ? logoUrl(db, brand.logoPath) : null}
+      />
 
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Your work</h2>
+      <Section className="mt-8">
+        <SectionHeading>Your work</SectionHeading>
 
-        {(items.data ?? []).length === 0 ? (
-          <p className="mt-1 text-sm opacity-60">Nothing recorded yet.</p>
-        ) : (
-          <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
-            {(items.data ?? []).map((item) => {
-              const window = parseWindow(item.scheduled_during as string | null);
-              const status = Array.isArray(item.status) ? item.status[0] : item.status;
-              return (
-                <li key={item.id} className="py-2 text-sm">
-                  <div className="font-medium">{item.title}</div>
-                  <div className="opacity-70">
-                    {/* The tenant's own word for the state, rendered as written (D6). */}
-                    {[status?.name, window ? formatWindow(window, organization.timezone) : null]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+        <div className="mt-2">
+          <DataTable
+            rows={(items.data ?? []).map((item) => ({
+              id: item.id as string,
+              title: item.title as string,
+              window: parseWindow(item.scheduled_during as string | null),
+              status: Array.isArray(item.status) ? item.status[0] : item.status,
+            }))}
+            rowKey={(item) => item.id}
+            empty="Nothing recorded yet."
+            columns={[
+              { key: 'title', header: 'Work', emphasis: 'primary', cell: (item) => item.title },
+              {
+                key: 'status',
+                header: 'Stage',
+                // The tenant's own word for the state, rendered as written (D6) and coloured
+                // by nothing — a customer is the last person who should be told by a colour
+                // that their job is in trouble.
+                cell: (item) => (item.status?.name ? <Badge>{item.status.name}</Badge> : null),
+              },
+              {
+                key: 'when',
+                header: 'When',
+                cell: (item) =>
+                  item.window ? (
+                    <span className="tabular-nums">
+                      {formatWindow(item.window, organization.timezone)}
+                    </span>
+                  ) : null,
+              },
+            ]}
+          />
+        </div>
+      </Section>
 
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Your invoices</h2>
+      <Section className="mt-8">
+        <SectionHeading>Your invoices</SectionHeading>
 
         {standings.length === 0 ? (
-          <p className="mt-1 text-sm opacity-60">Nothing invoiced yet.</p>
+          <EmptyState weight="subtle" className="mt-1">Nothing invoiced yet.</EmptyState>
         ) : (
-          <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+          <DividedList className="mt-2">
             {standings.map(({ invoice, standing }) => (
               <li key={invoice.id} className="flex items-baseline justify-between gap-3 py-2 text-sm">
                 <span>
                   #{invoice.number}
-                  <span className="opacity-60">
+                  <span className="text-subtle">
                     {' '}
                     {new Intl.DateTimeFormat('en-GB', {
                       dateStyle: 'medium',
@@ -129,7 +153,7 @@ export default async function PortalPage({ params }: PageProps<'/portal/[token]'
                 <span className="shrink-0 tabular-nums">
                   {standing.total ? formatMoney(standing.total.totalMinor, standing.total.currency) : '—'}
                   {/* Settled is arithmetic over payments, never a column. */}
-                  <span className="ml-2 opacity-70">
+                  <span className="ml-2 text-muted">
                     {standing.settled
                       ? 'paid'
                       : standing.outstandingMinor !== null && standing.total
@@ -139,9 +163,9 @@ export default async function PortalPage({ params }: PageProps<'/portal/[token]'
                 </span>
               </li>
             ))}
-          </ul>
+          </DividedList>
         )}
-      </section>
+      </Section>
     </main>
   );
 }

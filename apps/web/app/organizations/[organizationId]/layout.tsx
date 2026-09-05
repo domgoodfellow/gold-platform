@@ -1,6 +1,10 @@
+import { Hint } from '@/components/controls/inputs';
+import { Button } from '@/components/controls/button';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { AreaHeading, OrgNav } from '@/components/org-shell';
+import { AreaHeading, OrgNav } from './org-shell';
+import { BrandStyle } from '@/features/branding/brand-style';
+import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { listEnabledModules } from '@/lib/domain/tenancy/modules';
@@ -30,6 +34,10 @@ export default async function OrganizationLayout({
   // switched on is not a secret and not a permission — it decides which of its own areas it
   // sees, and the screens themselves are guarded by policies either way.
   const enabledModules = await listEnabledModules(db, { organizationId });
+  // **Read here rather than per screen, because a brand is the shell.** Every page inside this
+  // layout inherits the roles below, so a screen never asks for a colour and never learns whose
+  // it is. Read under RLS like everything else: a member sees their own business's row.
+  const brand = await getBrand(db, { organizationId });
 
   async function signOutAction() {
     'use server';
@@ -39,19 +47,36 @@ export default async function OrganizationLayout({
   }
 
   return (
-    <div className="min-h-full md:grid md:grid-cols-[15rem_1fr]">
-      <aside className="border-b border-black/10 md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:border-r md:border-b-0 dark:border-white/15">
+    // `data-brand` is what `BrandStyle`'s rule is keyed to, and it sits here rather than on
+    // `<html>` because a brand belongs to one business and this layout is the only thing that
+    // knows which one. The sign-in page and the business list have no tenant and stay the
+    // platform's own.
+    <div data-brand className="min-h-full md:grid md:grid-cols-[15rem_1fr]">
+      <BrandStyle brand={brand} />
+      <aside className="border-b border-border md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:border-r md:border-b-0">
         <div className="flex items-baseline justify-between gap-3 px-4 pt-4 md:block">
           <div className="min-w-0">
-            {/* The business, in its own name. Every screen used to repeat this under its
-                own heading; it belongs to the shell, not to nine pages. */}
+            {/* The business, in its own name and — when it has put one up — its own mark.
+                Every screen used to repeat the name under its own heading; it belongs to the
+                shell, not to nine pages. */}
+            {brand.logoPath ? (
+              // A tenant's logo is an arbitrary remote object in a public bucket, not a
+              // build-time asset, and `next/image` would need every deployment's storage host
+              // named in its config.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl(db, brand.logoPath)}
+                alt={organization.name}
+                className="mb-2 max-h-8 w-auto max-w-full object-contain"
+              />
+            ) : null}
             <p className="truncate font-semibold">{organization.name}</p>
             {/* The role is the tenant's word for it, not a platform label (D6, D19). */}
-            <p className="truncate text-sm opacity-70">{organization.role}</p>
+            <Hint className="truncate">{organization.role}</Hint>
           </div>
           <Link
             href="/organizations"
-            className="shrink-0 text-sm underline underline-offset-4 opacity-70 md:mt-3 md:inline-block"
+            className="shrink-0 text-sm underline underline-offset-4 text-muted md:mt-3 md:inline-block"
           >
             Switch business
           </Link>
@@ -60,9 +85,9 @@ export default async function OrganizationLayout({
         <OrgNav organizationId={organizationId} enabledModules={[...enabledModules]} />
 
         <form action={signOutAction} className="px-4 pb-4 md:pt-2">
-          <button type="submit" className="text-sm underline underline-offset-4 opacity-70">
+          <Button type="submit" tone="text" size="small">
             Sign out
-          </button>
+          </Button>
         </form>
       </aside>
 

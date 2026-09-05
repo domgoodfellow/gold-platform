@@ -1,3 +1,5 @@
+import { EmptyState } from '@/components/containers/section';
+import { Hint } from '@/components/controls/inputs';
 import { notFound } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import {
@@ -7,7 +9,10 @@ import {
   resolveBookingSlug,
   type Slot,
 } from '@/lib/domain/booking/booking';
+import { BrandStyle } from '@/features/branding/brand-style';
+import { Card } from '@/components/containers/card';
 import { PublicHeader } from '@/features/public-profile/public-header';
+import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { todayInZone } from '@/lib/domain/scheduling/window';
@@ -79,9 +84,10 @@ export default async function BookingPage({
     notFound();
   }
 
-  const [types, profile] = await Promise.all([
+  const [types, profile, brand] = await Promise.all([
     listBookableTypes(db, { organizationId }),
     publicProfile(db, { organizationId, fallbackName: organization.name }),
+    getBrand(db, { organizationId }),
   ]);
 
   const requested = typeof on === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(on) ? on : null;
@@ -101,31 +107,39 @@ export default async function BookingPage({
   }).format(new Date(`${date}T12:00:00Z`));
 
   return (
-    <main className="mx-auto max-w-xl p-6 sm:p-8">
-      <PublicHeader profile={profile} />
+    // `data-brand` scopes the roles `BrandStyle` writes. A public page is the surface a brand
+    // is most for: this is the page a business puts on the side of a van.
+    <main data-brand className="mx-auto max-w-xl p-6 sm:p-8">
+      <BrandStyle brand={brand} />
+      <PublicHeader
+        profile={profile}
+        logoUrl={brand.logoPath ? logoUrl(db, brand.logoPath) : null}
+      />
 
       {types.length === 0 ? (
         // Application state, not a claim: there is nothing published to show. A sentence
         // apologising on the business's behalf would be the platform speaking for it.
-        <p className="mt-8 text-sm opacity-70">Nothing is available to book here.</p>
+        <EmptyState className="mt-8">Nothing is available to book here.</EmptyState>
       ) : (
         <div className="mt-8 flex flex-col gap-8">
-          <p className="text-sm opacity-70">{day}</p>
+          <Hint>{day}</Hint>
           {types.map((type) => {
             const slots = slotsByType.get(type.id) ?? [];
 
             return (
-              <section key={type.id}>
+              // A card per service, so what is bookable reads as a set of choices rather than
+              // as one long page of headings — which is what it is, to somebody deciding.
+              <Card key={type.id} as="section">
                 <h2 className="font-medium">{type.name}</h2>
-                <p className="text-sm opacity-70">
+                <Hint>
                   {type.durationMinutes} minutes
                   {type.price
                     ? ` · ${formatMoney(type.price.amountMinor, type.price.currency)}`
                     : ''}
-                </p>
+                </Hint>
 
                 {slots.length === 0 ? (
-                  <p className="mt-3 text-sm opacity-60">Nothing free on this day.</p>
+                  <EmptyState weight="subtle" className="mt-3">Nothing free on this day.</EmptyState>
                 ) : (
                   <BookingForm
                     slug={slug}
@@ -135,7 +149,7 @@ export default async function BookingPage({
                     timeZone={organization.timezone}
                   />
                 )}
-              </section>
+              </Card>
             );
           })}
         </div>
@@ -143,9 +157,9 @@ export default async function BookingPage({
 
       {/* I6, said out loud rather than implied. A page that showed these as reservations would
           be making a promise the platform deliberately does not keep. */}
-      <p className="mt-10 text-xs opacity-60">
+      <Hint weight="subtle" className="mt-10 text-xs">
         Times shown are in {organization.timezone} and are not held until you book.
-      </p>
+      </Hint>
     </main>
   );
 }
