@@ -176,7 +176,7 @@ describe('M5 — the platform side', () => {
    * The second clause: *can see every tenant, and what each has switched on.*
    */
   it('sees both businesses, in each business’s own terms rather than in ours', async () => {
-    const tenants = await listTenants(staff.db);
+    const { tenants } = await listTenants(staff.db);
     const yard = tenants.find((t) => t.id === hire.organizationId);
     const tokyo = tenants.find((t) => t.id === clinic.organizationId);
 

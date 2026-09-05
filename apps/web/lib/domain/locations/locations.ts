@@ -1,6 +1,7 @@
 import { geocodingProvider, type Coordinates } from '@/lib/adapters/geocoding';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import { resolveCustom, type CustomValues } from '@/lib/domain/fields/field-definitions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -44,13 +45,16 @@ const ACCESS_NOTES_MAX = 2000;
  */
 export async function listLocations(
   db: Db,
-  input: { organizationId: string },
-): Promise<Location[]> {
-  const { data, error } = await db
+  input: { organizationId: string; limit?: number },
+): Promise<Counted<Location>> {
+  const { data, error, count } = await db
     .from('locations')
-    .select('id, label, address, access_notes, latitude, longitude, custom, created_at')
+    .select('id, label, address, access_notes, latitude, longitude, custom, created_at', {
+      count: 'exact',
+    })
     .eq('organization_id', input.organizationId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
     throw new DomainError(error.message, 'locations.list_failed');
@@ -58,7 +62,7 @@ export async function listLocations(
 
   const locations = data ?? [];
   if (locations.length === 0) {
-    return [];
+    return counted([], count);
   }
 
   const { data: links, error: linkError } = await db
@@ -82,21 +86,24 @@ export async function listLocations(
     byLocation.set(link.location_id, existing);
   }
 
-  return locations.map((row) => ({
-    id: row.id,
-    label: row.label,
-    address: row.address,
-    accessNotes: row.access_notes,
-    // The database refuses half a point (`locations_coordinates_are_complete`), so one test
-    // covers both columns rather than two that could disagree.
-    coordinates:
-      row.latitude !== null && row.longitude !== null
-        ? { latitude: row.latitude, longitude: row.longitude }
-        : null,
-    custom: (row.custom ?? {}) as CustomValues,
-    customers: (byLocation.get(row.id) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
-    createdAt: row.created_at,
-  }));
+  return counted(
+    locations.map((row) => ({
+      id: row.id,
+      label: row.label,
+      address: row.address,
+      accessNotes: row.access_notes,
+      // The database refuses half a point (`locations_coordinates_are_complete`), so one test
+      // covers both columns rather than two that could disagree.
+      coordinates:
+        row.latitude !== null && row.longitude !== null
+          ? { latitude: row.latitude, longitude: row.longitude }
+          : null,
+      custom: (row.custom ?? {}) as CustomValues,
+      customers: (byLocation.get(row.id) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
+      createdAt: row.created_at,
+    })),
+    count,
+  );
 }
 
 function one<T>(value: T | T[] | null): T | undefined {

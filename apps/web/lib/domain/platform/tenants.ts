@@ -71,30 +71,66 @@ function toTenant(row: TenantRow): Tenant | null {
   };
 }
 
+/** One page of the console, and the number the page is a page of. */
+export type TenantPage = {
+  tenants: Tenant[];
+  /** How many exist, which is what makes a partial list say so. */
+  total: number;
+};
+
 /**
- * Every tenant, newest first.
+ * How many tenants the console draws at once.
  *
- * **No pagination and no filter, deliberately.** M5 exists partly because a console over one
- * tenant is a list with one row, and the honest shape of this list today is short enough to
- * read. A `limit` added before there is anything to scroll is an abstraction with no caller;
- * the trigger for one is the first time this screen is slow, which is a fact rather than a
- * guess.
+ * A number this file chooses rather than one PostgREST imposes — see below. Two hundred is a
+ * screenful several times over and is not a claim about how many tenants there will be.
  */
-export async function listTenants(db: Db): Promise<Tenant[]> {
+export const TENANT_PAGE = 200;
+
+/**
+ * A page of tenants, newest first, and how many there are.
+ *
+ * **This used to say "no pagination, deliberately", and the trigger it named has fired — as
+ * something worse than the one it predicted.** That note said a `limit` before anything scrolls
+ * is an abstraction with no caller, and that the trigger would be "the first time this screen is
+ * slow, which is a fact rather than a guess". The fact arrived in a different shape: PostgREST
+ * answers an unbounded select with its **first thousand rows and no indication that it did**, so
+ * the console was never unpaginated — it had a page size nobody chose, no way to reach the next
+ * one, and a silent cliff. Ordered newest-first, what it dropped was the oldest tenants, which is
+ * the half of the list somebody chasing a lapsed business would be looking for.
+ *
+ * So the limit is explicit and the total is read in the same round trip, because a truncated list
+ * that says so is honest and one that does not is a lie about what this business has. The
+ * remedy for *more than a page* is a filter or a next page, and neither has a caller yet — what
+ * this change buys is that the console can now tell somebody they need one.
+ */
+export async function listTenants(
+  db: Db,
+  options: { limit?: number } = {},
+): Promise<TenantPage> {
   await requireActor(db);
 
-  const { data, error } = await db
+  const limit = options.limit ?? TENANT_PAGE;
+
+  const { data, error, count } = await db
     .from('platform_tenants')
-    .select('id, name, created_at, timezone, currency, slug, module_keys, last_activity_at')
-    .order('created_at', { ascending: false });
+    .select('id, name, created_at, timezone, currency, slug, module_keys, last_activity_at', {
+      count: 'exact',
+    })
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
   if (error) {
     throw new DomainError(error.message, 'platform.tenants_failed');
   }
 
-  return (data ?? [])
+  const tenants = (data ?? [])
     .map(toTenant)
     .filter((tenant): tenant is Tenant => tenant !== null);
+
+  // `count` is null when the server did not answer with one. Falling back to what came back
+  // means the page says "these are all of them", which is the reading that does not invent a
+  // number — and it is the same answer the old code gave in every case.
+  return { tenants, total: count ?? tenants.length };
 }
 
 /**

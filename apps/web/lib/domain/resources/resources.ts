@@ -1,5 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import { resolveCustom, type CustomValues } from '@/lib/domain/fields/field-definitions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -21,24 +22,28 @@ const NAME_MAX = 200;
  */
 export async function listResources(
   db: Db,
-  input: { organizationId: string },
-): Promise<Resource[]> {
-  const { data, error } = await db
+  input: { organizationId: string; limit?: number },
+): Promise<Counted<Resource>> {
+  const { data, error, count } = await db
     .from('resources')
-    .select('id, name, custom, created_at')
+    .select('id, name, custom, created_at', { count: 'exact' })
     .eq('organization_id', input.organizationId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
     throw new DomainError(error.message, 'resources.list_failed');
   }
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    name: row.name,
-    custom: (row.custom ?? {}) as CustomValues,
-    createdAt: row.created_at,
-  }));
+  return counted(
+    (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      custom: (row.custom ?? {}) as CustomValues,
+      createdAt: row.created_at,
+    })),
+    count,
+  );
 }
 
 /**

@@ -83,6 +83,63 @@ surface, so it stayed. Sounding like a feature is not the test.
 That README also moved: it was titled `# features/` and living inside `public-profile/`, so it
 described a directory from inside one of its inhabitants.
 
+### Every list had a page size nobody chose, not just the console
+
+The staff console's silent truncation turned out to be one instance of a class. `listCustomers`,
+`listWorkItems`, `listLocations`, `listResources` and `listAssets` had no `limit()` at all — so
+each was answered with PostgREST's first thousand rows and no indication that it was. A business
+doing ten jobs a day crosses a thousand work items in about three months, at which point its board
+quietly stops showing the oldest and nothing anywhere says so.
+
+All five now take an explicit limit and return a `Counted` — an array carrying the number of rows
+the query matches. `DataTable` reads it, so every table on the surface reports *Showing 500 of
+1,432* without a single call site asking for it; the work board says it itself, because it draws
+cards rather than a table.
+
+**`Counted<T>` is `T[] & { total }` rather than `{ items, total }`, and the reasoning changed once
+under contact with the tests.** The object shape is the conventional one and was the first draft;
+what argued against it is that about forty callers are tests reading
+`expect(await listWorkItems(…)).toEqual([])`. The first attempt used `Object.assign`, which made
+`total` an ordinary property — and ten suites promptly failed with *expected `[ , total: +0 ]` to
+deeply equal `[]`*, falsifying the argument as written. It is non-enumerable now, which is not a
+way of quieting those tests but the accurate statement of what the value is: `toEqual` compares a
+list's **contents**, and how many rows the database holds is not one of them.
+
+The cost of that choice is that the rest of the suite cannot see the total at all, so it gets its
+own file. `counted.test.ts` asserts the metadata survives, that it stays invisible to `toEqual` and
+`JSON.stringify`, that `.map` and `.filter` drop it — correct, since a derived list has no honest
+total — and that a real limited read reports three when it fetched two.
+
+**It was called `ListPage` first**, which reads as a screen in a repository where every route file
+is `page.tsx` — and the first person to meet it asked why a list needed its own page. Named for the
+count it carries, it cannot be mistaken for a route.
+
+**It does not paginate.** No cursor, no next page. What it buys is that a screen can say *showing
+500 of 1,432* instead of showing a thousand and implying that is everything; the remedy for a
+business that genuinely has more is a filter, and that is a feature with its own slice.
+
+### The staff console had a page size nobody chose
+
+`listTenants` read `platform_tenants` unbounded, and its own note said pagination would wait for
+"the first time this screen is slow, which is a fact rather than a guess". The fact arrived in a
+worse shape than the one predicted: PostgREST answers an unbounded select with its **first thousand
+rows and no indication that it did**. So the console was never unpaginated — it had a page size
+nobody chose, no way to reach the next page, and a silent cliff. Ordered newest-first, what it
+dropped was the oldest tenants, which is the half of the list somebody chasing a lapsed business
+would be looking for.
+
+The limit is explicit now and the total comes back in the same round trip, so a partial list says it
+is one. What this does not add is a filter or a next page — neither has a caller yet. What it buys
+is that the console can now tell somebody they need one.
+
+**Found by a test failing for the wrong reason.** `platform-staff.test.ts` asserted staff
+visibility by reading every organization and looking for two ids in the result — so it silently
+depended on the database holding fewer than a thousand of them, and on a machine that had run the
+suite a few hundred times it failed with *staff cannot see this tenant*, which is the exact
+opposite of what had happened. It names the two ids it means now. The claim is unchanged:
+`organizations_select_staff` is `using (true)`, so what makes them visible is the role and not the
+row, and a filter is applied after the policy rather than instead of it.
+
 ### A business looks like itself, and cannot make its own screens unreadable
 
 D23 rejected a per-tenant theme by name and sent it to D20's marketing surface. Two of the three

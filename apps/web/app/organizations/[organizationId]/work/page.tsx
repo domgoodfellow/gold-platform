@@ -1,5 +1,9 @@
+import { Hint } from '@/components/controls/inputs';
+import { Card, Disclosure } from '@/components/containers/card';
+import { Badge } from '@/components/display/data';
+import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
-import { CustomFieldValues } from '@/components/custom-field-values';
+import { CustomFieldValues } from '@/components/custom-fields/values';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
@@ -15,7 +19,8 @@ import {
   listWorkItemTransitions,
 } from '@/lib/domain/work-items/transitions';
 import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
-import { listWorkItems } from '@/lib/domain/work-items/work-items';
+import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items';
+import { counted } from '@/lib/domain/counted';
 import { requireOrganization } from '@/lib/route/organization';
 import {
   AddTypeChecklistItemForm,
@@ -73,7 +78,10 @@ export default async function WorkPage({
         : Promise.resolve([]),
       selectedType
         ? listWorkItems(db, { organizationId, typeId: selectedType.id })
-        : Promise.resolve([]),
+        // An empty page rather than a bare array, so *no kind of work selected* and *this kind
+        // has no work* are the same shape to everything downstream — including the line that
+        // says how much of the list is on screen.
+        : Promise.resolve(counted([] as WorkItem[], 0)),
       listCustomers(db, { organizationId }),
       listLocations(db, { organizationId }),
       listResources(db, { organizationId }),
@@ -116,7 +124,7 @@ export default async function WorkPage({
                 className={
                   current
                     ? 'rounded bg-foreground px-3 py-1 text-sm text-background'
-                    : 'rounded border border-black/15 px-3 py-1 text-sm dark:border-white/20'
+                    : 'rounded border border-border px-3 py-1 text-sm '
                 }
               >
                 {type.name}
@@ -126,11 +134,21 @@ export default async function WorkPage({
         </nav>
       ) : null}
 
+      {/* **The board is one page of the work, and says so when it is not all of it.** Every
+          other list on this surface gets this from `DataTable`; a board of cards grouped by
+          status has to say it itself, and it is the list most likely to need to — a business
+          doing ten jobs a day passes five hundred inside two months. */}
+      {workItems.total > workItems.length ? (
+        <Hint weight="subtle" className="mt-4">
+          Showing the {workItems.length} most recent of {workItems.total} in this kind of work.
+        </Hint>
+      ) : null}
+
       {selectedType === null ? (
-        <p className="mt-6 text-sm opacity-70">
+        <EmptyState className="mt-6">
           No kinds of work defined yet. What this business does is yours to name — the
           platform has no opinion.
-        </p>
+        </EmptyState>
       ) : (
         <>
           {/* Grouped by this type's own statuses, in the tenant's own order (D6). */}
@@ -138,63 +156,93 @@ export default async function WorkPage({
             const inStatus = workItems.filter((item) => item.status.id === status.id);
             return (
               <section key={status.id} className="mt-6">
-                <h2 className="text-sm font-medium">
+                <SectionHeading>
                   {status.name}
-                  <span className="ml-2 opacity-60">{inStatus.length}</span>
-                </h2>
+                  <span className="ml-2 text-subtle">{inStatus.length}</span>
+                </SectionHeading>
 
                 {inStatus.length === 0 ? (
-                  <p className="mt-1 text-sm opacity-60">Nothing here.</p>
+                  <EmptyState weight="subtle" className="mt-1">Nothing here.</EmptyState>
                 ) : (
-                  <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+                  /* **A card per job, and the actions in a footer.** Every row used to render
+                      two whole forms — two datetime fields, a select and four buttons — so a
+                      status holding ten jobs was forty controls and the jobs themselves were
+                      whatever was left between them. What a person does most is move a job on,
+                      so that stays visible as one row of buttons; scheduling is several fields
+                      and is done once per job, so it is available rather than permanent. */
+                  <ul className="mt-2 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(19rem,1fr))]">
                     {inStatus.map((item) => (
-                      <li key={item.id} className="py-3">
-                        <Link
-                          href={`/organizations/${organizationId}/work/${item.id}`}
-                          className="font-medium underline underline-offset-4"
-                        >
-                          {item.title}
-                        </Link>
-                        {item.customer || item.location || item.resource || item.asset ? (
-                          <div className="text-sm opacity-70">
-                            {[
-                              item.customer?.label,
-                              item.location?.label,
-                              item.asset?.label,
-                              item.resource ? `→ ${item.resource.label}` : null,
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </div>
-                        ) : null}
-                        {/* I9: the instant is absolute in the database and is rendered in
-                            the organization's zone, never the server's or the reader's. */}
-                        {item.window ? (
-                          <div className="text-sm opacity-70">
-                            {formatWindow(item.window, organization.timezone)}
-                          </div>
-                        ) : null}
-                        <CustomFieldValues definitions={definitions} custom={item.custom} />
-                        {maySchedule ? (
-                          <ScheduleWorkItemForm
-                            organizationId={organizationId}
-                            workItemId={item.id}
-                            resources={resourceOptions}
-                            scheduled={item.window !== null}
-                          />
-                        ) : null}
-                        {mayMove ? (
-                          <MoveWorkItemForm
-                            organizationId={organizationId}
-                            workItemId={item.id}
-                            moves={allowedNextStatusIds(transitions, item.status.id).flatMap(
-                              (id) => {
-                                const name = statusName.get(id);
-                                return name ? [{ id, name }] : [];
-                              },
+                      <li key={item.id}>
+                        <Card className="flex h-full flex-col">
+                          <Link
+                            href={`/organizations/${organizationId}/work/${item.id}`}
+                            className="font-medium underline underline-offset-4"
+                          >
+                            {item.title}
+                          </Link>
+
+                          {/* I9: the instant is absolute in the database and is rendered in
+                              the organization's zone, never the server's or the reader's. A job
+                              with no window says so, because *unscheduled* is exactly what
+                              somebody scanning this board is looking for. */}
+                          <div className="mt-1 text-sm">
+                            {item.window ? (
+                              <span className="tabular-nums text-muted">
+                                {formatWindow(item.window, organization.timezone)}
+                              </span>
+                            ) : (
+                              <span className="text-subtle">Not scheduled</span>
                             )}
-                          />
-                        ) : null}
+                          </div>
+
+                          {item.customer || item.location || item.asset || item.resource ? (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {[item.customer?.label, item.location?.label, item.asset?.label]
+                                .filter(Boolean)
+                                .map((label) => (
+                                  <Badge key={label}>{label}</Badge>
+                                ))}
+                              {/* The tenant's own colour, saying *this one* — who is on a job
+                                  is what a dispatcher scans a board for. Never *this one is
+                                  good*: §7 is about meaning, and an assignment has none. */}
+                              {item.resource ? (
+                                <Badge tone="accent">{item.resource.label}</Badge>
+                              ) : null}
+                            </div>
+                          ) : null}
+
+                          <CustomFieldValues definitions={definitions} custom={item.custom} />
+
+                          {mayMove || maySchedule ? (
+                            <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
+                              {mayMove ? (
+                                <MoveWorkItemForm
+                                  organizationId={organizationId}
+                                  workItemId={item.id}
+                                  moves={allowedNextStatusIds(transitions, item.status.id).flatMap(
+                                    (id) => {
+                                      const name = statusName.get(id);
+                                      return name ? [{ id, name }] : [];
+                                    },
+                                  )}
+                                />
+                              ) : null}
+                              {maySchedule ? (
+                                <Disclosure
+                                  summary={item.window ? 'Reschedule' : 'Schedule'}
+                                  className="border-0"
+                                >
+                                  <ScheduleWorkItemForm
+                                    organizationId={organizationId}
+                                    workItemId={item.id}
+                                    resources={resourceOptions}
+                                    scheduled={item.window !== null}
+                                  />
+                                </Disclosure>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </Card>
                       </li>
                     ))}
                   </ul>
@@ -220,21 +268,21 @@ export default async function WorkPage({
               definitions={definitions}
             />
           ) : (
-            <p className="mt-8 text-sm opacity-70">
+            <Hint className="mt-8">
               Your role, {organization.role}, cannot add work items here.
-            </p>
+            </Hint>
           )}
 
-          <section className="mt-10 border-t border-black/10 pt-6 dark:border-white/15">
-            <h2 className="text-sm font-medium">{selectedType.name} statuses</h2>
-            <p className="mt-1 text-sm opacity-70">
+          <Section className="mt-10">
+            <SectionHeading>{selectedType.name} statuses</SectionHeading>
+            <Hint className="mt-1">
               {statuses.length === 0
                 ? 'None yet. These are yours to name — the platform has no opinion.'
                 : statuses.map((status) => status.name).join(' → ')}
-            </p>
+            </Hint>
 
             {mayConfigure && statuses.length > 0 ? (
-              <div className="mt-3 divide-y divide-black/10 dark:divide-white/15">
+              <DividedList as="div" className="mt-3">
                 {statuses.map((status) => (
                   <EditStatusForm
                     key={status.id}
@@ -242,24 +290,24 @@ export default async function WorkPage({
                     status={status}
                   />
                 ))}
-              </div>
+              </DividedList>
             ) : null}
 
             {mayConfigure ? (
               <CreateStatusForm organizationId={organizationId} typeId={selectedType.id} />
             ) : (
-              <p className="mt-2 text-sm opacity-70">
+              <Hint className="mt-2">
                 Your role, {organization.role}, cannot configure statuses here.
-              </p>
+              </Hint>
             )}
-          </section>
+          </Section>
 
-          <section className="mt-10 border-t border-black/10 pt-6 dark:border-white/15">
-            <h2 className="text-sm font-medium">Allowed moves</h2>
+          <Section className="mt-10">
+            <SectionHeading>Allowed moves</SectionHeading>
             {/* An unconfigured type is frozen, not unconstrained — I13 has exactly one
                 reading when a tenant has configured no transitions at all. Saying so here is
                 the difference between a board that looks broken and one that is unfinished. */}
-            <p className="mt-1 text-sm opacity-70">
+            <Hint className="mt-1">
               {transitions.length === 0
                 ? 'None yet, so nothing on this board can move. Wire the moves this business actually makes.'
                 : transitions
@@ -270,7 +318,7 @@ export default async function WorkPage({
                         }`,
                     )
                     .join(' · ')}
-            </p>
+            </Hint>
 
             {mayConfigure ? (
               <CreateTransitionForm
@@ -279,24 +327,24 @@ export default async function WorkPage({
                 statuses={statuses}
               />
             ) : (
-              <p className="mt-2 text-sm opacity-70">
+              <Hint className="mt-2">
                 Your role, {organization.role}, cannot configure transitions here.
-              </p>
+              </Hint>
             )}
-          </section>
+          </Section>
 
-          <section className="mt-10 border-t border-black/10 pt-6 dark:border-white/15">
-            <h2 className="text-sm font-medium">Steps every {selectedType.name} involves</h2>
+          <Section className="mt-10">
+            <SectionHeading>Steps every {selectedType.name} involves</SectionHeading>
             {/* Copied onto each job at creation, never joined. Editing this list does not
                 reach a job that already exists — which is what makes editing it safe (I8). */}
-            <p className="mt-1 text-sm opacity-70">
+            <Hint className="mt-1">
               {templateSteps.length === 0
                 ? 'None. Work items of this kind start with an empty checklist.'
                 : 'Copied onto each new work item. Changing them leaves existing work alone.'}
-            </p>
+            </Hint>
 
             {templateSteps.length > 0 ? (
-              <div className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+              <DividedList as="div" className="mt-2">
                 {templateSteps.map((item) =>
                   mayConfigure ? (
                     <TypeChecklistItemRow
@@ -305,12 +353,12 @@ export default async function WorkPage({
                       item={item}
                     />
                   ) : (
-                    <p key={item.id} className="py-1 text-sm opacity-70">
+                    <Hint key={item.id} className="py-1">
                       {item.label}
-                    </p>
+                    </Hint>
                   ),
                 )}
-              </div>
+              </DividedList>
             ) : null}
 
             {mayConfigure ? (
@@ -319,7 +367,7 @@ export default async function WorkPage({
                 typeId={selectedType.id}
               />
             ) : null}
-          </section>
+          </Section>
 
           {/* **A module hides what it owns everywhere, not only its own area.** Switching public
               booking off takes this section away for the same reason switching billing off takes
@@ -328,8 +376,8 @@ export default async function WorkPage({
               is where the module says it is set up — this is the per-type half of the same
               thing, and `outstandingModuleSetup` now names both. */}
           {bookingEnabled ? (
-            <section className="mt-10 border-t border-black/10 pt-6 dark:border-white/15">
-              <h2 className="text-sm font-medium">Publish to the public booking page</h2>
+            <Section className="mt-10">
+              <SectionHeading>Publish to the public booking page</SectionHeading>
               <PublishTypeForm
                 organizationId={organizationId}
                 typeId={selectedType.id}
@@ -342,42 +390,42 @@ export default async function WorkPage({
                 disabled={!mayConfigure}
               />
               {!mayConfigure ? (
-                <p className="mt-2 text-sm opacity-70">
+                <Hint className="mt-2">
                   Your role, {organization.role}, cannot change what this business publishes.
-                </p>
+                </Hint>
               ) : null}
-            </section>
+            </Section>
           ) : null}
 
           {mayConfigure ? (
-            <section className="mt-10 border-t border-black/10 pt-6 dark:border-white/15">
-              <h2 className="text-sm font-medium">Rename this kind of work</h2>
+            <Section className="mt-10">
+              <SectionHeading>Rename this kind of work</SectionHeading>
               <RenameTypeForm
                 organizationId={organizationId}
                 typeId={selectedType.id}
                 name={selectedType.name}
               />
-            </section>
+            </Section>
           ) : null}
         </>
       )}
 
-      <section className="mt-10 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Kinds of work</h2>
-        <p className="mt-1 text-sm opacity-70">
+      <Section className="mt-10">
+        <SectionHeading>Kinds of work</SectionHeading>
+        <Hint className="mt-1">
           {types.length === 0
             ? 'None yet. A type is what scopes a board — statuses belong to one.'
             : types.map((type) => type.name).join(' · ')}
-        </p>
+        </Hint>
 
         {mayConfigure ? (
           <CreateTypeForm organizationId={organizationId} />
         ) : (
-          <p className="mt-2 text-sm opacity-70">
+          <Hint className="mt-2">
             Your role, {organization.role}, cannot configure work item types here.
-          </p>
+          </Hint>
         )}
-      </section>
+      </Section>
     </>
   );
 }

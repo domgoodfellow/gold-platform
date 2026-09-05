@@ -1,5 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import { resolveCustom, type CustomValues } from '@/lib/domain/fields/field-definitions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -34,31 +35,35 @@ function one<T>(value: T | T[] | null): T | undefined {
 
 export async function listAssets(
   db: Db,
-  input: { organizationId: string },
-): Promise<Asset[]> {
-  const { data, error } = await db
+  input: { organizationId: string; limit?: number },
+): Promise<Counted<Asset>> {
+  const { data, error, count } = await db
     .from('assets')
-    .select(ASSET_SELECT)
+    .select(ASSET_SELECT, { count: 'exact' })
     .eq('organization_id', input.organizationId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
     throw new DomainError(error.message, 'assets.list_failed');
   }
 
-  return (data ?? []).map((row) => {
-    const customer = one(row.customer);
-    const location = one(row.location);
+  return counted(
+    (data ?? []).map((row) => {
+      const customer = one(row.customer);
+      const location = one(row.location);
 
-    return {
-      id: row.id,
-      name: row.name,
-      customer: customer ? { id: customer.id, label: customer.name } : null,
-      location: location ? { id: location.id, label: location.label } : null,
-      custom: (row.custom ?? {}) as CustomValues,
-      createdAt: row.created_at,
-    };
-  });
+      return {
+        id: row.id,
+        name: row.name,
+        customer: customer ? { id: customer.id, label: customer.name } : null,
+        location: location ? { id: location.id, label: location.label } : null,
+        custom: (row.custom ?? {}) as CustomValues,
+        createdAt: row.created_at,
+      };
+    }),
+    count,
+  );
 }
 
 /**

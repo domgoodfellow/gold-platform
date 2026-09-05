@@ -1,3 +1,8 @@
+import { Badge } from '@/components/display/data';
+import { Hint } from '@/components/controls/inputs';
+import { DataTable } from '@/components/display/table';
+import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { Button } from '@/components/controls/button';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
@@ -45,22 +50,33 @@ export default async function PlatformPage() {
     redirect('/organizations');
   }
 
-  const [tenants, failures] = await Promise.all([listTenants(db), listFailures(db)]);
+  const [{ tenants, total }, failures] = await Promise.all([
+    listTenants(db),
+    listFailures(db),
+  ]);
 
   return (
     <main className="mx-auto max-w-4xl p-8">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">Platform</h1>
+        <PageHeading>Platform</PageHeading>
         <form action={signOutAction}>
-          <button type="submit" className="text-sm underline underline-offset-4 opacity-70">
+          <Button type="submit" tone="text" size="small">
             Sign out
-          </button>
+          </Button>
         </form>
       </div>
 
-      <p className="mt-2 text-sm opacity-70">
-        {tenants.length === 1 ? '1 business' : `${tenants.length} businesses`} on GOLD.
-      </p>
+      <Hint className="mt-2">
+        {total === 1 ? '1 business' : `${total} businesses`} on GOLD.
+        {/* **A partial list says so.** The console read an unbounded select until this change,
+            which PostgREST answers with its first thousand rows and no indication that it did —
+            so the oldest tenants simply were not there, which is the half somebody chasing a
+            lapsed business is looking for. Application state in the platform's own voice, and
+            the remedy is a filter or a next page, neither of which has a caller yet. */}
+        {total > tenants.length
+          ? ` Showing the most recent ${tenants.length}.`
+          : ''}
+      </Hint>
 
       {/*
         The operator door (D29). It sits above the list because provisioning is the thing this
@@ -69,66 +85,86 @@ export default async function PlatformPage() {
       */}
       <ProvisionForm />
 
-      {tenants.length === 0 ? (
-        <p className="mt-6 text-sm opacity-70">No business has been provisioned yet.</p>
-      ) : (
-        // Scrolls inside itself rather than pushing the page sideways.
-        <div className="mt-6 overflow-x-auto">
-          <table className="w-full min-w-[44rem] text-left text-sm">
-            <thead className="border-b border-black/10 text-xs uppercase tracking-wide opacity-60 dark:border-white/15">
-              <tr>
-                <th className="py-2 pr-4 font-medium">Business</th>
-                <th className="py-2 pr-4 font-medium">Arrived</th>
-                <th className="py-2 pr-4 font-medium">Trades in</th>
-                <th className="py-2 pr-4 font-medium">Switched on</th>
-                <th className="py-2 font-medium">Last activity</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/10 dark:divide-white/15">
-              {tenants.map((tenant) => (
-                <tr key={tenant.id} className="align-top">
-                  <td className="py-3 pr-4">
-                    <span className="font-medium">{tenant.name}</span>
-                    {tenant.slug ? (
-                      <span className="block text-xs opacity-60">/book/{tenant.slug}</span>
-                    ) : null}
-                  </td>
-                  {/*
-                    Rendered in the tenant's own zone, not ours. A console that showed every
-                    business in one timezone would be the platform deciding what "Tuesday"
-                    means for somebody in Tokyo (I9).
-                  */}
-                  <td className="py-3 pr-4 tabular-nums">
-                    {new Date(tenant.createdAt).toLocaleDateString('en-CA', {
+      <div className="mt-6">
+        <DataTable
+          rows={tenants}
+          rowKey={(tenant) => tenant.id}
+          empty="No business has been provisioned yet."
+          columns={[
+            {
+              key: 'name',
+              header: 'Business',
+              emphasis: 'primary',
+              cell: (tenant) => (
+                <>
+                  <span>{tenant.name}</span>
+                  {tenant.slug ? (
+                    <span className="block text-xs font-normal text-subtle">
+                      /book/{tenant.slug}
+                    </span>
+                  ) : null}
+                </>
+              ),
+            },
+            {
+              key: 'arrived',
+              header: 'Arrived',
+              // Rendered in the tenant's own zone, not ours. A console showing every business
+              // in one timezone would be the platform deciding what "Tuesday" means for
+              // somebody in Tokyo (I9).
+              cell: (tenant) => (
+                <span className="tabular-nums">
+                  {new Date(tenant.createdAt).toLocaleDateString('en-CA', {
+                    timeZone: tenant.timezone,
+                  })}
+                </span>
+              ),
+            },
+            {
+              key: 'trades',
+              header: 'Trades in',
+              cell: (tenant) => (
+                <>
+                  {/* Empty when the business has not said — signing up no longer asks, and a
+                      console inventing a currency for a tenant would be the same platform
+                      assumption one level removed. */}
+                  {tenant.currency ? tenant.currency : <span className="text-subtle">—</span>}
+                  <span className="block text-xs text-subtle">{tenant.timezone}</span>
+                </>
+              ),
+            },
+            {
+              key: 'modules',
+              header: 'Switched on',
+              emphasis: 'secondary',
+              cell: (tenant) =>
+                tenant.moduleKeys.length === 0 ? (
+                  <span className="text-subtle">Kernel only</span>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {tenant.moduleKeys.map((key) => (
+                      <Badge key={key}>{key}</Badge>
+                    ))}
+                  </div>
+                ),
+            },
+            {
+              key: 'activity',
+              header: 'Last activity',
+              cell: (tenant) =>
+                tenant.lastActivityAt ? (
+                  <span className="tabular-nums">
+                    {new Date(tenant.lastActivityAt).toLocaleString('en-CA', {
                       timeZone: tenant.timezone,
                     })}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {tenant.currency}
-                    <span className="block text-xs opacity-60">{tenant.timezone}</span>
-                  </td>
-                  <td className="py-3 pr-4">
-                    {tenant.moduleKeys.length === 0 ? (
-                      <span className="opacity-60">Kernel only</span>
-                    ) : (
-                      tenant.moduleKeys.join(', ')
-                    )}
-                  </td>
-                  <td className="py-3 tabular-nums">
-                    {tenant.lastActivityAt ? (
-                      new Date(tenant.lastActivityAt).toLocaleString('en-CA', {
-                        timeZone: tenant.timezone,
-                      })
-                    ) : (
-                      <span className="opacity-60">Nothing yet</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                  </span>
+                ) : (
+                  <span className="text-subtle">Nothing yet</span>
+                ),
+            },
+          ]}
+        />
+      </div>
 
       {/*
         **The fourth question, and the reason M5 could not answer it.** That milestone said
@@ -140,16 +176,16 @@ export default async function PlatformPage() {
         Names the business rather than linking to it: staff hold no membership anywhere, so
         there is nothing to open. What is here is enough to pick up the phone.
       */}
-      <section className="mt-10 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">What is failing</h2>
+      <Section className="mt-10">
+        <SectionHeading>What is failing</SectionHeading>
 
         {failures.length === 0 ? (
-          <p className="mt-2 text-sm opacity-70">
+          <EmptyState className="mt-2">
             Nothing has failed. This counts automations that could not run and messages a
             provider would not take — the two things that happen with nobody watching.
-          </p>
+          </EmptyState>
         ) : (
-          <ul className="mt-2 divide-y divide-black/10 text-sm dark:divide-white/15">
+          <DividedList className="mt-2 text-sm">
             {failures.map((failure, index) => {
               const tenant = tenants.find((entry) => entry.id === failure.organizationId);
               return (
@@ -157,22 +193,22 @@ export default async function PlatformPage() {
                   key={`${failure.occurredAt}-${index}`}
                   className="flex flex-wrap items-baseline gap-x-3 py-2"
                 >
-                  <span className="tabular-nums opacity-60">
+                  <span className="tabular-nums text-subtle">
                     {new Date(failure.occurredAt).toLocaleString('en-CA')}
                   </span>
                   <span className="font-medium">{tenant?.name ?? 'a business'}</span>
-                  <span className="opacity-60">{failure.kind}</span>
+                  <span className="text-subtle">{failure.kind}</span>
                   <span>{failure.subject}</span>
                   {/* The database's or the provider's own words, kept verbatim. An
                       interpretation here would be the console guessing at somebody else's
                       error. */}
-                  <span className="text-red-600 dark:text-red-400">{failure.detail}</span>
+                  <span className="text-danger">{failure.detail}</span>
                 </li>
               );
             })}
-          </ul>
+          </DividedList>
         )}
-      </section>
+      </Section>
     </main>
   );
 }

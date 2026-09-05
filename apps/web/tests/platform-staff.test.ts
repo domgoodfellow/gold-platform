@@ -178,7 +178,21 @@ describe('the platform staff axis (D28)', () => {
   });
 
   it('sees every tenant, including two it founded neither of', async () => {
-    const { data, error } = await staff.db.from('organizations').select('id');
+    // **Asked about two named tenants rather than by reading the whole table**, and the
+    // difference is not cosmetic. An unfiltered select returns PostgREST's first thousand rows,
+    // so this assertion silently depended on the database holding fewer than a thousand
+    // organizations — which is true of a fresh one and stops being true of a machine that has
+    // run the suite a few hundred times. It then fails with *staff cannot see this tenant*,
+    // which is the exact opposite of what has happened.
+    //
+    // **The claim is unchanged.** `organizations_select_staff` is `using (true)`, so what makes
+    // these two visible is the role and not the row; naming them proves staff read a tenant they
+    // hold no membership in, which is the whole of what this axis is. A filter is applied *after*
+    // the policy, never instead of it.
+    const { data, error } = await staff.db
+      .from('organizations')
+      .select('id')
+      .in('id', [alphaId, betaId]);
     expect(error).toBeNull();
 
     const ids = (data ?? []).map((row) => row.id);
@@ -250,7 +264,7 @@ describe('the platform staff axis (D28)', () => {
   });
 
   it('lists every tenant through the console, in each tenant’s own terms', async () => {
-    const tenants = await listTenants(staff.db);
+    const { tenants } = await listTenants(staff.db);
 
     const alpha = tenants.find((tenant) => tenant.id === alphaId)!;
     const beta = tenants.find((tenant) => tenant.id === betaId)!;
@@ -272,7 +286,7 @@ describe('the platform staff axis (D28)', () => {
   });
 
   it('newest first, so provisioning something puts it at the top', async () => {
-    const tenants = await listTenants(staff.db);
+    const { tenants } = await listTenants(staff.db);
     const times = tenants.map((tenant) => tenant.createdAt);
     expect([...times].sort().reverse()).toEqual(times);
   });

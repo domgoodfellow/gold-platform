@@ -1,5 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import { resolveCustom, type CustomValues } from '@/lib/domain/fields/field-definitions';
 import { parseWindow, type Window } from '@/lib/domain/scheduling/window';
 import { requireActor } from '@/lib/domain/tenancy/actor';
@@ -56,56 +57,61 @@ function one<T>(value: T | T[] | null): T | undefined {
  */
 export async function listWorkItems(
   db: Db,
-  input: { organizationId: string; typeId?: string },
-): Promise<WorkItem[]> {
+  input: { organizationId: string; typeId?: string; limit?: number },
+): Promise<Counted<WorkItem>> {
   let query = db
     .from('work_items')
-    .select(WORK_ITEM_SELECT)
+    .select(WORK_ITEM_SELECT, { count: 'exact' })
     .eq('organization_id', input.organizationId);
 
   if (input.typeId) {
     query = query.eq('type_id', input.typeId);
   }
 
-  const { data, error } = await query.order('created_at', { ascending: false });
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
     throw new DomainError(error.message, 'work_items.list_failed');
   }
 
-  return (data ?? []).flatMap((row) => {
-    const type = one(row.type);
-    const status = one(row.status);
-    // Neither can be absent — both columns are NOT NULL behind a foreign key — so this is
-    // unreachable rather than defensive. Dropping the row is still better than rendering a
-    // board column with no name if it ever becomes reachable.
-    if (!type || !status) return [];
+  return counted(
+    (data ?? []).flatMap((row) => {
+      const type = one(row.type);
+      const status = one(row.status);
+      // Neither can be absent — both columns are NOT NULL behind a foreign key — so this is
+      // unreachable rather than defensive. Dropping the row is still better than rendering a
+      // board column with no name if it ever becomes reachable.
+      if (!type || !status) return [];
 
-    const customer = one(row.customer);
-    const location = one(row.location);
-    const resource = one(row.resource);
-    const asset = one(row.asset);
+      const customer = one(row.customer);
+      const location = one(row.location);
+      const resource = one(row.resource);
+      const asset = one(row.asset);
 
-    return [
-      {
-        id: row.id,
-        title: row.title,
-        type: { id: type.id, label: type.name },
-        status: { id: status.id, label: status.name },
-        customer: customer ? { id: customer.id, label: customer.name } : null,
-        location: location ? { id: location.id, label: location.label } : null,
-        resource: resource ? { id: resource.id, label: resource.name } : null,
-        asset: asset ? { id: asset.id, label: asset.name } : null,
-        // D15's boundary again: `supabase gen types` has no TypeScript for a Postgres range
-        // and emits `unknown`. The cast is at the one place the value enters the domain, and
-        // `parseWindow` treats anything it cannot read as "not scheduled" rather than trusting
-        // the shape.
-        window: parseWindow(row.scheduled_during as string | null),
-        custom: (row.custom ?? {}) as CustomValues,
-        createdAt: row.created_at,
-      },
-    ];
-  });
+      return [
+        {
+          id: row.id,
+          title: row.title,
+          type: { id: type.id, label: type.name },
+          status: { id: status.id, label: status.name },
+          customer: customer ? { id: customer.id, label: customer.name } : null,
+          location: location ? { id: location.id, label: location.label } : null,
+          resource: resource ? { id: resource.id, label: resource.name } : null,
+          asset: asset ? { id: asset.id, label: asset.name } : null,
+          // D15's boundary again: `supabase gen types` has no TypeScript for a Postgres range
+          // and emits `unknown`. The cast is at the one place the value enters the domain, and
+          // `parseWindow` treats anything it cannot read as "not scheduled" rather than trusting
+          // the shape.
+          window: parseWindow(row.scheduled_during as string | null),
+          custom: (row.custom ?? {}) as CustomValues,
+          createdAt: row.created_at,
+        },
+      ];
+    }),
+    count,
+  );
 }
 
 /**
