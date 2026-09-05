@@ -7,6 +7,7 @@ import {
   createPriceBookItem,
   updatePriceBookItem,
 } from '@/lib/domain/pricing/price-book';
+import { setTradingCurrency } from '@/lib/domain/tenancy/organizations';
 
 export type PriceItemState = { error: string | null };
 
@@ -89,6 +90,36 @@ export async function updatePriceItemAction(
         String(formData.get('amount') ?? ''),
         String(formData.get('currency') ?? ''),
       ),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/pricing`);
+  return { error: null };
+}
+
+/**
+ * Answer what this business charges in, from the screen where it first matters.
+ *
+ * Calls the domain, which calls `updateOrganization` — so this is the same write, the same
+ * capability check and the same event as changing it in Settings. A screen does not get its own
+ * way to change what a business trades in just because it is the screen that noticed.
+ */
+export async function chooseCurrencyAction(
+  _previous: PriceItemState,
+  formData: FormData,
+): Promise<PriceItemState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await setTradingCurrency(db, {
+      organizationId,
+      currency: String(formData.get('currency') ?? ''),
     });
   } catch (error) {
     if (error instanceof DomainError) {

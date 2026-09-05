@@ -1,7 +1,10 @@
 'use client';
 
+import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { Badge } from '@/components/display/data';
+import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
-import { CurrencyField, TimeZoneField } from '@/components/locale-fields';
+import { CurrencyField, TimeZoneField } from '@/features/locale/locale-fields';
 import type { OperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import {
   addOperatingHoursAction,
@@ -13,9 +16,6 @@ import {
 } from './actions';
 
 const INITIAL: SettingsActionState = { error: null };
-
-const INPUT_CLASS = 'flex-1 rounded border border-black/15 px-3 py-2 dark:border-white/20';
-const SMALL_INPUT = 'rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20';
 
 /**
  * The names of the days, from the reader's own locale.
@@ -46,7 +46,8 @@ export function OrganizationSettingsForm({
   organizationId: string;
   name: string;
   timezone: string;
-  currency: string;
+  /** Null when this business has not said yet — signing up no longer asks. */
+  currency: string | null;
   bufferMinutes: number;
   slug: string | null;
 }) {
@@ -57,14 +58,14 @@ export function OrganizationSettingsForm({
       <input type="hidden" name="organizationId" value={organizationId} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="name"
           type="text"
           required
           maxLength={200}
           defaultValue={name}
           aria-label="Organization name"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
       </div>
 
@@ -74,7 +75,7 @@ export function OrganizationSettingsForm({
           `pg_timezone_names` — a list in the application is never the authority. */}
       <div className="flex flex-col gap-4 sm:flex-row">
         <TimeZoneField defaultValue={timezone} label="Where is this business?" />
-        <CurrencyField defaultValue={currency} />
+        <CurrencyField defaultValue={currency ?? undefined} />
       </div>
 
       {/* Why a business wants one is its own affair — driving to the next address, cleaning
@@ -83,7 +84,7 @@ export function OrganizationSettingsForm({
           gets no gap invented on its behalf. */}
       <label className="flex flex-col gap-1 text-sm">
         <span>Time a resource stays busy after a job (minutes)</span>
-        <input
+        <TextInput
           name="bufferMinutes"
           type="number"
           required
@@ -91,9 +92,9 @@ export function OrganizationSettingsForm({
           max={1440}
           step={1}
           defaultValue={bufferMinutes}
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <span className="text-xs opacity-70">
+        <span className="text-xs text-muted">
           Nothing else can be booked on that resource until this has passed. Changing it moves
           nothing, but work already scheduled too close together will be refused.
         </span>
@@ -104,34 +105,26 @@ export function OrganizationSettingsForm({
           "Smith & Sons" would find it had opinions about apostrophes. */}
       <label className="flex flex-col gap-1 text-sm">
         <span>Public booking address</span>
-        <input
+        <TextInput
           name="slug"
           type="text"
           maxLength={63}
           pattern="[a-z0-9][a-z0-9-]{1,62}"
           defaultValue={slug ?? ''}
           placeholder="your-business"
-          className={INPUT_CLASS}
+          className="flex-1"
         />
-        <span className="text-xs opacity-70">
+        <span className="text-xs text-muted">
           Customers book at /book/&lt;this&gt;. Leave it empty to have no public page. Changing
           it breaks links already shared.
         </span>
       </label>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Saving…' : 'Save'}
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -144,29 +137,21 @@ export function AddOperatingHoursForm({ organizationId }: { organizationId: stri
       <input type="hidden" name="organizationId" value={organizationId} />
 
       <div className="flex flex-wrap items-center gap-2">
-        <select name="dayOfWeek" aria-label="Day" className={SMALL_INPUT}>
+        <SelectInput name="dayOfWeek" aria-label="Day" size="small">
           {DAYS.map((day) => (
             <option key={day} value={day}>
               {dayName(day)}
             </option>
           ))}
-        </select>
-        <input name="opensAt" type="time" required aria-label="Opens at" className={SMALL_INPUT} />
-        <input name="closesAt" type="time" required aria-label="Closes at" className={SMALL_INPUT} />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded border border-black/15 px-3 py-1 text-sm disabled:opacity-50 dark:border-white/20"
-        >
+        </SelectInput>
+        <TextInput name="opensAt" type="time" required aria-label="Opens at" size="small" />
+        <TextInput name="closesAt" type="time" required aria-label="Closes at" size="small" />
+        <Button type="submit" disabled={pending} tone="secondary" size="small">
           {pending ? 'Adding…' : 'Add hours'}
-        </button>
+        </Button>
       </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -186,19 +171,15 @@ export function OperatingHoursRow({
       <input type="hidden" name="id" value={hours.id} />
 
       <span className="w-28">{dayName(hours.dayOfWeek)}</span>
-      <span className="opacity-70">
+      <span className="text-muted">
         {hours.opensAt.slice(0, 5)}–{hours.closesAt.slice(0, 5)}
       </span>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-50 dark:border-white/20"
-      >
+      <Button type="submit" disabled={pending} tone="secondary" size="tiny">
         Remove
-      </button>
+      </Button>
 
       {state.error ? (
-        <span role="alert" className="text-red-600 dark:text-red-400">
+        <span role="alert" className="text-danger">
           {state.error}
         </span>
       ) : null}
@@ -249,9 +230,11 @@ export function ModuleSwitch({
       <div className="min-w-0">
         <p className="text-sm font-medium">
           {label}
-          {enabled ? null : <span className="ml-2 font-normal opacity-60">off</span>}
+          {/* A state marker, and neutral: whether a module being off is good is this
+              business's business, not the platform's (ui-spec §7). */}
+          {enabled ? null : <Badge className="ml-2 font-normal">off</Badge>}
         </p>
-        <p className="text-sm opacity-70">{description}</p>
+        <Hint>{description}</Hint>
 
         {/* **Only once it is on**, and that is the whole rule: a business reading the list of
             what it could buy is being offered something, and a business that has switched one
@@ -260,7 +243,7 @@ export function ModuleSwitch({
         {enabled ? (
           <p className="mt-1 text-sm">
             {outstanding ? (
-              <span className="opacity-70">{outstanding} </span>
+              <span className="text-muted">{outstanding} </span>
             ) : null}
             <a href={configureHref} className="underline underline-offset-2">
               {outstanding ? 'Finish' : 'Set up'} in {configureLabel}
@@ -268,11 +251,7 @@ export function ModuleSwitch({
           </p>
         ) : null}
 
-        {state.error ? (
-          <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
-            {state.error}
-          </p>
-        ) : null}
+        <ErrorText role="alert" className="mt-1">{state.error}</ErrorText>
       </div>
 
       {mayConfigure ? (
@@ -280,13 +259,9 @@ export function ModuleSwitch({
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="moduleKey" value={moduleKey} />
           <input type="hidden" name="enabled" value={enabled ? '0' : '1'} />
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded border border-black/15 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-white/20"
-          >
+          <Button type="submit" disabled={pending} tone="secondary" size="small">
             {pending ? '…' : enabled ? 'Switch off' : 'Switch on'}
-          </button>
+          </Button>
         </form>
       ) : null}
     </div>
@@ -323,41 +298,33 @@ export function PaymentAccountRow({
         <p className="text-sm font-medium">
           {accountId ? 'Connected' : 'Not connected'}
           {connectedAt ? (
-            <span className="ml-2 font-normal opacity-60">
+            <span className="ml-2 font-normal text-subtle">
               since {new Date(connectedAt).toLocaleDateString('en-GB')}
             </span>
           ) : null}
         </p>
-        <p className="text-sm opacity-70">
+        <Hint>
           {accountId
             ? // The id, because an operator with two accounts needs to know which one this is.
               // It is not a secret: on its own it grants nothing.
               `Card payments are collected into ${accountId} and paid out by ${provider} directly to this business. GOLD never holds the money.`
             : `Connect an account with ${provider} to take card payments. The money goes straight to this business; GOLD never holds it, and this business keeps its own login.`}
-        </p>
-        {state.error ? (
-          <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
-            {state.error}
-          </p>
-        ) : null}
+        </Hint>
+        <ErrorText role="alert" className="mt-1">{state.error}</ErrorText>
       </div>
 
       {!mayManage ? null : accountId ? (
         <form action={formAction} className="shrink-0">
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="provider" value={provider} />
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded border border-black/15 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-white/20"
-          >
+          <Button type="submit" disabled={pending} tone="secondary" size="small">
             {pending ? '…' : 'Disconnect'}
-          </button>
+          </Button>
         </form>
       ) : (
         <a
           href={`/organizations/${organizationId}/settings/payments/connect`}
-          className="shrink-0 rounded border border-black/15 px-3 py-1.5 text-sm dark:border-white/20"
+          className="shrink-0 rounded border border-border px-3 py-1.5 text-sm"
         >
           Connect
         </a>

@@ -194,7 +194,7 @@ async function standUpPneu3L(): Promise<Business> {
     id: organizationId,
     name: organization!.name,
     timezone: organization!.timezone,
-    currency: organization!.currency,
+    currency: organization!.currency!,
     // Travel is this business's binding constraint, and it reaches the platform as a number
     // rather than as a feature: twenty minutes between jobs, enforced by the exclusion
     // constraint and never displayed as a rule.

@@ -543,6 +543,179 @@ export type Database = {
           },
         ]
       }
+      brand_settings: {
+        Row: {
+          accent: string | null
+          body_font: string | null
+          heading_font: string | null
+          logo_path: string | null
+          organization_id: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          accent?: string | null
+          body_font?: string | null
+          heading_font?: string | null
+          logo_path?: string | null
+          organization_id: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          accent?: string | null
+          body_font?: string | null
+          heading_font?: string | null
+          logo_path?: string | null
+          organization_id?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      call_outcomes: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          organization_id: string
+          position: number
+          reached: boolean
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          organization_id: string
+          position?: number
+          reached?: boolean
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          position?: number
+          reached?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_outcomes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_outcomes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calls: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          direction: string
+          duration_seconds: number | null
+          ended_at: string | null
+          external_id: string | null
+          from_number: string
+          id: string
+          note: string
+          organization_id: string
+          outcome_id: string | null
+          started_at: string
+          status: string
+          to_number: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          direction: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          external_id?: string | null
+          from_number: string
+          id?: string
+          note?: string
+          organization_id: string
+          outcome_id?: string | null
+          started_at?: string
+          status?: string
+          to_number: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          direction?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          external_id?: string | null
+          from_number?: string
+          id?: string
+          note?: string
+          organization_id?: string
+          outcome_id?: string | null
+          started_at?: string
+          status?: string
+          to_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calls_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "calls_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_outcome_same_org"
+            columns: ["organization_id", "outcome_id"]
+            isOneToOne: false
+            referencedRelation: "call_outcomes"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       configuration_proposals: {
         Row: {
           applied_at: string | null
@@ -708,6 +881,48 @@ export type Database = {
           },
         ]
       }
+      customer_stages: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          organization_id: string
+          position: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          organization_id: string
+          position?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -718,6 +933,7 @@ export type Database = {
           name: string
           organization_id: string
           phone: string | null
+          stage_id: string | null
         }
         Insert: {
           created_at?: string
@@ -728,6 +944,7 @@ export type Database = {
           name: string
           organization_id: string
           phone?: string | null
+          stage_id?: string | null
         }
         Update: {
           created_at?: string
@@ -738,6 +955,7 @@ export type Database = {
           name?: string
           organization_id?: string
           phone?: string | null
+          stage_id?: string | null
         }
         Relationships: [
           {
@@ -753,6 +971,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_stage_same_org"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "customer_stages"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -1625,7 +1850,7 @@ export type Database = {
           buffer_minutes: number
           created_at: string
           created_by: string
-          currency: string
+          currency: string | null
           id: string
           name: string
           slug: string | null
@@ -1635,7 +1860,7 @@ export type Database = {
           buffer_minutes?: number
           created_at?: string
           created_by: string
-          currency?: string
+          currency?: string | null
           id?: string
           name: string
           slug?: string | null
@@ -1645,7 +1870,7 @@ export type Database = {
           buffer_minutes?: number
           created_at?: string
           created_by?: string
-          currency?: string
+          currency?: string | null
           id?: string
           name?: string
           slug?: string | null
@@ -2962,7 +3187,7 @@ export type Database = {
       create_organization: {
         Args: {
           p_capabilities: string[]
-          p_currency: string
+          p_currency?: string
           p_display_name: string
           p_name: string
           p_role: string
@@ -3185,6 +3410,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_brand_logo: {
+        Args: { p_logo_path: string; p_organization_id: string }
+        Returns: undefined
+      }
+      set_brand_settings: {
+        Args: {
+          p_accent: string
+          p_body_font: string
+          p_heading_font: string
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
       set_checklist_item_done: {
         Args: { p_checklist_item_id: string; p_done: boolean }
         Returns: undefined
@@ -3228,6 +3466,18 @@ export type Database = {
       }
       unschedule_work_item: {
         Args: { p_work_item_id: string }
+        Returns: undefined
+      }
+      update_customer: {
+        Args: {
+          p_custom: Json
+          p_customer_id: string
+          p_email: string
+          p_name: string
+          p_organization_id: string
+          p_phone: string
+          p_stage_id: string
+        }
         Returns: undefined
       }
       update_field_definition: {

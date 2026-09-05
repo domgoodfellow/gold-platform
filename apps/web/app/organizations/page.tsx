@@ -1,3 +1,6 @@
+import { Hint } from '@/components/controls/inputs';
+import { DividedList, PageHeading } from '@/components/containers/section';
+import { Button } from '@/components/controls/button';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
@@ -53,13 +56,13 @@ export default async function OrganizationsPage() {
         {/* **The heading says what the page is, which depends on whether you have any.**
             "Organizations" above a page telling somebody they have none was a title describing
             a list that was not there. */}
-        <h1 className="text-2xl font-semibold">
+        <PageHeading>
           {organizations.length === 0 ? 'Set up your business' : 'Your businesses'}
-        </h1>
+        </PageHeading>
         <form action={signOutAction}>
-          <button type="submit" className="text-sm underline underline-offset-4 opacity-70">
+          <Button type="submit" tone="text" size="small">
             Sign out
-          </button>
+          </Button>
         </form>
       </div>
 
@@ -76,20 +79,23 @@ export default async function OrganizationsPage() {
         // nothing to press — which meant somebody who signed up had no way forward at all. The
         // argument for closing it was about the *quality* of a self-served business, and what it
         // actually produced was a door with nothing behind it.
-        <div className="mt-4 max-w-prose">
-          <p className="text-sm opacity-70">
-            You do not belong to a business yet. Make one below — it takes three answers, and
-            everything else about how it works is yours to set up afterwards.
-          </p>
-          <p className="mt-2 text-sm opacity-70">
-            If you have spoken to us about being set up, we may already have made one for you. It
-            will appear here as soon as it exists, and you do not need to make a second.
+        <div className="mt-3 max-w-prose">
+          <p className="text-base opacity-80">
+            Two questions and yours exists. Everything else — what you call your work, how a job
+            moves, what you charge — comes next, and none of it is set in stone.
           </p>
 
           <CreateBusinessForm />
+
+          {/* Quieter than the form and below it, because it applies to a minority of readers and
+              the ones it does not apply to should not have to read past it to reach the fields. */}
+          <Hint weight="subtle" className="mt-10 border-t border-border pt-4">
+            Spoken to us about being set up already? Yours will appear here as soon as it exists
+            — there is no need to make a second one.
+          </Hint>
         </div>
       ) : (
-        <ul className="mt-6 divide-y divide-black/10 dark:divide-white/15">
+        <DividedList className="mt-6">
           {organizations.map((organization) => (
             <li key={organization.id} className="flex items-baseline justify-between gap-4 py-3">
               <Link
@@ -99,10 +105,10 @@ export default async function OrganizationsPage() {
                 {organization.name}
               </Link>
               {/* The tenant's own word for this member's role, not a platform label. */}
-              <span className="shrink-0 text-sm opacity-70">{organization.role}</span>
+              <span className="shrink-0 text-sm text-muted">{organization.role}</span>
             </li>
           ))}
-        </ul>
+        </DividedList>
       )}
     </main>
   );

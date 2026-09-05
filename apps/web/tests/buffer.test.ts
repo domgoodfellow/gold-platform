@@ -103,7 +103,7 @@ async function setBuffer(tenant: Tenant, minutes: number) {
     id: tenant.organizationId,
     name: organization!.name,
     timezone: organization!.timezone,
-    currency: organization!.currency,
+    currency: organization!.currency!,
     bufferMinutes: minutes,
     slug: null,
   });

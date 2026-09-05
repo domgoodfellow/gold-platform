@@ -68,7 +68,15 @@ export type DraftingRequest = {
   business: {
     name: string;
     /** ISO 4217, as the organization holds it. */
-    currency: string;
+    /**
+     * What it trades in, or null when it has not said.
+     *
+     * Null is reachable and ordinary: signing up stopped asking (`20260904000001`), so a
+     * business commonly describes itself before it has named a currency. The prompt says so
+     * rather than substituting one — a drafted price book in a currency the platform picked
+     * would be the assumption I10 forbids, laundered through a model.
+     */
+    currency: string | null;
     /** IANA, as the organization holds it. */
     timeZone: string;
   };

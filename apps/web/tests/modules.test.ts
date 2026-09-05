@@ -105,7 +105,7 @@ async function newBusiness(label: string): Promise<Business> {
     id: organization,
     name: org!.name,
     timezone: org!.timezone,
-    currency: org!.currency,
+    currency: org!.currency!,
     bufferMinutes: org!.bufferMinutes,
     slug,
   });
@@ -130,19 +130,30 @@ describe('what a business has switched on', () => {
     shop = await newBusiness('mod');
   });
 
-  it('starts a new business on billing and nothing that publishes', async () => {
+  it('starts a new business on billing and guided setup, and nothing that publishes', async () => {
     const enabled = await listEnabledModules(shop.db, { organizationId: shop.organizationId });
 
     // **`work`, `scheduling` and `customers` are deliberately absent, and their absence is the
     // point.** They were listed here as required modules, which was the kernel misfiled — see
     // `navigation.ts`. A business always has them and never switched them on.
-    expect([...enabled].sort()).toEqual(['billing']);
+    //
+    // **`drafting` joined the list at `20260904000001`, and the reason is discoverability
+    // rather than generosity.** The screen whose whole job is to stand a business up was a
+    // module that started off, sitting last in the configuration group — so the way to reach
+    // the thing that saves you filling in eight screens was to go through the settings you
+    // were trying to avoid. It is still a module and still one click from off.
+    expect([...enabled].sort()).toEqual(['billing', 'drafting']);
     // Publishing a page to the internet is not a default anybody should acquire by signing up,
     // and neither is a module for machines a business may not have.
     expect(enabled.has('assets')).toBe(false);
     expect(enabled.has('booking')).toBe(false);
     expect(enabled.has('portal')).toBe(false);
     expect(enabled.has('card_payments')).toBe(false);
+    // **`assistant` is off while `drafting` is on, and that pair is the decision.** Drafting
+    // sends nothing anywhere until somebody types a description and presses a button; the
+    // assistant reads this business's rows out to a model to answer with. Acquiring the second
+    // by signing up would be a decision made on a business's behalf.
+    expect(enabled.has('assistant')).toBe(false);
   });
 
   it('gives a business with booking off no public presence at all', async () => {
@@ -551,7 +562,7 @@ describe('what a switched-on module still needs', () => {
       id: bare.organizationId,
       name: organization!.name,
       timezone: organization!.timezone,
-      currency: organization!.currency,
+      currency: organization!.currency!,
       bufferMinutes: organization!.bufferMinutes,
       slug: `ready-${randomUUID().slice(0, 6)}`,
     });

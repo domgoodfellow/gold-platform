@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { FIELD_KINDS, CUSTOM_FIELD_ENTITIES } from '@/lib/domain/fields/field-definitions';
 import { TRIGGER_EVENTS } from '@/lib/domain/automation/rules';
+import { FONT_KEYS } from '@/lib/domain/branding/palette';
 import type { BusinessShape } from '@/lib/domain/onboarding/configure';
 import type {
   ConfigurationGap,
@@ -190,6 +191,41 @@ function responseSchema(): Record<string, unknown> {
             description:
               'What this business does without anybody present. An empty list is an ordinary answer.',
           },
+          voice: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['tagline', 'intro'],
+            properties: {
+              tagline: {
+                type: 'string',
+                description:
+                  'One line under the business name on its public page, in their words. Empty if they gave you nothing to say it with.',
+              },
+              intro: {
+                type: 'string',
+                description:
+                  'A short paragraph a customer reads before booking, in their words. Empty if they gave you nothing to say it with.',
+              },
+            },
+            description:
+              'What this business says about itself on a page its customers see. Their claims, never yours.',
+          },
+          brand: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['accent', 'headingFont', 'bodyFont'],
+            properties: {
+              accent: {
+                type: 'string',
+                description:
+                  'Lowercase #rrggbb, or empty. Only if they named a colour or their trade has an unmistakable one. Contrast is handled by the platform, so pick the colour itself and do not adjust it for readability.',
+              },
+              headingFont: { type: 'string', enum: [...FONT_KEYS] },
+              bodyFont: { type: 'string', enum: [...FONT_KEYS] },
+            },
+            description:
+              'How this business looks. Lettering: plain (sans), traditional (serif) or technical (mono).',
+          },
         },
       },
       gaps: {
@@ -202,7 +238,7 @@ function responseSchema(): Record<string, unknown> {
             field: {
               type: 'string',
               description:
-                'Which part of the shape the question concerns: typeName, statuses, transitions, fields, prices, hours, roles or automations.',
+                'Which part of the shape the question concerns: typeName, statuses, transitions, fields, prices, hours, roles, automations, voice or brand.',
             },
             question: {
               type: 'string',
@@ -240,6 +276,11 @@ const SYSTEM = [
   '- Never invent a price. If they named a service but not what it costs, put nothing in the',
   '  price list for it and ask what they charge.',
   '- Give a role only the capabilities that job actually needs.',
+  '- Never write a claim they did not make. The tagline and the introduction are what this',
+  '  business says about itself to its own customers, so they are built from their words or',
+  '  left empty. "Quality service, guaranteed" is something you made up about somebody else.',
+  '- A colour only if they named one, or if their trade has one nobody would dispute. Leave it',
+  '  empty otherwise: a colour you invented is on every screen they look at.',
   '',
   'Raise a gap for anything you were thin about. A short proposal with three good questions is',
   'better than a complete-looking one built on assumptions. Ask in plain language: the person',
@@ -252,7 +293,9 @@ const SYSTEM = [
 function userMessage(input: DraftingRequest): string {
   const parts = [
     `The business is called ${input.business.name}.`,
-    `It trades in ${input.business.currency} and its working day is in the ${input.business.timeZone} time zone.`,
+    input.business.currency
+      ? `It trades in ${input.business.currency} and its working day is in the ${input.business.timeZone} time zone.`
+      : `It has not said what it trades in yet, so propose amounts as plain minor units and do not name a currency. Its working day is in the ${input.business.timeZone} time zone.`,
     '',
     'What they said about themselves:',
     input.description,
@@ -322,10 +365,42 @@ function narrow(value: unknown): DraftedConfiguration | null {
     gaps.push({ field: entry.field, question: entry.question });
   }
 
+  // **Dropped rather than refused, and only these two.** Everything above is structural — a
+  // shape without statuses is not a shape — while a malformed `voice` or `brand` is one optional
+  // part of an otherwise good proposal, and losing the whole draft over a colour would be worse
+  // than losing the colour. What is not done here is checking the *values*: whether `#ff` is a
+  // colour is `setBrand`'s to answer, and a second copy of that rule is what this file's header
+  // refuses.
+  const voice = record(shape.voice);
+  const brand = record(shape.brand);
+
   return {
-    shape: { ...(shape as unknown as BusinessShape), statuses, transitions },
+    shape: {
+      ...(shape as unknown as BusinessShape),
+      statuses,
+      transitions,
+      voice:
+        voice && typeof voice.tagline === 'string' && typeof voice.intro === 'string'
+          ? { tagline: voice.tagline, intro: voice.intro }
+          : undefined,
+      brand:
+        brand &&
+        typeof brand.accent === 'string' &&
+        typeof brand.headingFont === 'string' &&
+        typeof brand.bodyFont === 'string'
+          ? {
+              accent: brand.accent,
+              headingFont: brand.headingFont,
+              bodyFont: brand.bodyFont,
+            }
+          : undefined,
+    },
     gaps,
   };
+}
+
+function record(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
 }
 
 export function anthropicDraftingProvider(config: { apiKey: string }): DraftingProvider {

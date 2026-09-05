@@ -1,17 +1,19 @@
 'use client';
 
+import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
+import { SectionHeading } from '@/components/containers/section';
+import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
+import { CurrencyField } from '@/features/locale/locale-fields';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import {
+  chooseCurrencyAction,
   createPriceItemAction,
   updatePriceItemAction,
   type PriceItemState,
 } from './actions';
 
 const INITIAL: PriceItemState = { error: null };
-const CELL = 'rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20';
-const FIELD = 'rounded border border-black/15 px-3 py-2 dark:border-white/20';
-
 /**
  * How many decimal places to offer for a currency.
  *
@@ -30,6 +32,46 @@ function step(currency: string): string {
   }
 }
 
+/**
+ * The one question a business must answer before it can price anything.
+ *
+ * **This used to be the fourth field on a signup form and it belongs here.** A currency means
+ * nothing to somebody naming their business ninety seconds after registering, and it means
+ * something obvious to somebody looking at an empty price book. Nothing is guessed in between:
+ * until this is answered the business has no currency at all, which is a state the column holds
+ * (`20260904000001`) rather than a default standing in for an answer.
+ *
+ * Nothing preselected, deliberately. The browser knows where somebody is and does not know what
+ * they sell in — a Dutch company invoicing in dollars is ordinary — so a country-to-currency
+ * guess would be the platform deciding what this business trades in, which `constraints.md`
+ * forbids outright.
+ */
+export function ChooseCurrencyForm({ organizationId }: { organizationId: string }) {
+  const [state, formAction, pending] = useActionState(chooseCurrencyAction, INITIAL);
+
+  return (
+    <form action={formAction} className="mt-8 max-w-md">
+      <input type="hidden" name="organizationId" value={organizationId} />
+
+      <SectionHeading>First, what do you charge in?</SectionHeading>
+      <Hint className="mt-1">
+        Every amount is recorded in the currency it was written in, so this is a starting point
+        rather than a setting that reaches backwards. You can change it later without
+        reinterpreting anything already priced.
+      </Hint>
+
+      <div className="mt-4 flex flex-col gap-3">
+        <CurrencyField />
+        <Button type="submit" size="small" disabled={pending} className="w-fit">
+          {pending ? 'Saving…' : 'Save and start pricing'}
+        </Button>
+      </div>
+
+      <ErrorText role="alert" className="mt-2">{state.error}</ErrorText>
+    </form>
+  );
+}
+
 export function CreatePriceItemForm({
   organizationId,
   currency,
@@ -46,28 +88,28 @@ export function CreatePriceItemForm({
           inside the RPC, so editing this cannot change what the business prices in. */}
       <input type="hidden" name="currency" value={currency} />
 
-      <h2 className="text-sm font-medium">Something you charge for</h2>
+      <SectionHeading>Something you charge for</SectionHeading>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
+        <TextInput
           name="name"
           type="text"
           required
           maxLength={200}
           placeholder="What it is, e.g. Callout"
           aria-label="Name"
-          className={`flex-1 ${FIELD}`}
+          className="flex-1"
         />
-        <input
+        <TextInput
           name="unit"
           type="text"
           required
           maxLength={40}
           placeholder="Per what, e.g. visit"
           aria-label="Unit"
-          className={`flex-1 ${FIELD}`}
+          className="flex-1"
         />
-        <input
+        <TextInput
           name="amount"
           type="number"
           required
@@ -75,23 +117,15 @@ export function CreatePriceItemForm({
           step={step(currency)}
           placeholder={`Amount in ${currency}`}
           aria-label={`Amount in ${currency}`}
-          className={`w-40 ${FIELD}`}
+          className="w-40"
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Adding…' : 'Add'}
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );
 }
@@ -119,26 +153,28 @@ export function EditPriceItemForm({
       <input type="hidden" name="itemId" value={item.id} />
       <input type="hidden" name="currency" value={item.currency} />
 
-      <input
+      <TextInput
         name="name"
         type="text"
         required
         maxLength={200}
         defaultValue={item.name}
         aria-label={`Name of ${item.name}`}
-        className={`min-w-0 flex-1 ${CELL}`}
+        size="small"
+        className="min-w-0 flex-1"
       />
-      <span className="text-sm opacity-60">per</span>
-      <input
+      <span className="text-sm text-subtle">per</span>
+      <TextInput
         name="unit"
         type="text"
         required
         maxLength={40}
         defaultValue={item.unit}
         aria-label={`Unit of ${item.name}`}
-        className={`w-28 ${CELL}`}
+        size="small"
+        className="w-28"
       />
-      <input
+      <TextInput
         name="amount"
         type="number"
         required
@@ -146,22 +182,15 @@ export function EditPriceItemForm({
         step={step(item.currency)}
         defaultValue={minorToTyped(item.unitAmountMinor, item.currency)}
         aria-label={`Amount for ${item.name}`}
-        className={`w-28 ${CELL}`}
+        size="small"
+        className="w-28"
       />
-      <span className="text-sm opacity-60">{item.currency}</span>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-50 dark:border-white/20"
-      >
+      <span className="text-sm text-subtle">{item.currency}</span>
+      <Button type="submit" disabled={pending} tone="secondary" size="tiny">
         Save
-      </button>
+      </Button>
 
-      {state.error ? (
-        <p role="alert" className="w-full text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <ErrorText role="alert" className="w-full">{state.error}</ErrorText>
     </form>
   );
 }

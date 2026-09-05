@@ -5,6 +5,35 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Signing up asks two questions
+
+The first screen somebody meets asked four things at once: a business name, their own name, an IANA
+zone chosen from a list of every zone on earth, and a currency — the last two beside the first two
+as though *what is your business called* and *what is your ISO 4217 code* were the same kind of
+question. Two of the four are gone, by the oldest rule in form design: remove any field that can be
+derived elsewhere or collected later.
+
+**The zone is derived.** The browser knows it, and it is shown rather than hidden, because deriving
+something silently and being wrong is worse than asking. One line with a Change link is not a
+question — nobody has to answer it to get through.
+
+**The currency is collected later**, on the pricing screen, in front of somebody already thinking
+about prices. That needed `organizations.currency` to become nullable, and the previous shape is
+worth naming: it was `not null default 'EUR'`, so a business that never reached the currency box
+was silently recorded as trading in euro. `create_organization` raised on a null currency with the
+reasoning that a platform default would be the platform deciding what a business trades in — which
+was correct, and was being defeated one line below by a column default. The rule now travels with
+the write it protects: `create_price_book_item` and `record_work_item_cost` refuse, in a sentence,
+at the moment the answer is actually needed.
+
+**Guided setup is on at founding**, and somebody who makes a business lands on it rather than on an
+empty schedule — unless this deployment holds no drafting key, in which case that screen's only
+content would be what it cannot do, and they land on the first operational area instead. The module whose entire job is standing a business up started off and sat last in
+the configuration group, so the way to reach the thing that saves you filling in eight screens was
+to go through the settings you were trying to avoid. `assistant` is deliberately not in that list:
+drafting sends nothing anywhere until somebody types a description and presses a button, while the
+assistant reads a business's rows out to a model to answer with.
+
 ### A rule armed before its fixture was built could move the fixture
 
 `automations.test.ts` went red once in a full run and passed alone and on re-runs, which is the

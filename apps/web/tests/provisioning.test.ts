@@ -5,10 +5,12 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { provisionOrganization } from '@/lib/domain/platform/provision';
 import { listTenants } from '@/lib/domain/platform/tenants';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
+import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import {
   createOrganization,
   getOrganization,
   listMyOrganizations,
+  setTradingCurrency,
 } from '@/lib/domain/tenancy/organizations';
 
 /**
@@ -206,16 +208,21 @@ describe('the operator door (D29)', () => {
       currency: 'USD',
     });
 
-    const tenants = await listTenants(staff.db);
+    const { tenants } = await listTenants(staff.db);
     const provisioned = tenants.find((tenant) => tenant.id === id);
 
-    // **`billing` alone, and that is the whole list** — `20260829000012` took the kernel out
-    // of the module table, so work, scheduling and customers are not modules to switch on
-    // (D25). Deliberately absent: `booking` and `portal`, because publishing a business to the
-    // internet is not something GOLD does on somebody's behalf at the moment of handover.
-    // Asserted through the same `enable_default_modules` the other door calls, so the two
-    // cannot drift apart.
-    expect(provisioned?.moduleKeys).toEqual(['billing']);
+    // **`billing` and `drafting`, and that is the whole list** — `20260829000012` took the
+    // kernel out of the module table, so work, scheduling and customers are not modules to
+    // switch on (D25), and `20260904000001` added guided setup because a first-run screen that
+    // has to be found in settings is not a first-run screen. Deliberately absent: `booking` and
+    // `portal`, because publishing a business to the internet is not something GOLD does on
+    // somebody's behalf at the moment of handover.
+    //
+    // **Asserted at this door precisely because it is the other one.** Both doors call
+    // `enable_default_modules`, so a change made for the person who signs up reaches the
+    // business GOLD hands over as well — and if the two ever stopped agreeing, this line is
+    // where it would show.
+    expect(provisioned?.moduleKeys).toEqual(['billing', 'drafting']);
   });
 
   it('still cannot reach into a business once it exists, which is where I21 now sits', async () => {
@@ -283,7 +290,7 @@ describe('the operator door (D29)', () => {
     // one `add-platform-staff.sql` was fixed for: a tenant created with no member is a row
     // nobody can ever reach again.
     expect(
-      (await listTenants(staff.db)).some((tenant) => tenant.name === 'Unreachable Ltd'),
+      (await listTenants(staff.db)).tenants.some((tenant) => tenant.name === 'Unreachable Ltd'),
     ).toBe(false);
   });
 
@@ -330,6 +337,57 @@ describe('the operator door (D29)', () => {
     } finally {
       await pg.end();
     }
+  });
+
+  it('lets somebody sign up without saying what they trade in, and refuses the first amount until they do', async () => {
+    // **Signing up asks two questions and a currency is not one of them** (`20260904000001`).
+    // The screen a person meets is about who they are and what the business is called; a
+    // currency is a fact about money, and nothing here is about money yet.
+    const id = await createOrganization(stranger.db, {
+      name: 'Not Priced Yet Ltd',
+      displayName: 'Me',
+      timezone: 'UTC',
+    });
+
+    // **Null, not a default.** This is the whole point of the column becoming nullable: the
+    // previous shape was `not null default 'EUR'`, so a business that was never asked was
+    // silently recorded as trading in euro — the platform deciding what a business trades in
+    // through a column default, which is exactly what the raise one level up existed to stop.
+    const fresh = await getOrganization(stranger.db, id);
+    expect(fresh?.currency).toBeNull();
+
+    // And nothing invents one on the way to the first amount. The refusal is the database's,
+    // in a sentence an operator can act on, rather than a not-null violation from a column
+    // three joins away.
+    await expect(
+      createPriceBookItem(stranger.db, {
+        organizationId: id,
+        name: 'Call out',
+        unit: 'visit',
+        unitAmountMinor: 4500,
+      }),
+    ).rejects.toMatchObject({ message: expect.stringContaining('has not said what it trades in') });
+
+    // Answered where it is first needed, and then the same write goes through. `20260904000001`
+    // moved the question rather than removing it.
+    await setTradingCurrency(stranger.db, { organizationId: id, currency: 'SEK' });
+    expect((await getOrganization(stranger.db, id))?.currency).toBe('SEK');
+
+    const itemId = await createPriceBookItem(stranger.db, {
+      organizationId: id,
+      name: 'Call out',
+      unit: 'visit',
+      unitAmountMinor: 4500,
+    });
+    expect(itemId).toBeTruthy();
+
+    // **Asked once and never again.** Re-answering is a settings act with consequences for a
+    // catalogue already priced, and this path is for a business that has said nothing at all —
+    // so it refuses rather than quietly becoming a second way to change what a business trades
+    // in.
+    await expect(
+      setTradingCurrency(stranger.db, { organizationId: id, currency: 'NOK' }),
+    ).rejects.toMatchObject({ message: expect.stringContaining('already said') });
   });
 
   it('refuses an anonymous session at the door that is open', async () => {

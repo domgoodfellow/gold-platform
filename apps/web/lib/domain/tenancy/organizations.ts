@@ -17,8 +17,16 @@ export type Organization = {
   capabilities: Capability[];
   /** The IANA zone this business thinks in. Applied at render, never stored (I9). */
   timezone: string;
-  /** ISO 4217, this business's own. Never assumed by the platform (I10). */
-  currency: string;
+  /**
+   * ISO 4217, this business's own, or null until it has said.
+   *
+   * **Never assumed by the platform (I10), and null is how that survives contact with a person
+   * who has not been asked.** Signing up does not ask, because a currency matters the first
+   * time money is written down and not before; the pricing screen asks there. A default here
+   * would be the platform deciding what a business trades in through a column rather than
+   * through a sentence, which is the same mistake with better manners.
+   */
+  currency: string | null;
   /**
    * Minutes a resource stays occupied after work ends.
    *
@@ -95,7 +103,7 @@ type MembershipRow = {
         name: string;
         created_at: string;
         timezone: string;
-        currency: string;
+        currency: string | null;
         buffer_minutes: number;
         slug: string | null;
       }
@@ -104,7 +112,7 @@ type MembershipRow = {
         name: string;
         created_at: string;
         timezone: string;
-        currency: string;
+        currency: string | null;
         buffer_minutes: number;
         slug: string | null;
       }[];
@@ -241,13 +249,25 @@ export async function createOrganization(
     /** What this person is called inside this business. Per-tenant, never a global profile. */
     displayName: string;
     timezone: string;
-    currency: string;
+    /**
+     * What this business trades in, when it already knows.
+     *
+     * **Optional, and signing up does not ask.** A currency is a fact about money and the first
+     * screen a person meets is not about money — it is about who they are and what the business
+     * is called. Leaving it out records that this business has not said, which is a state the
+     * column now holds (`20260904000001`); the pricing screen asks for it at the moment it is
+     * first needed, in front of somebody who is already thinking about prices.
+     *
+     * Still never guessed. `provisionOrganization` passes one because staff spoke to the
+     * business and know the answer, which is the same asymmetry that door has everywhere else.
+     */
+    currency?: string;
   },
 ): Promise<string> {
   await requireActor(db);
 
   const name = normaliseName(input.name);
-  const currency = normaliseCurrency(input.currency);
+  const currency = input.currency ? normaliseCurrency(input.currency) : null;
   const timezone = input.timezone.trim();
 
   if (timezone.length === 0) {
@@ -268,7 +288,10 @@ export async function createOrganization(
     p_capabilities: ALL_CAPABILITIES,
     p_display_name: displayName,
     p_timezone: timezone,
-    p_currency: currency,
+    // Omitted rather than sent as null when nothing was asked, because the function's default
+    // is the thing being relied on. Spreading keeps the generated argument type honest: it says
+    // optional, not nullable.
+    ...(currency === null ? {} : { p_currency: currency }),
   });
 
   if (error) {
@@ -396,4 +419,48 @@ export async function updateOrganization(
     }
     throw new DomainError(error.message, 'organizations.update_failed');
   }
+}
+
+/**
+ * Say what this business trades in, for the first time.
+ *
+ * **A narrow caller for a wide function, and the narrowness is the point.** Signing up does not
+ * ask for a currency (`20260904000001`), so a business reaches its first price without one — and
+ * the person standing there is thinking about prices, not about settings. Asking them for one
+ * answer where they are is the whole of progressive collection: the same question, moved to the
+ * moment it means something.
+ *
+ * It calls `updateOrganization` rather than writing the column, which costs a read and buys
+ * three things: one write path, the same `organization.manage` refusal, and the same event. A
+ * direct update would be a second way to change what a business trades in, and the second one is
+ * always the one that forgets to record that it happened.
+ *
+ * **It refuses to change an answer already given.** Correcting a currency is a settings act with
+ * consequences for a catalogue already priced — the pricing screen says so — and this is the
+ * path for a business that has said nothing at all.
+ */
+export async function setTradingCurrency(
+  db: Db,
+  input: { organizationId: string; currency: string },
+): Promise<void> {
+  const organization = await getOrganization(db, input.organizationId);
+  if (!organization) {
+    throw new DomainError('No such business.', 'organizations.not_found');
+  }
+
+  if (organization.currency !== null) {
+    throw new DomainError(
+      'This business has already said what it trades in. Change it in Settings.',
+      'organizations.currency_already_set',
+    );
+  }
+
+  await updateOrganization(db, {
+    id: organization.id,
+    name: organization.name,
+    timezone: organization.timezone,
+    currency: input.currency,
+    bufferMinutes: organization.bufferMinutes,
+    slug: organization.slug,
+  });
 }

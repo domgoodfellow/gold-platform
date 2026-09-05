@@ -1,8 +1,11 @@
+import { Badge, DefinitionList, Detail } from '@/components/display/data';
+import { Hint } from '@/components/controls/inputs';
+import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { paymentProvider } from '@/lib/adapters/payments';
 import { listEnabledModules } from '@/lib/domain/tenancy/modules';
-import { CustomFieldValues } from '@/components/custom-field-values';
+import { CustomFieldValues } from '@/components/custom-fields/values';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { getInvoiceForWorkItem, invoiceStanding } from '@/lib/domain/billing/invoices';
 import { listCustomers } from '@/lib/domain/customers/customers';
@@ -111,32 +114,40 @@ export default async function WorkItemPage({
     <>
       <Link
         href={`/organizations/${organizationId}/work?type=${workItem.type.id}`}
-        className="text-sm underline underline-offset-4 opacity-70"
+        className="text-sm underline underline-offset-4 text-muted"
       >
         ← {workItem.type.label}
       </Link>
 
-      <h1 className="mt-4 text-2xl font-semibold">{workItem.title}</h1>
-      <p className="text-sm opacity-70">
-        {[
-          workItem.status.label,
-          workItem.customer?.label,
-          workItem.location?.label,
-          workItem.asset?.label,
-          workItem.resource ? `→ ${workItem.resource.label}` : null,
-        ]
-          .filter(Boolean)
-          .join(' · ')}
-      </p>
-      {workItem.window ? (
-        <p className="text-sm opacity-70">
-          Scheduled {formatWindow(workItem.window, organization.timezone)}
-        </p>
-      ) : null}
+      <PageHeading className="mt-4">{workItem.title}</PageHeading>
+
+      {/* **A job's facts were one sentence of middle dots, and are now labelled.** *Ana ·
+          Riverside · Van 2* asks the reader to work out which of those is the customer and
+          which is the van, and a job whose customer happens to be named after a place made
+          that genuinely ambiguous. Every value now carries the word for what it is. */}
+      <DefinitionList className="mt-3">
+        <Detail label="Stage">
+          {/* The tenant's own word, rendered as written and coloured by nothing (§7). */}
+          <Badge>{workItem.status.label}</Badge>
+        </Detail>
+        <Detail label="Customer">{workItem.customer?.label}</Detail>
+        <Detail label="Place">{workItem.location?.label}</Detail>
+        <Detail label="Asset">{workItem.asset?.label}</Detail>
+        <Detail label="Assigned to">{workItem.resource?.label}</Detail>
+        <Detail label="Scheduled">
+          {/* I9: an absolute instant rendered in this business's zone, never the server's. */}
+          {workItem.window ? (
+            <span className="tabular-nums">
+              {formatWindow(workItem.window, organization.timezone)}
+            </span>
+          ) : null}
+        </Detail>
+      </DefinitionList>
+
       <CustomFieldValues definitions={definitions} custom={workItem.custom} />
 
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Details</h2>
+      <Section className="mt-8">
+        <SectionHeading>Correct these details</SectionHeading>
         {mayEdit ? (
           <EditWorkItemForm
             organizationId={organizationId}
@@ -147,17 +158,17 @@ export default async function WorkItemPage({
             definitions={definitions}
           />
         ) : (
-          <p className="mt-1 text-sm opacity-60">
+          <Hint weight="subtle" className="mt-1">
             Your role cannot correct a job&rsquo;s details here.
-          </p>
+          </Hint>
         )}
-      </section>
+      </Section>
 
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Steps</h2>
+      <Section className="mt-8">
+        <SectionHeading>Steps</SectionHeading>
 
         {checklist.length === 0 ? (
-          <p className="mt-1 text-sm opacity-60">None yet.</p>
+          <EmptyState weight="subtle" className="mt-1">None yet.</EmptyState>
         ) : (
           <ul className="mt-2 flex flex-col gap-2">
             {checklist.map((item) => (
@@ -171,7 +182,7 @@ export default async function WorkItemPage({
                     done={item.doneAt !== null}
                   />
                 ) : (
-                  <span className={item.doneAt ? 'text-sm line-through opacity-60' : 'text-sm'}>
+                  <span className={item.doneAt ? 'text-sm line-through text-subtle' : 'text-sm'}>
                     {item.doneAt ? '☑' : '☐'} {item.label}
                   </span>
                 )}
@@ -187,22 +198,22 @@ export default async function WorkItemPage({
             position={nextPosition}
           />
         ) : null}
-      </section>
+      </Section>
 
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Time worked</h2>
+      <Section className="mt-8">
+        <SectionHeading>Time worked</SectionHeading>
         {/* Not the same as the scheduled window above, and shown separately on purpose: the
             difference between planned and actual is the reporting value, and a screen that
             merged them would destroy it. */}
 
         {timeEntries.length === 0 ? (
-          <p className="mt-1 text-sm opacity-60">None recorded.</p>
+          <EmptyState weight="subtle" className="mt-1">None recorded.</EmptyState>
         ) : (
-          <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+          <DividedList className="mt-2">
             {timeEntries.map((entry) => (
               <li key={entry.id} className="py-2 text-sm">
                 <div>{formatWindow(entry.worked, organization.timezone)}</div>
-                <div className="opacity-70">
+                <div className="text-muted">
                   {[
                     entry.resourceId ? resourceName.get(entry.resourceId) : null,
                     entry.note,
@@ -212,7 +223,7 @@ export default async function WorkItemPage({
                 </div>
               </li>
             ))}
-          </ul>
+          </DividedList>
         )}
 
         {mayRecord ? (
@@ -222,28 +233,28 @@ export default async function WorkItemPage({
             resources={resources.map((resource) => ({ id: resource.id, label: resource.name }))}
           />
         ) : null}
-      </section>
+      </Section>
 
       {/* Billing off means this business quotes and invoices somewhere else, so the three
           sections that do it are absent rather than empty. Costs below stay: what a job
           consumed is an operational observation, not a claim this business publishes, and a
           business that invoices in Xero still wants to know what its afternoon cost. */}
       {billingEnabled ? (
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Quote</h2>
+      <Section className="mt-8">
+        <SectionHeading>Quote</SectionHeading>
         {/* A quote is what this job is charged; the Cost section below is what it consumed.
             They are deliberately not the same number and are never derived from each other
             — see `roadmap.md` M2 on why a cost is not a price. */}
 
         {lines.length === 0 ? (
-          <p className="mt-1 text-sm opacity-60">Nothing priced.</p>
+          <EmptyState weight="subtle" className="mt-1">Nothing priced.</EmptyState>
         ) : (
-          <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+          <DividedList className="mt-2">
             {lines.map((line) => (
               <li key={line.id} className="flex items-baseline justify-between gap-3 py-2 text-sm">
                 <span>
                   {line.description}
-                  <span className="opacity-60">
+                  <span className="text-subtle">
                     {' '}
                     × {line.quantity} {line.unit}
                   </span>
@@ -251,7 +262,7 @@ export default async function WorkItemPage({
                 <span className="flex shrink-0 items-baseline gap-3">
                   {/* The line's own snapshotted amount and currency. Re-pricing the
                       catalogue does not reach this row (I8). */}
-                  <span className="opacity-70">
+                  <span className="text-muted">
                     {formatMoney(line.unitAmountMinor * line.quantity, line.currency)}
                   </span>
                   {mayPrice ? (
@@ -265,7 +276,7 @@ export default async function WorkItemPage({
                 </span>
               </li>
             ))}
-          </ul>
+          </DividedList>
         )}
 
         {price ? (
@@ -276,9 +287,9 @@ export default async function WorkItemPage({
         ) : null}
 
         {mayPrice && priceBook.length === 0 ? (
-          <p className="mt-3 text-sm opacity-70">
+          <EmptyState className="mt-3">
             Nothing is priced in this business yet, so there is nothing to quote from.
-          </p>
+          </EmptyState>
         ) : null}
         {mayPrice && priceBook.length > 0 ? (
           <AddPricedLineForm
@@ -287,28 +298,28 @@ export default async function WorkItemPage({
             items={priceBook}
           />
         ) : null}
-      </section>
+      </Section>
       ) : null}
 
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Cost</h2>
+      <Section className="mt-8">
+        <SectionHeading>Cost</SectionHeading>
 
         {costs.length === 0 ? (
-          <p className="mt-1 text-sm opacity-60">Nothing recorded.</p>
+          <EmptyState weight="subtle" className="mt-1">Nothing recorded.</EmptyState>
         ) : (
-          <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+          <DividedList className="mt-2">
             {costs.map((cost) => (
               <li key={cost.id} className="flex justify-between py-2 text-sm">
                 <span>{cost.description}</span>
                 {/* Each row renders in the currency it was recorded in, not the
                     organization's current one — a business that changed currency did not
                     change what last year's jobs cost (I8). */}
-                <span className="opacity-70">
+                <span className="text-muted">
                   {formatMoney(cost.amountMinor, cost.currency)}
                 </span>
               </li>
             ))}
-          </ul>
+          </DividedList>
         )}
 
         {economics.costs.length > 0 ? (
@@ -325,24 +336,37 @@ export default async function WorkItemPage({
           </p>
         ) : null}
 
+        {/* **A cost is an amount, and an amount needs a currency this business has named.**
+            Signing up no longer asks for one (`20260904000001`), so a business can reach a job
+            before it has said — and `record_work_item_cost` refuses in that state. Saying so
+            here is the same courtesy every capability refusal on these screens pays: the
+            database is the guard, and the screen explains rather than presenting a form whose
+            only outcome is a refusal. */}
         {mayRecord ? (
-          <RecordCostForm
-            organizationId={organizationId}
-            workItemId={workItemId}
-            currency={organization.currency}
-          />
+          organization.currency === null ? (
+            <Hint className="mt-4">
+              Costs are recorded in what this business charges in, and it has not said yet. Set
+              that on the pricing screen and this comes back.
+            </Hint>
+          ) : (
+            <RecordCostForm
+              organizationId={organizationId}
+              workItemId={workItemId}
+              currency={organization.currency}
+            />
+          )
         ) : null}
-      </section>
+      </Section>
 
       {billingEnabled ? (
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Invoice</h2>
+      <Section className="mt-8">
+        <SectionHeading>Invoice</SectionHeading>
         {/* The quote above can still change after this is issued. That is the point of the
             invoice being a copy rather than a view — it is what somebody was sent (I8). */}
 
         {invoice && standing ? (
           <>
-            <p className="mt-1 text-sm opacity-70">
+            <Hint className="mt-1">
               #{invoice.number} to {invoice.billedTo} ·{' '}
               {new Date(invoice.issuedAt).toLocaleDateString('en-GB', {
                 timeZone: organization.timezone,
@@ -352,9 +376,9 @@ export default async function WorkItemPage({
                     timeZone: organization.timezone,
                   })}`
                 : null}
-            </p>
+            </Hint>
 
-            <ul className="mt-2 divide-y divide-black/10 dark:divide-white/15">
+            <DividedList className="mt-2">
               {invoice.lines.map((line) => (
                 <li
                   key={line.id}
@@ -362,19 +386,19 @@ export default async function WorkItemPage({
                 >
                   <span>
                     {line.description}
-                    <span className="opacity-60">
+                    <span className="text-subtle">
                       {' '}
                       × {line.quantity} {line.unit}
                     </span>
                   </span>
                   {/* No remove control, and no edit. There is no update or delete policy on
                       `invoice_lines` at all: this document has been sent. */}
-                  <span className="shrink-0 opacity-70">
+                  <span className="shrink-0 text-muted">
                     {formatMoney(line.unitAmountMinor * line.quantity, line.currency)}
                   </span>
                 </li>
               ))}
-            </ul>
+            </DividedList>
 
             {standing.total ? (
               <p className="mt-2 flex justify-between text-sm font-medium">
@@ -386,10 +410,10 @@ export default async function WorkItemPage({
             ) : null}
 
             {invoice.payments.length > 0 ? (
-              <ul className="mt-3 divide-y divide-black/10 dark:divide-white/15">
+              <DividedList className="mt-3">
                 {invoice.payments.map((payment) => (
                   <li key={payment.id} className="flex justify-between gap-3 py-2 text-sm">
-                    <span className="opacity-70">
+                    <span className="text-muted">
                       {new Date(payment.receivedAt).toLocaleDateString('en-GB', {
                         timeZone: organization.timezone,
                       })}
@@ -403,7 +427,7 @@ export default async function WorkItemPage({
                     </span>
                   </li>
                 ))}
-              </ul>
+              </DividedList>
             ) : null}
 
             <p className="mt-2 flex justify-between text-sm font-medium">
@@ -432,32 +456,32 @@ export default async function WorkItemPage({
                 currency={invoice.currency}
               />
             ) : (
-              <p className="mt-3 text-sm opacity-60">
+              <Hint weight="subtle" className="mt-3">
                 Your role cannot record payments here.
-              </p>
+              </Hint>
             )}
           </>
         ) : (
           <>
-            <p className="mt-1 text-sm opacity-60">
+            <Hint weight="subtle" className="mt-1">
               {price
                 ? 'Not invoiced yet.'
                 : 'There is nothing priced on this job, so there is nothing to invoice.'}
-            </p>
+            </Hint>
             {mayInvoice && price ? (
               <IssueInvoiceForm organizationId={organizationId} workItemId={workItemId} />
             ) : null}
             {!mayInvoice ? (
-              <p className="mt-3 text-sm opacity-60">Your role cannot issue invoices here.</p>
+              <Hint weight="subtle" className="mt-3">Your role cannot issue invoices here.</Hint>
             ) : null}
           </>
         )}
-      </section>
+      </Section>
       ) : null}
 
       {billingEnabled ? (
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-sm font-medium">Margin</h2>
+      <Section className="mt-8">
+        <SectionHeading>Margin</SectionHeading>
         {/* The number the owner asks for first, and the smallest useful version of it: what
             this job earned, less what it consumed. Not a report and not a dashboard — those
             are M7, where an aggregate layer is the whole milestone. */}
@@ -472,15 +496,15 @@ export default async function WorkItemPage({
             </span>
           </p>
         ) : (
-          <p className="mt-1 text-sm opacity-60">
+          <Hint weight="subtle" className="mt-1">
             {/* Three different absences, said differently. A zero here would claim the job
                 broke even, which is a much stronger statement than "we cannot say". */}
             {economics.revenue === null
               ? 'Nothing is priced on this job yet, so there is nothing to compare its costs against.'
               : 'This job is priced in one currency and its costs are recorded in another, so there is no single margin. The two totals are above.'}
-          </p>
+          </Hint>
         )}
-      </section>
+      </Section>
       ) : null}
     </>
   );
