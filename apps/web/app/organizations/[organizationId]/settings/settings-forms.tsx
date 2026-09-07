@@ -3,6 +3,7 @@
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { Button } from '@/components/controls/button';
+import { ConfirmSubmit } from '@/components/containers/dialog';
 import { useActionState } from 'react';
 import { CurrencyField, TimeZoneField } from '@/features/locale/locale-fields';
 import type { OperatingHours } from '@/lib/domain/scheduling/operating-hours';
@@ -164,9 +165,10 @@ export function OperatingHoursRow({
   hours: OperatingHours;
 }) {
   const [state, formAction, pending] = useActionState(removeOperatingHoursAction, INITIAL);
+  const formId = `remove-hours-${hours.id}`;
 
   return (
-    <form action={formAction} className="flex items-center gap-3 py-2 text-sm">
+    <form id={formId} action={formAction} className="flex items-center gap-3 py-2 text-sm">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="id" value={hours.id} />
 
@@ -174,9 +176,15 @@ export function OperatingHoursRow({
       <span className="text-muted">
         {hours.opensAt.slice(0, 5)}–{hours.closesAt.slice(0, 5)}
       </span>
-      <Button type="submit" disabled={pending} tone="secondary" size="tiny">
-        Remove
-      </Button>
+      <ConfirmSubmit
+        formId={formId}
+        label="Remove"
+        confirmLabel="Remove hours"
+        description={`Remove ${dayName(hours.dayOfWeek)}'s hours? That day goes back to unconfigured.`}
+        tone="secondary"
+        size="tiny"
+        pending={pending}
+      />
 
       {state.error ? (
         <span role="alert" className="text-danger">

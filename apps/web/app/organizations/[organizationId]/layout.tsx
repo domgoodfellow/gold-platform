@@ -11,18 +11,10 @@ import { listEnabledModules } from '@/lib/domain/tenancy/modules';
 import { requireOrganization } from '@/lib/route/organization';
 
 /**
- * The operator shell: persistent navigation across one business's areas.
- *
- * Before this, every screen began with a back-link to `/organizations` and the only way from
- * Work to Customers was through the index — nine pages that knew about no other page.
- * `roadmap.md` records that as a deliberate deferral rather than an oversight, because M3
- * rebuilds these screens anyway and styling them twice was the waste.
- *
- * The guard here is not the boundary and is not relied on as one. Every page calls
- * `requireOrganization` for itself, because Next reuses a layout across client-side
- * navigations without re-rendering it — see that function for the full reasoning. This call
- * exists so the shell can render the business's name, and it is free: the two share one
- * request-scoped read.
+ * The operator shell: persistent navigation across one business's areas. Not the authorization
+ * boundary — every page still calls `requireOrganization` itself, since Next can reuse this
+ * layout across client navigations without re-rendering it. This call exists so the shell can
+ * render the business's name, sharing the same request-scoped read.
  */
 export default async function OrganizationLayout({
   params,
@@ -30,13 +22,9 @@ export default async function OrganizationLayout({
 }: LayoutProps<'/organizations/[organizationId]'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  // Read server-side under RLS, then handed to the client component. What a business has
-  // switched on is not a secret and not a permission — it decides which of its own areas it
-  // sees, and the screens themselves are guarded by policies either way.
   const enabledModules = await listEnabledModules(db, { organizationId });
-  // **Read here rather than per screen, because a brand is the shell.** Every page inside this
-  // layout inherits the roles below, so a screen never asks for a colour and never learns whose
-  // it is. Read under RLS like everything else: a member sees their own business's row.
+  // Read here rather than per-screen, since a brand belongs to the shell — every page inside
+  // inherits these roles and never has to know whose colour it's rendering.
   const brand = await getBrand(db, { organizationId });
 
   async function signOutAction() {
@@ -47,22 +35,15 @@ export default async function OrganizationLayout({
   }
 
   return (
-    // `data-brand` is what `BrandStyle`'s rule is keyed to, and it sits here rather than on
-    // `<html>` because a brand belongs to one business and this layout is the only thing that
-    // knows which one. The sign-in page and the business list have no tenant and stay the
-    // platform's own.
-    <div data-brand className="min-h-full md:grid md:grid-cols-[15rem_1fr]">
+    // `data-brand` sits here rather than on `<html>` — a brand belongs to one business, and this layout is the only thing that knows which.
+    <div data-brand className="min-h-full md:grid md:grid-cols-[5rem_1fr] lg:grid-cols-[15rem_1fr]">
       <BrandStyle brand={brand} />
       <aside className="border-b border-border md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:border-r md:border-b-0">
         <div className="flex items-baseline justify-between gap-3 px-4 pt-4 md:block">
           <div className="min-w-0">
-            {/* The business, in its own name and — when it has put one up — its own mark.
-                Every screen used to repeat the name under its own heading; it belongs to the
-                shell, not to nine pages. */}
             {brand.logoPath ? (
-              // A tenant's logo is an arbitrary remote object in a public bucket, not a
-              // build-time asset, and `next/image` would need every deployment's storage host
-              // named in its config.
+              // A tenant's logo is a remote object in a public bucket, not a build-time asset —
+              // next/image would need every deployment's storage host named in its config.
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logoUrl(db, brand.logoPath)}
@@ -71,7 +52,7 @@ export default async function OrganizationLayout({
               />
             ) : null}
             <p className="truncate font-semibold">{organization.name}</p>
-            {/* The role is the tenant's word for it, not a platform label (D6, D19). */}
+            {/* The tenant's own word for the role, not a platform label (D6, D19). */}
             <Hint className="truncate">{organization.role}</Hint>
           </div>
           <Link
@@ -91,13 +72,8 @@ export default async function OrganizationLayout({
         </form>
       </aside>
 
-      {/* `min-w-0` so a wide child — the schedule's rows, a long custom field value —
-          scrolls inside the column instead of stretching the grid and pushing the sidebar
-          off screen. */}
       <div className="min-w-0">
-        {/* `pb-24` on phones is not spacing — it is the room the fixed bottom navigation
-            occupies. Without it the last control on every screen sits underneath the bar and
-            cannot be tapped. From `md` the bar is a column and the reservation goes away. */}
+        {/* `pb-24` on phones reserves room for the fixed bottom nav; from `md` the nav is a column and this goes away. */}
         <main className="mx-auto max-w-3xl p-6 pb-24 sm:p-8 md:pb-8">
           <AreaHeading />
           {children}

@@ -19,6 +19,12 @@ across this repository — in documents, tests and migrations — so renumbering
 change of order would break every citation in order to record a fact that belongs in one list.
 This is the list.
 
+**The rule forbids renumbering, not appending, and M11 is the first thing to test that.** A new
+milestone takes the next free number and sits in this list wherever the work belongs — M11 is
+numbered above M9 and runs before it. Every existing citation keeps meaning what it meant, which
+is the whole point of separating the two. What would break the scheme is renaming M9 to M10 to
+say *later*, or leaving a third entry here with no number at all.
+
 What drives it is `market.md`: this is a configured-deployment business, and the order below is
 what that model wants built first. It is falsifiable — the first three sales calls can overturn
 it, and if they do, this section changes rather than the numbering.
@@ -58,8 +64,17 @@ it, and if they do, this section changes rather than the numbering.
    exists for it to call.
 6. **M7 — reporting and dashboards.** Now the thing that unlocks the report-shaped half of the
    question tools, rather than the whole of them.
-7. **M9 — reception and sales.** D5's reasoning is unchanged and nothing in `market.md` moves it.
-8. **M10 — desktop.** No customer has asked.
+7. **M11 — the interface, second pass. Met.** **The first number added to the original set**, and
+   numbered rather than left loose on purpose: the entry above warns that a third unnumbered
+   item would mean the numbering had stopped describing the work, and this had a beneficiary and
+   a date rather than waiting on a customer to name it. Its prerequisite was already paid — the
+   control set and `ui-spec.md` shipped, closing D23's last unpaid bullet — and what it closed was
+   focus, confirmation and the tablet rail; the containers §5 names had already shipped alongside
+   the control set itself. It went here for D23's own reason: M9 is a new family of screens, and
+   building it over a control set with no focus states and no confirmations would have been the
+   M3-into-M4 mistake at a larger size.
+8. **M9 — reception and sales.** D5's reasoning is unchanged and nothing in `market.md` moves it.
+9. **M10 — desktop.** No customer has asked.
 
 **A milestone splitting across this list is new, and M8 is the first.** Its two criteria share a
 number and not a dependency, which is what the numbering was always warned about: the number is
@@ -972,3 +987,81 @@ last two stages, not the first.
 Electron is another client, not another product. The `packages/ui` extraction happens here,
 at the moment a second consumer exists — and not before (`constraints.md`, never create a
 workspace package with one consumer).
+
+---
+
+## M11 — The interface, second pass
+
+> **Done when:** an operator can drive the whole application from a keyboard and always see
+> where they are, no destructive action completes without a confirmation, and `ui-spec.md`
+> §4's exception list is empty — demonstrated by a test that reads the screens and fails on a
+> control spelled by hand, on a control file with no focus treatment, and on a destructive
+> action with nothing between it and the write.
+
+**The number is new and the position is deliberate.** M0–M10 were the original set and this is
+the first addition to it, which the numbering was built for: a number is identity, *Order of
+work* is sequence, and M11 sits above M9 in that list while carrying the next free number. It is
+not a renumbering and nothing else moves.
+
+**Its prerequisite already shipped.** The control set, the colour roles and `ui-spec.md` are
+built — D23's last *Adopted* bullet, unpaid since M3, paid in one change. What that change bought
+is the thing this milestone spends: a screen now changes in one place. What it did **not** buy is
+a good interface, and the distinction is the whole reason this is a milestone rather than more
+cleanup.
+
+Covered, and every item was a gap measured rather than imagined:
+
+- **Focus.** Closed. The founding form's ring moved into `inputs.tsx` first (three of §4's six
+  exceptions closed at once), and this milestone extended the same `--accent-text` ring — now a
+  shared `FOCUS_RING` in `class-names.ts` rather than a fragment copied into each file — to
+  `Button`, `ButtonLink`, `Disclosure`'s `<summary>`, and every nav link in `org-shell.tsx`. An
+  operator on a keyboard can now see where they are everywhere, not only in a text field.
+- **Confirmation.** Closed. `containers/dialog.tsx` is the platform `<dialog>` this milestone said
+  to try before reaching for a library — `org-shell.tsx` already carried the argument against a
+  hand-rolled overlay, and `showModal()` ships the focus trap, the escape key and the backdrop
+  `<dialog>` was chosen for. `ConfirmSubmit` is the one call-site shape: a button that opens the
+  dialog rather than submitting, and a Confirm button inside it that submits the *original* form
+  through the native `form` attribute — no server action or `useActionState` wiring changed at
+  any of the ten call sites this replaced.
+- **The tablet rail.** Closed. §2 named three renderings and the code had two — `org-shell.tsx`
+  had one breakpoint, so a tablet got the desktop sidebar. It now renders icon-only between `md`
+  and `lg`, and icon-and-label from `lg`, over the same `AREAS` list mapped once (`AREA_ICONS`,
+  keyed by segment, lives in the shell rather than in `navigation.ts` — icon choice is how the
+  shell draws the IA, not part of what the IA is). `lucide-react` is a new dependency; nothing
+  else in this application has drawn an icon before.
+- **Cards and sheets.** Already closed before this milestone opened — `Card` and `Disclosure`
+  shipped with the row-actions and responsive-table change, and `ui-spec.md` §4/§5 said so before
+  this section caught up. Recorded here because the paragraph above it did not, for two
+  milestones, which is exactly the kind of drift `CLAUDE.md` says to name rather than carry.
+- **§4's exceptions.** Seven now, not six. The milestone test this criterion asked for found the
+  one this list had missed: `global-error.tsx` replaces the whole document on a root-layout
+  failure, and Next does not load `globals.css` there, so its retry button was already inline
+  styles for a sound reason nobody had written down. None of the three items this milestone built
+  — focus, confirmation, the rail — is a control the list otherwise names.
+
+**Demonstrated by `milestone-m11.test.ts`.** Three assertions, matching the criterion verbatim and
+turning on absences the way every milestone test here does: no raw `<button>` or `<select>` under
+`app/` (no exception names either, unlike the six `<input>`-shaped ones), every shared control
+file contains a `focus-visible:ring`, and every `delete`/`remove`/`revoke`/`cancel` action
+exported from an `actions.ts` file under the operator shell has a matching `ConfirmSubmit` in the
+forms file that calls it.
+
+**Why it goes before M9, and the argument is D23's own, reused.** D23 exists because M3 rebuilt
+every screen M1 and M2 had produced, and M4 was about to build three surfaces at four times the
+size. M9 is that moment again: reception and sales is a new family of screens over a control set
+with no focus states and no confirmations, and building it first means building the same gap
+larger and paying for it twice. The demand-side reason is in `market.md` — the demo is the pair,
+`tire-app-template` in production beside the configured one, and the GOLD half is the half being
+sold.
+
+**Three things it deliberately is not.**
+
+- **Not a per-tenant theme.** D20's deferral stands and D23's amendment is explicit that it is no
+  longer *blocked*, which is not the same as being due. A tenant choosing its own colours arrives
+  with the marketing surface and needs that evidence.
+- **Not `packages/ui`.** That is M10, at the moment a second consumer exists. The control set
+  living in one place is what will make it cheap; moving it early buys a build step and a
+  `dist/` for no isolation.
+- **Not a design-tokens document.** `globals.css` is the token list and is executable.
+  `ui-spec.md` holds decisions and never values, and a spec that starts listing hex codes has
+  become the document D8 refuses by a longer route.

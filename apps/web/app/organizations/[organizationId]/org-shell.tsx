@@ -1,8 +1,28 @@
 'use client';
 
 import { PageHeading } from '@/components/containers/section';
+import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import {
+  BarChart3,
+  Bot,
+  CalendarDays,
+  ClipboardList,
+  Layers,
+  LayoutDashboard,
+  MapPin,
+  Package,
+  Phone,
+  Settings,
+  Sparkles,
+  SlidersHorizontal,
+  Tag,
+  UserCog,
+  Users,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
 import {
   AREAS,
   areaHref,
@@ -13,64 +33,81 @@ import {
 } from '@/lib/navigation';
 
 /**
- * The two pieces of the shell that have to know which area is on screen.
- *
- * A layout cannot be told its own pathname on the server, so these are client components —
- * which costs nothing at first paint, because Next renders them on the server too and
- * `usePathname` is correct there. They hold no state and no effects; there is nothing to
- * hydrate but the links.
- *
- * Neither reads a capability. See `lib/navigation.ts` for why the shell shows every area to
- * every member and lets each screen explain what a role cannot do.
- *
- * **They do read which modules the business has enabled, and that is not the same thing.** A
- * role decides what a member may do inside this business; a module decides what this business
- * bought. Hiding a screen for the first would make this file the authorization boundary, which
- * I12 says it is not. Hiding it for the second is showing a business its own shape. The set
- * arrives from the layout, which reads it server-side under RLS — nothing is decided here.
+ * The two pieces of the shell that need to know which area is on screen. Client components
+ * because a layout can't read its own pathname server-side. Neither reads a capability
+ * (navigation shows every area to every member); they do read which modules are enabled, since
+ * that's the business's own shape rather than a permission — decided server-side under RLS and
+ * passed down from the layout.
  */
+
+/**
+ * One icon per area, keyed by segment rather than declared on `Area` itself — icon choice is how
+ * the shell draws the IA, not part of what the IA is (`navigation.ts` stays segments, labels,
+ * groups, modules). `navigation.test.ts` asserts every `AREAS` entry has one here, so a new area
+ * without an icon fails at the gate rather than rendering blank in the rail.
+ */
+export const AREA_ICONS: Record<string, LucideIcon> = {
+  today: LayoutDashboard,
+  work: ClipboardList,
+  schedule: CalendarDays,
+  customers: Users,
+  calls: Phone,
+  ask: Bot,
+  locations: MapPin,
+  assets: Package,
+  resources: Layers,
+  reports: BarChart3,
+  pricing: Tag,
+  automations: Zap,
+  fields: SlidersHorizontal,
+  roles: UserCog,
+  setup: Sparkles,
+  settings: Settings,
+};
 
 function NavLink({
   organizationId,
   area,
   current,
   className,
+  labelClassName,
 }: {
   organizationId: string;
   area: Area;
   current: boolean;
   className: string;
+  labelClassName?: string;
 }) {
+  const Icon = AREA_ICONS[area.segment];
+
   return (
     <Link
       href={areaHref(organizationId, area.segment)}
       aria-current={current ? 'page' : undefined}
-      className={
+      aria-label={area.label}
+      title={area.label}
+      className={cx(
+        className,
+        FOCUS_RING,
         current
-          ? `${className} bg-foreground font-medium text-background`
-          : `${className} hover:bg-black/5 dark:hover:bg-white/10`
-      }
+          ? 'bg-foreground font-medium text-background'
+          : 'hover:bg-black/5 dark:hover:bg-white/10',
+      )}
     >
-      {area.label}
+      <span className="flex items-center gap-2">
+        {Icon ? <Icon aria-hidden size={18} className="shrink-0" /> : null}
+        <span className={labelClassName}>{area.label}</span>
+      </span>
     </Link>
   );
 }
 
 /**
- * The information architecture, rendered twice.
- *
- * **The areas do not change across breakpoints; only their presentation does**, which is what
- * D23 adopts and is why both renderings map the same `AREAS` rather than each holding a list.
- * Two lists that had to agree eventually would not.
- *
- * On a phone the bar is fixed to the bottom, because the thing an operator does on a phone is
- * ask what to do next while holding it one-handed, and the top of a large screen is the one
- * place a thumb does not reach. It scrolls horizontally rather than collapsing into a drawer
- * or a "More" menu: a drawer needs state, a toggle, a focus trap and an escape key to be
- * correct, and a "More" menu would be the second place an area could live.
- *
- * From `md` up it is a column, and the two groups are ruled apart. D23: "An operator must
- * never reach today's work by going through settings."
+ * The information architecture, rendered twice — one `AREAS` list, two presentations, so they
+ * can't drift. On a phone it's a bottom bar that scrolls horizontally rather than collapsing
+ * into a drawer, which would need its own state and focus trap to be correct. From `md` up it's
+ * a column with operational above configuration (D23: never reach today's work through settings)
+ * — icon-only between `md` and `lg` (the tablet rail), icon and label from `lg` (desktop).
  */
 export function OrgNav({
   organizationId,
@@ -84,16 +121,11 @@ export function OrgNav({
 
   return (
     <>
-      {/* Phone: fixed to the bottom, out of the document flow. The layout reserves the space
-          with padding so the last row of a screen is never sitting underneath this. */}
       <nav
         aria-label="This business"
         className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background md:hidden"
       >
         <ul className="flex gap-1 overflow-x-auto p-2">
-          {/* Ungrouped on a phone — the rule between operational and configuration is the
-              column rendering's, and a horizontal bar has nowhere to put it. Same filter as
-              `areasIn` applies: no module named means the kernel, which is always here. */}
           {AREAS.filter((area) => !area.module || enabled.has(area.module)).map((area) => (
             <li key={area.segment} className="shrink-0">
               <NavLink
@@ -107,9 +139,7 @@ export function OrgNav({
         </ul>
       </nav>
 
-      {/* Tablet and desktop: one column, operational above the rule and configuration below
-          it. Hidden from assistive technology on phones by the `hidden` class rather than
-          duplicated, so the two renderings are never both in the accessibility tree. */}
+      {/* Hidden from assistive tech on phones via `hidden`, not duplicated, so only one rendering is ever in the accessibility tree. */}
       <nav aria-label="This business" className="hidden min-w-0 p-3 md:block">
         {(['operational', 'configuration'] as const).map((group, index) => (
           <ul
@@ -127,6 +157,7 @@ export function OrgNav({
                   area={area}
                   current={area.segment === segment}
                   className="block rounded px-3 py-1.5 text-sm"
+                  labelClassName="hidden lg:inline"
                 />
               </li>
             ))}
@@ -137,16 +168,9 @@ export function OrgNav({
   );
 }
 
-/**
- * The page's heading, read from the same row as its navigation entry.
- *
- * No page under `[organizationId]` carries an `<h1>` of its own. That is the mechanism
- * behind `lib/navigation.ts`'s claim to hold every platform noun: one string, rendered
- * twice, so the two cannot drift and an override has one place to reach.
- */
+/** No page under `[organizationId]` carries its own `<h1>` — one string, rendered here, is both nav entry and heading. */
 export function AreaHeading() {
-  // `areaRootSegment`, not `currentSegment`: a detail route is *in* an area but not *at*
-  // it, and renders its own heading. See `lib/navigation.ts`.
+  // `areaRootSegment`, not `currentSegment` — a detail route is *in* an area but not *at* it.
   const segment = areaRootSegment(usePathname());
   const area = AREAS.find((candidate) => candidate.segment === segment);
   if (!area) return null;

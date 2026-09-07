@@ -3,6 +3,7 @@
 import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import { SectionHeading } from '@/components/containers/section';
 import { Button } from '@/components/controls/button';
+import { ConfirmSubmit } from '@/components/containers/dialog';
 import { useActionState } from 'react';
 import type { ReportDefinition } from '@/lib/domain/reporting/definitions';
 import {
@@ -143,12 +144,18 @@ export function ReportAudienceForm({
         variation on sharing and a stray Enter must never remove a report somebody built a
         dashboard on.
       */}
-      <form action={removeAction} className="mt-2">
+      <form id={`delete-report-${report.id}`} action={removeAction} className="mt-2">
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="reportId" value={report.id} />
-        <Button type="submit" disabled={removing} tone="text" size="small">
-          {removing ? 'Removing…' : 'Remove this report'}
-        </Button>
+        <ConfirmSubmit
+          formId={`delete-report-${report.id}`}
+          label="Remove this report"
+          confirmLabel="Remove report"
+          description={`Remove "${report.name}"? Any dashboard it's pinned to loses it too.`}
+          tone="text"
+          size="small"
+          pending={removing}
+        />
         <ErrorText>{removal.error}</ErrorText>
       </form>
     </div>
@@ -223,12 +230,18 @@ export function DashboardContentsForm({
         </ul>
       )}
 
-      <form action={removeAction} className="mt-2">
+      <form id={`delete-dashboard-${dashboard.id}`} action={removeAction} className="mt-2">
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="dashboardId" value={dashboard.id} />
-        <Button type="submit" disabled={removing} tone="text" size="small">
-          {removing ? 'Removing…' : 'Remove this dashboard'}
-        </Button>
+        <ConfirmSubmit
+          formId={`delete-dashboard-${dashboard.id}`}
+          label="Remove this dashboard"
+          confirmLabel="Remove dashboard"
+          description={`Remove "${dashboard.name}"? What it pins stays saved as reports.`}
+          tone="text"
+          size="small"
+          pending={removing}
+        />
         <ErrorText>{removal.error}</ErrorText>
       </form>
     </div>

@@ -4,6 +4,7 @@ import { DividedList, EmptyState, GroupHeading, Section, SectionHeading } from '
 import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import { Card } from '@/components/containers/card';
+import { ConfirmSubmit } from '@/components/containers/dialog';
 import { useActionState } from 'react';
 import {
   ACTION_KINDS,
@@ -349,14 +350,21 @@ function EnableSwitch({
 
 function DeleteRule({ organizationId, rule }: { organizationId: string; rule: AutomationRule }) {
   const [state, formAction, pending] = useActionState(deleteRuleAction, INITIAL);
+  const formId = `delete-rule-${rule.id}`;
 
   return (
-    <form action={formAction}>
+    <form id={formId} action={formAction}>
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="ruleId" value={rule.id} />
-      <Button type="submit" disabled={pending} tone="secondary" size="small">
-        {pending ? '…' : 'Remove'}
-      </Button>
+      <ConfirmSubmit
+        formId={formId}
+        label="Remove"
+        confirmLabel="Remove rule"
+        description={`Remove "${rule.name}"? Its conditions and actions go with it.`}
+        tone="secondary"
+        size="small"
+        pending={pending}
+      />
       <Error state={state} />
     </form>
   );
@@ -370,14 +378,21 @@ function RemoveCondition({
   conditionId: string;
 }) {
   const [state, formAction, pending] = useActionState(removeConditionAction, INITIAL);
+  const formId = `remove-condition-${conditionId}`;
 
   return (
-    <form action={formAction} className="inline">
+    <form id={formId} action={formAction} className="inline">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="conditionId" value={conditionId} />
-      <Button type="submit" disabled={pending} tone="text" size="tiny">
-        remove
-      </Button>
+      <ConfirmSubmit
+        formId={formId}
+        label="remove"
+        confirmLabel="Remove condition"
+        description="Remove this condition from the rule?"
+        tone="text"
+        size="tiny"
+        pending={pending}
+      />
       <Error state={state} />
     </form>
   );
@@ -391,14 +406,21 @@ function RemoveAction({
   actionId: string;
 }) {
   const [state, formAction, pending] = useActionState(removeActionAction, INITIAL);
+  const formId = `remove-action-${actionId}`;
 
   return (
-    <form action={formAction} className="inline">
+    <form id={formId} action={formAction} className="inline">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="actionId" value={actionId} />
-      <Button type="submit" disabled={pending} tone="text" size="tiny">
-        remove
-      </Button>
+      <ConfirmSubmit
+        formId={formId}
+        label="remove"
+        confirmLabel="Remove action"
+        description="Remove this action from the rule?"
+        tone="text"
+        size="tiny"
+        pending={pending}
+      />
       <Error state={state} />
     </form>
   );
@@ -742,12 +764,18 @@ function EditTemplateForm({
         <Error state={state} />
       </form>
 
-      <form action={removeAction}>
+      <form id={`delete-template-${template.id}`} action={removeAction}>
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="templateId" value={template.id} />
-        <Button type="submit" disabled={removing} tone="text" size="tiny">
-          remove
-        </Button>
+        <ConfirmSubmit
+          formId={`delete-template-${template.id}`}
+          label="remove"
+          confirmLabel="Remove message"
+          description={`Remove "${template.name}"? Any rule using it loses its action.`}
+          tone="text"
+          size="tiny"
+          pending={removing}
+        />
         <Error state={removeState} />
       </form>
     </div>

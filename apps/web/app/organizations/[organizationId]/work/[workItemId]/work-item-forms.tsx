@@ -2,6 +2,7 @@
 
 import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
+import { ConfirmSubmit } from '@/components/containers/dialog';
 import { useActionState } from 'react';
 import { CustomFieldInputs } from '@/components/custom-fields/inputs';
 import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
@@ -277,22 +278,24 @@ export function RemovePricedLineForm({
   description: string;
 }) {
   const [state, formAction, pending] = useActionState(removePricedLineAction, INITIAL);
+  const formId = `remove-priced-line-${lineId}`;
 
   return (
-    <form action={formAction} className="inline">
+    <form id={formId} action={formAction} className="inline">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="workItemId" value={workItemId} />
       <input type="hidden" name="lineId" value={lineId} />
-      <Button
-        type="submit"
-        disabled={pending}
-        aria-label={`Remove ${description}`}
+      <ConfirmSubmit
+        formId={formId}
+        label="Remove"
+        confirmLabel="Remove line"
+        description={`Remove "${description}" from this quote?`}
+        ariaLabel={`Remove ${description}`}
         tone="text"
         size="tiny"
+        pending={pending}
         className="opacity-60 disabled:opacity-30"
-      >
-        Remove
-      </Button>
+      />
       {state.error ? (
         <span role="alert" className="ml-2 text-xs text-danger">
           {state.error}

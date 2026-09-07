@@ -11,6 +11,7 @@ import {
   moduleConfiguration,
   type Module,
 } from '@/lib/navigation';
+import { AREA_ICONS } from '@/app/organizations/[organizationId]/org-shell';
 
 /**
  * The shell's navigation is the only place the platform's own nouns are written down, and
@@ -62,6 +63,14 @@ describe('the operator shell navigation', () => {
     const labels = AREAS.map((area) => area.label);
     expect(labels.every((label) => label.trim().length > 0)).toBe(true);
     expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  it('gives every area an icon for the tablet rail (M11)', () => {
+    // The rail renders icon-only between `md` and `lg` — an area with no entry here would
+    // render blank rather than failing loudly.
+    for (const area of AREAS) {
+      expect(AREA_ICONS[area.segment], `"${area.segment}" has no rail icon`).toBeDefined();
+    }
   });
 
   it('marks the area a detail route belongs to', () => {

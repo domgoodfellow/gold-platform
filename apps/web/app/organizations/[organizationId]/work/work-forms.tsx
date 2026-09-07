@@ -3,6 +3,7 @@
 import { SectionHeading } from '@/components/containers/section';
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
+import { ConfirmSubmit } from '@/components/containers/dialog';
 import { useActionState } from 'react';
 import { CustomFieldInputs } from '@/components/custom-fields/inputs';
 import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
@@ -483,16 +484,23 @@ export function TypeChecklistItemRow({
   item: TypeChecklistItem;
 }) {
   const [state, formAction, pending] = useActionState(removeTypeChecklistItemAction, INITIAL);
+  const formId = `remove-checklist-item-${item.id}`;
 
   return (
-    <form action={formAction} className="flex items-center gap-3 py-1 text-sm">
+    <form id={formId} action={formAction} className="flex items-center gap-3 py-1 text-sm">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="id" value={item.id} />
 
       <span className="flex-1">{item.label}</span>
-      <Button type="submit" disabled={pending} tone="secondary" size="tiny">
-        Remove
-      </Button>
+      <ConfirmSubmit
+        formId={formId}
+        label="Remove"
+        confirmLabel="Remove item"
+        description={`Remove "${item.label}" from this checklist? Work items already using it keep their history.`}
+        tone="secondary"
+        size="tiny"
+        pending={pending}
+      />
 
       {state.error ? (
         <span role="alert" className="text-danger">

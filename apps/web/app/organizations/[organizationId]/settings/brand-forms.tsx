@@ -13,6 +13,7 @@ import {
   contrastRatio,
 } from '@/lib/domain/branding/palette';
 import { removeLogoAction, updateBrandAction, uploadLogoAction, type BrandState } from './actions';
+import { ConfirmSubmit } from '@/components/containers/dialog';
 
 const INITIAL: BrandState = { error: null };
 
@@ -215,11 +216,17 @@ export function LogoForm({
           {/* A tenant's own upload in a public bucket, not a build-time asset. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logoUrl} alt="" className="max-h-12 w-auto max-w-48 object-contain" />
-          <form action={removeAction}>
+          <form id="remove-logo" action={removeAction}>
             <input type="hidden" name="organizationId" value={organizationId} />
-            <Button type="submit" tone="danger" size="small" disabled={removing}>
-              {removing ? 'Removing…' : 'Remove'}
-            </Button>
+            <ConfirmSubmit
+              formId="remove-logo"
+              label="Remove"
+              confirmLabel="Remove logo"
+              description="Remove your logo? Public pages fall back to your business name."
+              tone="danger"
+              size="small"
+              pending={removing}
+            />
           </form>
         </div>
       ) : null}
