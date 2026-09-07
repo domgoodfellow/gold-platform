@@ -43,7 +43,7 @@ const FIELD_SCHEMA = {
   items: {
     type: 'object',
     additionalProperties: false,
-    required: ['key', 'label', 'kind', 'required'],
+    required: ['key', 'label', 'kind', 'required', 'options'],
     properties: {
       key: {
         type: 'string',
@@ -53,6 +53,17 @@ const FIELD_SCHEMA = {
       label: { type: 'string', description: "What the business calls it, in its own words." },
       kind: { type: 'string', enum: [...FIELD_KINDS] },
       required: { type: 'boolean' },
+      // **Required in the schema and allowed to be empty**, because this API's structured
+      // output has no way to say *required only when kind is select*. Always asking for the
+      // array and letting it be empty is the shape that fits: a text field answers `[]`, and
+      // a choice field that answers `[]` is refused by `createFieldDefinition` with a sentence
+      // rather than accepted as a dropdown nobody can use.
+      options: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          "The choices, for kind 'select' or 'multi_select' only, in the business's own words and its own order. An empty array for every other kind.",
+      },
     },
   },
 } as const;

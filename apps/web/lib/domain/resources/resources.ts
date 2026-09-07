@@ -1,7 +1,11 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
-import { resolveCustom, type CustomValues } from '@/lib/domain/fields/field-definitions';
+import {
+  resolveCustom,
+  type CustomInput,
+  type CustomValues,
+} from '@/lib/domain/fields/field-definitions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 export type Resource = {
@@ -58,7 +62,7 @@ export async function createResource(
     organizationId: string;
     name: string;
     /** Raw form values keyed by field key. Coerced and checked against the registry here. */
-    custom?: Record<string, string>;
+    custom?: CustomInput;
   },
 ): Promise<string> {
   await requireActor(db);

@@ -588,6 +588,61 @@ export type Database = {
           },
         ]
       }
+      call_events: {
+        Row: {
+          call_id: string
+          id: string
+          occurred_at: string
+          organization_id: string
+          payload: Json
+          payload_hash: string
+          raw_status: string | null
+          source: string
+        }
+        Insert: {
+          call_id: string
+          id?: string
+          occurred_at?: string
+          organization_id: string
+          payload?: Json
+          payload_hash: string
+          raw_status?: string | null
+          source: string
+        }
+        Update: {
+          call_id?: string
+          id?: string
+          occurred_at?: string
+          organization_id?: string
+          payload?: Json
+          payload_hash?: string
+          raw_status?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_events_call_same_org"
+            columns: ["organization_id", "call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "call_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_outcomes: {
         Row: {
           created_at: string
@@ -633,8 +688,73 @@ export type Database = {
           },
         ]
       }
+      call_participants: {
+        Row: {
+          call_id: string
+          created_at: string
+          external_id: string | null
+          id: string
+          joined_at: string | null
+          left_at: string | null
+          member_id: string | null
+          on_hold: boolean
+          organization_id: string
+          party: string
+          status: string
+        }
+        Insert: {
+          call_id: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          member_id?: string | null
+          on_hold?: boolean
+          organization_id: string
+          party: string
+          status?: string
+        }
+        Update: {
+          call_id?: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          member_id?: string | null
+          on_hold?: boolean
+          organization_id?: string
+          party?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_participants_call_same_org"
+            columns: ["organization_id", "call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "call_participants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_participants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calls: {
         Row: {
+          conference_name: string | null
           created_at: string
           created_by: string
           customer_id: string
@@ -647,11 +767,13 @@ export type Database = {
           note: string
           organization_id: string
           outcome_id: string | null
+          recording_url: string | null
           started_at: string
           status: string
           to_number: string
         }
         Insert: {
+          conference_name?: string | null
           created_at?: string
           created_by: string
           customer_id: string
@@ -664,11 +786,13 @@ export type Database = {
           note?: string
           organization_id: string
           outcome_id?: string | null
+          recording_url?: string | null
           started_at?: string
           status?: string
           to_number: string
         }
         Update: {
+          conference_name?: string | null
           created_at?: string
           created_by?: string
           customer_id?: string
@@ -681,6 +805,7 @@ export type Database = {
           note?: string
           organization_id?: string
           outcome_id?: string | null
+          recording_url?: string | null
           started_at?: string
           status?: string
           to_number?: string
@@ -715,6 +840,91 @@ export type Database = {
             referencedColumns: ["organization_id", "id"]
           },
         ]
+      }
+      communication_credits: {
+        Row: {
+          amount_minor: number
+          call_id: string | null
+          channel: Database["public"]["Enums"]["communication_channel"] | null
+          created_by: string | null
+          currency: string
+          id: string
+          note: string
+          occurred_at: string
+          organization_id: string
+          reason: string
+        }
+        Insert: {
+          amount_minor: number
+          call_id?: string | null
+          channel?: Database["public"]["Enums"]["communication_channel"] | null
+          created_by?: string | null
+          currency: string
+          id?: string
+          note?: string
+          occurred_at?: string
+          organization_id: string
+          reason: string
+        }
+        Update: {
+          amount_minor?: number
+          call_id?: string | null
+          channel?: Database["public"]["Enums"]["communication_channel"] | null
+          created_by?: string | null
+          currency?: string
+          id?: string
+          note?: string
+          occurred_at?: string
+          organization_id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_credits_call_same_org"
+            columns: ["organization_id", "call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "communication_credits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_credits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_rates: {
+        Row: {
+          channel: Database["public"]["Enums"]["communication_channel"]
+          currency: string
+          id: string
+          unit_amount_minor: number
+          updated_at: string
+        }
+        Insert: {
+          channel: Database["public"]["Enums"]["communication_channel"]
+          currency: string
+          id?: string
+          unit_amount_minor: number
+          updated_at?: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["communication_channel"]
+          currency?: string
+          id?: string
+          unit_amount_minor?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       configuration_proposals: {
         Row: {
@@ -1325,6 +1535,7 @@ export type Database = {
           key: string
           kind: string
           label: string
+          options: string[]
           organization_id: string
           position: number
           required: boolean
@@ -1337,6 +1548,7 @@ export type Database = {
           key: string
           kind: string
           label: string
+          options?: string[]
           organization_id: string
           position?: number
           required?: boolean
@@ -1349,6 +1561,7 @@ export type Database = {
           key?: string
           kind?: string
           label?: string
+          options?: string[]
           organization_id?: string
           position?: number
           required?: boolean
@@ -3169,6 +3382,7 @@ export type Database = {
           p_key: string
           p_kind: string
           p_label: string
+          p_options: string[]
           p_organization_id: string
           p_required: boolean
         }
@@ -3252,6 +3466,7 @@ export type Database = {
         Args: { p_name: string; p_organization_id: string }
         Returns: string
       }
+      credit_balance: { Args: { p_organization_id: string }; Returns: number }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       customers_not_contacted: {
         Args: { p_days?: number; p_organization_id: string }
@@ -3297,6 +3512,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      open_call: {
+        Args: {
+          p_conference_name: string
+          p_customer_id: string
+          p_from_number: string
+          p_organization_id: string
+          p_to_number: string
+        }
+        Returns: string
+      }
       places_to_watch: {
         Args: never
         Returns: {
@@ -3328,6 +3553,19 @@ export type Database = {
           recipient: string
           subject_line: string
         }[]
+      }
+      record_call_event: {
+        Args: {
+          p_duration: number
+          p_external_id: string
+          p_payload: Json
+          p_payload_hash: string
+          p_raw_status: string
+          p_recording_url: string
+          p_source: string
+          p_status: string
+        }
+        Returns: string
       }
       record_external_readings: {
         Args: { p_location_id: string; p_readings: Json }
@@ -3484,6 +3722,7 @@ export type Database = {
         Args: {
           p_id: string
           p_label: string
+          p_options: string[]
           p_position: number
           p_required: boolean
         }
@@ -3564,7 +3803,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      communication_channel: "voice" | "sms" | "email"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3694,7 +3933,9 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      communication_channel: ["voice", "sms", "email"],
+    },
   },
 } as const
 

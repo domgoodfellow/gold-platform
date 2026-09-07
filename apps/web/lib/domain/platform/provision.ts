@@ -9,25 +9,13 @@ import {
 } from '@/lib/domain/tenancy/organizations';
 
 /**
- * The operator door: GOLD creates a business and hands it to its owner (D29).
- *
- * **This is not an alternative to `createOrganization` and must never become one.** D29's
- * correction is that provisioned and self-served are two doors onto one creation path — what
- * separates them is who does the configuring, not what kind of tenant comes out. A business
- * provisioned here is the same row under the same policies as one founded by its own owner, and
- * the way that stays true is that both doors normalise through the same three rules imported
- * above rather than each having their own.
- *
- * What differs, and all that differs: **the founding member is somebody other than the
- * caller.** That is the one thing `create_organization` cannot express, because its whole gate
- * is `auth.uid()` and it makes the caller the founder. Hence a second database function rather
- * than a flag on the first — a function that decides from its arguments whether it is being
- * called by a founder or by staff is where an authorization mistake goes to hide.
- *
- * **There is no `requireStaff()` here**, for the same reason `tenants.ts` has none: the gate is
- * `provision_organization`'s first act, the caller reaches it in the `platform_staff` Postgres
- * role or not at all, and a TypeScript check in front of that would be a second authorization
- * system shadowing the real one (I12).
+ * The operator door: GOLD creates a business and hands it to its owner (D29). Not an
+ * alternative to `createOrganization` — both doors normalise through the same three imported
+ * rules, so a provisioned business is the same row under the same policies as a self-founded
+ * one. What differs is only that the founding member is somebody other than the caller, which
+ * `create_organization`'s `auth.uid()` gate can't express — hence a second function rather than
+ * a flag on the first. No `requireStaff()` here: the gate is `provision_organization`'s own
+ * Postgres-role check (I12).
  */
 export async function provisionOrganization(
   db: Db,
@@ -54,10 +42,8 @@ export async function provisionOrganization(
     );
   }
 
-  // Deliberately shallow: this checks that a human typed something shaped like an address, and
-  // the real answer comes from the database finding an account or not. A stricter pattern here
-  // would reject a valid address somebody actually holds, and the failure it would prevent —
-  // provisioning to nobody — already fails loudly one call later.
+  // Deliberately shallow — checks the shape of an address; the database is the real check when
+  // it looks up the account.
   if (!ownerEmail.includes('@')) {
     throw new DomainError('That is not an email address.', 'platform.owner_email_invalid');
   }
@@ -73,15 +59,13 @@ export async function provisionOrganization(
   const { data, error } = await db.rpc('provision_organization', {
     p_owner_email: ownerEmail,
     p_name: name,
-    // The founding role and its capabilities are the same through either door. A business
-    // provisioned with a narrower owner role would be GOLD deciding what its owner may do.
+    // Same founding role and capabilities through either door — a narrower one here would be
+    // GOLD deciding what a business's owner may do.
     p_role: FOUNDING_ROLE,
     p_capabilities: ALL_CAPABILITIES,
     p_display_name: displayName,
-    // UTC is the absence of an assumption, exactly as at the other door — and it matters more
-    // here, because the browser submitting this form is ours rather than the business's. A
-    // timezone taken from the staff member's machine would put a Montreal business on a
-    // London clock because of where somebody happened to be sitting (I9).
+    // UTC rather than the staff member's own timezone — a Montreal business shouldn't land on a
+    // London clock because of where the operator was sitting (I9).
     p_timezone: (input.timezone || 'UTC') as string,
     p_currency: currency,
   });

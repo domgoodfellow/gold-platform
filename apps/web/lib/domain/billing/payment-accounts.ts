@@ -4,22 +4,14 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * The processor account a business connected.
- *
- * **What is stored is an account id, not a credential** (D27). It grants nothing on its own,
- * it is worthless without the platform's own key, and the business can revoke it from their own
- * processor dashboard without telling us — so it is per-tenant configuration like a currency,
- * and there is no vault here because there is nothing a vault would be for.
- *
- * **The money never reaches GOLD.** The charge is created on this account, so funds go straight
- * to the business. A platform that collects and pays out is a money transmitter in most
- * jurisdictions, and the thing that decides it is the charge type rather than the word
- * "platform" — see D27, and the `Stripe-Account` header in the adapter, which is where the
- * decision physically is.
+ * The processor account a business connected. What's stored is an account id, not a credential
+ * (D27) — it grants nothing alone, and the business can revoke it from their own dashboard.
+ * The money never reaches GOLD: the charge is created directly on this account, which is what
+ * keeps this off the money-transmitter shape D27 refuses.
  */
 
 export type PaymentAccount = {
-  /** Which processor. The domain layer never branches on it (I15). */
+  /** The domain layer never branches on this (I15). */
   provider: string;
   account: ConnectedAccount;
   connectedAt: string;
@@ -49,16 +41,11 @@ export async function getPaymentAccount(
 }
 
 /**
- * Record that a business has connected an account.
- *
- * **Called only by the callback route, after the provider has confirmed the authorization.**
- * The account id is not something an operator types: it comes back from the exchange, which is
- * authenticated with the platform's own key. A form that accepted one would let somebody point
- * another business's payments at an account of their choosing.
- *
- * Reconnecting replaces: the delete and the insert are both here, because the table has no
- * update policy on purpose — a row that could be re-pointed in place would move a business's
- * money with nothing recording that it moved.
+ * Record that a business has connected an account. Called only by the callback route, after the
+ * provider confirms — the account id never comes from an operator-typed form, or anyone could
+ * point another business's payments at an account of their choosing. Reconnecting replaces
+ * (delete then insert) because the table has no update policy — a row re-pointed in place would
+ * move a business's money with nothing recording that it moved.
  */
 export async function connectPaymentAccount(
   db: Db,
@@ -99,14 +86,9 @@ export async function connectPaymentAccount(
 }
 
 /**
- * Stop using an account.
- *
- * **This removes nothing that has already happened.** Payments recorded against it stay, in the
- * currency they were taken in, attached to the invoices they settled — the same reasoning I8
- * gives about configuration never reaching backwards. What stops is new charges.
- *
- * It does not revoke the authorization at the provider; the business does that from their own
- * dashboard, which is the point of them holding it rather than us.
+ * Stop using an account. Removes nothing already recorded — past payments stay attached to the
+ * invoices they settled (I8). Doesn't revoke the authorization at the provider; the business
+ * does that from their own dashboard.
  */
 export async function disconnectPaymentAccount(
   db: Db,
@@ -114,11 +96,8 @@ export async function disconnectPaymentAccount(
 ): Promise<void> {
   await requireActor(db);
 
-  // **A refused delete is not an error, and that is the trap this handles.** An RLS `delete`
-  // whose policy excludes the row matches nothing and returns success — so a role without
-  // `organization.manage` was being told the account was disconnected while it sat there. The
-  // returned rows are the only way to tell "you may not" from "there was nothing to remove",
-  // and reporting a write that did not happen is worse than refusing one that could not.
+  // A refused RLS delete matches nothing and reports success — so the returned rows are the only
+  // way to tell "you may not" from "there was nothing to remove".
   const { data, error } = await db
     .from('payment_accounts')
     .delete()

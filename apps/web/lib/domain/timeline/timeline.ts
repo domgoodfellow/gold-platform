@@ -3,44 +3,13 @@ import { DomainError } from '@/lib/domain/errors';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 
 /**
- * What happened to a customer, read back out of `events`.
- *
- * **This is the first thing that has ever read that table.** `Event` shipped in the very
- * first slice that wrote state, on the grounds that it cannot be backfilled, and thirty-odd
- * writers have been filling it since with nothing looking. So the interesting part of this
- * module is not the query — it is what reading discovered about how those payloads were
- * written.
- *
- * **The payloads are thin about vocabulary and thick about snapshots, and that split is
- * already correct.** `work_item.status_changed` carries `from_status_id` and `to_status_id`
- * and no names; `work_item.created` carries the title; a priced line carries its description
- * and amount. That looks inconsistent and is not:
- *
- *   * A **status name is the tenant's vocabulary**, and `CLAUDE.md` says vocabulary is "rows
- *     that business wrote, and is read from the database wherever it appears". Renaming a
- *     status moves no work (D6) — the job went into a row, and that row is now called
- *     something else. Snapshotting the old word onto the event would make the timeline the
- *     one screen in the platform still showing a name the business has stopped using.
- *   * An **amount or a title is a term somebody agreed to**, and I8 says those are
- *     snapshotted so that editing configuration cannot reach backwards.
- *
- * So this resolves ids against the same rows every other screen reads, and adds no columns,
- * no payload fields and no backfill. The one thing it must handle is a row that has since
- * gone: `describe` falls back rather than rendering an empty sentence.
- *
- * **What reading did find is a subject problem, not a payload one.** `location.linked` is
- * written against the *location*, with the customer id in the payload — perfectly reasonable
- * when it was written, and invisible to a reader asking "what happened to this customer",
- * because that reader filters on `entity_id`. It is fetched separately below rather than
- * quietly dropped. The general lesson is worth more than the fix: an append-only table with
- * a polymorphic subject records which entity the *writer* thought it was about, and the
- * reader that arrives two milestones later may be standing on the other side of the row.
- *
- * Deliberately concrete and deliberately named for a customer. `constraints.md` says to
- * write it "for the business in front of you, named for what it does rather than for the
- * category it might one day belong to" — a general `listTimeline` over any entity is one
- * extraction away on the day the work item screen wants one, and is a speculative
- * abstraction today.
+ * What happened to a customer, read back out of `events`. Payloads are thin about vocabulary
+ * and thick about snapshots, deliberately: a status name is the tenant's vocabulary and is
+ * resolved fresh (renaming moves no work, D6), while an amount or title is a term somebody
+ * agreed to and is snapshotted (I8) so editing configuration can't reach backwards. `describe`
+ * falls back rather than rendering an empty sentence when a referenced row has since gone.
+ * Deliberately concrete and named for a customer, not a general `listTimeline` — that's one
+ * extraction away the day the work item screen wants one.
  */
 
 export type TimelineEntry = {
@@ -50,19 +19,17 @@ export type TimelineEntry = {
   action: string;
   /** One sentence, in this tenant's vocabulary where the event names any of it. */
   description: string;
-  /**
-   * What this tenant calls the person who did it, or null if they are no longer a member.
-   *
-   * I11 guarantees an actor id, not a name: identity is global and this repository owns no
-   * users table (D19), so the only name available is the one *this organization* wrote on a
-   * membership — and somebody who has left has no membership row to read it from.
-   */
+  /** I11 guarantees an actor id, not a name — identity is global (D19), so the only name available is the one this organization wrote on a membership; somebody who's left has none. */
   actorName: string | null;
 };
 
 /** Actions a customer's history is made of. Anything else is noise on this screen. */
 const CUSTOMER_ACTIONS = [
   'customer.created',
+  'customer.updated',
+  'customer.stage_changed',
+  'call.placed',
+  'call.wrapped_up',
   'location.linked',
   'document.created',
   'work_item.created',
@@ -93,6 +60,9 @@ type Vocabulary = {
   statuses: Map<string, string>;
   resources: Map<string, string>;
   workItems: Map<string, string>;
+  /** Empty for a business that has not switched reception on, which reads as "no word for it". */
+  stages: Map<string, string>;
+  outcomes: Map<string, string>;
 };
 
 function text(payload: Record<string, unknown>, key: string): string | null {
@@ -100,14 +70,7 @@ function text(payload: Record<string, unknown>, key: string): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-/**
- * One sentence for one event.
- *
- * The platform's words, not the tenant's — "Scheduled" here is what *this system* calls
- * committing a resource, and the only tenant-authored strings are the ones looked up from
- * `words`. Terminology overrides stay deferred (`constraints.md`), and when they land this
- * is a second lookup rather than an excavation, for the same reason `navigation.ts` exists.
- */
+/** The platform's words, not the tenant's — only the looked-up strings from `words` are tenant-authored. */
 function describe(row: EventRow, words: Vocabulary): string {
   const job = words.workItems.get(row.entity_id);
   const on = job ? ` on ${job}` : '';
@@ -115,6 +78,22 @@ function describe(row: EventRow, words: Vocabulary): string {
   switch (row.action) {
     case 'customer.created':
       return 'Added as a customer';
+    case 'customer.updated':
+      return 'Details corrected';
+    case 'customer.stage_changed': {
+      const to = text(row.payload, 'to_stage_id');
+      const name = to ? words.stages.get(to) : null;
+      return to
+        ? `Moved to ${name ?? 'a stage that no longer exists'}`
+        : 'Taken off the pipeline';
+    }
+    case 'call.placed':
+      return text(row.payload, 'direction') === 'inbound' ? 'Call taken' : 'Call made';
+    case 'call.wrapped_up': {
+      const outcome = text(row.payload, 'outcome_id');
+      const name = outcome ? words.outcomes.get(outcome) : null;
+      return name ? `Call written up: ${name}` : 'Call written up';
+    }
     case 'location.linked':
       return 'Linked to a location';
     case 'document.created':
@@ -122,13 +101,9 @@ function describe(row: EventRow, words: Vocabulary): string {
     case 'work_item.created':
       return `Work created: ${text(row.payload, 'title') ?? 'untitled'}`;
     case 'work_item.booked':
-      // A different fact from `work_item.created`, and the outsider axis writes it as one: a
-      // job somebody booked themselves is not a job an operator typed, and a timeline that
-      // rendered them identically would lose the only part a customer would recognise.
+      // Distinct from `work_item.created` — a job booked by an outsider isn't a job an operator typed, and that's the only part a customer would recognise.
       return `Booked: ${text(row.payload, 'title') ?? 'untitled'}`;
     case 'work_item.status_changed': {
-      // The id, resolved to what the tenant calls that status *today*. A status that has
-      // since been deleted has no word left, and saying so is better than a blank.
       const to = text(row.payload, 'to_status_id');
       const name = to ? words.statuses.get(to) : null;
       return `Moved to ${name ?? 'a status that no longer exists'}${on}`;
@@ -151,15 +126,11 @@ function describe(row: EventRow, words: Vocabulary): string {
     case 'work_item.updated':
       return `Details corrected${on}`;
     case 'invoice.issued': {
-      // The number is snapshotted onto the payload because it is a term — it is what the
-      // document this customer holds says on it (I8), and unlike a status name it can never
-      // be renamed by a later edit.
+      // The number is snapshotted — it's what the document this customer holds says on it (I8), and unlike a status name it can never be renamed later.
       const number = row.payload.number;
       return `Invoiced${typeof number === 'number' ? ` (#${number})` : ''}${on}`;
     }
     case 'payment.recorded': {
-      // The amount and its currency, snapshotted for the same reason. The provider is a fact
-      // about where the money came from and a null one is a person writing it down.
       const amount = row.payload.amount_minor;
       const currency = text(row.payload, 'currency');
       const money =
@@ -167,25 +138,17 @@ function describe(row: EventRow, words: Vocabulary): string {
       return `Payment recorded${money}${on}`;
     }
     default:
-      // Unreachable while CUSTOMER_ACTIONS is the filter, and here so that adding an action
-      // to that list without a sentence degrades to something legible rather than blank.
+      // Unreachable while CUSTOMER_ACTIONS is the filter — here so a new action added without a sentence degrades legibly rather than blank.
       return row.action;
   }
 }
 
 /**
- * One customer's history, newest first.
- *
- * **A customer's timeline is not only events about the customer row.** Almost everything a
- * business remembers about a customer happened to a *job* — it was booked, moved, priced,
- * done. So this reads events for the customer and for that customer's work items together,
- * which is why the work item ids are fetched first rather than joined: `events` holds
- * `(entity_type, entity_id)` with no foreign key, deliberately, and
- * `schema-conformance.test.ts` forbids that polymorphic shape anywhere else precisely so
- * this table stays the only one.
- *
- * Every read here is under RLS, and the `organization_id` filters are the usual optimisation
- * rather than the boundary.
+ * One customer's history, newest first. Reads events for the customer *and* their work items
+ * together, via the `customer_activity` view — `events` holds `(entity_type, entity_id)` with
+ * no foreign key deliberately, and this is the one table allowed that shape
+ * (schema-conformance.test.ts). The action list stays here, since which events are worth
+ * showing is this screen's decision.
  */
 export async function listCustomerTimeline(
   db: Db,
@@ -205,14 +168,6 @@ export async function listCustomerTimeline(
 
   const workItems = new Map((jobs ?? []).map((job) => [job.id, job.title]));
 
-  // **Which events are about this customer is no longer decided here.** It was, until the
-  // question tools needed the same answer, and `20260902000008` moved it into
-  // `customer_activity` — the customer's own events, their jobs' events, and the one action
-  // that names them only in its payload. Two callers, one definition; the two queries and the
-  // manual merge this used to do are what that view now does.
-  //
-  // What stays here is the action list, because *which of those are worth showing* is this
-  // screen's decision rather than a fact about the data.
   const { data, error } = await db
     .from('customer_activity')
     .select('event_id, action, payload, occurred_at, actor_id, entity_id')
@@ -229,22 +184,25 @@ export async function listCustomerTimeline(
   const rows = (data ?? []).map((row) => ({ ...row, id: row.event_id })) as EventRow[];
   if (rows.length === 0) return [];
 
-  // The tenant's current words, and who its people are. Three reads rather than three joins:
-  // `events` carries ids in a jsonb payload, which PostgREST cannot embed through, and the
-  // alternative would be a resolution per row.
-  const [statuses, resources, members] = await Promise.all([
+  // Three reads rather than three joins — `events` carries ids in a jsonb payload, which PostgREST can't embed through.
+  const [statuses, resources, members, stages, outcomes] = await Promise.all([
     db.from('work_item_statuses').select('id, name').eq('organization_id', input.organizationId),
     db.from('resources').select('id, name').eq('organization_id', input.organizationId),
     db
       .from('memberships')
       .select('user_id, display_name')
       .eq('organization_id', input.organizationId),
+    // Read unconditionally rather than behind a module check — a business that's switched reception off can still hold calls made while it was on.
+    db.from('customer_stages').select('id, name').eq('organization_id', input.organizationId),
+    db.from('call_outcomes').select('id, name').eq('organization_id', input.organizationId),
   ]);
 
   const words: Vocabulary = {
     statuses: new Map((statuses.data ?? []).map((row) => [row.id, row.name])),
     resources: new Map((resources.data ?? []).map((row) => [row.id, row.name])),
     workItems,
+    stages: new Map((stages.data ?? []).map((row) => [row.id, row.name])),
+    outcomes: new Map((outcomes.data ?? []).map((row) => [row.id, row.name])),
   };
   const names = new Map((members.data ?? []).map((row) => [row.user_id, row.display_name]));
 

@@ -3,23 +3,10 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * What a business charges for.
- *
- * **This directory is not a module and does not claim to be one.** `domain-model.md` lists
- * `pricing` under "Not yet modules", which forbids naming a module before two independent
- * pieces of evidence want it — and `lib/domain/scheduling/` is the settled precedent that a
- * domain directory is a different thing entirely: `scheduling` sits in that same list while
- * that directory has existed since M2. What the rule forbids is claiming generality, not
- * writing the code concretely for the business in front of us.
- *
- * **Nothing here calculates a price.** That is deliberate and it is I4: there is exactly one
- * price calculation, it lives with the lines that consume this catalogue, and the surest way
- * to end up with two of them is to put a convenience total here as well.
- *
- * Money is integer minor units throughout, and every amount carries the currency it was
- * written in (I10). `formatMoney` in `work-items/consumption.ts` remains the only place a
- * minor unit is divided — pricing does not get a second formatter, because a second one is
- * how JPY starts printing with a decimal point in one half of the application.
+ * What a business charges for. Nothing here calculates a price — that's I4, and lives with the
+ * lines that consume this catalogue. Money is integer minor units throughout, with the currency
+ * it was written in (I10); `formatMoney` in `work-items/consumption.ts` remains the only place
+ * a minor unit is divided.
  */
 
 export type PriceBookItem = {
@@ -38,15 +25,7 @@ export type PriceBookItem = {
 const NAME_MAX = 200;
 const UNIT_MAX = 40;
 
-/**
- * The largest amount this can hold, and why the check is here rather than only in Postgres.
- *
- * `unit_amount_minor` is `bigint`, which exceeds what a JavaScript number represents exactly.
- * A value beyond `Number.MAX_SAFE_INTEGER` would round on the way through this layer and the
- * rounding would be invisible — so the boundary is refused rather than silently crossed.
- * Twenty-one million euro was the figure `work_item_costs` chose bigint for; this is four
- * orders of magnitude above that and still exact.
- */
+/** `unit_amount_minor` is `bigint`, beyond what a JS number represents exactly — refused here rather than silently rounded on the way through. */
 const AMOUNT_MAX = Number.MAX_SAFE_INTEGER;
 
 function normaliseName(value: string): string {
@@ -77,14 +56,7 @@ function normaliseUnit(value: string): string {
   return unit;
 }
 
-/**
- * The amount rule, in one place because two callers need it.
- *
- * Zero is allowed: an item a business includes at no charge is a real thing to publish.
- * Negative is not, and the reason is not arithmetic — `constraints.md` defers discounting
- * until travel cost modelling can bound it, and a negative line item would be that feature
- * arriving with none of the reasoning attached.
- */
+/** Zero allowed (a no-charge item is real); negative isn't — discounting is deferred (constraints.md), and a negative line would be that feature arriving with no reasoning attached. */
 function normaliseAmount(value: number): number {
   if (!Number.isInteger(value)) {
     throw new DomainError(
@@ -101,12 +73,6 @@ function normaliseAmount(value: number): number {
   return value;
 }
 
-/**
- * Everything this tenant prices, in its own order.
- *
- * The `organization_id` filter is an optimisation, not the boundary — RLS decided which rows
- * exist before this ran.
- */
 export async function listPriceBookItems(
   db: Db,
   input: { organizationId: string },
@@ -131,13 +97,7 @@ export async function listPriceBookItems(
   }));
 }
 
-/**
- * Add something to the catalogue.
- *
- * The currency is deliberately not an argument. `create_price_book_item` reads it from the
- * organization and writes it onto the row, so a caller cannot assert what a business prices
- * in — the same shape `record_work_item_cost` has, and for the same reason (I10).
- */
+/** Currency is never an argument — `create_price_book_item` reads it from the organization, so a caller can't assert what a business prices in (I10). */
 export async function createPriceBookItem(
   db: Db,
   input: {
@@ -173,16 +133,10 @@ export async function createPriceBookItem(
 }
 
 /**
- * Re-price something, or rename it.
- *
- * Safe for a reason worth stating rather than assuming: nothing already quoted reads this row
- * again. A work item's priced lines copy what they need when they are added, so this changes
- * what the next job is quoted and nothing about a job that exists (I8) — the same property
- * that makes editing a checklist template safe.
- *
- * The currency is not editable, by anyone, through any path: the column grant refuses it.
- * Changing it would reinterpret the amount rather than convert it, which is the same
- * distinction that keeps a field definition's `kind` frozen.
+ * Re-price something, or rename it. Safe because nothing already quoted reads this row again —
+ * a priced line copies what it needs when added, so this changes only the next job quoted (I8).
+ * Currency isn't editable by anyone, through any path — the column grant refuses it, since
+ * changing it would reinterpret the amount rather than convert it.
  */
 export async function updatePriceBookItem(
   db: Db,

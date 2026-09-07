@@ -1,18 +1,11 @@
 /**
- * What a role may do.
- *
- * This list is **platform vocabulary, not tenant configuration**. Each entry names an
- * operation the code actually performs and RLS actually checks, so adding one means writing
- * the code, the policy, and a migration extending `roles_capabilities_known`. A capability
- * that exists here but nowhere else is a promise the UI makes and the system does not keep.
- *
- * What is tenant configuration is which role holds which of these, and what that role is
- * called — those are rows in `roles` (D6).
- *
- * Grows one entry per slice that adds a guarded operation. It is deliberately short.
+ * What a role may do — platform vocabulary, not tenant configuration. Adding one means writing
+ * the code, the policy, and a migration extending `roles_capabilities_known`. Which role holds
+ * which capability, and what that role is called, are tenant rows (D6).
  */
 export const CAPABILITIES = [
   'customer.create',
+  'customer.update',
   'role.manage',
   'field.manage',
   'location.create',
@@ -34,6 +27,7 @@ export const CAPABILITIES = [
   'assistant.ask',
   'report.read',
   'report.manage',
+  'call.place',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -45,15 +39,11 @@ export function isCapability(value: string): value is Capability {
   return (CAPABILITIES as readonly string[]).includes(value);
 }
 
-/**
- * Human wording for each capability, for the one screen that has to render them.
- *
- * Not tenant-configurable: these describe what the *platform* does, not what a business
- * calls its own concepts. Per-tenant terminology is a separate, later concern
- * (`constraints.md`, "Decided, not yet built").
- */
+/** Describes what the platform does, not tenant terminology — that's a separate, later concern. */
 export const CAPABILITY_LABELS: Record<Capability, string> = {
   'customer.create': 'Add customers',
+  /** Separate from creating one — correcting a record and moving a relationship along its stages are plausibly two different people. */
+  'customer.update': 'Correct a customer and move them along',
   'role.manage': 'Manage roles',
   'field.manage': 'Define custom fields',
   'location.create': 'Add locations',
@@ -68,30 +58,19 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'price.manage': 'Set what this business charges',
   'work_item.price': 'Put priced items on a job',
   'work_item.update': 'Correct a job’s details',
-  // Two rather than one, because they are plausibly two people. Deciding a job is finished
-  // and asking to be paid for it is whoever runs the work; writing down that money arrived is
-  // whoever opens the post.
+  /** Split from recording payment — deciding a job is finished is whoever runs the work; writing down that money arrived is whoever opens the post. */
   'invoice.issue': 'Invoice a finished job',
   'payment.record': 'Record a payment against an invoice',
-  // Its own authority rather than part of managing the business, because it is the one thing a
-  // role can hold that acts when nobody is present. Reading a rule needs nothing: an operator
-  // who cannot write them still has to be able to find out why a job moved on its own.
+  /** Its own authority — the one capability a role can hold that acts when nobody is present. */
   'automation.manage': 'Write the rules this business runs on its own',
-  // Asking for a proposal, not applying one. Applying is whatever the proposal contains, and
-  // each part of it is already gated by the capability that part needs — somebody who may not
-  // create a role cannot apply a proposal that creates one, and the refusal comes from the
-  // policy on `roles` rather than from anything on this list (D32).
+  /** Asking for a proposal, not applying one — applying is gated per-part by whatever capability that part needs (D32). */
   'configuration.propose': 'Ask the platform to draft this business’s setup',
-  // Its own authority, and not because a question is dangerous — a tool reads nothing its
-  // caller could not already read. It is because asking spends this deployment's money and
-  // sends this business's rows to whoever answers, and both are decisions somebody takes on
-  // purpose rather than inherit.
+  /** Its own authority because asking spends this deployment's money and shares this business's rows with whoever answers — not because a question is dangerous. */
   'assistant.ask': 'Ask the platform questions about this business',
-  // Reading totals, which is not the same as reading the rows behind them. Anybody may open one
-  // invoice on the job it belongs to; what this grants is seeing a year of them added up, which
-  // exists in no row and is a decision a business takes about who sees the book.
+  /** Totals, not the rows behind them — anybody may open one invoice; this grants seeing a year of them added up. */
   'report.read': 'See what this business has billed and what its work cost',
-  // Authoring rather than reading: saving a report other people will see is closer to managing
-  // roles than to looking at a number, and it is plausibly a different person.
+  /** Authoring, not reading — saving a report others will see is closer to managing roles. */
   'report.manage': 'Save reports and choose which roles see them',
+  /** Its own authority for the same reason as `assistant.ask` — placing a call spends money and shares this business's number. */
+  'call.place': 'Call a customer and record how it went',
 };

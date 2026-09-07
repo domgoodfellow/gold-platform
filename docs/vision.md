@@ -143,7 +143,8 @@ The failure mode is visible in the middle one: documentation and abstraction wri
 of evidence, which then governed work that never arrived. This repo starts with four
 documents and a hard budget: a function waits for its second caller, and an engine waits for
 its second piece of evidence — of which the three repos above are the first, since a system
-that shipped is exactly the thing a hypothesis is not.
+that shipped is exactly the thing a hypothesis is not. That budget governs unprompted work; it
+is not a permission gate against the owner's own instruction, which is evidence on its own.
 
 See `constraints.md` for what that means in practice, and `roadmap.md` for what "done"
 means at each stage.

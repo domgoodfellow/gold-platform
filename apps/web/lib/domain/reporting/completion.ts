@@ -3,45 +3,18 @@ import { DomainError } from '@/lib/domain/errors';
 import type { Filters, Grouping, Period } from '@/lib/domain/reporting/shape';
 
 /**
- * How much work a business marked as finished, and when.
- *
- * **The second measure, and the first that is not money** — which is what takes `requires:
- * 'billing'` off the reporting module: a business that invoices somewhere else can now read
- * something here.
- *
- * **It says *marked* complete, and the word is the honest part.** `events.occurred_at` records
- * when somebody moved a job into a status their business calls finished; nothing passes that
- * function a date, so it is not the instant the work stopped. Reporting it as *completed* would
- * claim a precision this platform does not have, which is the same discipline that makes the
- * financial set say invoiced rather than revenue. If a business needs the other instant, that is
- * a caller-supplied date on `change_work_item_status` and its own slice.
- *
- * **Which status means finished is the tenant's answer**, held in `work_item_statuses.marks_
- * complete`. It is deliberately not `releases_resource` and deliberately not a platform
- * `isTerminal`: Cancelled frees the resource and is not completed work, and one flag could not
- * have said both. M4 is where that reasoning is recorded.
- *
- * **Nothing here computes anything**, on the same terms as `financials.ts`: every number comes
- * from `public.work_marked_complete`, the one aggregate for this question (D35).
+ * How much work a business marked as finished, and when. Says "marked" deliberately —
+ * `occurred_at` is when a status changed, not necessarily when the work stopped. Which status
+ * means finished is the tenant's own answer (`work_item_statuses.marks_complete`), distinct
+ * from `releases_resource` since cancelling frees a resource without completing work. Nothing
+ * here computes anything — every number comes from `public.work_marked_complete` (D35).
  */
 
 export type CompletionGroup = {
-  /** The entity this group is about, or null for work attributed to nobody. */
   groupId: string | null;
-  /**
-   * Today's name for that entity, or null.
-   *
-   * Two causes, told apart by the grouping the caller asked for: nothing was attributed, or the
-   * reader may not see that row. Neither gets a word from the platform.
-   */
+  /** Null either because nothing was attributed, or because the reader may not see that row — never distinguished. */
   label: string | null;
-  /**
-   * Jobs, not events.
-   *
-   * A job moved out of a finishing status and back into it inside one period was finished once.
-   * Counting the moves would make a business that corrects a mistake look busier than one that
-   * does not, which is a number nobody could reproduce from a screen.
-   */
+  /** Jobs, not events — a job moved out of and back into a finishing status within a period counts once. */
   jobs: number;
 };
 
@@ -75,13 +48,7 @@ export async function listWorkMarkedComplete(
   }));
 }
 
-/**
- * How many jobs in total, across every group.
- *
- * A function rather than a `reduce` on a page, for the reason I4 gives about prices — and one
- * number rather than a set, because a count has no currency and nothing here is being added
- * across a unit that could differ.
- */
+/** A function rather than an inline `reduce` (I4's reasoning about totals). */
 export function totalJobs(groups: CompletionGroup[]): number {
   return groups.reduce((total, group) => total + group.jobs, 0);
 }

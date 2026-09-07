@@ -13,31 +13,18 @@ import { executorFor, reasonActionCannotRun } from './actions';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
 
 /**
- * Asking the system a question, and the record of having asked.
- *
- * **The domain layer owns the flow; the capability owns the answering.** Nothing in this file
- * knows there is a loop, a model, a tool or a second deployment — it asks for an answer and
- * writes down what came back, beside who asked and what they asked.
- *
- * **Nothing here reads business data, and that absence is the point.** A question about work is
- * answered by tools running in Postgres under the asking person's own token, so this function
- * never fetches a job, never filters one, and could not widen what somebody sees if it tried
- * (`constraints.md` D34). It is the same shape D32 gave drafting: the model reaches business
- * state through nothing this layer hands it.
- *
- * **And nothing here writes business data.** A question is a read. The intended-action half of
- * the AI layer — where an answer comes back with something to do about it — is a later slice
- * with its own screen, and until it exists the honest description of this feature is that it
- * can tell you things and change nothing.
+ * Asking the system a question, and the record of having asked. The domain layer owns the flow;
+ * the capability owns the answering — nothing here knows there's a loop, a model, or a second
+ * deployment. Nothing here reads or writes business data: a question is answered by tools
+ * running under the asking person's own token (D34), so this function could not widen what
+ * somebody sees if it tried. Carrying out a suggested action is a separate, later step with its
+ * own screen.
  */
 
 export type { ProposedAction, ToolCallRecord };
 export { ACTION_LABELS } from './actions';
 
-/**
- * What became of a suggestion. `pending` is a real state somebody is looking at, which is why
- * there are four words rather than three.
- */
+/** `pending` is a real state somebody is looking at, hence four words rather than three. */
 export type ActionOutcome = 'pending' | 'done' | 'declined' | 'failed';
 
 export type AgentRun = {
@@ -105,26 +92,12 @@ function isActionOutcome(value: string | null): value is ActionOutcome {
 const COLUMNS =
   'id, question, answer, outcome, detail, tools, answered_by, occurred_at, proposed_action, action_outcome, action_detail';
 
-/**
- * Whether this deployment can answer anything at all.
- *
- * Exists so a screen can say so rather than rendering a box that cannot work — D31's rule, and
- * the shipped failure it was written from.
- */
+/** Lets a screen say "this deployment can't answer" rather than rendering a box that fails (D31). */
 export async function canAnswerQuestions(): Promise<boolean> {
   return (await answeringProvider()) !== null;
 }
 
-/**
- * My own questions in this business, newest first.
- *
- * **Only ever mine, and that is the policy rather than this filter.** `agent_runs_select`
- * narrows to `created_by = auth.uid()` because an answer holds whatever its asker could see, and
- * two people in one business do not see the same rows — a portal customer's narrowing and an
- * operator's reach are different, and a tenant-wide history would be a way to read yesterday's
- * answer to a question today's policies refuse. There is no `.eq('created_by', ...)` below
- * because there is no need for one, and adding it would suggest the boundary lives here.
- */
+/** Only ever mine, by policy (`agent_runs_select` narrows to `created_by = auth.uid()`) — an answer holds whatever its asker could see, so no `.eq('created_by', ...)` is added here, to avoid suggesting the boundary lives in this function. */
 export async function listAgentRuns(
   db: Db,
   input: { organizationId: string },
@@ -144,17 +117,10 @@ export async function listAgentRuns(
 }
 
 /**
- * Ask, and write down what came back.
- *
- * **A failure is recorded rather than thrown away**, which is I25 applied to a third thing. A
- * model that refused, a deployment whose far side is unconfigured, a tool that Postgres declined
- * — all of them leave a row saying so in whoever's words said it. The alternative is the failure
- * mode M5's console could not answer: something went wrong, nobody can say what, and there is
- * nothing to read.
- *
- * **The token is fetched here and passed straight through.** It is the caller's own session,
- * which is what makes every tool on the far side run inside their own RLS boundary rather than
- * beside it. A caller with no session never reaches the provider.
+ * Ask, and write down what came back. A failure is recorded rather than discarded (I25) — a
+ * refusal, an unconfigured deployment, a declined tool all leave a row saying so in whoever's
+ * words said it. The token is fetched here and passed straight through, so every tool on the
+ * far side runs inside the caller's own RLS boundary.
  */
 export async function askQuestion(
   db: Db,
@@ -173,12 +139,9 @@ export async function askQuestion(
     );
   }
 
-  // **Checked before anything is asked, and this one is not merely for the message.** Everywhere
-  // else in this platform a domain-side capability check exists to produce a readable refusal
-  // while the policy does the guarding — but `agent_runs_insert` fires *after* the answering has
-  // happened, and by then somebody without the capability has already spent this deployment's
-  // money and sent this business's rows to whoever answers. So the guard has to be here as well.
-  // The policy remains the guarantee: it refuses the record even if this check is ever lost.
+  // Checked here as well as by the policy: `agent_runs_insert` fires *after* the answering has
+  // happened, by which point somebody without the capability would already have spent this
+  // deployment's money and sent this business's rows to whoever answers.
   const organization = await getOrganization(db, input.organizationId);
   if (!organization) {
     throw new DomainError('No such business.', 'assistant.not_found');
@@ -217,11 +180,7 @@ export async function askQuestion(
       question,
       token,
       organizationId: input.organizationId,
-      // **The business's own today, and it is I9 rather than a convenience.** An instant is
-      // absolute; a zone is applied at render, and here the thing rendering is a model that has
-      // been handed a number and no context. `Intl` does the conversion rather than arithmetic
-      // on a Date, because a zone with an offset that changes is exactly where hand-rolled
-      // arithmetic goes wrong.
+      // I9, not a convenience — the model has no clock, so `Intl` (not Date arithmetic) resolves the business's own today in its own zone.
       context: `Today is ${new Intl.DateTimeFormat('en-CA', {
         timeZone: organization.timezone,
         dateStyle: 'full',
@@ -232,15 +191,12 @@ export async function askQuestion(
     detail = answer.detail;
     answeredBy = answer.answeredBy;
     tools = answer.tools;
-    // **Recorded as pending, never performed** — but only if it could be carried out at all.
-    // Whether this platform knows the action, and whether its arguments make sense, is decided
-    // here by the whitelist rather than by whoever suggested it; whether it *should* happen is
-    // decided by the person reading it.
+    // Recorded as pending, never performed — but only if it could be carried out at all, decided
+    // by the whitelist rather than by whoever suggested it.
     action = answer.action;
     actionRefusal = action ? reasonActionCannotRun(action.name, action.arguments) : null;
   } catch (failure) {
-    // Their words, not a paraphrase of them (I25). A sentence an operator can act on is the
-    // whole value of recording this at all.
+    // Their words, not a paraphrase (I25).
     detail = failure instanceof Error ? failure.message : 'the assistant could not answer';
   }
 
@@ -252,19 +208,13 @@ export async function askQuestion(
       answer: text,
       outcome,
       detail,
-      // Cast because `tools` is `jsonb` and the generated type is `Json`. The shape it holds
-      // is this layer's own `ToolCallRecord`, narrowed by the capability contract before it got
-      // here, and re-describing it as `Json` on the way out would lose the only thing worth
-      // knowing about it.
+      // `tools` is jsonb, generated as `Json` — cast because the shape it actually holds is this layer's own `ToolCallRecord`, already narrowed by the capability contract.
       tools: tools as unknown as Json,
       answered_by: answeredBy,
       created_by: actor.id,
       proposed_action: action as unknown as Json,
-      // **A suggestion that cannot work is recorded as having failed, not offered as a button.**
-      // Watched with a small local model: it proposed moving a job it had never looked up,
-      // naming it in words where the id goes. Showing that as *Do it* asks somebody to press a
-      // control whose only outcome is a refusal — so the refusal happens now, the suggestion
-      // stays visible with the reason beside it, and nothing is offered that cannot be done.
+      // A suggestion that can't work is recorded as failed, never offered as a button — a weak
+      // model can propose moving a job it never looked up, naming it in words where the id goes.
       action_outcome: action ? (actionRefusal ? 'failed' : 'pending') : null,
       action_detail: actionRefusal,
       action_taken_at: action && actionRefusal ? new Date().toISOString() : null,
@@ -280,22 +230,12 @@ export async function askQuestion(
 }
 
 /**
- * Carry out what a run suggested, or decline it.
- *
- * **The whole of the proposal contract, and it is four short steps.** Read the run back from the
- * database rather than trusting what a caller handed over — a lesson `applyConfigurationProposal`
- * learned the hard way, where a stale snapshot walked past the guard and re-ran a whole sequence.
- * Look the name up in this layer's own whitelist. Call the domain function. Write down what
- * happened.
- *
- * **This adds no capability and checks none.** Moving a job is `work_item.schedule`, refused by
- * the policy on `work_items` exactly as it would be if the person had dragged it on the schedule.
- * A check here would be a second copy of that rule in the place least able to keep it current.
- *
- * **A refusal is recorded rather than thrown.** The person suggested pressing a button and the
- * database said no; what they are owed is the sentence it said, on the row, where they are
- * already looking. The exclusion constraint refusing an overlap is the ordinary case, not a rare
- * one — which is the point of proposing an instant rather than searching for a free one (I6).
+ * Carry out what a run suggested, or decline it. Reads the run back from the database rather
+ * than trusting what the caller handed over (a stale snapshot walked past the guard once, on
+ * `applyConfigurationProposal`). Adds no capability and checks none — moving a job is still
+ * `work_item.schedule`, refused by the same policy it would be if dragged by hand. A refusal is
+ * recorded rather than thrown: the exclusion constraint refusing an overlap is the ordinary
+ * case here, not a rare one (I6).
  */
 export async function decideOnAction(
   db: Db,
@@ -315,8 +255,7 @@ export async function decideOnAction(
 
   const run = toRun(current);
   if (run.actionOutcome !== 'pending') {
-    // Frozen the moment it was decided, in the policy as well as here. Asking again is a new
-    // question, because a suggestion acted on twice is a job moved twice.
+    // Frozen the moment it was decided, in the policy as well as here — asking again is a new question.
     throw new DomainError('That has already been decided.', 'assistant.action_decided');
   }
   if (!run.proposedAction) {
@@ -329,8 +268,7 @@ export async function decideOnAction(
   if (input.carryOut) {
     const executor = executorFor(run.proposedAction.name);
     if (!executor) {
-      // The two runtimes disagreeing, which is allowed to happen and must fail closed. Recorded
-      // in the platform's own words, because this is a fact about the platform.
+      // The two runtimes disagreeing — allowed to happen, and must fail closed.
       outcome = 'failed';
       detail = 'This platform cannot carry out that kind of suggestion.';
     } else {

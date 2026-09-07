@@ -3,32 +3,14 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * What a business says about itself, on a page strangers can see.
- *
- * **This module exists because the booking surface broke a Never.** `constraints.md`: "Never
- * hardcode a claim a business makes about itself — guarantees, trust points, service
- * assertions, section headings. Copy is configuration." The booking page shipped saying "Book
- * a time" and "This business is not taking bookings online at the moment" — the platform
- * speaking in a business's voice, on a URL that business puts on the side of a van.
- *
- * **D20 assumed booking could ship before marketing.** It defers the marketing surface because
- * "every word on a public page a business shows the world is a claim that business makes about
- * itself", and then permits booking — which is a public page. They are the same problem, and
- * the second one arrived first.
- *
- * What this is **not** is the marketing surface: no pages, no sections, no blocks, no editor,
- * and deliberately **no colour** — D23 rejects a per-tenant theme by name and says it lands
- * with the marketing surface and needs the same evidence. Copy is what the Never is about.
- *
- * The line this draws, and it is the useful part: **a business's own voice at the top of the
- * page; the platform's words only where they describe what the system is doing.** The Never
- * carves that out itself — "strings describing *application state* ('Loading', 'No results',
- * aria labels) stay in code." "Nothing free on this day" is application state. "We come to
- * you across Montréal" is a claim, and is a row.
+ * What a business says about itself, on a page strangers can see. Exists because copy is
+ * configuration, not something the platform says on a business's behalf — a public page must
+ * carry the business's own voice, never a platform claim ("Book a time now!"). No colour here;
+ * that's the marketing surface D23 defers separately.
  */
 
 export type PublicProfile = {
-  /** What to call this business publicly. Never null to a renderer — see `publicProfile`. */
+  /** Never null to a renderer — see `publicProfile`. */
   displayName: string;
   tagline: string | null;
   intro: string | null;
@@ -40,14 +22,7 @@ export type PublicProfile = {
 const TAGLINE_MAX = 200;
 const INTRO_MAX = 2000;
 
-/**
- * One business's public copy, with its own name as the floor.
- *
- * **A business that has configured nothing still renders its own name**, because "it has said
- * nothing" must never resolve to the platform saying something on its behalf. That is the same
- * reading operating hours and the buffer take of an absent row, and it is the reason
- * `displayName` is not nullable out here even though the column is.
- */
+/** A business that's configured nothing still renders its own name — "said nothing" must never become the platform speaking for it. */
 export async function publicProfile(
   db: Db,
   input: { organizationId: string; fallbackName: string },
@@ -72,17 +47,7 @@ export async function publicProfile(
   };
 }
 
-/**
- * Write it.
- *
- * No capability of its own: `organization.manage` already means "change this business's own
- * settings", and what a business says about itself is settings rather than a new authority.
- * A capability with no operation distinct from another is vocabulary nobody can act on
- * differently — the same argument the schema makes for configuring a board under `field.manage`.
- *
- * Empty means unset rather than empty: a business clearing its tagline is saying something,
- * and storing `''` would render a blank line where the reader expects nothing at all.
- */
+/** No capability of its own — `organization.manage` already covers a business's own settings. Empty means unset, not blank: storing `''` would render a blank line where the reader expects nothing. */
 export async function setPublicProfile(
   db: Db,
   input: {

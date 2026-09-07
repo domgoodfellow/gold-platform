@@ -16,6 +16,22 @@
     {
       "source": "/ai/ask",
       "destination": "/app/api/ai_ask"
+    },
+    {
+      "source": "/voice/outbound",
+      "destination": "/app/api/voice_outbound"
+    },
+    {
+      "source": "/voice/inbound",
+      "destination": "/app/api/voice_inbound"
+    },
+    {
+      "source": "/voice/status",
+      "destination": "/app/api/voice_status"
+    },
+    {
+      "source": "/voice/recording",
+      "destination": "/app/api/voice_recording"
     }
   ],
   "crons": [

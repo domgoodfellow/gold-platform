@@ -1,25 +1,9 @@
 /**
- * What any report is made of, whatever it measures.
- *
- * **Extracted at the second measure and not before.** All of this lived in `financials.ts` while
- * money was the only thing this platform reported on; *work marked complete* is the second, and a
- * grouping, a period and a filter mean the same thing to both. Copying them would be two lists
- * that drift, which is the rule about extracting at the second caller arriving one level up.
- *
- * **D36 predicted this file.** It says a definition holds a grouping, a period and up to three
- * filters *for this report set*, and that the day a set arrives whose fields are not fixed, that
- * record is where the argument for a query language has to be made. This is that day and the
- * argument is not made: the fields stay fixed **per measure**, and what varies is which measure.
- * So a report gains one more column from a closed list, not a builder.
+ * What any report is made of, whatever it measures. Fields stay fixed per measure (D36) —
+ * a report gains a column from a closed list, not a query builder.
  */
 
-/**
- * What a report can be about.
- *
- * Platform vocabulary, exactly like `CAPABILITIES` and `GROUPINGS`: each entry names something
- * the database actually implements as a function, and adding one means writing the SQL. A
- * business does not invent a measure; it picks one and says how to group it.
- */
+/** Platform vocabulary — each entry names a function the database actually implements. */
 export const MEASURES = [
   'invoiced_and_incurred',
   'work_marked_complete',
@@ -30,25 +14,13 @@ export type Measure = (typeof MEASURES)[number];
 
 export const MEASURE_LABELS: Record<Measure, string> = {
   'invoiced_and_incurred': 'Billed and spent',
-  // **Marked, and the word is doing work.** `events.occurred_at` records when somebody moved a
-  // job into a status their business calls finished, which is not the same instant the work
-  // stopped. Saying *completed* would claim a precision this platform does not have, on the same
-  // discipline that makes the financial set say invoiced rather than revenue.
+  /** "Marked" rather than "completed" — `occurred_at` records when a status changed, not when the work stopped. */
   'work_marked_complete': 'Work marked complete',
-  // **The numerator of utilisation, and named as what it is.** A percentage would need opening
-  // hours minus commitments as its denominator, which is `freeWindows` — the one availability
-  // calculation — and an aggregate re-deriving that would be the second answer to *what is free*
-  // that I5 exists to forbid. A business dividing this by its own opening hours is doing
-  // arithmetic this platform did not invent for it.
+  /** The numerator of utilisation, not a percentage — a percentage needs `freeWindows`, the one availability calculation (I5). */
   'time_committed': 'Time committed',
 };
 
-/**
- * What a figure can be grouped by.
- *
- * The tenant's own words appear *inside* a grouping — their customers, their services — never as
- * one of these.
- */
+/** A tenant's own words (customers, services) live inside a grouping, never as one of these. */
 export const GROUPINGS = ['customer', 'service', 'resource', 'location'] as const;
 
 export type Grouping = (typeof GROUPINGS)[number];
@@ -60,29 +32,14 @@ export const GROUPING_LABELS: Record<Grouping, string> = {
   location: 'Location',
 };
 
-/**
- * Which groupings a measure can answer.
- *
- * **Not every measure answers every grouping, and the absences are facts rather than gaps.**
- * Money grouped by service reports no cost, because a cost belongs to a job and a service is one
- * line on it. Neither of the other two has a service grouping at all: a job is finished as a
- * whole and books a resource as a whole, and splitting either across the lines on it would be
- * inventing a rule about how — the same refusal, arriving at a count and at a duration instead
- * of an amount.
- */
+/** Absences are facts, not gaps — e.g. money grouped by service reports no cost, because a cost belongs to a job and a service is one line on it. */
 export const GROUPINGS_FOR: Record<Measure, readonly Grouping[]> = {
   'invoiced_and_incurred': GROUPINGS,
   'work_marked_complete': ['customer', 'resource', 'location'],
   'time_committed': ['customer', 'resource', 'location'],
 };
 
-/**
- * One entity to narrow to, or none.
- *
- * Three optional ids rather than a filter language, because for these report sets there is
- * nothing else to express (D36). A filter narrows the *jobs* considered, so everything a job
- * contributes is counted together or not at all.
- */
+/** Three optional ids rather than a filter language — nothing else needs expressing for these report sets (D36). */
 export type Filters = {
   customerId?: string | null;
   resourceId?: string | null;
@@ -95,12 +52,7 @@ export const FILTER_LABELS: Record<keyof Filters, string> = {
   locationId: 'Location',
 };
 
-/**
- * A period, half-open, as two dates in `YYYY-MM-DD`.
- *
- * Dates rather than instants: every aggregate applies the business's own zone to both ends, from
- * the row that holds it. Both optional — absent means everything on that side.
- */
+/** Dates, not instants — every aggregate applies the business's own zone to both ends. Both optional; absent means everything on that side. */
 export type Period = { from?: string; to?: string };
 
 export const PERIODS = ['month', 'year', 'all'] as const;
@@ -113,20 +65,7 @@ export const PERIOD_LABELS: Record<PeriodPreset, string> = {
   all: 'Everything',
 };
 
-/**
- * A preset turned into two dates.
- *
- * **Dates, not instants, and the conversion deliberately does not happen here** (I9). Where a
- * month begins depends on where the business is, and the aggregates apply the tenant's own zone
- * to both ends — once, from the row that holds it. Converting on this side would put the same
- * arithmetic in every caller, and one of those callers is a language model.
- *
- * What this needs the zone for is only *which* month: a tenant in Auckland and one in Montréal
- * are on different dates for most of the server's day, so `today` comes from `todayInZone`.
- *
- * Half-open, matching the aggregates: the first day is included and the last is not, so a month
- * and the month after it share a boundary and count nothing twice.
- */
+/** Half-open (first day included, last excluded) so consecutive periods share a boundary without double-counting. */
 export function periodFor(preset: PeriodPreset, today: string): Period {
   if (preset === 'all') return {};
 

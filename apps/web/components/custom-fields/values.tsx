@@ -3,13 +3,14 @@ import type {
   FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
 
-/**
- * The custom values one row carries, labelled from the registry.
- *
- * Extracted at its third caller — customers, locations and resources all render the same
- * thing. Driven by the definitions rather than by the keys present in `custom`, so a value
- * left behind by a field that no longer exists is not rendered as a nameless string.
- */
+/** Rendered exactly as stored — formatting a date would pick a locale, and the raw spelling is unambiguous to everyone. */
+function readValue(value: CustomValues[string]): string {
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (Array.isArray(value)) return value.join(', ');
+  return String(value);
+}
+
+/** Driven by field definitions, not by the keys present in `custom` — a value left behind by a deleted field renders nothing. */
 export function CustomFieldValues({
   definitions,
   custom,
@@ -27,15 +28,12 @@ export function CustomFieldValues({
 
   return (
     <dl className="mt-1 flex flex-wrap gap-x-4 text-sm text-muted">
-      {present.map((definition) => {
-        const value = custom[definition.key];
-        return (
-          <div key={definition.id} className="flex gap-1">
-            <dt>{definition.label}:</dt>
-            <dd>{typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}</dd>
-          </div>
-        );
-      })}
+      {present.map((definition) => (
+        <div key={definition.id} className="flex gap-1">
+          <dt>{definition.label}:</dt>
+          <dd>{readValue(custom[definition.key])}</dd>
+        </div>
+      ))}
     </dl>
   );
 }

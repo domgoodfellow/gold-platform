@@ -1,12 +1,6 @@
 /**
- * What a customer sees while their own page is being read.
- *
- * The same reasoning as the booking route's, and a longer wait to justify it: this page reads
- * the profile, the brand, the customer's work and their invoices — and then, for each invoice,
- * its lines and its payments. That last part is a read per invoice rather than one read, which
- * `page.tsx` names out loud; a customer with six invoices waits for thirteen round trips.
- *
- * Nothing here speaks for the business, because nothing that would let it has arrived yet.
+ * What a customer sees while their portal page loads — this one reads a payment and lines per
+ * invoice, so it's a longer wait than most (`page.tsx` names the round-trip count).
  */
 export default function Loading() {
   return (

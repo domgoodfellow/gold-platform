@@ -5,20 +5,12 @@ import { listOperatingHours, openWindows } from '@/lib/domain/scheduling/operati
 import { parseWindow, zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
 
 /**
- * Booking: what a stranger may see of a business, and what they may commit it to.
- *
- * This module is the first caller of D22's axis. Everything it reads is restricted by an RLS
- * policy keyed to `app.current_external_tenant()`, and nothing in this file decides who may
- * see what — the migration does, in policies written as *permit* rather than as "unless
- * refused". If a query here returns nothing, the honest reading is that the business has not
- * published that thing, not that the code forgot a filter.
- *
- * **It carries no second notion of availability and no second notion of price.** D20 blocked
- * booking on I5, I6 and I4 for exactly that reason: a booking page written before them would
- * necessarily have invented its own answers, on the surface where being wrong is most
- * expensive. So `bookableSlots` subtracts commitments from opening hours with the same two
- * pure functions `listSchedule` uses, and a price is copied from the catalogue by
- * `add_work_item_priced_line` inside `create_booking` — the same copy every quote gets (I4, I8).
+ * Booking: what a stranger may see of a business, and what they may commit it to — the first
+ * caller of D22's axis. Everything reads under an RLS policy keyed to
+ * `app.current_external_tenant()`; nothing here decides visibility. No second notion of
+ * availability or price: `bookableSlots` uses the same pure functions `listSchedule` uses, and a
+ * price is copied from the catalogue by `add_work_item_priced_line` inside `create_booking` (I4,
+ * I5, I6, I8).
  */
 
 export type BookableType = {
@@ -33,27 +25,15 @@ export type BookableType = {
 export type Slot = {
   startsAt: string;
   endsAt: string;
-  /**
-   * A resource that is free for this slot.
-   *
-   * An id and never a name: a resource can be a person (D19), and which member of staff is
-   * free on Tuesday is not a fact a booking page has any reason to publish. It travels back
-   * with the booking so the commit names the same resource the offer was computed against.
-   */
+  /** An id, never a name — a resource can be a person (D19), and who's free isn't a fact this page publishes. Travels back with the booking so the commit names the same resource the offer was computed against. */
   resourceId: string;
 };
 
 /**
- * Which business a public slug names, or null.
- *
- * **A visitor arriving with a slug has no binding, and therefore no RLS scope at all** — every
- * policy on this axis keys on `app.current_external_tenant()`, so they cannot read the very row
- * that would tell them which business they are looking at. `app.booking_organization` breaks
- * that circle: privileged, one uuid out, and it answers only for a business that has actually
- * published something bookable, which is what makes the public directory opt-in.
- *
- * Null covers "no such slug" and "that business publishes nothing" indistinguishably, and the
- * page turns both into a 404. From outside, those are the same fact.
+ * Which business a public slug names, or null. `app.booking_organization` is privileged and
+ * breaks the circle a visitor with no binding is otherwise stuck in — it answers only for a
+ * business that has published something bookable. Null covers "no such slug" and "publishes
+ * nothing" indistinguishably; the page turns both into a 404.
  */
 export async function resolveBookingSlug(db: Db, slug: string): Promise<string | null> {
   const { data, error } = await db.rpc('booking_organization', { p_slug: slug });
@@ -66,20 +46,10 @@ export async function resolveBookingSlug(db: Db, slug: string): Promise<string |
 }
 
 /**
- * Become an external actor of one business.
- *
- * Anonymous sign-in first — D22 named it as the option costing I11 and D17 the least, because
- * it produces a genuine `auth.uid()` — then the binding row that scopes it to exactly one
- * tenant. Calling this twice for one visitor is harmless: the unique index on `user_id` means
- * the second insert conflicts, and the existing binding is the correct answer anyway.
- *
- * The organization id is one this process resolved from a slug, never one a URL supplied. That
- * distinction is D17's: a path segment is routing convenience and must never be an
- * authorization input, and out here there is no membership to re-derive it against.
- *
- * A member of the business must never end up here. The unique index would let them hold a
- * binding as well as a membership, so the guard is that this signs in *anonymously* — a
- * caller who already has a session keeps it and takes the member path.
+ * Become an external actor of one business. Anonymous sign-in first (D22, I11, D17) produces a
+ * genuine `auth.uid()`, then the binding row scopes it to exactly one tenant — calling this
+ * twice is harmless since the unique index on `user_id` makes the second insert a no-op. The
+ * organization id is one this process resolved from a slug, never one a URL supplied (D17).
  */
 export async function beginBooking(db: Db, input: { organizationId: string }): Promise<void> {
   const { data: existing } = await db.auth.getUser();
@@ -100,21 +70,13 @@ export async function beginBooking(db: Db, input: { organizationId: string }): P
     .from('external_actors')
     .insert({ organization_id: input.organizationId, user_id: user.user.id });
 
-  // 23505 is this visitor already having a binding, which is the ordinary case on a reload.
-  // Any other error is real.
+  // 23505 is this visitor already having a binding — the ordinary case on a reload.
   if (error && error.code !== '23505') {
     throw new DomainError(error.message, 'booking.begin_failed');
   }
 }
 
-/**
- * What this business takes bookings for.
- *
- * Reads `work_item_types` under the external policy, which already restricts this to published
- * types — there is no `bookable` filter here because there is no `bookable` column: a type is
- * published when the business has said which status a booking arrives in and how long one
- * takes, and those two columns are the whole answer.
- */
+/** No `bookable` column — a type is published when the business has said which status a booking arrives in and how long one takes, and those two columns are the whole answer. */
 export async function listBookableTypes(
   db: Db,
   input: { organizationId: string },
@@ -153,18 +115,10 @@ export async function listBookableTypes(
 }
 
 /**
- * When this business could do that work, on one of its days.
- *
- * **The same availability calculation the operator sees** — `openWindows` minus the
- * commitments, through `freeWindows` — which is what I5 requires and what D20 said booking was
- * blocked on. What differs is the *read*, not the arithmetic: an outsider sees
- * `resource_commitments`, which publishes when a resource is occupied and nothing else, while
- * an operator reads the work items themselves.
- *
- * **Every answer here is advisory (I6).** Nothing is held, nothing is reserved, and the slot
- * offered may be taken between rendering this page and submitting it. The re-assertion is the
- * exclusion constraint refusing the insert inside `create_booking`, and `bookBooking` turns
- * that refusal into a sentence.
+ * When this business could do that work, on one of its days — the same availability calculation
+ * the operator sees (I5), just reading `resource_commitments` (what's occupied, published) in
+ * place of the work items themselves. Advisory only (I6): the re-assertion is the exclusion
+ * constraint refusing the insert inside `create_booking`.
  */
 export async function bookableSlots(
   db: Db,
@@ -193,8 +147,7 @@ export async function bookableSlots(
     throw new DomainError(commitments.error.message, 'booking.commitments_failed');
   }
 
-  // A business that has published no hours is treated as open, exactly as the operator's
-  // schedule treats it — the absence of a rule is not a closed door (see `availability.ts`).
+  // No published hours is treated as open, same as the operator's schedule.
   const open = openWindows(input.date, input.timeZone, hours, within);
 
   const busyByResource = new Map<string, Window[]>();
@@ -208,8 +161,7 @@ export async function bookableSlots(
   const stepMs = input.type.durationMinutes * 60_000;
 
   for (const resource of resources.data ?? []) {
-    // `supabase gen types` marks every view column nullable — a view has no NOT NULL to read
-    // — so this narrows what the underlying column already guarantees (D15's boundary again).
+    // A view has no NOT NULL to read, so `supabase gen types` marks every column nullable (D15).
     const resourceId = resource.id;
     if (!resourceId) continue;
 
@@ -219,9 +171,7 @@ export async function bookableSlots(
       }),
     );
 
-    // Whole slots from the start of each free window. Not a grid on the hour: a business
-    // whose gaps do not begin on the hour would be offered nothing by one, and the platform
-    // has no opinion about when an appointment ought to start.
+    // Whole slots from the start of each free window — not a grid on the hour, since the platform has no opinion about when an appointment ought to start.
     for (const window of free) {
       const end = new Date(window.endsAt).getTime();
       for (
@@ -238,8 +188,7 @@ export async function bookableSlots(
     }
   }
 
-  // One offer per instant. Two vans free at nine is one slot to a customer, who is booking a
-  // time rather than a vehicle — and the id that travels is whichever is free.
+  // One offer per instant — two vans free at nine is one slot to a customer booking a time, not a vehicle.
   const seen = new Set<string>();
   return slots
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
@@ -250,13 +199,7 @@ export async function bookableSlots(
     });
 }
 
-/**
- * Take the slot.
- *
- * The duration is not an argument and cannot be: `create_booking` reads it from the type the
- * business published, so a caller chooses *what* and *when* but never *how long*. That is the
- * same shape as `addPricedLine`, where a caller chooses what and how many but never how much.
- */
+/** The duration is never an argument — `create_booking` reads it from the type the business published, same shape as `addPricedLine` choosing what and how many but never how much. */
 export async function bookSlot(
   db: Db,
   input: {
@@ -291,17 +234,14 @@ export async function bookSlot(
   });
 
   if (error) {
-    // I6, arriving as a sentence. The slot was free when the page was rendered and is not
-    // now, and nothing could have prevented that — a check before the insert would have
-    // raced identically.
+    // I6, arriving as a sentence — the slot was free when rendered and is not now, and nothing could have prevented that.
     if (error.code === '23P01') {
       throw new DomainError(
         'Somebody took that time while you were filling this in. Please choose another.',
         'booking.slot_taken',
       );
     }
-    // A SQLSTATE of its own, because 23505 is also what a duplicate email raises and the two
-    // mean opposite things to the person reading the sentence.
+    // A distinct SQLSTATE from 23505, which is also what a duplicate email raises and means the opposite thing.
     if (error.code === 'GD001') {
       throw new DomainError(
         'This booking has already been made.',

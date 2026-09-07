@@ -2,14 +2,7 @@ import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
-/**
- * The entities that can carry tenant-defined fields.
- *
- * Platform vocabulary, not tenant configuration — the same split roles draws between which
- * capabilities exist and which role holds them. A tenant defines *fields*; it cannot invent
- * a core entity. This list mirrors the check constraint on `field_definitions.entity_type`
- * and grows with the migration that adds each entity.
- */
+/** Platform vocabulary, not tenant configuration — a tenant defines *fields*, not core entities. Mirrors the check constraint on `field_definitions.entity_type`. */
 export const CUSTOM_FIELD_ENTITIES = [
   'customer',
   'location',
@@ -33,14 +26,15 @@ export function isCustomFieldEntity(value: string): value is CustomFieldEntity {
   return (CUSTOM_FIELD_ENTITIES as readonly string[]).includes(value);
 }
 
-/**
- * What a field can hold.
- *
- * Also platform vocabulary: each kind has a coercion branch here and a validation branch in
- * `app.check_custom_fields`, so adding one is code plus a migration. A kind with neither is
- * a promise the field editor makes and nothing keeps.
- */
-export const FIELD_KINDS = ['text', 'number', 'boolean'] as const;
+/** Also platform vocabulary — each kind has a coercion branch here and a validation branch in `app.check_custom_fields`, so adding one is code plus a migration. */
+export const FIELD_KINDS = [
+  'text',
+  'number',
+  'boolean',
+  'select',
+  'multi_select',
+  'date',
+] as const;
 
 export type FieldKind = (typeof FIELD_KINDS)[number];
 
@@ -49,14 +43,21 @@ export const FIELD_KIND_LABELS: Record<FieldKind, string> = {
   text: 'Text',
   number: 'Number',
   boolean: 'Yes / no',
+  select: 'Choice',
+  multi_select: 'Choices',
+  date: 'Date',
 };
 
-/**
- * The prefix that carries a custom value through a form.
- *
- * Shared by the form that renders the inputs and the action that reads them back, so the
- * convention lives in one place rather than as a string literal in two.
- */
+/** The one place this question is answered — three other files would otherwise each spell out the same check. */
+export function offersOptions(kind: FieldKind): boolean {
+  return kind === 'select' || kind === 'multi_select';
+}
+
+/** How many choices one field may offer, and how long each may be. Mirrors the check constraint. */
+const OPTIONS_MAX = 50;
+const OPTION_LENGTH_MAX = 64;
+
+/** Shared by the form that renders the inputs and the action that reads them back, so the convention lives in one place. */
 export const CUSTOM_FIELD_PREFIX = 'custom_';
 
 export type FieldDefinition = {
@@ -68,40 +69,36 @@ export type FieldDefinition = {
   required: boolean;
   /** Where this field sits on the entity's form. The tenant's order, not creation order. */
   position: number;
+  /** The stored value on an entity is the option's own text, not an index or id — so a business that stops offering an option doesn't erase it from rows that already carry it. Empty for every other kind. */
+  options: string[];
   createdAt: string;
 };
 
 /** A validated custom payload, ready to be written to a `custom` column. */
-export type CustomValues = Record<string, string | number | boolean>;
+export type CustomValues = Record<string, string | number | boolean | string[]>;
+
+/** `string[]` arrived with `multi_select` — one checkbox group sends its name once per ticked box, so the transport genuinely carries a list. */
+export type CustomInput = Record<string, string | string[]>;
 
 const KEY_PATTERN = /^[a-z][a-z0-9_]{0,62}$/;
 const LABEL_MAX = 100;
 
-function isKind(value: string): value is FieldKind {
+/** Whether a string names a kind this build knows how to render and validate. */
+export function isKind(value: string): value is FieldKind {
   return (FIELD_KINDS as readonly string[]).includes(value);
 }
 
-/**
- * The fields one tenant has defined for one entity type, in the order that tenant put them.
- *
- * This is the whole of "custom forms over field definitions" on the read side: every form in
- * the platform renders this sequence, so changing it here changes the form everywhere, and
- * nothing else gets an opinion about field order.
- *
- * The `organization_id` filter is an optimisation, not the boundary — RLS has already
- * restricted the rows to organizations the caller belongs to.
- */
+/** Every form in the platform renders this sequence, so changing it here changes the form everywhere. */
 export async function listFieldDefinitions(
   db: Db,
   input: { organizationId: string; entityType: CustomFieldEntity },
 ): Promise<FieldDefinition[]> {
   const { data, error } = await db
     .from('field_definitions')
-    .select('id, entity_type, key, label, kind, required, position, created_at')
+    .select('id, entity_type, key, label, kind, required, position, options, created_at')
     .eq('organization_id', input.organizationId)
     .eq('entity_type', input.entityType)
-    // The tenant's own order, with creation order breaking ties — `position` is not unique,
-    // so this second key is what makes the form deterministic rather than merely sorted.
+    // `position` is not unique, so creation order is the tiebreak that makes the form deterministic rather than merely sorted.
     .order('position', { ascending: true })
     .order('created_at', { ascending: true });
 
@@ -109,9 +106,7 @@ export async function listFieldDefinitions(
     throw new DomainError(error.message, 'fields.list_failed');
   }
 
-  // entity_type and kind are `text` in the database, constrained by CHECK. The filters below
-  // discard anything a future migration adds that this build does not know how to render,
-  // rather than rendering it wrongly.
+  // Discards anything a future migration adds that this build doesn't know how to render, rather than rendering it wrongly.
   return (data ?? [])
     .filter((row) => isCustomFieldEntity(row.entity_type) && isKind(row.kind))
     .map((row) => ({
@@ -122,18 +117,51 @@ export async function listFieldDefinitions(
       kind: row.kind as FieldKind,
       required: row.required,
       position: row.position,
+      options: row.options ?? [],
       createdAt: row.created_at,
     }));
 }
 
-/**
- * Define a field.
- *
- * Whether the caller *may* is not decided here — `field_definitions_insert` requires
- * `field.manage`, so a caller without it is refused by the database whether it arrives
- * through this function, a raw insert, or an AI tool. What this owns is what a well-formed
- * definition looks like.
- */
+/** Mirrors `app.field_options_well_formed`. Blanks are dropped rather than refused — a trailing newline from a textarea isn't an error. */
+function cleanOptions(kind: FieldKind, supplied: string[]): string[] {
+  if (!offersOptions(kind)) {
+    // Not an error — typing choices then switching the kind to Text meant the kind, not a mistake worth blocking.
+    return [];
+  }
+
+  const options = supplied.map((option) => option.trim()).filter((option) => option.length > 0);
+
+  if (options.length === 0) {
+    throw new DomainError(
+      'A field that offers a choice needs at least one choice.',
+      'fields.options_required',
+    );
+  }
+  if (options.length > OPTIONS_MAX) {
+    throw new DomainError(
+      `A field can offer at most ${OPTIONS_MAX} choices.`,
+      'fields.options_too_many',
+    );
+  }
+  const tooLong = options.find((option) => option.length > OPTION_LENGTH_MAX);
+  if (tooLong !== undefined) {
+    throw new DomainError(
+      `A choice is at most ${OPTION_LENGTH_MAX} characters, and “${tooLong}” is longer.`,
+      'fields.option_too_long',
+    );
+  }
+  const duplicate = options.find((option, index) => options.indexOf(option) !== index);
+  if (duplicate !== undefined) {
+    throw new DomainError(
+      `“${duplicate}” is offered twice, and two identical choices cannot be told apart.`,
+      'fields.option_duplicated',
+    );
+  }
+
+  return options;
+}
+
+/** Whether the caller may is decided by `field_definitions_insert` (`field.manage`) — this owns only what a well-formed definition looks like. */
 export async function createFieldDefinition(
   db: Db,
   input: {
@@ -143,12 +171,13 @@ export async function createFieldDefinition(
     label: string;
     kind: string;
     required: boolean;
+    /** The choices, for a kind that offers them. Ignored by every other kind. */
+    options?: string[];
   },
 ): Promise<string> {
   await requireActor(db);
 
-  // Lowercased rather than rejected on case: `VAT_Number` is an operator typing a label into
-  // the wrong box, not an attack, and the stored key is what every row will carry forever.
+  // Lowercased rather than rejected on case — a mis-cased key is an operator mistake, not an attack, and the stored key is what every row will carry forever.
   const key = input.key.trim().toLowerCase();
   if (key.length === 0) {
     throw new DomainError('A field needs a key.', 'fields.key_required');
@@ -171,14 +200,15 @@ export async function createFieldDefinition(
     );
   }
 
-  // Named here rather than left to the check constraint, so the message says what was wrong
-  // instead of quoting a constraint name.
+  // Named here rather than left to the check constraint, so the message says what was wrong.
   if (!isCustomFieldEntity(input.entityType)) {
     throw new DomainError(`Not an entity: ${input.entityType}.`, 'fields.entity_unknown');
   }
   if (!isKind(input.kind)) {
     throw new DomainError(`Not a field type: ${input.kind}.`, 'fields.kind_unknown');
   }
+
+  const options = cleanOptions(input.kind, input.options ?? []);
 
   const { data, error } = await db.rpc('create_field_definition', {
     p_organization_id: input.organizationId,
@@ -187,6 +217,7 @@ export async function createFieldDefinition(
     p_label: label,
     p_kind: input.kind,
     p_required: input.required,
+    p_options: options,
   });
 
   if (error) {
@@ -206,17 +237,14 @@ export async function createFieldDefinition(
 }
 
 /**
- * Change how a field appears on the form: its label, whether it is required, where it sits.
- *
- * Deliberately not its `kind` and not its `key`. Both are refused by the column grant rather
- * than by an argument this function declines to accept, so a raw PostgREST update is refused
- * identically — see the migration for why each would be a retroactive rewrite (I8) wearing a
- * rename's clothing.
- *
- * Whether the caller *may* is decided by `field_definitions_update`, which requires
- * `field.manage`. What this owns is what a well-formed edit looks like, and it repeats
- * `createFieldDefinition`'s label rules rather than inventing softer ones — a label that
- * could not be created should not be reachable by editing.
+ * Change how a field appears on the form: its label, whether it's required, where it sits.
+ * Never `kind` or `key` — both are refused by the column grant, since each would be a
+ * retroactive rewrite of stored values wearing a rename's clothing (I8). Options are editable
+ * and `kind` is not: adding a fourth choice doesn't reinterpret the three already stored, but
+ * turning a choice into a number would. Removing an option doesn't reach back — rows already
+ * carrying it keep it, and only the next write to one of those rows is refused. `kind` is taken
+ * here only to decide whether options mean anything; the check constraint reads the *stored*
+ * kind, so a caller that lies about it is refused by the database rather than trusted here.
  */
 export async function updateFieldDefinition(
   db: Db,
@@ -225,6 +253,8 @@ export async function updateFieldDefinition(
     label: string;
     required: boolean;
     position: number;
+    kind: FieldKind;
+    options?: string[];
   },
 ): Promise<void> {
   await requireActor(db);
@@ -240,8 +270,7 @@ export async function updateFieldDefinition(
     );
   }
 
-  // A position is a sort key, not an index into anything, so the only wrong values are the
-  // ones that are not whole numbers. Gaps and duplicates are both fine and both survive.
+  // A sort key, not an index — gaps and duplicates are both fine and both survive.
   if (!Number.isInteger(input.position) || input.position < 0) {
     throw new DomainError(
       'A position is a whole number, counting from zero.',
@@ -254,6 +283,7 @@ export async function updateFieldDefinition(
     p_label: label,
     p_required: input.required,
     p_position: input.position,
+    p_options: cleanOptions(input.kind, input.options ?? []),
   });
 
   if (error) {
@@ -265,21 +295,14 @@ export async function updateFieldDefinition(
 }
 
 /**
- * Turn the raw strings a form submits into a validated custom payload.
- *
- * This is the rule that makes `custom` a registry rather than a junk drawer, and it runs in
- * two independent places on purpose. Here it produces a message naming the offending field;
- * in `app.check_custom_fields` it produces the guarantee, because every entity table grants
- * INSERT to authenticated and a direct PostgREST call never passes through this function.
- * The same shape as `requireActor` alongside RLS: one for the error, one for the promise.
- *
- * Absent and blank are the same thing. HTML sends an empty string for an untouched text
- * input, and treating that as a value would store `""` for every field nobody filled in.
+ * Turn the raw strings a form submits into a validated custom payload — what makes `custom` a
+ * registry rather than a junk drawer. Runs in two places on purpose: here it produces a message
+ * naming the offending field, while `app.check_custom_fields` produces the guarantee for direct
+ * PostgREST calls that never pass through this function (same split as `requireActor` and RLS).
+ * Absent and blank are the same thing — HTML sends an empty string for an untouched input, and
+ * treating that as a value would store `""` for every field nobody filled in.
  */
-export function parseCustom(
-  definitions: FieldDefinition[],
-  raw: Record<string, string>,
-): CustomValues {
+export function parseCustom(definitions: FieldDefinition[], raw: CustomInput): CustomValues {
   const declared = new Map(definitions.map((definition) => [definition.key, definition]));
 
   for (const key of Object.keys(raw)) {
@@ -291,12 +314,41 @@ export function parseCustom(
   const values: CustomValues = {};
 
   for (const definition of definitions) {
-    const supplied = raw[definition.key]?.trim() ?? '';
+    const sent = raw[definition.key];
+
+    // Handled before the blank check — "nothing ticked" is a list, not a blank. A checkbox
+    // group sends its name once per ticked box and not at all when none are, so an empty list
+    // is written as one, letting untick-everything actually save.
+    if (definition.kind === 'multi_select') {
+      const chosen = (Array.isArray(sent) ? sent : sent === undefined ? [] : [sent])
+        .map((option) => option.trim())
+        .filter((option) => option.length > 0);
+
+      const offered = new Set(definition.options);
+      const stranger = chosen.find((option) => !offered.has(option));
+      if (stranger !== undefined) {
+        throw new DomainError(
+          `${definition.label} does not offer “${stranger}”.`,
+          'fields.not_an_option',
+        );
+      }
+      if (chosen.length === 0) {
+        if (definition.required) {
+          throw new DomainError(`${definition.label} is required.`, 'fields.required');
+        }
+        continue;
+      }
+
+      // Deduplicated rather than refused — a repeated value is a browser or script repeating itself, and the business meant the choice once.
+      values[definition.key] = [...new Set(chosen)];
+      continue;
+    }
+
+    // Every remaining kind is a single value — a list here means the form sent the same name twice, and the last one wins.
+    const supplied = (Array.isArray(sent) ? (sent[sent.length - 1] ?? '') : (sent ?? '')).trim();
 
     if (definition.kind === 'boolean') {
-      // A checkbox sends its value when ticked and nothing when cleared, so absence is a
-      // real `false` rather than "not answered". A boolean is therefore always written, and
-      // `required` on one is always satisfied — it does its work on text and number.
+      // A checkbox sends its value when ticked and nothing when cleared, so absence is a real `false`. `required` on a boolean is therefore always satisfied.
       values[definition.key] = supplied.length > 0;
       continue;
     }
@@ -310,12 +362,38 @@ export function parseCustom(
 
     if (definition.kind === 'number') {
       const parsed = Number(supplied);
-      // Number('') is 0 and Number('12abc') is NaN; the blank case is already handled above,
-      // so this rejects only genuine non-numbers and the infinities.
+      // The blank case is already handled above, so this rejects only genuine non-numbers and infinities.
       if (!Number.isFinite(parsed)) {
         throw new DomainError(`${definition.label} must be a number.`, 'fields.not_a_number');
       }
       values[definition.key] = parsed;
+      continue;
+    }
+
+    if (definition.kind === 'select') {
+      if (!definition.options.includes(supplied)) {
+        throw new DomainError(
+          `${definition.label} does not offer “${supplied}”.`,
+          'fields.not_an_option',
+        );
+      }
+      values[definition.key] = supplied;
+      continue;
+    }
+
+    if (definition.kind === 'date') {
+      // `Date.parse` on an ISO date is UTC-anchored, so this never disagrees with itself by timezone — the value stored is the string, never what a Date would print.
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(supplied)) {
+        throw new DomainError(
+          `${definition.label} is a date, written as YYYY-MM-DD.`,
+          'fields.not_a_date',
+        );
+      }
+      const parsed = new Date(`${supplied}T00:00:00Z`);
+      if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== supplied) {
+        throw new DomainError(`${definition.label} is not a real date.`, 'fields.not_a_date');
+      }
+      values[definition.key] = supplied;
       continue;
     }
 
@@ -325,23 +403,13 @@ export function parseCustom(
   return values;
 }
 
-/**
- * Read a tenant's registry for one entity and validate a raw payload against it.
- *
- * Extracted at its third caller. `createCustomer`, `createLocation` and `createResource` all
- * needed the identical pair — fetch the definitions, then `parseCustom` — and the pair is
- * the rule, not either half: reading the registry from anywhere other than the database, or
- * validating against definitions the caller supplied, would each defeat the point.
- *
- * The registry is read here rather than passed in so that a route, a server action and an AI
- * tool all get the same answer without any of them knowing there is a registry at all.
- */
+/** Extracted at its third caller (`createCustomer`, `createLocation`, `createResource` all needed the identical pair) — reads the registry here rather than accepting one, so a route, an action, and an AI tool all get the same answer without knowing there is a registry at all. */
 export async function resolveCustom(
   db: Db,
   input: {
     organizationId: string;
     entityType: CustomFieldEntity;
-    custom?: Record<string, string>;
+    custom?: CustomInput;
   },
 ): Promise<CustomValues> {
   const definitions = await listFieldDefinitions(db, {

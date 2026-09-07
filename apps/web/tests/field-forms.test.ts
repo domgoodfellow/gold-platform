@@ -116,6 +116,7 @@ describe('a field registry is a form', () => {
       label: third.label,
       required: third.required,
       position: 0,
+      kind: third.kind,
     });
 
     const after = await listFieldDefinitions(alice.db, {
@@ -197,6 +198,7 @@ describe('a field registry is a form', () => {
       label: 'Renamed Entirely',
       required: true,
       position: 9,
+      kind: field.kind,
     });
 
     const customers = await listCustomers(alice.db, {
@@ -238,6 +240,7 @@ describe('a field registry is a form', () => {
         label: 'Sneaky',
         required: false,
         position: 0,
+        kind: 'text',
       }),
     ).rejects.toMatchObject({ code: 'fields.forbidden' });
 
@@ -264,6 +267,7 @@ describe('a field registry is a form', () => {
         label: 'Hijacked',
         required: false,
         position: 0,
+        kind: mine.kind,
       }),
     ).rejects.toMatchObject({ code: 'fields.forbidden' });
 
@@ -286,6 +290,7 @@ describe('a field registry is a form', () => {
         label: field.label,
         required: field.required,
         position: 1.5,
+        kind: field.kind,
       }),
     ).rejects.toMatchObject({ code: 'fields.position_invalid' });
   });

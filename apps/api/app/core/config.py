@@ -108,3 +108,42 @@ def load_runner_settings() -> RunnerSettings | None:
         return None
 
     return RunnerSettings(**values)  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
+class VoiceSettings:
+    """What hearing from the carrier needs.
+
+    **A fourth dataclass rather than a field on one of the others**, for the reason the second
+    and third exist: a deployment that runs a floor and takes no cards, or takes cards and has
+    no telephone, is an ordinary deployment. Folding them together would mean either switch
+    turning the other off.
+
+    **The auth token is here and not in a registry**, unlike the message and model providers.
+    Those registries choose *which vendor sends*; this is the shared secret that proves an
+    unauthenticated request came from the one carrying the calls, and there is nothing to
+    choose between -- an endpoint with no token cannot verify anything and must not exist.
+    """
+
+    supabase_url: str
+    supabase_anon_key: str
+    # Signs a 60-second token for `voice_webhook`, which holds no grant on any table and one
+    # execute. Not the service-role key, which D14 refuses.
+    supabase_jwt_secret: str
+    # The carrier signs every callback with this. Without it the endpoints below would accept
+    # anything, which is a stranger writing calls into a business's record.
+    twilio_auth_token: str
+
+
+def load_voice_settings() -> VoiceSettings | None:
+    values = {
+        "supabase_url": os.environ.get("SUPABASE_URL"),
+        "supabase_anon_key": os.environ.get("SUPABASE_ANON_KEY"),
+        "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
+        "twilio_auth_token": os.environ.get("TWILIO_AUTH_TOKEN"),
+    }
+
+    if not all(values.values()):
+        return None
+
+    return VoiceSettings(**values)  # type: ignore[arg-type]

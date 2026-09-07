@@ -126,7 +126,7 @@ path a tenant uses. The risk to watch: a field our own pipeline wants is *one* c
 | Operator provisioning | M5, next. |
 | Tenant marketing surface | Deferred by D20; `tire-app-template` holds the pattern in `site_content`. |
 | Taking money from a tenant's customers | D27 decided, no route built. |
-| Billing the tenant | Not needed. Implementation and platform fees are invoiced. |
+| Billing the tenant | Implementation and platform fees are invoiced. **One metered cost is not: reaching people.** Calls, texts and email are paid for with credit bought in advance — a thing purchased, not a bill sent, so there is no arrears and no credit risk (D40). |
 
 ---
 

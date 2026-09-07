@@ -1,21 +1,9 @@
 /**
- * One colour in, a readable set of roles out.
- *
- * **This is the whole reason a business may choose a colour at all.** D23 refused a per-tenant
- * theme partly because it is "configuration with a renderer", and the unstated half of that
- * objection is the dangerous one: a tenant who picks five colours has five ways to put
- * unreadable text on their own screens, and the platform would be shipping a product whose
- * legibility it does not control. So the business chooses the one colour it actually has, and
- * every role rendered from it is computed here against WCAG AA — 4.5:1 for text, which is the
- * threshold, not an aspiration.
- *
- * **There is one of these and there may not be a second.** The same rule `priceWorkItem` and
- * `freeWindows` are held to, for the same reason: a second contrast calculation is a second
- * answer to *is this readable*, and the one that gets forgotten is the one on the screen a
- * customer sees. A component that needs a colour asks for a role; it does not derive one.
- *
- * Nothing here touches the database and nothing here is per-tenant knowledge — it is arithmetic
- * on a hex string, which is why it is a module of its own rather than a corner of a page.
+ * One colour in, a readable set of roles out — the whole reason a business may choose a colour
+ * at all. Every role is computed here against WCAG AA (4.5:1 for text), so a business picks the
+ * one colour it has and the platform guarantees it stays legible. One calculation only, the
+ * same rule `priceWorkItem` and `freeWindows` are held to — a component asks for a role, never
+ * derives one.
  */
 
 /** What a business may pick from, and what each key means to the renderer. */
@@ -28,14 +16,7 @@ export const FONT_LABELS: Record<FontKey, string> = {
   mono: 'Technical',
 };
 
-/**
- * The families this deployment actually loads, and the reason the list is short.
- *
- * A font is a file. A tenant typing a family name would either do nothing or become a request
- * to somebody else's server from every page this platform renders on their behalf — a privacy
- * decision made by a text box. Two of these are already loaded by the root layout and the third
- * is a system stack, so choosing one costs nothing and downloads nothing.
- */
+/** A tenant typing a family name would become a request to somebody else's server from every page — two of these already load via the root layout, the third is a system stack, so choosing one downloads nothing. */
 export const FONT_STACKS: Record<FontKey, string> = {
   sans: 'var(--font-geist-sans), system-ui, sans-serif',
   serif: 'Georgia, Cambria, "Times New Roman", serif',
@@ -53,15 +34,7 @@ export function isBrandColour(value: string): boolean {
   return HEX.test(value.trim().toLowerCase());
 }
 
-/**
- * Normalise what somebody typed, or say it is not a colour.
- *
- * A native colour input always produces `#rrggbb`, so this exists for the paths that are not
- * one: a pasted value, a proposal drafted by a model, a hand-written test. Three-digit shorthand
- * is expanded rather than refused, because `#0af` is a colour somebody wrote and not a mistake;
- * a named colour is refused, because accepting `rebeccapurple` would mean the column holds two
- * spellings of one answer.
- */
+/** Three-digit shorthand is expanded (a real colour, not a mistake); a named colour is refused, so the column never holds two spellings of one answer. */
 export function normaliseBrandColour(value: string): string | null {
   const trimmed = value.trim().toLowerCase();
 
@@ -89,13 +62,7 @@ function toHex({ r, g, b }: Rgb): string {
   return `#${part(r)}${part(g)}${part(b)}`;
 }
 
-/**
- * WCAG 2.x relative luminance.
- *
- * The channel transfer function is the specification's, not a perceptual approximation: the
- * threshold this is compared against is defined in terms of exactly this formula, so a
- * different curve would produce a number that is not the thing the threshold is about.
- */
+/** WCAG 2.x relative luminance — the specification's own transfer function, not a perceptual approximation, since the AA threshold is defined in terms of exactly this formula. */
 function luminance({ r, g, b }: Rgb): number {
   const channel = (value: number) => {
     const c = value / 255;
@@ -161,14 +128,7 @@ function fromHsl({ h, s, l }: Hsl): Rgb {
   return { r: channel(h + 1 / 3) * 255, g: channel(h) * 255, b: channel(h - 1 / 3) * 255 };
 }
 
-/**
- * Whichever of black or white reads on this colour.
- *
- * **This one cannot fail, and that is worth knowing rather than assuming.** The worst possible
- * background is the one where black and white are equally bad, and there the better of the two
- * is still 4.58:1 — above the threshold. So a business may pick any colour at all for a button
- * and the label on it is always legible, with no adjustment to the colour they chose.
- */
+/** Black or white always reaches AA here — the worst-case background still gives 4.58:1 with the better of the two, so any accent colour a business picks stays legible with no adjustment. */
 export function foregroundOn(background: string): string {
   return contrastRatio(background, '#000000') >= contrastRatio(background, '#ffffff')
     ? '#000000'
@@ -176,17 +136,11 @@ export function foregroundOn(background: string): string {
 }
 
 /**
- * The same colour, moved in lightness until it reads against `against`.
- *
- * **Lightness only, so the hue survives.** A business that picked a particular orange is still
- * that orange when it appears as a link on white — darker, and recognisably theirs. Changing
- * the hue to reach the threshold would be the platform picking a different colour and not
- * saying so.
- *
- * Walks in the direction that helps rather than binary-searching, because the ratio is not
- * monotonic across the whole range: against a mid-grey page both darker and lighter improve it,
- * and a search assuming one direction settles on the wrong side. Sixty steps of a hundredth is
- * finer than the eight bits the result is quantised to anyway.
+ * The same colour, moved in lightness until it reads against `against`. Lightness only, so the
+ * hue survives — a business's orange is still that orange as a link on white, just darker.
+ * Walks in the direction that helps rather than binary-searching, since the ratio isn't
+ * monotonic across the whole range (against a mid-grey page, both darker and lighter improve
+ * it).
  */
 export function readableOn(colour: string, against: string, target = AA_TEXT): string {
   if (contrastRatio(colour, against) >= target) return colour;
@@ -202,21 +156,12 @@ export function readableOn(colour: string, against: string, target = AA_TEXT): s
     if (contrastRatio(candidate, against) >= target) return candidate;
   }
 
-  // Nothing on this hue reached the threshold, which happens only when the walk ran out of
-  // room. Black or white is the honest fallback: it is readable, and a business that chose a
-  // colour this close to its own page background has been given the only legible answer.
+  // The walk ran out of room on this hue — black or white is the honest fallback.
   return foregroundOn(against);
 }
 
-/**
- * What a business's brand actually renders as.
- *
- * Both schemes are computed, because the page decides which it is at render time and a
- * server that guessed would be wrong for half its readers. `onAccent` needs no scheme: the
- * accent is the background there, and it is the same colour in both.
- */
+/** Both schemes computed, since the page decides which it is at render time and a server guess would be wrong for half its readers. `onAccent` needs no scheme — the accent is its own background in both. */
 export type BrandPalette = {
-  /** The colour as chosen, used where it is a background under chosen text. */
   accent: string;
   /** Black or white, whichever reads on `accent`. */
   onAccent: string;
@@ -227,13 +172,7 @@ export type BrandPalette = {
   bodyFont: string;
 };
 
-/**
- * The two page colours the roles are derived against.
- *
- * These are `globals.css`'s `--background` in each scheme, repeated here because this module
- * cannot read a stylesheet — and a comment is a weaker link than a test, so
- * `branding.test.ts` asserts the two agree.
- */
+/** Repeated from `globals.css`'s `--background` in each scheme, since this module can't read a stylesheet — `branding.test.ts` asserts the two agree. */
 export const PAGE_LIGHT = '#ffffff';
 export const PAGE_DARK = '#0a0a0a';
 

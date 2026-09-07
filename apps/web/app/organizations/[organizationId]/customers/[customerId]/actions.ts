@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { createPortalInvite } from '@/lib/domain/portal/portal';
+import { updateCustomer } from '@/lib/domain/customers/customers';
+import { customValuesFromFormData } from '@/lib/custom-fields';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import { DomainError } from '@/lib/domain/errors';
 
@@ -68,4 +70,52 @@ export async function createPortalInviteAction(
 
   revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
   return { error: null, token };
+}
+
+export type EditCustomerState = { error: string | null };
+
+/**
+ * Correct a customer, and move them along their pipeline.
+ *
+ * **The stage arrives on the same form as the phone number on purpose.** They are one record and
+ * one act — a rep who has just spoken to somebody fixes the number they were given and moves the
+ * deal in the same breath, and two forms would mean two saves and two chances to do only one.
+ */
+export async function editCustomerAction(
+  _previous: EditCustomerState,
+  formData: FormData,
+): Promise<EditCustomerState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const customerId = String(formData.get('customerId') ?? '');
+  const stageId = String(formData.get('stageId') ?? '');
+
+  // **Was a hand-written copy of `customValuesFromFormData`, and its own comment said so** —
+  // "one prefix, two callers" was the argument for extracting it rather than for writing it
+  // twice. It is called now, because the shared one learned that a repeated name is a list and
+  // this one had not: a `multi_select` submitted through this form kept one choice out of four
+  // and reported success. A copy is wrong the moment the original learns something.
+  const custom = customValuesFromFormData(formData);
+
+  try {
+    await updateCustomer(db, {
+      organizationId,
+      customerId,
+      name: String(formData.get('name') ?? ''),
+      email: String(formData.get('email') ?? ''),
+      phone: String(formData.get('phone') ?? ''),
+      custom,
+      // An empty select is "no stage", which is a real answer for a business that has named
+      // none and for a customer nobody has staged yet.
+      stageId: stageId === '' ? null : stageId,
+    });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
+  return { error: null };
 }

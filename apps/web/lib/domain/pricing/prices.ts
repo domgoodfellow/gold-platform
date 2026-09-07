@@ -3,27 +3,15 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * What a job is quoted, and the one place a price is derived.
- *
- * **`priceWorkItem` is I4.** There is exactly one price calculation, it is that function, and
- * the property is kept the same way I5 keeps "exactly one availability calculation": by there
- * being nothing else that could answer. No component totals lines, no route handler sums an
- * array, no `subtotal` column is written anywhere, and the database holds no generated column
- * that would be a second opinion able to drift from the first.
- *
- * The reason a second one is tempting is worth naming, because it is how this invariant will
- * eventually be broken if it is: a total is trivial arithmetic, so writing `lines.reduce(…)`
- * inline feels like formatting rather than like pricing. It is pricing. The moment a discount,
- * a minimum charge or a tax lands, every inline sum becomes a place the rule was forgotten.
- *
- * A line is a **copy** of a catalogue row, never a join to one — see the migration. Everything
- * here therefore reads the snapshot and nothing reaches back to `price_book_items`, which is
- * what makes re-pricing the catalogue safe (I8).
+ * What a job is quoted, and the one place a price is derived — `priceWorkItem` is I4. No
+ * component totals lines, no route sums an array, no `subtotal` column exists anywhere. A line
+ * is a copy of a catalogue row, never a join to one, so re-pricing the catalogue never touches
+ * an existing quote (I8).
  */
 
 export type PricedLine = {
   id: string;
-  /** The catalogue item's name, as it read when this line was added. Not a live join. */
+  /** The catalogue item's name as it read when this line was added — not a live join. */
   description: string;
   unit: string;
   /** Integer minor units, snapshotted. */
@@ -33,28 +21,18 @@ export type PricedLine = {
   quantity: number;
 };
 
-/** What a job comes to. `null` when nothing has been priced — not zero, which is a claim. */
+/** `null` when nothing has been priced — not zero, which is a claim. */
 export type Price = {
   totalMinor: number;
   currency: string;
 } | null;
 
 /**
- * The price of a work item.
- *
- * Integer arithmetic end to end, and **no rounding rule, because nothing rounds**: quantity is
- * a whole number, so `unitAmountMinor * quantity` is exact. That is a real constraint on the
- * product rather than a simplification — a business billing half-hours prices per half-hour.
- * When a fractional quantity earns its way in, how a half-cent rounds is a pricing decision
- * and it belongs *in this function*, which is precisely why there must not be a second one.
- *
- * Nothing priced is `null` rather than zero. A job with no lines has not been quoted; a job
- * quoted at nothing is a business decision somebody made, and rendering them identically
- * would erase the difference at exactly the moment it matters.
- *
- * The mixed-currency throw is unreachable through the database, and is here for the same
- * reason `parseCustom` re-checks the registry: `work_item_priced_lines_one_currency` is the
- * guarantee, this produces a sentence if the constraint is ever dropped.
+ * The price of a work item. Integer arithmetic end to end with no rounding rule, because
+ * nothing rounds — quantity is a whole number, so the multiplication is exact. A fractional
+ * quantity, when it arrives, brings its rounding decision here and nowhere else. The
+ * mixed-currency throw is unreachable through the database (`work_item_priced_lines_one_currency`
+ * guarantees it) and exists only in case that constraint is ever dropped.
  */
 export function priceWorkItem(lines: PricedLine[]): Price {
   if (lines.length === 0) return null;
@@ -98,14 +76,7 @@ export async function listPricedLines(
   }));
 }
 
-/**
- * Put something from the catalogue on a job.
- *
- * The amount is not an argument and cannot be. `add_work_item_priced_line` reads the
- * catalogue row and copies it, so a caller can choose *what* and *how many* but never *how
- * much* — which is the difference between quoting from a price book and typing a number onto
- * an invoice.
- */
+/** The amount is never an argument — `add_work_item_priced_line` reads the catalogue row and copies it, so a caller chooses what and how many but never how much. */
 export async function addPricedLine(
   db: Db,
   input: { workItemId: string; priceBookItemId: string; quantity: number },
@@ -126,9 +97,7 @@ export async function addPricedLine(
   });
 
   if (error) {
-    // The exclusion constraint. Reachable only after a business changed the currency it
-    // trades in and then quoted from both halves of its catalogue, which is exactly the case
-    // the constraint exists for.
+    // Reachable after a business changes what it trades in and quotes from both halves of its catalogue.
     if (error.code === '23P01') {
       throw new DomainError(
         'This job is already priced in another currency. Re-price that item first.',
@@ -147,13 +116,7 @@ export async function addPricedLine(
   return data;
 }
 
-/**
- * Strike a line off a quote.
- *
- * Removal rather than editing, because an amount on a line is a snapshot and a snapshot that
- * can be amended in place is not one ("never rewrite history"). There is no update policy on
- * the table at all, so this is the only way a line changes.
- */
+/** Removal, not editing — a priced line is a snapshot, and there's no update policy on the table at all. */
 export async function removePricedLine(db: Db, input: { id: string }): Promise<void> {
   await requireActor(db);
 

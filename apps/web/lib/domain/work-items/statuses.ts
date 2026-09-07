@@ -3,58 +3,32 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * A state a work item of one type can be in, in the tenant's own vocabulary.
- *
- * D6: statuses are data, not enums. Nothing in this file knows what any status *means* —
- * "Booked", "Awaiting parts" and "Op de planning" are all just rows — and that is the point.
- * Which transitions between them are legal is I13, and belongs to the next slice.
- *
- * A status belongs to a **type**, not to the organization. Two types both having a
- * "Scheduled" column is the ordinary shape of a business that installs and also repairs,
- * and the database now says so: the unique index is
- * `(organization_id, type_id, lower(name))`.
+ * A state a work item of one type can be in, in the tenant's own vocabulary (D6) — statuses are
+ * data, not enums. A status belongs to a **type**, not the organization: two types can both
+ * have a "Scheduled" column, hence the unique index on `(organization_id, type_id, lower(name))`.
  */
 export type WorkItemStatus = {
   id: string;
   name: string;
   position: number;
   /**
-   * Whether work in this status still occupies its resource.
-   *
-   * The one question the platform asks about a status, and it is deliberately not
-   * `isTerminal`. That flag would be the platform deciding what a status *means*; this asks
-   * the tenant something only they can answer about their own word. "Cancelled" and "No show"
-   * release the van; "Awaiting parts" does not, because the vehicle is still on the lift.
-   *
-   * It reaches the exclusion constraint through a mirrored column on `work_items` — see the
-   * migration for why a constraint predicate cannot read it from here.
+   * Whether work in this status still occupies its resource — deliberately not `isTerminal`.
+   * "Cancelled" and "No show" release the resource; "Awaiting parts" doesn't, because the work
+   * is still there.
    */
   releasesResource: boolean;
   /**
-   * Whether moving work into this status means the work was done.
-   *
-   * **The second question the platform asks about a status, and it is separate from the first
-   * on purpose.** "Cancelled" releases the van and is not completed work; "Awaiting parts"
-   * holds the van and is not completed work either. One flag could not have said both, which
-   * is exactly why M4 refused a single `isTerminal` and answered the question it actually had.
-   *
-   * Nothing reads it at the moment work moves. It is read afterwards, against the event log,
-   * by `work_marked_complete` — so changing the answer re-reads history rather than rewriting
-   * it, and a business that decides "Delivered" was always the finish line sees last year
-   * counted correctly the moment it says so.
+   * Whether moving into this status means the work was done — separate from `releasesResource`
+   * on purpose (M4): "Cancelled" releases the resource without completing work. Read afterwards
+   * by `work_marked_complete` against the event log, so changing the answer re-reads history
+   * rather than rewriting it.
    */
   marksComplete: boolean;
 };
 
 const NAME_MAX = 64;
 
-/**
- * One type's board, in board order.
- *
- * `typeId` is required rather than optional. An organization-wide status list would be every
- * type's columns interleaved, which is not a board and is not a picker either — there is no
- * screen that wants it, so there is no signature for it.
- */
+/** `typeId` required — an organization-wide list would be every type's columns interleaved, which no screen wants. */
 export async function listWorkItemStatuses(
   db: Db,
   input: { organizationId: string; typeId: string },
@@ -80,13 +54,7 @@ export async function listWorkItemStatuses(
   }));
 }
 
-/**
- * Add a status to one type's board.
- *
- * `position` defaults to the end rather than to zero, because a status added to a board is
- * almost always a later stage, and a table of statuses that all claim position 0 is a board
- * in arbitrary order. The caller may still say where it goes.
- */
+/** `position` defaults to the end, not zero — a status added later is almost always a later stage. */
 export async function createWorkItemStatus(
   db: Db,
   input: { organizationId: string; typeId: string; name: string; position?: number },
@@ -135,8 +103,6 @@ export async function createWorkItemStatus(
     if (error.code === '23505') {
       throw new DomainError(`A status called ${name} already exists here.`, 'statuses.name_taken');
     }
-    // The composite reference to work_item_types refusing a type that is not in this
-    // organization. From the caller's position that type does not exist.
     if (error.code === '23503') {
       throw new DomainError('No such work item type here.', 'statuses.type_not_found');
     }
@@ -150,17 +116,10 @@ export async function createWorkItemStatus(
 }
 
 /**
- * Rename a status, or move it along the board.
- *
- * Renaming moves no work: a work item references its status by id, so every job sitting in
- * "Booked" is sitting in the same row once it becomes "Scheduled". The type is deliberately
- * not changeable — moving a status to another type would strand every work item in it and
- * every transition wired to it, and I20's constraint would refuse it anyway.
- *
- * `releasesResource` is the one field here that reaches work already committed, and it is
- * meant to. Marking "Cancelled" as releasing frees the van on every job already sitting in
- * it, which is the only reading that helps — a tenant who says a status does not hold a
- * resource is not making a claim about the future.
+ * Rename a status, or move it along the board. `releasesResource` reaches work already
+ * committed on purpose — marking "Cancelled" as releasing frees every job already sitting in
+ * it. Type is not changeable: I20's constraint would refuse a status moved to another type
+ * while work items still reference it.
  */
 export async function updateWorkItemStatus(
   db: Db,
@@ -203,10 +162,8 @@ export async function updateWorkItemStatus(
     if (error.code === '23505') {
       throw new DomainError(`A status called ${name} already exists here.`, 'statuses.name_taken');
     }
-    // Reachable only when releasesResource goes true → false: the tenant has just asserted
-    // that two overlapping jobs both hold the same resource, and the exclusion constraint
-    // refuses inside the propagation trigger rather than letting the board become something
-    // the schedule cannot draw.
+    // Reachable only when releasesResource flips true → false — the tenant just asserted that
+    // two overlapping jobs both hold the same resource.
     if (error.code === '23P01') {
       throw new DomainError(
         'Work already in this status overlaps on the same resource, so it cannot start holding one again. Reschedule that work first.',

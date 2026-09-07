@@ -21,7 +21,7 @@ import time
 
 import httpx
 
-from app.core.config import Settings
+from app.core.config import Settings, VoiceSettings
 
 ROLE = "payment_webhook"
 
@@ -117,5 +117,64 @@ def record_provider_payment(
         if body.get("code") == "GD003" or "no payment was requested" in str(body):
             return None
         raise RuntimeError(f"record_provider_payment failed: {response.status_code}")
+
+    return response.json()
+
+
+VOICE_ROLE = "voice_webhook"
+
+# The voice integration's own auth.users row, fixed in
+# 20260905000002_a_call_is_a_conference_and_the_carrier_reports_back.sql. Like the payment one:
+# no email, no password, and the only way to act as it is to hold the JWT secret.
+VOICE_ACTOR = "00000000-0000-4000-8000-0000000000a2"
+
+
+def record_call_event(
+    settings: VoiceSettings,
+    *,
+    external_id: str,
+    source: str,
+    raw_status: str | None,
+    status: str | None,
+    duration_seconds: int | None,
+    recording_url: str | None,
+    payload: dict[str, str],
+    payload_hash: str,
+) -> str | None:
+    """Apply one thing the carrier said about one call.
+
+    **The only thing this role may do**, and every value deciding *where* it lands -- the
+    organization, the customer, the call -- is derived inside the function from the row the
+    carrier's identifier already belongs to. A callback that could name an organization could
+    name somebody else's.
+
+    Returns the event id, or `None` for a callback about a call this platform has no record of
+    and for one already applied. Both are a 200 to the carrier: retrying will not change either
+    answer, and telling the two apart would be telling a stranger which identifiers are real.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=VOICE_ROLE, sub=VOICE_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/record_call_event",
+        headers={
+            "apikey": settings.supabase_anon_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "p_external_id": external_id,
+            "p_source": source,
+            "p_raw_status": raw_status,
+            "p_status": status,
+            "p_duration": duration_seconds,
+            "p_recording_url": recording_url,
+            "p_payload": payload,
+            "p_payload_hash": payload_hash,
+        },
+        timeout=10.0,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"record_call_event failed: {response.status_code}")
 
     return response.json()

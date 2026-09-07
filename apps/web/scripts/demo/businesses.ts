@@ -124,6 +124,17 @@ const GRACHTWERK: DemoBusiness = {
       work_item: [
         { key: 'inzetlocatie', label: 'Inzetlocatie', kind: 'text', required: false },
         { key: 'kenteken', label: 'Kenteken', kind: 'text', required: false },
+        // A choice and a date, in this yard's own words. Nothing about a hire yard makes
+        // these the right three states -- they are what this business would have typed, and
+        // the clinic below answers the same kinds with nothing in common.
+        {
+          key: 'staat',
+          label: 'Staat bij uitgifte',
+          kind: 'select',
+          required: false,
+          options: ['Nieuw', 'Goed', 'Onderhoud nodig'],
+        },
+        { key: 'retourdatum', label: 'Verwachte retourdatum', kind: 'date', required: false },
       ],
       customer: [{ key: 'kvk', label: 'KvK-nummer', kind: 'text', required: false }],
     },
@@ -328,8 +339,29 @@ const KOISHIKAWA: DemoBusiness = {
       [1, 3],
     ],
     fields: {
-      work_item: [{ key: 'shoken', label: '所見', kind: 'text', required: false }],
-      customer: [{ key: 'hokensho', label: '保険証番号', kind: 'text', required: false }],
+      work_item: [
+        { key: 'shoken', label: '所見', kind: 'text', required: false },
+        {
+          key: 'jushin_kubun',
+          label: '受診区分',
+          kind: 'select',
+          required: false,
+          options: ['初診', '再診', '健診'],
+        },
+      ],
+      customer: [
+        { key: 'hokensho', label: '保険証番号', kind: 'text', required: false },
+        // The multi_select in this pair, and a clinic is where one is obviously right: a
+        // patient has any number of these, including none, and a business that ships a fixed
+        // allergy list would be answering a medical question on somebody else's behalf.
+        {
+          key: 'allergie',
+          label: 'アレルギー',
+          kind: 'multi_select',
+          required: false,
+          options: ['花粉', '薬剤', '食物'],
+        },
+      ],
     },
     // Yen has no minor unit, so these are whole yen and the money formatting has to know it.
     prices: [

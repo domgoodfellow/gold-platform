@@ -68,6 +68,14 @@ export default async function FieldsPage({
                             .filter(Boolean)
                             .join(' · ')}
                         </div>
+                        {/* The choices, for a role that may read the configuration and not
+                            change it. Without them this row says a field is a Choice and
+                            never says of what, which is the half that matters. */}
+                        {definition.options.length > 0 ? (
+                          <div className="text-sm text-subtle">
+                            {definition.options.join(' · ')}
+                          </div>
+                        ) : null}
                       </div>
                     )}
                   </li>

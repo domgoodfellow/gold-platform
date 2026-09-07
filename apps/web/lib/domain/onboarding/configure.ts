@@ -21,40 +21,15 @@ import { createWorkItemTransition } from '@/lib/domain/work-items/transitions';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 
 /**
- * Standing a whole business up from data, in one function with no branch in it.
- *
- * **This is `milestone-m3.test.ts`'s `configure`, moved.** That file's structural claim was
- * that exactly one function, taking every word, number, status, field, order, currency, zone
- * and price as *data*, could stand up an equipment hire yard in Amsterdam and a clinic in
- * Tokyo — and that had either shape needed a branch, the function could not exist. The claim
- * held, and then the function sat in a test where nothing but a test could call it.
- *
- * It moves here under this repository's own rule: *if a second caller needs a rule that is
- * currently inline, extract it first, then call it twice.* The second caller is the AI
- * onboarding flow `roadmap.md` M8 describes and `constraints.md` D29 makes self-serve signup
- * conditional on — describe a business in prose, receive a proposed configuration, review it,
- * apply it. `BusinessShape` below is what that proposal *is*, which is why it is a type rather
- * than an argument list: a proposal has to survive being generated, rendered, edited by a
- * human and only then applied, and a function's parameters cannot hold it across those steps.
- *
- * **This is not a business template** (`constraints.md`, *Decided, not yet built*). A template
- * is a named bundle this platform ships and a business starts from; a shape is supplied by a
- * caller. The distinction is the one that record cares about: nothing here is seeded, named,
- * or known to the platform in advance.
- *
- * **It deliberately does not create a customer or a job.** The test's version ended by making
- * one of each so it had something to assert against, and that was evidence rather than
- * configuration — a business that has just been stood up has no customers, and inventing one
- * would be the platform putting words in its mouth exactly where D6 and D20 say it may not.
- *
- * **It is not atomic, and that is the honest limitation.** `create_organization` is a
- * transaction and each call below is a transaction, but the sequence is not one: a failure at
- * the price book leaves an organization with its statuses and no catalogue. Nothing is lost
- * and nothing is corrupt — the result is a partly-configured business, which is a state every
- * screen already handles, because it is also the state of a business somebody is configuring
- * by hand. Making the sequence atomic means one privileged function taking the shape as JSON,
- * which puts the order of these steps in the database; that is a real option and it needs a
- * caller who cannot tolerate the partial state. Neither of the two has said so.
+ * Standing a whole business up from data, in one function with no branch in it —
+ * `milestone-m3.test.ts` asserts that by reading this function's own source. `BusinessShape` is
+ * a type rather than an argument list because a proposal has to survive being generated,
+ * rendered, edited by a human, and only then applied (the second caller is M8's onboarding
+ * flow). Not a business template — nothing here is seeded or known to the platform in advance.
+ * Creates no customer and no job, since inventing one would be the platform speaking for a
+ * business that hasn't said anything (D6, D20). Not atomic: each call is its own transaction,
+ * so a failure partway leaves a partly-configured business — the same state a business
+ * configuring by hand can be in, and every screen already handles it.
  */
 
 /** One custom field, on whichever entity carries it. */
@@ -63,19 +38,15 @@ export type ShapeField = {
   label: string;
   kind: FieldKind;
   required: boolean;
+  /** Optional, so a shape written before choices existed is still valid — a choosing kind with none is refused by `createFieldDefinition`. */
+  options?: string[];
 };
 
 /**
- * One rule, as data.
- *
- * **Statuses by index, for the reason transitions already are**: a shape is written before
+ * One rule, as data. Statuses by index (same reason transitions are): a shape is written before
  * anything has an id, and a name is a string a proposal can get subtly wrong twice.
- *
- * Deliberately the smallest rule that is a whole rule — a moment to watch for and a status to
- * move to. Conditions, messages, timings and counters are all expressible as rows and none of
- * them is here, because a shape is what somebody stands a business up with and nothing in M6's
- * two callers has asked to start with a conditional one. Adding a field here later costs
- * nothing; adding four now would be four fields nobody fills in.
+ * Deliberately the smallest rule that is a whole rule — conditions, messages, timings and
+ * counters are all expressible later, but nothing has asked for a conditional one yet.
  */
 export type ShapeAutomation = {
   /** What this business calls the rule. Rendered as written, never translated. */
@@ -87,25 +58,15 @@ export type ShapeAutomation = {
 };
 
 /**
- * A business, as data.
- *
- * Nothing in this type is a platform decision. The platform supplies `Customer`, `Work Item`,
- * `Resource` and `Event` — `vision.md`'s "what is not negotiable is the primitives" — and
- * every word describing them here belongs to the tenant.
+ * A business, as data. The platform supplies `Customer`, `Work Item`, `Resource` and `Event`
+ * (vision.md's non-negotiable primitives); every word describing them here belongs to the tenant.
  */
 export type BusinessShape = {
   /** What this business calls the work it does. */
   typeName: string;
   /** Its lifecycle, in its own words and its own length. */
   statuses: string[];
-  /**
-   * Which moves are legal, as pairs of indices into `statuses`.
-   *
-   * Indices rather than names, because a shape is written before anything has an id and
-   * because a name is a string a proposal can get subtly wrong twice. A type with no
-   * transitions is frozen rather than unconstrained (I13), so an empty list is a valid answer
-   * and means this business has not said how its work moves.
-   */
+  /** Which moves are legal, as index pairs — an empty list means this business hasn't said how its work moves, and a type with none is frozen rather than unconstrained (I13). */
   transitions: [number, number][];
   /** Its own form, in its own order — `position` is applied explicitly below. */
   fields: Partial<Record<CustomFieldEntity, ShapeField[]>>;
@@ -115,32 +76,11 @@ export type BusinessShape = {
   hours: { dayOfWeek: number; opensAt: string; closesAt: string }[];
   /** Roles that are not the founder's, holding what this business decided it needs. */
   roles: { name: string; capabilities: string[] }[];
-  /**
-   * What it does without anybody present.
-   *
-   * Optional, because a business that automates nothing is an ordinary business and a shape
-   * written before M6 existed is still a valid shape.
-   */
+  /** Optional — a business that automates nothing is ordinary, and a shape written before M6 existed is still valid. */
   automations?: ShapeAutomation[];
-  /**
-   * What it says about itself, in its own words.
-   *
-   * **The only part of a shape that is prose rather than structure**, and it is here for the
-   * reason `constraints.md` forbids hardcoding a claim a business makes about itself: a public
-   * page with no tagline renders a name and stops, which is honest and blank. A business that
-   * has just described itself in a paragraph has already said the thing that belongs there.
-   *
-   * Optional, and empty strings clear rather than write. A shape written before this existed is
-   * still a valid shape.
-   */
+  /** What it says about itself. The only prose field in a shape — a public page with no tagline is honest and blank, but a business that just described itself has already said the thing that belongs there. Optional; empty strings clear rather than write. */
   voice?: { tagline: string; intro: string };
-  /**
-   * How it looks: one colour and a pair of lettering choices.
-   *
-   * Optional for the same reason. **No branch on what kind of business this is** — a colour is
-   * a colour whoever chose it, which is what lets this field sit inside a function that must
-   * never learn what it is holding.
-   */
+  /** How it looks — a colour and a pair of lettering choices. Optional, and no branch on what kind of business this is: a colour is a colour, whoever chose it. */
   brand?: { accent: string; headingFont: string; bodyFont: string };
 };
 
@@ -156,14 +96,7 @@ export type ConfiguredBusiness = {
   automationRuleIds: string[];
 };
 
-/**
- * Every transition names a status this shape actually has.
- *
- * Checked before anything is written rather than left to fail on the fourth call, because the
- * caller this exists for is a language model and an out-of-range index is exactly what it will
- * produce. The message names the offending index, since a proposal is read by a human who has
- * to fix it.
- */
+/** Checked up front rather than left to fail on the fourth call — the caller here is often a model, and an out-of-range index is exactly what it will produce. */
 function validateTransitions(shape: BusinessShape): void {
   for (const pair of shape.transitions) {
     for (const index of pair) {
@@ -176,9 +109,6 @@ function validateTransitions(shape: BusinessShape): void {
     }
   }
 
-  // The same check on the same kind of mistake, for the same caller. A rule naming a status
-  // this shape does not have would otherwise fail on the last call of the sequence, after
-  // everything else had already been written.
   for (const automation of shape.automations ?? []) {
     if (
       !Number.isInteger(automation.moveTo) ||
@@ -194,24 +124,12 @@ function validateTransitions(shape: BusinessShape): void {
 }
 
 /**
- * Configure a business that already exists.
- *
- * **It no longer creates the business, and the database is what decided that.** The first
- * version after D29 closed founding stood the business up through the operator door and then
- * carried on configuring it in the same call — which fails at the second step, because
- * `createRole` and everything after it run against policies keyed to `app.current_tenant_ids()`
- * and platform staff are a member of nothing. That is I21 refusing exactly what it says it
- * refuses: staff may bring a tenant into existence and may not reach into one.
- *
- * So standing a business up is two acts by two parties, which is **D29's axis stated as code**:
- * GOLD creates the business (`provisionOrganization`), and whoever does the configuring
- * configures it. Today that is the owner, holding their own session. At M8 it is the same call
- * made after a human reviews a proposal. Neither is a second creation path, and neither can
- * become one, because nothing here creates anything.
- *
- * What has not changed is the part the milestone turns on: a fixed sequence of domain calls
- * with **no branch on which business it is holding**, which `milestone-m3.test.ts` asserts by
- * reading this function's own source.
+ * Configure a business that already exists — it no longer creates one, since `createRole` and
+ * everything after it run against policies keyed to `app.current_tenant_ids()`, and platform
+ * staff are a member of nothing (I21). Standing a business up is two acts by two parties (D29):
+ * GOLD creates it (`provisionOrganization`), and whoever does the configuring configures it —
+ * today the owner, at M8 the same call made after a human reviews a proposal. What hasn't
+ * changed is the fixed sequence of domain calls with no branch on which business this is.
  */
 export async function configureBusiness(
   db: Db,
@@ -247,9 +165,7 @@ export async function configureBusiness(
     });
   }
 
-  // The form, then its order. Definitions are appended as they are created, so a business that
-  // wants a different order has to say so — which is what the registry gained in M3, and why
-  // `position` is a second pass rather than an argument to the first.
+  // The form, then its order — definitions are appended as created, so a business wanting a different order says so in a second pass.
   const entries = Object.entries(shape.fields) as [CustomFieldEntity, ShapeField[]][];
   for (const [entityType, fields] of entries) {
     for (const field of fields) {
@@ -259,15 +175,16 @@ export async function configureBusiness(
     const defined = await listFieldDefinitions(db, { organizationId, entityType });
     for (const definition of defined) {
       const position = fields.findIndex((field) => field.key === definition.key);
-      // A definition this shape did not ask for belongs to somebody else's ordering, and is
-      // left where it is. There are none today; there will be the first time a shape is
-      // applied to a business that already has fields.
+      // A definition this shape didn't ask for belongs to somebody else's ordering and is left where it is.
       if (position === -1) continue;
+      // Carries `kind` and `options` rather than omitting them — this call writes the whole row, so leaving them out would reorder a business's form and empty every dropdown on it.
       await updateFieldDefinition(db, {
         id: definition.id,
         label: definition.label,
         required: definition.required,
         position,
+        kind: definition.kind,
+        options: definition.options,
       });
     }
   }
@@ -288,9 +205,7 @@ export async function configureBusiness(
     );
   }
 
-  // Last, because a rule names a status and the statuses are written above it. That is the
-  // only reason for the position — nothing here branches on what the rule says, any more than
-  // anything above branches on what the statuses are called.
+  // Last, because a rule names a status and the statuses are already written above it.
   const automationRuleIds: string[] = [];
   for (const automation of shape.automations ?? []) {
     const ruleId = await createAutomationRule(db, {
@@ -308,26 +223,17 @@ export async function configureBusiness(
     automationRuleIds.push(ruleId);
   }
 
-  // **Last, and after everything that can fail on a capability.** How a business looks and what
-  // it says about itself are `organization.manage`, while everything above is a different
-  // capability each — so a member configuring a business they may operate but not rename gets
-  // the whole operational setup and is refused only here, rather than being refused first and
-  // getting nothing.
-  //
-  // Nothing branches on the content. A tagline is written because the shape carried one, not
-  // because of what it says.
+  // Last, and after everything else that can fail on a capability — a business's look and voice
+  // are `organization.manage`, so a member who may operate but not rename the business still
+  // gets the whole operational setup before being refused here.
   if (shape.voice) {
-    // **Read first, because `setPublicProfile` writes the whole row.** A shape carries two of
-    // its six fields, so passing empty strings for the rest would clear a phone number this
-    // business had already typed in — which is exactly the failure mode a form that forgets a
-    // hidden field has, arriving through a domain call instead.
+    // Read first — `setPublicProfile` writes the whole row, and a shape carries only two of its
+    // six fields; passing empty strings for the rest would clear a phone number already typed in.
     const existing = await publicProfile(db, { organizationId, fallbackName: '' });
 
     await setPublicProfile(db, {
       organizationId,
-      // Not part of the voice: a business's public display name is `organizations.name` until
-      // it says otherwise, and having the drafting propose a second name for the same business
-      // is how two names start disagreeing.
+      // Not part of the voice — a business's display name is `organizations.name` until it says otherwise.
       displayName: existing.displayName,
       tagline: shape.voice.tagline,
       intro: shape.voice.intro,
