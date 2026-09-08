@@ -7,13 +7,23 @@ export function Section({ className, ...props }: ComponentProps<'section'>) {
   return <section {...props} className={cx('border-t border-border pt-6', className)} />;
 }
 
+/**
+ * The type scale, and the one thing about it worth writing down.
+ *
+ * `SectionHeading` was `text-sm font-medium` — the same size as body text, a shade heavier. So a
+ * screen was one large title followed by an undifferentiated wall, and a reader had no way to
+ * tell the start of a section from a sentence inside one without reading both. Three steps that
+ * are actually distinguishable: 24px for what the page is, 16px semibold for a section of it,
+ * 12px uppercase for a group inside a section, against 14px body.
+ */
+
 /** An area page never renders this — `navigation.ts`/`org-shell.tsx` already supply the heading. Detail routes do. */
 export function PageHeading({ className, ...props }: ComponentProps<'h1'>) {
-  return <h1 {...props} className={cx('text-2xl font-semibold', className)} />;
+  return <h1 {...props} className={cx('text-2xl font-semibold tracking-tight', className)} />;
 }
 
 export function SectionHeading({ className, ...props }: ComponentProps<'h2'>) {
-  return <h2 {...props} className={cx('text-sm font-medium', className)} />;
+  return <h2 {...props} className={cx('text-base font-semibold', className)} />;
 }
 
 /** Label over a group inside a screen — *If*, *Then*, *Recently*, *Sent*. */

@@ -18,10 +18,10 @@ async function signOutAction() {
   'use server';
   const db = await getDb();
   await signOut(db);
-  redirect('/sign-in');
+  redirect('/login');
 }
 
-export default async function OrganizationsPage() {
+export default async function OrganizationsPage({ searchParams }: PageProps<'/organizations'>) {
   const db = await getDb();
 
   // The proxy already turned anonymous callers away, and this still runs. That is the
@@ -31,7 +31,7 @@ export default async function OrganizationsPage() {
     await requireActor(db);
   } catch (error) {
     if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
+      redirect('/login');
     }
     throw error;
   }
@@ -50,8 +50,23 @@ export default async function OrganizationsPage() {
 
   const organizations = await listMyOrganizations(db);
 
+  /*
+    **One business is not a choice, and a whole page to make it is a page in the way.** Most
+    operators belong to exactly one, and this screen asked every one of them to read a list of
+    length one and click it before anything could happen.
+
+    `?all=1` is what the shell's *Switch business* link sends. Without it that link and this
+    redirect would bounce a single-business operator straight back where they came from, which
+    is worse than the page it replaces — so the list stays reachable deliberately rather than
+    becoming unreachable by accident.
+  */
+  const { all } = await searchParams;
+  if (organizations.length === 1 && !all) {
+    redirect(areaHref(organizations[0].id, AREAS[0].segment));
+  }
+
   return (
-    <main className="mx-auto max-w-2xl p-8">
+    <main className="mx-auto w-full max-w-2xl p-8">
       <div className="flex items-baseline justify-between">
         {/* **The heading says what the page is, which depends on whether you have any.**
             "Organizations" above a page telling somebody they have none was a title describing
@@ -61,7 +76,7 @@ export default async function OrganizationsPage() {
         </PageHeading>
         <form action={signOutAction}>
           <Button type="submit" tone="text" size="small">
-            Sign out
+            Log out
           </Button>
         </form>
       </div>

@@ -6,7 +6,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { signInWithPassword } from '@/lib/domain/identity/credentials';
 import type { CredentialsState } from '../credentials-form';
 
-export async function signInAction(
+export async function logInAction(
   _previous: CredentialsState,
   formData: FormData,
 ): Promise<CredentialsState> {

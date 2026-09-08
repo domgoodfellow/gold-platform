@@ -9,7 +9,7 @@ import { SectionHeading } from '@/components/containers/section';
  */
 export default function OrganizationNotFound() {
   return (
-    <main className="mx-auto max-w-prose p-6 sm:p-8">
+    <main className="mx-auto w-full max-w-prose p-6 sm:p-8">
       <SectionHeading>This business is not available to you</SectionHeading>
 
       <Hint className="mt-2">

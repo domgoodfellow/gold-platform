@@ -78,7 +78,7 @@ export default async function BookingPage({
   }).format(new Date(`${date}T12:00:00Z`));
 
   return (
-    <main data-brand className="mx-auto max-w-xl p-6 sm:p-8">
+    <main data-brand className="mx-auto w-full max-w-xl p-6 sm:p-8">
       <BrandStyle brand={brand} />
       <PublicHeader
         profile={profile}

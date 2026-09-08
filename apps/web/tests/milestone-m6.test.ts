@@ -18,7 +18,7 @@ import {
   createLocation,
   setLocationCoordinates,
 } from '@/lib/domain/locations/locations';
-import { configureBusiness } from '@/lib/domain/onboarding/configure';
+import { configureBusiness } from '@/lib/domain/configuration/configure';
 import { createResource } from '@/lib/domain/resources/resources';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
@@ -67,7 +67,7 @@ const CONNECTION =
   process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
 const CONFIGURE = fileURLToPath(
-  new URL('../lib/domain/onboarding/configure.ts', import.meta.url),
+  new URL('../lib/domain/configuration/configure.ts', import.meta.url),
 );
 
 type Person = { db: SupabaseClient; email: string; userId: string };

@@ -15,6 +15,8 @@ import { setBrand } from '@/lib/domain/branding/brand';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { addOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { createRole } from '@/lib/domain/tenancy/roles';
+import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
+import { MODULES, isModuleKey, type ModuleKey } from '@/lib/navigation';
 import { publicProfile, setPublicProfile } from '@/lib/domain/tenancy/profile';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemTransition } from '@/lib/domain/work-items/transitions';
@@ -78,6 +80,17 @@ export type BusinessShape = {
   roles: { name: string; capabilities: string[] }[];
   /** Optional — a business that automates nothing is ordinary, and a shape written before M6 existed is still valid. */
   automations?: ShapeAutomation[];
+  /**
+   * What this business is switching on. A description like *"we repair plant on site, we
+   * invoice, and we take bookings online"* names a module set as surely as it names a
+   * lifecycle, and leaving it out meant a proposal could describe a business it then could not
+   * show. Optional, and an omitted list changes nothing: a shape written before this existed
+   * still applies, and a business keeps whatever founding gave it.
+   *
+   * Switching one on is never switching one off — a module absent from this list is left alone,
+   * because a proposal is a description of a business and not an inventory of it.
+   */
+  modules?: ModuleKey[];
   /** What it says about itself. The only prose field in a shape — a public page with no tagline is honest and blank, but a business that just described itself has already said the thing that belongs there. Optional; empty strings clear rather than write. */
   voice?: { tagline: string; intro: string };
   /** How it looks — a colour and a pair of lettering choices. Optional, and no branch on what kind of business this is: a colour is a colour, whoever chose it. */
@@ -94,6 +107,8 @@ export type ConfiguredBusiness = {
   priceBookItemIds: string[];
   /** In `shape.automations` order, so an index into one indexes the other. */
   automationRuleIds: string[];
+  /** What this shape asked for, in its order. Not a list of what changed: `setModuleEnabled` treats switching on something already on as success, so a key here was not necessarily off before. */
+  moduleKeys: ModuleKey[];
 };
 
 /** Checked up front rather than left to fail on the fourth call — the caller here is often a model, and an out-of-range index is exactly what it will produce. */
@@ -103,7 +118,7 @@ function validateTransitions(shape: BusinessShape): void {
       if (!Number.isInteger(index) || index < 0 || index >= shape.statuses.length) {
         throw new DomainError(
           `A transition names status ${index}, and this business has ${shape.statuses.length}.`,
-          'onboarding.transition_out_of_range',
+          'configuration.transition_out_of_range',
         );
       }
     }
@@ -117,7 +132,45 @@ function validateTransitions(shape: BusinessShape): void {
     ) {
       throw new DomainError(
         `A rule names status ${automation.moveTo}, and this business has ${shape.statuses.length}.`,
-        'onboarding.automation_out_of_range',
+        'configuration.automation_out_of_range',
+      );
+    }
+  }
+}
+
+/**
+ * Checked up front for the same reason transitions are: the caller is often a model, and a name
+ * it invented or a dependency it did not notice must fail before the first write rather than
+ * after the fourth. `requires` is checked against the whole list rather than against what the
+ * business already has, because both arrive in the same call.
+ */
+function validateModules(shape: BusinessShape): void {
+  const asked = shape.modules ?? [];
+
+  for (const key of asked) {
+    if (!isModuleKey(key)) {
+      throw new DomainError(
+        `This platform has no module called ${key}.`,
+        'configuration.module_unknown',
+      );
+    }
+  }
+
+  for (const key of asked) {
+    // Not named `module`: Next forbids assigning to that identifier, because webpack's own
+    // `module` is in scope in a compiled file and shadowing it breaks resolution
+    // (`@next/next/no-assign-module-variable`). The rule is an error, not a warning, and it
+    // fails the gate.
+    const sold = MODULES.find((entry) => entry.key === key);
+    // `MODULES` is `as const`, so `requires` exists on some members and not others — the same
+    // narrowing `outstandingModuleSetup` uses.
+    const needs =
+      sold && 'requires' in sold ? (sold.requires as ModuleKey | undefined) : undefined;
+    if (needs && !asked.includes(needs)) {
+      const label = MODULES.find((entry) => entry.key === needs)?.label ?? needs;
+      throw new DomainError(
+        `${sold?.label} does nothing without ${label}, which this setup does not switch on.`,
+        'configuration.module_requires',
       );
     }
   }
@@ -137,6 +190,7 @@ export async function configureBusiness(
   shape: BusinessShape,
 ): Promise<ConfiguredBusiness> {
   validateTransitions(shape);
+  validateModules(shape);
 
   const roleIds: string[] = [];
   for (const role of shape.roles) {
@@ -223,6 +277,17 @@ export async function configureBusiness(
     automationRuleIds.push(ruleId);
   }
 
+  // **Down here with voice and brand, and not first, because of the capability it needs.**
+  // Switching a module on is `organization.manage`, and the comment below is the rule: a member
+  // who may operate but not rename the business gets the whole operational setup before
+  // anything refuses them. Nothing above depends on a module being on — no write in this file
+  // is gated on enablement, and D25 is why that stays true.
+  const moduleKeys: ModuleKey[] = [];
+  for (const key of shape.modules ?? []) {
+    await setModuleEnabled(db, { organizationId, key, enabled: true });
+    moduleKeys.push(key);
+  }
+
   // Last, and after everything else that can fail on a capability — a business's look and voice
   // are `organization.manage`, so a member who may operate but not rename the business still
   // gets the whole operational setup before being refused here.
@@ -252,5 +317,13 @@ export async function configureBusiness(
     });
   }
 
-  return { organizationId, typeId, statusIds, roleIds, priceBookItemIds, automationRuleIds };
+  return {
+    organizationId,
+    typeId,
+    statusIds,
+    roleIds,
+    priceBookItemIds,
+    automationRuleIds,
+    moduleKeys,
+  };
 }

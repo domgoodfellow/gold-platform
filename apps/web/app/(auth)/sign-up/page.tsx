@@ -12,6 +12,7 @@ export default function SignUpPage() {
       <PageHeading>Create an account</PageHeading>
       <CredentialsForm
         action={signUpAction}
+        fields="email-and-password"
         submitLabel="Create account"
         pendingLabel="Creating…"
         passwordAutoComplete="new-password"
@@ -19,8 +20,8 @@ export default function SignUpPage() {
       />
       <Hint className="mt-6">
         Already have one?{' '}
-        <Link href="/sign-in" className="underline underline-offset-4">
-          Sign in
+        <Link href="/login" className="underline underline-offset-4">
+          Log in
         </Link>
       </Hint>
     </>

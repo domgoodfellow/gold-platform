@@ -19,9 +19,10 @@ import {
   type FieldKind,
 } from '@/lib/domain/fields/field-definitions';
 import { TRIGGER_EVENTS } from '@/lib/domain/automation/rules';
+import { MODULES, type ModuleKey } from '@/lib/navigation';
 import { FONT_KEYS, FONT_LABELS } from '@/lib/domain/branding/palette';
-import type { BusinessShape, ShapeField } from '@/lib/domain/onboarding/configure';
-import type { ConfigurationProposal } from '@/lib/domain/onboarding/proposals';
+import type { BusinessShape, ShapeField } from '@/lib/domain/configuration/configure';
+import type { ConfigurationProposal } from '@/lib/domain/configuration/proposals';
 import {
   applyAction,
   discardAction,
@@ -179,6 +180,44 @@ export function ProposalReview({
           </Hint>
         </Card>
       )}
+
+      {/* **First, because it is the only part of this proposal that changes what the business
+          owns rather than how it is described** — and the part somebody must not apply without
+          having read. Each one is switched on and paid for, so it is a list of checkboxes
+          somebody clears rather than a summary they scroll past. A module already on stays on:
+          applying never switches anything off. */}
+      <Section title="What this switches on">
+        <Hint>
+          Each of these is part of your business once you apply this, and each one can be
+          switched off again in Settings.
+        </Hint>
+        <div className="mt-2 space-y-2">
+          {MODULES.map((module) => {
+            const chosen = (shape.modules ?? []).includes(module.key);
+            return (
+              <label key={module.key} className="flex gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1 shrink-0"
+                  checked={chosen}
+                  onChange={(event) =>
+                    set(
+                      'modules',
+                      event.target.checked
+                        ? [...(shape.modules ?? []), module.key]
+                        : (shape.modules ?? []).filter((key) => key !== module.key),
+                    )
+                  }
+                />
+                <span className="min-w-0">
+                  <span className="font-medium">{module.label}</span>
+                  <Hint>{module.description}</Hint>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </Section>
 
       <Section title="What you call the work">
         <TextInput

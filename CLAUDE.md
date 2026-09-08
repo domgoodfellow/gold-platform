@@ -232,6 +232,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 
 | Never | Because | Held by |
 |---|---|---|
+| A carrier credential in a settings form | D39: what a business stores is an identifier, and an identifier grants nothing on its own. A token would need rotating and revoking, which D27 already refused for payments | `telephony_settings` holds one nullable number and no secret; `reception.test.ts` proves the policy refuses a role without `organization.manage` |
 | A call leg written by somebody signed in | A leg is created when a telephone rings and changed when the carrier says so; a person typing one invents a call that did not happen | `call_participants` has a select policy and no other; every write goes through `record_call_event` |
 | A second ending on a call that already ended | A carrier retries a delivery it thinks was not acknowledged, and the same *completed* arrives three times | `call_events_org_payload_hash_unique`, and a status that only ever moves forward into a terminal one |
 | A callback naming its own organization | A webhook that could name a tenant could name somebody else's | `record_call_event` derives it from the call the carrier's identifier already belongs to; `voice_webhook` holds no grant on any table |
@@ -286,8 +287,12 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 
 | Never | Because | Held by |
 |---|---|---|
+| A page container centred with `mx-auto` and no `w-full` | An auto side margin cancels flex stretch, so the box shrinks to its own text — which is how every surface outside the shell shipped | `layout.test.ts`, a source scan; jsdom computes no layout, so nothing that renders could have caught it |
+| A shell action in the list of areas | *Leave this business* is not somewhere to go, and a list holding both makes sixteen areas look like eighteen | Switch business and Sign out live in the header; `navigation.test.ts` fails on an `AREAS` entry with no route behind it |
+| GOLD's header on a tenant's public page | `SiteShell` says GOLD twice. On `/book/{slug}` that is our wordmark on somebody else's shop front (D20) | `public-profile.test.ts` scans `app/(public)/` for it, beside the sentences it already refuses |
 | A heading on an area page | One string in `navigation.ts` is both the navigation entry and the `<h1>`. A detail route writes its own, because a job's title is not a platform noun | `navigation.test.ts` fails on a route with no entry and on an entry with no route |
-| An interleaved `AREAS` list | An operator must never reach today's work by going through settings (D23) | `navigation.test.ts` rules operational above configuration |
+| An interleaved `AREAS` list | An operator must never reach today's work by going through settings (D23), and the sidebar rules between sections — a broken run draws a divider through the middle of one | `navigation.test.ts` asserts each group is one unbroken run, in `AREA_GROUPS` order, operations first and configuration last |
+| A navigation section named for the billing axis | *Module* is what a tenant switches on (D25), and Reports, Assets, Automations and Reception are all modules — a section by that name would have to hold areas belonging to all three sections | `AREA_GROUPS` names what an operator does: operations, records, configuration |
 | A `required: true` module | That is the kernel misfiled. It shipped once with every area inside a required module, and module enablement could not change a single line of navigation | `navigation.test.ts` fails if no area belongs to an optional module |
 | A module that hides only its own area | Switching `billing` off must also remove the quote, invoice and margin sections from every job screen | `modules.test.ts`; `20260829000010` fixed the half-switch booking shipped |
 | A module without `configuredAt` | A switch with no route to its inputs looks finished and does nothing, which is what card payments did (D31) | Required by `Module`; `outstandingModuleSetup` says what is still missing |
@@ -321,6 +326,8 @@ Every entry above has a decision record behind it. Read it before changing the t
 | The demo builder | D37 |
 | The dialer, and whose telephone account it is | D38, D39 |
 | What reaching somebody costs, and who pays first | D40 |
+| What a business is buying, and what a lapse does | D41 |
+| GOLD's own business, and why staff is a second account | D42 |
 
 ## When you finish a change
 

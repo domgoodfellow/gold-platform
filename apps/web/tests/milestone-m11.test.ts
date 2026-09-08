@@ -62,6 +62,10 @@ describe('M11 — a control file with no focus treatment', () => {
     `${COMPONENTS_ROOT}/controls/button.tsx`,
     `${COMPONENTS_ROOT}/controls/inputs.tsx`,
     `${COMPONENTS_ROOT}/containers/card.tsx`,
+    // The shell's own rows — the navigation links here, and `SIDEBAR_ROW`/`SidebarButton` in
+    // `app-shell.tsx`, which is where the sign-out control moved when the first test in this
+    // file caught it spelled by hand under `app/`.
+    `${COMPONENTS_ROOT}/containers/app-shell.tsx`,
     `${APP_ROOT}/organizations/[organizationId]/org-shell.tsx`,
   ];
 

@@ -1,1067 +1,430 @@
 # Roadmap
 
-Milestone **definitions**, not task lists. A milestone is done when its acceptance criteria
-are demonstrably true — not when a checklist looks full.
+Milestone **definitions**, not task lists — a milestone is done when its acceptance criteria are
+demonstrably true. Status lives on the issue board and in `CHANGELOG.md`, never here (D9).
 
-**Status is not tracked here.** Task state lives on the issue board; shipped work is recorded
-in `CHANGELOG.md` on merge. Nothing in this file has a checkbox, because nothing in git
-forces a checkbox to stay accurate. See `constraints.md` D9.
-
-One issue per **vertical slice** — schema, domain, route, UI, guard, test — never one issue
-per layer.
+One issue per **vertical slice** — schema, domain, route, UI, guard, test — never one per layer.
 
 ---
 
 ## Order of work
 
-**A milestone number is identity, not sequence.** M0–M10 are cited over three hundred times
-across this repository — in documents, tests and migrations — so renumbering them to express a
-change of order would break every citation in order to record a fact that belongs in one list.
-This is the list.
+A milestone number is identity, not sequence — cited across hundreds of documents, tests and
+migrations, so it is never renumbered, only appended to. M11 sits above M9 in the list below and
+runs before it; the number still means M11.
 
-**The rule forbids renumbering, not appending, and M11 is the first thing to test that.** A new
-milestone takes the next free number and sits in this list wherever the work belongs — M11 is
-numbered above M9 and runs before it. Every existing citation keeps meaning what it meant, which
-is the whole point of separating the two. What would break the scheme is renaming M9 to M10 to
-say *later*, or leaving a third entry here with no number at all.
-
-What drives it is `market.md`: this is a configured-deployment business, and the order below is
-what that model wants built first. It is falsifiable — the first three sales calls can overturn
-it, and if they do, this section changes rather than the numbering.
-
-1. **M5 — the platform side.** Provisioning is the factory floor. Every signed customer walks
-   through it.
-2. **M6 — workflows and automations.** **Taken ahead of the place this list gave it, and the
-   reason is worth keeping rather than quietly renumbering.** M5 shipped a staff console that
-   could not answer its own fourth question — *what is failing* — because nothing in the schema
-   recorded a failure, and M6 was named as the milestone that would give that question a writer.
-   Finishing a screen that named a question it could not answer beat leaving it standing. It also
-   settled D30, which the AI layer would otherwise have had to settle while holding a second
-   problem.
-3. **M8's second criterion — describe a business, receive a proposed configuration.** The half of
-   the AI layer with a business behind it, and now the half with a door standing open in front of
-   it: `20260901000001` reopened self-serve founding, so a business can sign itself up and reach
-   nothing but the hand-configuration screens. D29 says this flow is the only thing that door
-   waits on. **D32 holds the decisions**, and `milestone-m8.test.ts` demonstrates it.
-4. **Tenant marketing and branding.** D20's deferral, revisited — a named revenue line and the
-   third sale to the same customer. **It has no milestone number yet and needs one**;
-   `organization_profiles` is the seed and `tire-app-template`'s `site_content` is the pattern.
-   **A tenant's own integrations (D33) is the second unnumbered entry**, and it waits on a
-   customer naming one rather than on anything in this list. A third would mean the numbering has
-   stopped describing the work.
-5. **M8's first criterion — asking the system questions. Built, and it did not wait for M7.**
-   This entry said it lands *after* M7, and that was right about the dependency and wrong about
-   its size. Four of the seven commands `starting_conversation.txt` §18 uses as examples are
-   reports, and an AI layer over no aggregate layer either cannot answer those or grows a second
-   aggregate layer inside its tool implementations — which is what I4 and I5 exist to prevent one
-   level up. But *what work is at risk of being late today* is a query over `work_items` and needs
-   nothing that does not exist, and the two shapes of question were never the same dependency.
-
-   **What keeps the distinction honest is that a tool cannot contain a calculation.** A tool is a
-   `stable`, `security invoker` function in Postgres (D34), so the failure this entry feared is
-   structurally unavailable: there is no aggregate-shaped tool, a question needing one is answered
-   *I cannot answer that*, and the tool that answers it gets written when M7's aggregate layer
-   exists for it to call.
-6. **M7 — reporting and dashboards.** Now the thing that unlocks the report-shaped half of the
-   question tools, rather than the whole of them.
-7. **M11 — the interface, second pass. Met.** **The first number added to the original set**, and
-   numbered rather than left loose on purpose: the entry above warns that a third unnumbered
-   item would mean the numbering had stopped describing the work, and this had a beneficiary and
-   a date rather than waiting on a customer to name it. Its prerequisite was already paid — the
-   control set and `ui-spec.md` shipped, closing D23's last unpaid bullet — and what it closed was
-   focus, confirmation and the tablet rail; the containers §5 names had already shipped alongside
-   the control set itself. It went here for D23's own reason: M9 is a new family of screens, and
-   building it over a control set with no focus states and no confirmations would have been the
-   M3-into-M4 mistake at a larger size.
-8. **M9 — reception and sales.** D5's reasoning is unchanged and nothing in `market.md` moves it.
+1. **M5 — the platform side.** Every signed customer walks through provisioning first.
+2. **M6 — workflows and automations.** Pulled ahead of its original slot: M5's console couldn't
+   answer *what is failing* until something recorded a failure, and M6 gives it a writer (D30).
+3. **M8's second criterion — describe a business, get a proposed configuration.** Self-serve
+   founding reopened (`20260901000001`); D29 says this proposal flow is the only thing standing
+   between that door and hand-configuration. D32 holds the decisions.
+4. **Tenant marketing and branding.** D20's deferral, revisited — a named revenue line
+   (`market.md`), no milestone number yet. A tenant's own integrations (D33) is the second
+   unnumbered entry.
+5. **M8's first criterion — asking the system questions.** Shipped ahead of M7: a tool cannot
+   contain a calculation (D34, a tool is `stable`/`security invoker`), so a report-shaped question
+   with no aggregate yet just answers *I cannot answer that* rather than inventing one.
+6. **M7 — reporting and dashboards.** Unlocks the report-shaped half of the question tools.
+7. **M11 — the interface, second pass. Met.** The first appended number: its prerequisite (the
+   control set, `ui-spec.md`) had already shipped, and building M9's new screens over a control
+   set with no focus states or confirmations would repeat the M3-into-M4 mistake at a larger size.
+8. **M9 — reception and sales.** D5's reasoning is unchanged.
 9. **M10 — desktop.** No customer has asked.
 
-**A milestone splitting across this list is new, and M8 is the first.** Its two criteria share a
-number and not a dependency, which is what the numbering was always warned about: the number is
-identity. Nothing is renumbered and both halves keep citing M8.
+M8 splits across two entries above because its two criteria share a number, not a dependency.
 
-**GOLD as tenant zero runs alongside all of it and is not a milestone.** GOLD is an operations
-business — customers, work items, scheduling, documents, costs — so it is an ordinary
-organization with ordinary memberships, distinct from the `platform_staff` role D28 keeps out of
-every tenant. The risk it carries: a field our own pipeline wants is *one* caller, and the
-constraint against building for one is right to refuse it.
+GOLD runs as an ordinary tenant (customers, work items, scheduling) alongside all of this and is
+not itself a milestone — a field only our own pipeline wants is one caller, and building for one
+is still refused.
 
 ---
 
 ## M0 — Founding documents
 
-> **Done when:** `/scope` can be run against the first real slice and returns a named
-> invariant and a decision record without the operator supplying either.
+> **Done when:** `/scope` can be run against the first real slice and returns a named invariant
+> and a decision record without the operator supplying either.
 
-That is the whole test. If scoping a task requires explaining the platform in the prompt,
-the documents have not absorbed enough, and the gap is found for the price of one prompt
-rather than one milestone.
-
-### Already true
-
-- `vision.md`, `constraints.md`, `domain-model.md`, and `roadmap.md` exist.
-- `CLAUDE.md` routes work to the right document.
-- The five prompts exist as slash commands in `.claude/commands/`.
-- The invariants are stated. Which of them are actually enforced is recorded in
-  `domain-model.md`'s `Enforced by` column and nowhere else, because a count repeated here
-  is a status field that nothing keeps honest (D9).
-
-### Remaining
-
-Nothing structural. M0 closes the first time `/scope` is used in anger.
+Closed the first time `/scope` was used in anger.
 
 ---
 
 ## M1 — The kernel
 
-> **Done when:** two organizations exist in one database, each with its own users,
-> customers, locations, and work items, and no query, index, or constraint belonging to one
-> can observe or block the other — demonstrated by a test that creates colliding rows in
-> both tenants and expects success. Those entities accept per-tenant custom fields through
-> `field_definitions`, because after M4 they hold production data and the registry can no
-> longer be added cheaply (`constraints.md` D7, D18).
+> **Done when:** two organizations exist in one database, each with its own users, customers,
+> locations, and work items, and no query, index, or constraint belonging to one can observe or
+> block the other — demonstrated by a test that creates colliding rows in both tenants and
+> expects success. Those entities take per-tenant custom fields through `field_definitions`.
 
-That test is the milestone. It is also the thing every prior attempt deferred.
+Covers: `organizations`, memberships and roles (including a second member joining one), tenant
+resolution, RLS across every table, `Customer`, `Location`, `Asset`, `Work Item`, `Resource`,
+`Document`, `Event`, `Field Definition`.
 
-Covers: `organizations`, memberships and roles — **including a way for a second person to
-join one** — the tenant resolution function, RLS across every table created so far,
-`Customer`, `Location`, `Asset`, `Work Item`, `Resource`, `Document`, `Event`, and
-`Field Definition`.
+Enforces: **I1, I2, I3, I11, I12, I16, I17, I18**. `Event` ships with the first slice that writes
+state, because it can't be backfilled.
 
-Enforces: **I1, I2, I3, I11, I12, I16, I17, I18** — and `Event` must ship with the first
-slice that writes state, because it cannot be backfilled.
-
-Three things that must be right here because they are expensive later:
-
-- Every unique index and exclusion constraint leads with `tenant_id` (I2). The
-  colliding-rows test exists specifically to catch this.
-- Custom fields land inside this milestone, not a later one, and arrive together with the
-  registry that governs them (`constraints.md` D7 and D18).
-- **An organization can gain a second member, and roles are exercised by somebody who is
-  not the founder.** A kernel in which every organization has exactly one member cannot
-  demonstrate "each with its own users" at all, and a capability check tested by one member
-  reassigning their own role proves less than it appears to. See `constraints.md` D19 for
-  what a membership may and may not be.
+- Every unique index and exclusion constraint leads with `tenant_id` (I2) — the colliding-rows
+  test exists to catch exactly this.
+- Custom fields land with their registry, not after it (D7, D18).
+- A membership must be exercisable by someone who isn't the founder, or the capability checks
+  prove nothing (D19).
 
 ---
 
 ## M2 — The work engine
 
 > **Done when:** an operator can define a work item type, its statuses, and its allowed
-> transitions from the admin UI without opening the database — and a work item moves through
-> that lifecycle, consuming a resource for a window that nothing else can double-book.
+> transitions from the admin UI with no database access — and a work item moves through that
+> lifecycle, consuming a resource for a window nothing else can double-book.
 
-Covers: work item types and statuses as data, transition validation, assignment, the
-scheduling core over Work Item and Resource, availability calculation, checklists, time and
-cost capture.
+Covers: work item types and statuses as data, transition validation, assignment, the scheduling
+core over Work Item and Resource, availability, checklists, time and cost capture.
 
-Enforces: **I5, I6, I7, I8, I9, I10, I13** — and **I20**, which was added by the slice that
-enforced it.
+Enforces: **I5, I6, I7, I8, I9, I10, I13, I20**. I7 is a database exclusion constraint — an
+application-level overlap check does not satisfy this milestone.
 
-`I7` is a database exclusion constraint. An application-level overlap check is not this
-milestone.
+Operating hours are configuration only: no seeded working week, no default. A business that has
+configured nothing is treated as always open.
 
-**Operating hours are configuration, and they are nothing else.** The availability
-calculation subtracts them, and no part of the platform holds a working week: there is no
-Monday-to-Friday, no weekend, no seeded rows and no default, because all of those are the
-hardcoded business hours `constraints.md` forbids. A business that has configured nothing is
-treated as always open, which is the only reading of "it has said nothing" that does not
-invent a claim on its behalf.
-
-**I10 and I8 moved here from M3, and the reason is a distinction worth keeping.** M3 owns *pricing*,
-which is I4. A recorded **cost** is not a price: a price is derived from configuration a
-business publishes, a cost is an observation about a job that already happened. Cost capture
-is named in this milestone's coverage above, and it needs no pricing engine — but it does
-need money columns, and deferring them would have meant the first pricing slice inventing
-them as a side effect.
+I8 and I10 belong here, not M3: a recorded **cost** is an observation about a job that already
+happened, not a price (which is I4, M3's). Cost capture needs money columns without needing a
+pricing engine.
 
 ---
 
 ## M3 — The configuration engine
 
-> **Done when:** a new business can be stood up entirely through configuration — modules,
-> roles, fields, statuses, forms, terminology, pricing rules, scheduling rules — with no
-> migration and no deploy. The test is literally: configure a second business shape without
-> a pull request.
+> **Done when:** a new business can be stood up entirely through configuration — modules, roles,
+> fields, statuses, forms, terminology, pricing rules, scheduling rules — with no migration and no
+> deploy. Test: configure a second business shape without a pull request.
 
-Covers: custom forms over field definitions, the price book and what a job is quoted from it,
-and the interface.
+Covers: custom forms over field definitions, the price book and quoting from it, the interface.
 
 Enforces: **I4**.
 
-**Two things named in that coverage list were removed correctly. One was removed by mistake,
-and this milestone owns the mistake.**
+Dashboard configuration and a business-rules runtime were correctly cut (nothing yet to configure
+or trigger). **Module enablement was cut by mistake** and shipped in M4 instead: it was argued as
+needing "two pieces of evidence," which is the bar for an *engine*, not for a per-tenant switch
+with callers on day one (`navigation.ts`, D21's partial-adoption pricing). D25 now pins the two
+words apart so the mix-up can't recur.
 
-Dashboard configuration had no dashboard to configure, and business rules is one
-trigger-condition-action runtime by `domain-model.md`'s own account with nothing triggering
-anything yet. Each would have been a table, a screen and a vocabulary built against a
-hypothesis, which is the speculative abstraction `constraints.md` opens by refusing. Those two
-removals stand.
+Pricing rules shipped only as a catalogue-and-quantity — no rule engine (conditions, surcharges),
+because nothing asked for one yet; a rule the catalogue can't express belongs inside
+`priceWorkItem` (I4).
 
-**Module enablement was the mistake.** The argument given was that there were no modules to
-enable — the module table in `domain-model.md` was empty, and a module needs two independent
-pieces of evidence with one from a system that shipped. Every clause of that is true about the
-wrong noun. An empty ownership table and a two-pieces-of-evidence bar govern an **engine**, a
-body of code that owns entities and rules; module enablement is not a claim about code at all.
-It is a per-tenant row saying which capabilities this business has switched on, and it had
-callers the day it was cut: `navigation.ts` shows every area to every tenant regardless of what
-they bought, D21 prices partial adoption against a mechanism this milestone was supposed to
-ship, and `vision.md` bills `platform fee + modules + usage` against the same. The D21
-quotation used to justify the removal — partial adoption "needs no new mechanism at all" — says
-the opposite of what it was read as saying: it means *no mechanism beyond module enablement*,
-which was this milestone's job.
+Terminology: a tenant already names its own things (statuses, roles, fields, display names) —
+that's what "standing up a shape" means, and it shipped across M1–M2. What's *not* built is
+overriding the platform's own nouns (Work Item, Resource, Customer) in tenant chrome — deferred
+under "Decided, not yet built" until a second vertical shows the shape.
 
-`constraints.md` D25 now holds the two words apart so the substitution cannot be made again,
-and the *Scope and abstraction* section's own prediction — that it would be over-tuned the
-first time something was removed and did not come back — is exactly this. **The slice lands in
-M4.** What survives unharmed is the criterion above, because standing up a business shape needs
-roles, fields, statuses, transitions, hours, currency, timezone and prices; modules decide what
-that business is *shown and charged for*, which is a different question and was always a
-smaller one.
-
-**Pricing rules stayed, in the only form that has a caller.** What a business charges is a
-per-tenant catalogue and a quantity, and `milestone-m3.test.ts` stands up two businesses that
-share no word or number without either needing more than that. A rule *engine* — conditions
-over a work item, minimum charges, surcharges — was scoped and deliberately not built, because
-neither shape asked for one and a hypothesis is not evidence. When a business needs a rule the
-catalogue cannot express, that rule belongs inside `priceWorkItem`, which is why I4 insists
-there is only one of it.
-
-I10 and I8 were both enforced in M2. See that milestone for why a cost is not a price; I8
-arrived with the two edit paths that made it load-bearing — changing a currency, and editing
-a checklist template — each of which is safe only because the thing it could have rewritten
-was snapshotted. Pricing does not add the invariant, it inherits it: when amounts derived
-from a catalogue land, they snapshot the same way.
-
-**Terminology was in that coverage list and is not a thing M3 builds, so the word is gone.**
-It named two mechanisms at once. A tenant already names its own things — `work_item_types.name`,
-`work_item_statuses.name`, `roles.name`, `field_definitions.label`, and the per-tenant display
-name on a membership (`constraints.md` D19) are rows a business wrote, rendered as written.
-That shipped across M1 and M2, and it is what the criterion above means: standing up a business
-shape is largely the act of naming its things.
-
-What is **not** built is overriding the platform's own nouns — Work Item, Resource, Customer —
-in chrome the tenant never authored. That is a display-layer indirection over strings the code
-owns, deferred in `constraints.md` under "Decided, not yet built" until a second vertical makes
-its shape knowable; `capabilities.ts` already cites that deferral for the same reason about
-capability labels, and `vision.md` makes the primitives non-negotiable in the same breath as it
-makes everything else configurable. The debt M3 does take on is that the operator shell
-concentrates every platform noun into one navigation definition instead of scattering it across
-page headings, so the override is a lookup swap when it has evidence rather than an excavation.
-
-This is the milestone that decides whether the platform is a platform. If standing up a
-business shape still needs code, M3 is not done regardless of what has been built.
-
-**M3 also owns the interface, and until then nothing does.** Every screen through M2 is a
-`max-w-2xl` stack of sections with incidental `sm:` breakpoints, no shell, no navigation
-between areas of one business, and no shared form vocabulary. That is a deliberate deferral
-rather than an oversight — M3 rebuilds these screens anyway, because custom forms over field
-definitions and pricing both change what is on them, and styling them twice would be the
-waste. What M3 owes:
-
-- **An operator shell**: persistent navigation across one business's areas, rather than every
-  page beginning with a back-link to `/organizations`.
-- **Real responsiveness**, decided rather than inherited from whatever Tailwind default was
-  typed first.
-- **Shared form components**, extracted from what already exists at the point a third screen
-  needs the same control — never before.
-
-`../../my-builder/my-app/frontend` is the **reference** for the shape of that shell, not for
-its code: `components/layout/org-sidebar.tsx` is the one to read. Its sibling
-`admin-sidebar.tsx` belongs to a *platform staff* console spanning tenants, which is a
-different question entirely and is recorded in `constraints.md` under "Decided, not yet
-built" — it cannot run on the caller's JWT, so it is an authorization decision before it is
-a screen.
+The interface also lands here for the first time: an operator shell, real responsiveness, and
+shared form components extracted at their third caller.
 
 ---
 
 ## M4 — Vertical one: a real business runs on the platform
 
 > **Done when:** a real business runs its operations on GOLD — quotes or bookings in, work
-> scheduled and assigned, work completed, invoiced, and paid — and nobody at that business
-> has ever been given database credentials.
+> scheduled and assigned, completed, invoiced, paid — and nobody at that business has ever held
+> database credentials.
 
-**Pneu3L is this milestone's evidence, not its subject.** The criterion above is a claim
-about the platform; Pneu3L is the business that makes the claim checkable, in the same way
-that M1's criterion is about tenancy and the two organizations in `milestone-m1.test.ts` are
-how it is proved. The milestone is over when the *platform* can do that, and the fact that
-one named business is doing it is what stops the claim being a hypothesis.
+Pneu3L is the evidence, not the subject: mobile automotive service, one owner-operator, Montreal,
+CAD, `America/Toronto`, Stripe alongside cash. Its binding constraint is travel between jobs, not
+job length — and the platform answer is `organizations.buffer_minutes`, a per-tenant number the
+exclusion constraint reads, not travel-aware scheduling logic. It onboards fresh; its rows don't
+migrate, only its configuration does (D1).
 
-The business is named because "one real field-service business" was a placeholder and D1
-deferred the naming to this milestone. **What it is, structurally, is the first row in
-`organizations`** — the first tenant, holding no privilege, no branch and no column that a
-second one will not also hold. Pneu3L: mobile automotive service, one owner-operator
-who is also the technician, Montreal, CAD, `America/Toronto`, Stripe alongside cash as a
-first-class payment method. **Its binding scheduling constraint is the travel between jobs
-rather than the length of any one of them** — and that is a fact about this business, which is
-the whole point of the paragraph above it. Nothing in the platform may hold it.
-
-What the platform owes is not travel-aware scheduling. It is that **what makes a job fit is
-something a tenant states, never something the code assumes**, and the first answer to that
-already shipped: `organizations.buffer_minutes` is a per-tenant number the exclusion constraint
-reads through `occupies`, and a business that leaves it at zero has said its jobs run
-back-to-back. A clinic whose real constraint is room turnaround and a hire yard whose constraint
-is nothing at all configure the same column to different numbers, and no line of code knows
-which of them is which. Travel time computed between two specific addresses is the part the
-buffer cannot express; that is a platform capability whose named prerequisite has since landed
-— `locations` carries `latitude` and `longitude` as of M6's second slice — and not a Pneu3L
-feature. What is still missing for travel time is the measuring, not the points.
-
-It onboards **fresh** — see `constraints.md` D1, which this milestone resolves. Its rows do
-not migrate; its configuration does. A business arriving through configuration is the claim
-`vision.md` makes, and a business arriving through an import script would prove the opposite.
-
-**The test that keeps the two apart, applied to every slice in this milestone.** Anything
-Pneu3L needs is one of exactly three things, and only the first two may be built here:
-
-1. **Platform capability** — the tenant could not express it by configuring, and any business
-   of this shape would hit the same wall. `releases_resource` was this. Build it, in the
-   domain layer, named for what it does rather than for whom.
-2. **Configuration** — a work item type, a status, a transition, a price book item, an
-   operating-hours row, a field definition. This is Pneu3L's data, it lives in the database
-   and not in the tree, and it is the milestone working as designed.
-3. **Pneu3L-specific code** — a branch, a column, a screen or a constant that names this
-   business or encodes a fact only true of it. There is no such category. It is the
-   per-client app studio `vision.md` refuses in its second sentence, and the fork D1 rejects,
-   arriving one `if` at a time instead of all at once.
-
-A slice that cannot be sorted into (1) or (2) has not been scoped yet. The symptom is a
-platform noun that reads as a tire word, a default that is only a default because Pneu3L
-would have chosen it, or a table whose only conceivable second tenant is another mobile
-mechanic. Run `/scope` rather than guessing — the question it is for is exactly this one.
-
-**"Operator" means whoever runs the business, not the founder.** M2's criterion already
-exercised somebody who was not, D19 governs what a membership may be, and D20 records that
-*admin* names the tenant operator surface. What separates an owner from a dispatcher is role
-capabilities and nothing else.
-
-See `constraints.md` D5 for why field service rather than sales.
+Everything Pneu3L needs sorts into exactly two buckets — a platform capability any business of
+this shape would need, or configuration (Pneu3L's own data). There is no third bucket:
+Pneu3L-specific code. Run `/scope` when a slice won't sort cleanly.
 
 Covers:
 
-- **The external-actor authorization axis, and this is the milestone's largest cost.** D22
-  says booking, the customer portal and any embedded surface are blocked on one model, and
-  that whichever surface goes first pays for it. Booking went first, M4 paid, and D22 carries
-  the four answers. The one that was not anticipated: the plan was for every write to be an
-  RLS permit policy, and a returning customer broke it — `customers_org_email_unique` refuses a
-  second row for one address, and a read policy narrow enough to be safe cannot see the
-  customer already there. The write side became one privileged function with a scope check
-  instead, which made the surface *smaller*: an outsider now holds no insert permission on any
-  table at all.
-- **Booking and the customer portal.** D20 deferred both and its trigger has now fired: I5
-  and I6 were enforced in M2, I4 in M3, and D22 is written. They are no longer blocked on
-  invariants — only on the model above.
-- **Quote → invoice → payment.** Named in the criterion above and absent from every coverage
-  list until now. Stripe is the first vendor behind an adapter and the first real caller for
-  the integration shape — and it brought two decisions with it. **D26** moves `apps/api/`
-  forward from M6, because ingress is Python's by D2 and the alternative was a route called
-  *api* inside the app that is not the API. **D27** decides that a tenant connects their own
-  processor account rather than pasting a key into a settings form: GOLD stores an account id,
-  charges are created on the business's own account, and no customer money ever reaches a
-  balance of ours — which is what keeps this platform out of being a money transmitter, and is
-  a legal position rather than an architectural preference.
-  What lands in `apps/api` is one endpoint: no scheduler, no `domains/`, no `workers/`, because
-  automation execution is still M6 and still the thing that needs them.
-- **Job economics.** Prices landed in M3 and costs in M2, and nothing subtracts them.
-  Revenue minus cost per job is the smallest useful version, and it is the number the owner
-  asks for first.
-- **The customer timeline.** `Event` shipped in M1 precisely because it cannot be backfilled,
-  so the substrate exists and what is missing is a screen.
-- **Editing and cancelling a work item.** `updateWorkItem` does not exist and neither does a
-  cancel path: a job typed wrong today is wrong permanently, which no live business tolerates.
-  Editing the details is a `work_item.update` capability following the per-column split
-  `app.check_work_item_update_capability` already establishes.
+- **The external-actor authorization axis** (D22) — booking, the customer portal, any embedded
+  surface. A returning customer broke the plan to make every write an RLS permit policy
+  (`customers_org_email_unique` collides with a read policy narrow enough to be safe), so the
+  write side became one privileged function with a scope check instead — an outsider holds no
+  insert grant on any table.
+- **Booking and the customer portal**, unblocked once I5, I6 (M2) and I4 (M3) existed.
+- **Quote → invoice → payment.** Stripe is the first vendor behind an adapter. **D26** moves
+  `apps/api/` forward for webhook ingress (Python owns it, D2). **D27**: a tenant connects their
+  own processor account; GOLD stores an account id, charges land on the business's own account, no
+  customer money touches GOLD's balance — the thing that keeps this platform out of being a money
+  transmitter.
+- **Job economics** — revenue minus cost per job, the number an owner asks for first.
+- **The customer timeline**, over `Event` (shipped in M1 for exactly this).
+- **Editing and cancelling a work item.** Cancelling needed more than "a status the tenant
+  configures": the exclusion constraint's predicate didn't know about status, so a cancelled job
+  kept its resource booked. Fixed with `work_item_statuses.releases_resource` — a tenant question
+  about their own word, not a platform `is_terminal` flag, because releasing a resource and
+  marking work complete are two different questions (this recurs at M7).
+- **Module enablement**, arriving late from M3 — see above.
+- **The interface**, per D23, so M4 doesn't rebuild M3's screens the way M3 rebuilt M2's.
+- **A business's own words on its public page** — one row of tenant copy, rendered at the top of
+  any public surface. Not the marketing surface (no pages, no blocks, no theme).
 
-  **This list said cancelling "is a status the tenant configures and a transition into it,
-  needing no new code", and that was wrong.** The claim was about D6 and it was right about
-  D6; what it missed is the exclusion constraint, whose partial predicate was
-  `resource_id is not null and scheduled_during is not null` and knew nothing about status. A
-  tenant could configure "Cancelled" and move a job into it, and the van stayed booked for a
-  job nobody was doing — on a business whose primary scheduling constraint is travel, that is
-  the afternoon gone. The available workaround was worse than the gap: unschedule then
-  transition is two capabilities, so a dispatcher who could cancel but not schedule left the
-  slot held with nothing reporting it.
+**CRM ships here as a module, not an engine, and both halves matter.** The timeline lands now;
+lifetime value, balance and last-contacted land in M9 over M7's aggregate layer. It's a module —
+switched on, billed for, shown in navigation — with no `crm` directory owning entities, because
+the timeline is a projection of `events` and the intelligence is arithmetic over existing rows. A
+module with no engine is the normal case (D25).
 
-  What it needed was one question the tenant answers about their own word —
-  `work_item_statuses.releases_resource` — feeding the constraint's predicate. Deliberately
-  not `is_terminal`, which 20260827000003 refused for the right reason: that flag is the
-  platform deciding what a status *means*, and this asks only whether the van is occupied.
-  Recorded here rather than quietly fixed, because "configuration is enough" is the claim
-  this platform makes most often and this is the first place it was checked and found short.
-- **Module enablement, arriving late from M3.** See that milestone for why it was removed and
-  `constraints.md` D25 for the word that removed it. It lands here because this is where the
-  callers finally became undeniable rather than merely present: Pneu3L is one owner-operator
-  who does not want *Assets*, *Resources* or a customer portal on their phone, and booking is
-  the first surface that a tenant either offers to the public or does not. The shape is the
-  smallest thing that satisfies those callers — a per-tenant set of enabled module keys, an
-  `AREAS` entry naming the module it belongs to, and a navigation that renders what is on.
-  **It is not authorization and must never become it**: a member who cannot configure fields
-  still sees that fields exist and is told why the form is not theirs (I12), whereas a module a
-  tenant has not bought is not part of their business at all. The two failures look identical
-  on screen and are opposite in the database — the guard stays RLS and `app.has_capability`,
-  and module state answers a different question.
-- **The interface, per D23** — which exists so that M4 does not rebuild its screens the way
-  M3 rebuilt M2's.
-- **A business's own words on its public page**, which was not in this list and had to be.
-  Booking is a public surface, so it trips the precondition D20 defers *marketing* over: copy
-  is configuration, and the first booking page shipped speaking in the platform's voice. One
-  row of tenant copy per business, rendered at the top of any public surface. Not the marketing
-  surface — no pages, no blocks, no theme — and D20 is amended to say why the two could never
-  have been sequenced the way this roadmap assumed.
+**Three domain capabilities shipped with no operator path** — `setTypeBookable`,
+`revokePortalInvite`, `assignRole` — which was a debt against this milestone's own criterion.
+`setTypeBookable` is now paid: a section on the Work screen, gated on the booking module. The
+other two remain, and `docs/walkthrough.md` names where an operator would hit them.
 
-**CRM is a module and not an engine, and both halves of that are worth keeping.**
-`docs/starting_conversation.txt` §9 describes a CRM engine: a customer timeline and customer
-intelligence. **Both get built.** The timeline screen lands in this milestone; lifetime value,
-outstanding balance and last-contacted land in M9, where the dialer is the caller that needs a
-customer reduced to a number rather than a history — over the aggregate layer M7 builds, which
-is why they are not simply arithmetic written twice. A tenant will see *Customers* in their
-navigation, switch CRM on or off, and be billed for it. That is a module and it is real.
-
-What is not built is a `crm` directory owning entities and rules of its own, because the
-timeline is a projection of `events` and the intelligence is arithmetic over work items, prices
-and payments. That is the engine bar in `constraints.md`, and CRM does not clear it — nor does
-it need to, because **a module with no engine is the normal case** (D25).
-
-An earlier version of this paragraph read "there is no CRM engine" and stopped there, which
-sounded like refusing the product when it was only declining a directory. That is precisely the
-collision D25 exists to end, and it is recorded here rather than smoothed over because this
-document caused it.
-
-**Three capabilities shipped without an operator path, and that was a debt against this
-milestone's own criterion rather than a deferral.** `setTypeBookable`, `revokePortalInvite` and
-`assignRole` existed in the domain layer, were covered by tests, and had no route, form or
-button. The first was the sharp one: a type becomes bookable when a business says which status a
-booking starts in and how long one takes, and there was nowhere on any screen to say it — so
-*publishing to the public booking page* was something only somebody with database access could
-do, which is the precise thing "nobody at that business has ever been given database
-credentials" claims nobody has to. The test path proved the platform could do it; no operator
-path proved an operator could.
-
-**`setTypeBookable` is paid.** It is a section on the Work screen under the selected kind of
-work, gated on the booking module — the address is configured in Settings where the module says
-it is, and *which types are on the page* is per type and belongs where the types are.
-`outstandingModuleSetup` used to end that module's sentence with "and no screen here can publish
-one", which was the debt written into the product; it now names the screen.
-`infra/supabase/snippets/publish-bookable-type.sql` is deleted, because a snippet beside a screen
-is a second way to do one thing. **Two remain**, and `docs/walkthrough.md` names both where
-somebody would hit them.
-
-**Module enablement shipped inert, and the cause was a word.** Every area in `AREAS` belonged
-to one of four modules marked `required` — `work`, `scheduling`, `customers`, `billing` — so
-the filter `areasIn` applies could never remove an entry, and the three switchable modules each
-owned a surface *outside* the sidebar. The switch existed, was tested, and changed nothing an
-operator could see. The caller this milestone gave for the whole feature, an owner-operator who
-does not want *Assets* on their phone, was unreachable on the day it landed.
-
-A required module is the kernel misfiled: a module is by definition the part a business
-*chooses*, and there is no version of this platform where somebody records work without work,
-a schedule, customers or a way into their own settings. Those are now simply not in the list —
-`Area.module` is optional, absent means kernel — and what remains is what a business can
-genuinely decline: `billing`, `assets`, `booking`, `portal`, `card_payments`. Switching billing
-off takes Pricing out of the navigation *and* the quote, invoice and margin off every job,
-because hiding the area and leaving the sections would have been half a switch.
-
-**This is the second time D25's distinction was needed and the first time it was not enough.**
-That record separates a module a tenant enables from an engine that owns code, which is what
-M3 got wrong. The word it did not pin down is what a module is separate *from* — and the
-answer is the kernel, which is neither. `navigation.test.ts` now fails if no area belongs to an
-optional module, which is the assertion that would have caught this: every test it had was
-about the two lists agreeing rather than about the feature doing anything.
-
-**What M4 produces beyond a running business** is the list of seams that looked general — to
-be tested against the next vertical rather than declared general here. That is the other half
-of *evidence, not subject*: one business cannot tell you which parts of itself were general,
-so what this milestone hands to M6 and M9 is a list of candidates, not a set of engines. `constraints.md`'s
-*Scope and abstraction* governs what may be *claimed* about them, and that section is
-explicit that it is not a gate on building any of it.
+**Module enablement shipped inert once already** — every area belonged to a module marked
+`required`, so the enable/disable filter could never remove anything. A required module is the
+kernel misfiled: `Area.module` is now optional, and only what a business can genuinely decline
+(`billing`, `assets`, `booking`, `portal`, `card_payments`) carries one. Switching `billing` off
+now removes the quote/invoice/margin sections everywhere, not just the sidebar entry.
 
 ---
 
 ## M5 — The platform side
 
-> **Done when:** somebody who runs GOLD rather than a business on it can see every tenant, what
-> each has switched on, and what is failing — from a surface inside this application, holding no
-> membership in any of them and reaching no tenant's data through a service-role key. And a
-> business that GOLD signed becomes a tenant because somebody at GOLD provisioned it — through
-> the same `createOrganization` a self-serve door will call once M8 can do the configuring.
+> **Done when:** somebody who runs GOLD — not a business on it — can see every tenant, what each
+> has switched on, and what is failing, from a surface holding no membership in any tenant and no
+> service-role key. And a business GOLD signs becomes a tenant because GOLD provisioned it,
+> through the same `createOrganization` a self-serve door will call once M8 can do the configuring.
 
-**Everything before this milestone was built for a tenant. This is the first one built for
-us.** M1 through M4 answered "can a business run on this", and the answer is yes — while the
-people who own the platform have no surface at all, and watch their own tenants in the database
-vendor's dashboard. That is not a missing screen. It is the last authorization axis, and it is
-the reason this milestone exists before the ones that add tenants faster.
-
-**The staff axis is a Postgres role, and that is a decision rather than an implementation
-detail — see `constraints.md` D28.** Every policy in this database keys on
-`app.current_tenant_ids()`, which answers *which tenants is this caller in*, and staff are in
-none of them. The three shapes that already exist do not stretch: a member is scoped by
-membership, an external actor by `app.current_external_tenant()` and is bound to exactly one
-tenant, and the machine writer holds no table grant at all. Cross-tenant read is a fourth
-shape, D14 refuses the service-role client that would fake it, and putting staff in every
-tenant's `memberships` would write our people into each customer's own list of who works there.
-
-**"Admin" is taken and means the tenant operator surface** (D20), so the word is *platform* and
-the route is `/platform`. That naming was owed since the console was first written down.
+Staff are a Postgres role, not a fourth authorization shape stretched from the other three (D28):
+a member is scoped by membership, an external actor by its own binding, a machine writer holds no
+table grant — cross-tenant read needed its own shape, and the service-role client D14 refuses
+would have faked it. "Admin" was already taken by the tenant operator surface (D20), so staff get
+`/platform`.
 
 Covers:
 
-- **The staff role and its policies** — one Postgres role, read across tenants, and the
-  invariant that comes with it: a platform-staff path may read what it needs and write no
-  tenant's data. `payment_webhook` is the precedent for a role with a deliberately tiny grant.
-- **The tenant list**, which is the whole console at first: who exists, when they arrived, what
-  they have switched on, when they last did anything. Not a dashboard — an aggregate layer is
-  M7 and building a second one here is exactly what that milestone exists to prevent.
-- **Operator-provisioned onboarding** (D29). GOLD creates the organization and hands it over,
-  which is what actually happens when a business is signed. **This is one of two doors onto one
-  `createOrganization` rather than an alternative to self-serve**, and the distinction is worth
-  stating because D29 was first written as "provisioned, not self-served" and that named the
-  wrong axis. What decides whether a door may be open is whether somebody is on the far side of
-  it doing the configuring — a new organization here is genuinely empty, and handing the
-  emptiness to somebody with nothing to fill it is not a product. M5 builds the door where that
-  somebody is a person. M8's onboarding flow is the somebody behind the self-serve door and
-  opens it by calling the same function, and it is the *better*-configured of the two rather
-  than the emptier one. What closes here is the **unattended** door: `/sign-up` as it stands,
-  where a stranger founds an organization and nobody is configuring it at all.
-- **GOLD's own public site**, at last distinguished from the marketing surface D20 defers.
-  That record blocks a *tenant's* site because every word on it is a claim that business makes
-  about itself; this one is GOLD's claim about GOLD, and the argument never applied to it. The
-  route group exists and holds the page that has been sitting at `/` since M1.
+- The staff role and its policies — read-only across every tenant.
+- The tenant list: who exists, what they've switched on, when they last did anything.
+- **Operator-provisioned onboarding** (D29) — one of two doors onto one `createOrganization`, not
+  an alternative to self-serve. A new organization is genuinely empty; handing that emptiness to
+  an unattended stranger is not a product, which is what closes: `/sign-up` as an *unattended*
+  door, not registration itself (an account still isn't a tenant).
+- GOLD's own public site, distinguished at last from the tenant marketing surface D20 defers —
+  this one is GOLD's own claim about GOLD.
 
-**What is deliberately not here.** Billing a tenant for what they enabled. `vision.md` prices
-`platform fee + modules + usage`, `organization_modules` records what is on and since when, and
-the two have never met — but a price is a number, numbers move on the first three sales calls,
-and D8 keeps them out of this directory for that reason. The console can *show* what a tenant
-has on. Charging for it needs a payment relationship with the tenant that does not exist and a
-`billing-usage.md` that D8 unlocks at the first usage event.
+Billing a tenant for what they've switched on is deliberately not here — a price is a number, and
+D8 keeps numbers out of this directory.
 
-**Why here rather than earlier or later.** Not earlier, because a console over one tenant is a
-list with one row and the axis would have been designed against a hypothesis. Not later,
-because M6 adds automation that fails silently and M9 adds a second vertical: the first time
-"what is failing" is a real question is the first time nobody can answer it.
+**The fourth question — what is failing — is deferred to M6 on purpose**, not skipped: nothing in
+the schema records a failure yet, so there's nothing to read. M6 closes it with a view over
+`automation_runs` and `message_deliveries` rather than a new table, since automation is the first
+thing this platform does that can fail with nobody watching.
 
-**"What is failing" has no substrate, and that quarter of the criterion is deferred to M6
-deliberately rather than skipped.** The console answers three of its four questions — who
-exists, what they have switched on, when they last did anything — and `events` is on the staff
-grant list and has a read policy, so the fourth has somewhere to come from. Nothing reads it for
-failures because nothing *records* one: a failure in this system today is a `DomainError`
-raised, rendered to whoever caused it, and dropped, and there is no failed-thing table anywhere
-in the schema. Building one here would be a table with no writer, which is the speculative
-abstraction `constraints.md` opens by refusing — and the paragraph above is its own argument for
-why the wait is short. M6's automation is the first thing this platform can do that fails with
-nobody watching; a scheduled evaluation that did not fire is a failure no tenant reports and no
-screen shows. **The row lands with the writer, and M6 owns both.** Until then the honest console
-is one that does not claim to answer a question it has no data for.
+Provisioning is a staff **write**, and it's the one write `platform_staff` gets: one
+`SECURITY DEFINER` function (`create_organization`), no table privilege — the same shape as the
+external axis's `create_booking`. I21 is the line this draws: staff may bring a tenant into
+existence and may never reach into one that exists.
 
-**Closed by M6, and the shape it took is worth recording: it added no table.** "Give the console
-a failures table" was the obvious move and would have been a second copy of two tables that
-already record their own outcomes — a copy that would drift the first time one of them learned a
-new one. What shipped is a view over `automation_runs` and `message_deliveries`, and the same
-view serves the tenant's own screen, so there is no second idea of what *failing* means growing
-on the other side of the product.
-
-**Operator provisioning is a staff *write*, and it collides with D28 by design rather than by
-accident.** `20260830000002` grants `platform_staff` `select` and no `insert`, `update` or
-`delete` on any table at all — the second half of the invariant, and the half that survives a
-careless policy author. D28's stated trigger to revisit is "the first thing platform staff must
-*write*", and D29's operator door is that first thing. **This is the two records working, not
-disagreeing**: D28 declined to grant a write before there was one to name, and D29 names it. It
-meant the provisioning slice decided a *shape* before it drew a screen, and it chose the second
-of the two candidates: **one `SECURITY DEFINER` function and no table privilege**, which is what
-the external axis chose the last time a caller needed exactly one write and no table permission
-(`create_booking`, D22). A write grant on `organizations` and `memberships` was the other
-option, and it fails for a reason worth keeping: it is indistinguishable, at the privilege
-level, from letting staff rename a live business and add themselves to it. I21 now carries the
-line that choice draws — staff may bring a tenant into existence and may not reach into one that
-exists.
-
-**The other half closed too, and it cost more than the estimate.** D29's consequence said M5
-"closes `/sign-up`", and taken literally that is not implementable: provisioning names an owner
-who must already have an `auth.users` row — the same precondition `addMember` states out loud —
-and creating that row needs the admin API, which `apps/web` may not hold and must not (D14).
-**An account is not a tenant.** Registration stays open; *founding* is what closed, and it
-closed in the database — `create_organization` holds no grant at all — rather than by removing
-a form, because a missing button is not a boundary (I12).
-
-**Two things it dragged with it, and the second is the interesting one.**
-
-The suite's own idea of how a business begins had to change: twenty-nine test files founded
-their fixtures by calling `create_organization` as an ordinary user, and they now provision
-through `tests/helpers/founding.ts`. That is one place instead of twenty-nine, and the point is
-not tidiness — a founding path only the tests could reach would be the second creation path
-this milestone just spent a migration forbidding.
-
-And **creating a business and configuring one came apart, because the database refused to let
-them stay together.** The first attempt kept `configureBusiness` whole and had it stand the
-business up through the operator door; that fails at the second step, since `createRole` and
-everything after it run against policies keyed to `app.current_tenant_ids()` and platform staff
-are a member of nothing. I21 refusing exactly what it says it refuses. So GOLD creates the
-business and whoever does the configuring configures it — **which is D29's own axis, arriving in
-the code because the schema would not accept anything else.** It is worth recording as
-confirmation rather than as a cost: the separation was not a design preference that could have
-drifted, and the same shape is what M8's self-serve door will need.
+Creating a business and configuring one came apart here because the database wouldn't let them
+stay together — `createRole` and everything after it are keyed to `app.current_tenant_ids()`, and
+platform staff are a member of nothing. So GOLD creates, and whoever configures configures — D29's
+own axis, arriving because nothing else was possible.
 
 ---
 
 ## M6 — Workflows, automations, and the channels they act through
 
-> **Done when:** the business already live on this platform adds a second technician, writes a
-> rule — *when the forecast at a job's location crosses this threshold, move the job and tell
-> the customer* — and a forecast change reschedules the job and sends the message. No code
-> change and no deploy.
+> **Done when:** a business already live on the platform adds a second technician, writes a
+> rule — *when the forecast at a job's location crosses this threshold, move the job and tell the
+> customer* — and a forecast change reschedules the job and sends the message. No code change, no
+> deploy.
 
-That business is Pneu3L, the first tenant, and it is **evidence and not subject here too** —
-the criterion is a claim about the runtime, and naming the tenant inside it would make the
-milestone read as a feature request from one customer. What the name supplies is a rule
-somebody actually wants written and a second technician somebody actually needs to add.
-
-**One tenant, deliberately.** The obvious version of this milestone stands up a second
-business with crews and dispatch and calls the difference a feature. That framing makes
-weather an engine, which D11 forbids for the right reason: weather owns no entity and no rule.
-Weather is a perfectly good module, and a weather-dependent tenant switches it on.
-**Dispatch is not something the platform builds.** It is what a business has once it
-configures several resources and turns these capabilities on — and proving that on a business
-already live is a far stronger claim than proving it on a second tenant built to need it.
+Pneu3L again, as evidence rather than subject. One tenant, deliberately — a second tenant built to
+need dispatch would make weather look like an engine, which D11 refuses: weather owns no entity
+and no rule, it's a module a weather-dependent tenant switches on. Dispatch isn't something the
+platform builds; it's what several configured resources and this runtime add up to.
 
 Covers:
 
-- **The workflow and automation runtime.** `starting_conversation.txt` describes these as
-  §11 and §13 and they are one feature seen twice: a trigger, a condition, an action, and a
-  branch. What exists today is the graph without the verbs — `work_item_transitions` says
-  which status may follow which, and nothing anywhere expresses *if* or *then*. The runtime
-  arrives here rather than in M3 or M4 because it needs a second caller and M4 supplies only
-  the first: a booking confirmation is one line inside the domain function that creates the
-  booking. Weather is the second, and the runtime absorbs the first when it lands — *Never
-  duplicate a rule across callers* running on schedule rather than as a rescue.
+- **The workflow/automation runtime** — trigger, condition, action, branch. Needed a second caller
+  to justify extracting it (a booking confirmation is the first, weather the second) — and there
+  was in fact no first caller to absorb: M4 shipped no confirmation code at all, so a confirmation
+  became a rule a business writes in its own words, not a platform sentence.
+- **Four trigger shapes**, not three: schedule, external condition, counter threshold, and event —
+  the last runs inside the transaction that caused it, which the other three can't do.
+- **Weather** — an adapter plus tenant-written conditions (D11). Its one real prerequisite
+  shipped: `locations.latitude`/`longitude`, with the first update policy that table's ever had.
+- **Channels** — email, SMS, first outbound voice — each behind an adapter, delivery idempotent
+  per recipient per reason.
+- `apps/api` gains a scheduler (stood up in M4 for webhook ingress). Serverless, per D24 —
+  nothing a worker daemon would hold, since anything surviving between runs lives in Postgres.
 
-  **There was nothing to absorb.** No notification code existed anywhere in `lib/domain` when M6
-  started — M4 shipped no confirmation of any kind, so this described a line that was never
-  written. The correction is better than the plan: a confirmation is now a rule *a business
-  writes*, in its own words, rather than a sentence the platform sends on its behalf. Recorded
-  rather than quietly reinterpreted, because "the runtime absorbs the first caller" was the
-  argument for building the runtime here and it turned out to rest on something that did not
-  exist.
-- **Four trigger shapes, and they are not the same shape.** A schedule fires at a time. An
-  external condition fires on a reading from a provider. Maintenance fires when *a counter a
-  human or a sensor advances crosses a threshold* — the model `Mechanic_Maintenance` already
-  ships, and the one an event-shaped runtime does not express naturally. Designing for the
-  second alone is the specific mistake available here.
+**The runtime lives in Postgres, the clock in Python** (D30) — forced, not chosen: a rule tripped
+by a stranger's booking has no `app.current_tenant_ids()`, and a rule tripped by the clock has no
+person at all. No action may search for a free slot — that's `freeWindows`, and a second one in a
+second runtime is exactly what I5 forbids, so a reschedule shifts by a typed offset and the
+exclusion constraint decides whether it lands.
 
-  **This said three, and the sentence above it assumed a fourth.** A booking confirmation fires
-  on an event, and an event is not a schedule, a reading or a counter — it runs *inside the
-  transaction that caused it*, which is the one thing the other three cannot do. Corrected here
-  rather than quietly built: `event` is the first kind that shipped and the one every other
-  slice was tested against.
-- **Weather is an integration plus rules, and nothing else** (D11). The provider goes behind
-  an adapter like any other; the business writes conditions against its answer. What is *not*
-  configuration is the one prerequisite underneath, and it is **built**: `locations` now carries
-  `latitude` and `longitude`, filled in by hand or by a geocoding adapter, and `locations` has
-  the first update policy it has ever had — a column grant carrying those two and nothing else.
-  A place with no point is an ordinary place; nothing is guessed on a business's behalf. The
-  same gap blocked travel time and service areas, and no longer does.
-- **Channels** — email, SMS, and the first outbound voice path, each behind an adapter that
-  names a capability rather than a provider. Delivery is idempotent per recipient per reason;
-  `Mechanic_Maintenance`'s notification log is the shape, and the failure it prevents is
-  telling a customer the same thing twice.
-- **`apps/api/` gains a scheduler here.** It was stood up in M4 for webhook ingress (D26) and
-  holds one endpoint; this is the milestone that gives it the responsibility D2 lists first.
-  A scheduled evaluation asking *what is due* has nowhere to live in Next.js. Per D24 it is a
-  scheduled serverless invocation and not a worker daemon, so anything that must survive
-  between runs lives in Postgres.
+`reviewAutomationRules` reads rules back to the business — a status nothing can move into, a
+threshold in the wrong unit, two rules fighting over one moment — because a rule that never fires
+produces no failed run and looks identical to a quiet week. Arithmetic on existing rows, no model
+involved.
 
-`infieldos-main` is the reference for the screens this shape needs — alerts, crews, activity —
-alongside `tire-app-template`'s spec under D23. Reference for the shape, never the code; D1's
-reasoning generalises to both.
-
-### What shipped, and the four things worth knowing about it
-
-**The runtime is in Postgres and the clock is in Python** (`constraints.md` D30). That was the
-one open decision and it was forced rather than chosen: a rule tripped by a stranger's booking
-runs where `app.current_tenant_ids()` is empty, and a rule tripped by the tick runs where there
-is no person at all. Every action is a narrow `security definer` function in the class
-`create_booking` already established, and `automation_runner` holds no grant on any table.
-
-**Its cost is recorded and is not small: no action may search for a free slot.** Searching is
-`freeWindows`, and a second one of those in a second runtime is exactly what I5 forbids — so a
-rescheduling rule shifts by an offset the business typed and the exclusion constraint decides
-whether it lands. A refusal is a recorded failure a dispatcher reads. That is I6 doing the job it
-was written for, and it is also the first thing to revisit if a business asks for the next free
-slot.
-
-**M5's fourth question is answered.** `automation_runs` and `message_deliveries` record their own
-failures with the database's or the provider's own words, and `platform_failures` — a
-`security_invoker` view, like `platform_tenants` — is what the console reads. The deferral was
-right and its reason has expired exactly as predicted: an automation is the first thing this
-platform does that fails with nobody watching.
-
-**Weather and maintenance are modules, and neither is an engine** (D11, D25). There is no weather
-table and no maintenance table: a reading, a threshold a business typed, a counter log and a mark.
-Both are configured on the Automations screen, which is a link a second switch could break — so
-`Module.requires` declares the dependency and the settings screen says what is missing (D31)
-rather than handing anybody a dead end.
-
-**The rules are read back to the business, and that was not in the plan.** `reviewAutomationRules`
-says which rules cannot work — a status nothing can move into, a threshold in a unit no reading
-uses, a message rule on jobs with no customer, two rules fighting over one moment. It exists
-because *what is failing* cannot see the worst cases: a rule that never fires produces no failed
-run, because nothing happened, and on screen that is indistinguishable from a quiet week. None of
-it is AI and none of it should be — it is arithmetic on rows the business already has. The
-language model version answers the harder question (what this will do to the people receiving it)
-and wants these answers underneath it regardless, which is M8.
-
-**What M6 did not build.** A wall-clock schedule ("every Monday at seven") — a report's question
-rather than a job's, with no caller. Conditions on a counter rule — every condition looks at a
-job and a counter rule runs about a machine before one exists, so the domain layer refuses one
-rather than accepting something nobody would consult. A per-tenant sending identity — proving a
-domain per tenant is a real feature and a different one. And chaining: an automation may not
-trigger an automation, because a cycle and a feature are indistinguishable from the rows.
+Not built: a wall-clock schedule (a report's question, no caller yet), conditions on a counter
+rule (nothing to consult before a counter exists), a per-tenant sending identity, and chaining —
+an automation may never trigger an automation, since a cycle and a feature look identical from the
+rows.
 
 ---
 
 ## M7 — Reporting and dashboards
 
-> **Done when:** an operator defines a report — entity, fields, filters, grouping, period —
-> pins it to a dashboard, and shares it with a role, without anything about that report or
-> that dashboard existing in code.
+> **Done when:** an operator defines a report — entity, fields, filters, grouping, period — pins
+> it to a dashboard, and shares it with a role, with nothing about that report or dashboard
+> existing in code.
 
-`starting_conversation.txt` describes these as §17 and §14. They are one machinery: **a
-dashboard is a saved report with a layout and an audience.** Building them apart produces two
-aggregate layers that disagree, which is the same failure I4 and I5 exist to prevent one level
-up.
+A dashboard is a saved report with a layout and an audience — one machinery, not two, or the two
+aggregate layers disagree (the same failure I4 and I5 prevent one level up).
 
-Covers: the aggregate layer, report definitions as per-tenant rows, the four dashboards the
-source names — executive, operations, manager, employee — as configuration rather than four
-screens, and the operational and financial report sets.
+Covers: the aggregate layer, report definitions as per-tenant rows, the four dashboards
+(executive, operations, manager, employee) as configuration rather than four screens, and the
+operational and financial report sets.
 
-**M3 removed dashboard configuration and gave a reason with an expiry date:** there was no
-dashboard to configure. M4 builds the operator's day view, which is the first one, and at that
-point the argument stops working — a second hardcoded dashboard is the thing this milestone
-exists to prevent.
+`milestone-m7.test.ts` has a non-founder define a report, pin it, share it with a role in two
+businesses sharing no word, then reads `lib/domain/reporting/` and fails on either tenant's word
+appearing there. D35 and D36 hold the decisions: an aggregate is a Postgres function pinned to
+`priceWorkItem` by a correspondence test; a saved report's audience is a policy.
 
-**Job economics is this milestone's first row, and it ships in M4 without it.** Revenue minus
-cost on one job screen is one function and needs no engine. Revenue by customer, by service, by
-employee and by location are that same subtraction grouped four ways, which is where an engine
-starts paying. Building the engine first would have been the abstraction with no caller;
-building the fourth grouping by hand would be the copy.
+**The operational report set is deferred, and two things this entry used to claim about it were
+wrong.** Work completed *does* have a date (`events.occurred_at`) — what's missing is which status
+the business calls finished, a tenant question rather than a platform `is_terminal` (same shape as
+M4's `releases_resource`: Cancelled releases the resource and is not completed work — two
+questions, not one). And *quoted* revenue needs no schema change (`work_item.line_added`/
+`line_removed` already carry `occurred_at`) — it needs a decision between two different questions
+(quoted *during* a period vs. quoted-and-unbilled *as at* a date), not a completion column.
 
-**It lands before the *report-shaped* half of the AI layer's questions, and after both the half
-that proposes configuration and the half that asks about work.** Four of the seven commands `starting_conversation.txt` §18 uses as examples —
-least profitable services, cost trends, parts to order, customers not contacted — are reports,
-and an AI layer over no aggregate layer either cannot answer them or grows a second aggregate
-layer inside its tool implementations, which is the failure I4 and I5 exist to prevent one level
-up. Onboarding is the other half and shares none of that: it writes configuration through
-`configureBusiness` and reads no aggregate at all.
-
-**The criterion is met, and the operational half of *Covers* is not.** `milestone-m7.test.ts` has
-somebody who is not the founder define a report, pin it to a dashboard and share it with a role in
-two businesses that share no word — and then reads `lib/domain/reporting/` and fails on any word
-either tenant chose. `constraints.md` D35 and D36 hold the decisions: an aggregate is a function in
-Postgres pinned to `priceWorkItem` by a correspondence test, and a saved report is a row whose
-audience is a policy.
-
-**What is deferred is the operational report set, and this entry said two wrong things about why
-before anybody checked.** Both are corrected here rather than quietly rewritten, because the
-corrections are more useful than the original claims.
-
-- **It said work completed has no date. It has one.** `events.occurred_at` is not null,
-  `change_work_item_status` writes `work_item.status_changed` carrying `from_status_id` and
-  `to_status_id`, and `customer_activity` is already the precedent for reading that log to answer
-  a business question. Every move a job has ever made is timestamped. **What is missing is which
-  status the business calls finished**, which is a question and not a column.
-- **It said M4's refusal of `is_terminal` was the blocker. It is the template.** M4 refused
-  answering one specific need — does cancelling free the resource — with one general platform
-  concept, and answered it with a tenant question instead. The same shape applies here, and it is
-  also why `releases_resource` cannot be borrowed: **Cancelled releases the resource and is not
-  completed work.** Two questions about one status, which is exactly what M4 was right not to
-  collapse.
-- **The remaining honesty is in the word.** `occurred_at` defaults to `now()` and nothing passes a
-  value, so the log records when somebody *marked* a job finished rather than when work stopped.
-  That is reportable as long as the report says so — *work marked complete*, on the same
-  discipline that made the financial set say invoiced rather than revenue.
-- **It said one completion column would also unblock *quoted* revenue. It would not.** That claim
-  was built on the first mistake. `work_item.line_added` and `work_item.line_removed` are both
-  recorded with `occurred_at`, and a line's `created_at` is the same instant — so *what we quoted
-  in August* is answerable with no schema change at all. What quoted revenue actually needs is a
-  decision between two questions: what was quoted **during** a period, and what stands quoted and
-  unbilled **as at** a date, which needs reconstruction from those two events. They are unrelated
-  to completion and smaller than this entry claimed.
-- **Utilisation was where I5 was at risk, and the safe half is built.** `public.time_committed`
-  sums `occupies` for rows matching the exclusion constraint's partial predicate, which makes it
-  the *third* expression of that predicate after the constraint and `listSchedule` — admitted on
-  D35's terms and pinned by a correspondence test that runs the same jobs through both and holds
-  through a status change that frees a resource.
-
-  **The percentage is not built and is not a deferral.** Its denominator is opening hours minus
-  commitments, which is `freeWindows`, and an aggregate re-deriving that would be a second answer
-  to *what is free*. No correspondence test would make that one safe, because the second answer
-  is the one somebody books against — which is the difference between a rule expressed twice and
-  a rule that has two authorities. A business dividing committed time by its own opening hours is
-  doing arithmetic this platform did not invent for it, and that is where the division belongs
-  until something makes a better case.
-
-**Corrected twice, and the second correction is the interesting one.** This paragraph said
-"before the AI layer" for two milestones after that stopped being true; it then said "before the
-half that asks questions", which was also too broad. Question tools shipped ahead of this
-milestone because a query is not a report, and what stops that from becoming the failure feared
-below is D34: a tool is a `stable` function in Postgres, so a tool implementation cannot hold an
-aggregate at all. What M7 unlocks is the tools that have no function to call yet.
-
-**The original correction, kept for its reasoning.**
-`market.md` moved AI onboarding ahead of both M6 and M7 and the *Order of work* list was
-rewritten to say so; this sentence was not, so one file argued both ways and the stale half sat
-inside the milestone it favoured — which is the kind that gets believed. Corrected here rather
-than quietly, because the correction is the useful part: the dependency was always on *half* of
-M8, and reading it as the whole is what put reporting in front of the onboarding flow.
+**Utilisation**, split in two: `public.time_committed` (the numerator) is built — the third
+expression of the exclusion constraint's own predicate, pinned by a correspondence test against
+`listSchedule`. The percentage is not a deferral — its denominator is `freeWindows`, and a second
+answer to *what is free* is exactly what I5 forbids. A business dividing committed time by its own
+opening hours is arithmetic this platform didn't invent for it.
 
 ---
 
 ## M8 — The AI layer
 
-> **Done when:** an operator can ask "what work is at risk of being late today" and
-> "which customers haven't been contacted in thirty days," and the answers are produced
-> through the same domain tools a human uses, under that user's permissions — **and** can
-> describe a business in prose and receive a proposed configuration, work item types,
-> statuses, fields and price book, which a human reviews and applies.
+> **Done when:** an operator can ask "what work is at risk of being late today" and "which
+> customers haven't been contacted in thirty days," answered through the same domain tools a
+> human uses, under that user's permissions — **and** can describe a business in prose and
+> receive a proposed configuration, which a human reviews and applies.
 
 Enforces: **I14**.
 
-Do not start with autonomous agents. First make the AI good at *understanding* the system;
-operating it follows. Every tool is a domain service that already exists — if a tool needs
-new business logic, that logic belongs in the domain layer and the tool is a caller.
+Every tool is a domain service that already exists; new business logic belongs in the domain
+layer, and the tool is a caller. The two criteria share a milestone number, not a dependency, and
+were built separately — the second went first, since asking about work needed no aggregate layer
+(a tool is a `stable`, `security invoker` Postgres function under the asking person's own token,
+per D34 — it can neither write nor see a row its caller couldn't, and can't hold an aggregate).
 
-**The second criterion is onboarding, and it is the half with a business behind it.** Reading
-the system answers questions; configuring it removes the bottleneck of a service business,
-which is standing up the next tenant. It stays inside the guardrail above because a person
-reviews and applies the proposal — the AI proposes configuration, it does not become
-configuration.
+**Questions**: `public.work_at_risk`, `public.customers_not_contacted` (over `customer_activity`,
+which the customer timeline also reads — a second caller for an inline rule, extracted rather than
+copied); `agent_runs`, readable only by whoever asked; an `assistant` module and Ask screen; a
+provider-blind loop in `apps/api` over a capability contract (Claude, or anything speaking chat
+completions, for a business running its own model). An answer can carry one intended action,
+recorded as pending, performed by nobody until a person presses a button — the loop itself writes
+nothing and holds nothing that could.
 
-`C:\Users\domin\Documents\step-by-roll` is the reference: role, agent, skill, tool, workflow held apart, with a
-capability check on every tool. That separation is I14 already built once.
+**Onboarding**: `configuration_proposals` (prose, proposed `BusinessShape`, gaps, outcome), a
+drafting adapter, a setup screen where a person reads, answers, edits, applies. Applying calls
+`configureBusiness` unchanged. D32 holds three load-bearing decisions: the model holds no tool and
+no database handle (I14 by absence, not by check); applying adds no capability, since every step
+is already gated by an existing policy; a failed apply is recorded in the database's own words
+rather than rolled back, since atomicity would mean a second configuration path.
 
-### The two criteria are built apart, and the second went first
+It is not a business template — a template is a named bundle the platform ships; a proposal is
+supplied by its caller and nothing in it is seeded. That deferral (business templates, waiting on
+two businesses configured by hand) is unchanged.
 
-**They share a milestone number and not a dependency.** Proposing a configuration is one
-structured call over `configureBusiness`; asking the system questions is a tool loop. *Order of
-work* split them accordingly and neither is renumbered.
+`ai-tools.test.ts` reads the tool registry from the Python source and asserts from `pg_proc` that
+every name resolves to a non-volatile, non-owner-run function, then asks the same question from
+four angles — two tenants get their own words back and nothing of each other's, a portal customer
+gets nothing from a tool their role can't reach, a member of nothing gets nothing. No model is
+called in the test — what D34 decided is structural.
 
-**Both are now built.** The reason given here for putting questions last — that they are "tools
-over an aggregate layer that does not exist yet" — was true of the report-shaped ones and not of
-the rest. *What work is at risk of being late today* is a query over `work_items`. D34 holds the
-decisions; the short version is that a tool is a `stable`, `security invoker` function in Postgres
-called under the asking person's own token, so a tool can neither write nor see a row its caller
-could not, and cannot contain an aggregate even if somebody wanted it to. What waits for M7 is
-the tools with no function to call yet, and until then the assistant says it cannot answer.
-
-**What the first criterion builds.** Both tools the criterion names — `public.work_at_risk` and
-`public.customers_not_contacted`, the second sitting on `customer_activity`, a view that resolves
-which events are about a customer and that the customer's own timeline now reads too, because a
-second caller for an inline rule means extracting it rather than copying it; `agent_runs`, a row
-per question readable only by whoever asked; `assistant.ask`; an `assistant` module and an Ask
-screen; and in `apps/api`, a provider-blind loop over a capability contract with two
-implementations — Claude, and anything speaking chat completions, which is how a business answers
-with a model on its own hardware. **The write half is built too**: an answer can carry one
-intended action, recorded as pending and performed by nobody until a person presses a button, at
-which point `apps/web` maps the name through its own whitelist and the domain layer does it under
-that person's session. The loop itself still writes nothing, and there is nothing in it that
-could.
-
-**What onboarding builds.** `configuration_proposals`, a tenant-owned row holding the prose, the
-proposed `BusinessShape`, the gaps the model could not fill and an outcome; a drafting adapter
-under `lib/adapters/drafting/`; and a setup screen where a person reads the proposal, answers what
-it asked, edits anything they disagree with, and applies. Applying calls `configureBusiness`
-unchanged. **`constraints.md` D32 holds the decisions**, three of which are load-bearing: the model
-holds no tool and no database handle, so I14 is satisfied by an absence rather than by a check;
-applying adds no capability, because every step it takes is already gated by a policy; and a failed
-apply is recorded on the row in the database's own words rather than rolled back, because
-atomicity here would mean a second configuration path.
-
-**It is not Business templates, and `configure.ts` already said so before this was written.** A
-template is a named bundle the platform ships and a business starts from; a shape is supplied by
-its caller, and nothing in a proposal is seeded, named or known to the platform in advance. The
-earlier version of this section claimed the opposite — that onboarding *was* that entry arriving
-the way it demanded — and the code contradicted it in its own comments for two milestones. That
-entry stays closed, and what it is still waiting for is unchanged: two businesses configured by
-hand.
-
-**What this half does not build.** No tool loop, no agent, no question answering — that is the
-first criterion. No drafting of message templates, though *Decided, not yet built* is right that
-it belongs here and is the same shape: it is a **second** caller of the drafting capability, and
-this repository builds the first one first.
-
-### The first criterion is demonstrated by what a tool cannot do
-
-`ai-tools.test.ts` is its demonstration, and like the others it turns on an absence rather than on
-a happy path. It reads the tool registry out of the Python source — one registry, not a list kept
-on both sides of the seam — and asserts from `pg_proc` that every name in it resolves to a
-function that is not `volatile` and does not run as its owner. Then it asks the same question from
-four sides of one database: two businesses get their own work back in their own words; each gets
-**nothing** when handed the other's organization id, which is the assertion the whole design
-exists for, because a model chooses that argument; a portal customer of the right business gets
-nothing either, since the tool joins a table the portal has never been allowed to read; and
-somebody who is a member of nothing gets nothing at all.
-
-**No model is called, deliberately.** What D34 decides is structural, and a test that asked a
-provider would be asserting somebody else's judgement, slowly and for money. The loop's own
-behaviour — the cap, the recorded failure, the row count that is never a row — is tested in
-`apps/api`, which **joined the check gate in this milestone**: `pnpm check` runs both runtimes,
-and the loop arriving in Python is what made two milestones of tolerating that gap stop being
-tolerable.
-
-### The second criterion is demonstrated, and the demonstration is an absence
-
-`milestone-m8.test.ts` describes two businesses that share no word — a chimney sweep in Tallinn
-trading in euro, a dive school in Cebu trading in pesos — receives a whole configuration for
-each, and **asserts at that moment that both are still completely empty**. No type, no status, no
-price, no hour, and the same number of roles founding gave them. That is the milestone: the AI
-proposed configuration and did not become configuration, and there is no path by which it could
-have, because the drafting capability holds no database handle at all.
-
-Two further things it proves rather than assumes. **The review is real**: between proposing and
-applying, the test changes the last stage's name to a word the drafting never produced, and that
-is the word in the database afterwards — so a proposal is not what gets applied, the reviewed
-version is. And **neither business's vocabulary appears in the code that handled it**: the test
-reads `configureBusiness`'s source *and* all three files of the drafting adapter, and fails on any
-of their words. M3 makes that claim about the configuring; M8 extends it to the drafting, which is
-the second place a business's specifics could have been smuggled in and one layer further out than
-M3 was watching.
-
-**The drafting is a fixed provider, and that is the honest choice.** What the milestone claims is
-a property of the path — where a proposal lives, what may touch it, who writes — and a test that
-called a real provider would be asserting somebody else's judgement, slowly and for money. That
-the model has nothing to write with is asserted structurally in `proposals.test.ts`, from the
-adapter's imports.
+`milestone-m8.test.ts` drafts a full configuration for two businesses sharing no word, and asserts
+both are still completely empty afterward — no path exists by which the draft could apply itself,
+because the drafting capability holds no database handle. It also edits the reviewed proposal
+before applying (proving review is real, not a rubber stamp) and reads both `configureBusiness`
+and all three drafting-adapter files, failing on either business's vocabulary appearing in either.
 
 ---
 
 ## M9 — Vertical two: reception and sales
 
-> **Done when:** a business runs its front desk on GOLD — a call is placed or answered,
-> recorded, transcribed, analysed, and attached to the customer timeline as events — and the
-> analysis proposes actions that the domain layer executes rather than performing them itself.
+> **Done when:** a business runs its front desk on GOLD — a call is placed or answered, recorded,
+> transcribed, analysed, and attached to the customer timeline as events — and the analysis
+> proposes actions that the domain layer executes rather than performing them itself.
 
-Renamed from "Communications and the dialer", which described the plumbing. The plumbing
-serves a business function — reception and sales — and naming it that way gives the milestone
-M4's test instead of a demo's: a call placed and transcribed proves a pipeline, a business
-answering its phone here proves a product. D5 already calls the dialer vertical two and says
-why it is cheaper built second, once customers, timeline and audit exist to attach to.
+Renamed from "Communications and the dialer," which described the plumbing rather than the
+business function it serves.
 
-**This milestone buys a second host, and D24 says why.** A call is a persistent media stream
-for its whole duration, which is not what Vercel serverless is. `apps/api` does not move; a
-realtime deployment target is added beside it.
+This milestone buys a second host (D24): a call is a persistent media stream for its duration,
+which serverless isn't. `apps/api` stays; a realtime deployment target sits beside it.
 
-References: **`agent-system`** — a receptionist agent and a sales agent over Twilio and
-ElevenLabs, with an orchestration service and a tool dispatcher whose split matches D2's — and
-**`nextfund-portal`**, which proved capability tokens, inbound routing, recording and
-transcription.
+GOLD is a user of this milestone, not only its vendor — selling configured deployments to
+businesses with no system is outbound calling, so GOLD switches the module on like any tenant
+(tenant zero, no fork). The trigger to build is call volume, not audience: thirty calls need a
+phone and a list.
 
-**GOLD is a user of this milestone, not only its vendor.** Selling configured deployments to
-businesses with no system is outbound calling, which makes GOLD a member of vertical two. As
-tenant zero it switches the module on like any other tenant — no fork, no second path, and a
-dialer we run ourselves is evidence for it that a hypothesis cannot be. What this does *not*
-license is building it early to reach the first customer: the trigger is call volume, and thirty
-calls need a phone and a list.
+Two-way email lands here too — the half of "communications" that isn't the dialer. Reading a
+mailbox so a reply attaches to its job needs an authorization against somebody else's account,
+refreshable tokens, and a matching problem with no perfect answer, which is why it waits for the
+milestone that owns the front desk.
 
-**Two-way email lands here, and it is the half of "communications" that is not the dialer.**
-M6 sends; nothing reads. A customer's reply currently goes to somebody's personal inbox and
-leaves the system entirely. Reading a mailbox so a reply attaches to the job it concerns needs an
-authorization against somebody else's account, refreshable tokens, and a matching problem with no
-perfect answer — which is why it waits for the milestone that owns a business's front desk rather
-than being bolted to the sending half. `constraints.md`, *Decided, not yet built*, holds the full
-entry, including the two smaller pieces that land earlier.
+Customer intelligence (lifetime value, balance, last contact, next action) lands here too — the
+first caller that needs a customer reduced to a number, over M7's aggregate layer.
 
-**Customer intelligence lands here**: lifetime value, outstanding balance, last contact, next
-action. M4 built the history and M7 built the aggregate layer; this is the first caller that
-needs a customer reduced to a number.
-
-The progression is deliberately staged, and each stage is sellable on its own:
-record → understand → assist → automate → delegate. Live rebuttals and voice agents are the
-last two stages, not the first.
+Staged deliberately, each stage sellable alone: record → understand → assist → automate →
+delegate. Live rebuttals and voice agents are the last two, not the first.
 
 ---
 
 ## M10 — Desktop
 
-> **Done when:** the Electron build renders the same React components as the web app, with
-> no forked UI, and adds only what a browser genuinely cannot do — device access, local
-> printing, tray, hotkeys, headset integration.
+> **Done when:** the Electron build renders the same React components as the web app, with no
+> forked UI, and adds only what a browser genuinely cannot do — device access, local printing,
+> tray, hotkeys, headset integration.
 
-Electron is another client, not another product. The `packages/ui` extraction happens here,
-at the moment a second consumer exists — and not before (`constraints.md`, never create a
-workspace package with one consumer).
+Electron is another client, not another product. `packages/ui` is extracted here, at the moment a
+second consumer exists, and not before.
 
 ---
 
 ## M11 — The interface, second pass
 
-> **Done when:** an operator can drive the whole application from a keyboard and always see
-> where they are, no destructive action completes without a confirmation, and `ui-spec.md`
-> §4's exception list is empty — demonstrated by a test that reads the screens and fails on a
-> control spelled by hand, on a control file with no focus treatment, and on a destructive
-> action with nothing between it and the write.
+> **Done when:** an operator can drive the whole application from a keyboard and always see where
+> they are, no destructive action completes without a confirmation, and `ui-spec.md` §4's
+> exception list is empty — demonstrated by a test that reads the screens and fails on a control
+> spelled by hand, a control file with no focus treatment, and a destructive action with nothing
+> between it and the write.
 
-**The number is new and the position is deliberate.** M0–M10 were the original set and this is
-the first addition to it, which the numbering was built for: a number is identity, *Order of
-work* is sequence, and M11 sits above M9 in that list while carrying the next free number. It is
-not a renumbering and nothing else moves.
+The first milestone appended to the original M0–M10 set — its prerequisite (the control set,
+`ui-spec.md`) had already shipped, closing D23's last unpaid bullet.
 
-**Its prerequisite already shipped.** The control set, the colour roles and `ui-spec.md` are
-built — D23's last *Adopted* bullet, unpaid since M3, paid in one change. What that change bought
-is the thing this milestone spends: a screen now changes in one place. What it did **not** buy is
-a good interface, and the distinction is the whole reason this is a milestone rather than more
-cleanup.
+Closed:
 
-Covered, and every item was a gap measured rather than imagined:
+- **Focus** — a shared `FOCUS_RING` (in `class-names.ts`, not copied per file) on `Button`,
+  `ButtonLink`, `Disclosure`'s `<summary>`, and every nav link.
+- **Confirmation** — `containers/dialog.tsx`, the platform `<dialog>`; `ConfirmSubmit` opens it
+  and its Confirm button submits the *original* form via the native `form` attribute, so none of
+  the ten replaced call sites needed their server action or `useActionState` wiring changed.
+- **The tablet rail** — `org-shell.tsx` had one breakpoint, so tablets got the desktop sidebar.
+  Now icon-only between `md` and `lg`, icon-and-label from `lg`, over the same `AREAS` list.
+- **Cards and sheets** — already shipped before this milestone opened.
+- **A seventh §4 exception** this list had missed: `global-error.tsx` can't load `globals.css`
+  (Next skips it on a root-layout failure), so its retry button is inline styles for a real
+  reason.
 
-- **Focus.** Closed. The founding form's ring moved into `inputs.tsx` first (three of §4's six
-  exceptions closed at once), and this milestone extended the same `--accent-text` ring — now a
-  shared `FOCUS_RING` in `class-names.ts` rather than a fragment copied into each file — to
-  `Button`, `ButtonLink`, `Disclosure`'s `<summary>`, and every nav link in `org-shell.tsx`. An
-  operator on a keyboard can now see where they are everywhere, not only in a text field.
-- **Confirmation.** Closed. `containers/dialog.tsx` is the platform `<dialog>` this milestone said
-  to try before reaching for a library — `org-shell.tsx` already carried the argument against a
-  hand-rolled overlay, and `showModal()` ships the focus trap, the escape key and the backdrop
-  `<dialog>` was chosen for. `ConfirmSubmit` is the one call-site shape: a button that opens the
-  dialog rather than submitting, and a Confirm button inside it that submits the *original* form
-  through the native `form` attribute — no server action or `useActionState` wiring changed at
-  any of the ten call sites this replaced.
-- **The tablet rail.** Closed. §2 named three renderings and the code had two — `org-shell.tsx`
-  had one breakpoint, so a tablet got the desktop sidebar. It now renders icon-only between `md`
-  and `lg`, and icon-and-label from `lg`, over the same `AREAS` list mapped once (`AREA_ICONS`,
-  keyed by segment, lives in the shell rather than in `navigation.ts` — icon choice is how the
-  shell draws the IA, not part of what the IA is). `lucide-react` is a new dependency; nothing
-  else in this application has drawn an icon before.
-- **Cards and sheets.** Already closed before this milestone opened — `Card` and `Disclosure`
-  shipped with the row-actions and responsive-table change, and `ui-spec.md` §4/§5 said so before
-  this section caught up. Recorded here because the paragraph above it did not, for two
-  milestones, which is exactly the kind of drift `CLAUDE.md` says to name rather than carry.
-- **§4's exceptions.** Seven now, not six. The milestone test this criterion asked for found the
-  one this list had missed: `global-error.tsx` replaces the whole document on a root-layout
-  failure, and Next does not load `globals.css` there, so its retry button was already inline
-  styles for a sound reason nobody had written down. None of the three items this milestone built
-  — focus, confirmation, the rail — is a control the list otherwise names.
+Demonstrated by `milestone-m11.test.ts`: no raw `<button>`/`<select>` under `app/`, every shared
+control file contains `focus-visible:ring`, and every `delete`/`remove`/`revoke`/`cancel` action
+has a matching `ConfirmSubmit`.
 
-**Demonstrated by `milestone-m11.test.ts`.** Three assertions, matching the criterion verbatim and
-turning on absences the way every milestone test here does: no raw `<button>` or `<select>` under
-`app/` (no exception names either, unlike the six `<input>`-shaped ones), every shared control
-file contains a `focus-visible:ring`, and every `delete`/`remove`/`revoke`/`cancel` action
-exported from an `actions.ts` file under the operator shell has a matching `ConfirmSubmit` in the
-forms file that calls it.
+Goes before M9 for D23's own reason, reused: M9 is a new family of screens, and building it over a
+control set with no focus states or confirmations repeats the M3-into-M4 mistake at a larger size.
 
-**Why it goes before M9, and the argument is D23's own, reused.** D23 exists because M3 rebuilt
-every screen M1 and M2 had produced, and M4 was about to build three surfaces at four times the
-size. M9 is that moment again: reception and sales is a new family of screens over a control set
-with no focus states and no confirmations, and building it first means building the same gap
-larger and paying for it twice. The demand-side reason is in `market.md` — the demo is the pair,
-`tire-app-template` in production beside the configured one, and the GOLD half is the half being
-sold.
-
-**Three things it deliberately is not.**
-
-- **Not a per-tenant theme.** D20's deferral stands and D23's amendment is explicit that it is no
-  longer *blocked*, which is not the same as being due. A tenant choosing its own colours arrives
-  with the marketing surface and needs that evidence.
-- **Not `packages/ui`.** That is M10, at the moment a second consumer exists. The control set
-  living in one place is what will make it cheap; moving it early buys a build step and a
-  `dist/` for no isolation.
-- **Not a design-tokens document.** `globals.css` is the token list and is executable.
-  `ui-spec.md` holds decisions and never values, and a spec that starts listing hex codes has
-  become the document D8 refuses by a longer route.
+Not a per-tenant theme (still D20's deferral), not `packages/ui` (M10), not a design-tokens
+document (`globals.css` already is one, executable).

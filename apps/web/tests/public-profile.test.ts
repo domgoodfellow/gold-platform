@@ -252,3 +252,38 @@ describe('what a business says about itself', () => {
     }
   });
 });
+
+describe("GOLD's chrome, and the one place it must never appear", () => {
+  /**
+   * `SiteShell` is a header saying GOLD and a footer saying GOLD. On the marketing page and the
+   * credential screens that is correct — the business making claims there is GOLD.
+   *
+   * On `/book/{slug}` and `/portal/{token}` it would be our wordmark on somebody else's shop
+   * front. That is the same failure the rest of this file guards against, in structural form
+   * rather than as a sentence: a customer of a business must meet that business, and D20 keeps
+   * the platform out of the frame entirely.
+   */
+  const sourcesIn = (relative: string): string[] => {
+    const root = fileURLToPath(new URL(`../app/${relative}`, import.meta.url));
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) return walk(full);
+        return entry.name.endsWith('.tsx') ? [readFileSync(full, 'utf8')] : [];
+      });
+    return walk(root);
+  };
+
+  it('dresses GOLD’s own pages in it', () => {
+    // Both, because the point of the shell is that the two stop feeling like two applications.
+    for (const group of ['(marketing)', '(auth)']) {
+      const uses = sourcesIn(group).some((source) => source.includes('SiteShell'));
+      expect(uses, `${group} should render inside SiteShell`).toBe(true);
+    }
+  });
+
+  it("keeps it off a tenant's own surfaces", () => {
+    const offenders = sourcesIn('(public)').filter((source) => source.includes('SiteShell'));
+    expect(offenders).toEqual([]);
+  });
+});

@@ -37,18 +37,6 @@ export async function telephonyProvider(): Promise<TelephonyProvider | null> {
 }
 
 /**
- * The number this deployment calls from, or null.
- *
- * **Read here rather than in the domain layer**, because *which number* is a fact about how this
- * deployment is wired and the domain has no business knowing there is only one. When the number
- * inventory lands, the domain asks the tenant's rows instead and this export disappears — which
- * is why nothing else in the repository is allowed to read the variable directly.
- */
-export function callingNumber(): string | null {
-  return process.env.TELEPHONY_FROM_NUMBER || null;
-}
-
-/**
  * Where the carrier should report what happens next.
  *
  * The public base of this repository's own `apps/api` deployment. **Passed per call rather than

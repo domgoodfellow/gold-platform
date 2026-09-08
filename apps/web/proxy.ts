@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { updateSession } from '@/lib/db/session';
 
 /**
- * Routes reachable without a session. Everything else redirects to sign-in.
+ * Routes reachable without a session. Everything else redirects to the log-in screen.
  *
  * This is a closed set, checked by exact match or path prefix — not a pattern a request
  * can talk its way into. The redirect target below is likewise a fixed literal: there is
@@ -11,7 +11,18 @@ import { updateSession } from '@/lib/db/session';
  * against a closed set on read as well as on write, and nothing needs one yet
  * (constraints.md, "Never build an open redirector").
  */
-const PUBLIC_PATHS = ['/', '/sign-in', '/sign-up'];
+const PUBLIC_PATHS = [
+  '/',
+  '/login',
+  '/sign-up',
+  '/forgot-password',
+  // Where a recovery link lands, and the screen it lands on. Both have to be reachable without a
+  // session: that is the state somebody who has forgotten their password is in. `/auth/recover`
+  // is a route handler that exchanges the code for one, and `/reset-password` turns an arriving
+  // caller with no session away itself.
+  '/auth/recover',
+  '/reset-password',
+];
 
 /**
  * The booking surface, which is public in a way the paths above are not.
@@ -56,12 +67,12 @@ export async function proxy(request: NextRequest) {
   // to `proxy`; the security reasoning is unchanged by the rename.
   if (!userId && !isPublic(pathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = '/sign-in';
+    url.pathname = '/login';
     url.search = '';
     return NextResponse.redirect(url);
   }
 
-  if (userId && (pathname === '/sign-in' || pathname === '/sign-up')) {
+  if (userId && (pathname === '/login' || pathname === '/sign-up')) {
     const url = request.nextUrl.clone();
     url.pathname = '/organizations';
     url.search = '';

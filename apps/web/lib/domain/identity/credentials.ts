@@ -60,6 +60,56 @@ export async function registerWithPassword(
   }
 }
 
+/**
+ * Ask for a link that lets somebody set a new password.
+ *
+ * **It reports success whatever happened, and that is the point.** `signInWithPassword` above
+ * already refuses to distinguish *no such account* from *wrong password*, because telling the two
+ * apart tells an attacker which addresses are registered. A reset form is the easier place to
+ * make that mistake, since there is no password to be wrong — so this returns nothing either way
+ * and the screen says the same sentence to everybody. A provider error is swallowed for the same
+ * reason rather than out of carelessness.
+ *
+ * `redirectTo` is decided by the caller and never by the person filling the form. It is a fixed
+ * literal at the one call site, for the reason `proxy.ts` refuses a `?next=` parameter: a
+ * destination that travels with a request has to be checked against a closed set on the way in
+ * and on the way out, and nothing here needs one.
+ */
+export async function requestPasswordReset(
+  db: Db,
+  input: { email: string; redirectTo: string },
+): Promise<void> {
+  const email = normaliseEmail(input.email);
+
+  await db.auth.resetPasswordForEmail(email, { redirectTo: input.redirectTo });
+}
+
+/**
+ * Set a new password, for somebody who arrived holding a recovery link.
+ *
+ * **Nothing here decides whether they may.** The recovery link is what proves who they are, and
+ * Supabase turned it into a session before this runs; with no session the update is refused by
+ * the auth server, which is the boundary. This applies the same length and confirmation rules
+ * registration does, from the same function, so the two cannot drift apart.
+ */
+export async function setNewPassword(
+  db: Db,
+  input: { password: string; passwordConfirmation: string },
+): Promise<void> {
+  checkPassword(input.password, input.passwordConfirmation);
+
+  const { error } = await db.auth.updateUser({ password: input.password });
+
+  if (error) {
+    throw new DomainError(
+      // The one case worth its own sentence: an expired or already-used link is the ordinary
+      // failure here, and "something went wrong" would send somebody back to the same dead link.
+      'That link has expired or has already been used. Ask for a new one.',
+      'identity.recovery_invalid',
+    );
+  }
+}
+
 export async function signOut(db: Db): Promise<void> {
   const { error } = await db.auth.signOut();
 

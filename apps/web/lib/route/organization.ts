@@ -20,7 +20,7 @@ export const requireOrganization = cache(
       await requireActor(db);
     } catch (error) {
       if (error instanceof DomainError && error.code === 'auth.required') {
-        redirect('/sign-in');
+        redirect('/login');
       }
       throw error;
     }

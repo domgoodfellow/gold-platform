@@ -76,7 +76,7 @@ Each owns entities and rules. This is the honest state, not the plan.
 | **Maintenance** | Customer-owned assets, readings, condition-triggered work | Assets and readings built; recurring plans are not |
 | **Dispatch** | Routes, travel time, geographic assignment | Not built — see *Deferred* |
 | **Inventory** | Stock levels, suppliers, purchase orders, shipments | Not built — see *Deferred* |
-| **Voice** | The realtime communications plane, the dialer | Not built — M9 |
+| **Voice** | Calls as conferences, participants, carrier callbacks, a customer's stage | Built — M9 |
 
 **The calendar is part of the scheduling engine, and scheduling is an engine.** There is no
 `calendars` table because a calendar is work items organised by time and resource — that is a
@@ -643,159 +643,175 @@ leaves two still owing.
 
 ### D38 — Every call is a conference, and a party on it is a row
 
-**Decided before the browser dialer is built, because it is the shape of that dialer rather than
-a feature added to it.**
+**Decision.** A call is a conference from its first second, including the ones nobody ever
+transfers. A participant is one party's leg — its own provider identifier, status, and joining/
+leaving (I2, I18 apply unchanged). The recording belongs to the conference, never to a leg.
+**Why.** Hold, transfer, merge and a supervisor listening in are one structure — an operation on a
+participant — not four features. A plain two-leg dial supports none of them: no third party to
+add, nothing to mute, no way to hand the far end off without dropping the call.
+**Rejected.** Upgrading to a conference only on transfer: a two-leg call can't become one without
+the parties hearing it happen, so it means dropping and redialling mid-conversation, plus two dial
+paths and two sets of callbacks to keep agreeing — the second-answer problem I4/I5 refuse one
+level up. Waiting for a customer to ask for transfer: right everywhere else in this file, wrong
+here, because the deferred cost isn't a later feature — it's rebuilding the one screen a floor
+stares at for eight hours.
+**Cost, stated rather than buried.** Billed per participant per minute, on every call, forever — a
+fraction of a cent on all of them to buy something used on a few.
+**Not decided here.** Whether an agent on a call is a scheduling `Resource` — an argument exists
+and no caller yet; the answer arrives when dispatch and the floor have to share a person.
 
-M9's first slice records a call as one row with two telephone numbers on it. That is enough to
-write down what happened and not enough to *do* anything while it is happening. Hold, transfer,
-merge and a supervisor listening in are the four things a floor asks for, and a plain two-leg
-dial supports none of them: there is no third party to add, no participant to mute, and no way to
-hand the far end to somebody else without dropping the call in front of them.
+### D39 — The tenant's telephone account is a subaccount of GOLD's; what's stored is an identifier
 
-**In a conference each of those is one operation on one participant.** Hold is a flag on a
-participant. Merge is a participant joining. Transfer is one joining and another leaving. A
-supervisor is a participant nobody else hears, and coaching is that same participant heard by one
-side only. The capability is not four features; it is one structure with four verbs.
-
-**So a call is a conference from its first second, including the ones nobody ever transfers.**
-
-**The cost, stated rather than buried.** A conference is billed per participant per minute, on
-every call, forever — a fraction of a cent, paid on all of them to buy something used on a few.
-That is a real ongoing charge and it should be argued with rather than waved through.
-
-**Rejected: a conference only once somebody presses transfer.** This is the obvious saving and it
-does not work. A two-leg call cannot become a conference without the parties hearing it happen,
-so *upgrade on demand* means dropping and redialling the person being sold to, at the exact
-moment the conversation got interesting. It also means two dial paths, two sets of callbacks and
-two things to keep in agreement — which is the second answer to one question that I5 and I4
-refuse one level up.
-
-**Rejected: waiting for a customer to ask for transfer.** Ordinarily that trigger is right and
-this file says so repeatedly. It fails here because the cost of the deferral is not a later
-feature, it is rebuilding the dialer — the one screen a floor stares at for eight hours, and the
-one place a rewrite is most visible.
-
-**What this decides about the schema.** `calls` keeps its meaning as *the conversation*; a
-participant is one party's leg, with its own provider identifier, its own status, and its own
-joining and leaving. I2 and I18 apply unchanged: a participant carries `organization_id` and
-reaches its call through a composite key. **The recording belongs to the conference and not to a
-leg**, because what a business plays back is the conversation.
-
-**What this does not decide.** Whether an agent on a call is a `Resource` in the scheduling
-sense — which would make a call something that occupies a person for a window, and put it in
-front of the exclusion constraint that stops double-booking. There is an argument for it and no
-caller yet, and D5's ordering says the answer arrives when dispatch and the floor have to share a
-person.
-
-### D39 — The tenant's telephone account is a subaccount of GOLD's, and what is stored is an identifier
-
-**The question every customer asks: do I bring my own accounts?** For the database and the
-hosting the answer is never — a tenant is a row under RLS, and a tenant with its own deployment
-would be a fork with its own migrations rather than a customer. For the carrier it is a genuine
-fork, and this is the answer.
-
-**GOLD holds the master account and each business gets a subaccount.** Numbers belong to the
-subaccount, so one business dialling from another's number is impossible at the carrier rather
-than prevented in application code — I2 expressed one layer further out than usual. What is
-stored against a tenant is a **subaccount identifier**, which is not a credential and grants
-nothing on its own.
-
-**This is D27's shape and D27's opposite ownership, and the difference is worth stating.** On
-payments the tenant holds the account because they must be the merchant of record and their
-customers' money must never touch a balance of ours. Neither applies here: no customer money
-flows through a telephone call, and nothing requires the business to be the account holder. So
-what carries across from D27 is the *storage* rule — an identifier, never a secret — rather than
-the ownership, and the two records agree on the thing that matters and differ on the thing that
-does not.
-
-**Rejected: a business pasting an authentication token into a settings form.** The shape D27
-already refused. A carrier's auth token is a real credential: it needs somewhere to live that RLS
-alone does not protect, a rotation story, and an answer for the day it is revoked. D33 names that
-as the reason a tenant's own integrations are an axis rather than a feature, and none of it has
-been built.
-
-**Rejected as the default: the tenant's own carrier account.** `market.md` says the buyer is a
-business with no system. *Open a carrier account, register your brand, buy a number* is not
-onboarding — it is four reasons not to start. **It remains the escape hatch**, for a business
-arriving with numbers and a registered reputation already attached: they authorize GOLD from
-their own account and what gets stored is still an identifier rather than a secret. Same table,
-same rule, built when a customer needs it and not before.
-
-**The liability this bought is gone, and D40 is what removed it.** This record originally said
-GOLD is billed for every call every tenant makes and rebills them, so a business that runs up
-spend and does not pay is our loss rather than the carrier's problem -- and that a per-tenant
-spend limit was therefore part of this decision rather than a later refinement. **Credit is
-bought in advance**, so there is nothing to rebill and no exposure to carry: a business that has
-not paid has nothing to spend. The spend limit turned out to be the balance, and the "later
-refinement" turned out to be the thing that made the whole model safe.
-
-**A suspended or failed subaccount is a row, not a log line** — D33's rule, and the same one M6
-settled for automations (I25). A business whose calls have stopped must be told why by the
-application, not by silence.
-
----
+**Decision.** GOLD holds the master carrier account; each business gets a subaccount, so one
+business dialling from another's number is impossible at the carrier rather than merely prevented
+in application code (I2, one layer further out). What's stored is a subaccount identifier — not a
+credential, grants nothing alone.
+**Why the opposite ownership from D27.** On payments the tenant holds the account because they
+must be the merchant of record and their customers' money must never touch GOLD's balance.
+Neither applies to a phone call — no customer money moves, and nothing requires the business to
+hold the account — so what carries over from D27 is the *storage* rule (identifier, never a
+secret), not the ownership.
+**Rejected.** A business pasting a carrier auth token into a settings form — a real credential
+needing rotation and revocation, the shape D27 already refused (D33 names this as why a tenant's
+own integrations are an axis, not built yet). The tenant's own carrier account as the default —
+`market.md`'s buyer has no system, and "open a carrier account, register your brand, buy a
+number" is four reasons not to start. **It remains the escape hatch** for a business arriving with
+numbers and a reputation already attached, authorizing GOLD from their own account.
+**A suspended or failed subaccount is a row, not a log line** (D33's rule, I25's shape) — a
+business whose calls have stopped is told why by the application, not by silence.
 
 ### D40 — Reaching people is paid for in advance, and a balance is a sum
 
-**The question this settles: does charging a tenant for calls make GOLD a metered business.**
-`market.md` says billing the tenant is not needed and that implementation and platform fees are
-invoiced. Telephony costs real money per minute, so something had to give, and there were two
-shapes available.
+**Decision.** A business buys a pack of credit; calls draw it down; at zero, dialling stops.
+Nobody can spend money they haven't already handed over.
+**Why not metering.** Count-the-minutes-bill-monthly is a utility company — invoices, arrears,
+dunning, credit risk — a different business from the one `market.md` describes, adopted to
+support one feature.
+**Load-bearing.** A balance is a sum of a ledger (`communication_credits`, append-only, signed),
+never a column (I4) — `public.credit_balance` is the one answer. The refusal lives where the
+spend starts: `open_call` asks `app.may_spend_on` before it writes a room, long before the carrier
+is asked. Nobody signed in may add credit — no policy on `communication_credits` permits an
+insert, for anyone, staff included (I21); money in arrives only through a payment via a machine
+role, the same shape `payment_webhook` already established.
+**A rate is GOLD's price, written by migration** — `communication_rates` carries no
+`organization_id` (outside I2 the way `platform_staff` is, not in breach of it), and there is no
+application write path. Nothing is seeded: with no rate for a channel, that channel costs nothing
+and refuses nothing, so every existing tenant keeps working unchanged.
+**Not built here:** the purchase itself — a tenant paying GOLD is a charge on GOLD's own processor
+account, the opposite direction and a different code path from D27. Until it exists, a purse is
+filled by migration or not at all.
+**One thing unsolved:** the spread — a rate exists per currency (amounts never convert, I10), so
+GOLD carries the difference between a tenant's own-currency balance and what the carrier bills in
+its.
 
-**Rejected: metering.** Count the minutes, bill at the end of the month. That is a utility
-company: invoices, arrears, dunning, credit risk, revenue recognised over a period, and a
-collections problem the first time a floor has a bad quarter. It is a different business from the
-one `market.md` describes, and adopting it to support one feature would be the tail wagging the
-dog.
+---
 
-**Chosen: credit bought in advance.** A business buys a pack, calls draw it down, and at zero the
-dialling stops. **Nobody can spend money they have not already handed over** -- no arrears, no
-dunning, no exposure, and no invoice at the end of anything. A pack of credit is a *thing
-purchased*, which is the same shape as an implementation fee rather than a new one.
+### D41 — A module is wanted and paid for, and those are two rows
 
-**So `market.md` needed one row corrected rather than its position rewritten**, and that is the
-whole of the change: *billing the tenant* moves from "not needed" to "one route, prepaid, bought
-up front". The business model is unchanged. This record exists because the distinction between
-those two sentences is exactly the kind that gets lost, and the wrong reading of it builds an
-invoicing system nobody wanted.
+**Decision.** `organization_modules` keeps answering one question only: *does this business want
+this module.* A person with `organization.manage` switches it, and D25 is untouched. A second,
+append-only table answers the other question: *what has been paid for, and through when.* A
+**term** — organization, module key, the period it covers, and its price and currency snapshotted
+onto the row (I8) — never updated, only superseded. What a business actually gets is the
+**intersection**, computed inside `listEnabledModules` itself so that none of its callers can
+forget it.
 
-**Three decisions inside it.**
+**Why this shape.** It is D40's, one level up. A balance is a sum of a ledger and never a column;
+an entitlement is a term that covers now and never a flag. Neither is a stored total (I4).
 
-- **A balance is a sum of a ledger, never a column** (I4). `communication_credits` is append-only
-  and signed -- positive in, negative out -- and `public.credit_balance` is the one answer. A
-  balance column would be a second truth, and the two disagree the first time one is written
-  without the other. Nothing has measured a slow query here yet; when something does, the answer
-  is an index rather than a stored total.
-- **The refusal lives where the spend starts, in the database.** `open_call` asks
-  `app.may_spend_on` before it writes a room and long before the carrier is asked. A balance
-  check in a screen is a suggestion an automation, an AI action or a second caller walks past --
-  the same argument that puts every capability check in a policy rather than in a component.
-- **Nobody signed in may add credit.** No policy on `communication_credits` permits an insert, so
-  a member topping up their own purse is impossible rather than merely ungranted -- and staff
-  cannot do it either, because I21 gives them no write grant on any table. Money in arrives from
-  a payment through a machine role, which is the shape `payment_webhook` already established.
+**Four states, where there were two.** The middle two are the ones that make this worth building.
 
-**A rate is GOLD's price and is written by migration.** `communication_rates` carries no
-`organization_id` -- it is not a tenant's row, which puts it outside I2 the way `platform_staff`
-is rather than in breach of it -- and there is deliberately no application write path at all. A
-price list that changes rarely and must change deliberately is a deploy, and that is the correct
-cost.
+| Wanted | Paid | What the business sees |
+|---|---|---|
+| yes | yes | On |
+| yes | no | Screens hidden, **nothing deleted**, and Settings says why |
+| no | yes | *You are paying for this and it is switched off* |
+| no | no | Absent — not part of this business, so nothing to explain (D25) |
 
-**Nothing is seeded, and that is what makes this safe to land.** With no rate for a channel, that
-channel costs nothing, draws nothing down and refuses nothing: every existing tenant keeps working
-exactly as it did. Credit becomes load-bearing on the day somebody decides what a minute is worth,
-which is D31's shape applied to money.
+**Load-bearing.**
+- **A lapse hides screens and takes nothing away.** No row is deleted, no write path is closed
+  retroactively, and the business is told in a sentence. Hiding it in silence is exactly the D31
+  failure card payments already shipped once.
+- **Nobody signed in writes a term.** No insert policy admits `authenticated`, staff included
+  (I21). Money in arrives through a machine role on a webhook — the shape `payment_webhook`
+  established and D40 already reused.
+- **A price is GOLD's, written by migration.** No `organization_id` (outside I2 the way
+  `communication_rates` and `platform_staff` are), per currency, no application write path.
+  Nothing seeded: a module with no price costs nothing and refuses nothing, so every existing
+  tenant keeps working unchanged.
+- **No RLS policy reads any of this.** D25's rule survives the arrival of money: a module is
+  navigation and billing, never authorization, and a lapsed subscription must never become an
+  access control decision.
 
-**One thing it does not solve: the spread.** A rate exists per currency because amounts are never
-converted (I10), so a Canadian business holds a balance in its own currency while the carrier
-bills in another. GOLD carries that difference. Converting instead would need a rate, and a rate
-has a date, and a date makes this accounting software.
+**A trial stops being a special case.** Founding writes zero-price terms with an end date instead
+of switching modules on for free, so `app.enable_default_modules` becomes
+`app.grant_founding_terms`. A trial expiring is a term ending — no expiry flag, no second code
+path, nothing to remember.
 
-**Not built here, and named so it is not reinvented:** the purchase itself. A tenant paying GOLD
-is a charge on *GOLD's own* processor account and must never be confused with D27's flow, which is
-a tenant's customers paying the tenant on *their* connected account with the money never touching
-a balance of ours. Opposite direction, different account, different code path. Until it exists, a
-purse is filled by a migration or not at all.
+**Rejected.** An `expires_at` column on `organization_modules`: it is the stored total I4 refuses,
+and updating it would lose the fact that the module was ever off — the same reason that table has
+no update policy today. Merging terms into `communication_credits`: a term is dated and a balance
+is drawn down, and forcing a fixed subscription price into a balance rebuilds the metering utility
+D40 refused.
+
+**An unpaid module goes read-only, and never goes dark.** Writes to what that module owns are
+refused, with a sentence naming the module and the date its term ended. Reads never stop, export
+never stops, and no row becomes invisible — a business that stops paying must always be able to
+leave with everything it recorded.
+
+**Refused by a trigger, not by a policy**, and that distinction is D25 surviving contact with
+money. No RLS policy consults entitlement. A policy makes rows disappear and cannot explain
+itself, so a late webhook or a term boundary an hour out becomes an operator locked out mid-shift
+with `permission denied` and nothing to read. A trigger is the shape this schema already uses
+wherever a refusal has to say why — `app.check_status_transition`,
+`app.check_work_item_update_capability` — and unlike a check in the domain layer it also holds
+against a caller reaching PostgREST directly.
+
+**A write that spends is already refused one level down.** `open_call` asks `app.may_spend_on`
+before it writes a room, because that write costs GOLD money at a carrier. Entitlement is the
+slower, commercial half of the same idea; it does not duplicate that check and does not replace
+it.
+
+**Which tables a module owns has to be written down**, because nothing records it today —
+`MODULES` names where a module is *configured*, not what it *owns*. That map lives beside the
+trigger, and a conformance test asserts every module owning tables carries the trigger on all of
+them. Without it the next table ships without one, which is the failure this file has already
+recorded twice about column grants.
+
+### D42 — GOLD runs its own business as an ordinary tenant, and staff is a separate account
+
+**Decision.** GOLD-the-business is a tenant with no exemption of any kind. The people who run GOLD
+hold **two accounts**: one listed in `platform_staff`, and one that is an ordinary member of
+GOLD's own organization.
+
+**Why two.** D28 makes staff a Postgres role holding no write grant on any table. A single account
+that was both would be an operator who cannot write anything, and `/organizations` would redirect
+them to `/platform` before they found out. That is not an obstacle to route around — it is the
+axis working. Acting as GOLD and acting as a business are two authorization contexts, and putting
+both in one token is the thing D28 refuses.
+
+**Why a tenant at all.** This file's own *Known defects* section already says GOLD is tenant zero
+and that what tenant zero needs counts as evidence. Reception's first real user is GOLD's own
+sales calls, which is the module it most needs to sell.
+
+**Load-bearing.** No branch anywhere names GOLD's organization id, and no code path is reserved
+for it. Its modules are ordinary D41 terms at zero price — the same rows a paying customer's
+purchase writes, for the reason D37 gives about the demo builder: a seeded exception is a path
+nobody tests. The SQL that grants them lives in `infra/supabase/snippets/`, not in a migration,
+because a migration cannot name an organization id that only exists in one deployment. No signed-in
+person may write one either way; D41's rule is unchanged.
+
+**Two money paths, and they must not be confused.** The `billing` module is a tenant invoicing
+*their* customers, and D27 keeps GOLD out of that flow entirely. A tenant paying GOLD is D41's
+ledger, on GOLD's own processor account, in the opposite direction. GOLD's tenant may well use
+`billing` for its own consulting invoices; subscription revenue never travels through it.
+
+**Rejected, for now.** Staffhood claimed per session — the token hook grants the staff role only
+when the sign-in asked for it. It is safe: the claim can only *reduce* privilege, since the hook
+still verifies the listing, and one account with two doors is the nicer product. It is deferred
+rather than refused because it costs a change to the most security-sensitive function in this
+repository in order to save a second login. **Trigger:** the two logins actually getting in the
+way.
 
 ---
 

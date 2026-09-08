@@ -1,13 +1,9 @@
-import {
-  callbackBase,
-  callingNumber,
-  telephonyProvider,
-  type CallStatus,
-} from '@/lib/adapters/telephony';
+import { callbackBase, telephonyProvider, type CallStatus } from '@/lib/adapters/telephony';
 import { randomUUID } from 'node:crypto';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
+import { callingNumber } from '@/lib/domain/reception/telephony';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -156,13 +152,25 @@ export async function placeCall(
     );
   }
 
-  const from = callingNumber();
   const reportTo = callbackBase();
   const provider = await telephonyProvider();
-  if (!provider || !from || !reportTo) {
+  if (!provider || !reportTo) {
     throw new DomainError(
       'This deployment cannot place calls yet. Record the call instead once you have made it.',
       'calls.telephony_unconfigured',
+    );
+  }
+
+  // **The business's own number, not the deployment's.** This used to read one environment
+  // variable for every tenant on the installation, which meant a business either dialled from
+  // somebody else's number or from none. Two refusals rather than one, because they are two
+  // different problems with two different people to fix them: the one above is ours, and this
+  // one is a business that has not finished setting the module up (D31).
+  const from = await callingNumber(db, { organizationId: input.organizationId });
+  if (!from) {
+    throw new DomainError(
+      'This business has no number to dial from yet. Set one under Calls, in Set up.',
+      'calls.no_calling_number',
     );
   }
 

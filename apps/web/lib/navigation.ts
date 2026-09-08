@@ -8,10 +8,32 @@
  */
 
 /**
- * Which half of the shell an area belongs to (D23): operational navigation is separate from
- * configuration, and an operator must never reach today's work by going through settings.
+ * Which section of the shell an area belongs to.
+ *
+ * **Three, and they are named for what an operator does rather than for what we bill.** The
+ * source this grouping comes from (`starting_conversation.txt`) describes four layers — core
+ * platform, operational engine, business modules, business configuration — and the third of them
+ * cannot be a navigation section here. *Module* is the billing axis (D25): Reports, Assets,
+ * Automations and Reception are all modules, so a section by that name would have to hold areas
+ * that belong in all three of these. Two axes crossed in one list is how a sidebar stops making
+ * sense.
+ *
+ * D23 still governs the part that matters: operations comes first and configuration last, and an
+ * operator must never reach today's work by going through settings.
  */
-export type AreaGroup = 'operational' | 'configuration';
+export type AreaGroup = 'operations' | 'records' | 'configuration';
+
+/**
+ * The sections, in the order the sidebar draws them. One list, so the ordering rule D23 states
+ * is a value the test can read rather than a sentence it has to trust.
+ */
+export const AREA_GROUPS = [
+  { key: 'operations', label: 'Operations' },
+  // Who the work is for, and what it is done to. Entities rather than activities — the things a
+  // business keeps a record of and refers back to.
+  { key: 'records', label: 'Records' },
+  { key: 'configuration', label: 'Configuration' },
+] as const satisfies readonly { key: AreaGroup; label: string }[];
 
 /**
  * The modules this platform sells, and the only list of them — a row in `organization_modules`,
@@ -175,25 +197,27 @@ export type Area = {
 /** Operational areas first, configuration last — a claim about what an operator does all day, not an alphabetisation. */
 export const AREAS: readonly Area[] = [
   // Leads because D23 says the action an operator's phone is designed around is "what do I do next".
-  { segment: 'today', label: 'Today', group: 'operational' },
-  { segment: 'work', label: 'Work', group: 'operational' },
-  { segment: 'schedule', label: 'Schedule', group: 'operational' },
-  { segment: 'customers', label: 'Customers', group: 'operational' },
-  // Beside Customers — the same loop from the other end: who to ring is a question about the customer list.
-  { segment: 'calls', label: 'Calls', group: 'operational', module: 'reception' },
+  { segment: 'today', label: 'Today', group: 'operations' },
+  { segment: 'work', label: 'Work', group: 'operations' },
+  { segment: 'schedule', label: 'Schedule', group: 'operations' },
+  { segment: 'resources', label: 'Resources', group: 'operations' },
   // Operational, not configuration — asking what's at risk of being late happens mid-shift, and nothing here is configured at all.
-  { segment: 'ask', label: 'Ask', group: 'operational', module: 'assistant' },
-  { segment: 'locations', label: 'Locations', group: 'operational' },
-  { segment: 'assets', label: 'Assets', group: 'operational', module: 'assets' },
-  { segment: 'resources', label: 'Resources', group: 'operational' },
-  // Last operational, on purpose — reading what a month came to is periodic, not part of the loop that gets work done.
-  { segment: 'reports', label: 'Reports', group: 'operational', module: 'reporting' },
+  { segment: 'ask', label: 'Ask', group: 'operations', module: 'assistant' },
+  // Last in operations, on purpose — reading what a month came to is periodic, not part of the loop that gets work done.
+  { segment: 'reports', label: 'Reports', group: 'operations', module: 'reporting' },
+
+  { segment: 'customers', label: 'Customers', group: 'records' },
+  // Beside Customers — the same loop from the other end: who to ring is a question about the customer list.
+  { segment: 'calls', label: 'Calls', group: 'records', module: 'reception' },
+  { segment: 'locations', label: 'Locations', group: 'records' },
+  { segment: 'assets', label: 'Assets', group: 'records', module: 'assets' },
+
   // Turning this off also takes priced lines and the invoice off a job screen — see the work item route.
   { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing' },
   { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations' },
   { segment: 'fields', label: 'Custom fields', group: 'configuration' },
   { segment: 'roles', label: 'People and roles', group: 'configuration' },
-  // Last in configuration — a business reaches it while standing everything up and rarely again.
+  // Last but one — a business reaches guided setup while standing everything up and rarely again.
   { segment: 'setup', label: 'Guided setup', group: 'configuration', module: 'drafting' },
   // Names no module — it's where the switches are, so a module able to hide it would lock a business out of its own account.
   { segment: 'settings', label: 'Settings', group: 'configuration' },

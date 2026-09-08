@@ -4,7 +4,7 @@
  */
 export default function Loading() {
   return (
-    <main className="mx-auto max-w-xl p-6 sm:p-8">
+    <main className="mx-auto w-full max-w-xl p-6 sm:p-8">
       <div role="status" aria-live="polite" className="motion-safe:animate-pulse">
         <span className="sr-only">Loading</span>
 

@@ -1,4 +1,4 @@
-import type { BusinessShape } from '@/lib/domain/onboarding/configure';
+import type { BusinessShape } from '@/lib/domain/configuration/configure';
 
 /**
  * Drafting a configuration from a description, named as a capability rather than a provider

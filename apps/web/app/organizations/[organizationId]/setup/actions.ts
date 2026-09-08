@@ -3,14 +3,14 @@
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
-import type { BusinessShape } from '@/lib/domain/onboarding/configure';
+import type { BusinessShape } from '@/lib/domain/configuration/configure';
 import {
   applyConfigurationProposal,
   currentConfigurationProposal,
   discardConfigurationProposal,
   proposeConfiguration,
   reviseConfigurationProposal,
-} from '@/lib/domain/onboarding/proposals';
+} from '@/lib/domain/configuration/proposals';
 
 export type SetupActionState = { error: string | null };
 

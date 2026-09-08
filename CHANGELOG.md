@@ -5,6 +5,275 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Sixteen areas in one flat list, and one divider
+
+The sidebar was two groups — operational, then configuration — with sixteen entries between them
+and nothing saying what any run of them had in common. Three labelled sections now, in
+`AREA_GROUPS` order:
+
+| Section | Holds |
+|---|---|
+| Operations | Today, Work, Schedule, Resources, Ask, Reports |
+| Records | Customers, Calls, Locations, Assets |
+| Configuration | Pricing, Automations, Custom fields, People and roles, Guided setup, Settings |
+
+The grouping comes from `starting_conversation.txt`'s four layers, with **one deliberate
+difference**. That document's third layer is *business modules*, and it cannot be a section here:
+*module* is the billing axis (D25), and Reports, Assets, Automations and Reception are all
+modules — so a section named for it would have to hold areas belonging to all three of the others.
+Two axes crossed in one list is how a sidebar stops making sense. These three are named for what
+an operator does.
+
+Nothing was invented to fill them. That document also lists Teams, Notes, Activities,
+Notifications, Tags, Time tracking, Expenses, Inventory, Routes, Dispatch, Approvals, Forms and an
+audit log — none of which exists, and `navigation.test.ts` fails on an entry with no route behind
+it. The sixteen areas that exist were regrouped; no seventeenth was added.
+
+**Resources and Reports sit under Operations**, which was the owner's call on the two placements
+that could have gone either way.
+
+`navigation.test.ts` no longer compares two group names. It asserts each section is one unbroken
+run and that the runs arrive in `AREA_GROUPS` order, with operations first and configuration last
+— D23's rule read off a value rather than restated as a sentence. Verified by interleaving the
+list and watching it fail.
+
+A section whose every area belongs to a switched-off module renders as nothing at all, heading
+included. Naming a part of the application that is not there for that business would be worse than
+the gap.
+
+### Logging in, and a way back from a forgotten password
+
+The verb is *log in* now, and the route is `/login` — a URL is something people read, and leaving
+`/sign-in` under a button saying *Log in* would have reproduced the inconsistency the rename was
+for. *Sign out* became *Log out* to match; that pairing was not asked for and is the obvious
+consequence of the one that was. *Sign up* stays as it is, since **Log in / Sign up** is an
+ordinary pairing and nobody asked for that half.
+
+**There was no way to recover an account.** Somebody who forgot their password had no route back
+in at all, and the screen offered them a new account instead — the wrong answer to the question
+they arrived with. *Forgotten your password?* now sits above *create one*, in that order and for
+that reason.
+
+Four screens where there were two:
+
+- `/forgot-password` asks for an address and sends a link.
+- `/auth/recover` is a route handler, because exchanging the code writes cookies and a Server
+  Component cannot (`lib/db/server.ts` says so where it swallows that write).
+- `/reset-password` sets the new one, and turns away a caller with no session — which is what
+  arriving without following a link looks like.
+
+**The recovery request reports success whatever happened.** `signInWithPassword` already refuses
+to distinguish *no such account* from *wrong password*; a reset form is the easier place to lose
+that, since there is no password to be wrong. One sentence for every address, saying what was
+done rather than what was found.
+
+**Nothing in the flow takes a destination from the request.** `proxy.ts` refuses a `?next=`
+parameter on the grounds that a stored destination must be checked against a closed set at both
+ends; that argument is stronger here, where the request arrives holding a credential. The callback
+redirects to one literal, and it does so with a **relative** `Location`. Both `request.url` and
+`request.nextUrl` were measured redirecting a request made to `127.0.0.1` off to `localhost` —
+two origins as far as a cookie jar is concerned, so the session set by the exchange would not have
+travelled, `/reset-password` would have found nothing, and the flow would have looped back to
+asking for another link. A relative location needs no host at all.
+
+### The front page and the credential screens are in the same building
+
+There was no shared chrome anywhere: the marketing page was a bare centred column, and the auth
+screens were a form in the middle of white with no wordmark and no way back. `SiteShell` is a
+header and a footer, and both surfaces wear it.
+
+**It is GOLD's chrome and belongs on GOLD's pages only.** On `/book/{slug}` or `/portal/{token}`
+it would be our wordmark on somebody else's shop front — D20 keeps the platform out of a tenant's
+frame entirely. `public-profile.test.ts` now fails the build on a `SiteShell` under `app/(public)/`,
+which is the structural form of the sentence rule that suite already enforced.
+
+The footer links to nothing that does not exist. A Privacy, Terms and About row would be three
+dead ends, and this application has enough of those recorded already.
+
+`CredentialsForm` grew a `fields` switch instead of splitting into four near-identical forms. What
+must not drift between them is the part nobody looks at twice: the autocomplete hints a password
+manager reads, the `role="alert"` on the error, and the disabled state while a submit is in flight.
+
+### A business dials from its own number
+
+Reception shipped complete from the carrier inwards — signed webhooks, a conference per call, legs
+as rows, recordings — and with nothing in the product to point any of it at. `callingNumber()` read
+`TELEPHONY_FROM_NUMBER`, one environment variable for a whole deployment, so every business on it
+dialled from the same number or none did. A module with a switch and no route to its inputs is what
+D31 exists to prevent, and what card payments did before it.
+
+`telephony_settings` is one row per business holding one nullable number, and the Calls screen sets
+it — where the module's `configuredAt` already pointed, first in *Set up*, because it is the one
+thing there without which the module does nothing.
+
+**An identifier, never a credential** (D39). The carrier account stays GOLD's, and what a business
+stores grants nothing on its own. A form taking a carrier auth token is the shape D27 refused for
+payments — a real secret needing rotation and revocation — and it is refused here for the same
+reason. `.env.example` already promised this variable would "go away when the table arrives"; it
+has, and the account itself is still per deployment.
+
+**A table rather than a column on `organizations`.** A column would have meant re-granting that
+table's whole update list, which is the promise-about-every-column mistake this repository has made
+twice. And `organizations` is the kernel: a setting that exists only because a business switched a
+module on does not belong on the row every business has.
+
+**`organization.manage`, not `field.manage`.** 20260828000003 drew that line and it decides this —
+naming a board column is configuring how a business records work, and the number its customers see
+when it rings them is the business itself. It sits with currency and the clock.
+
+**Two refusals where there was one.** *This deployment cannot place calls* and *this business has
+no number yet* are different problems with different people to fix them, and `placeCall` now says
+which.
+
+`reception.test.ts` proves the parts a dialer gets wrong: another business can neither read the row
+nor write it, clearing it is a real act that stops the dialer, and a role holding every reception
+capability — `field.manage`, `call.place`, `customer.create` — is still refused by the database.
+That last one signs the member in *after* the membership exists, because a session opened before it
+would be refused for having no tenant at all, which is the wrong reason and would pass even with
+the capability check deleted. What is deliberately not asserted is that `placeCall` refuses for the
+business's reason: no carrier is configured in that environment, so it refuses one step earlier,
+and a test that could not tell the two apart would pass whichever check was removed.
+
+### Reception had no face, and the pipeline was a list of words
+
+The module this platform sells a floor on rendered as one flat list of every call ever made,
+followed by two lists of vocabulary. The pipeline existed only as those stage names — a business
+could read what its stages were called and never see anybody standing in one.
+
+Calls is a dashboard now (`ui-spec.md` §2b): what happened today, how calls went in the business's
+own words, and who is where in the pipeline. Any tile opens to the whole thing.
+
+**The pipeline is a board, and it is deliberately read-only.** `customer-forms.tsx` said this was
+coming — the stage selector lives on the customer's own page because moving a relationship is
+something somebody does while looking at the person, and *"a board is a way of reading the same
+column and it can be built later"*. This is the reading. Dropping a card would be a write, the
+write already has a home, and a second one here would be a second path to the same column. The
+board scrolls sideways rather than wrapping, because columns that reflow stop reading as a
+pipeline. *No stage* is a column only when somebody is in it — a business that has staged
+everybody never sees it, because an empty column would read as a step in a process nobody named.
+
+**No rate and no comparison.** *Reached* is a flag a business set on its own outcome, and what a
+good day on a floor looks like is not something this platform knows — the same reasoning that
+keeps a status neutral (§7).
+
+The *Set up* section is unchanged and still sits at `id="setup"`, where the module's `configuredAt`
+points and where `navigation.test.ts` reads for it — below the tiles now, because two lists of
+words adjusted twice a year are not what somebody opens this screen for.
+
+**Still missing, and named rather than left to be discovered:** there is nowhere in the product to
+configure the telephone. `telephonyProvider()` reads five environment variables and
+`callingNumber()` a sixth, so a business has no number of its own and the dialer is invisible to
+it. D39 already decided the shape — a subaccount identifier stored against the business, never a
+credential — and nothing stores one yet.
+
+### An area can be a dashboard now, and Today is the first
+
+`components/display/widget.tsx`: `WidgetGrid`, `Widget`, `WidgetPanel`. Tiles read at a glance,
+any of which opens as the screen. `ui-spec.md` §2b is the specification.
+
+**It is not the `dashboards` in `lib/domain/reporting/`, and the two must not converge.** That one
+is a business's own arrangement of saved reports, and the platform still seeds none — including
+the four names in `roadmap.md` — because which numbers a business watches is configuration. This
+is how an *area* draws itself, which has always been the platform's. Nothing here writes a
+`dashboards` row and no test below reads that table.
+
+**The grid is flex and the rule is about the tile, not the viewport** — no narrower than 18rem,
+otherwise share the row. Two fit side by side at 40rem and four at 80rem; one column on a phone
+falls out of the same line rather than being declared as a third case.
+
+**Opening a widget is a URL.** `?widget=<key>` on the area's own page, the shape the Reports screen
+already used for `?dashboard=`. So it survives a reload, arrives with the back button, can be sent
+to somebody, and reads its rows on the server under the caller's own RLS — none of which is true
+of a panel a component remembers. It replaces the grid rather than covering it, so nothing traps
+focus and the way out is the way back.
+
+`dashboard.test.ts` holds that from both ends: `widget.tsx` never becomes a client component or
+grows state, and a page linking to `?widget=` reads `searchParams`. A tile opening onto nothing is
+`navigation.test.ts`'s dead entry wearing different clothes.
+
+**`Stat` and `StatRow` are gone.** A number in a bordered box, and a row of them — `Widget` is the
+same thing with somewhere to go, and Today was their only caller. Keeping both would have left two
+boxes with a number in them and no rule for choosing between them. The one claim worth carrying
+over now sits on `Widget.note`: no trend and no comparison, because the platform cannot tell
+whether a number moving is good or bad for a business it knows nothing about.
+
+**Today is rebuilt from them.** What it replaced was two counts at the top and two tables below,
+the second cut off at ten rows with *N more in Work* underneath — the same idea without a way to
+see the rest without leaving the screen. Each tile now previews four rows and opens to the whole
+table.
+
+### The shell never said where you were
+
+There was no header. `AppShell` was a sidebar and a content column, and the only thing naming the
+current screen was an `<h1>` at the top of that column, which scrolled away as soon as a list got
+long. A job screen said the job's title and nothing about the area it belonged to or the way back
+to it.
+
+The shell now has a sticky header carrying three things: whose business this is (below `md`, where
+the sidebar is not there to say so), where you are, and the two actions that belong to the shell
+rather than to any screen. `ui-spec.md` §2a is the specification.
+
+**The area's heading moved into it and is still one string.** `navigation.ts` supplies the
+navigation entry and the `<h1>` both, exactly as before; `AreaTrail` renders it, and what changed
+is only where. On a detail route — *in* an area but not *at* it — the header shows the way back
+and the page keeps writing its own `<h1>`, because a job's title is a tenant's words.
+
+**Switch business and Sign out came out of the sidebar.** They were two rows under sixteen areas,
+which put *leave this business* in the same column as *go to Customers*. They are not navigation.
+
+**The sidebar is gone below `md` entirely.** It used to render there too, stacking the business's
+identity and those two actions above every screen while the same areas sat in the bar along the
+bottom — two bands of chrome and the list twice before any content. The phone bar is `fixed` and
+`display: none` on an ancestor takes a fixed descendant with it, so it is now a sibling of the
+sidebar rather than a second `<nav>` inside it: `OrgNavBar` beside `OrgNav`, still mapping the one
+`AREAS` list.
+
+The content column widened from `max-w-3xl` to `max-w-5xl`, which is what side-by-side content
+needs and what the next slice is for.
+
+### Sections were the same size as sentences
+
+`SectionHeading` was `text-sm font-medium` — body text, a shade heavier. So a screen read as one
+large title over an undifferentiated wall, and nothing marked where a section started. Now 16px
+semibold, against 24px for the page, 12px uppercase for a group and 14px body: four steps that can
+actually be told apart. It is one line in `section.tsx` and it changes every screen in the
+application.
+
+### A page whose only purpose was one click
+
+`/organizations` rendered a full screen to show most operators a list of length one and ask them
+to click it. It now sends anyone with exactly one business straight in. `?all=1` keeps the list
+reachable — it is what the header's *Switch business* link sends, and without it that link and
+this redirect would bounce a single-business operator right back where they came from.
+
+### Every page outside the shell was as wide as its longest line
+
+`app/layout.tsx` lays `<body>` out as a flex column, so the sign-in screen can fill the viewport
+and centre in it. Every page outside the operator shell is a direct child of that body, and each
+centred itself the ordinary way — `mx-auto max-w-2xl`. In a flex container an automatic margin on
+the cross axis absorbs the free space *instead of* stretching the item, so `align-self: stretch`
+never applied and each `<main>` collapsed to the width of its own text. The `max-w-*` was never
+reached, because the box never got near it.
+
+Nine screens, and they were the wrong nine: the marketing page, sign in, sign up, the business
+list, the platform console, `/book/{slug}` and `/portal/{token}` with both of their loading
+states. Everything a stranger, a prospect or a tenant's own customer ever sees. On the business
+list a heading and a *Sign out* button sat welded together in the middle of an empty page, because
+`justify-between` had no width left to distribute. Only the screens inside `AppShell` were spared,
+and only because its `<main>` sits in a grid cell rather than a flex one.
+
+Each of those containers now declares `w-full` alongside its `mx-auto`, which is correct in a grid
+cell and in an ordinary block too — so it is one rule for every surface rather than a rule about
+which parent a page happens to have today. `AppShell` and the organization `not-found` carry it as
+well, for that reason rather than because they were broken.
+
+`layout.test.ts` is what holds it, and it reads the source rather than rendering anything. The
+obvious test — mount the layout and measure it — cannot work: jsdom implements no layout at all,
+computes no flex stretch and no used width, and would have reported the same class list either
+way. Measuring this honestly needs a real browser, which this repository does not run. So the rule
+is enforced one level up, the way `public-profile.test.ts` enforces a business's own words. It is
+the first test here about how a screen draws, and the gate could not fail on one before it.
+
 ### Nothing streamed, and an unhandled error took the whole route
 
 Every screen here is `force-dynamic` and awaits several reads under RLS before it can render

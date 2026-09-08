@@ -17,30 +17,37 @@ from here rather than copied. D23 refuses a design-tokens document under D8's ne
 and a spec that starts listing values has become one by a longer route.
 
 **§4 was the empty half and is now filled in**, by the change that wrote the controls rather than
-ahead of it. What is recorded there is what was built and what it replaced, including a count
-this document got wrong the first time and had to correct upward.
+ahead of it. What is recorded there is what was built and what it replaced.
 
 ---
 
 ## 1. The surfaces
 
-Five, and they do not share a navigation model. That is the reason this file exists rather than
-another paragraph in D23.
+Six, and only two of them share a navigation model. That is the reason this file exists rather
+than another paragraph in D23.
 
 | Surface | Whose it is | Navigation | Where |
 |---|---|---|---|
+| GOLD's front page | a stranger | GOLD's own header and footer (`SiteShell`) | `app/(marketing)/` |
 | Operator shell | a business's own staff | full IA, three renderings (§2) | `app/organizations/[organizationId]/` |
 | Public booking | a stranger with no account | none — one linear flow | `app/(public)/book/[slug]/` |
 | Customer portal | one customer of one business | none — a single page of their own things | `app/(public)/portal/[token]/` |
 | Platform console | GOLD staff, members of nothing | none — one list, deliberately no sidebar | `app/(platform)/platform/` |
-| Auth | anybody | none — the one group with a layout of its own | `app/(auth)/` |
+| Auth | anybody | GOLD's own header and footer (`SiteShell`) | `app/(auth)/` |
 
-Two consequences that are easy to undo.
+Three consequences that are easy to undo.
 
-**Only the operator shell has an information architecture.** The other four are flows or single
+**Only the operator shell has an information architecture.** The others are flows or single
 pages, and giving any of them a sidebar would import an operator's mental model into a place
 where it means nothing. A customer must never meet a business-configuration concept, and a
 stranger booking a slot must never meet one at all.
+
+**`SiteShell` is GOLD's chrome and belongs on GOLD's pages only** — the front page and the four
+credential screens, which is why those two rows share a description above. It is a header saying
+GOLD and a footer saying GOLD, and on `/book/{slug}` or `/portal/{token}` that would be our
+wordmark on somebody else's shop front. D20 keeps the platform out of a tenant's frame entirely,
+and `public-profile.test.ts` now fails the build on a `SiteShell` anywhere under `app/(public)/` —
+the structural form of the sentence rule the rest of that suite enforces.
 
 **The platform console has no `navigation.ts` entry and must not gain one.** Those nouns belong
 to a business and the console is not one. `navigation.test.ts` scans
@@ -52,15 +59,15 @@ these four are grouped.
 ## 2. The three renderings
 
 The information architecture does not change across breakpoints; only its presentation does.
-`apps/web/lib/navigation.ts` holds the one set of areas and `apps/web/components/org-shell.tsx`
-renders it.
+`apps/web/lib/navigation.ts` holds the one set of areas and
+`apps/web/app/organizations/[organizationId]/org-shell.tsx` renders it. (This file named
+`components/org-shell.tsx` until the path was corrected — that directory is for what more than
+one surface needs, and the shell serves one.)
 
-**All three renderings exist.** This section once claimed the tablet rail did too, copying the
-claim from the decision rather than from the file — `org-shell.tsx` had one breakpoint, `md`, so a
-tablet got the desktop sidebar. M11 built the third: icon-only between `md` and `lg` over the same
-`AREAS` list the other two renderings already map, an icon per area from `lucide-react` keyed by
-segment in `org-shell.tsx` (`AREA_ICONS`) rather than in `navigation.ts`, which stays what it was
-— segments, labels, groups, modules.
+**All three renderings exist.** The tablet rail is M11's: icon-only between `md` and `lg` over the
+same `AREAS` list the other two renderings already map, an icon per area from `lucide-react` keyed
+by segment in `org-shell.tsx` (`AREA_ICONS`) rather than in `navigation.ts`, which stays what it
+was — segments, labels, groups, modules.
 
 | | Navigation | Layout | Overlays | State |
 |---|---|---|---|---|
@@ -71,12 +78,98 @@ segment in `org-shell.tsx` (`AREA_ICONS`) rather than in `navigation.ts`, which 
 **The sidebar is the desktop rendering of the IA, never its source.** Both renderings map the
 same `AREAS`; two lists that had to agree eventually would not.
 
-**Operational is ruled apart from configuration**, and `navigation.test.ts` fails on an
-interleaved list. An operator must never reach today's work by going through settings.
+**Three sections, ruled apart, in `AREA_GROUPS` order** — Operations, Records, Configuration.
+`navigation.test.ts` fails on an interleaved list: each section must be one unbroken run, and an
+operator must never reach today's work by going through settings (D23).
+
+The grouping comes from `starting_conversation.txt`'s four layers, with one deliberate difference.
+That document's third layer is *business modules*, and it cannot be a section here: *module* is
+the billing axis (D25), and Reports, Assets, Automations and Reception are all modules — so a
+section by that name would have to hold areas belonging to all three of the others. Two axes
+crossed in one list is how a sidebar stops making sense. These three are named for what an
+operator does.
+
+| Section | Holds | Why |
+|---|---|---|
+| Operations | Today, Work, Schedule, Resources, Ask, Reports | The loop that gets work done, and what it came to |
+| Records | Customers, Calls, Locations, Assets | Who the work is for and what it is done to — entities rather than activities |
+| Configuration | Pricing, Automations, Custom fields, People and roles, Guided setup, Settings | What a business sets up once and adjusts rarely |
+
+A section whose every area belongs to a switched-off module renders as nothing at all, heading
+included — naming a part of the application that is not there for that business would be worse
+than the gap.
 
 **The phone bar does not collapse into a drawer or a "More" menu.** A drawer needs state, a
 toggle, a focus trap and an escape key to be correct; a "More" menu would be a second place an
 area could live.
+
+**The desktop sidebar does collapse, to the tablet rail's own icon-only width.** Unlike a phone
+drawer this needs none of that machinery — nothing overlays, nothing traps focus, the column
+just narrows — so `AppShell` (`components/containers/app-shell.tsx`) holds it as a `localStorage`
+preference read through `useSyncExternalStore`, applying only from `lg` up. Still one `AREAS`
+list; the identity block compacts the same way nav labels already did for the tablet rail, via
+the shared `SidebarLabel`.
+
+**The sidebar is not there at all on a phone.** It used to be, which put the business's identity
+and the shell's own actions in a band above every screen while the same areas sat in the bar at
+the bottom — two pieces of chrome and one duplicated list before any content. Below `md` the
+areas are the bottom bar and everything else is the header, so `AppShell` hides the column
+outright. The phone bar is `fixed`, and `display: none` on an ancestor takes a fixed descendant
+with it, so that bar is a sibling of the sidebar rather than a second `<nav>` inside it —
+`OrgNavBar` beside `OrgNav`, both mapping the one `AREAS` list.
+
+---
+
+## 2a. The header
+
+**Every operator screen sits under one sticky header, and it answers *where am I*.** Scrolling a
+long list of jobs is exactly when that stops being obvious, so it does not scroll away. It
+carries its own background: the page moves underneath it, and a transparent bar shows rows
+sliding through the text.
+
+Three things, in the order they are read:
+
+| | What | Which widths |
+|---|---|---|
+| Left | the business's mark and name | below `md` only — the sidebar says it above that |
+| Middle | where you are: the area's name, or a link back to it from a detail route | all |
+| Right | Switch business, Log out | all; labels appear from `sm` |
+
+**The area's `<h1>` lives here now, and it is still one string.** `navigation.ts` supplies the
+navigation entry and the heading both, exactly as before — `AreaTrail` renders it, and what
+changed is only where. A detail route is *in* an area and not *at* it, so there the header shows
+the way back and the page writes its own `<h1>`, because a job's title is a tenant's words.
+
+**Switch business and Sign out are not navigation and no longer sit in the list of areas.** In
+the sidebar they were two rows under sixteen, which put *leave this business* in the same column
+as *go to Customers*. They stay plain rows rather than becoming `Button`s, for the reason
+`SIDEBAR_ROW` exists: chrome declares no weight in the action hierarchy (§6).
+
+---
+
+## 2b. Widgets, and what an area opens onto
+
+**An area may present itself as a dashboard of widgets**: tiles you read at a glance, any of
+which opens as the screen. `components/display/widget.tsx` holds `WidgetGrid`, `Widget` and
+`WidgetPanel`. Today is the first; the module areas follow.
+
+**This is not the `dashboards` in `lib/domain/reporting/`, and the two must not converge.** That
+one is a business's own arrangement of saved reports, and `CLAUDE.md` refuses to let the platform
+seed one — including the four names in `roadmap.md` — because which numbers a business watches is
+configuration and not four screens. This is how an *area* draws itself, which has always been the
+platform's. A business still builds report dashboards on top of it.
+
+| Rule | Why |
+|---|---|
+| The grid is flex, not columns at three breakpoints | The rule is about the tile — *no narrower than 18rem, otherwise share the row*. One column on a phone falls out of that rather than being declared |
+| A widget opens to `?widget=<key>`, never to remembered state | It survives a reload, arrives with the back button, can be sent to somebody, and reads its rows on the server under the caller's own RLS. None of that is true of a panel a component remembers |
+| The expanded view replaces the grid; it does not cover it | Nothing overlays, so nothing traps focus and nothing needs an escape key. The way out is the way back |
+| The title is the link, not the whole tile | A tile whose every pixel navigates cannot hold the rows that make it worth looking at — a link inside a link is invalid, and the overlay that works around it swallows text selection |
+| No trend, no comparison, no percentage | The platform cannot tell whether a number moving is good or bad for a business it knows nothing about. Same reasoning as §7's neutral status |
+
+`dashboard.test.ts` holds the second rule from both ends: `widget.tsx` never becomes a client
+component, and a page linking to `?widget=` reads `searchParams` — a tile that opens onto nothing
+is `navigation.test.ts`'s dead entry in another costume.
 
 ---
 
@@ -154,13 +247,9 @@ was moved *out* of the directory and on what test. No screen spells a control by
 **What it replaced, measured before and after.** 23 local style constants across eight names —
 `INPUT_CLASS` in ten files, then `INPUT`, `CELL`, `FIELD`, `BUTTON`, `SMALL_INPUT`,
 `SELECT_CLASS`, `COORDINATE_INPUT` — are gone, along with every hand-written colour. The most
-repeated class string in the application is now `mt-1`.
-
-**The finding was worse than the first count.** This section said eleven `INPUT_CLASS` constants
-in four spellings. Eleven was the number of *files*, ten of the constants carried that name, and
-counting only that name missed twelve more doing the same job under seven other names. Extraction
-had been attempted eight separate times. That is the failure D23's last bullet describes, and it
-compounds quietly: each one looks like tidying up the file you are in.
+repeated class string in the application is now `mt-1`. Extraction had been attempted eight
+separate times before this one stuck — each attempt looked like tidying up the file it was in,
+which is the failure D23's last bullet describes.
 
 **Spacing and layout stayed at the call site**, which is why `mt-1`, `flex-1` and `w-fit` are
 still written out and should be. A control carries the rule, the type scale and the colour role.
@@ -211,6 +300,13 @@ same argument settles this the other way round: the element that does all four a
 business with forty customers ended its customer list with a create form, so the answer to *what
 is on this page* was whatever fitted above a thing used once a week. A form is now available and
 opens by default only when the list behind it is empty — because then the form *is* the screen.
+
+**The outermost container declares its width and not only its margins.** `mx-auto max-w-2xl`
+centres a block and does nothing useful in a flex parent, where an automatic side margin absorbs
+the free space instead of stretching the item and leaves the box as wide as its longest line.
+Every `<main>` outside the operator shell is a direct flex child of `<body>`, so each carries
+`w-full` as well; `layout.test.ts` reads the source and fails on one that does not, because jsdom
+implements no layout and a test that rendered these pages would have seen nothing wrong.
 
 ---
 

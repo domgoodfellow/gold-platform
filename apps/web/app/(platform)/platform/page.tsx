@@ -17,7 +17,7 @@ async function signOutAction() {
   'use server';
   const db = await getDb();
   await signOut(db);
-  redirect('/sign-in');
+  redirect('/login');
 }
 
 /**
@@ -41,7 +41,7 @@ export default async function PlatformPage() {
     await requireActor(db);
   } catch (error) {
     if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/sign-in');
+      redirect('/login');
     }
     throw error;
   }
@@ -56,12 +56,12 @@ export default async function PlatformPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-4xl p-8">
+    <main className="mx-auto w-full max-w-4xl p-8">
       <div className="flex items-baseline justify-between">
         <PageHeading>Platform</PageHeading>
         <form action={signOutAction}>
           <Button type="submit" tone="text" size="small">
-            Sign out
+            Log out
           </Button>
         </form>
       </div>

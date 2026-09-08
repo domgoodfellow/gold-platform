@@ -10,8 +10,8 @@ you would have looked it up by.
 | Folder | What is in it | Spec |
 |---|---|---|
 | `controls/` | things a person operates: `Button`, `ButtonLink`, the inputs, the labels, `OptionalSelect` | §4 |
-| `containers/` | the page's own furniture: `Card`, `Disclosure`, `Section`, the headings, `DividedList`, `EmptyState` | §5 |
-| `display/` | values you read rather than edit: `DataTable`, `Badge`, `DefinitionList`, `Stat`, `Toolbar` | §5a, §7 |
+| `containers/` | the page's own furniture: `Card`, `Disclosure`, `Section`, the headings, `DividedList`, `EmptyState`, `AppShell` and the sidebar rows it draws | §5 |
+| `display/` | values you read rather than edit: `DataTable`, `Badge`, `DefinitionList`, `Toolbar`, and the dashboard `Widget` | §5a, §7 |
 | `custom-fields/` | rendering and collecting a tenant's own fields | — |
 | `class-names.ts` | `cx`, used by all three | §4 |
 

@@ -6,6 +6,7 @@ import { createCustomerStage, updateCustomerStage } from '@/lib/domain/customers
 import { DomainError } from '@/lib/domain/errors';
 import { createCallOutcome } from '@/lib/domain/reception/outcomes';
 import { placeCall, recordCall, recordCallOutcome } from '@/lib/domain/reception/calls';
+import { setCallingNumber } from '@/lib/domain/reception/telephony';
 
 /**
  * The reception module's writes.
@@ -153,4 +154,28 @@ export async function wrapUpCallAction(
       durationSeconds: duration === '' ? null : Number(duration),
     }),
   );
+}
+
+/**
+ * The number this business dials from.
+ *
+ * `organization.manage` rather than `field.manage`, and decided by the policy rather than here:
+ * naming a stage is configuring how a business records work, and the number its customers see
+ * when it rings them is the business itself.
+ */
+export async function setCallingNumberAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  return attempt(organizationId, '/calls', async () => {
+    const db = await getDb();
+    // An empty field clears it — a business taking its number down rather than a mistake.
+    // `set_calling_number` reads it as null, and dialling refuses again.
+    await setCallingNumber(db, {
+      organizationId,
+      number: String(formData.get('number') ?? ''),
+    });
+  });
 }

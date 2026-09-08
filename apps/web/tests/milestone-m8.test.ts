@@ -8,7 +8,7 @@ import type {
   DraftingProvider,
   DraftingRequest,
 } from '@/lib/adapters/drafting';
-import { configureBusiness, type BusinessShape } from '@/lib/domain/onboarding/configure';
+import { configureBusiness, type BusinessShape } from '@/lib/domain/configuration/configure';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { listRoles } from '@/lib/domain/tenancy/roles';
@@ -144,7 +144,7 @@ const {
   currentConfigurationProposal,
   proposeConfiguration,
   reviseConfigurationProposal,
-} = await import('@/lib/domain/onboarding/proposals');
+} = await import('@/lib/domain/configuration/proposals');
 
 type Stood = {
   db: SupabaseClient;

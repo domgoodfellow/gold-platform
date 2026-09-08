@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createCustomer, listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
-import { configureBusiness, type BusinessShape } from '@/lib/domain/onboarding/configure';
+import { configureBusiness, type BusinessShape } from '@/lib/domain/configuration/configure';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { addPricedLine, listPricedLines, priceWorkItem } from '@/lib/domain/pricing/prices';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
@@ -30,7 +30,7 @@ import { foundBusiness } from './helpers/founding';
  *
  * **The structure of this file is the assertion, and the `expect` calls are secondary.**
  * There is exactly one function that configures a business, it is
- * `configureBusiness` in `lib/domain/onboarding/configure.ts`, and it performs a fixed
+ * `configureBusiness` in `lib/domain/configuration/configure.ts`, and it performs a fixed
  * sequence of domain calls taking every word, number, status, field, order, currency, zone
  * and price as *data*. It is called twice below, with two business shapes that share nothing:
  * an equipment hire yard in Amsterdam trading in euro, and a clinic in Tokyo trading in yen.
@@ -67,7 +67,7 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 /**
  * A business shape, plus the evidence this test needs to assert against it.
  *
- * `BusinessShape` itself now lives in `lib/domain/onboarding/configure.ts` — the structural
+ * `BusinessShape` itself now lives in `lib/domain/configuration/configure.ts` — the structural
  * claim this file makes is about a function with no branch in it, and that function is real
  * code with a second caller rather than a fixture. What is added here is the one customer, one
  * job and one quote the assertions read: those are evidence, not configuration, and a business

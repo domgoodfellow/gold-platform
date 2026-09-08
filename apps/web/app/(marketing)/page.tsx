@@ -11,7 +11,7 @@ import Link from 'next/link';
  */
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-10 p-8">
+    <main className="mx-auto w-full flex min-h-screen max-w-3xl flex-col justify-center gap-10 p-8">
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">GOLD</h1>
         <p className="mt-3 text-lg opacity-80">
@@ -50,7 +50,7 @@ export default function Home() {
           you actually work.
         </Hint>
         <Link
-          href="/sign-in"
+          href="/login"
           className="mt-4 inline-block text-sm underline underline-offset-4"
         >
           Sign in

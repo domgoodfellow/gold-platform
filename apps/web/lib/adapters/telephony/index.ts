@@ -72,4 +72,4 @@ export type TelephonyProvider = {
  * implementation's name arrives in the domain layer one import at a time. `./registry` is
  * therefore the single place in the tree, outside an implementation, permitted to name a carrier.
  */
-export { callbackBase, callingNumber, telephonyProvider } from './registry';
+export { callbackBase, telephonyProvider } from './registry';

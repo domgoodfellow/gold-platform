@@ -2540,6 +2540,42 @@ export type Database = {
           },
         ]
       }
+      telephony_settings: {
+        Row: {
+          calling_number: string | null
+          organization_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          calling_number?: string | null
+          organization_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          calling_number?: string | null
+          organization_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telephony_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telephony_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_item_checklist_items: {
         Row: {
           created_at: string
@@ -3659,6 +3695,10 @@ export type Database = {
           p_heading_font: string
           p_organization_id: string
         }
+        Returns: undefined
+      }
+      set_calling_number: {
+        Args: { p_number: string; p_organization_id: string }
         Returns: undefined
       }
       set_checklist_item_done: {

@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
-import { canDraftConfiguration } from '@/lib/domain/onboarding/proposals';
+import { canDraftConfiguration } from '@/lib/domain/configuration/proposals';
 import { createOrganization } from '@/lib/domain/tenancy/organizations';
 import { AREAS, areaHref } from '@/lib/navigation';
 

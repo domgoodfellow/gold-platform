@@ -4,7 +4,7 @@ import {
   canDraftConfiguration,
   currentConfigurationProposal,
   listConfigurationProposals,
-} from '@/lib/domain/onboarding/proposals';
+} from '@/lib/domain/configuration/proposals';
 import { requireOrganization } from '@/lib/route/organization';
 import { DescribeForm, ProposalHistory, ProposalReview } from './setup-forms';
 

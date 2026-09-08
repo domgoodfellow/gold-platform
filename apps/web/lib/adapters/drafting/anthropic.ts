@@ -4,7 +4,8 @@ import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { FIELD_KINDS, CUSTOM_FIELD_ENTITIES } from '@/lib/domain/fields/field-definitions';
 import { TRIGGER_EVENTS } from '@/lib/domain/automation/rules';
 import { FONT_KEYS } from '@/lib/domain/branding/palette';
-import type { BusinessShape } from '@/lib/domain/onboarding/configure';
+import { MODULES } from '@/lib/navigation';
+import type { BusinessShape } from '@/lib/domain/configuration/configure';
 import type {
   ConfigurationGap,
   DraftedConfiguration,
@@ -105,6 +106,7 @@ function responseSchema(): Record<string, unknown> {
           'hours',
           'roles',
           'automations',
+          'modules',
         ],
         properties: {
           typeName: {
@@ -202,6 +204,19 @@ function responseSchema(): Record<string, unknown> {
             description:
               'What this business does without anybody present. An empty list is an ordinary answer.',
           },
+          modules: {
+            type: 'array',
+            items: { type: 'string', enum: MODULES.map((module) => module.key) },
+            // Built from `MODULES` rather than restated, the same rule the header states about
+            // every other list here — so a module added to the platform is offered without
+            // anybody remembering this file, and one removed cannot be proposed.
+            description: [
+              'Which parts of the platform this business needs, from what they described. Only',
+              'what they actually said they do — a module nobody mentioned is something they',
+              'have to pay for, so leave it out and ask instead. What each one is:',
+              ...MODULES.map((module) => `- ${module.key}: ${module.description}`),
+            ].join(' '),
+          },
           voice: {
             type: 'object',
             additionalProperties: false,
@@ -249,7 +264,7 @@ function responseSchema(): Record<string, unknown> {
             field: {
               type: 'string',
               description:
-                'Which part of the shape the question concerns: typeName, statuses, transitions, fields, prices, hours, roles, automations, voice or brand.',
+                'Which part of the shape the question concerns: typeName, statuses, transitions, fields, prices, hours, roles, automations, modules, voice or brand.',
             },
             question: {
               type: 'string',
@@ -292,6 +307,9 @@ const SYSTEM = [
   '  left empty. "Quality service, guaranteed" is something you made up about somebody else.',
   '- A colour only if they named one, or if their trade has one nobody would dispute. Leave it',
   '  empty otherwise: a colour you invented is on every screen they look at.',
+  '- A module only if they described doing that thing. Each one is something they switch on and',
+  '  pay for, so switching one on because it sounded useful is spending their money for them.',
+  '  If a module needs another one, name both or neither.',
   '',
   'Raise a gap for anything you were thin about. A short proposal with three good questions is',
   'better than a complete-looking one built on assumptions. Ask in plain language: the person',

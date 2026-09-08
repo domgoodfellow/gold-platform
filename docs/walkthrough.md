@@ -1,88 +1,69 @@
 # Driving the platform by hand
 
-The test suite proves the platform. It does not *show* it to you — every suite runs headless
-against a real Postgres, creates its own users, and takes its assertions from function return
-values rather than from a screen. This document is the other path: how to sit in front of the
-running application and reach, with a mouse, each thing a milestone test proves with an
-`expect`.
+The test suite proves the platform, headless against a real Postgres. This document is the other
+path: how to sit in front of the running application and reach, with a mouse, each thing a
+milestone test proves with an `expect`.
 
 It is a **guide, not a specification**. Where it disagrees with the code, the code is right and
-this file is stale — say so in the same commit that finds it. What it is allowed to be
-authoritative about is the one thing no other document records: **which capabilities exist in
-the domain layer and cannot be reached from any screen**, which is the section near the end.
+this file is stale — say so in the same commit that finds it. It is authoritative about one thing
+no other document records: **which capabilities exist in the domain layer and cannot be reached
+from any screen** — the section near the end.
 
 ---
 
 ## What Supabase Studio's user list actually is
 
 Studio's *Authentication* page fills up with addresses like `alice-7f3c…@example.test` after a
-test run, and none of them can sign you in. That is not a bug and they are not seed data:
+test run, and none of them can sign you in. Not a bug, not seed data:
 
-- Each suite calls `admin.auth.createUser` with a **password it generates and throws away** —
-  `pw-` plus a random uuid. Nothing writes it down, so nothing can type it into `/sign-in`.
-- The addresses are per-run, because two suites running against one database must not collide
-  on `customers_org_email_unique` or on a membership.
-- Nothing cleans them up. Deleting them by hand mostly fails: `created_by` on every tenant
-  table references `auth.users` **without** `on delete cascade`, so a user who founded anything
-  is held by their own rows.
+- Each suite calls `admin.auth.createUser` with a password it generates and throws away.
+- Addresses are per-run, so two suites against one database don't collide on
+  `customers_org_email_unique` or a membership.
+- Nothing cleans them up — `created_by` on every tenant table references `auth.users` without
+  `on delete cascade`, so a user who founded anything is held by their own rows.
 
-**The eraser is `pnpm db:reset`.** It re-applies every migration against an empty database, so
-the Studio list and every tenant row go together. Do it before a walkthrough you intend to read
-carefully, and expect to redo the sign-up below afterwards.
+**The eraser is `pnpm db:reset`.** Re-applies every migration against an empty database. Do it
+before a walkthrough you intend to read carefully.
 
-There is deliberately **no seed file**. `infra/supabase/` holds `migrations` and `snippets` and
-no `seed.sql`, because a seeded business would be the platform choosing a business's statuses,
-hours and vocabulary — the thing `constraints.md` forbids in its never-hardcode list. A new
-organization here is genuinely empty, and the emptiness is the product working.
+No seed file exists on purpose — `infra/supabase/` holds `migrations` and `snippets`, never
+`seed.sql`, because a seeded business would be the platform choosing a business's statuses, hours
+and vocabulary. A new organization here is genuinely empty, and the emptiness is the product
+working.
 
 ---
 
 ## The short way in: `pnpm demo`
-
-Everything below this section is the long way, and it is the one to read when you want to know
-what the product asks of somebody standing a business up. When what you want is **screens with
-something on them**, there is one command:
 
 ```bash
 pnpm demo:fresh    # reset the database, then populate it
 pnpm demo          # populate a database that is already empty
 ```
 
-It stands up two businesses that share no word — an equipment hire yard in Amsterdam trading in
-euro and a clinic in Tokyo trading in yen — with jobs in every state, invoices and costs spread
-across three months, saved reports and a dashboard each. It prints their URLs, the accounts, and
-the one password they all share, so you copy an address into `/sign-in` and click.
+Stands up two businesses sharing no word — an equipment hire yard in Amsterdam (euro) and a
+clinic in Tokyo (yen) — jobs in every state, invoices and costs across three months, saved
+reports and a dashboard each. Prints their URLs, accounts, and the one shared password.
 
-Four things worth knowing before you rely on it:
-
-- **It is not a seed and nothing about it runs automatically.** Every row it writes comes from a
-  real domain call under a real session, so the paragraph above stays true: a database you have
-  not run this against is genuinely empty. `constraints.md` D37 records why that distinction is
-  worth a script instead of a `seed.sql`.
-- **It refuses to run against anything but localhost**, and refuses a database that already holds
-  organizations rather than half-building a second copy.
-- **Sign in as the second account in each business.** They hold three capabilities and nothing
-  else, which is the fastest way to see that hiding a control is a courtesy and the policy is the
-  guard — every screen renders and the forms they cannot use explain themselves.
-- **One report is a spike and the others are spread, and that is honest.** Invoices, costs and
-  booked time carry dates a caller chose, so those figures run across months. *Work marked
-  complete* reads the event log, which nothing may backdate, so every completion is dated the
-  afternoon you ran the script. The businesses really are that young.
+- **Not a seed** — every row comes from a real domain call under a real session (D37).
+- Refuses anything but localhost, and refuses a database that already holds organizations.
+- **Log in as the second account in each business** — three capabilities and nothing else, the
+  fastest way to see that hiding a control is a courtesy and the policy is the guard.
+- One report is a spike and the rest are spread, honestly: invoices/costs/booked time carry
+  dates a caller chose, but *work marked complete* reads the event log, which nothing may
+  backdate — every completion is dated the afternoon you ran the script.
 
 ---
 
 ## Standing it up
 
-1. `pnpm db:start` — needs Docker. It prints an API URL, an anon key and a service-role key.
+1. `pnpm db:start` — needs Docker. Prints an API URL, an anon key and a service-role key.
 2. Put the anon key in `apps/web/.env.local` (copy `apps/web/.env.example` first). Nothing in
    `apps/web` may hold the service-role key.
-3. Put what the tests need in `infra/.env.test` — gitignored, and the only place a service-role
-   key belongs, because the suites need to *create* users before they sign in as them.
+3. Put what the tests need in `infra/.env.test` — gitignored, the only place a service-role key
+   belongs, since the suites create users before signing in as them.
 4. `pnpm --filter @gold/web dev` — <http://localhost:3000>.
 
-Studio is at <http://127.0.0.1:54323>. Use it to *watch* rows, not to make them: every
-walkthrough below is meant to be doable without it, and the places where that breaks down are
-listed under "What you cannot reach from any screen".
+Studio is at <http://127.0.0.1:54323>. Use it to *watch* rows, not to make them — see "What you
+cannot reach from any screen" for where that breaks down.
 
 ---
 
@@ -90,279 +71,223 @@ listed under "What you cannot reach from any screen".
 
 ### 1. Two people, not one
 
-Open a private window alongside your normal one and sign up twice — `/sign-up`. You want two
-accounts because `addMember` refuses an address with no account behind it: *"Nobody with that
-address has an account yet. Ask them to sign up first."* There is no invitation email; M6 owns
-channels, and until then a member is somebody who signed up and was then named.
+Sign up twice — `/sign-up` — in two browser sessions. `addMember` refuses an address with no
+account behind it, and there's no invitation email yet (M6 owns channels). The second account is
+also how you see I12 later: a member whose role lacks a capability still sees every screen and is
+told why the form isn't theirs.
 
-The second account is also how you see I12 with your own eyes later: a member whose role lacks
-a capability still sees every screen and is told why the form is not theirs.
+### 1b. Forgetting the password — the only flow with a round trip in it
+
+Worth driving by hand, because it is the one thing here that leaves the application and comes
+back, and no test in this repository follows it end to end: the link is carried by a browser
+holding a cookie that a test client does not have.
+
+1. **/login → *Forgotten your password?*** Give it the address of one of the accounts above.
+2. The reply is the same sentence whatever you type, including an address with no account. That
+   is deliberate — a form that answered differently would let somebody learn which addresses are
+   registered.
+3. **Read the mail at <http://127.0.0.1:54324>** (Inbucket, part of the local stack). The link
+   points at Supabase, which bounces to `/auth/recover?code=…`.
+4. Following it should land you on **/reset-password**, already signed in, with your own address
+   named on the screen. Set a new one and you arrive at `/organizations`.
+
+**If step 4 sends you back to *Forgotten your password?*, the session did not travel.** That is
+the failure this flow is prone to: the exchange sets a cookie on the host the link was opened at,
+so anything that changes host between the link and the form loses it. The callback redirects with
+a relative `Location` for exactly that reason — `request.url` and `request.nextUrl` were both
+measured turning a `127.0.0.1` request into a `localhost` redirect.
 
 ### 2. Have a business provisioned for you
 
-**This step used to say "found a business", and it cannot any more.** D29 closed founding:
-`/organizations` has no form on it, `create_organization` holds no grant, and a business begins
-when somebody at GOLD provisions it. Sign in as the staff account from *The other side* below,
-provision one for the first of your two sign-ups, then come back and sign in as them.
+Founding closed (D29): `/organizations` has no form, `create_organization` holds no grant, and a
+business begins when GOLD provisions it. Log in as the staff account from *The other side*
+below, provision one for the first of your two sign-ups, then sign in as them.
 
-What the provisioning form asks is four things about the business plus the address it belongs
-to, and each of the four is a decision rather than a formality:
+The provisioning form asks four things, each deliberate:
 
 - *What is it called* — the business's name.
-- *What should it call you* — your display name **in this business only** (D19). The founder is
-  not a special case; they are its first membership, and another business may know you by a
-  different name.
-- *Timezone* — write-once at founding, because the edit path needed a capability of its own.
-  UTC is the honest default rather than the server's zone, which would make the answer depend
-  on where this happened to be deployed.
-- *Currency* — required, with no default, because there is no neutral currency to pick.
+- *What should it call you* — your display name **in this business only** (D19).
+- *Timezone* — write-once at founding; UTC is the default rather than the server's zone.
+- *Currency* — required, no default — there's no neutral currency to pick.
 
-What you get: one membership holding the founding role with every capability, the kernel — work,
-the schedule, customers, locations, resources, fields, roles, settings, none of which is a
-module and none of which can be switched off — and exactly one module on: **Billing**.
+You get one membership with every capability, the kernel (work, schedule, customers, locations,
+resources, fields, roles, settings — none switchable off), and exactly one module on: **Billing**.
 
-**Assets, public booking, the customer portal and card payments all start off.** Publishing a
-page to the internet is not a default anybody should acquire by signing up, and neither is a
-module for machines a business may not have. Go to Settings → *What this business uses* and
-watch the sidebar change as you flip Assets and Billing: that is the fastest way to see the
-difference between a module and the kernel, and switching Billing off also takes the quote, the
-invoice and the margin off every job screen.
+**Assets, public booking, the portal and card payments all start off.** Settings → *What this
+business uses* — flip Assets and Billing and watch the sidebar change; switching Billing off also
+takes the quote, invoice and margin off every job screen.
 
 ### 2b. The shortcut, if this deployment has one — *Guided setup*
 
-**Optional, and worth doing once in each direction.** Switch **Guided setup** on in Settings and a
-*Guided setup* entry appears at the bottom of the configuration group. It takes one box: describe
-the business in your own words — the work it does, how a job goes from start to finish, what you
-charge for, when you are open — and it hands back a whole proposed setup with questions attached
-about whatever it could not work out.
+Switch **Guided setup** on in Settings. Describe the business in your own words — the work, how a
+job moves start to finish, what you charge, when you're open — and get back a proposed setup with
+questions attached for whatever it couldn't work out.
 
-**Nothing has happened to the business at this point, and that is the thing to check.** Open
-*Work* in another tab before you press Apply: still empty. The proposal is a row, every word of it
-is yours to change on the screen, and only Apply writes anything — through exactly the same calls
-steps 3 to 6 make by hand. Change a stage's name before applying, then go and look at the board:
-your word is there and the drafted one is not.
+**Nothing has happened to the business yet.** Open *Work* in another tab before pressing Apply:
+still empty. Only Apply writes anything, through the same calls steps 3–6 make by hand. Change a
+stage's name before applying, then check the board — your word is there, the drafted one isn't.
 
-**If this deployment has no model key, the screen says so** rather than taking three paragraphs
-and refusing them, and points you at the screens below. That is the honest state, not a broken
-one: everything the proposal would have written can be typed in by hand, which is why guided setup
-is a module and not part of the kernel.
+No model key configured, the screen says so rather than failing after three paragraphs.
 
-Steps 3 to 6 are the hand path. Do them at least once even if the shortcut worked — they are what
-the shortcut is a shortcut *to*, and a proposal that lands part-way leaves you finishing it here.
+Do steps 3–6 at least once regardless — a proposal that lands part-way leaves you finishing it by
+hand.
 
 ### 3. Teach it what work is — *Work*
 
-The Work area is where a business's vocabulary is written, and a brand-new one has none, so the
-board is empty and there is nothing to create a job against.
+A brand-new business has no vocabulary, so the board is empty.
 
-1. **Kinds of work**, at the bottom of the page — create one. This is a `work_item_type`, and
-   the board above the fold is that type's jobs grouped by that type's statuses.
-2. **Statuses** — create at least two. Each carries the tenant's own word, an order, and one
-   question the platform genuinely needs answered: *does this status release the resource?*
-   That flag is the place `roadmap.md` records "configuration is enough" being checked and
-   found short — a cancelled job that keeps the van booked is the afternoon gone.
-3. **Allowed moves** — create the transitions. Until you do, **the type is frozen, not
-   unconstrained** (I13): a job can be created in a status and moved nowhere. If a move you
-   expected is refused, this is why, and the refusal came from a database trigger rather than
-   from the form.
-4. **Steps every ⟨type⟩ involves** — the checklist template, optional. It is *copied* onto each
-   job at creation and never joined, which is what makes editing it safe for work already done.
+1. **Kinds of work** — create one (`work_item_type`); the board is that type's jobs by status.
+2. **Statuses** — create at least two. Each carries a name, an order, and one question: *does
+   this status release the resource?* (A cancelled job that keeps its resource booked is the
+   afternoon gone.)
+3. **Allowed moves** — until you create transitions, the type is frozen, not unconstrained (I13):
+   a refused move came from a database trigger, not the form.
+4. **Steps every ⟨type⟩ involves** — the checklist template, optional, copied onto each job at
+   creation and never joined back.
 
 ### 4. Give it something to schedule — *Resources*, *Settings*
 
-- **Resources** — a van, a bay, a person, a room. The scheduling engine has no opinion about
-  which of those it is holding.
-- **Settings → Opening hours** — starts empty, and empty means *always open*, not *closed*.
-  Nothing anywhere holds a working week: no Monday-to-Friday, no weekend, no seeded set. Add a
-  rule or two and watch the schedule's free time contract around it.
-- **Settings → This business → buffer** — how long a resource stays busy *after* work ends.
-  Zero means back-to-back. It is enforced by the exclusion constraint rather than merely
-  displayed, so widening it far enough to overlap two committed jobs is refused by the
-  database — which is the database declining to hold a schedule the business cannot work.
+- **Resources** — a van, a bay, a person, a room; the scheduling engine has no opinion which.
+- **Settings → Opening hours** — starts empty, which means *always open*, not closed. Add a rule
+  and watch the schedule's free time contract around it.
+- **Settings → This business → buffer** — how long a resource stays busy after work ends. Zero is
+  back-to-back. Enforced by the exclusion constraint, not merely displayed — widening it far
+  enough to overlap two committed jobs is refused by the database.
 
 ### 5. Who the work is for — *Customers*, *Locations*
 
-Create a customer; create a location and link it to them. A customer's detail page is the CRM
-screen: their locations, their documents, their timeline read from `events`, and their
-invoices. Nothing there is a table of its own — the timeline is a projection.
+Create a customer, create a location, link them. The customer's detail page is the CRM screen —
+locations, documents, a timeline read from `events` (a projection, not a table of its own), and
+invoices.
 
 ### 6. What it charges — *Pricing*
 
-Price book items, in this business's currency, in integer minor units. A job is priced by
-copying catalogue rows onto it, and the copy holds no foreign key back, so editing the
-catalogue never rewrites a quote somebody already agreed to.
+Price book items, in this business's currency, in integer minor units. A job is priced by copying
+catalogue rows onto it — the copy holds no foreign key back, so editing the catalogue never
+rewrites a quote already agreed to.
 
 ### 7. Run a job — *Work* → the job's own page
 
-Create a work item from the board, then open it. **`/work/{id}` is the screen where this
-platform actually happens**, and it is the one screen with no sidebar entry, because it is a
-detail route inside Work rather than an area of its own. On it:
-
-- edit the job, move it through the statuses you configured, tick the checklist copied from
-  the template;
-- record time and record costs — observations about a job that happened;
-- add priced lines from the catalogue — a claim the business published in advance;
-- read *job economics*, which subtracts the two and **returns no margin at all** when the
-  currencies differ, because converting one would need a rate, a rate has a date, and a date
-  makes this accounting software.
+Create a work item, open it. `/work/{id}` has no sidebar entry — it's a detail route inside Work.
+On it: edit the job, move it through your configured statuses, tick the copied checklist; record
+time and costs (observations about what happened); add priced lines from the catalogue (a claim
+published in advance); read *job economics* — no margin at all when currencies differ, since
+converting would need a rate, and a rate has a date.
 
 ### 8. Money
 
-On the same page: **issue an invoice**, which snapshots its lines, then **record a payment**.
-There is no `paid` column — where an invoice stands is derived on every read. If
-`STRIPE_SECRET_KEY` is set and the *Card payments* module is on, a card control appears; the
-business's own processor account is connected from Settings → Getting paid, and what GOLD
-stores is an `acct_` id, never a key.
+Issue an invoice (snapshots its lines), then record a payment. No `paid` column — standing is
+derived on every read. With `STRIPE_SECRET_KEY` set and *Card payments* on, a card control
+appears; connect the business's own processor account from Settings → Getting paid — GOLD stores
+an `acct_` id, never a key.
 
 ### 9. The customer's own view
 
-Customer detail → **portal link**. Open it in a private window: `/portal/{token}`. The token is
-the credential and the page does not pretend otherwise — it is the security model of a link to
-a shared document. Note what the page says and does not say: every word that is not application
-state is the business's own copy from Settings → Public page, because no platform sentence may
-appear on a public surface.
+Customer detail → **portal link** → open `/portal/{token}` in a private window. The token is the
+credential, and the page doesn't pretend otherwise. Every word that isn't application state is
+the business's own copy from Settings → Public page — no platform sentence appears on a public
+surface.
 
 ### 10. Trying to break it — the part worth doing twice
 
-These are the assertions the milestone tests make, performed by hand:
-
-- **Double-book a resource.** Schedule two jobs onto one resource in overlapping windows. The
-  refusal comes from `work_items_resource_not_double_booked`, a partial gist exclusion
-  constraint — there is no check in the domain layer, deliberately, because a check before an
-  insert races identically.
-- **Cancel one and re-book the slot.** It only frees up if the status you moved it into says it
-  releases the resource. Flip that answer in Work → Statuses and watch the schedule change.
-- **Sign in as the second account** under a role missing `work_item.transition`. Every screen
-  still renders and the forms explain themselves. The guard is RLS; the sentence is the
-  courtesy.
-- **Found a second business from the same account** and switch between them. Identical names,
-  identical statuses and identical customer email addresses all coexist — that is M1's whole
-  claim, and the sidebar's *Switch business* is where you feel it.
+- **Double-book a resource.** Overlapping windows on one resource — refused by
+  `work_items_resource_not_double_booked`, a partial gist exclusion, never a domain-layer check.
+- **Cancel one and re-book the slot.** Only frees up if the status says it releases the resource
+  — flip that in Work → Statuses and watch the schedule change.
+- **Log in as the second account** under a role missing `work_item.transition` — every screen
+  still renders and the forms explain themselves.
+- **Found a second business from the same account** and switch between them — identical names,
+  statuses and customer emails coexist (M1's claim), felt through the sidebar's *Switch business*.
 
 ---
 
 ## The other side: the platform console
 
-Everything above is a tenant. `/platform` is the first screen in this application built for the
-people who run GOLD, and it is the only one you cannot reach by clicking — you have to be put
-into a Postgres role first.
+`/platform` is the first screen built for the people who run GOLD — reachable only by being put
+into a Postgres role, not by clicking.
 
-1. **Sign up a third account** at `/sign-up`, normally. The row references `auth.users`, so the
-   person has to exist before they can be staff.
-2. **Run `infra/supabase/snippets/add-platform-staff.sql`** in Studio's SQL editor, with the
-   address and name edited at the top. It raises if the address matches no user rather than
-   inserting zero rows and reporting success.
-3. **Sign out and sign in again.** This is the step that catches people. The role arrives as a
-   claim on the token and the token is minted at sign-in, so somebody promoted while signed in
-   stays `authenticated` until their next one. Nothing is broken; the session is just older than
-   the decision.
+1. **Sign up a third account** at `/sign-up`, normally.
+2. **Run `infra/supabase/snippets/add-platform-staff.sql`** in Studio's SQL editor, address and
+   name edited at the top — raises if the address matches no user.
+3. **Log out and log in again.** The role is a claim on the token, minted at log-in — staying
+   signed in after promotion keeps the old token.
 
-Then `/platform` lists every business: when each arrived, what it trades in, what it has
-switched on, and when it last did anything — each rendered in that tenant's own zone and
-currency, because a console showing every business in one timezone would be deciding what
-Tuesday means for somebody in Tokyo.
+`/platform` lists every business — arrival date, currency, modules, last activity — each rendered
+in that tenant's own zone and currency.
 
-**Provision a business, which is what this console is for.** *Provision a business* asks the
-four things founding asks plus the one that makes it the operator door: whose business it is.
-That person **must already have an account** — a membership references `auth.users`, so sign
-them up first in a private window, exactly as you would before adding a member. Fill it in and
-the business appears in the list below, newest first.
+**Provision a business.** *Provision a business* asks the same four things as founding, plus
+whose business it is — that person must already have an account. Log in as that owner: they have
+the founding role and every capability, and their *People* list has one row, not you. Nothing in
+their organization, role or membership records a GOLD user id — their event log does, saying the
+business was provisioned and by whom.
 
-Then sign in as that owner. They have the whole business — the founding role and every
-capability — and you are not in it: their *People* list has one row and it is not you. Nothing
-in their organization, role or membership records a GOLD user id at all. What does record one is
-their event log, which says the business was provisioned and by whom, because that is a true
-fact about how it began.
-
-**What to actually look at, because the screen is a list and the milestone is not.** Try to
-reach a tenant. Take an organization id off the console and open
-`/organizations/{id}/work` as the staff account: you get a 404, not a page, because
-`getOrganization` filters on the caller's own membership and staff hold none. Then try to write
-anything at all — there is no button, so this one is Studio's SQL editor with the role set — and
-the refusal is `permission denied`, a missing privilege rather than a policy declining. That
-distinction is the whole invariant (I21): no write policy names this role *and* the role holds no
-write grant, so a permissive policy added later still hits a wall.
+**Try to reach a tenant anyway.** Take an organization id off the console and open
+`/organizations/{id}/work` as staff: a 404, since `getOrganization` filters on membership and
+staff hold none. Try to write anything (Studio's SQL editor, role set to staff) — `permission
+denied`, a missing privilege rather than a policy declining (I21): no write policy names this
+role, and it holds no write grant either, so a permissive policy added later still hits a wall.
 
 **One human who both runs GOLD and operates a business needs two accounts.** The hook replaces
-the `role` claim outright, so a staff member who is also a member of an organization loses the
-membership half while signed in — their tenant policies key on `authenticated` and they are no
-longer wearing it. That is D28 working as intended rather than a rough edge: our people are not
-in a customer's own list of who works at their business.
+the `role` claim outright, so a staff member who is also a tenant member loses the membership half
+while signed in as staff.
 
 ---
 
 ### 11. Make it run itself — *Settings*, *Automations*, *Assets*
 
-Everything below is configuration and none of it needs a deploy.
+**Switch it on.** Settings → *Automations* — the switch names where it's configured and what's
+still missing (D31). Switch on *Weather* or *Maintenance* too and each says it needs Automations.
 
-**Switch it on.** Settings → *Automations*. The switch now names where it is set up and links
-there, and tells you what is still missing — which is D31, and the reason the Card payments
-switch used to be a dead end. Switch on *Weather* or *Maintenance* too and each says it needs
-Automations, rather than handing you a link into a screen that is not there.
-
-**Write a rule.** Automations → *New rule*. Name it, pick what sets it off, and press add. It
-arrives inert: no conditions, nothing to do. Then add a condition — the picker offers the parts
-of a job *and this business's own custom fields*, from the registry it already keeps — and add an
+**Write a rule.** Automations → *New rule*. Name it, pick what sets it off, add. It arrives inert
+— add a condition (the picker offers job fields and this business's own custom fields) and an
 action.
 
-Four kinds of trigger, and they are genuinely four different things:
+Four kinds of trigger:
 
 | Kind | Fires | Runs |
 |---|---|---|
 | when something happens | an event: a job created, booked, moved, scheduled | inside the transaction that caused it |
 | a set time before a job starts | the moment the offset names | on the next tick |
 | when conditions cross a line | a reading at the job's location | on the next tick |
-| every so many hours or miles | a counter reading you record on a machine | inside the write that recorded it |
+| every so many hours or miles | a counter reading recorded on a machine | inside the write that recorded it |
 
-**Watch it act.** Create a job that matches, and it moves before the page finishes reloading. The
-job's timeline names the rule. Under the rule, *Recently* shows what it did.
+**Watch it act.** A matching job moves before the page finishes reloading; the job's timeline
+names the rule; the rule's *Recently* shows what it did.
 
-**Watch it fail, which is the more interesting half.** Point a rule at a status the type's own
-lifecycle cannot reach from where the job is, and create a matching job. **The job is created
-normally** and the rule records a failure with the database's own sentence in it — that is the
-subtransaction working, and the reason a business's bad rule can never break a customer's
-booking.
+**Watch it fail.** Point a rule at a status the type's lifecycle can't reach, create a matching
+job — the job is created normally and the rule records a failure with the database's own sentence
+(the subtransaction working: a bad rule can't break a customer's booking).
 
-**Write a message.** Automations → *What this business says*. Every word is yours; the five
-placeholders are the platform's whole contribution. Add a *tell the customer* action, and a job
-with a customer who has an address queues one. Whether it is actually sent depends on what the
-installation is connected to, and the message itself says which — including "this deployment
-cannot send email messages yet", which is the honest answer rather than silence.
+**Write a message.** Automations → *What this business says*. Every word is yours; five
+placeholders are the platform's whole contribution. An unconnected channel says so plainly
+("this deployment cannot send email messages yet") rather than going silent.
 
 **Record a counter.** Assets → any machine → the reading box. The first reading sets the mark and
-raises nothing, deliberately: switching a rule on for a machine that has already run nine hundred
-hours must not raise nine services that were done years ago. Cross the interval and a job appears,
-titled with the rule's own name and attached to the machine.
+raises nothing (a machine already at nine hundred hours shouldn't raise nine back-owed services).
+Cross the interval and a job appears, titled with the rule's name.
 
-**Two things you cannot do by hand**, and both are on purpose. You cannot type a weather reading
-— a business that could would be a business that could make its own rules fire — so exercising
-that path locally means calling `record_external_reading` over a database connection, as
-`milestone-m6.test.ts` does. And the tick that runs timed and weather rules is
-`/tasks/automation-tick` in `apps/api`, which needs `CRON_SECRET`; without it every scheduled rule
-simply waits.
+**Two things you can't do by hand, both deliberate.** A weather reading — exercise that path with
+`record_external_reading` over a database connection (as `milestone-m6.test.ts` does). And the
+timed/weather tick is `/tasks/automation-tick` in `apps/api`, needing `CRON_SECRET` — without it
+scheduled rules simply wait.
 
 ---
 
 ### 12. Ask it something — *Ask*
 
-Switch *Ask* on in Settings and the area appears beside Today. Type *what work is at risk of being
-late today*.
+Switch *Ask* on in Settings. Type *what work is at risk of being late today*.
 
-**What comes back is built from what you can already see.** The loop is in `apps/api` and it
-reaches this database through one function, `public.work_at_risk`, called with your own access
-token — so the answer is your rows, decided by the same policies as every other screen. Worth
-proving to yourself: hand the same question to a colleague on a role with fewer capabilities and
-the answer is the same, because reading here is scoped by membership rather than by capability;
-open the customer portal and ask nothing at all, because that side has no Ask screen and would
-get nothing if it had one.
+**What comes back is built from what you can already see.** The loop reaches this database
+through one function, `public.work_at_risk`, called with your own access token — scoped by
+membership, not capability. A colleague with fewer capabilities gets the same answer; the portal
+has no Ask screen at all.
 
-**It needs two things and says so when it has neither.** `ASSISTANT_API_URL` in `apps/web`, so
-it knows where the loop is; and on that deployment a model. Missing the first and the screen says
-this installation cannot answer questions; missing the second and it says so in the far side's
-own words. Neither is a blank box.
+**It needs two things and says so when it has neither.** `ASSISTANT_API_URL` in `apps/web`, and a
+model on that deployment. Missing the first, the screen says this installation can't answer;
+missing the second, it says so in the far side's own words.
 
-**A model on your own machine is the cheapest way to exercise this**, and it is the same path a
-business that will not let its rows leave the building uses in production:
+**A model on your own machine** — the same path a business that won't let rows leave the building
+uses in production:
 
 ```bash
 ollama pull qwen3.5:9b            # tool-calling is what matters; `ollama list` shows which have it
@@ -374,86 +299,57 @@ python apps/api/dev.py            # :8787
 #   ASSISTANT_API_URL=http://127.0.0.1:8787
 ```
 
-Both settings are required together — there is no default model name, because one that resolves
-to a tag you do not have makes the deployment look configured and answer 404 on every question.
+Both settings are required together — no default model name, since one that resolves to a tag you
+don't have makes the deployment look configured and answer 404 on every question.
 
-**Anything hosted that speaks the same dialect is the same three settings**, including Gemini's
-OpenAI-compatible endpoint — `https://generativelanguage.googleapis.com/v1beta/openai` with a
-model and a key. Worth knowing before pointing it at real data: a free tier is usually free
-because the provider may train on what you send, and a tool result is a business's customers and
-jobs.
+**Anything hosted speaking the same dialect** is the same three settings, including Gemini's
+OpenAI-compatible endpoint. Worth knowing: a free tier is usually free because the provider may
+train on what you send, and a tool result is a business's customers and jobs.
 
-**Try a weak model too, once.** `qwen3.5:9b` answers every question above correctly in a few
-seconds, and asked to move a job it calls `work_at_risk` first, takes the id from the result, and
-produces a suggestion you can press. `llama3.1:8b` cannot chain those two steps: it proposes a
-move for a job it never looked up, putting a description where the id goes. What you should see
-then is the suggestion recorded as **failed with the reason beside it and no button** — judged
-when the answer was written rather than when somebody presses. `answered by` names the model, so
-a business that changed models can see why the answers changed. That is the system behaving
-correctly with a bad answer in it, and it is worth seeing once.
+**Try a weak model too, once.** `qwen3.5:9b` chains *look the job up, then suggest moving it*
+correctly. `llama3.1:8b` cannot — it proposes a move for a job it never looked up, a description
+where the id goes. What you should see: the suggestion recorded as **failed, reason beside it, no
+button** — judged when written, not when pressed. `answered by` names the model.
 
 **Ask it something it has no tool for** — *which service makes the most money* — and it should
-tell you it cannot answer. That is the shape to check rather than a bug: report-shaped questions
-wait for M7's aggregate layer, and a tool is a `stable` function in Postgres precisely so nobody
-can quietly answer them with arithmetic in the loop instead.
+say it can't answer. Report-shaped questions wait for M7's aggregate layer; a tool is a `stable`
+Postgres function precisely so nothing can quietly answer with arithmetic in the loop instead.
 
-Below the box is every question you have asked, with what each tool returned as a row count. Your
-own only: a colleague's questions are not yours to read, because an answer holds whatever its
-asker could see.
+Below the box: every question you've asked, with row counts. Your own only — a colleague's
+questions aren't yours to read.
 
-**Then ask it to do something about it** — *anything I should move?* If it suggests one, you get
-*Move this job* with the model's own sentence underneath and two buttons. Nothing has happened
-yet: the suggestion is a row, and the job is where it was. Press *Do it* and the same function the
-schedule screen calls runs under your session — so ask a colleague on a role without
-`work_item.schedule` to press it and the refusal is the policy's, shown on the row. Suggest a
-window something else already occupies and the refusal is the exclusion constraint's, in its own
-words. Either way it is decided once: the buttons do not come back.
+**Then ask it to do something** — *anything I should move?* A suggestion gets you *Move this job*
+with the model's sentence and two buttons; nothing has happened yet. Press *Do it* and the same
+function the schedule screen calls runs under your session — a colleague without
+`work_item.schedule` gets the policy's refusal on the row; a taken window gets the exclusion
+constraint's. Either way it's decided once — the buttons don't come back.
 
 ---
 
 ## What you cannot reach from any screen
 
-Three capabilities exist in the domain layer, are covered by tests, and have **no route, no
-form and no button**. This is the honest residue of M4, and it is why a hand-driven booking
-walkthrough stops short. A fourth thing needs database access for a different reason, and it is
-recorded under the table because conflating the two would turn a decision into a debt:
+Two capabilities exist in the domain layer, are covered by tests, and have no route, form or
+button — the honest residue of M4:
 
 | Capability | Function | What its absence blocks |
 |---|---|---|
 | Withdraw a customer's portal link | `revokePortalInvite` | The portal page's own comment says "the business revokes it". Today the business cannot. |
-| Change an existing member's role | `assignRole` | A role is assigned at the moment somebody is added and never changed afterwards. |
+| Change an existing member's role | `assignRole` | A role is assigned when somebody is added and never changed afterwards. |
 
-**A third capability was on this list and is not any more.** `setTypeBookable` — publishing a
-kind of work to the public page — was the sharp one, because `/book/{slug}` resolves only for a
-business that publishes something, so the whole booking flow was unreachable by hand. It is now a
-section on the **Work** screen under the selected kind of work, gated on the booking module. The
-stand-in snippet `publish-bookable-type.sql` is deleted, because a snippet beside a screen is a
-second way to do one thing, and Settings no longer says "no screen here can publish one" — it
-says which screen does (D31).
+**A third capability was on this list and isn't any more.** `setTypeBookable` — publishing a kind
+of work to the public page — is now a section on the **Work** screen under the selected kind,
+gated on the booking module. The stand-in snippet is deleted.
 
-**A fourth thing now needs database access, and it is the one entry here that is not a debt.**
-Adding somebody to `platform_staff` is a hand-run snippet
-(`infra/supabase/snippets/add-platform-staff.sql`) because `platform_staff` has no insert policy
-and no grant to any application role — deliberately. A screen that adds a colleague is a *staff
-write*, and D28's own trigger to revisit is "the first thing platform staff must write". Nothing
-is owed until that decision is made, which is the difference between this snippet and the two
-capabilities above it: those stand in for operator paths a business must eventually have, and this
-one stands in for nothing, because the person running it is us.
+**A fourth thing needs database access, and it isn't a debt.** Adding somebody to
+`platform_staff` is a hand-run snippet (`infra/supabase/snippets/add-platform-staff.sql`) —
+deliberately, since a screen that adds a colleague would be a *staff write*, and D28's own trigger
+to revisit that is unmet. Provisioning a tenant was the first staff write and it has landed (D29):
+one `execute` on `provision_organization`, no table privilege.
 
-**Provisioning a tenant was the first staff write, and it has landed** (D29) — the decision D28
-deferred, made as narrowly as it could be: one `execute` on `provision_organization`, no table
-privilege, so the role still cannot write anything belonging to a business that already exists.
-
-**Founding is closed, which is why step 2 above reads the way it does.** `create_organization`
-holds no grant, so nobody founds a business from `/organizations` any more — the console is the
-only way one begins. `/sign-up` stays open because an account is not a tenant: the owner has to
-have one before a business can be handed to them.
-
-With that snippet run, the booking half of the walkthrough is: Settings → set a URL name and
-switch *Public booking* on, then open `/book/{slug}` in a private window and take a slot as
-somebody with no account at all. What you are watching is D22's external actor — a real
-`auth.users` row from anonymous sign-in, bound to exactly one organization, holding insert
-permission on no table whatsoever.
+With that snippet run, the booking half of the walkthrough is: Settings → set a URL name, switch
+*Public booking* on, open `/book/{slug}` in a private window, take a slot with no account at all —
+D22's external actor, a real `auth.users` row from anonymous sign-in, bound to exactly one
+organization, holding insert permission on no table whatsoever.
 
 ---
 

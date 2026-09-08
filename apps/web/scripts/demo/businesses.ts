@@ -1,4 +1,4 @@
-import type { BusinessShape } from '@/lib/domain/onboarding/configure';
+import type { BusinessShape } from '@/lib/domain/configuration/configure';
 import type { Grouping, Measure, PeriodPreset } from '@/lib/domain/reporting/shape';
 
 /**
@@ -57,8 +57,6 @@ export type DemoBusiness = {
   owner: { email: string; displayName: string };
   /** One colleague on a reduced role, so I12 is something to look at rather than read about. */
   member: { email: string; displayName: string };
-  /** Which modules this business bought. Different lengths, so the two sidebars differ. */
-  modules: string[];
   shape: BusinessShape;
   /**
    * The two questions the platform asks about a status, answered per business.
@@ -98,8 +96,10 @@ const GRACHTWERK: DemoBusiness = {
   currency: 'EUR',
   owner: { email: 'sanne@grachtwerk.test', displayName: 'Sanne de Vries' },
   member: { email: 'joris@grachtwerk.test', displayName: 'Joris Bakker' },
-  modules: ['billing', 'assets', 'reporting'],
   shape: {
+    // Inside the shape rather than beside it, so the demo takes the same path a proposal does
+    // (D37). Different lengths from the clinic's, so the two sidebars differ.
+    modules: ['billing', 'assets', 'reporting'],
     typeName: 'Verhuring', // a hire
     statuses: [
       'Aangevraagd', // requested
@@ -323,8 +323,8 @@ const KOISHIKAWA: DemoBusiness = {
   currency: 'JPY',
   owner: { email: 'harada@koishikawa.test', displayName: '原田 美咲' },
   member: { email: 'ito@koishikawa.test', displayName: '伊藤 健' },
-  modules: ['billing', 'reporting'],
   shape: {
+    modules: ['billing', 'reporting'],
     typeName: '診察', // a consultation
     statuses: [
       '受付', // received

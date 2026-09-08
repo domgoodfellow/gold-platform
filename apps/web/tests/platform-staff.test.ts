@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { configureBusiness } from '@/lib/domain/onboarding/configure';
+import { configureBusiness } from '@/lib/domain/configuration/configure';
 import { isPlatformStaff, listTenants } from '@/lib/domain/platform/tenants';
 import { foundBusiness } from './helpers/founding';
 

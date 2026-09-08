@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createCustomer } from '@/lib/domain/customers/customers';
-import { configureBusiness } from '@/lib/domain/onboarding/configure';
+import { configureBusiness } from '@/lib/domain/configuration/configure';
 import { provisionOrganization } from '@/lib/domain/platform/provision';
 import { isPlatformStaff, listTenants } from '@/lib/domain/platform/tenants';
 import { getOrganization, listMyOrganizations } from '@/lib/domain/tenancy/organizations';

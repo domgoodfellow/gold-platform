@@ -1,8 +1,15 @@
 import { Hint } from '@/components/controls/inputs';
-import { Button } from '@/components/controls/button';
+import {
+  AppShell,
+  SidebarButton,
+  SidebarLabel,
+  SIDEBAR_ROW,
+} from '@/components/containers/app-shell';
+import { cx } from '@/components/class-names';
 import Link from 'next/link';
+import { ArrowLeftRight, LogOut } from 'lucide-react';
 import { redirect } from 'next/navigation';
-import { AreaHeading, OrgNav } from './org-shell';
+import { AreaTrail, OrgNav, OrgNavBar } from './org-shell';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
@@ -31,54 +38,98 @@ export default async function OrganizationLayout({
     'use server';
     const db = await getDb();
     await signOut(db);
-    redirect('/sign-in');
+    redirect('/login');
   }
+
+  // The business's mark and name. Rendered in the sidebar from `md` up and in the header below
+  // it, because the sidebar is not there on a phone and a screen that never says whose business
+  // it is showing is the one thing worse than saying it twice.
+  const logo = brand.logoPath ? (
+    // A tenant's logo is a remote object in a public bucket, not a build-time asset —
+    // next/image would need every deployment's storage host named in its config.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={logoUrl(db, brand.logoPath)}
+      alt=""
+      className="h-7 w-7 shrink-0 rounded object-contain"
+    />
+  ) : null;
+
+  const sidebar = (
+    <>
+      <div className="border-b border-border px-4 py-4">
+        <div className="flex items-center gap-3 md:block">
+          {logo ? <span className="contents md:mb-2 md:block">{logo}</span> : null}
+          <SidebarLabel block>
+            <span className="block min-w-0">
+              <span className="block truncate font-semibold">{organization.name}</span>
+              {/* The tenant's own word for the role, not a platform label (D6, D19). */}
+              <Hint className="block truncate">{organization.role}</Hint>
+            </span>
+          </SidebarLabel>
+        </div>
+      </div>
+
+      <OrgNav organizationId={organizationId} enabledModules={[...enabledModules]} />
+    </>
+  );
+
+  /*
+    The header. Three things, in the order somebody reads them: whose business this is (on a
+    phone, where the sidebar cannot say so), where in it you are, and the two actions that belong
+    to the shell rather than to any screen.
+
+    Switch business and Sign out moved here out of the sidebar. In a column they were two rows
+    sitting under sixteen areas, which put *leave this business* in the same list as *go to
+    Customers*; they are not navigation and they now read as what they are. They stay plain
+    rows rather than becoming `Button`s for the reason `SIDEBAR_ROW` exists — chrome declares no
+    weight — and their labels appear from `sm` up, the icon and its accessible name carrying them
+    on a narrow screen.
+  */
+  const header = (
+    <>
+      <span className="flex min-w-0 items-center gap-2 md:hidden">
+        {logo}
+        <span className="truncate font-semibold">{organization.name}</span>
+      </span>
+
+      <AreaTrail organizationId={organizationId} />
+
+      {/* Pushes what follows to the far end, so the two actions sit together whatever the trail's length. */}
+      <span className="flex-1" />
+
+      <Link
+        href="/organizations?all=1"
+        aria-label="Switch business"
+        title="Switch business"
+        className={cx(SIDEBAR_ROW, 'shrink-0')}
+      >
+        <ArrowLeftRight aria-hidden size={16} className="shrink-0" />
+        <span className="hidden sm:inline">Switch business</span>
+      </Link>
+
+      <form action={signOutAction} className="shrink-0">
+        <SidebarButton type="submit" aria-label="Log out" title="Log out">
+          <LogOut aria-hidden size={16} className="shrink-0" />
+          <span className="hidden sm:inline">Log out</span>
+        </SidebarButton>
+      </form>
+    </>
+  );
 
   return (
     // `data-brand` sits here rather than on `<html>` — a brand belongs to one business, and this layout is the only thing that knows which.
-    <div data-brand className="min-h-full md:grid md:grid-cols-[5rem_1fr] lg:grid-cols-[15rem_1fr]">
+    <div data-brand className="min-h-full">
       <BrandStyle brand={brand} />
-      <aside className="border-b border-border md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:border-r md:border-b-0">
-        <div className="flex items-baseline justify-between gap-3 px-4 pt-4 md:block">
-          <div className="min-w-0">
-            {brand.logoPath ? (
-              // A tenant's logo is a remote object in a public bucket, not a build-time asset —
-              // next/image would need every deployment's storage host named in its config.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoUrl(db, brand.logoPath)}
-                alt={organization.name}
-                className="mb-2 max-h-8 w-auto max-w-full object-contain"
-              />
-            ) : null}
-            <p className="truncate font-semibold">{organization.name}</p>
-            {/* The tenant's own word for the role, not a platform label (D6, D19). */}
-            <Hint className="truncate">{organization.role}</Hint>
-          </div>
-          <Link
-            href="/organizations"
-            className="shrink-0 text-sm underline underline-offset-4 text-muted md:mt-3 md:inline-block"
-          >
-            Switch business
-          </Link>
-        </div>
-
-        <OrgNav organizationId={organizationId} enabledModules={[...enabledModules]} />
-
-        <form action={signOutAction} className="px-4 pb-4 md:pt-2">
-          <Button type="submit" tone="text" size="small">
-            Sign out
-          </Button>
-        </form>
-      </aside>
-
-      <div className="min-w-0">
-        {/* `pb-24` on phones reserves room for the fixed bottom nav; from `md` the nav is a column and this goes away. */}
-        <main className="mx-auto max-w-3xl p-6 pb-24 sm:p-8 md:pb-8">
-          <AreaHeading />
-          {children}
-        </main>
-      </div>
+      <AppShell
+        header={header}
+        sidebar={sidebar}
+        bottomBar={
+          <OrgNavBar organizationId={organizationId} enabledModules={[...enabledModules]} />
+        }
+      >
+        {children}
+      </AppShell>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { createRole } from '@/lib/domain/tenancy/roles';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { listCustomerCalls, recordCall, recordCallOutcome } from '@/lib/domain/reception/calls';
 import { createCallOutcome, listCallOutcomes } from '@/lib/domain/reception/outcomes';
+import { callingNumber, setCallingNumber } from '@/lib/domain/reception/telephony';
 import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
 import { foundBusiness } from './helpers/founding';
 
@@ -454,5 +455,121 @@ describe('the loop the module exists for', () => {
     expect(descriptions).toContain('Call written up: Interested');
     // The tenant's word, resolved at read time — the same treatment a work item's status gets.
     expect(descriptions).toContain('Moved to Booked a meeting');
+  });
+});
+
+describe('the number a business dials from', () => {
+  it('is absent until the business says so', async () => {
+    // The ordinary state and not a fault: provisioning does not ask, and a platform that filled
+    // one in on a business's behalf would be answering through a column — the same reasoning
+    // that keeps `organizations.currency` nullable.
+    //
+    // What is deliberately *not* asserted here is that `placeCall` refuses for this reason. No
+    // carrier is configured in this environment, so it refuses one step earlier for the
+    // deployment's own reason, and a test that could not tell the two apart would pass whichever
+    // check was deleted.
+    expect(await callingNumber(floor.db, { organizationId: floor.organizationId })).toBeNull();
+  });
+
+  it("is one business's own, and another can neither read nor write it (I2)", async () => {
+    await setCallingNumber(floor.db, {
+      organizationId: floor.organizationId,
+      number: '+14165550142',
+    });
+
+    expect(await callingNumber(floor.db, { organizationId: floor.organizationId })).toBe(
+      '+14165550142',
+    );
+
+    // `telephony_settings_select` is keyed to the caller's own tenants, so for the other business
+    // this is an absence rather than a refusal — the row is not there to be seen.
+    expect(await callingNumber(other.db, { organizationId: floor.organizationId })).toBeNull();
+
+    await expect(
+      setCallingNumber(other.db, {
+        organizationId: floor.organizationId,
+        number: '+14165550199',
+      }),
+    ).rejects.toThrow();
+
+    expect(await callingNumber(floor.db, { organizationId: floor.organizationId })).toBe(
+      '+14165550142',
+    );
+  });
+
+  it('clears back to nothing, which is a business taking its number down', async () => {
+    await setCallingNumber(floor.db, {
+      organizationId: floor.organizationId,
+      number: '+14165550143',
+    });
+    await setCallingNumber(floor.db, { organizationId: floor.organizationId, number: '  ' });
+
+    expect(await callingNumber(floor.db, { organizationId: floor.organizationId })).toBeNull();
+  });
+
+  it('refuses a role holding every reception capability but not organization.manage (I12)', async () => {
+    // `organization.manage`, not `field.manage`. Naming a stage is configuring how a business
+    // records work; the number its customers see when it rings them is the business itself, and
+    // it sits with currency and the clock.
+    const email = `dialer-${randomUUID().slice(0, 8)}@example.test`;
+    const password = `pw-${randomUUID()}`;
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+    expect(created.error).toBeNull();
+
+    const roleId = await createRole(floor.db, {
+      organizationId: floor.organizationId,
+      name: `Dialer ${randomUUID().slice(0, 8)}`,
+      capabilities: ['field.manage', 'call.place', 'customer.create'],
+    });
+    await addMember(floor.db, {
+      organizationId: floor.organizationId,
+      email,
+      displayName: 'Dialer',
+      roleId,
+    });
+
+    // Signed in *after* the membership exists, because the tenant claim is read at sign-in — a
+    // session opened before it would be refused for having no tenant at all, which is the wrong
+    // reason and would pass even if the capability check were deleted.
+    const dialer = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const signIn = await dialer.auth.signInWithPassword({ email, password });
+    expect(signIn.error).toBeNull();
+
+    // They can read it — every member who may place a call must know what they call from.
+    await setCallingNumber(floor.db, {
+      organizationId: floor.organizationId,
+      number: '+14165550144',
+    });
+    const read = await dialer
+      .from('telephony_settings')
+      .select('calling_number')
+      .eq('organization_id', floor.organizationId);
+    expect(read.data?.[0]?.calling_number).toBe('+14165550144');
+
+    // And they cannot write it. Through the raw table as well as the function, because what is
+    // under test is the policy rather than the wrapper: a table-wide grant added later would
+    // show up here and nowhere else.
+    const refused = await dialer
+      .from('telephony_settings')
+      .update({ calling_number: '+14165550100' })
+      .eq('organization_id', floor.organizationId)
+      .select('organization_id');
+    expect(refused.data ?? []).toEqual([]);
+
+    await expect(
+      setCallingNumber(dialer, {
+        organizationId: floor.organizationId,
+        number: '+14165550100',
+      }),
+    ).rejects.toThrow();
+
+    expect(await callingNumber(floor.db, { organizationId: floor.organizationId })).toBe(
+      '+14165550144',
+    );
   });
 });

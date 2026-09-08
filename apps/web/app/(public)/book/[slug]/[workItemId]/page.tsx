@@ -57,7 +57,7 @@ export default async function BookingConfirmationPage({
   const status = Array.isArray(item.data.status) ? item.data.status[0] : item.data.status;
 
   return (
-    <main className="mx-auto max-w-xl p-6 sm:p-8">
+    <main className="mx-auto w-full max-w-xl p-6 sm:p-8">
       <PublicHeader profile={profile} />
       {/* Application state — what just happened — rather than anything the business claims. */}
       <p className="mt-6 text-sm font-medium">Your booking is confirmed.</p>

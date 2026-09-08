@@ -86,7 +86,7 @@ export default async function PortalPage({ params }: PageProps<'/portal/[token]'
   return (
     // `data-brand` scopes the roles `BrandStyle` writes. A public page is the surface a brand
     // is most for: this is the page a business puts on the side of a van.
-    <main data-brand className="mx-auto max-w-xl p-6 sm:p-8">
+    <main data-brand className="mx-auto w-full max-w-xl p-6 sm:p-8">
       <BrandStyle brand={brand} />
       <PublicHeader
         profile={profile}

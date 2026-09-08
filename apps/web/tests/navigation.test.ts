@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   AREAS,
+  AREA_GROUPS,
   MODULES,
   areaHref,
   areaRootSegment,
@@ -99,13 +100,22 @@ describe('the operator shell navigation', () => {
     expect(currentSegment('/organizations/org-1/documents/doc-1/download')).toBeNull();
   });
 
-  it('puts every operational area ahead of every configuration one (D23)', () => {
+  it('keeps each section contiguous and in AREA_GROUPS order (D23)', () => {
     // "An operator must never reach today's work by going through settings." The order used
     // to carry that claim and nothing held it, which made it the accident D23 says a later
     // contributor would be free to tidy away. The sidebar rules between the two groups, so
     // an interleaved list would render a divider in the middle of the operational half.
-    const groups = AREAS.map((area) => area.group);
-    expect(groups.lastIndexOf('operational')).toBeLessThan(groups.indexOf('configuration'));
+    // Each section appears as one unbroken run, and the runs come in the declared order. The
+    // sidebar rules between sections, so an interleaved list would draw a divider through the
+    // middle of one — and D23's rule, that an operator never reaches today's work by going
+    // through settings, is the first and last entries of that order.
+    const order = AREA_GROUPS.map((group) => group.key);
+    const runs = AREAS.map((area) => area.group).filter(
+      (group, index, all) => group !== all[index - 1],
+    );
+    expect(runs).toEqual(order);
+    expect(order[0]).toBe('operations');
+    expect(order[order.length - 1]).toBe('configuration');
   });
 
   it('leads with the area an operator opens the application for', () => {
@@ -115,7 +125,8 @@ describe('the operator shell navigation', () => {
   });
 
   it('splits every area into exactly one group', () => {
-    expect(areasIn('operational').length + areasIn('configuration').length).toBe(AREAS.length);
+    const total = AREA_GROUPS.reduce((sum, group) => sum + areasIn(group.key).length, 0);
+    expect(total).toBe(AREAS.length);
   });
 });
 
@@ -155,7 +166,7 @@ describe('modules', () => {
     const optional = AREAS.filter((area) => area.module);
     expect(optional.length).toBeGreaterThan(0);
 
-    const withNothingOn = [...areasIn('operational', new Set()), ...areasIn('configuration', new Set())];
+    const withNothingOn = AREA_GROUPS.flatMap((group) => areasIn(group.key, new Set()));
     expect(withNothingOn.length).toBeLessThan(AREAS.length);
   });
 
@@ -168,7 +179,7 @@ describe('modules', () => {
   });
 
   it('shows the kernel to a business that has switched everything off', () => {
-    const shown = [...areasIn('operational', new Set()), ...areasIn('configuration', new Set())];
+    const shown = AREA_GROUPS.flatMap((group) => areasIn(group.key, new Set()));
 
     // Nothing enabled, and the business still has work, a schedule, customers and a way back
     // into its own settings — because none of those was ever sold to it separately.
@@ -188,7 +199,7 @@ describe('modules', () => {
     expect(shown.map((area) => area.segment)).toContain('pricing');
 
     // And with nothing passed, everything: a caller with no business in hand means all of it.
-    expect(areasIn('operational').length + areasIn('configuration').length).toBe(AREAS.length);
+    expect(AREA_GROUPS.reduce((sum, group) => sum + areasIn(group.key).length, 0)).toBe(AREAS.length);
   });
 });
 

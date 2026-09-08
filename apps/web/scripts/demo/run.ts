@@ -4,7 +4,7 @@ import { Client } from 'pg';
 import { issueInvoice, recordPayment } from '@/lib/domain/billing/invoices';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { createLocation, linkCustomerLocation } from '@/lib/domain/locations/locations';
-import { configureBusiness } from '@/lib/domain/onboarding/configure';
+import { configureBusiness } from '@/lib/domain/configuration/configure';
 import { provisionOrganization } from '@/lib/domain/platform/provision';
 import { addPricedLine } from '@/lib/domain/pricing/prices';
 import { createDashboard, pinReport } from '@/lib/domain/reporting/dashboards';
@@ -16,7 +16,6 @@ import { recordCost, recordTime } from '@/lib/domain/work-items/consumption';
 import { updateWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { changeWorkItemStatus } from '@/lib/domain/work-items/transitions';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
-import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { BUSINESSES, DEMO_PASSWORD, type DemoBusiness, type DemoJob } from './businesses';
 
 /**
@@ -230,10 +229,8 @@ async function standUp(
     currency: business.currency,
   });
 
-  for (const key of business.modules) {
-    await setModuleEnabled(ownerDb, { organizationId, key, enabled: true });
-  }
-
+  // Modules are part of the shape now, so `configureBusiness` switches them on — one path,
+  // the same one a proposal takes (D37).
   const configured = await configureBusiness(ownerDb, organizationId, business.shape);
 
   // The two questions the platform asks about a status, answered through the same call the Work

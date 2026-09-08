@@ -4,11 +4,11 @@ import { join } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
-import type { BusinessShape } from '@/lib/domain/onboarding/configure';
+import type { BusinessShape } from '@/lib/domain/configuration/configure';
 import {
   applyConfigurationProposal,
   currentConfigurationProposal,
-} from '@/lib/domain/onboarding/proposals';
+} from '@/lib/domain/configuration/proposals';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';

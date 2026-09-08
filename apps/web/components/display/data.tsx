@@ -51,36 +51,14 @@ export function Detail({ label, children }: { label: ReactNode; children: ReactN
   );
 }
 
-/** No trend or comparison — the platform can't tell whether a number moving is good or bad. */
-export function Stat({
-  label,
-  value,
-  note,
-  className,
-  ...props
-}: Omit<ComponentProps<'div'>, 'title'> & {
-  label: ReactNode;
-  value: ReactNode;
-  note?: ReactNode;
-}) {
-  return (
-    <div {...props} className={cx('rounded border border-border p-3', className)}>
-      <div className="text-xs text-subtle">{label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
-      {note ? <div className="mt-1 text-xs text-muted">{note}</div> : null}
-    </div>
-  );
-}
-
-/** `auto-fit` so the count per row follows the space available, not a guessed breakpoint. */
-export function StatRow({ className, ...props }: ComponentProps<'div'>) {
-  return (
-    <div
-      {...props}
-      className={cx('grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))]', className)}
-    />
-  );
-}
+/*
+  `Stat` and `StatRow` were here: a number in a bordered box, and a row of them that fitted as
+  many across as there was room for. `Widget` (`display/widget.tsx`) is the same thing with
+  somewhere to go, and the Today screen — their only caller — is now built from widgets, so
+  keeping both would have left two boxes with a number in them and no rule for choosing. The one
+  claim worth carrying over is on `Widget.note`: no trend and no comparison, because the platform
+  cannot tell whether a number moving is good or bad for a business it knows nothing about.
+*/
 
 /** One primary action per screen (ui-spec §6). */
 export function Toolbar({ className, ...props }: ComponentProps<'div'>) {
