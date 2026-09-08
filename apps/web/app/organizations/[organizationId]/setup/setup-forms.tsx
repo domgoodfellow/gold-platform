@@ -19,7 +19,7 @@ import {
   type FieldKind,
 } from '@/lib/domain/fields/field-definitions';
 import { TRIGGER_EVENTS } from '@/lib/domain/automation/rules';
-import { MODULES, type ModuleKey } from '@/lib/navigation';
+import { MODULES } from '@/lib/navigation';
 import { FONT_KEYS, FONT_LABELS } from '@/lib/domain/branding/palette';
 import type { BusinessShape, ShapeField } from '@/lib/domain/configuration/configure';
 import type { ConfigurationProposal } from '@/lib/domain/configuration/proposals';

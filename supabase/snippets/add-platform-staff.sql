@@ -39,7 +39,7 @@
 do $$
 declare
   v_email text := 'domgoodfellow@gmail.com  ';
-  v_name  text := 'Their name here';
+  v_name  text := 'Dominic';
   v_user  uuid;
 begin
   select u.id into v_user from auth.users u where u.email = v_email;

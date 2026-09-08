@@ -51,3 +51,4 @@ __pycache__/
 
 # Local working copy, not part of the document set.
 docs/starting_conversation.txt
+examples/

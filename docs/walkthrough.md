@@ -111,7 +111,9 @@ The provisioning form asks four things, each deliberate:
 - *Currency* — required, no default — there's no neutral currency to pick.
 
 You get one membership with every capability, the kernel (work, schedule, customers, locations,
-resources, fields, roles, settings — none switchable off), and exactly one module on: **Billing**.
+resources, fields, roles, settings — none switchable off), and two modules on: **Billing** and
+**Guided setup**. The second is on because a first-run screen you have to discover in Settings is
+not a first-run screen; it is still a module and still one click from off.
 
 **Assets, public booking, the portal and card payments all start off.** Settings → *What this
 business uses* — flip Assets and Billing and watch the sidebar change; switching Billing off also
@@ -119,9 +121,14 @@ takes the quote, invoice and margin off every job screen.
 
 ### 2b. The shortcut, if this deployment has one — *Guided setup*
 
-Switch **Guided setup** on in Settings. Describe the business in your own words — the work, how a
-job moves start to finish, what you charge, when you're open — and get back a proposed setup with
-questions attached for whatever it couldn't work out.
+Already in the sidebar. Describe the business in your own words — the work, how a job moves start
+to finish, what you charge, when you're open — and get back a proposed setup with questions
+attached for whatever it couldn't work out.
+
+**The first section is what it wants to switch on**, because that is the only part of a proposal
+that changes what the business *has* rather than what it is called. Each one is something the
+business pays for, so they are checkboxes to clear rather than a summary to scroll past. Uncheck
+one before applying and the sidebar you come back to is missing that area.
 
 **Nothing has happened to the business yet.** Open *Work* in another tab before pressing Apply:
 still empty. Only Apply writes anything, through the same calls steps 3–6 make by hand. Change a

@@ -20,7 +20,12 @@ import {
 import { getOrganization, updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
-import { createWorkItemType, setTypeBookable } from '@/lib/domain/work-items/types';
+import {
+  createWorkItemType,
+  listWorkItemTypes,
+  setTypeBookable,
+} from '@/lib/domain/work-items/types';
+import { configureBusiness, type BusinessShape } from '@/lib/domain/configuration/configure';
 import { foundBusiness } from './helpers/founding';
 
 /**
@@ -616,5 +621,107 @@ describe('what a switched-on module still needs', () => {
     });
 
     expect(outstanding.get('card_payments')).toBeTruthy();
+  });
+});
+
+/**
+ * **A proposal names modules, and applying it switches them on.**
+ *
+ * A description like *"we repair plant on site, we invoice, and we take bookings online"* names
+ * a module set as surely as it names a lifecycle. Before this, a proposal could describe a
+ * business it then had no way to show — every screen it implied stayed hidden until somebody
+ * found Settings.
+ *
+ * What is asserted here is the pair: that the list is applied, and that a bad list is refused
+ * **before the first write**. The caller is often a model, and a model that invents a module
+ * name or forgets a dependency must not leave half a configured business behind it.
+ */
+describe('the modules a configuration asks for', () => {
+  let business: Awaited<ReturnType<typeof newBusiness>>;
+
+  /**
+   * The smallest shape that is a whole shape — this suite is about `modules` and nothing else.
+   * A fresh type name each time, because two shapes applied to one business are two whole
+   * configurations and `createWorkItemType` refuses a duplicate name.
+   */
+  const minimal = (modules: string[]): BusinessShape => ({
+    typeName: `Job ${randomUUID().slice(0, 6)}`,
+    statuses: ['Open', 'Done'],
+    transitions: [[0, 1]],
+    fields: {},
+    prices: [],
+    hours: [],
+    roles: [],
+    modules: modules as BusinessShape['modules'],
+  });
+
+  beforeAll(async () => {
+    if (!ANON_KEY || !SERVICE_ROLE_KEY) {
+      throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
+    }
+    business = await newBusiness('shape-mod');
+  });
+
+  it('switches on what it names, and leaves what it does not name alone', async () => {
+    await configureBusiness(business.db, business.organizationId, minimal(['assets']));
+
+    const enabled = await listEnabledModules(business.db, {
+      organizationId: business.organizationId,
+    });
+
+    expect(enabled.has('assets')).toBe(true);
+    // **Applying never switches anything off.** A proposal describes a business; it is not an
+    // inventory of one, so a module founding gave this business survives a shape that is silent
+    // about it.
+    expect(enabled.has('billing')).toBe(true);
+    expect(enabled.has('drafting')).toBe(true);
+    // Named by nobody, and still off.
+    expect(enabled.has('portal')).toBe(false);
+  });
+
+  it('refuses a module this platform does not have, before writing anything', async () => {
+    const before = await listWorkItemTypes(business.db, {
+      organizationId: business.organizationId,
+    });
+
+    await expect(
+      configureBusiness(business.db, business.organizationId, minimal(['telepathy'])),
+    ).rejects.toThrow(/no module called telepathy/i);
+
+    // The whole point of validating up front: a refusal partway would have left a type, two
+    // statuses and a transition behind for a name nobody could act on.
+    const after = await listWorkItemTypes(business.db, {
+      organizationId: business.organizationId,
+    });
+    expect(after.length).toBe(before.length);
+  });
+
+  it('refuses a module whose dependency the same shape does not switch on', async () => {
+    const before = await listWorkItemTypes(business.db, {
+      organizationId: business.organizationId,
+    });
+
+    // Maintenance is counters and the rules that watch them, and a rule is an automation. On
+    // its own it is a switch that does nothing — which is what D31 exists to prevent, caught
+    // here rather than discovered on the Settings screen afterwards.
+    await expect(
+      configureBusiness(business.db, business.organizationId, minimal(['maintenance'])),
+    ).rejects.toThrow(/Automations/);
+
+    const after = await listWorkItemTypes(business.db, {
+      organizationId: business.organizationId,
+    });
+    expect(after.length).toBe(before.length);
+
+    // And the dependency named alongside it is fine.
+    await configureBusiness(
+      business.db,
+      business.organizationId,
+      minimal(['automations', 'maintenance']),
+    );
+    const enabled = await listEnabledModules(business.db, {
+      organizationId: business.organizationId,
+    });
+    expect(enabled.has('maintenance')).toBe(true);
   });
 });
