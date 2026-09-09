@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler
 
-from apps.api.api.voice_status import form_params, public_url
+from api.voice_status import form_params, public_url
 from app.core.config import load_voice_settings
 from app.integrations.twilio.voice import conference_twiml, verify_signature
 
