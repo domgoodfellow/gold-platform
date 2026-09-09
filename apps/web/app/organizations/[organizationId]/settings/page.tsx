@@ -134,6 +134,11 @@ export default async function SettingsPage({
           href="#modules"
         />
         <ConfigCard
+          title="Plan & usage"
+          description="What this business is entitled to use, what it's bought, and what it's used."
+          href={`/organizations/${organizationId}/settings/plan`}
+        />
+        <ConfigCard
           title="Hours"
           description="When this business is open, for the schedule to read."
           href="#hours"

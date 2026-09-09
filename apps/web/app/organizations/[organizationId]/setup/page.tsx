@@ -7,7 +7,7 @@ import {
   listConfigurationProposals,
 } from '@/lib/domain/configuration/proposals';
 import { computeReadiness } from '@/lib/domain/tenancy/lifecycle';
-import { listEnabledModules } from '@/lib/domain/tenancy/modules';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { AREAS, areaHref } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { DescribeForm, LaunchForm, ProposalHistory, ProposalReview } from './setup-forms';
@@ -48,7 +48,7 @@ export default async function SetupPage({
     listConfigurationProposals(db, { organizationId }),
     canDraftConfiguration(),
     // Only asked while there is a launch to gate — a live business has nothing here to compute.
-    inSetup ? listEnabledModules(db, { organizationId }) : Promise.resolve(new Set<string>()),
+    inSetup ? listUsableModules(db, { organizationId }) : Promise.resolve(new Set<string>()),
     inSetup ? computeReadiness(db, { organizationId }) : Promise.resolve(null),
   ]);
 

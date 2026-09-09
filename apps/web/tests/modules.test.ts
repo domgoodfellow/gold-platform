@@ -14,6 +14,7 @@ import { listMembers } from '@/lib/domain/tenancy/members';
 import {
   listEnabledModules,
   listModuleSettings,
+  listUsableModules,
   outstandingModuleSetup,
   setModuleEnabled,
 } from '@/lib/domain/tenancy/modules';
@@ -665,18 +666,28 @@ describe('the modules a configuration asks for', () => {
   it('switches on what it names, and leaves what it does not name alone', async () => {
     await configureBusiness(business.db, business.organizationId, minimal(['assets']));
 
-    const enabled = await listEnabledModules(business.db, {
+    // `listEnabledModules` is the wanted axis — organization_modules itself, unaffected by D41.
+    const wanted = await listEnabledModules(business.db, {
       organizationId: business.organizationId,
     });
 
-    expect(enabled.has('assets')).toBe(true);
+    expect(wanted.has('assets')).toBe(true);
     // **Applying never switches anything off.** A proposal describes a business; it is not an
     // inventory of one, so a module founding gave this business survives a shape that is silent
     // about it.
-    expect(enabled.has('billing')).toBe(true);
-    expect(enabled.has('drafting')).toBe(true);
+    expect(wanted.has('billing')).toBe(true);
+    expect(wanted.has('drafting')).toBe(true);
     // Named by nobody, and still off.
-    expect(enabled.has('portal')).toBe(false);
+    expect(wanted.has('portal')).toBe(false);
+
+    // And usable (D41's wanted∩paid), since founding granted billing and drafting a term but
+    // nothing granted assets one — the other half, proven on the same business.
+    const usable = await listUsableModules(business.db, {
+      organizationId: business.organizationId,
+    });
+    expect(usable.has('billing')).toBe(true);
+    expect(usable.has('drafting')).toBe(true);
+    expect(usable.has('assets')).toBe(false);
   });
 
   it('refuses a module this platform does not have, before writing anything', async () => {
@@ -713,15 +724,20 @@ describe('the modules a configuration asks for', () => {
     });
     expect(after.length).toBe(before.length);
 
-    // And the dependency named alongside it is fine.
+    // And the dependency named alongside it is fine — wanted, which is what this test is
+    // actually about (D41 keeps `maintenance` unpaid and so unusable either way, since it is
+    // not one of the founding modules a term was ever granted for).
     await configureBusiness(
       business.db,
       business.organizationId,
       minimal(['automations', 'maintenance']),
     );
-    const enabled = await listEnabledModules(business.db, {
+    const settings = await listModuleSettings(business.db, {
       organizationId: business.organizationId,
     });
-    expect(enabled.has('maintenance')).toBe(true);
+    const wanted = new Set(
+      settings.filter((entry) => entry.enabledAt !== null).map((entry) => entry.module.key),
+    );
+    expect(wanted.has('maintenance')).toBe(true);
   });
 });

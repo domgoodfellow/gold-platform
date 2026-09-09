@@ -9,7 +9,7 @@ import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { listResources } from '@/lib/domain/resources/resources';
-import { listEnabledModules } from '@/lib/domain/tenancy/modules';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { formatWindow } from '@/lib/domain/scheduling/window';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { allowedNextStatusIds, listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
@@ -72,7 +72,7 @@ export default async function WorkPage({
       listResources(db, { organizationId }),
       listAssets(db, { organizationId }),
       listFieldDefinitions(db, { organizationId, entityType: 'work_item' }),
-      listEnabledModules(db, { organizationId }),
+      listUsableModules(db, { organizationId }),
     ]);
 
   const mayAdd = organization.capabilities.includes('work_item.create');

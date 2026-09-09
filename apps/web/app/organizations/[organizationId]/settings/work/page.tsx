@@ -2,7 +2,7 @@ import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@
 import { Hint } from '@/components/controls/inputs';
 import Link from 'next/link';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
-import { listEnabledModules } from '@/lib/domain/tenancy/modules';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { listTypeChecklistItems } from '@/lib/domain/work-items/checklists';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
@@ -59,7 +59,7 @@ export default async function WorkConfigurationPage({
     selectedType
       ? getTypeBooking(db, { organizationId, typeId: selectedType.id })
       : Promise.resolve(null),
-    listEnabledModules(db, { organizationId }),
+    listUsableModules(db, { organizationId }),
   ]);
 
   const mayConfigure = organization.capabilities.includes('field.manage');

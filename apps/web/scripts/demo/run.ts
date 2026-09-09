@@ -5,6 +5,7 @@ import { issueInvoice, recordPayment } from '@/lib/domain/billing/invoices';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { createLocation, linkCustomerLocation } from '@/lib/domain/locations/locations';
 import { configureBusiness } from '@/lib/domain/configuration/configure';
+import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { provisionOrganization } from '@/lib/domain/platform/provision';
 import { addPricedLine } from '@/lib/domain/pricing/prices';
 import { createDashboard, pinReport } from '@/lib/domain/reporting/dashboards';
@@ -233,6 +234,23 @@ async function standUp(
   // Modules are part of the shape now, so `configureBusiness` switches them on — one path,
   // the same one a proposal takes (D37).
   const configured = await configureBusiness(ownerDb, organizationId, business.shape);
+
+  // **D41's own trigger, applied to this script.** Only `billing` and `drafting` carry a term
+  // from founding (`app.grant_founding_terms`); anything else a shape names sits wanted-but-
+  // unpaid until GOLD records one. A demo business is meant to be seen fully working, so the
+  // staff session that just provisioned it also records a term for whatever else it switched
+  // on — the same act a real sale would perform, through the same door.
+  for (const key of business.shape.modules ?? []) {
+    if (key === 'billing' || key === 'drafting') continue;
+    await recordCommercialTerm(staff, {
+      organizationId,
+      productKey: `module:${key}`,
+      periodStart: new Date().toISOString().slice(0, 10),
+      periodEnd: '9999-12-31',
+      priceMinor: 0,
+      note: 'Demo: switched on and paid for, so nothing this business uses is hidden.',
+    });
+  }
 
   // The two questions the platform asks about a status, answered through the same call the Work
   // screen makes. A shape says what a business calls its work; these say what its words *mean*.

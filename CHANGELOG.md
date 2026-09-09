@@ -5,6 +5,61 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### GOLD can now answer what it sells, what a business owes, and what serving it costs
+
+Every table before this one answers a question about a *tenant's* business. Nothing answered
+the question GOLD needs about itself — D41 (module entitlement) had been specified and left
+"Decided, not yet built" for exactly this trigger. It is now built in full, generalized past
+modules into a catalogue, two rate cards, a usage ledger, and a platform console reading all of
+it, without touching D40's prepaid comms purse or blurring D42's two money paths.
+
+- `supabase/migrations/20260910000001_gold_sells_gold_the_commercial_catalogue.sql` —
+  `platform_meters` (eight named meters, vocabulary only) and `platform_products` (the base
+  platform, one row per real module, a seat), both migration-written. `platform_provider_rates`
+  and `platform_retail_rates`, append-only and effective-dated, in micro-minor-units (D43's
+  amendment to I10's rate precision). `public.record_provider_rate` / `public.record_retail_rate`
+  are the one door onto each, `SECURITY DEFINER`, checked against `platform_staff`
+  (`app.require_platform_staff`) and granted `execute` to that role alone — the amendment D40's
+  "written by migration and by nothing else" needed once platform-side money needed more than a
+  migration, applied only to these two new tables.
+- `supabase/migrations/20260910000002_a_module_is_wanted_and_a_term_is_paid.sql` — D41, built:
+  `organization_commercial_terms` (the term, append-only, no write grant to anyone),
+  `public.record_commercial_term` (the one door), `public.usable_modules` /
+  `app.module_paid` / `public.module_commercial_state` (the wanted∩paid intersection, computed
+  fresh). `app.grant_founding_terms` replaces `app.enable_default_modules`, per D41's own "a
+  trial stops being a special case." Every business already using a module was backfilled a
+  zero-price term for it, so nothing already working stopped working.
+- `supabase/migrations/20260910000003_an_unpaid_module_goes_read_only.sql` —
+  `app.check_module_entitlement`, the generic write-refusal trigger, attached to
+  `payment_accounts` (`card_payments`) as the proven pilot. The other five optional modules'
+  tables are a named gap, not a covered one.
+- `supabase/migrations/20260910000004_a_call_knows_what_it_cost_gold.sql` — `usage_events`, the
+  generalized ledger, tenant-owned, with GOLD's own cost withheld from `authenticated` by column
+  grant. `app.charge_for_call` (D40) is replaced, never edited, to also record what a call cost
+  GOLD alongside the retail debit it already wrote.
+- `supabase/migrations/20260910000005_gold_reads_its_own_margin.sql` —
+  `platform_provider_sync_failures` (ships empty, same shape `platform_failures` had between M5
+  and M6), `public.organization_commercial_summary` (usage, cost, charge, margin — staff only),
+  and platform-staff read access to D40's own tables, which had never been granted it.
+- `apps/web/lib/domain/commercial/` — `catalogue.ts`, `terms.ts`, `usage.ts`. A new engine
+  directory rather than `lib/domain/billing/`, because that one is a tenant's own price book and
+  GOLD's subscription revenue must never be confused with it (D42).
+- `apps/web/app/(platform)/platform/organizations/[organizationId]/` — the staff console's
+  answer to all six questions for one business, with forms to record a rate or a term.
+  `apps/web/app/organizations/[organizationId]/settings/plan/` — the tenant-safe projection:
+  entitlement in plain language, what's been bought, usage and what GOLD charged for it, credit
+  balance. Never a wholesale cost, never a margin.
+- `apps/web/lib/domain/tenancy/modules.ts` — `listEnabledModules` stays the wanted axis;
+  `listUsableModules` is the new wanted∩paid one, and every presentation call site (navigation,
+  the operational screens that gate a section on a module) now calls it. `lifecycle.ts`'s
+  readiness computation and `setModuleEnabled`'s own self-check stay on the wanted axis
+  deliberately — entitlement is a rendering rule, not an operational-completeness one.
+- `apps/web/tests/{commercial-catalogue,commercial-terms,commercial-usage}.test.ts`.
+
+Newly enforced: **I28, I29, I30** (see `docs/domain-model.md`). `constraints.md` D43 records the
+shape and the five deliberate amendments to D40/D41 this required; D41's "Decided, not yet
+built" row is closed.
+
 ### A prospect can ask GOLD for a workflow review, and read nothing back
 
 The homepage's primary CTA pointed at an in-page anchor with no submission mechanism behind it.

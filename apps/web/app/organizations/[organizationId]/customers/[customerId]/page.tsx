@@ -7,7 +7,7 @@ import { CustomFieldValues } from '@/components/custom-fields/values';
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listCustomerCalls } from '@/lib/domain/reception/calls';
-import { listEnabledModules } from '@/lib/domain/tenancy/modules';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { PortalLinkForm } from '@/features/public-profile/portal-link-form';
@@ -47,7 +47,7 @@ export default async function CustomerPage({
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
     listCustomerTimeline(db, { organizationId, customerId }),
     listPortalInvites(db, { organizationId, customerId }),
-    listEnabledModules(db, { organizationId }),
+    listUsableModules(db, { organizationId }),
     listCustomerStages(db, { organizationId }),
     listCustomerCalls(db, { organizationId, customerId }),
   ]);

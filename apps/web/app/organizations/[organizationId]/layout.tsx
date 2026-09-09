@@ -15,7 +15,7 @@ import { BrandStyle } from '@/features/branding/brand-style';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
-import { listEnabledModules } from '@/lib/domain/tenancy/modules';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { requireOrganization } from '@/lib/route/organization';
 
 /**
@@ -30,7 +30,7 @@ export default async function OrganizationLayout({
 }: LayoutProps<'/organizations/[organizationId]'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  const enabledModules = await listEnabledModules(db, { organizationId });
+  const enabledModules = await listUsableModules(db, { organizationId });
   // Read here rather than per-screen, since a brand belongs to the shell — every page inside
   // inherits these roles and never has to know whose colour it's rendering.
   const brand = await getBrand(db, { organizationId });

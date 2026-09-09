@@ -4,7 +4,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { getInvoiceForWorkItem, invoiceStanding } from '@/lib/domain/billing/invoices';
 import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
 import { requireActor } from '@/lib/domain/tenancy/actor';
-import { listEnabledModules } from '@/lib/domain/tenancy/modules';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 
 /**
  * Asking a processor for money, and writing down what it says arrived. Only the asking half is
@@ -34,7 +34,7 @@ export async function requestCardPayment(
   // business hasn't switched card payments on. Either way the operator just sees no control.
   const [provider, enabled] = await Promise.all([
     paymentProvider(),
-    listEnabledModules(db, { organizationId: input.organizationId }),
+    listUsableModules(db, { organizationId: input.organizationId }),
   ]);
   if (!provider || !enabled.has('card_payments')) return null;
 

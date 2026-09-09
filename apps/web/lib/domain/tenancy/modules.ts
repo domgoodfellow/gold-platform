@@ -22,7 +22,13 @@ export type OrganizationModule = {
   enabledAt: string;
 };
 
-/** Rows naming a key this version has dropped are skipped — `organization_modules` outlives any particular list of areas. */
+/**
+ * What a business **wants** — read straight off `organization_modules`, unaffected by whether
+ * anyone has paid for it. What operational logic needs to ask (is this switch on, so its own
+ * setup can be checked; did a delete actually remove the row) — never what should render, which
+ * is `listUsableModules` below. Rows naming a key this version has dropped are skipped —
+ * `organization_modules` outlives any particular list of areas.
+ */
 export async function listEnabledModules(
   db: Db,
   input: { organizationId: string },
@@ -37,6 +43,27 @@ export async function listEnabledModules(
   }
 
   return new Set((data ?? []).map((row) => row.module_key).filter(isModuleKey));
+}
+
+/**
+ * What a business wants **and** has currently paid for (D41) — the wanted∩paid intersection,
+ * computed by `public.usable_modules`. This is what a screen or a presentation-level gate should
+ * ask: D41's "screens hidden, nothing deleted" is a rendering rule, not an operational one, and
+ * `listEnabledModules` above still answers the operational question unchanged.
+ */
+export async function listUsableModules(
+  db: Db,
+  input: { organizationId: string },
+): Promise<Set<ModuleKey>> {
+  const { data, error } = await db.rpc('usable_modules', {
+    p_organization_id: input.organizationId,
+  });
+
+  if (error) {
+    throw new DomainError(error.message, 'modules.list_failed');
+  }
+
+  return new Set((data ?? []).filter(isModuleKey));
 }
 
 /** Every module, with whether this business has it on. The settings screen's whole answer. */

@@ -57,6 +57,23 @@ export type TenantPage = {
   total: number;
 };
 
+/** One tenant, for a detail screen that already has its id (from `listTenants`'s own rows). */
+export async function getTenant(db: Db, organizationId: string): Promise<Tenant | null> {
+  await requireActor(db);
+
+  const { data, error } = await db
+    .from('platform_tenants')
+    .select('id, name, created_at, timezone, currency, slug, module_keys, last_activity_at')
+    .eq('id', organizationId)
+    .maybeSingle();
+
+  if (error) {
+    throw new DomainError(error.message, 'platform.tenant_failed');
+  }
+
+  return data ? toTenant(data) : null;
+}
+
 /** A screenful several times over, not a claim about how many tenants there will be. */
 export const TENANT_PAGE = 200;
 

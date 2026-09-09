@@ -73,6 +73,7 @@ Each owns entities and rules. This is the honest state, not the plan.
 | **Booking** | The public booking flow and the external actor axis | Built |
 | **AI** | Domain tools, the answering loop, drafted configuration | Built |
 | **Communications** | Sending on a channel, as a capability | Adapter and templates built; channels are per-deployment |
+| **Commercial** | GOLD's own catalogue, entitlement terms, provider and retail rates, the usage ledger — GOLD selling GOLD, never a tenant's own books (D42, D43) | Built — D41, generalized |
 | **Maintenance** | Customer-owned assets, readings, condition-triggered work | Assets and readings built; recurring plans are not |
 | **Dispatch** | Routes, travel time, geographic assignment | Not built — see *Deferred* |
 | **Inventory** | Stock levels, suppliers, purchase orders, shipments | Not built — see *Deferred* |
@@ -628,7 +629,6 @@ wrong and change this table.
 | **Group and proximity discounting** | Travel cost modelling, so a discount never exceeds what the business provably saved | A business that actually routes |
 | **Business templates** — a cloneable bundle of modules, statuses, fields and roles | Two businesses configured by hand first | The source conversation calls this the thing that turns four apps into a product, and it is — **second**. A template is an extract of configuration that has already proven itself; cloned earlier, it clones a guess |
 | **Incumbent displacement** — import, parity, a reason to switch | Deliberately not scoped | Phase two. Named so it is a recorded decision rather than an assumption |
-| **D41's term table** — the append-only ledger, the four-state intersection in `listEnabledModules`, and the trigger that refuses a lapsed module's writes | Nothing technical; D41 below specifies the shape in full | A real subscription about to be quoted to a paying tenant. Until then, `organization_modules` is still the only table, and D41's four-state table is not yet true of the code — found by the product reality audit, which is why this row exists rather than the decision record simply being wrong |
 
 Two of these carry reasoning worth keeping in full, because finding it out later is expensive.
 
@@ -717,10 +717,10 @@ its.
 
 ### D41 — A module is wanted and paid for, and those are two rows
 
-**Not yet built.** See "Decided, not yet built" above. `organization_modules` is still the only
-table today; `listEnabledModules` computes no intersection because there is nothing yet to
-intersect with. What follows is the decision, specified in full so building it is a matter of
-following this rather than re-deriving it.
+**Built.** The owner gave the trigger directly, as part of the wider commercial/financial
+control plane D43 records. What follows is the decision as specified before it was built;
+where the built shape amends it, the amendment is D43's and is named there rather than
+silently rewritten in here.
 
 **Decision.** `organization_modules` keeps answering one question only: *does this business want
 this module.* A person with `organization.manage` switches it, and D25 is untouched. A second,
@@ -747,12 +747,18 @@ an entitlement is a term that covers now and never a flag. Neither is a stored t
   retroactively, and the business is told in a sentence. Hiding it in silence is exactly the D31
   failure card payments already shipped once.
 - **Nobody signed in writes a term.** No insert policy admits `authenticated`, staff included
-  (I21). Money in arrives through a machine role on a webhook — the shape `payment_webhook`
-  established and D40 already reused.
-- **A price is GOLD's, written by migration.** No `organization_id` (outside I2 the way
-  `communication_rates` and `platform_staff` are), per currency, no application write path.
-  Nothing seeded: a module with no price costs nothing and refuses nothing, so every existing
-  tenant keeps working unchanged.
+  (I21). **Amended by D43**: there is no Stripe integration yet, so the writer is not the
+  machine role this record originally imagined — it is `public.record_commercial_term`, one
+  `SECURITY DEFINER` function checking `platform_staff` and granted `execute` to that role
+  alone, the `provision_organization` shape rather than the `payment_webhook` one. The table
+  itself still admits no insert from any role directly, staff included.
+- **A price is GOLD's.** No `organization_id` (outside I2 the way `communication_rates` and
+  `platform_staff` are), per currency, and nothing seeded — a module with no price costs
+  nothing and refuses nothing, so every existing tenant keeps working unchanged. **Amended by
+  D43** in the same direction as the term itself: `platform_provider_rates` and
+  `platform_retail_rates` are written through `public.record_provider_rate` /
+  `public.record_retail_rate`, staff-only `SECURITY DEFINER` functions, rather than by
+  migration alone — `communication_rates` (D40) is untouched and still migration-only.
 - **No RLS policy reads any of this.** D25's rule survives the arrival of money: a module is
   navigation and billing, never authorization, and a lapsed subscription must never become an
   access control decision.
@@ -787,10 +793,14 @@ slower, commercial half of the same idea; it does not duplicate that check and d
 it.
 
 **Which tables a module owns has to be written down**, because nothing records it today —
-`MODULES` names where a module is *configured*, not what it *owns*. That map lives beside the
-trigger, and a conformance test asserts every module owning tables carries the trigger on all of
-them. Without it the next table ships without one, which is the failure this file has already
-recorded twice about column grants.
+`MODULES` names where a module is *configured*, not what it *owns*. **Only partly done.** The
+generic trigger, `app.check_module_entitlement`, is attached to exactly one table in this
+slice — `payment_accounts` (`card_payments`) — chosen as the smallest complete example rather
+than because the other five optional modules own nothing. Booking's, the portal's, assistant's
+and reception's own tables are an explicitly named gap, not a covered one; there is no
+conformance test yet asserting every module-owning table carries the trigger, because the map
+this bullet calls for has not been written for the rest of them. That is the next slice's
+opening line, not a defect in this one — see D43.
 
 ### D42 — GOLD runs its own business as an ordinary tenant, and staff is a separate account
 
@@ -826,6 +836,88 @@ still verifies the listing, and one account with two doors is the nicer product.
 rather than refused because it costs a change to the most security-sensitive function in this
 repository in order to save a second login. **Trigger:** the two logins actually getting in the
 way.
+
+---
+
+### D43 — GOLD's own commercial/financial control plane, and what it amends
+
+**Decision.** GOLD can now answer, for any tenant: what it bought, what it is entitled to use
+right now, what GOLD charged it, what it used, what that usage cost GOLD at a provider, and the
+margin between the two. D41 (entitlement) is the middle of this and is built in full by this
+record rather than left as a separate deferral; the rest generalizes D40's usage thinking past
+voice, SMS and email to every meter this platform will eventually price — call recording,
+transcription, text-to-speech, AI tokens, email sends, and whatever a future provider adds.
+
+**The catalogue.** `platform_meters` (what can be metered — a table, not an enum, so a new
+provider is a row) and `platform_products` (what GOLD sells, recurring: the base platform, one
+row per real module, a seat) are platform vocabulary, migration-written, like
+`communication_channel` was. Neither is authorization and neither is read by any policy.
+
+**Two rate cards, not one, and neither is `communication_rates`.** `platform_provider_rates` is
+what GOLD pays a provider; `platform_retail_rates` is what GOLD charges, for every meter except
+voice, SMS and email, whose retail price stays `communication_rates` (D40) rather than being
+duplicated. Both are append-only and effective-dated — "current" is the latest approved row at
+or before a moment, never an edited one — and both carry `unit_amount_micros`: millionths of one
+minor currency unit, because a provider's wholesale price is routinely sub-cent, and rounding
+that to the nearest minor unit before multiplying by volume would make a margin wrong by
+construction. This is a narrow, deliberate amendment to I10's minor-units rule — for a *rate*
+only, never for a recorded amount. `usage_events`, the generalized ledger this record adds
+alongside D40's purse, snapshots a provider cost and a customer charge in the same unit, per
+reading; every total this platform actually discloses still rounds to a minor unit exactly once,
+at the point it is shown.
+
+**The first amendment to D40 and D41: a rate and a term are no longer written by migration
+alone.** Both records said staff hold no write grant on any table, and both still do — no table
+grant changed. What is new is one door each: `public.record_provider_rate`,
+`public.record_retail_rate` and `public.record_commercial_term`, three `SECURITY DEFINER`
+functions checking `platform_staff` (`app.require_platform_staff`, extracted once for all three
+rather than copied) and granted `execute` to that role alone, the exact shape
+`provision_organization` already used for the first staff write D28 ever allowed. The reason is
+literal: D41 imagined the term's writer as a machine role on a webhook, because it assumed a
+payment integration would exist by the time this shipped. There is no Stripe integration yet
+(deliberately — internal commercial truth has to exist before payment collection), so the writer
+today is a person at GOLD recording what was actually sold, through the narrowest door this
+schema knows how to build.
+
+**Entitlement changes what a self-serve module switch does, and that is the point rather than a
+side effect.** Before this record, flipping any module on in Settings (or naming one in a
+configuration proposal, D32) worked immediately. After it, only the founding modules
+(`app.grant_founding_terms` — billing and guided setup, replacing `app.enable_default_modules`)
+carry a term from the start; anything switched on afterward sits in D41's second state — wanted,
+not paid — until GOLD records a term. Every business that already had a module enabled before
+this migration was backfilled a zero-price, open-ended term for it, so nothing already working
+stopped working the day it shipped; the demo builder (D37) was updated the same way for whatever
+it enables beyond the founding set, so `pnpm demo` keeps showing a fully usable business.
+
+**Entitlement's own write-refusal trigger is real but not yet everywhere.**
+`app.check_module_entitlement` is generic and is attached in this slice to one table —
+`payment_accounts` (`card_payments`) — proven rather than assumed to work, and named in D41's
+own text as a partial completion: the map of which table each optional module owns has not been
+written for booking,
+the portal, the assistant or reception, and the trigger is not on any of their tables yet. An
+empty `Held by` cell would hide that; this sentence is the honest alternative.
+
+**GOLD's own cost and the margin it implies are never a tenant-visible row.**
+`platform_provider_rates` grants `select` to `platform_staff` only. `usage_events`'s grant to
+`authenticated` names every column except the provider-cost ones — a column grant, not a
+row-level policy, because RLS cannot withhold one column of a row it otherwise allows.
+`public.organization_commercial_summary`, which computes the margin, is granted to
+`platform_staff` alone. A tenant's own "Plan & usage" screen (Settings) reads a disjoint set of
+functions that never return the withheld columns at all — belt and braces, not either on its
+own.
+
+**GOLD selling GOLD stays a different axis from a tenant selling its own customers (D42,
+restated a third time).** This record's domain code lives in `lib/domain/commercial/`, never
+`lib/domain/billing/` — the `billing` module is a tenant's own price book and invoices, and
+folding GOLD's subscription revenue into the same directory would invite exactly the confusion
+D42 already named once.
+
+**Not built here, named rather than skipped.** Reconciling an estimated provider cost against a
+provider's real invoice (`platform_provider_sync_failures` exists and reads empty, the same
+shape `platform_failures` had between M5 and M6); an AI cost analyst drafting a provider rate
+from a source (`approval_state` on both rate tables exists for exactly this, and nothing writes
+a draft yet); Stripe, on either side of this ledger; and the remaining five modules' entitlement
+maps named above.
 
 ---
 

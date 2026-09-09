@@ -4,7 +4,7 @@ import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { paymentProvider } from '@/lib/adapters/payments';
-import { listEnabledModules } from '@/lib/domain/tenancy/modules';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { CustomFieldValues } from '@/components/custom-fields/values';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { getInvoiceForWorkItem, invoiceStanding } from '@/lib/domain/billing/invoices';
@@ -75,7 +75,7 @@ export default async function WorkItemPage({
     listLocations(db, { organizationId }),
     listAssets(db, { organizationId }),
     getInvoiceForWorkItem(db, { organizationId, workItemId }),
-    listEnabledModules(db, { organizationId }),
+    listUsableModules(db, { organizationId }),
   ]);
 
   // I4: the only total on this page, and the only one anywhere. Nothing here reduces an

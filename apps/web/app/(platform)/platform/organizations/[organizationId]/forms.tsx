@@ -1,0 +1,138 @@
+'use client';
+
+import { Button } from '@/components/controls/button';
+import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
+import { useActionState } from 'react';
+import {
+  RATE_INITIAL,
+  TERM_INITIAL,
+  recordCommercialTermAction,
+  recordProviderRateAction,
+  recordRetailRateAction,
+} from './actions';
+
+type Option = { value: string; label: string };
+
+/** One form, two callers — the provider and retail rate cards are the same shape (D43). */
+export function RecordRateForm({
+  organizationId,
+  kind,
+  meters,
+}: {
+  organizationId: string;
+  kind: 'provider' | 'retail';
+  meters: Option[];
+}) {
+  const action = kind === 'provider' ? recordProviderRateAction : recordRetailRateAction;
+  const [state, formAction, pending] = useActionState(action, RATE_INITIAL);
+
+  return (
+    <form action={formAction} className="mt-3 flex flex-col gap-2 text-sm">
+      <input type="hidden" name="organizationId" value={organizationId} />
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <SelectInput name="meterId" required aria-label="Meter" className="flex-1">
+          <option value="">Meter…</option>
+          {meters.map((meter) => (
+            <option key={meter.value} value={meter.value}>
+              {meter.label}
+            </option>
+          ))}
+        </SelectInput>
+        <TextInput
+          name="currency"
+          type="text"
+          required
+          maxLength={3}
+          placeholder="USD"
+          aria-label="Currency"
+          className="w-24"
+        />
+        <TextInput
+          name="unitAmountMicros"
+          type="number"
+          required
+          min={0}
+          step={1}
+          placeholder="Micro-minor-units per unit"
+          aria-label="Amount per unit, in micro-minor-units"
+          className="flex-1"
+        />
+      </div>
+
+      <TextInput
+        name="source"
+        type="text"
+        required
+        maxLength={200}
+        placeholder="Where this number came from — an invoice, a pricing page, an estimate"
+        aria-label="Source"
+      />
+
+      <ErrorText>{state.error}</ErrorText>
+      {state.recorded ? <p className="text-subtle">Recorded.</p> : null}
+
+      <Button type="submit" disabled={pending} size="small" className="w-fit">
+        {pending ? 'Recording…' : `Record ${kind} rate`}
+      </Button>
+    </form>
+  );
+}
+
+export function RecordCommercialTermForm({
+  organizationId,
+  products,
+}: {
+  organizationId: string;
+  products: Option[];
+}) {
+  const [state, formAction, pending] = useActionState(recordCommercialTermAction, TERM_INITIAL);
+
+  return (
+    <form action={formAction} className="mt-3 flex flex-col gap-2 text-sm">
+      <input type="hidden" name="organizationId" value={organizationId} />
+
+      <SelectInput name="productKey" required aria-label="Product">
+        <option value="">What was sold…</option>
+        {products.map((product) => (
+          <option key={product.value} value={product.value}>
+            {product.label}
+          </option>
+        ))}
+      </SelectInput>
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <TextInput name="periodStart" type="date" required aria-label="Period start" className="flex-1" />
+        <TextInput name="periodEnd" type="date" required aria-label="Period end" className="flex-1" />
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <TextInput
+          name="priceMinor"
+          type="number"
+          required
+          min={0}
+          step={1}
+          placeholder="Price, in minor units"
+          aria-label="Price, in minor units"
+          className="flex-1"
+        />
+        <TextInput
+          name="currency"
+          type="text"
+          maxLength={3}
+          placeholder="USD (leave blank if free)"
+          aria-label="Currency"
+          className="w-40"
+        />
+      </div>
+
+      <ErrorText>{state.error}</ErrorText>
+      {state.recorded ? <p className="text-subtle">Recorded.</p> : null}
+
+      <Button type="submit" disabled={pending} size="small" className="w-fit">
+        {pending ? 'Recording…' : 'Record term'}
+      </Button>
+    </form>
+  );
+}

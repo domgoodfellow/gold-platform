@@ -1971,6 +1971,70 @@ export type Database = {
           },
         ]
       }
+      organization_commercial_terms: {
+        Row: {
+          currency: string | null
+          id: string
+          note: string
+          organization_id: string
+          period_end: string
+          period_start: string
+          price_minor: number
+          product_key: string
+          quantity: number
+          recorded_at: string
+          recorded_by: string
+        }
+        Insert: {
+          currency?: string | null
+          id?: string
+          note?: string
+          organization_id: string
+          period_end: string
+          period_start: string
+          price_minor: number
+          product_key: string
+          quantity?: number
+          recorded_at?: string
+          recorded_by: string
+        }
+        Update: {
+          currency?: string | null
+          id?: string
+          note?: string
+          organization_id?: string
+          period_end?: string
+          period_start?: string
+          price_minor?: number
+          product_key?: string
+          quantity?: number
+          recorded_at?: string
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_commercial_terms_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_commercial_terms_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_commercial_terms_product_key_fkey"
+            columns: ["product_key"]
+            isOneToOne: false
+            referencedRelation: "platform_products"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       organization_modules: {
         Row: {
           enabled_at: string
@@ -2248,6 +2312,203 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_meters: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          provider: string
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id: string
+          provider: string
+          unit: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          provider?: string
+          unit?: string
+        }
+        Relationships: []
+      }
+      platform_products: {
+        Row: {
+          created_at: string
+          key: string
+          kind: string
+          label: string
+          module_key: string | null
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          kind: string
+          label: string
+          module_key?: string | null
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          kind?: string
+          label?: string
+          module_key?: string | null
+        }
+        Relationships: []
+      }
+      platform_provider_rates: {
+        Row: {
+          approval_state: string
+          captured_at: string
+          currency: string
+          effective_from: string
+          id: string
+          meter_id: string
+          note: string
+          recorded_by: string
+          source: string
+          source_url: string | null
+          unit_amount_micros: number
+        }
+        Insert: {
+          approval_state?: string
+          captured_at?: string
+          currency: string
+          effective_from?: string
+          id?: string
+          meter_id: string
+          note?: string
+          recorded_by: string
+          source: string
+          source_url?: string | null
+          unit_amount_micros: number
+        }
+        Update: {
+          approval_state?: string
+          captured_at?: string
+          currency?: string
+          effective_from?: string
+          id?: string
+          meter_id?: string
+          note?: string
+          recorded_by?: string
+          source?: string
+          source_url?: string | null
+          unit_amount_micros?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_provider_rates_meter_id_fkey"
+            columns: ["meter_id"]
+            isOneToOne: false
+            referencedRelation: "platform_meters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_provider_sync_failures: {
+        Row: {
+          created_at: string
+          detail: string
+          id: string
+          meter_id: string | null
+          occurred_at: string
+          organization_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          detail: string
+          id?: string
+          meter_id?: string | null
+          occurred_at?: string
+          organization_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          detail?: string
+          id?: string
+          meter_id?: string | null
+          occurred_at?: string
+          organization_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_provider_sync_failures_meter_id_fkey"
+            columns: ["meter_id"]
+            isOneToOne: false
+            referencedRelation: "platform_meters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_provider_sync_failures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_provider_sync_failures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_retail_rates: {
+        Row: {
+          approval_state: string
+          captured_at: string
+          currency: string
+          effective_from: string
+          id: string
+          meter_id: string
+          note: string
+          recorded_by: string
+          source: string
+          source_url: string | null
+          unit_amount_micros: number
+        }
+        Insert: {
+          approval_state?: string
+          captured_at?: string
+          currency: string
+          effective_from?: string
+          id?: string
+          meter_id: string
+          note?: string
+          recorded_by: string
+          source: string
+          source_url?: string | null
+          unit_amount_micros: number
+        }
+        Update: {
+          approval_state?: string
+          captured_at?: string
+          currency?: string
+          effective_from?: string
+          id?: string
+          meter_id?: string
+          note?: string
+          recorded_by?: string
+          source?: string
+          source_url?: string | null
+          unit_amount_micros?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_retail_rates_meter_id_fkey"
+            columns: ["meter_id"]
+            isOneToOne: false
+            referencedRelation: "platform_meters"
             referencedColumns: ["id"]
           },
         ]
@@ -2604,6 +2865,70 @@ export type Database = {
             foreignKeyName: "telephony_settings_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_events: {
+        Row: {
+          created_at: string
+          currency: string
+          customer_charge_micros: number
+          id: string
+          meter_id: string
+          note: string
+          occurred_at: string
+          organization_id: string
+          provider_cost_micros: number
+          provider_cost_status: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          customer_charge_micros?: number
+          id?: string
+          meter_id: string
+          note?: string
+          occurred_at?: string
+          organization_id: string
+          provider_cost_micros?: number
+          provider_cost_status?: string
+          quantity: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          customer_charge_micros?: number
+          id?: string
+          meter_id?: string
+          note?: string
+          occurred_at?: string
+          organization_id?: string
+          provider_cost_micros?: number
+          provider_cost_status?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_events_meter_id_fkey"
+            columns: ["meter_id"]
+            isOneToOne: false
+            referencedRelation: "platform_meters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
           },
@@ -3582,6 +3907,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      module_commercial_state: {
+        Args: { p_organization_id: string }
+        Returns: {
+          module_key: string
+          paid: boolean
+          period_end: string
+          wanted: boolean
+        }[]
+      }
       open_call: {
         Args: {
           p_conference_name: string
@@ -3591,6 +3925,17 @@ export type Database = {
           p_to_number: string
         }
         Returns: string
+      }
+      organization_commercial_summary: {
+        Args: { p_from?: string; p_organization_id: string; p_to?: string }
+        Returns: {
+          currency: string
+          customer_charge_minor: number
+          margin_minor: number
+          meter_id: string
+          provider_cost_minor: number
+          quantity: number
+        }[]
       }
       organization_launch_blockers: {
         Args: { p_id: string }
@@ -3641,6 +3986,19 @@ export type Database = {
         }
         Returns: string
       }
+      record_commercial_term: {
+        Args: {
+          p_currency?: string
+          p_note?: string
+          p_organization_id: string
+          p_period_end: string
+          p_period_start: string
+          p_price_minor: number
+          p_product_key: string
+          p_quantity?: number
+        }
+        Returns: string
+      }
       record_external_readings: {
         Args: { p_location_id: string; p_readings: Json }
         Returns: number
@@ -3666,6 +4024,30 @@ export type Database = {
           p_provider: string
           p_provider_reference: string
           p_request_id: string
+        }
+        Returns: string
+      }
+      record_provider_rate: {
+        Args: {
+          p_approval_state?: string
+          p_currency: string
+          p_meter_id: string
+          p_note?: string
+          p_source: string
+          p_source_url?: string
+          p_unit_amount_micros: number
+        }
+        Returns: string
+      }
+      record_retail_rate: {
+        Args: {
+          p_approval_state?: string
+          p_currency: string
+          p_meter_id: string
+          p_note?: string
+          p_source: string
+          p_source_url?: string
+          p_unit_amount_micros: number
         }
         Returns: string
       }
@@ -3709,6 +4091,10 @@ export type Database = {
           p_team_size: string
         }
         Returns: undefined
+      }
+      retail_rate_at: {
+        Args: { p_at?: string; p_currency: string; p_meter_id: string }
+        Returns: number
       }
       run_due_automations: { Args: never; Returns: number }
       schedule_ahead: {
@@ -3859,6 +4245,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      usable_modules: { Args: { p_organization_id: string }; Returns: string[] }
       work_at_risk: {
         Args: { p_organization_id: string }
         Returns: {

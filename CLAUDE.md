@@ -53,13 +53,17 @@ the deferrals, and the two claims this repository has had to withdraw.
 Built: the kernel (tenancy, memberships, events, customers, roles, field definitions, locations,
 resources, assets, documents, operating hours), the work engine, the configuration engine, the
 automation engine, the AI question tools and the onboarding proposal, the aggregate layer, saved
-reports and dashboards, and reception — a customer's stage, a call as a conference, the words a
-business uses for both, and the carrier's own callbacks finishing the row (D38, D39).
+reports and dashboards, reception — a customer's stage, a call as a conference, the words a
+business uses for both, and the carrier's own callbacks finishing the row (D38, D39) — and
+GOLD's own commercial/financial control plane: a catalogue, D41's entitlement in full, and a
+usage ledger recording GOLD's own provider cost alongside what a business is charged (D43).
 
 Not built: per-tenant theming, the shared control set (`docs/ui-spec.md` §4), the per-tenant
-marketing surface (D20), desktop (M10). Two domain capabilities are reachable from no screen —
-`revokePortalInvite` and `assignRole`; `docs/walkthrough.md` names where an operator would hit
-them. Do not add a third without noticing.
+marketing surface (D20), desktop (M10), Stripe on either side of the commercial ledger, and the
+entitlement write-refusal on any module's tables but `card_payments`'s (D43 names the rest as a
+gap). Two domain capabilities are reachable from no screen — `revokePortalInvite` and
+`assignRole`; `docs/walkthrough.md` names where an operator would hit them. Do not add a third
+without noticing.
 
 `supabase/migrations/` is the source of truth for the data model. Read it rather than
 inferring the schema, and comment the *why* rather than the *what*.
@@ -239,6 +243,16 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | An unsigned callback accepted | Anyone who learns the URL could write calls into a business's record | `verify_signature` over the URL and every parameter; a missing signature is a refusal, not a skip |
 | A word the platform speaks to a caller | What a customer hears belongs to the business (I24), and an unrouted number does not even say whose it is | `voice_inbound` declines rather than improvising |
 
+### Commercial
+
+| Never | Because | Held by |
+|---|---|---|
+| A rate or a term written by a general table grant | D40's rule, restated: staff hold no `insert`/`update`/`delete` on any table. A rate or a term is a narrow `SECURITY DEFINER` function's job, checked and audited, never a grant somebody widens later | `platform_provider_rates`, `platform_retail_rates`, `organization_commercial_terms` hold no such grant for any role; `public.record_provider_rate`, `public.record_retail_rate`, `public.record_commercial_term` are the only doors, each `execute`-granted to `platform_staff` alone |
+| An RLS policy that reads entitlement | D25 surviving the arrival of money: a module is billing and navigation, never authorization, and a lapsed term must never become an access-control decision | No policy anywhere selects from `organization_commercial_terms`; the refusal is `app.check_module_entitlement`, a trigger |
+| GOLD's own provider cost, or the margin it implies, reaching a tenant | A business is entitled to know what it is charged, never what it costs GOLD to serve it | `platform_provider_rates` has no grant to `authenticated`; `usage_events`'s grant to `authenticated` omits `provider_cost_micros`/`provider_cost_status`; `public.organization_commercial_summary` is `platform_staff`-only |
+| A recorded amount below one minor unit | I10 | Only a *rate* (price per unit) carries micro-minor-unit precision; every disclosed total still rounds once, at render |
+| A second retail price for voice, SMS or email | `communication_rates` (D40) already answers it | `platform_retail_rates` holds no row for those three meters |
+
 ### The AI axis
 
 | Never | Because | Held by |
@@ -329,6 +343,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | What reaching somebody costs, and who pays first | D40 |
 | What a business is buying, and what a lapse does | D41 |
 | GOLD's own business, and why staff is a second account | D42 |
+| The commercial catalogue, entitlement's build, provider cost and margin | D43 |
 
 ## When you finish a change
 

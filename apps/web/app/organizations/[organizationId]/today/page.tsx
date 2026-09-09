@@ -10,7 +10,7 @@ import { listCalls } from '@/lib/domain/reception/calls';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { formatWindow, todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 import { computeReadiness } from '@/lib/domain/tenancy/lifecycle';
-import { listEnabledModules } from '@/lib/domain/tenancy/modules';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { listRecentActivity } from '@/lib/domain/timeline/timeline';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
@@ -62,7 +62,7 @@ export default async function TodayPage({
     }),
     listWorkItems(db, { organizationId }),
     listWorkItemTypes(db, { organizationId }),
-    listEnabledModules(db, { organizationId }),
+    listUsableModules(db, { organizationId }),
     // Only asked while there is a launch ahead of it — a live business has nothing here to
     // compute, and asking would be a second opinion nobody would ever read (Slice 1).
     inSetup ? computeReadiness(db, { organizationId }) : Promise.resolve(null),

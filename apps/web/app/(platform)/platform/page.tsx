@@ -3,6 +3,7 @@ import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import { Button } from '@/components/controls/button';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
@@ -97,7 +98,9 @@ export default async function PlatformPage() {
               emphasis: 'primary',
               cell: (tenant) => (
                 <>
-                  <span>{tenant.name}</span>
+                  <Link href={`/platform/organizations/${tenant.id}`} className="underline underline-offset-4">
+                    {tenant.name}
+                  </Link>
                   {tenant.slug ? (
                     <span className="block text-xs font-normal text-subtle">
                       /book/{tenant.slug}
