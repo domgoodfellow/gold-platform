@@ -97,6 +97,10 @@ export default async function WorkPage({
   const mayAdd = organization.capabilities.includes('work_item.create');
   const mayConfigure = organization.capabilities.includes('field.manage');
   const bookingEnabled = enabledModules.has('booking');
+  // A module hides what it owns everywhere, not only its own area — the same rule billing
+  // already follows on this page (Quote/Invoice/Margin below). A business that switched Assets
+  // off should not still see an asset reference on every job.
+  const assetsEnabled = enabledModules.has('assets');
   const mayMove = organization.capabilities.includes('work_item.transition');
   const maySchedule = organization.capabilities.includes('work_item.schedule');
 
@@ -195,9 +199,16 @@ export default async function WorkPage({
                             )}
                           </div>
 
-                          {item.customer || item.location || item.asset || item.resource ? (
+                          {item.customer ||
+                          item.location ||
+                          (assetsEnabled && item.asset) ||
+                          item.resource ? (
                             <div className="mt-2 flex flex-wrap gap-1">
-                              {[item.customer?.label, item.location?.label, item.asset?.label]
+                              {[
+                                item.customer?.label,
+                                item.location?.label,
+                                assetsEnabled ? item.asset?.label : null,
+                              ]
                                 .filter(Boolean)
                                 .map((label) => (
                                   <Badge key={label}>{label}</Badge>
@@ -265,6 +276,7 @@ export default async function WorkPage({
               locations={locations.map((l) => ({ id: l.id, label: l.label }))}
               resources={resourceOptions}
               assets={assets.map((a) => ({ id: a.id, label: a.name }))}
+              assetsEnabled={assetsEnabled}
               definitions={definitions}
             />
           ) : (

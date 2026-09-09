@@ -295,6 +295,27 @@ describe('a switch leads to its inputs', () => {
     expect(work).toContain("enabledModules.has('booking')");
   });
 
+  it('gates the asset reference on a job on the assets module, on both the board and the job page', () => {
+    // The same rule as above, one module over: an asset is what the Assets module owns on a
+    // job screen, and D25 says a module hides what it owns everywhere. This one was found by
+    // the product reality audit rather than caught at the time — the asset picker and badge
+    // rendered regardless of whether a business had switched Assets off at all.
+    const work = readFileSync(`${ROUTES}/work/page.tsx`, 'utf8');
+    const workItem = readFileSync(`${ROUTES}/work/[workItemId]/page.tsx`, 'utf8');
+
+    expect(work).toContain("enabledModules.has('assets')");
+    expect(work, 'the create-work-item form is not told whether assets are enabled').toContain(
+      'assetsEnabled={assetsEnabled}',
+    );
+    expect(workItem).toContain("enabledModules.has('assets')");
+    expect(workItem, 'the "Asset" detail is not gated on the assets module').toMatch(
+      /assetsEnabled\s*\?[\s\S]{0,200}Detail label="Asset"/,
+    );
+    expect(workItem, 'the edit-work-item form is not told whether assets are enabled').toContain(
+      'assetsEnabled={assetsEnabled}',
+    );
+  });
+
   it('builds a link that says where it goes', () => {
     const payments = MODULES.find((sold) => sold.key === 'card_payments')!;
     const where = moduleConfiguration('org-1', payments);

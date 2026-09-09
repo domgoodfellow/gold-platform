@@ -323,6 +323,7 @@ export function EditWorkItemForm({
   customers,
   locations,
   assets,
+  assetsEnabled,
   definitions,
 }: {
   organizationId: string;
@@ -330,6 +331,7 @@ export function EditWorkItemForm({
   customers: SelectOption[];
   locations: SelectOption[];
   assets: SelectOption[];
+  assetsEnabled: boolean;
   definitions: FieldDefinition[];
 }) {
   const [state, formAction, pending] = useActionState(updateWorkItemAction, INITIAL);
@@ -362,7 +364,9 @@ export function EditWorkItemForm({
           options={locations}
           value={workItem.location?.id}
         />
-        <OptionalSelect name="assetId" label="About" options={assets} value={workItem.asset?.id} />
+        {assetsEnabled ? (
+          <OptionalSelect name="assetId" label="About" options={assets} value={workItem.asset?.id} />
+        ) : null}
       </div>
 
       <CustomFieldInputs definitions={definitions} values={workItem.custom as CustomValues} />

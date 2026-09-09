@@ -21,9 +21,9 @@ const BUILT_ON = ['Stripe', 'Twilio', 'Resend', 'Anthropic'];
  *
  * No button of its own reaches `/login` — `(marketing)/layout.tsx` already puts "Log in" in
  * the header on every page here, so a second one in the hero would be the same action twice.
- * "Get in touch" stays prose rather than a button, because nothing in this repository is a real
- * destination for it yet (no contact route, no listed address) — a button that goes nowhere is
- * worse than a sentence that says so.
+ * The closing section's "Get started" points at `/sign-up`, a real working door (self-serve
+ * founding reopened, `20260901000001`) — not an invented contact form or a fabricated address,
+ * which would have been worse than the dead-end prose it replaces (product reality audit, Slice E).
  */
 export default function Home() {
   return (
@@ -206,12 +206,23 @@ export default function Home() {
           right.
         </h2>
         <p className="max-w-md text-muted">
-          {/* Two doors onto one `createOrganization` (D29) — the self-serve door isn't open yet, since a new business here starts genuinely empty and handing that to a stranger isn't a product yet. */}
-          Get in touch and we will configure it against how you actually work.
+          Get in touch and we will configure it against how you actually work — or start now and
+          shape it as you go.
         </p>
-        <Link href="/login" className="mt-1 inline-block w-fit text-sm font-medium underline underline-offset-4">
-          Log in
-        </Link>
+        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+          {/* Self-serve founding is open (`20260901000001`, revisiting D29) — this is a real,
+              working door, not a promise, so the closing section has a next step for a visitor
+              who isn't a customer yet rather than only "Log in" for one who already is. */}
+          <Link
+            href="/sign-up"
+            className="text-sm font-medium underline underline-offset-4"
+          >
+            Get started
+          </Link>
+          <Link href="/login" className="inline-block w-fit text-sm font-medium underline underline-offset-4">
+            Log in
+          </Link>
+        </div>
       </section>
     </div>
   );

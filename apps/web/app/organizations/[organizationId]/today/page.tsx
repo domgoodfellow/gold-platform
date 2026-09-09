@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { formatWindow, todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
+import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -48,13 +49,14 @@ export default async function TodayPage({
   const date = todayInZone(organization.timezone);
   const within = zonedDayRange(date, organization.timezone);
 
-  const [schedule, all] = await Promise.all([
+  const [schedule, all, types] = await Promise.all([
     listSchedule(db, {
       organizationId,
       within,
       on: { date, timeZone: organization.timezone },
     }),
     listWorkItems(db, { organizationId }),
+    listWorkItemTypes(db, { organizationId }),
   ]);
 
   // One chronological list across every resource. `listSchedule` returns per resource because
@@ -180,6 +182,24 @@ export default async function TodayPage({
   return (
     <>
       {dateLine}
+
+      {/* A business with no kinds of work yet cannot have anything committed or waiting, so
+          both tiles below would read zero regardless — which looked identical to "nothing due
+          today" and left a brand-new organization with nowhere to go from this screen (product
+          reality audit, Slice B). This names the actual state and points at the screen where it
+          stops being true, rather than advising — `work/page.tsx` owns the same sentence for the
+          same reason. */}
+      {types.length === 0 ? (
+        <EmptyState className="mt-4">
+          No kinds of work defined yet.{' '}
+          <Link
+            href={`/organizations/${organizationId}/work`}
+            className="underline underline-offset-4"
+          >
+            Start in Work
+          </Link>
+        </EmptyState>
+      ) : null}
 
       {/* **Two tiles and no third.** How much is on today and how much is waiting are the two
           questions this screen answers. There is deliberately no *overdue*, no percentage and no

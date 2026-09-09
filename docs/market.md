@@ -122,7 +122,7 @@ path a tenant uses. The risk to watch: a field our own pipeline wants is *one* c
 | Blocker | State |
 |---|---|
 | ~~`setTypeBookable` has no route~~ | **Closed.** Publishing is a section on the Work screen, under the kind of work being published. The public flow is demonstrable by hand. |
-| GOLD is not deployed | No git remote; `vercel.json` exists only under `apps/api`. |
+| GOLD is not deployed | Tracked on GitHub, but nowhere live: no `.vercel` directory, no hosting config, and `vercel.json` exists only under `apps/api`. |
 | Operator provisioning | M5, next. |
 | Tenant marketing surface | Deferred by D20; `tire-app-template` holds the pattern in `site_content`. |
 | Taking money from a tenant's customers | D27 decided, no route built. |

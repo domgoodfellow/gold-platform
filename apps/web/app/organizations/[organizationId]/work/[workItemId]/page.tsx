@@ -101,6 +101,9 @@ export default async function WorkItemPage({
   // business that invoices in another system has no quote on this job to explain. Hiding the
   // Pricing area and leaving quoting on every job screen would have been half a switch.
   const billingEnabled = enabledModules.has('billing');
+  // Same rule, same file, one module over: an asset reference is what Assets owns on a job
+  // screen, and D25 says a module hides what it owns everywhere.
+  const assetsEnabled = enabledModules.has('assets');
 
   const mayAdd = organization.capabilities.includes('work_item.create');
   const mayEdit = organization.capabilities.includes('work_item.update');
@@ -132,7 +135,7 @@ export default async function WorkItemPage({
         </Detail>
         <Detail label="Customer">{workItem.customer?.label}</Detail>
         <Detail label="Place">{workItem.location?.label}</Detail>
-        <Detail label="Asset">{workItem.asset?.label}</Detail>
+        {assetsEnabled ? <Detail label="Asset">{workItem.asset?.label}</Detail> : null}
         <Detail label="Assigned to">{workItem.resource?.label}</Detail>
         <Detail label="Scheduled">
           {/* I9: an absolute instant rendered in this business's zone, never the server's. */}
@@ -155,6 +158,7 @@ export default async function WorkItemPage({
             customers={customers.map((customer) => ({ id: customer.id, label: customer.name }))}
             locations={locations.map((location) => ({ id: location.id, label: location.label }))}
             assets={assets.map((asset) => ({ id: asset.id, label: asset.name }))}
+            assetsEnabled={assetsEnabled}
             definitions={definitions}
           />
         ) : (

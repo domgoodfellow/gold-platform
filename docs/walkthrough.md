@@ -97,11 +97,19 @@ so anything that changes host between the link and the form loses it. The callba
 a relative `Location` for exactly that reason — `request.url` and `request.nextUrl` were both
 measured turning a `127.0.0.1` request into a `localhost` redirect.
 
-### 2. Have a business provisioned for you
+### 2. Found a business, or have one provisioned for you
 
-Founding closed (D29): `/organizations` has no form, `create_organization` holds no grant, and a
-business begins when GOLD provisions it. Log in as the staff account from *The other side*
-below, provision one for the first of your two sign-ups, then sign in as them.
+**Stale until this line: self-serve founding reopened** (`20260901000001`, revisiting D29).
+`/organizations` shows a form to any signed-in user with no organization yet, and
+`create_organization` is granted to `authenticated` — the simplest path for either of your two
+sign-ups is to use it directly, right here.
+
+The staff-provisioned door still exists and is what M5's console proves, so it is worth walking
+once: log in as the staff account from *The other side* below, provision a business for the
+first of your two sign-ups (`createBusinessAction`'s staff-facing counterpart on `/platform`),
+then sign in as them. Both doors write the same `organization.created` event — one flagged
+`provisioned`, one not — and both call `app.enable_default_modules` before handing you the same
+empty business described below.
 
 The provisioning form asks four things, each deliberate:
 

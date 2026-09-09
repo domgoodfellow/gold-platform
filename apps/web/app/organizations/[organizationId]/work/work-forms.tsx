@@ -36,6 +36,7 @@ export function CreateWorkItemForm({
   locations,
   resources,
   assets,
+  assetsEnabled,
   definitions,
 }: {
   organizationId: string;
@@ -44,6 +45,7 @@ export function CreateWorkItemForm({
   locations: SelectOption[];
   resources: SelectOption[];
   assets: SelectOption[];
+  assetsEnabled: boolean;
   definitions: FieldDefinition[];
 }) {
   const [state, formAction, pending] = useActionState(createWorkItemAction, INITIAL);
@@ -94,10 +96,14 @@ export function CreateWorkItemForm({
       </div>
 
       {/* What the work is about, as opposed to what it is done with. "Service the
-          compressor" names an asset; "Sam drives there" names a resource. */}
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <OptionalSelect name="assetId" label="About" options={assets} />
-      </div>
+          compressor" names an asset; "Sam drives there" names a resource. Gated on the Assets
+          module the same way Quote/Invoice/Margin are gated on billing (D25): a business that
+          switched Assets off should not see an asset picker on a job, empty or not. */}
+      {assetsEnabled ? (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <OptionalSelect name="assetId" label="About" options={assets} />
+        </div>
+      ) : null}
 
       <CustomFieldInputs definitions={definitions} />
 

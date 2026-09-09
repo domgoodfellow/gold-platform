@@ -620,6 +620,7 @@ wrong and change this table.
 | **Group and proximity discounting** | Travel cost modelling, so a discount never exceeds what the business provably saved | A business that actually routes |
 | **Business templates** — a cloneable bundle of modules, statuses, fields and roles | Two businesses configured by hand first | The source conversation calls this the thing that turns four apps into a product, and it is — **second**. A template is an extract of configuration that has already proven itself; cloned earlier, it clones a guess |
 | **Incumbent displacement** — import, parity, a reason to switch | Deliberately not scoped | Phase two. Named so it is a recorded decision rather than an assumption |
+| **D41's term table** — the append-only ledger, the four-state intersection in `listEnabledModules`, and the trigger that refuses a lapsed module's writes | Nothing technical; D41 below specifies the shape in full | A real subscription about to be quoted to a paying tenant. Until then, `organization_modules` is still the only table, and D41's four-state table is not yet true of the code — found by the product reality audit, which is why this row exists rather than the decision record simply being wrong |
 
 Two of these carry reasoning worth keeping in full, because finding it out later is expensive.
 
@@ -707,6 +708,11 @@ its.
 ---
 
 ### D41 — A module is wanted and paid for, and those are two rows
+
+**Not yet built.** See "Decided, not yet built" above. `organization_modules` is still the only
+table today; `listEnabledModules` computes no intersection because there is nothing yet to
+intersect with. What follows is the decision, specified in full so building it is a matter of
+following this rather than re-deriving it.
 
 **Decision.** `organization_modules` keeps answering one question only: *does this business want
 this module.* A person with `organization.manage` switches it, and D25 is untouched. A second,

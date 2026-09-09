@@ -130,7 +130,14 @@ collision cost.
 
 | Engine | Owns |
 |---|---|
-| *(none yet)* | Tenancy is kernel, not an engine. The first engine appears when two independent pieces of evidence want the same capability, or when told to build one directly — not when a second caller needs a rule, which is grounds for extracting a function and nothing more. |
+| Pricing | `priceWorkItem` — the price book, quoted lines, invoices, payments, job economics (I4). |
+| Scheduling | `freeWindows` and `listSchedule` — the calendar, availability, resource assignment, operating hours, double-booking (I5, I7). |
+
+**Stale until this line, this table said `*(none yet)*`.** `constraints.md`'s own Engines table
+has listed both of these as **Built** since M2/M3 — this table simply hadn't been updated to
+agree with it. The definition above still holds: an engine appears here on two independent
+pieces of evidence, and each of these has them — the prior repositories `vision.md` names, plus
+the invariant machinery (I4, I5, I7) that would break if either calculation moved.
 
 Filled in as engines are extracted. An engine appears here on two independent pieces of
 evidence, at least one from a system that shipped — never in anticipation, and never on the
