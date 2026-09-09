@@ -1,22 +1,64 @@
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
+import { listAutomationRuns } from '@/lib/domain/automation/rules';
+import { listMessageDeliveries } from '@/lib/domain/automation/templates';
+import { createCustomer } from '@/lib/domain/customers/customers';
+import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
+import { createOrganization } from '@/lib/domain/tenancy/organizations';
+import { listRecentActivity } from '@/lib/domain/timeline/timeline';
 
 /**
- * A brand-new organization has no work item types, so both of Today's tiles read zero — which
- * looked identical to "nothing due today" and left an operator with nowhere to go from this
- * screen (product reality audit, Slice B). `work/page.tsx` already carries the sentence for this
- * state ("No kinds of work defined yet"); Today now says the same thing and links to the screen
- * where it stops being true, rather than leaving it to be found unaided.
+ * Today as the operational cockpit (product reality audit, Slice 2).
  *
- * Source scan, for the reason `layout.test.ts` gives for the same choice: an async server
- * component here has no rendering harness this repository runs, so the structural claim is read
- * from the file instead of mounted.
+ * **Structural claims are a source scan, for the reason `layout.test.ts` gives for the same
+ * choice**: an async server component has no rendering harness this repository runs, so which
+ * widgets exist in which order under which lifecycle state is read from the file rather than
+ * mounted. **Data claims — tenant isolation, real attribution, zero-is-valid — are real Postgres
+ * tests**, because those are exactly the two kinds of mistake a source scan cannot catch.
  */
 
 const TODAY = fileURLToPath(
   new URL('../app/organizations/[organizationId]/today/page.tsx', import.meta.url),
 );
+
+const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
+const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+
+async function signedInStranger(): Promise<SupabaseClient> {
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const email = `stranger-${randomUUID().slice(0, 8)}@example.test`;
+  const password = `pw-${randomUUID()}`;
+  const { error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+  if (createError) throw createError;
+
+  const db = createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { error: signInError } = await db.auth.signInWithPassword({ email, password });
+  if (signInError) throw signInError;
+  return db;
+}
+
+async function freshOrganization(): Promise<{ db: SupabaseClient; organizationId: string }> {
+  const db = await signedInStranger();
+  const organizationId = await createOrganization(db, {
+    name: `Today Test ${randomUUID().slice(0, 6)}`,
+    displayName: 'Founder',
+    timezone: 'UTC',
+    currency: 'EUR',
+  });
+  return { db, organizationId };
+}
 
 describe('Today, with nothing configured yet', () => {
   it('names the empty state and links to Work rather than showing two silent zeroes', () => {
@@ -27,5 +69,123 @@ describe('Today, with nothing configured yet', () => {
       source,
       'no empty state pointing at Work when there are no work item types',
     ).toMatch(/types\.length === 0[\s\S]{0,300}organizations\/\$\{organizationId\}\/work/);
+  });
+});
+
+describe('Today, structural composition (source scan)', () => {
+  const source = readFileSync(TODAY, 'utf8');
+
+  it('reads readiness from the existing Slice 1 mechanism rather than a second calculation', () => {
+    expect(source).toContain("import { computeReadiness } from '@/lib/domain/tenancy/lifecycle'");
+    expect(source).toContain('computeReadiness(db, { organizationId })');
+  });
+
+  it('puts readiness and activity before operational widgets while in SETUP, and omits readiness entirely once LIVE', () => {
+    // Rendered exactly once anywhere in the file — if LIVE also rendered it, this would be 2.
+    const readinessOccurrences = source.match(/\{readinessWidget\}/g) ?? [];
+    expect(readinessOccurrences, 'readinessWidget is rendered more than once, or not at all').toHaveLength(1);
+
+    const setupTernary = source.indexOf('{inSetup ? (');
+    const readinessIndex = source.indexOf('{readinessWidget}');
+    const activityIndex = source.indexOf('{activityWidget}');
+    const operationalIndex = source.indexOf('{operationalWidgets}', setupTernary);
+
+    expect(setupTernary).toBeGreaterThan(-1);
+    // The one rendering of readinessWidget sits inside the `inSetup ? (` branch, ahead of both
+    // activity and the operational widgets — proving SETUP leads with readiness rather than
+    // merely including it somewhere on the page.
+    expect(readinessIndex).toBeGreaterThan(setupTernary);
+    expect(readinessIndex).toBeLessThan(activityIndex);
+    expect(activityIndex).toBeLessThan(operationalIndex);
+  });
+
+  it('never claims a business with zero blockers is complete or launched', () => {
+    expect(source).toContain('Ready to launch');
+    expect(source).not.toMatch(/Setup complete/i);
+    // "Not ready to launch" contains "launch" adjacent to a negative, which is fine; what must
+    // never appear is a bare claim that setup — or the business — is finished or live.
+    expect(source).not.toMatch(/setup is (complete|finished|done)/i);
+  });
+
+  it('preserves the existing Committed/Waiting queries unchanged', () => {
+    expect(source).toContain("import { listSchedule } from '@/lib/domain/scheduling/availability'");
+    expect(source).toContain("import { listWorkItems } from '@/lib/domain/work-items/work-items'");
+    expect(source).toContain('listSchedule(db, {');
+  });
+
+  it('gates the new operational widgets on the module being enabled, never on their current count', () => {
+    expect(source).toMatch(/automationsOn \? \(/);
+    expect(source).toMatch(/receptionOn \? \(/);
+    // The tell for a count-based gate would be `failedRuns.length > 0 ?` guarding the whole
+    // widget rather than only its `href`/empty-state — asserted absent.
+    expect(source).not.toMatch(/failedRuns\.length > 0 \?\s*\(?\s*<Widget/);
+    expect(source).not.toMatch(/failedMessages\.length > 0 \?\s*\(?\s*<Widget/);
+  });
+
+  it('expands Committed, Waiting and Recent activity through the existing ?widget= mechanism', () => {
+    expect(source).toContain(
+      "open === 'committed' || open === 'waiting' || open === 'activity'",
+    );
+    expect(source).toContain('${area}?widget=activity');
+    expect(source).toContain('${area}?widget=committed');
+    expect(source).toContain('${area}?widget=waiting');
+  });
+});
+
+describe('Today, real data behind the new widgets', () => {
+  it('recent activity is tenant-isolated and renders a real, attributable event', async () => {
+    const { db: dbA, organizationId: orgA } = await freshOrganization();
+    const { organizationId: orgB } = await freshOrganization();
+
+    await createCustomer(dbA, { organizationId: orgA, name: 'Ana Reyes' });
+
+    const ownActivity = await listRecentActivity(dbA, { organizationId: orgA });
+    const customerCreated = ownActivity.find((entry) => entry.description === 'Added as a customer');
+    expect(customerCreated).toBeDefined();
+    expect(customerCreated?.actorName).toBe('Founder');
+
+    // The organization itself coming into existence is on the same feed, in the platform's own
+    // words rather than the raw action string.
+    expect(ownActivity.some((entry) => entry.description === 'This business was created')).toBe(
+      true,
+    );
+
+    // Asking A's own session about B's organization returns nothing — RLS scopes by the
+    // caller's membership regardless of which id the query names.
+    const crossTenant = await listRecentActivity(dbA, { organizationId: orgB });
+    expect(crossTenant).toEqual([]);
+  });
+
+  it('a stranger with no membership gains nothing through any of Today’s reused readers', async () => {
+    const { db, organizationId } = await freshOrganization();
+    // Real data behind the readers, so "the stranger sees nothing" is a claim about RLS rather
+    // than a claim about there being nothing to see.
+    await createCustomer(db, { organizationId, name: 'A Real Customer' });
+    await setModuleEnabled(db, { organizationId, key: 'automations', enabled: true });
+
+    const stranger = await signedInStranger();
+
+    expect(await listRecentActivity(stranger, { organizationId })).toEqual([]);
+    expect(
+      await listAutomationRuns(stranger, { organizationId, failedOnly: true }),
+    ).toEqual([]);
+    expect(
+      await listMessageDeliveries(stranger, { organizationId, failedOnly: true }),
+    ).toEqual([]);
+  });
+
+  it('a module switched on with zero failures is a valid, distinct state from the module being off', async () => {
+    const { db, organizationId } = await freshOrganization();
+
+    // Off: nothing to ask, and the page itself never calls these readers in that state
+    // (asserted by the source scan above). On: a real, empty answer — not an error, not
+    // undefined, and not indistinguishable from "the module isn't there".
+    await setModuleEnabled(db, { organizationId, key: 'automations', enabled: true });
+
+    const runs = await listAutomationRuns(db, { organizationId, failedOnly: true });
+    const messages = await listMessageDeliveries(db, { organizationId, failedOnly: true });
+
+    expect(runs).toEqual([]);
+    expect(messages).toEqual([]);
   });
 });

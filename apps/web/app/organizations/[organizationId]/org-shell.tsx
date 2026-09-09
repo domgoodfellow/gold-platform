@@ -2,6 +2,7 @@
 
 
 import { SidebarLabel, useSidebarCollapsed } from '@/components/containers/app-shell';
+import { Badge } from '@/components/display/data';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -180,7 +181,9 @@ export function OrgNavBar({
       className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background md:hidden"
     >
       <ul className="flex gap-1 overflow-x-auto p-2">
-        {AREAS.filter((area) => !area.module || enabled.has(area.module)).map((area) => (
+        {AREAS.filter(
+          (area) => area.sidebar !== false && (!area.module || enabled.has(area.module)),
+        ).map((area) => (
           <li key={area.segment} className="shrink-0">
             <NavLink
               organizationId={organizationId}
@@ -196,6 +199,48 @@ export function OrgNavBar({
 }
 
 /**
+ * The one entry that is not in `AREAS` at all. Business Setup is implementation infrastructure
+ * while a business is in Setup — not a switched-on capability — so it does not belong to a
+ * group the way an ordinary area does, and it is shown above every group rather than filed
+ * inside Configuration beside the things a business adjusts twice a year. `layout.tsx` decides
+ * when: only while `organization.operationalState === 'setup'`.
+ */
+export function SetupEntry({ organizationId }: { organizationId: string }) {
+  const collapsed = useSidebarCollapsed();
+  const current = currentSegment(usePathname()) === 'setup';
+
+  return (
+    <div className="border-b border-border p-3">
+      <Link
+        href={areaHref(organizationId, 'setup')}
+        aria-current={current ? 'page' : undefined}
+        className={cx(
+          FOCUS_RING,
+          'flex items-center justify-center gap-2 rounded bg-accent px-3 py-1.5 text-sm font-medium text-on-accent',
+          !collapsed && 'lg:justify-start',
+        )}
+      >
+        <Sparkles aria-hidden size={18} className="shrink-0" />
+        <SidebarLabel>Set up your business</SidebarLabel>
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * The header's version of the same fact, for the width the sidebar is not there at all —
+ * `ui-spec.md` §2's rule against a second permanent bottom-nav destination on a phone is why
+ * this is a header treatment rather than a fourth thing in `OrgNavBar`.
+ */
+export function SetupBadge({ organizationId }: { organizationId: string }) {
+  return (
+    <Link href={areaHref(organizationId, 'setup')} className={cx(FOCUS_RING, 'rounded shrink-0')}>
+      <Badge tone="accent">Setting up</Badge>
+    </Link>
+  );
+}
+
+/**
  * Where you are, in the header bar.
  *
  * **Still one string doing two jobs.** An area page carries no `<h1>` of its own — the entry in
@@ -206,6 +251,13 @@ export function OrgNavBar({
  * On a detail route it becomes the way back instead. `areaRootSegment` is what tells the two
  * apart — a job is *in* Work but not *at* it — and there the page writes its own `<h1>`, because
  * a job's title is a tenant's words and not a platform noun.
+ *
+ * **An area with `parent` set gets a small link above its heading, reading whose it is.**
+ * Pricing, Automations, Custom fields and People and roles all left the sidebar for Settings in
+ * Slice 3 without moving anywhere — the same route, the same href, still directly bookmarkable
+ * — so somebody arriving at one straight from a bookmark or a module's own configuration link
+ * still needs to be told where they've landed. The parent's own `label` is read off its `Area`
+ * entry rather than written again here, which is what keeps this a single registry.
  */
 export function AreaTrail({ organizationId }: { organizationId: string }) {
   const pathname = usePathname();
@@ -213,7 +265,24 @@ export function AreaTrail({ organizationId }: { organizationId: string }) {
   if (!area) return null;
 
   if (areaRootSegment(pathname) !== null) {
-    return <h1 className="min-w-0 truncate text-lg font-semibold">{area.label}</h1>;
+    const parent = area.parent ? AREAS.find((candidate) => candidate.segment === area.parent) : null;
+
+    return (
+      <div className="min-w-0">
+        {parent ? (
+          <Link
+            href={areaHref(organizationId, parent.segment)}
+            className={cx(
+              'block text-xs text-muted underline-offset-4 hover:underline',
+              FOCUS_RING,
+            )}
+          >
+            {parent.label}
+          </Link>
+        ) : null}
+        <h1 className="min-w-0 truncate text-lg font-semibold leading-tight">{area.label}</h1>
+      </div>
+    );
   }
 
   return (

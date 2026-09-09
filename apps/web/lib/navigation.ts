@@ -192,6 +192,22 @@ export type Area = {
   group: AreaGroup;
   /** The module this area belongs to, or absent for the kernel. A business without a named module doesn't see its entry — not capability gating (I12), just a fact that it isn't part of that business. */
   module?: ModuleKey;
+  /**
+   * Route metadata, kept apart from sidebar visibility on purpose (product reality audit,
+   * Slice 3). `false` means this area's route, href, capability and module gating are all
+   * unchanged — it is still a real, directly addressable page — it simply is not one of the
+   * permanent rows a business scans every day. Settings became the primary door to it instead.
+   * Absent (the default) means shown, same as before this field existed.
+   */
+  sidebar?: boolean;
+  /**
+   * The area this one reads as nested under, for `AreaTrail` alone — never a second grouping
+   * axis and never consulted by `areasIn`. An area with `sidebar: false` still needs to say
+   * where it belongs when somebody arrives at it directly (a bookmark, a module's own
+   * `configuredAt` link), and "Settings → Pricing" is that answer without inventing a second
+   * label registry: the parent's own `label` is read straight off its `Area` entry.
+   */
+  parent?: string;
 };
 
 /** Operational areas first, configuration last — a claim about what an operator does all day, not an alphabetisation. */
@@ -213,12 +229,21 @@ export const AREAS: readonly Area[] = [
   { segment: 'assets', label: 'Assets', group: 'records', module: 'assets' },
 
   // Turning this off also takes priced lines and the invoice off a job screen — see the work item route.
-  { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing' },
-  { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations' },
-  { segment: 'fields', label: 'Custom fields', group: 'configuration' },
-  { segment: 'roles', label: 'People and roles', group: 'configuration' },
-  // Last but one — a business reaches guided setup while standing everything up and rarely again.
-  { segment: 'setup', label: 'Guided setup', group: 'configuration', module: 'drafting' },
+  // `sidebar: false` below: Settings is the primary door to each of these now (Slice 3). The
+  // route, the module gate and the capability underneath are all exactly what they were —
+  // bookmarks, deep links and `moduleConfiguration`'s own hrefs keep working unchanged.
+  { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing', sidebar: false, parent: 'settings' },
+  { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations', sidebar: false, parent: 'settings' },
+  { segment: 'fields', label: 'Custom fields', group: 'configuration', sidebar: false, parent: 'settings' },
+  { segment: 'roles', label: 'People and roles', group: 'configuration', sidebar: false, parent: 'settings' },
+  // `sidebar: false`: Business Setup is implementation infrastructure, not a permanent tenant
+  // area (Product Contract, Slice 1/3). While a business is in SETUP it already has its own
+  // elevated shell treatment (`SetupEntry`/`SetupBadge` in `layout.tsx`) — a second, equal-weight
+  // row in the ordinary Configuration group would be the very thing that treatment exists to
+  // avoid. While LIVE, the route recedes to a Settings hub card instead of the sidebar. The
+  // route, its module gate and `/setup` itself are all unchanged — only where it is *found*
+  // moved, exactly as Pricing/Automations/Custom fields/People and roles already did.
+  { segment: 'setup', label: 'Guided setup', group: 'configuration', module: 'drafting', sidebar: false },
   // Names no module — it's where the switches are, so a module able to hide it would lock a business out of its own account.
   { segment: 'settings', label: 'Settings', group: 'configuration' },
 ] as const;
@@ -228,6 +253,7 @@ export function areasIn(group: AreaGroup, enabled?: ReadonlySet<string>): Area[]
   return AREAS.filter(
     (area) =>
       area.group === group &&
+      area.sidebar !== false &&
       // No module named means the kernel — not something a business switched on, so not something it can switch off.
       (!area.module || !enabled || enabled.has(area.module)),
   );

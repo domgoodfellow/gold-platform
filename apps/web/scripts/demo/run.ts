@@ -12,6 +12,7 @@ import { saveReportDefinition, setReportRoles } from '@/lib/domain/reporting/def
 import { createResource } from '@/lib/domain/resources/resources';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
 import { addMember } from '@/lib/domain/tenancy/members';
+import { launchOrganization } from '@/lib/domain/tenancy/lifecycle';
 import { recordCost, recordTime } from '@/lib/domain/work-items/consumption';
 import { updateWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { changeWorkItemStatus } from '@/lib/domain/work-items/transitions';
@@ -329,6 +330,11 @@ async function standUp(
       position,
     });
   }
+
+  // Three months of jobs, invoices and reports is not a business "still being set up" — the
+  // real path a person building one of these by hand would have launched it long before now,
+  // and D37 says this script takes the real path, not a shortcut around it.
+  await launchOrganization(ownerDb, { organizationId });
 
   return { organizationId };
 }

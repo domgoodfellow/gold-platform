@@ -11,6 +11,7 @@ import {
   proposeConfiguration,
   reviseConfigurationProposal,
 } from '@/lib/domain/configuration/proposals';
+import { launchOrganization } from '@/lib/domain/tenancy/lifecycle';
 
 export type SetupActionState = { error: string | null };
 
@@ -113,6 +114,16 @@ export async function applyAction(
 
     await applyConfigurationProposal(db, { organizationId, proposalId });
   });
+}
+
+export async function launchAction(
+  _previous: SetupActionState,
+  formData: FormData,
+): Promise<SetupActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  return run(organizationId, () => launchOrganization(db, { organizationId }));
 }
 
 export async function discardAction(

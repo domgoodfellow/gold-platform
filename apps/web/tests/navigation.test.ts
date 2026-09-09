@@ -125,7 +125,13 @@ describe('the operator shell navigation', () => {
   });
 
   it('splits every area into exactly one group', () => {
-    const total = AREA_GROUPS.reduce((sum, group) => sum + areasIn(group.key).length, 0);
+    // A fact about `AREAS` itself — every area belongs to exactly one group whether or not it
+    // currently renders in the sidebar — so this reads the array directly rather than through
+    // `areasIn`, which also applies Slice 3's `sidebar` filter.
+    const total = AREA_GROUPS.reduce(
+      (sum, group) => sum + AREAS.filter((area) => area.group === group.key).length,
+      0,
+    );
     expect(total).toBe(AREAS.length);
   });
 });
@@ -195,11 +201,19 @@ describe('modules', () => {
   });
 
   it('shows an area once its module is on', () => {
-    const shown = areasIn('configuration', new Set(['billing']));
-    expect(shown.map((area) => area.segment)).toContain('pricing');
+    // Not `pricing` — Slice 3 gave it `sidebar: false`, so it never appears in `areasIn`
+    // regardless of module state, on purpose. `assets` stays a sidebar area, so it is still the
+    // right example of the underlying rule this test is about.
+    const shown = areasIn('records', new Set(['assets']));
+    expect(shown.map((area) => area.segment)).toContain('assets');
 
-    // And with nothing passed, everything: a caller with no business in hand means all of it.
-    expect(AREA_GROUPS.reduce((sum, group) => sum + areasIn(group.key).length, 0)).toBe(AREAS.length);
+    // And with nothing passed, every area still in the sidebar: a caller with no business in
+    // hand means all of it, on the module axis. `sidebar: false` areas (Slice 3) stay absent
+    // regardless — that filter is orthogonal to which modules are enabled, not a relaxation of it.
+    const sidebarAreas = AREAS.filter((area) => area.sidebar !== false).length;
+    expect(AREA_GROUPS.reduce((sum, group) => sum + areasIn(group.key).length, 0)).toBe(
+      sidebarAreas,
+    );
   });
 });
 
@@ -280,19 +294,20 @@ describe('a switch leads to its inputs', () => {
     // `billing` off follows when it takes the quote and the invoice off every job screen.
     // Publishing a kind of work is the second half of public booking: the address is configured
     // in Settings, where `configuredAt` points, and *which types are on the page* is configured
-    // per type on the Work screen. Leaving that visible with the module off would be half a
-    // switch, and it is the kind of thing a refactor removes without noticing, because the
-    // control still works.
+    // per type on Settings → Work (Slice 3 moved this off the operational board, and the rule
+    // travelled with it). Leaving that visible with the module off would be half a switch, and
+    // it is the kind of thing a refactor removes without noticing, because the control still
+    // works.
     //
     // Read from source for the reason the section check above is: the alternative is trusting
     // that whoever moves this section remembers what it was conditional on.
-    const work = readFileSync(`${ROUTES}/work/page.tsx`, 'utf8');
+    const workConfig = readFileSync(`${ROUTES}/settings/work/page.tsx`, 'utf8');
 
-    expect(work).toContain('PublishTypeForm');
-    expect(work, 'the publish section is not gated on the booking module').toMatch(
+    expect(workConfig).toContain('PublishTypeForm');
+    expect(workConfig, 'the publish section is not gated on the booking module').toMatch(
       /bookingEnabled\s*\?[\s\S]{0,400}PublishTypeForm/,
     );
-    expect(work).toContain("enabledModules.has('booking')");
+    expect(workConfig).toContain("enabledModules.has('booking')");
   });
 
   it('gates the asset reference on a job on the assets module, on both the board and the job page', () => {
@@ -316,6 +331,24 @@ describe('a switch leads to its inputs', () => {
     );
   });
 
+  it('gates the shell’s prominent Setup treatment on operational_state, not on a module', () => {
+    // Business Setup is implementation infrastructure while a business is in Setup, not a
+    // switched-on capability (product reality audit) — so its shell prominence must disappear
+    // once a business is Live, on its own, with nothing left to remember to turn off. Source
+    // scan for the same reason `layout.test.ts` gives: nothing here renders in a harness this
+    // repository runs.
+    const layout = readFileSync(`${ROUTES}/layout.tsx`, 'utf8');
+    const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
+
+    expect(layout, 'the shell never asks whether this business is still in setup').toContain(
+      "operationalState === 'setup'",
+    );
+    expect(layout).toContain('SetupEntry');
+    expect(layout).toContain('SetupBadge');
+    expect(shell).toContain('export function SetupEntry');
+    expect(shell).toContain('export function SetupBadge');
+  });
+
   it('builds a link that says where it goes', () => {
     const payments = MODULES.find((sold) => sold.key === 'card_payments')!;
     const where = moduleConfiguration('org-1', payments);
@@ -328,5 +361,133 @@ describe('a switch leads to its inputs', () => {
     const billing = MODULES.find((sold) => sold.key === 'billing')!;
     expect(moduleConfiguration('org-1', billing).href).toBe('/organizations/org-1/pricing');
     expect(moduleConfiguration('org-1', billing).label).toBe('Pricing');
+  });
+
+  it('keeps every module’s configuration link valid after Slice 3 hid four areas from the sidebar', () => {
+    // Billing and Automations both configure at a segment `sidebar: false` now hides — the
+    // exact case D31's own link would break if hiding an area from the sidebar were confused
+    // with removing it. Neither href nor label moved, because the route didn't.
+    const billing = MODULES.find((sold) => sold.key === 'billing')!;
+    expect(moduleConfiguration('org-1', billing)).toEqual({
+      href: '/organizations/org-1/pricing',
+      label: 'Pricing',
+    });
+
+    const automations = MODULES.find((sold) => sold.key === 'automations')!;
+    expect(moduleConfiguration('org-1', automations)).toEqual({
+      href: '/organizations/org-1/automations',
+      label: 'Automations',
+    });
+  });
+});
+
+/**
+ * Route metadata versus sidebar visibility (Slice 3) — the two must stay separable without a
+ * second registry of labels or hrefs anywhere else in the codebase.
+ */
+describe('an area hidden from the sidebar', () => {
+  const HIDDEN = ['pricing', 'automations', 'fields', 'roles'] as const;
+
+  it('stays a real, directly addressable area with its href and capability gating unchanged', () => {
+    for (const segment of HIDDEN) {
+      const area = AREAS.find((entry) => entry.segment === segment);
+      expect(area, `${segment} was removed from AREAS entirely`).toBeDefined();
+      expect(area?.sidebar).toBe(false);
+      // Still resolves through the one href function — no second path was added for it.
+      expect(areaHref('org-1', segment)).toBe(`/organizations/org-1/${segment}`);
+    }
+  });
+
+  it('names Settings as its parent for AreaTrail, reading the parent’s own label rather than a second one', () => {
+    for (const segment of HIDDEN) {
+      const area = AREAS.find((entry) => entry.segment === segment)!;
+      expect(area.parent).toBe('settings');
+      const parent = AREAS.find((entry) => entry.segment === area.parent);
+      expect(parent?.label).toBe('Settings');
+    }
+  });
+
+  it('is absent from the sidebar, the tablet rail and the phone bar alike — one AREAS list, not two', () => {
+    // `OrgNav` (desktop and tablet, via `areasIn`) and `OrgNavBar` (phone) are two renderings
+    // of the one `AREAS` array, per `ui-spec.md` §2 — never a second list kept in step by hand.
+    // `OrgNav` gets the filter for free by calling `areasIn`; `OrgNavBar` filters `AREAS`
+    // directly (it always has, for the module check) and Slice 3 extended that same inline
+    // filter rather than introducing a parallel one.
+    const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
+    const navigation = readFileSync(fileURLToPath(new URL('../lib/navigation.ts', import.meta.url)), 'utf8');
+
+    expect(navigation, 'areasIn (which OrgNav calls) should filter on sidebar').toContain(
+      'area.sidebar !== false',
+    );
+    expect(shell, 'OrgNavBar should filter the same AREAS array on the same flag').toContain(
+      'area.sidebar !== false',
+    );
+    // Both renderers still map the one imported `AREAS`/`areasIn` — not a locally declared list.
+    expect(shell).toContain("from '@/lib/navigation'");
+  });
+});
+
+/**
+ * Guided Setup, off the permanent sidebar — the last piece of the Product Contract's own
+ * inconsistency: Business Setup is implementation infrastructure, not a tenant area, and a
+ * second equal-weight Configuration row duplicated the elevated SETUP-only treatment Slice 1
+ * already built for exactly this purpose.
+ */
+describe('Guided Setup is no longer a permanent sidebar destination', () => {
+  it('is hidden from areasIn regardless of whether drafting is enabled', () => {
+    // Sidebar visibility and module gating are orthogonal (Slice 3's own point) — proven here
+    // by enabling the module and still finding no sidebar entry.
+    const withDrafting = areasIn('configuration', new Set(['drafting']));
+    expect(withDrafting.map((area) => area.segment)).not.toContain('setup');
+
+    const area = AREAS.find((entry) => entry.segment === 'setup');
+    expect(area?.sidebar).toBe(false);
+  });
+
+  it('remains a real, directly addressable route', () => {
+    const area = AREAS.find((entry) => entry.segment === 'setup');
+    expect(area, 'setup was removed from AREAS entirely').toBeDefined();
+    expect(areaHref('org-1', 'setup')).toBe('/organizations/org-1/setup');
+
+    // D31's own link for the drafting module still resolves — nothing about `MODULES` or
+    // `configuredAt` changed, only where a person finds the sidebar row that used to point here.
+    const drafting = MODULES.find((sold) => sold.key === 'drafting')!;
+    expect(moduleConfiguration('org-1', drafting)).toEqual({
+      href: '/organizations/org-1/setup',
+      label: 'Guided setup',
+    });
+  });
+
+  it('still gets its elevated SETUP-only shell treatment, and no second row in Configuration', () => {
+    const layout = readFileSync(`${ROUTES}/layout.tsx`, 'utf8');
+    expect(layout).toContain('SetupEntry');
+    expect(layout).toContain('SetupBadge');
+
+    // `OrgNav` — the ordinary Configuration-group renderer — is generic over `AREAS`/`areasIn`
+    // and must not special-case 'setup' itself; if it did, that would be the second,
+    // equal-weight row this patch exists to remove. Extracted by name rather than grepping the
+    // whole file, since `SetupEntry`/`SetupBadge` legitimately mention 'setup' right beside it.
+    const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
+    const orgNavBody = shell.slice(shell.indexOf('export function OrgNav('), shell.indexOf('export function OrgNavBar('));
+    expect(orgNavBody, 'OrgNav should not hardcode a setup-specific row').not.toContain("'setup'");
+  });
+
+  it('gives Settings a path back to it, worded so Launch never sounds available again', () => {
+    const settings = readFileSync(`${ROUTES}/settings/page.tsx`, 'utf8');
+    expect(settings, 'no card links Settings to /setup').toMatch(/organizationId\}\/setup/);
+    expect(settings, 'Business setup card is missing').toContain('Business setup');
+    expect(
+      settings,
+      'post-launch wording must not imply Launch can happen again',
+    ).toMatch(/Review or revise this business.s configuration/);
+  });
+
+  it('never renders Launch again on /setup once the business is LIVE', () => {
+    // The whole readiness/Launch section — `LaunchForm` included — is gated on `inSetup`, so a
+    // LIVE business visiting `/setup` directly sees no Launch control to press, on top of the
+    // database's own refusal if one were pressed anyway (`lifecycle.test.ts`: a second attempt
+    // is refused as `organizations.already_live`).
+    const setup = readFileSync(`${ROUTES}/setup/page.tsx`, 'utf8');
+    expect(setup).toMatch(/inSetup && readiness \? \(([\s\S]*?)LaunchForm/);
   });
 });

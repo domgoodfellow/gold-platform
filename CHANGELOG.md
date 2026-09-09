@@ -5,6 +5,112 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A prospect can ask GOLD for a workflow review, and read nothing back
+
+The homepage's primary CTA pointed at an in-page anchor with no submission mechanism behind it.
+It now leads to `/workflow-review`, a public form that writes an ordinary customer into GOLD's
+own tenant rather than a second CRM.
+
+- `supabase/migrations/20260909000001_a_workflow_review_leaves_no_way_back_in.sql` —
+  `platform_settings` (one row, RLS forced, no grant to any role) and
+  `public.request_workflow_review`, a `SECURITY DEFINER` function that takes no organization id
+  from its caller at all. `create_booking` accepts one because it re-checks it against the
+  caller's own `external_actors` binding; this axis has no binding to check against, so the
+  target is read from `platform_settings` instead, set once per deployment by
+  `supabase/snippets/workflow-review-target.sql` (D42's reasoning applied a second time).
+- `apps/web/lib/domain/workflow-review/workflow-review.ts` — anonymous sign-in (D22, I11),
+  the one RPC call, then an unconditional sign-out. Booking keeps its session alive so a visitor
+  can see their own booking; this deliberately does not, because there is nothing here for a
+  visitor to read back.
+- `apps/web/app/(marketing)/workflow-review/` — the route, in GOLD's own chrome. Filling it in
+  creates no account, no membership, no organization. Success reads "Request received" rather
+  than redirecting to `/sign-up`.
+- Corrected the product-example sentence on the homepage. It previously read as a promise that a
+  tenant could rename the platform's own screens ("the areas, the words... are this business's
+  own"); the screens are fixed (D6) and only a tenant's own data — customers, jobs, work types
+  and statuses — varies. Rewritten to say that.
+- `apps/web/tests/{workflow-review,workflow-review-route,marketing-homepage}.test.ts`.
+
+Newly enforced: **I26** (see `docs/domain-model.md`). `constraints.md` D22 carries the reasoning
+for the second, narrower caller.
+
+### The homepage sells the product these slices actually produced
+
+Rebuilt for what GOLD now is, after four slices gave it a real lifecycle, a real cockpit, a real
+Configuration Center and a real split between operating Work and defining it — not the platform's
+internal naming for how it is built, and not the order this repository's own commercial reasoning
+expects one customer to buy successive pieces.
+
+- `apps/web/app/(marketing)/page.tsx`, `layout.tsx` — header nav, hero with a stated primary
+  motion ("Request a workflow review", never presented as equal to self-service signup), the
+  current-fragmentation problem, a product example grounded in the real shell (Today, Work,
+  Schedule, Customers, Settings — not generic SaaS chrome), capability families, the real
+  four-step implementation motion, an automation/AI progression that marks what is available
+  today versus direction, and vendor trust kept visually subordinate.
+- No fabricated customer counts, testimonials, guarantees, or contact destination that does not
+  exist in this repository's configuration.
+- `apps/web/tests/marketing-homepage.test.ts`.
+
+### Guided Setup leaves the permanent sidebar
+
+The last inconsistency from the Configuration Center slice: Guided Setup and Settings both sat in
+the sidebar's Configuration group, though Business Setup is implementation infrastructure and not
+a permanent tenant area. `navigation.ts`'s `sidebar?: boolean` (added below) now hides it while
+LIVE without removing the `/setup` route, the elevated SETUP-state treatment, D32's proposal
+history, or AI drafting access — none of which moves.
+
+### Settings becomes the Configuration Center; Work becomes operational only
+
+Operations and configuration were mixed on one screen — Work carried both today's jobs and the
+type/status definitions behind them. Split, so that navigating today's work never routes an
+operator through settings for it (D23).
+
+- `apps/web/lib/navigation.ts` — `Area` gained `sidebar?: boolean` (route stays real and
+  addressable, hidden from the sidebar) and `parent?: string` (drives a breadcrumb via
+  `AreaTrail`), rather than a second label/route registry alongside `AREAS`.
+- `apps/web/app/organizations/[organizationId]/settings/work/` — work types, statuses and
+  transitions moved here from `Work`, which now shows only what is scheduled or waiting.
+- Settings became a hub linking to ten configuration destinations, each carrying a
+  "Settings → X" breadcrumb rather than a client-side tab framework.
+- `apps/web/tests/settings-configuration-center.test.ts`, updates to `navigation.test.ts`.
+
+### Today is an operational cockpit, not a static greeting
+
+Widget composition is now lifecycle-aware rather than a fixed set: what a SETUP-state business
+sees differs from a LIVE one, and every widget's eligibility comes from actual configured product
+state rather than a role name or a row count.
+
+- `apps/web/app/organizations/[organizationId]/today/page.tsx` — a Setup Readiness widget while
+  in SETUP (wording sourced from `computeReadiness`, never a second opinion on the same facts); a
+  Recent Activity widget while LIVE, reading the same `events` table `listCustomerTimeline`
+  already reads, through a shared interpretive core rather than a duplicate one.
+- `apps/web/lib/domain/timeline/timeline.ts` — `listRecentActivity` extracted alongside
+  `listCustomerTimeline`, both built on one shared `describe()`/`Vocabulary`.
+- Existing Committed/Waiting widgets kept their business logic unchanged; reused `WidgetGrid`
+  unmodified.
+- `apps/web/tests/today.test.ts`.
+
+### A business starts in SETUP, and Launch is a decision — closed against a direct-RPC bypass
+
+Every organization now begins in `operational_state = 'setup'`; readiness is computed, never
+stored, from actual configured product state; Launch to `'live'` is something an operator decides
+rather than something that happens on its own.
+
+- `supabase/migrations/20260908000002_a_business_launches_when_someone_says_so.sql` —
+  `operational_state`; `apps/web/lib/domain/tenancy/lifecycle.ts` — `computeReadiness`,
+  `launchOrganization`.
+- **The first version of Launch checked only `organization.manage`, never the blockers
+  themselves** — anyone holding that capability could call `launch_organization` directly through
+  PostgREST and skip `computeReadiness` entirely. Closed the same day, in
+  `20260908000003_a_launch_cannot_bypass_its_own_blockers.sql`: `public.organization_launch_blockers`
+  is now the one definition of what blocks SETUP → LIVE, called by `computeReadiness` for
+  presentation and by a `before update of operational_state` trigger for enforcement — the same
+  shape I13 already uses for a work item's status, one table over.
+- `apps/web/tests/lifecycle.test.ts` — including a direct-RPC attempt against an organization
+  with an open blocker, asserted refused regardless of capability.
+
+Newly enforced: **I27** (see `docs/domain-model.md`).
+
 ### Sixteen areas in one flat list, and one divider
 
 The sidebar was two groups — operational, then configuration — with sixteen entries between them

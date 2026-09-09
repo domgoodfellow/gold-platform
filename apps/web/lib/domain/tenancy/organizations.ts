@@ -23,6 +23,8 @@ export type Organization = {
   bufferMinutes: number;
   /** What this business is called in a public URL, or null until it wants one. Never derived from the name — that would be the platform naming a business. */
   slug: string | null;
+  /** Whether this business is still being configured or is running for real. Not billing, not entitlement (D41 remains undone) — see `lib/domain/tenancy/lifecycle.ts`. */
+  operationalState: 'setup' | 'live';
 };
 
 const NAME_MAX = 200;
@@ -61,7 +63,7 @@ export const FOUNDING_ROLE = 'Owner';
 // not a concatenation — supabase-js parses the select at the type level and only sees a
 // literal, so splitting it collapses the result type to GenericStringError[].
 const MEMBERSHIP_SELECT =
-  'role:roles!memberships_role_same_org(name, capabilities), organization:organizations!inner(id, name, created_at, timezone, currency, buffer_minutes, slug)';
+  'role:roles!memberships_role_same_org(name, capabilities), organization:organizations!inner(id, name, created_at, timezone, currency, buffer_minutes, slug, operational_state)';
 
 type MembershipRow = {
   role: { name: string; capabilities: string[] } | { name: string; capabilities: string[] }[];
@@ -74,6 +76,9 @@ type MembershipRow = {
         currency: string | null;
         buffer_minutes: number;
         slug: string | null;
+        // Postgres types this `text`; the check constraint is what actually narrows it to two
+        // values, so the cast happens in `toOrganization` rather than being asserted here.
+        operational_state: string;
       }
     | {
         id: string;
@@ -83,6 +88,9 @@ type MembershipRow = {
         currency: string | null;
         buffer_minutes: number;
         slug: string | null;
+        // Postgres types this `text`; the check constraint is what actually narrows it to two
+        // values, so the cast happens in `toOrganization` rather than being asserted here.
+        operational_state: string;
       }[];
 };
 
@@ -105,6 +113,9 @@ function toOrganization(row: MembershipRow): Organization | null {
     currency: organization.currency,
     bufferMinutes: organization.buffer_minutes,
     slug: organization.slug,
+    // Guaranteed to be one of the two by `organizations_operational_state_known`; the database
+    // is the check constraint, not a second one written here.
+    operationalState: organization.operational_state === 'live' ? 'live' : 'setup',
   };
 }
 

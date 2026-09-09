@@ -19,9 +19,18 @@ import { cx, FOCUS_RING } from '../class-names';
  * business yet.
  */
 export function SiteShell({
+  nav,
   action,
   children,
 }: {
+  /**
+   * A handful of in-page anchors, for a visitor already reading rather than one deciding
+   * whether to. Optional, and used by the marketing page alone — the four credential screens
+   * have nothing on the page worth jumping to, and a nav that only sometimes does something is
+   * worse than no nav (product reality audit, Slice 4). Hidden below `sm` rather than wrapped:
+   * a header is not where a phone has room for a second row.
+   */
+  nav?: ReactNode;
   /** What sits opposite the wordmark — the link the reader most likely wants next. */
   action?: ReactNode;
   children: ReactNode;
@@ -34,10 +43,11 @@ export function SiteShell({
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 p-4 sm:px-6">
           <Link
             href="/"
-            className={cx('rounded text-lg font-semibold tracking-tight', FOCUS_RING)}
+            className={cx('rounded shrink-0 text-lg font-semibold tracking-tight', FOCUS_RING)}
           >
             GOLD
           </Link>
+          {nav ? <nav className="hidden min-w-0 flex-1 sm:block">{nav}</nav> : null}
           {action}
         </div>
       </header>

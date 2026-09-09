@@ -1,63 +1,281 @@
 import Link from 'next/link';
-import {
-  Bot,
-  CalendarDays,
-  ClipboardCheck,
-  LayoutDashboard,
-  Phone,
-  SlidersHorizontal,
-  ToggleLeft,
-  Users,
-} from 'lucide-react';
+import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users } from 'lucide-react';
+import { Badge } from '@/components/display/data';
+import { ButtonLink } from '@/components/controls/button';
 
 const BUILT_ON = ['Stripe', 'Twilio', 'Resend', 'Anthropic'];
 
 /**
  * GOLD's own front door — not the tenant marketing surface D20 defers, since the business
  * making claims here is GOLD itself, not a tenant (`public-profile.test.ts` doesn't scan it).
- * Says only what's true today: no prices (D8), nothing about layers that don't exist yet, and
- * no fake "trusted by" wall — the integrations strip below names the four vendors actually in
- * `apps/api/app/integrations/`, nothing aspirational.
  *
- * No button of its own reaches `/login` — `(marketing)/layout.tsx` already puts "Log in" in
- * the header on every page here, so a second one in the hero would be the same action twice.
- * The closing section's "Get started" points at `/sign-up`, a real working door (self-serve
- * founding reopened, `20260901000001`) — not an invented contact form or a fabricated address,
- * which would have been worse than the dead-end prose it replaces (product reality audit, Slice E).
+ * **Rebuilt for what the product now actually is** (product reality audit, Slice 4), after four
+ * slices gave GOLD a real lifecycle (SETUP → readiness → Launch → LIVE), a real cockpit (Today),
+ * a real Configuration Center (Settings) and a real split between operating Work and defining
+ * it. This page sells that — the configured system, and the review that gets a business one —
+ * never the platform's own internal naming for how it is built, and never the order in which
+ * this document's own commercial reasoning expects one customer to buy successive pieces. Those
+ * belong to `docs/`, not to somebody deciding whether to get in touch.
+ *
+ * **The primary CTA now has a real destination.** "Request a workflow review" (`market.md`'s own
+ * three reasons a business buys, read as an offer rather than a sales script) leads to
+ * `/workflow-review`, a form that writes an ordinary customer into GOLD's own tenant
+ * (`lib/domain/workflow-review/workflow-review.ts`) rather than to a fabricated inbox or a
+ * signup form standing in for it.
  */
 export default function Home() {
   return (
     <div className="flex flex-col gap-16 py-4 sm:gap-20 sm:py-6">
       {/* Hero */}
-      <section className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between sm:gap-12">
-        <div className="flex max-w-xl flex-col gap-6">
-          <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
-            Your business isn&rsquo;t the problem. Your spreadsheet is.
-          </h1>
-          <p className="max-w-md text-lg leading-relaxed text-muted">
-            GOLD replaces the spreadsheet, the shared calendar and the group chat holding your
-            business together with one place that books the job, keeps the schedule honest and
-            gets you paid — set up around how you already work, not a template you bend to fit.
+      <section className="flex flex-col gap-6">
+        <h1 className="max-w-2xl text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
+          Your business isn&rsquo;t the problem. Running it from five different places is.
+        </h1>
+        <p className="max-w-xl text-lg leading-relaxed text-muted">
+          Small operations businesses run real work — jobs, schedules, customers, payments — split
+          across a spreadsheet, a calendar, a phone and a few tools that don&rsquo;t talk to each
+          other. GOLD is one configured system that reflects how you already work, built with you
+          rather than bent to fit a template.
+        </p>
+
+        {/* Primary, then the two doors that already exist today — never presented as equals
+            (product reality audit, Slice 4: self-service is real but not the primary motion). */}
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <ButtonLink href="/workflow-review" tone="primary">
+            Request a workflow review
+          </ButtonLink>
+          <p className="text-sm text-muted">
+            Already have an account?{' '}
+            <Link href="/login" className="underline underline-offset-4">
+              Log in
+            </Link>
           </p>
         </div>
+        <p className="text-sm text-subtle">
+          Want to explore on your own first?{' '}
+          <Link href="/sign-up" className="underline underline-offset-4">
+            Start here
+          </Link>
+          .
+        </p>
+      </section>
 
-        <div className="flex shrink-0 flex-col gap-3 sm:pt-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
-            What you&rsquo;re running today
-          </p>
-          <ul className="flex flex-col gap-2 text-sm text-subtle">
-            <li className="line-through decoration-1">A spreadsheet</li>
-            <li className="line-through decoration-1">A shared calendar</li>
-            <li className="line-through decoration-1">A group chat</li>
-          </ul>
-          <p className="text-sm font-semibold text-foreground">One system that runs it</p>
+      {/* Current problem — fragmentation, not a spreadsheet grudge */}
+      <section id="problem" className="flex flex-col gap-6">
+        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
+          Where it stands today
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            ['Customer details', 'a phone, an inbox, or an old spreadsheet'],
+            ['The schedule', 'a shared calendar nobody fully trusts'],
+            ['Job status', 'in someone’s head, or a whiteboard'],
+            ['Getting paid', 'invoices written by hand, chased by text'],
+            ['Customer conversations', 'scattered across calls, texts and email'],
+          ].map(([what, where]) => (
+            <div
+              key={what}
+              className="flex items-baseline justify-between gap-3 rounded border border-border px-4 py-3 text-sm"
+            >
+              <span className="font-medium">{what}</span>
+              <span className="text-right text-subtle line-through decoration-1">{where}</span>
+            </div>
+          ))}
+        </div>
+        <p className="max-w-xl text-sm leading-relaxed text-muted">
+          None of these tools is wrong on its own. The problem is that no one of them knows what
+          the others are doing. GOLD&rsquo;s promise isn&rsquo;t replacing any single one of them
+          — it&rsquo;s putting the whole operation in one place that stays coordinated.
+        </p>
+      </section>
+
+      {/* Product example — grounded in the real shell, not generic SaaS chrome */}
+      <section id="example" className="flex flex-col gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
+          Example: a field-service business configured in GOLD
+        </p>
+        <div className="overflow-hidden rounded-lg border border-border shadow-sm">
+          <div className="grid grid-cols-[auto_1fr] sm:grid-cols-[180px_1fr]">
+            <div className="hidden flex-col gap-1 border-r border-border p-3 sm:flex">
+              {[
+                { label: 'Today', icon: LayoutDashboard, current: true },
+                { label: 'Work', icon: ClipboardList, current: false },
+                { label: 'Schedule', icon: CalendarDays, current: false },
+                { label: 'Customers', icon: Users, current: false },
+                { label: 'Settings', icon: Settings, current: false },
+              ].map(({ label, icon: Icon, current }) => (
+                <div
+                  key={label}
+                  className={
+                    current
+                      ? 'flex items-center gap-2 rounded bg-foreground px-2.5 py-1.5 text-sm font-medium text-background'
+                      : 'flex items-center gap-2 rounded px-2.5 py-1.5 text-sm text-muted'
+                  }
+                >
+                  <Icon aria-hidden size={16} className="shrink-0" />
+                  {label}
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-3 p-5">
+              <p className="text-sm font-semibold">Today</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { title: 'Committed today', value: '6', note: '09:00 Van 2 · Install, Reyes' },
+                  { title: 'Waiting to be scheduled', value: '2', note: 'Gutter clean · Okafor' },
+                  { title: 'Recent activity', value: null, note: 'Invoice #41 issued' },
+                ].map((widget) => (
+                  <div key={widget.title} className="rounded border border-border p-3">
+                    <p className="truncate text-xs font-medium text-muted">{widget.title}</p>
+                    {widget.value ? (
+                      <p className="mt-1 text-xl font-semibold tabular-nums">{widget.value}</p>
+                    ) : null}
+                    <p className="mt-1 truncate text-xs text-subtle">{widget.note}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        <p className="max-w-md text-sm text-subtle">
+          This is one example business, configured in GOLD. The screens stay the same for every
+          business — what changes is the work inside them: your own customers, your own jobs,
+          your own work types and statuses, set up around how you already run things.
+        </p>
+      </section>
+
+      {/* What GOLD can handle — capability families, not a feature checklist */}
+      <section id="capabilities" className="flex flex-col gap-8">
+        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
+          What a configured system can cover
+        </p>
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              name: 'Operations',
+              body: 'Work, scheduling, resources, customers, locations and assets — the day-to-day, in one place.',
+            },
+            {
+              name: 'Communications',
+              body: 'Calls logged against the right customer, with the history there when you pick up.',
+            },
+            {
+              name: 'Money',
+              body: 'A price book, quotes, invoices and payments — the numbers a job actually turns on.',
+            },
+            {
+              name: 'Automation',
+              body: 'Rules that move work on and messages that go out, in your own words, when something you defined happens.',
+            },
+            {
+              name: 'Customer-facing',
+              body: 'A booking page and a customer portal carrying your name and your brand, not ours.',
+            },
+            {
+              name: 'Insight',
+              body: 'A daily view of what’s committed, what’s waiting and what changed, plus reports when you want more.',
+            },
+          ].map((capability) => (
+            <div key={capability.name} className="flex flex-col gap-2 border-t-2 border-foreground pt-4">
+              <h3 className="text-base font-semibold">{capability.name}</h3>
+              <p className="text-sm leading-relaxed text-muted">{capability.body}</p>
+            </div>
+          ))}
+        </div>
+        <p className="max-w-xl text-sm text-muted">
+          You switch on what your business uses and pay for that — not a bundle of everything
+          above, and not a stripped-down tier of it either.
+        </p>
+      </section>
+
+      {/* How implementation works — the real motion, honestly paced */}
+      <section id="how-it-works" className="flex flex-col gap-8">
+        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
+          How implementation works
+        </p>
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              step: '01',
+              title: 'Understand the workflow',
+              body: 'We start with how your business actually runs today — the jobs, the schedule, who does what.',
+            },
+            {
+              step: '02',
+              title: 'Configure the business',
+              body: 'Work types, statuses, pricing, hours and roles get set up around that — nothing forced into a template.',
+            },
+            {
+              step: '03',
+              title: 'Review and launch',
+              body: 'You see exactly what’s been set up and what still needs attention before anything goes live. Launching is a decision you make, not something that happens on its own.',
+            },
+            {
+              step: '04',
+              title: 'Improve over time',
+              body: 'Switch on more of the system, add rules, adjust as the business changes — the same configuration, not a new one.',
+            },
+          ].map((phase) => (
+            <div key={phase.step} className="flex flex-col gap-2">
+              <p className="text-sm font-semibold text-subtle">{phase.step}</p>
+              <h3 className="text-base font-semibold">{phase.title}</h3>
+              <p className="text-sm leading-relaxed text-muted">{phase.body}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* What it's built on — real vendors, not a "trusted by" wall */}
+      {/* Automation / AI progression — capability, not a hype ladder. Delegate is the one stage
+          not yet real, and it says so once rather than with a badge on every line. */}
+      <section id="automation" className="flex flex-col gap-8">
+        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
+          How much runs on its own is up to you
+        </p>
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+          {[
+            {
+              name: 'Record',
+              body: 'The system captures the work, the calls and the customer history as it happens.',
+              available: true,
+            },
+            {
+              name: 'Understand',
+              body: 'Reports and plain-language questions expose what’s actually going on.',
+              available: true,
+            },
+            {
+              name: 'Assist',
+              body: 'A suggestion for the next step, with your own approval before anything changes.',
+              available: true,
+            },
+            {
+              name: 'Automate',
+              body: 'Rules act on their own when something you defined happens, and messages go out in your own words.',
+              available: true,
+            },
+            {
+              name: 'Delegate',
+              body: 'A voice agent handling bounded calls on its own.',
+              available: false,
+            },
+          ].map((stage) => (
+            <div key={stage.name} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold">{stage.name}</h3>
+                <Badge tone={stage.available ? 'neutral' : 'accent'}>
+                  {stage.available ? 'Available today' : 'Direction'}
+                </Badge>
+              </div>
+              <p className="text-sm leading-relaxed text-muted">{stage.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Platform / integration trust — subordinate, real vendors only */}
       <section className="flex flex-col gap-4 border-y border-border py-5 sm:flex-row sm:items-center sm:gap-10">
         <p className="shrink-0 text-xs font-semibold uppercase tracking-wide text-subtle">
-          What it&rsquo;s built on
+          Built on
         </p>
         <div
           className="min-w-0 flex-1 overflow-hidden"
@@ -74,7 +292,7 @@ export default function Home() {
             {[...BUILT_ON, ...BUILT_ON].map((name, index) => (
               <span
                 key={`${name}-${index}`}
-                className="text-lg font-semibold tracking-tight text-subtle"
+                className="text-base font-medium tracking-tight text-subtle"
               >
                 {name}
               </span>
@@ -83,144 +301,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* The shell, illustrated rather than screenshotted — the real one carries a business's own words, which this can't. */}
-      <section className="flex flex-col gap-3">
-        <div className="overflow-hidden rounded-lg border border-border shadow-sm">
-          <div className="grid grid-cols-[auto_1fr] sm:grid-cols-[180px_1fr]">
-            <div className="hidden flex-col gap-1 border-r border-border p-3 sm:flex">
-              {[
-                { label: 'Today', icon: LayoutDashboard, current: true },
-                { label: 'Work', icon: ClipboardCheck, current: false },
-                { label: 'Schedule', icon: CalendarDays, current: false },
-                { label: 'Customers', icon: Users, current: false },
-                { label: 'Calls', icon: Phone, current: false },
-                { label: 'Ask', icon: Bot, current: false },
-              ].map(({ label, icon: Icon, current }) => (
-                <div
-                  key={label}
-                  className={
-                    current
-                      ? 'flex items-center gap-2 rounded bg-foreground px-2.5 py-1.5 text-sm font-medium text-background'
-                      : 'flex items-center gap-2 rounded px-2.5 py-1.5 text-sm text-muted'
-                  }
-                >
-                  <Icon aria-hidden size={16} className="shrink-0" />
-                  {label}
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-col gap-2.5 p-5">
-              <p className="text-sm font-semibold">Today</p>
-              {[180, 140, 210, 120].map((width, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between rounded border border-border px-3 py-2.5"
-                >
-                  <div className="h-2.5 rounded-full bg-foreground/10" style={{ width }} />
-                  <div className="h-4 w-14 shrink-0 rounded border border-border bg-foreground/5" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <p className="max-w-md text-sm text-subtle">
-          The shape of the operator shell — the real one has your business&rsquo;s own words on
-          it, not ours.
-        </p>
-      </section>
-
-      {/* Three pillars */}
-      <section className="grid gap-10 sm:grid-cols-3">
-        <div className="flex flex-col gap-3 border-t-2 border-foreground pt-5">
-          <SlidersHorizontal aria-hidden size={22} />
-          <h2 className="text-lg font-semibold">
-            Shaped like your business, not the other way around
-          </h2>
-          <p className="text-sm leading-relaxed text-muted">
-            Your statuses, your prices, your hours, your forms. Nobody asks you to change how you
-            run things to fit the software — and nobody writes you a line of code to get there.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 border-t-2 border-foreground pt-5">
-          <ClipboardCheck aria-hidden size={22} />
-          <h2 className="text-lg font-semibold">
-            Nothing gets double-booked. Nobody chases a cheque.
-          </h2>
-          <p className="text-sm leading-relaxed text-muted">
-            One schedule that refuses to overlap, a booking page your customers use themselves,
-            and invoices that go out and get tracked — without you doing the tracking.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 border-t-2 border-foreground pt-5">
-          <ToggleLeft aria-hidden size={22} />
-          <h2 className="text-lg font-semibold">Pay for what you turn on</h2>
-          <p className="text-sm leading-relaxed text-muted">
-            Billing, assets, booking, card payments — switch on what you need. Invoice somewhere
-            else already? Keep doing that, and pay for the rest.
-          </p>
-        </div>
-      </section>
-
-      {/* Growth path */}
-      <section className="rounded-2xl bg-foreground px-6 py-10 text-background sm:px-10 sm:py-14">
-        <p className="text-xs font-semibold uppercase tracking-wide text-background/50">
-          How this actually plays out
-        </p>
-        <h2 className="mt-3 max-w-lg text-2xl font-semibold sm:text-3xl">
-          Most businesses buy this three times, not once.
-        </h2>
-
-        <div className="mt-10 grid gap-8 sm:grid-cols-3">
-          <div className="flex flex-col gap-2.5">
-            <p className="text-sm font-semibold text-background/45">01</p>
-            <h3 className="text-base font-semibold">Get off paper</h3>
-            <p className="text-sm leading-relaxed text-background/70">
-              Right now it&rsquo;s a booking inbox, a shared calendar, a group chat — and it holds
-              together because someone remembers. This is the part that changes first.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2.5">
-            <p className="text-sm font-semibold text-background/45">02</p>
-            <h3 className="text-base font-semibold">Let it run itself a little</h3>
-            <p className="text-sm leading-relaxed text-background/70">
-              A year in, the system that felt modern starts to feel like the old way. Rules
-              answer a customer without anyone watching; an assistant works the same tools your
-              team does.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2.5">
-            <p className="text-sm font-semibold text-background/45">03</p>
-            <h3 className="text-base font-semibold">Make it look like you own the place</h3>
-            <p className="text-sm leading-relaxed text-background/70">
-              Same customer, later: a site and a brand that shows up everywhere a customer looks
-              — the booking page, the portal, the invoice.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Closing */}
-      <section className="flex flex-col gap-4 pb-4">
+      {/* Closing CTA */}
+      <section id="review" className="flex flex-col gap-4 pb-4 scroll-mt-6">
         <h2 className="max-w-lg text-2xl font-semibold tracking-tight sm:text-3xl">
-          We build it with you. You don&rsquo;t touch a settings screen until it&rsquo;s already
-          right.
+          A workflow review is a conversation about how your business runs today.
         </h2>
         <p className="max-w-md text-muted">
-          Get in touch and we will configure it against how you actually work — or start now and
-          shape it as you go.
+          From there: we configure GOLD around it, you review exactly what&rsquo;s been set up,
+          and you launch when it&rsquo;s ready — never before.
         </p>
+        <div className="mt-1 flex flex-wrap items-center gap-3">
+          <ButtonLink href="/workflow-review" tone="primary">
+            Request a workflow review
+          </ButtonLink>
+        </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
-          {/* Self-serve founding is open (`20260901000001`, revisiting D29) — this is a real,
-              working door, not a promise, so the closing section has a next step for a visitor
-              who isn't a customer yet rather than only "Log in" for one who already is. */}
-          <Link
-            href="/sign-up"
-            className="text-sm font-medium underline underline-offset-4"
-          >
-            Get started
+          <Link href="/login" className="text-sm font-medium underline underline-offset-4">
+            Already have an account? Log in
           </Link>
-          <Link href="/login" className="inline-block w-fit text-sm font-medium underline underline-offset-4">
-            Log in
+          <Link href="/sign-up" className="text-sm font-medium underline underline-offset-4">
+            Want to explore on your own? Start here
           </Link>
         </div>
       </section>

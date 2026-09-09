@@ -273,6 +273,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 |---|---|---|
 | A service-role key in `apps/web` | D14 | Anon key only |
 | A tenant id in a public URL | The id must be one the server resolved, never one a URL supplied (D17) | `/book/[slug]` resolves through `public.booking_organization` |
+| An organization id accepted by a privileged public write | A parameter the caller supplies is a parameter the caller chose, no matter which layer read it first (D17, D22) | `request_workflow_review` takes no such argument; the target comes from `platform_settings`, readable by no role through PostgREST, set by hand (D42) |
 | A platform sentence on a public page | A claim a business makes about itself is configuration | `public-profile.test.ts` scans the source of `app/(public)/`, so this fails at the gate rather than in front of a customer |
 | An insert, update or delete grant to `platform_staff` | Staff may bring a tenant into existence and may never reach into one that exists (I21) | No write policy names the role *and* the role holds no such grant; `platform-staff.test.ts` asserts `permission denied` rather than merely a failure |
 | `security_definer` on `platform_tenants` | It would be the service-role client D14 refuses, with extra steps | `pg_class.reloptions`, read by the test rather than trusting the definition |

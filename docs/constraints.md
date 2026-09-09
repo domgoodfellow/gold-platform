@@ -426,6 +426,14 @@ one can write somebody else's. `external_actors_one_tenant_per_user` is on `user
 is the tenancy rule inverted on purpose: one actor may never span two tenants. Every write about
 the business goes through `create_booking`, whose first act is the scope check. A public URL
 carries a slug, never a tenant id.
+**A second, narrower caller.** GOLD's own homepage (`request_workflow_review`,
+`20260909000001_a_workflow_review_leaves_no_way_back_in.sql`) uses anonymous sign-in for the same
+reason booking does — I11 needs a real actor — but writes no `external_actors` binding at all,
+because there is nothing this caller should ever read back. The target organization is GOLD's own,
+which is not a slug a visitor supplies but D42's problem exactly: no migration can name an id that
+exists in one deployment, so it lives in `platform_settings`, set by hand
+(`supabase/snippets/workflow-review-target.sql`), never accepted as a parameter the function
+would otherwise have to trust.
 
 ### D23 — The interface has a decided visual language
 

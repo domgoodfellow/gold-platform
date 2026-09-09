@@ -226,7 +226,7 @@ export async function deleteMessageTemplate(db: Db, input: { id: string }): Prom
  */
 export async function listMessageDeliveries(
   db: Db,
-  input: { organizationId: string; subjectId?: string; limit?: number },
+  input: { organizationId: string; subjectId?: string; failedOnly?: boolean; limit?: number },
 ): Promise<MessageDelivery[]> {
   let query = db
     .from('message_deliveries')
@@ -236,6 +236,7 @@ export async function listMessageDeliveries(
     .limit(input.limit ?? 50);
 
   if (input.subjectId) query = query.eq('subject_id', input.subjectId);
+  if (input.failedOnly) query = query.eq('state', 'failed');
 
   const { data, error } = await query;
 

@@ -2066,6 +2066,7 @@ export type Database = {
           currency: string | null
           id: string
           name: string
+          operational_state: string
           slug: string | null
           timezone: string
         }
@@ -2076,6 +2077,7 @@ export type Database = {
           currency?: string | null
           id?: string
           name: string
+          operational_state?: string
           slug?: string | null
           timezone?: string
         }
@@ -2086,6 +2088,7 @@ export type Database = {
           currency?: string | null
           id?: string
           name?: string
+          operational_state?: string
           slug?: string | null
           timezone?: string
         }
@@ -2243,6 +2246,36 @@ export type Database = {
           {
             foreignKeyName: "payments_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_settings: {
+        Row: {
+          singleton: boolean
+          workflow_review_organization_id: string | null
+        }
+        Insert: {
+          singleton?: boolean
+          workflow_review_organization_id?: string | null
+        }
+        Update: {
+          singleton?: boolean
+          workflow_review_organization_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_settings_workflow_review_organization_id_fkey"
+            columns: ["workflow_review_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_settings_workflow_review_organization_id_fkey"
+            columns: ["workflow_review_organization_id"]
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
@@ -3540,6 +3573,7 @@ export type Database = {
         Args: { p_due_at: string; p_issued_at: string; p_work_item_id: string }
         Returns: string
       }
+      launch_organization: { Args: { p_id: string }; Returns: undefined }
       link_customer_location: {
         Args: {
           p_customer_id: string
@@ -3557,6 +3591,10 @@ export type Database = {
           p_to_number: string
         }
         Returns: string
+      }
+      organization_launch_blockers: {
+        Args: { p_id: string }
+        Returns: string[]
       }
       places_to_watch: {
         Args: never
@@ -3658,6 +3696,18 @@ export type Database = {
       }
       rename_work_item_type: {
         Args: { p_id: string; p_name: string }
+        Returns: undefined
+      }
+      request_workflow_review: {
+        Args: {
+          p_business_name: string
+          p_business_type: string
+          p_context: string
+          p_email: string
+          p_name: string
+          p_phone: string
+          p_team_size: string
+        }
         Returns: undefined
       }
       run_due_automations: { Args: never; Returns: number }

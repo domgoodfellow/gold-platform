@@ -10,7 +10,7 @@ import { cx } from '@/components/class-names';
 import Link from 'next/link';
 import { ArrowLeftRight, LogOut } from 'lucide-react';
 import { redirect } from 'next/navigation';
-import { AreaTrail, OrgNav, OrgNavBar } from './org-shell';
+import { AreaTrail, OrgNav, OrgNavBar, SetupBadge, SetupEntry } from './org-shell';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
@@ -68,6 +68,8 @@ export default async function OrganizationLayout({
     </span>
   );
 
+  const inSetup = organization.operationalState === 'setup';
+
   const sidebar = (
     <>
       <SidebarIdentity
@@ -82,6 +84,8 @@ export default async function OrganizationLayout({
           </SidebarLabel>
         }
       />
+
+      {inSetup ? <SetupEntry organizationId={organizationId} /> : null}
 
       <OrgNav organizationId={organizationId} enabledModules={[...enabledModules]} />
     </>
@@ -107,6 +111,8 @@ export default async function OrganizationLayout({
       </span>
 
       <AreaTrail organizationId={organizationId} />
+
+      {inSetup ? <SetupBadge organizationId={organizationId} /> : null}
 
       {/* Pushes what follows to the far end, so the two actions sit together whatever the trail's length. */}
       <span className="flex-1" />

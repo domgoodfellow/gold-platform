@@ -1,43 +1,34 @@
 import { Hint } from '@/components/controls/inputs';
 import { Card, Disclosure } from '@/components/containers/card';
 import { Badge } from '@/components/display/data';
-import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { EmptyState, SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
 import { CustomFieldValues } from '@/components/custom-fields/values';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
-import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listResources } from '@/lib/domain/resources/resources';
 import { listEnabledModules } from '@/lib/domain/tenancy/modules';
 import { formatWindow } from '@/lib/domain/scheduling/window';
-import { listTypeChecklistItems } from '@/lib/domain/work-items/checklists';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
-import {
-  allowedNextStatusIds,
-  listWorkItemTransitions,
-} from '@/lib/domain/work-items/transitions';
-import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
+import { allowedNextStatusIds, listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
+import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items';
 import { counted } from '@/lib/domain/counted';
 import { requireOrganization } from '@/lib/route/organization';
-import {
-  AddTypeChecklistItemForm,
-  CreateStatusForm,
-  CreateTransitionForm,
-  CreateTypeForm,
-  CreateWorkItemForm,
-  EditStatusForm,
-  MoveWorkItemForm,
-  PublishTypeForm,
-  RenameTypeForm,
-  ScheduleWorkItemForm,
-  TypeChecklistItemRow,
-} from './work-forms';
+import { CreateWorkItemForm, MoveWorkItemForm, ScheduleWorkItemForm } from './work-forms';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Operate work. Defining how it behaves — kinds of work, statuses, allowed moves, checklist
+ * templates, publishing to the public page — moved to Settings → Work (product reality audit,
+ * Slice 3): a business scanning today's jobs should not have to scroll past what a status means
+ * to reach them. This screen keeps exactly the queries it always had (`listWorkItemStatuses`,
+ * `listWorkItemTransitions` read here only to draw the board and offer legal moves — never to
+ * define them), so the board it draws is unchanged.
+ */
 export default async function WorkPage({
   params,
   searchParams,
@@ -56,15 +47,12 @@ export default async function WorkPage({
   const [
     statuses,
     transitions,
-    templateSteps,
     workItems,
     customers,
     locations,
     resources,
     assets,
     definitions,
-    prices,
-    booking,
     enabledModules,
   ] = await Promise.all([
       selectedType
@@ -72,9 +60,6 @@ export default async function WorkPage({
         : Promise.resolve([]),
       selectedType
         ? listWorkItemTransitions(db, { organizationId, typeId: selectedType.id })
-        : Promise.resolve([]),
-      selectedType
-        ? listTypeChecklistItems(db, { organizationId, typeId: selectedType.id })
         : Promise.resolve([]),
       selectedType
         ? listWorkItems(db, { organizationId, typeId: selectedType.id })
@@ -87,16 +72,11 @@ export default async function WorkPage({
       listResources(db, { organizationId }),
       listAssets(db, { organizationId }),
       listFieldDefinitions(db, { organizationId, entityType: 'work_item' }),
-      listPriceBookItems(db, { organizationId }),
-      selectedType
-        ? getTypeBooking(db, { organizationId, typeId: selectedType.id })
-        : Promise.resolve(null),
       listEnabledModules(db, { organizationId }),
     ]);
 
   const mayAdd = organization.capabilities.includes('work_item.create');
   const mayConfigure = organization.capabilities.includes('field.manage');
-  const bookingEnabled = enabledModules.has('booking');
   // A module hides what it owns everywhere, not only its own area — the same rule billing
   // already follows on this page (Quote/Invoice/Margin below). A business that switched Assets
   // off should not still see an asset reference on every job.
@@ -110,6 +90,8 @@ export default async function WorkPage({
   // holds only uuids, which is why the domain layer re-checks a refused move to build the
   // message rather than letting the trigger's text reach a person.
   const statusName = new Map(statuses.map((status) => [status.id, status.name]));
+
+  const configHref = `/organizations/${organizationId}/settings/work`;
 
   return (
     <>
@@ -150,8 +132,12 @@ export default async function WorkPage({
 
       {selectedType === null ? (
         <EmptyState className="mt-6">
-          No kinds of work defined yet. What this business does is yours to name — the
-          platform has no opinion.
+          No kinds of work are configured.{' '}
+          {mayConfigure ? (
+            <Link href={configHref} className="underline underline-offset-4">
+              Configure Work in Settings
+            </Link>
+          ) : null}
         </EmptyState>
       ) : (
         <>
@@ -263,10 +249,9 @@ export default async function WorkPage({
           })}
 
           {/*
-            Hiding either form is a courtesy, not the guard. `work_items_insert` requires
-            work_item.create and both `work_item_statuses_insert` and `work_item_types_insert`
-            require field.manage, all in the database (constraints.md: hiding a UI element is
-            not authorization).
+            Hiding the form is a courtesy, not the guard. `work_items_insert` requires
+            work_item.create in the database (constraints.md: hiding a UI element is not
+            authorization).
           */}
           {mayAdd ? (
             <CreateWorkItemForm
@@ -284,160 +269,22 @@ export default async function WorkPage({
               Your role, {organization.role}, cannot add work items here.
             </Hint>
           )}
-
-          <Section className="mt-10">
-            <SectionHeading>{selectedType.name} statuses</SectionHeading>
-            <Hint className="mt-1">
-              {statuses.length === 0
-                ? 'None yet. These are yours to name — the platform has no opinion.'
-                : statuses.map((status) => status.name).join(' → ')}
-            </Hint>
-
-            {mayConfigure && statuses.length > 0 ? (
-              <DividedList as="div" className="mt-3">
-                {statuses.map((status) => (
-                  <EditStatusForm
-                    key={status.id}
-                    organizationId={organizationId}
-                    status={status}
-                  />
-                ))}
-              </DividedList>
-            ) : null}
-
-            {mayConfigure ? (
-              <CreateStatusForm organizationId={organizationId} typeId={selectedType.id} />
-            ) : (
-              <Hint className="mt-2">
-                Your role, {organization.role}, cannot configure statuses here.
-              </Hint>
-            )}
-          </Section>
-
-          <Section className="mt-10">
-            <SectionHeading>Allowed moves</SectionHeading>
-            {/* An unconfigured type is frozen, not unconstrained — I13 has exactly one
-                reading when a tenant has configured no transitions at all. Saying so here is
-                the difference between a board that looks broken and one that is unfinished. */}
-            <Hint className="mt-1">
-              {transitions.length === 0
-                ? 'None yet, so nothing on this board can move. Wire the moves this business actually makes.'
-                : transitions
-                    .map(
-                      (transition) =>
-                        `${statusName.get(transition.fromStatusId) ?? '?'} → ${
-                          statusName.get(transition.toStatusId) ?? '?'
-                        }`,
-                    )
-                    .join(' · ')}
-            </Hint>
-
-            {mayConfigure ? (
-              <CreateTransitionForm
-                organizationId={organizationId}
-                typeId={selectedType.id}
-                statuses={statuses}
-              />
-            ) : (
-              <Hint className="mt-2">
-                Your role, {organization.role}, cannot configure transitions here.
-              </Hint>
-            )}
-          </Section>
-
-          <Section className="mt-10">
-            <SectionHeading>Steps every {selectedType.name} involves</SectionHeading>
-            {/* Copied onto each job at creation, never joined. Editing this list does not
-                reach a job that already exists — which is what makes editing it safe (I8). */}
-            <Hint className="mt-1">
-              {templateSteps.length === 0
-                ? 'None. Work items of this kind start with an empty checklist.'
-                : 'Copied onto each new work item. Changing them leaves existing work alone.'}
-            </Hint>
-
-            {templateSteps.length > 0 ? (
-              <DividedList as="div" className="mt-2">
-                {templateSteps.map((item) =>
-                  mayConfigure ? (
-                    <TypeChecklistItemRow
-                      key={item.id}
-                      organizationId={organizationId}
-                      item={item}
-                    />
-                  ) : (
-                    <Hint key={item.id} className="py-1">
-                      {item.label}
-                    </Hint>
-                  ),
-                )}
-              </DividedList>
-            ) : null}
-
-            {mayConfigure ? (
-              <AddTypeChecklistItemForm
-                organizationId={organizationId}
-                typeId={selectedType.id}
-              />
-            ) : null}
-          </Section>
-
-          {/* **A module hides what it owns everywhere, not only its own area.** Switching public
-              booking off takes this section away for the same reason switching billing off takes
-              the quote off a job: hiding the area and leaving its controls scattered across other
-              screens is half a switch. The public address itself is configured in Settings, which
-              is where the module says it is set up — this is the per-type half of the same
-              thing, and `outstandingModuleSetup` now names both. */}
-          {bookingEnabled ? (
-            <Section className="mt-10">
-              <SectionHeading>Publish to the public booking page</SectionHeading>
-              <PublishTypeForm
-                organizationId={organizationId}
-                typeId={selectedType.id}
-                typeName={selectedType.name}
-                statuses={statuses}
-                prices={prices}
-                booking={booking}
-                // Shown to everybody and refused by the database if their role cannot configure
-                // types — I12's rule, and the same one every other form on this page follows.
-                disabled={!mayConfigure}
-              />
-              {!mayConfigure ? (
-                <Hint className="mt-2">
-                  Your role, {organization.role}, cannot change what this business publishes.
-                </Hint>
-              ) : null}
-            </Section>
-          ) : null}
-
-          {mayConfigure ? (
-            <Section className="mt-10">
-              <SectionHeading>Rename this kind of work</SectionHeading>
-              <RenameTypeForm
-                organizationId={organizationId}
-                typeId={selectedType.id}
-                name={selectedType.name}
-              />
-            </Section>
-          ) : null}
         </>
       )}
 
-      <Section className="mt-10">
-        <SectionHeading>Kinds of work</SectionHeading>
-        <Hint className="mt-1">
-          {types.length === 0
-            ? 'None yet. A type is what scopes a board — statuses belong to one.'
-            : types.map((type) => type.name).join(' · ')}
+      {/* The one pointer back to where this board's shape is defined — kinds of work,
+          statuses, allowed moves, checklists and publishing all live in Settings now, and this
+          is the courtesy of saying so rather than leaving them to be found unaided. Application
+          state ("this is configured elsewhere"), not advice. */}
+      {mayConfigure ? (
+        <Hint className="mt-10">
+          Kinds of work, statuses, allowed moves and checklists are configured in{' '}
+          <Link href={configHref} className="underline underline-offset-4">
+            Settings → Work
+          </Link>
+          .
         </Hint>
-
-        {mayConfigure ? (
-          <CreateTypeForm organizationId={organizationId} />
-        ) : (
-          <Hint className="mt-2">
-            Your role, {organization.role}, cannot configure work item types here.
-          </Hint>
-        )}
-      </Section>
+      ) : null}
     </>
   );
 }

@@ -1,4 +1,6 @@
 import { Hint } from '@/components/controls/inputs';
+import { Card } from '@/components/containers/card';
+import { ButtonLink } from '@/components/controls/button';
 import { DividedList, Section, SectionHeading } from '@/components/containers/section';
 import { ProfileForm } from '@/features/public-profile/profile-form';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
@@ -22,18 +24,54 @@ import {
 export const dynamic = 'force-dynamic';
 
 /**
- * What a business has told the platform about itself.
+ * One tile in the map below — a name, a sentence, and the one thing to do about it. Whether
+ * `href` is an anchor on this same page or another route is invisible here on purpose: the
+ * business doesn't experience "route" and "anchor" as different kinds of thing, only "where do
+ * I go to change this" (product reality audit, Slice 3).
+ */
+function ConfigCard({
+  title,
+  description,
+  href,
+}: {
+  title: string;
+  description: string;
+  href: string;
+}) {
+  return (
+    <Card className="flex flex-col gap-2">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <p className="flex-1 text-sm text-muted">{description}</p>
+      <ButtonLink href={href} tone="text" size="small" className="w-fit">
+        View →
+      </ButtonLink>
+    </Card>
+  );
+}
+
+/**
+ * The Configuration Center — one obvious place to answer "how is this business set up".
  *
- * Everything on this page is configuration a tenant owns, and none of it has a value the
- * platform chose. In particular the opening hours start **empty**: there is no seeded working
- * week, because a business that has said nothing about its hours has not said it is closed,
- * and inventing a nine-to-five would be the hardcoded business hours `constraints.md` forbids.
+ * **A map, not a tenth section bolted onto six.** Pricing, Automations, Custom fields and People
+ * and roles moved here from the sidebar (Slice 3's IA change) without moving their routes,
+ * their forms or their permissions anywhere — the cards below link straight at the same pages
+ * that always existed, still directly bookmarkable, still governed by the same capabilities.
+ * What used to be found by knowing which of five equal-weight sidebar rows held which kind of
+ * setup is now one screen that names all of it.
+ *
+ * **What a business has told the platform about itself, still below the map.** Everything past
+ * the grid is exactly the same six sections this page has always had, each now reachable from
+ * the map above it as well as by scrolling. In particular the opening hours start **empty**:
+ * there is no seeded working week, because a business that has said nothing about its hours has
+ * not said it is closed, and inventing a nine-to-five would be the hardcoded business hours
+ * `constraints.md` forbids.
  */
 export default async function SettingsPage({
   params,
 }: PageProps<'/organizations/[organizationId]/settings'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
+  const inSetup = organization.operationalState === 'setup';
 
   const provider = await paymentProvider();
   const [hours, profile, modules, paymentAccount, brand] = await Promise.all([
@@ -57,6 +95,75 @@ export default async function SettingsPage({
 
   return (
     <>
+      <Hint className="mt-1">Configure how this business works.</Hint>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <ConfigCard
+          title="Business"
+          description="Name, timezone, currency, buffer and other operating rules."
+          href="#business"
+        />
+        <ConfigCard
+          title="Work"
+          description="Kinds of work, statuses, allowed moves and checklist templates."
+          href={`/organizations/${organizationId}/settings/work`}
+        />
+        <ConfigCard
+          title="Pricing"
+          description="What this business charges, and how a job is quoted."
+          href={`/organizations/${organizationId}/pricing`}
+        />
+        <ConfigCard
+          title="People & roles"
+          description="Who works here, and what each role may do."
+          href={`/organizations/${organizationId}/roles`}
+        />
+        <ConfigCard
+          title="Custom fields"
+          description="What this business records beyond the platform's own fields."
+          href={`/organizations/${organizationId}/fields`}
+        />
+        <ConfigCard
+          title="Automations"
+          description="Rules this business writes for itself, and what they have done."
+          href={`/organizations/${organizationId}/automations`}
+        />
+        <ConfigCard
+          title="Modules & features"
+          description="What this business has switched on."
+          href="#modules"
+        />
+        <ConfigCard
+          title="Hours"
+          description="When this business is open, for the schedule to read."
+          href="#hours"
+        />
+        <ConfigCard
+          title="Brand & public presence"
+          description="Logo, colour and what customers see before they book."
+          href="#public-page"
+        />
+        <ConfigCard
+          title="Payments & integrations"
+          description="Connecting a payment processor, and other integrations."
+          href="#getting-paid"
+        />
+        {/* Guided Setup left the sidebar entirely (it is implementation infrastructure, not a
+            permanent tenant area) — while SETUP it already has its own elevated treatment in the
+            shell, and this card is the way back to it once that treatment is gone. Wording never
+            implies Launch is available again: it already happened, or it is being handled by the
+            SETUP-only entry elsewhere in the shell. */}
+        <ConfigCard
+          title="Business setup"
+          description={
+            inSetup
+              ? 'Describe this business, review readiness, and launch when ready.'
+              : "Review or revise this business's configuration."
+          }
+          href={`/organizations/${organizationId}/setup`}
+        />
+      </div>
+
       {/* The section ids here are anchors a module's switch links to (D31), so they are part
           of `navigation.ts`'s `configuredAt` contract rather than decoration.
           `navigation.test.ts` reads this file and fails on one that has been renamed away. */}
@@ -109,7 +216,7 @@ export default async function SettingsPage({
         )}
       </Section>
 
-      <Section className="mt-8">
+      <Section id="business" className="mt-8 scroll-mt-6">
         <SectionHeading>This business</SectionHeading>
         <Hint className="mt-1">
           Changing the currency does not reinterpret what past jobs cost, and changing the
@@ -133,7 +240,7 @@ export default async function SettingsPage({
         )}
       </Section>
 
-      <Section className="mt-8">
+      <Section id="hours" className="mt-8 scroll-mt-6">
         <SectionHeading>Opening hours</SectionHeading>
         <Hint className="mt-1">
           {hours.length === 0
@@ -202,7 +309,7 @@ export default async function SettingsPage({
         </Section>
       ) : null}
 
-      <Section className="mt-8">
+      <Section id="modules" className="mt-8 scroll-mt-6">
         <SectionHeading>What this business uses</SectionHeading>
         {/* Modules: what this business switched on and is billed for, not what a role may do
             (`constraints.md` D25). Switching one off removes its area from the navigation and

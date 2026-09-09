@@ -46,6 +46,14 @@ const CUSTOMER_ACTIONS = [
   'payment.recorded',
 ] as const;
 
+/**
+ * The same vocabulary, for a business's own feed rather than one customer's — plus the two
+ * organization-level moments neither list needed before: founding and Launch. Everything else
+ * is `CUSTOMER_ACTIONS` unchanged, because what is worth showing on a customer's history is
+ * worth showing on the business's own, and a second, drifting list would be the thing to avoid.
+ */
+const ORGANIZATION_ACTIONS = [...CUSTOMER_ACTIONS, 'organization.created', 'organization.launched'] as const;
+
 type EventRow = {
   id: string;
   action: string;
@@ -130,6 +138,10 @@ function describe(row: EventRow, words: Vocabulary): string {
       const number = row.payload.number;
       return `Invoiced${typeof number === 'number' ? ` (#${number})` : ''}${on}`;
     }
+    case 'organization.created':
+      return 'This business was created';
+    case 'organization.launched':
+      return 'Launched';
     case 'payment.recorded': {
       const amount = row.payload.amount_minor;
       const currency = text(row.payload, 'currency');
@@ -201,6 +213,75 @@ export async function listCustomerTimeline(
     statuses: new Map((statuses.data ?? []).map((row) => [row.id, row.name])),
     resources: new Map((resources.data ?? []).map((row) => [row.id, row.name])),
     workItems,
+    stages: new Map((stages.data ?? []).map((row) => [row.id, row.name])),
+    outcomes: new Map((outcomes.data ?? []).map((row) => [row.id, row.name])),
+  };
+  const names = new Map((members.data ?? []).map((row) => [row.user_id, row.display_name]));
+
+  return rows.map((row) => ({
+    id: row.id,
+    occurredAt: row.occurred_at,
+    action: row.action,
+    description: describe(row, words),
+    actorName: names.get(row.actor_id) ?? null,
+  }));
+}
+
+/**
+ * What has happened in this business, newest first — the same interpretive core as
+ * `listCustomerTimeline` (`describe`, the vocabulary lookups), reused rather than copied,
+ * reading `events` directly instead of the customer-scoped `customer_activity` view since this
+ * is not about any one customer. Descriptive, never interpretive: nothing here judges whether an
+ * event was good or bad, only says what it was.
+ *
+ * **Bounded by the events actually returned, not by the whole business.** Resolving which jobs a
+ * row refers to only fetches the handful of work items this batch's rows actually name, rather
+ * than every job the organization has ever had — `listCustomerTimeline` can afford the wider
+ * fetch because one customer's jobs are naturally few; a business's are not.
+ */
+export async function listRecentActivity(
+  db: Db,
+  input: { organizationId: string; limit?: number },
+): Promise<TimelineEntry[]> {
+  const limit = input.limit ?? 20;
+
+  const { data, error } = await db
+    .from('events')
+    .select('id, action, payload, occurred_at, actor_id, entity_id')
+    .eq('organization_id', input.organizationId)
+    .in('action', ORGANIZATION_ACTIONS as unknown as string[])
+    .order('occurred_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new DomainError(error.message, 'timeline.activity_failed');
+  }
+
+  const rows = (data ?? []) as EventRow[];
+  if (rows.length === 0) return [];
+
+  // Not every row names a work item — a customer or organization event's `entity_id` is not
+  // one — so this over-asks by a few ids rather than branching on action first, and the query
+  // simply matches nothing for the ones that aren't.
+  const entityIds = [...new Set(rows.map((row) => row.entity_id))];
+
+  const [statuses, resources, members, stages, outcomes, jobs] = await Promise.all([
+    db.from('work_item_statuses').select('id, name').eq('organization_id', input.organizationId),
+    db.from('resources').select('id, name').eq('organization_id', input.organizationId),
+    db.from('memberships').select('user_id, display_name').eq('organization_id', input.organizationId),
+    db.from('customer_stages').select('id, name').eq('organization_id', input.organizationId),
+    db.from('call_outcomes').select('id, name').eq('organization_id', input.organizationId),
+    db
+      .from('work_items')
+      .select('id, title')
+      .eq('organization_id', input.organizationId)
+      .in('id', entityIds),
+  ]);
+
+  const words: Vocabulary = {
+    statuses: new Map((statuses.data ?? []).map((row) => [row.id, row.name])),
+    resources: new Map((resources.data ?? []).map((row) => [row.id, row.name])),
+    workItems: new Map((jobs.data ?? []).map((row) => [row.id, row.title])),
     stages: new Map((stages.data ?? []).map((row) => [row.id, row.name])),
     outcomes: new Map((outcomes.data ?? []).map((row) => [row.id, row.name])),
   };
