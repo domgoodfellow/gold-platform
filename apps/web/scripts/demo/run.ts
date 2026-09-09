@@ -36,7 +36,7 @@ import { BUSINESSES, DEMO_PASSWORD, type DemoBusiness, type DemoJob } from './bu
  */
 
 config({
-  path: new URL('../../../../infra/.env.test', import.meta.url).pathname.replace(
+  path: new URL('../../../../.env.test', import.meta.url).pathname.replace(
     /^\/([A-Za-z]:)/,
     '$1',
   ),
@@ -55,7 +55,7 @@ const DAY = 24 * 60 * MINUTE;
  *
  * This creates accounts with a password written down in a file in the repository and then writes
  * into whatever schema it is pointed at. The accident it exists to prevent is somebody's
- * `infra/.env.test` pointing at a linked project.
+ * `.env.test` pointing at a linked project.
  */
 function refuseAnythingButLocalhost(): void {
   let host = '';
@@ -68,7 +68,7 @@ function refuseAnythingButLocalhost(): void {
   if (host !== '127.0.0.1' && host !== 'localhost') {
     throw new Error(
       `Refusing to run against ${host}. This creates accounts with a published password and ` +
-        `writes into the schema it is given. Point infra/.env.test at a local stack.`,
+        `writes into the schema it is given. Point .env.test at a local stack.`,
     );
   }
 }
@@ -337,7 +337,7 @@ async function main(): Promise<void> {
   refuseAnythingButLocalhost();
 
   if (!ANON_KEY || !SERVICE_ROLE_KEY || !CONNECTION) {
-    throw new Error('infra/.env.test is missing keys. Run `pnpm db:start` and try again.');
+    throw new Error('.env.test is missing keys. Run `pnpm db:start` and try again.');
   }
 
   const pg = new Client({ connectionString: CONNECTION });

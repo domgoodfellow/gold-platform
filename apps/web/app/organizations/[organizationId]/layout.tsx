@@ -2,6 +2,7 @@ import { Hint } from '@/components/controls/inputs';
 import {
   AppShell,
   SidebarButton,
+  SidebarIdentity,
   SidebarLabel,
   SIDEBAR_ROW,
 } from '@/components/containers/app-shell';
@@ -55,11 +56,23 @@ export default async function OrganizationLayout({
     />
   ) : null;
 
+  // The sidebar always has a mark to show, so its identity row is never an empty bordered box
+  // in the icon-only rail or when collapsed — an uploaded logo where there is one, the
+  // business's own initial otherwise.
+  const mark = logo ?? (
+    <span
+      aria-hidden
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-foreground text-sm font-semibold text-background"
+    >
+      {organization.name.charAt(0).toUpperCase()}
+    </span>
+  );
+
   const sidebar = (
     <>
-      <div className="border-b border-border px-4 py-4">
-        <div className="flex items-center gap-3 md:block">
-          {logo ? <span className="contents md:mb-2 md:block">{logo}</span> : null}
+      <SidebarIdentity
+        mark={mark}
+        label={
           <SidebarLabel block>
             <span className="block min-w-0">
               <span className="block truncate font-semibold">{organization.name}</span>
@@ -67,8 +80,8 @@ export default async function OrganizationLayout({
               <Hint className="block truncate">{organization.role}</Hint>
             </span>
           </SidebarLabel>
-        </div>
-      </div>
+        }
+      />
 
       <OrgNav organizationId={organizationId} enabledModules={[...enabledModules]} />
     </>

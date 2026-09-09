@@ -14,7 +14,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'GOLD',
-  description: 'One engine. Many businesses. Configuration, not forks.',
+  // Not `vision.md`'s "One engine. Many businesses." -- that's the platform's own architecture,
+  // read by whoever builds it. A search result is read by the one business being sold to.
+  description:
+    'GOLD replaces the spreadsheet, the shared calendar and the group chat holding your business together.',
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

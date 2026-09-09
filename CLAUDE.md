@@ -61,7 +61,7 @@ marketing surface (D20), desktop (M10). Two domain capabilities are reachable fr
 `revokePortalInvite` and `assignRole`; `docs/walkthrough.md` names where an operator would hit
 them. Do not add a third without noticing.
 
-`infra/supabase/migrations/` is the source of truth for the data model. Read it rather than
+`supabase/migrations/` is the source of truth for the data model. Read it rather than
 inferring the schema, and comment the *why* rather than the *what*.
 
 ## Commands
@@ -77,7 +77,7 @@ Report a failure verbatim; do not summarise one.
 | `pnpm --filter @gold/web dev` | Next.js dev server on :3000 |
 | `pnpm demo` | Two populated businesses, in one command. Localhost only; refuses a database that already holds organizations (D37). |
 | `pnpm demo:fresh` | `db:reset` then `demo`. What you want after a walkthrough. |
-| `pnpm db:start` | Local Supabase (needs Docker). Prints the keys; they belong in `infra/.env.test`, which is gitignored. |
+| `pnpm db:start` | Local Supabase (needs Docker). Prints the keys; they belong in `.env.test`, which is gitignored. |
 | `pnpm db:reset` | Re-apply every migration from scratch against the local stack |
 | `pnpm db:types` | Regenerate `apps/web/lib/db/database.types.ts`. Checked in; a stale one fails the gate (D15). |
 | `pnpm db:push` | Apply migrations to the linked remote project |
@@ -87,10 +87,10 @@ Report a failure verbatim; do not summarise one.
   `pnpm db:start` must be running.
 - `apps/web` needs `.env.local` — copy `apps/web/.env.example`. Anon key only. **Nothing in
   `apps/web` may hold a service-role key.**
-- A change to `infra/supabase/config.toml` needs the stack **restarted, not reset**:
-  `npx supabase stop --workdir infra`, then `start`. `db:reset` re-applies migrations against the
+- A change to `supabase/config.toml` needs the stack **restarted, not reset**:
+  `npx supabase stop`, then `start`. `db:reset` re-applies migrations against the
   running containers and does not re-read that file.
-- Standalone SQL — diagnostics, repairs, helpers — goes in `infra/supabase/snippets/`, never in
+- Standalone SQL — diagnostics, repairs, helpers — goes in `supabase/snippets/`, never in
   `migrations/`, where it is either mistaken for schema or applied by accident.
 - `apps/web/scripts/demo/` calls the domain layer through `@/`, so the gate reads it and a changed
   domain signature breaks the build. `run.ts` holds no branch on which business it is building;
@@ -131,7 +131,7 @@ apps/
     app/api/        HTTP entrypoints — one file, one route. NOT apps/api/api/ (see its README)
   desktop/          Electron shell (M10; not before)
 packages/           Empty until a package has two consumers
-infra/supabase/     migrations, policies, snippets
+supabase/           migrations, policies, snippets
 docs/
 ```
 

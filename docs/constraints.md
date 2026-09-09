@@ -40,7 +40,7 @@ any design conversation, because the rules that apply are different in each.
 
 | Layer | What it is | Who changes it | Where it lives |
 |---|---|---|---|
-| **1. Kernel** | The entities every business gets and none can decline | Us, in a migration | `lib/domain/`, `infra/supabase/migrations/` |
+| **1. Kernel** | The entities every business gets and none can decline | Us, in a migration | `lib/domain/`, `supabase/migrations/` |
 | **2. Engines** | Code that owns rules — scheduling, pricing, automation, reporting | Us, in a migration | `lib/domain/<engine>/`, plus Postgres functions and constraints |
 | **3. Modules** | Capabilities a tenant switches on and is billed for | A tenant, with a switch | `lib/navigation.ts` `MODULES`, plus a row |
 | **4. Configuration** | Everything a business says about itself | A tenant, on a screen | Rows in their own tables |
@@ -108,7 +108,7 @@ apps/
     app/api/              HTTP entrypoints — one file, one route
   desktop/                Electron shell — M10
 packages/                 shared code, when a second app consumes it — see D13
-infra/supabase/           migrations, policies, snippets
+supabase/                 migrations, policies, snippets
 docs/
 ```
 
@@ -797,7 +797,7 @@ sales calls, which is the module it most needs to sell.
 **Load-bearing.** No branch anywhere names GOLD's organization id, and no code path is reserved
 for it. Its modules are ordinary D41 terms at zero price — the same rows a paying customer's
 purchase writes, for the reason D37 gives about the demo builder: a seeded exception is a path
-nobody tests. The SQL that grants them lives in `infra/supabase/snippets/`, not in a migration,
+nobody tests. The SQL that grants them lives in `supabase/snippets/`, not in a migration,
 because a migration cannot name an organization id that only exists in one deployment. No signed-in
 person may write one either way; D41's rule is unchanged.
 

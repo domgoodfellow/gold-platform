@@ -96,6 +96,27 @@ export function SidebarButton({ className, ...props }: ComponentProps<'button'>)
 }
 
 /**
+ * The identity row at the top of the sidebar: a mark, and beside it the business's name once
+ * there is room. Centers the mark on its own whenever the label has nowhere to go — the
+ * icon-only tablet rail, or a manual collapse — rather than leaving it pinned to the row's own
+ * padding while the rest of the column sits empty beside it.
+ */
+export function SidebarIdentity({ mark, label }: { mark: ReactNode; label: ReactNode }) {
+  const collapsed = useSidebarCollapsed();
+  return (
+    <div
+      className={cx(
+        'flex items-center gap-3 border-b border-border px-4 py-4 md:justify-center',
+        !collapsed && 'lg:justify-start',
+      )}
+    >
+      {mark}
+      {label}
+    </div>
+  );
+}
+
+/**
  * The two-column frame every operator screen renders inside: a fixed sidebar slot and a
  * scrolling main slot. Structure only — what goes in either slot, and whether it needs a brand
  * scope around it, is the caller's decision.
@@ -145,6 +166,7 @@ export function AppShell({
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             className={cx(
               'hidden shrink-0 items-center gap-2 border-t border-border px-4 py-2 text-sm text-muted hover:bg-black/5 dark:hover:bg-white/10 lg:flex',
+              collapsed ? 'justify-center' : 'justify-start',
               FOCUS_RING,
             )}
           >

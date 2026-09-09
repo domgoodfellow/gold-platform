@@ -25,7 +25,7 @@ test run, and none of them can sign you in. Not a bug, not seed data:
 **The eraser is `pnpm db:reset`.** Re-applies every migration against an empty database. Do it
 before a walkthrough you intend to read carefully.
 
-No seed file exists on purpose — `infra/supabase/` holds `migrations` and `snippets`, never
+No seed file exists on purpose — `supabase/` holds `migrations` and `snippets`, never
 `seed.sql`, because a seeded business would be the platform choosing a business's statuses, hours
 and vocabulary. A new organization here is genuinely empty, and the emptiness is the product
 working.
@@ -58,7 +58,7 @@ reports and a dashboard each. Prints their URLs, accounts, and the one shared pa
 1. `pnpm db:start` — needs Docker. Prints an API URL, an anon key and a service-role key.
 2. Put the anon key in `apps/web/.env.local` (copy `apps/web/.env.example` first). Nothing in
    `apps/web` may hold the service-role key.
-3. Put what the tests need in `infra/.env.test` — gitignored, the only place a service-role key
+3. Put what the tests need in `.env.test` — gitignored, the only place a service-role key
    belongs, since the suites create users before signing in as them.
 4. `pnpm --filter @gold/web dev` — <http://localhost:3000>.
 
@@ -214,7 +214,7 @@ surface.
 into a Postgres role, not by clicking.
 
 1. **Sign up a third account** at `/sign-up`, normally.
-2. **Run `infra/supabase/snippets/add-platform-staff.sql`** in Studio's SQL editor, address and
+2. **Run `supabase/snippets/add-platform-staff.sql`** in Studio's SQL editor, address and
    name edited at the top — raises if the address matches no user.
 3. **Log out and log in again.** The role is a claim on the token, minted at log-in — staying
    signed in after promotion keeps the old token.
@@ -348,7 +348,7 @@ of work to the public page — is now a section on the **Work** screen under the
 gated on the booking module. The stand-in snippet is deleted.
 
 **A fourth thing needs database access, and it isn't a debt.** Adding somebody to
-`platform_staff` is a hand-run snippet (`infra/supabase/snippets/add-platform-staff.sql`) —
+`platform_staff` is a hand-run snippet (`supabase/snippets/add-platform-staff.sql`) —
 deliberately, since a screen that adds a colleague would be a *staff write*, and D28's own trigger
 to revisit that is unmet. Provisioning a tenant was the first staff write and it has landed (D29):
 one `execute` on `provision_organization`, no table privilege.

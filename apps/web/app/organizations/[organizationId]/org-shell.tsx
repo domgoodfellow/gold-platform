@@ -1,7 +1,7 @@
 'use client';
 
 
-import { SidebarLabel } from '@/components/containers/app-shell';
+import { SidebarLabel, useSidebarCollapsed } from '@/components/containers/app-shell';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -80,6 +80,7 @@ function NavLink({
   className: string;
 }) {
   const Icon = AREA_ICONS[area.segment];
+  const collapsed = useSidebarCollapsed();
 
   return (
     <Link
@@ -90,15 +91,15 @@ function NavLink({
       className={cx(
         className,
         FOCUS_RING,
+        'flex items-center justify-center gap-2',
+        !collapsed && 'lg:justify-start',
         current
           ? 'bg-foreground font-medium text-background'
           : 'hover:bg-black/5 dark:hover:bg-white/10',
       )}
     >
-      <span className="flex items-center gap-2">
-        {Icon ? <Icon aria-hidden size={18} className="shrink-0" /> : null}
-        <SidebarLabel>{area.label}</SidebarLabel>
-      </span>
+      {Icon ? <Icon aria-hidden size={18} className="shrink-0" /> : null}
+      <SidebarLabel>{area.label}</SidebarLabel>
     </Link>
   );
 }
@@ -143,7 +144,7 @@ export function OrgNav({
                     organizationId={organizationId}
                     area={area}
                     current={area.segment === segment}
-                    className="block rounded px-3 py-1.5 text-sm"
+                    className="rounded px-3 py-1.5 text-sm"
                   />
                 </li>
               ))}
@@ -185,7 +186,7 @@ export function OrgNavBar({
               organizationId={organizationId}
               area={area}
               current={area.segment === segment}
-              className="block rounded px-3 py-1.5 text-sm"
+              className="rounded px-3 py-1.5 text-sm"
             />
           </li>
         ))}

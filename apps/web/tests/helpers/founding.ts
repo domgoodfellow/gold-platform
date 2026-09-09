@@ -31,7 +31,7 @@ const CONNECTION =
  *
  * Vitest isolates modules per file, so this is one extra user per suite rather than one per
  * tenant. The `platform_staff` row goes in over a direct connection because **nothing in the
- * application may write it** — D28 grants no path, and `infra/supabase/snippets/` holds the
+ * application may write it** — D28 grants no path, and `supabase/snippets/` holds the
  * same statement. It is written *before* the sign-in below, because the role claim is minted
  * at sign-in and promotion does not refresh an existing token.
  */

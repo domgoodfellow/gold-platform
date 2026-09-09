@@ -26,7 +26,7 @@
 
 -- **No policy grants anyone write access to this table, and that is the design.** Adding a
 -- colleague is a privileged operation performed with database access, exactly as publishing a
--- bookable type was before it had a screen -- see `infra/supabase/snippets/`. A screen for it is
+-- bookable type was before it had a screen -- see `supabase/snippets/`. A screen for it is
 -- a *staff write*, which is precisely the decision D28 says this record does not make.
 --
 -- It carries no `organization_id` and never will: the whole point of this axis is that it is
@@ -140,7 +140,7 @@ end;
 $fn$;
 
 comment on function public.custom_access_token_hook(jsonb) is
-  'Puts a user listed in platform_staff into the platform_staff Postgres role by rewriting the token role claim. A no-op for everyone else. Enabled in infra/supabase/config.toml.';
+  'Puts a user listed in platform_staff into the platform_staff Postgres role by rewriting the token role claim. A no-op for everyone else. Enabled in supabase/config.toml.';
 
 -- Only GoTrue may call it, and it is not part of any application surface.
 revoke execute on function public.custom_access_token_hook(jsonb) from public, anon, authenticated;

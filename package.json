@@ -7,10 +7,10 @@
     "check:api": "python -m pytest apps/api/tests -q",
     "demo": "pnpm --filter @gold/web demo",
     "demo:fresh": "pnpm db:reset && pnpm --filter @gold/web demo",
-    "db:start": "supabase start --workdir infra",
-    "db:reset": "supabase db reset --workdir infra",
-    "db:types": "supabase gen types typescript --local --workdir infra > apps/web/lib/db/database.types.ts",
-    "db:push": "supabase db push --workdir infra"
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local > apps/web/lib/db/database.types.ts",
+    "db:push": "supabase db push"
   },
   "devDependencies": {
     "supabase": "^2.22.6"

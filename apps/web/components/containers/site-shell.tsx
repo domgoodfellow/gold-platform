@@ -49,11 +49,15 @@ export function SiteShell({
         to pages nobody has written is four dead ends, and this application has enough of those
         recorded already. It says who made the thing and what the thing is, both of which are
         true today.
+        **Not `vision.md`'s epigraph.** "One engine. Many businesses." describes this platform's
+        own architecture to whoever builds it — one engine serving many tenant businesses. Read
+        by a visitor rather than a maintainer it says the opposite of what is sold: they are one
+        business, not a fleet of them, and "many businesses" is GOLD's shape, not theirs.
       */}
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-4 text-sm text-muted sm:px-6">
           <span>GOLD</span>
-          <span>One engine. Many businesses.</span>
+          <span>One system that runs your business.</span>
         </div>
       </footer>
     </div>

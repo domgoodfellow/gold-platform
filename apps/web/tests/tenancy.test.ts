@@ -57,7 +57,7 @@ describe('tenant isolation', () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
       throw new Error(
         'SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set. Run `pnpm db:start` ' +
-          'and export the keys it prints, or source infra/.env.test.',
+          'and export the keys it prints, or source .env.test.',
       );
     }
 

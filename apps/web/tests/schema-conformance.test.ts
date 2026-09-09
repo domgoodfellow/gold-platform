@@ -433,7 +433,7 @@ describe('schema conformance', () => {
     // worth a test rather than a comment: adding `app` to this list would publish the platform's
     // internals as REST endpoints, and nothing else in the tree would look different.
     const config = await readFile(
-      new URL('../../../infra/supabase/config.toml', import.meta.url),
+      new URL('../../../supabase/config.toml', import.meta.url),
       'utf8',
     );
     const exposed = config

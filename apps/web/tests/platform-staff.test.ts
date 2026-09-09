@@ -77,7 +77,7 @@ async function signedInUser(
  * application may write it** — there is no insert policy and no grant, which is D28 declining
  * to decide what a staff *write* is. That makes this the one place in the suite where a raw
  * connection is the honest setup rather than a shortcut: it is how a colleague is actually
- * added today, and `infra/supabase/snippets/add-platform-staff.sql` is the same statement.
+ * added today, and `supabase/snippets/add-platform-staff.sql` is the same statement.
  *
  * The row goes in **before** the first sign-in, because the role claim is minted at sign-in.
  * Somebody promoted while signed in keeps an `authenticated` token until their next one, which

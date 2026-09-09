@@ -15,7 +15,7 @@
 --
 --   pnpm db:reset
 --   docker exec -i supabase_db_infra psql -U postgres -d postgres \
---     -f - < infra/supabase/snippets/i7-vacuity-control.sql
+--     -f - < supabase/snippets/i7-vacuity-control.sql
 --   pnpm --filter @gold/web test -- scheduling milestone-m2
 --
 -- Expected: "does not let one tenant's unassigned work block another tenant's" fails with

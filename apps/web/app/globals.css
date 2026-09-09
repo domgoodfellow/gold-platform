@@ -89,3 +89,10 @@ body {
 h1, h2, h3, h4 {
   font-family: var(--font-heading);
 }
+
+/* The marketing page's integrations strip -- an infinite scroll, not a tenant-facing role, so it
+   lives here rather than in the theme block above. */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
