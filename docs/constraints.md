@@ -848,23 +848,62 @@ record rather than left as a separate deferral; the rest generalizes D40's usage
 voice, SMS and email to every meter this platform will eventually price — call recording,
 transcription, text-to-speech, AI tokens, email sends, and whatever a future provider adds.
 
-**The catalogue.** `platform_meters` (what can be metered — a table, not an enum, so a new
-provider is a row) and `platform_products` (what GOLD sells, recurring: the base platform, one
-row per real module, a seat) are platform vocabulary, migration-written, like
-`communication_channel` was. Neither is authorization and neither is read by any policy.
+**The catalogue, and a correction found writing the first provider bindings against it.**
+`platform_meters` (what can be metered) and `platform_products` (what GOLD sells, recurring: the
+base platform, one row per real module, a seat) are platform vocabulary, migration-written, like
+`communication_channel` was. Neither is authorization and neither is read by any policy. **A
+meter first shipped naming one provider each — `transcription_seconds` said `deepgram`,
+`ai_tokens_input` said `anthropic` — which cannot express Deepgram *or* ElevenLabs both
+transcribing, or an OpenAI-compatible host sitting beside Anthropic on the same meter.**
+Corrected: `platform_meters` carries no provider column at all, and a new table,
+`platform_providers`, names who can be paid — vocabulary of the same kind, seeded the same way.
+A meter describes consumption; a provider is who answered it, for a given reading. This changes
+no historical usage's meaning — a row already saying `voice_minutes` still does.
 
 **Two rate cards, not one, and neither is `communication_rates`.** `platform_provider_rates` is
-what GOLD pays a provider; `platform_retail_rates` is what GOLD charges, for every meter except
-voice, SMS and email, whose retail price stays `communication_rates` (D40) rather than being
-duplicated. Both are append-only and effective-dated — "current" is the latest approved row at
-or before a moment, never an edited one — and both carry `unit_amount_micros`: millionths of one
-minor currency unit, because a provider's wholesale price is routinely sub-cent, and rounding
-that to the nearest minor unit before multiplying by volume would make a margin wrong by
+what GOLD pays a named provider, keyed by `(provider, meter, currency, effective date)` now
+rather than by meter alone — the same correction one level down, since two providers pricing one
+meter needs two rows, not a table that can only hold one. `platform_retail_rates` is what GOLD
+charges, for every meter except voice, SMS and email, whose retail price stays
+`communication_rates` (D40) rather than being duplicated; it carries no provider dimension at
+all, because a business is charged one retail price per meter regardless of which vendor GOLD
+used underneath it. Both are append-only and effective-dated — "current" is the latest approved
+row at or before a moment, never an edited one — and both carry `unit_amount_micros`: millionths
+of one minor currency unit, because a provider's wholesale price is routinely sub-cent, and
+rounding that to the nearest minor unit before multiplying by volume would make a margin wrong by
 construction. This is a narrow, deliberate amendment to I10's minor-units rule — for a *rate*
 only, never for a recorded amount. `usage_events`, the generalized ledger this record adds
-alongside D40's purse, snapshots a provider cost and a customer charge in the same unit, per
-reading; every total this platform actually discloses still rounds to a minor unit exactly once,
-at the point it is shown.
+alongside D40's purse, snapshots a provider cost and a customer charge, **each in its own
+currency** — the correction below — and every total this platform actually discloses still
+rounds to a minor unit exactly once, at the point it is shown.
+
+**The bug this record corrects, stated plainly.** `usage_events` first held one `currency`
+column for both facts, and `charge_for_call` looked up GOLD's own wholesale rate using the
+*tenant's* currency — treating "what does this Canadian business trade in" as though it answered
+"what does Twilio bill GOLD in," which are unrelated. `usage_events` now carries
+`provider_currency` and `customer_currency` separately; `app.provider_rate_at` is asked for a
+provider and a meter and answers with whichever currency that provider's own rate was recorded
+in, rather than being told one to look for. **Nothing converts between the two.**
+`public.organization_commercial_summary` groups by both currencies together and reports
+`margin_minor` as null whenever they disagree and the cost is not exactly zero (a true zero
+needs no exchange rate to subtract) — the same rule `jobEconomics` already holds across a
+tenant's own currencies (I10), and the same open question D40 named on the day it shipped voice
+("one thing unsolved: the spread"). This record keeps it unsolved rather than solving it
+quietly. If this repository ever builds a real conversion, it is a rate with a date and a
+snapshot of which one was used (I8), never a division performed inside a report.
+
+**Reconciliation is a second table, not a second row on the first.** `usage_events` is immutable
+once written — no update grant reaches it, and the `provider_cost_status` column an earlier
+version of this record carried (implying a row could move from `estimated` to `reconciled` in
+place) is gone; that implied mutability contradicted "immutable" in the same paragraph.
+`usage_cost_reconciliations` is the correction, keyed to one usage event, append-only, carrying
+GOLD's real cost and nothing else — no quantity column, no customer-charge column, so a
+correction can never duplicate either. `public.record_usage_reconciliation` is its one door,
+staff-checked today for the same reason the rate functions are: there is no provider-sync
+machine role yet, and that axis arrives with provider bindings rather than being invented early.
+The aggregate uses the latest reconciliation in place of the estimate it corrects, never the sum
+of both; `public.organization_usage_detail` keeps the original estimate visible next to whatever
+corrected it, permanently.
 
 **The first amendment to D40 and D41: a rate and a term are no longer written by migration
 alone.** Both records said staff hold no write grant on any table, and both still do — no table
@@ -889,19 +928,25 @@ this migration was backfilled a zero-price, open-ended term for it, so nothing a
 stopped working the day it shipped; the demo builder (D37) was updated the same way for whatever
 it enables beyond the founding set, so `pnpm demo` keeps showing a fully usable business.
 
-**Entitlement's own write-refusal trigger is real but not yet everywhere.**
-`app.check_module_entitlement` is generic and is attached in this slice to one table —
-`payment_accounts` (`card_payments`) — proven rather than assumed to work, and named in D41's
-own text as a partial completion: the map of which table each optional module owns has not been
-written for booking,
-the portal, the assistant or reception, and the trigger is not on any of their tables yet. An
-empty `Held by` cell would hide that; this sentence is the honest alternative.
+**Two claims that sound like one and are not: the entitlement model, and its enforcement
+coverage.** D41's model — the wanted∩paid intersection, the four states, `usable_modules`,
+`module_commercial_state` — is built in full and holds for every module; there is no module for
+which the *computation* is wrong or partial. Its *enforcement* is a different, narrower claim:
+`app.check_module_entitlement` is a generic trigger, and it is attached in this slice to exactly
+one table — `payment_accounts` (`card_payments`) — proven rather than assumed to work. The map
+of which table each of the other five optional modules owns has not been written for booking,
+the portal, the assistant or reception, and the trigger is not on any of their tables yet. Read
+"D41 is built" as the first claim only; the second is tracked here and in `domain-model.md`'s I28
+so that an empty `Held by` cell for the other five never gets mistaken for the first.
 
-**GOLD's own cost and the margin it implies are never a tenant-visible row.**
-`platform_provider_rates` grants `select` to `platform_staff` only. `usage_events`'s grant to
-`authenticated` names every column except the provider-cost ones — a column grant, not a
-row-level policy, because RLS cannot withhold one column of a row it otherwise allows.
-`public.organization_commercial_summary`, which computes the margin, is granted to
+**GOLD's own cost, a reconciliation of it, and the margin either implies are never a
+tenant-visible row.** `platform_provider_rates` and `usage_cost_reconciliations` grant `select`
+to `platform_staff` only. `usage_events`'s grant to `authenticated` names every column except
+`provider_key`, `provider_currency` and `provider_cost_micros` — a column grant, not a row-level
+policy, because RLS cannot withhold one column of a row it otherwise allows. Which vendor GOLD
+uses is withheld by the same mechanism as what GOLD pays it: neither is a tenant's business.
+`public.organization_commercial_summary` and `public.organization_usage_detail`, the only two
+functions that ever compute or disclose a margin or a reconciled cost, are granted to
 `platform_staff` alone. A tenant's own "Plan & usage" screen (Settings) reads a disjoint set of
 functions that never return the withheld columns at all — belt and braces, not either on its
 own.
@@ -912,12 +957,16 @@ restated a third time).** This record's domain code lives in `lib/domain/commerc
 folding GOLD's subscription revenue into the same directory would invite exactly the confusion
 D42 already named once.
 
-**Not built here, named rather than skipped.** Reconciling an estimated provider cost against a
-provider's real invoice (`platform_provider_sync_failures` exists and reads empty, the same
-shape `platform_failures` had between M5 and M6); an AI cost analyst drafting a provider rate
-from a source (`approval_state` on both rate tables exists for exactly this, and nothing writes
-a draft yet); Stripe, on either side of this ledger; and the remaining five modules' entitlement
-maps named above.
+**Not built here, named rather than skipped.** The provider-sync job itself — actually calling a
+vendor's billing API to produce a reconciliation automatically (`platform_provider_sync_failures`
+exists and reads empty, the same shape `platform_failures` had between M5 and M6, and
+`public.record_usage_reconciliation` is staff-only until that job's machine role exists to widen
+the grant onto); a real currency conversion, should this platform ever build one, with a
+snapshotted rate and date rather than a division inside a report; an AI cost analyst drafting a
+provider rate from a source (`approval_state` on both rate tables exists for exactly this, and
+nothing writes a draft yet); Stripe, on either side of this ledger; provider bindings themselves
+— an organization actually choosing which provider answers which meter, Vault, provisioning; and
+the remaining five modules' entitlement maps named above.
 
 ---
 

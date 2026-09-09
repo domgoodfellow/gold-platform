@@ -5,6 +5,56 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A provider bills GOLD in its own currency, not a tenant's, and a meter names no vendor
+
+A narrow correction to the commercial control plane (D43), found before provider bindings —
+three real bugs that would have surfaced the moment a second real provider or a real
+reconciliation arrived, caught first instead.
+
+- `supabase/migrations/20260911000001_a_meter_is_a_capability_a_provider_is_who_answered.sql` —
+  `platform_providers`, a new vocabulary table. `platform_meters` drops its `provider` column
+  entirely — `transcription_seconds` naming `deepgram` could not also let `elevenlabs` answer it.
+  `platform_provider_rates` gains `provider_key`, keyed by `(provider, meter, currency,
+  effective date)`; `app.provider_rate_at` now answers with the provider's own currency rather
+  than being told one to look for. Also grants `platform_staff` the `select` on
+  `platform_meters`/`platform_products` it should have had since `20260910000001` — nothing had
+  ever exercised the staff console's own read of either table until this change's tests did.
+- `supabase/migrations/20260911000002_a_provider_bills_gold_in_its_own_currency.sql` — **the
+  bug.** `usage_events` held one `currency` column for both GOLD's cost and a tenant's charge,
+  and `charge_for_call` looked up GOLD's wholesale rate using the *tenant's* currency — Twilio
+  does not bill GOLD in whatever a Canadian customer trades in. Split into `provider_currency`
+  and `customer_currency`; neither is ever converted into the other. Drops
+  `provider_cost_status`, which implied a row could move from estimated to reconciled in place,
+  contradicting "immutable" one line above it.
+- `supabase/migrations/20260911000003_a_reconciliation_never_charges_twice.sql` —
+  `usage_cost_reconciliations`, append-only, keyed to one usage event, carrying no quantity and
+  no customer-charge column at all, so a correction can never duplicate either.
+  `public.record_usage_reconciliation` is its one door — staff-checked today, the same shape
+  every other commercial write function uses, until a provider-sync machine role exists to widen
+  the grant onto it. `public.organization_usage_detail` keeps the original estimate visible next
+  to whatever later corrected it.
+- `supabase/migrations/20260911000004_margin_is_never_guessed_across_currencies.sql` —
+  `organization_commercial_summary`, rewritten to use the latest reconciliation in place of the
+  estimate it corrects (never the sum of both), grouped by both currencies, reporting
+  `margin_minor` as null whenever they disagree and the cost is not exactly zero — the same rule
+  `jobEconomics` already holds across a tenant's own currencies (I10), and the same open question
+  D40 named the day it shipped voice ("the spread"), kept unsolved rather than solved quietly.
+- `apps/web/lib/domain/commercial/{catalogue,usage}.ts` — `listProviders`,
+  `recordProviderRate`/`recordRetailRate` split so only the provider one takes a `providerKey`,
+  `organizationUsageDetail`, `recordUsageReconciliation`. The `/platform` console and its forms
+  updated to match; the tenant-safe "Plan & usage" screen touches only its own renamed column.
+- `apps/web/tests/{commercial-catalogue,commercial-usage}.test.ts` — two providers pricing one
+  meter independently; a provider cost and a customer charge coexisting in two currencies on one
+  fact, with no margin guessed across them; a reconciliation replacing the estimate for reporting
+  without duplicating quantity or charge, and the estimate staying inspectable afterward; a
+  tenant refused every one of the newly withheld columns and both new functions; cross-tenant
+  isolation on the new reconciliation table.
+
+Newly enforced: **I31, I32** (see `docs/domain-model.md`); I28–I30 revised to say precisely what
+D41's entitlement build does and does not yet cover, and what D43's rate/ledger split actually
+guarantees. `constraints.md` D43 rewritten in place to describe the corrected shape rather than
+the superseded one.
+
 ### GOLD can now answer what it sells, what a business owes, and what serving it costs
 
 Every table before this one answers a question about a *tenant's* business. Nothing answered

@@ -2321,21 +2321,18 @@ export type Database = {
           created_at: string
           description: string
           id: string
-          provider: string
           unit: string
         }
         Insert: {
           created_at?: string
           description: string
           id: string
-          provider: string
           unit: string
         }
         Update: {
           created_at?: string
           description?: string
           id?: string
-          provider?: string
           unit?: string
         }
         Relationships: []
@@ -2373,6 +2370,7 @@ export type Database = {
           id: string
           meter_id: string
           note: string
+          provider_key: string
           recorded_by: string
           source: string
           source_url: string | null
@@ -2386,6 +2384,7 @@ export type Database = {
           id?: string
           meter_id: string
           note?: string
+          provider_key: string
           recorded_by: string
           source: string
           source_url?: string | null
@@ -2399,6 +2398,7 @@ export type Database = {
           id?: string
           meter_id?: string
           note?: string
+          provider_key?: string
           recorded_by?: string
           source?: string
           source_url?: string | null
@@ -2411,6 +2411,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_meters"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_provider_rates_provider_key_fkey"
+            columns: ["provider_key"]
+            isOneToOne: false
+            referencedRelation: "platform_providers"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -2462,6 +2469,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_providers: {
+        Row: {
+          created_at: string
+          key: string
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          label: string
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          label?: string
+        }
+        Relationships: []
       }
       platform_retail_rates: {
         Row: {
@@ -2870,44 +2895,108 @@ export type Database = {
           },
         ]
       }
+      usage_cost_reconciliations: {
+        Row: {
+          id: string
+          note: string
+          organization_id: string
+          provider_currency: string
+          provider_reference: string
+          reconciled_at: string
+          reconciled_provider_cost_micros: number
+          recorded_by: string | null
+          source: string
+          usage_event_id: string
+        }
+        Insert: {
+          id?: string
+          note?: string
+          organization_id: string
+          provider_currency: string
+          provider_reference?: string
+          reconciled_at?: string
+          reconciled_provider_cost_micros: number
+          recorded_by?: string | null
+          source: string
+          usage_event_id: string
+        }
+        Update: {
+          id?: string
+          note?: string
+          organization_id?: string
+          provider_currency?: string
+          provider_reference?: string
+          reconciled_at?: string
+          reconciled_provider_cost_micros?: number
+          recorded_by?: string | null
+          source?: string
+          usage_event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_cost_reconciliations_event_same_org"
+            columns: ["organization_id", "usage_event_id"]
+            isOneToOne: false
+            referencedRelation: "usage_events"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "usage_cost_reconciliations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_cost_reconciliations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_events: {
         Row: {
           created_at: string
-          currency: string
           customer_charge_micros: number
+          customer_currency: string
           id: string
           meter_id: string
           note: string
           occurred_at: string
           organization_id: string
           provider_cost_micros: number
-          provider_cost_status: string
+          provider_currency: string | null
+          provider_key: string
           quantity: number
         }
         Insert: {
           created_at?: string
-          currency: string
           customer_charge_micros?: number
+          customer_currency: string
           id?: string
           meter_id: string
           note?: string
           occurred_at?: string
           organization_id: string
           provider_cost_micros?: number
-          provider_cost_status?: string
+          provider_currency?: string | null
+          provider_key: string
           quantity: number
         }
         Update: {
           created_at?: string
-          currency?: string
           customer_charge_micros?: number
+          customer_currency?: string
           id?: string
           meter_id?: string
           note?: string
           occurred_at?: string
           organization_id?: string
           provider_cost_micros?: number
-          provider_cost_status?: string
+          provider_currency?: string | null
+          provider_key?: string
           quantity?: number
         }
         Relationships: [
@@ -2931,6 +3020,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_events_provider_key_fkey"
+            columns: ["provider_key"]
+            isOneToOne: false
+            referencedRelation: "platform_providers"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -3929,17 +4025,35 @@ export type Database = {
       organization_commercial_summary: {
         Args: { p_from?: string; p_organization_id: string; p_to?: string }
         Returns: {
-          currency: string
           customer_charge_minor: number
+          customer_currency: string
           margin_minor: number
           meter_id: string
           provider_cost_minor: number
+          provider_currency: string
           quantity: number
         }[]
       }
       organization_launch_blockers: {
         Args: { p_id: string }
         Returns: string[]
+      }
+      organization_usage_detail: {
+        Args: { p_organization_id: string }
+        Returns: {
+          customer_charge_micros: number
+          customer_currency: string
+          estimated_cost_micros: number
+          estimated_currency: string
+          meter_id: string
+          occurred_at: string
+          provider_key: string
+          quantity: number
+          reconciled_at: string
+          reconciled_cost_micros: number
+          reconciled_currency: string
+          usage_event_id: string
+        }[]
       }
       places_to_watch: {
         Args: never
@@ -4033,6 +4147,7 @@ export type Database = {
           p_currency: string
           p_meter_id: string
           p_note?: string
+          p_provider_key: string
           p_source: string
           p_source_url?: string
           p_unit_amount_micros: number
@@ -4048,6 +4163,17 @@ export type Database = {
           p_source: string
           p_source_url?: string
           p_unit_amount_micros: number
+        }
+        Returns: string
+      }
+      record_usage_reconciliation: {
+        Args: {
+          p_note?: string
+          p_provider_currency: string
+          p_provider_reference?: string
+          p_reconciled_provider_cost_micros: number
+          p_source: string
+          p_usage_event_id: string
         }
         Returns: string
       }

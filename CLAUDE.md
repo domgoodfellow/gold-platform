@@ -55,8 +55,11 @@ resources, assets, documents, operating hours), the work engine, the configurati
 automation engine, the AI question tools and the onboarding proposal, the aggregate layer, saved
 reports and dashboards, reception — a customer's stage, a call as a conference, the words a
 business uses for both, and the carrier's own callbacks finishing the row (D38, D39) — and
-GOLD's own commercial/financial control plane: a catalogue, D41's entitlement in full, and a
-usage ledger recording GOLD's own provider cost alongside what a business is charged (D43).
+GOLD's own commercial/financial control plane: a catalogue with providers named apart from the
+meters they answer, D41's entitlement *model* in full (its write-refusal coverage is not — see
+below), and a usage ledger recording GOLD's own provider cost, in the provider's own currency,
+alongside what a business is charged, with reconciliation as a second append-only fact rather
+than a rewrite (D43).
 
 Not built: per-tenant theming, the shared control set (`docs/ui-spec.md` §4), the per-tenant
 marketing surface (D20), desktop (M10), Stripe on either side of the commercial ledger, and the
@@ -249,9 +252,12 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 |---|---|---|
 | A rate or a term written by a general table grant | D40's rule, restated: staff hold no `insert`/`update`/`delete` on any table. A rate or a term is a narrow `SECURITY DEFINER` function's job, checked and audited, never a grant somebody widens later | `platform_provider_rates`, `platform_retail_rates`, `organization_commercial_terms` hold no such grant for any role; `public.record_provider_rate`, `public.record_retail_rate`, `public.record_commercial_term` are the only doors, each `execute`-granted to `platform_staff` alone |
 | An RLS policy that reads entitlement | D25 surviving the arrival of money: a module is billing and navigation, never authorization, and a lapsed term must never become an access-control decision | No policy anywhere selects from `organization_commercial_terms`; the refusal is `app.check_module_entitlement`, a trigger |
-| GOLD's own provider cost, or the margin it implies, reaching a tenant | A business is entitled to know what it is charged, never what it costs GOLD to serve it | `platform_provider_rates` has no grant to `authenticated`; `usage_events`'s grant to `authenticated` omits `provider_cost_micros`/`provider_cost_status`; `public.organization_commercial_summary` is `platform_staff`-only |
+| GOLD's own provider cost, a reconciliation, or the margin either implies, reaching a tenant | A business is entitled to know what it is charged, never what it costs GOLD to serve it or who GOLD used | `platform_provider_rates` and `usage_cost_reconciliations` have no grant to `authenticated`; `usage_events`'s grant to `authenticated` omits `provider_key`/`provider_currency`/`provider_cost_micros`; `public.organization_commercial_summary` and `public.organization_usage_detail` are `platform_staff`-only |
 | A recorded amount below one minor unit | I10 | Only a *rate* (price per unit) carries micro-minor-unit precision; every disclosed total still rounds once, at render |
 | A second retail price for voice, SMS or email | `communication_rates` (D40) already answers it | `platform_retail_rates` holds no row for those three meters |
+| A provider named on a meter | Two providers may answer one meter (Deepgram or ElevenLabs, both `transcription_seconds`); a meter that named one could not express the second | `platform_meters` carries no provider column; `platform_provider_rates` is keyed by `(provider_key, meter_id, currency, effective_from)` |
+| A provider cost subtracted from a charge in a different currency | Nothing converts, and a guessed margin is worse than none (I10, restated for GOLD's own books) | `organization_commercial_summary` returns `margin_minor` as null whenever the two currencies disagree and the cost is not exactly zero |
+| A reconciliation that adds quantity or a customer charge | It would duplicate a fact `usage_events` already recorded once | `usage_cost_reconciliations` has no quantity column and no customer-charge column at all |
 
 ### The AI axis
 

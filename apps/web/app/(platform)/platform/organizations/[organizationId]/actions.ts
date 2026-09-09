@@ -10,27 +10,22 @@ export type RecordRateState = { error: string | null; recorded: boolean };
 
 export const RATE_INITIAL: RecordRateState = { error: null, recorded: false };
 
-async function recordRate(
-  kind: 'provider' | 'retail',
+export async function recordProviderRateAction(
+  _previous: RecordRateState,
   formData: FormData,
 ): Promise<RecordRateState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
 
-  const input = {
-    meterId: String(formData.get('meterId') ?? ''),
-    currency: String(formData.get('currency') ?? ''),
-    unitAmountMicros: Number(formData.get('unitAmountMicros') ?? 0),
-    source: String(formData.get('source') ?? ''),
-    note: String(formData.get('note') ?? ''),
-  };
-
   try {
-    if (kind === 'provider') {
-      await recordProviderRate(db, input);
-    } else {
-      await recordRetailRate(db, input);
-    }
+    await recordProviderRate(db, {
+      providerKey: String(formData.get('providerKey') ?? ''),
+      meterId: String(formData.get('meterId') ?? ''),
+      currency: String(formData.get('currency') ?? ''),
+      unitAmountMicros: Number(formData.get('unitAmountMicros') ?? 0),
+      source: String(formData.get('source') ?? ''),
+      note: String(formData.get('note') ?? ''),
+    });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message, recorded: false };
     throw error;
@@ -40,18 +35,28 @@ async function recordRate(
   return { error: null, recorded: true };
 }
 
-export async function recordProviderRateAction(
-  _previous: RecordRateState,
-  formData: FormData,
-): Promise<RecordRateState> {
-  return recordRate('provider', formData);
-}
-
 export async function recordRetailRateAction(
   _previous: RecordRateState,
   formData: FormData,
 ): Promise<RecordRateState> {
-  return recordRate('retail', formData);
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await recordRetailRate(db, {
+      meterId: String(formData.get('meterId') ?? ''),
+      currency: String(formData.get('currency') ?? ''),
+      unitAmountMicros: Number(formData.get('unitAmountMicros') ?? 0),
+      source: String(formData.get('source') ?? ''),
+      note: String(formData.get('note') ?? ''),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message, recorded: false };
+    throw error;
+  }
+
+  revalidatePath(`/platform/organizations/${organizationId}`);
+  return { error: null, recorded: true };
 }
 
 export type RecordTermState = { error: string | null; recorded: boolean };

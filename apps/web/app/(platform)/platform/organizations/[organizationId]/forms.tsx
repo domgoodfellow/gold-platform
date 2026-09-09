@@ -13,18 +13,95 @@ import {
 
 type Option = { value: string; label: string };
 
-/** One form, two callers — the provider and retail rate cards are the same shape (D43). */
-export function RecordRateForm({
+/**
+ * A provider rate names who; a retail rate does not (D43's correction — GOLD charges one retail
+ * price per meter regardless of which vendor fulfilled it). Two forms rather than one with a
+ * conditional field, since the field a caller must fill in is exactly the difference between
+ * them.
+ */
+export function RecordProviderRateForm({
   organizationId,
-  kind,
+  meters,
+  providers,
+}: {
+  organizationId: string;
+  meters: Option[];
+  providers: Option[];
+}) {
+  const [state, formAction, pending] = useActionState(recordProviderRateAction, RATE_INITIAL);
+
+  return (
+    <form action={formAction} className="mt-3 flex flex-col gap-2 text-sm">
+      <input type="hidden" name="organizationId" value={organizationId} />
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <SelectInput name="providerKey" required aria-label="Provider" className="flex-1">
+          <option value="">Provider…</option>
+          {providers.map((provider) => (
+            <option key={provider.value} value={provider.value}>
+              {provider.label}
+            </option>
+          ))}
+        </SelectInput>
+        <SelectInput name="meterId" required aria-label="Meter" className="flex-1">
+          <option value="">Meter…</option>
+          {meters.map((meter) => (
+            <option key={meter.value} value={meter.value}>
+              {meter.label}
+            </option>
+          ))}
+        </SelectInput>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <TextInput
+          name="currency"
+          type="text"
+          required
+          maxLength={3}
+          placeholder="USD"
+          aria-label="Currency"
+          className="w-24"
+        />
+        <TextInput
+          name="unitAmountMicros"
+          type="number"
+          required
+          min={0}
+          step={1}
+          placeholder="Micro-minor-units per unit"
+          aria-label="Amount per unit, in micro-minor-units"
+          className="flex-1"
+        />
+      </div>
+
+      <TextInput
+        name="source"
+        type="text"
+        required
+        maxLength={200}
+        placeholder="Where this number came from — an invoice, a pricing page, an estimate"
+        aria-label="Source"
+      />
+
+      <ErrorText>{state.error}</ErrorText>
+      {state.recorded ? <p className="text-subtle">Recorded.</p> : null}
+
+      <Button type="submit" disabled={pending} size="small" className="w-fit">
+        {pending ? 'Recording…' : 'Record provider rate'}
+      </Button>
+    </form>
+  );
+}
+
+export function RecordRetailRateForm({
+  organizationId,
   meters,
 }: {
   organizationId: string;
-  kind: 'provider' | 'retail';
   meters: Option[];
 }) {
-  const action = kind === 'provider' ? recordProviderRateAction : recordRetailRateAction;
-  const [state, formAction, pending] = useActionState(action, RATE_INITIAL);
+  const [state, formAction, pending] = useActionState(recordRetailRateAction, RATE_INITIAL);
 
   return (
     <form action={formAction} className="mt-3 flex flex-col gap-2 text-sm">
@@ -73,7 +150,7 @@ export function RecordRateForm({
       {state.recorded ? <p className="text-subtle">Recorded.</p> : null}
 
       <Button type="submit" disabled={pending} size="small" className="w-fit">
-        {pending ? 'Recording…' : `Record ${kind} rate`}
+        {pending ? 'Recording…' : 'Record retail rate'}
       </Button>
     </form>
   );

@@ -6,11 +6,21 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { isPlatformStaff, getTenant } from '@/lib/domain/platform/tenants';
-import { listMeters, listProducts, listProviderRates, listRetailRates } from '@/lib/domain/commercial/catalogue';
+import {
+  listMeters,
+  listProducts,
+  listProviderRates,
+  listProviders,
+  listRetailRates,
+} from '@/lib/domain/commercial/catalogue';
 import { listOrganizationTerms, moduleCommercialState } from '@/lib/domain/commercial/terms';
-import { listProviderSyncFailures, organizationCommercialSummary } from '@/lib/domain/commercial/usage';
+import {
+  listProviderSyncFailures,
+  organizationCommercialSummary,
+  organizationUsageDetail,
+} from '@/lib/domain/commercial/usage';
 import { communicationsAccount } from '@/lib/domain/communications/credits';
-import { RecordCommercialTermForm, RecordRateForm } from './forms';
+import { RecordCommercialTermForm, RecordProviderRateForm, RecordRetailRateForm } from './forms';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +38,10 @@ function formatMinor(amountMinor: number, currency: string): string {
  * itself (`constraints.md` D43). `(platform)` is a route group, not a security boundary, exactly
  * as `/platform` itself says — every read below runs under RLS as `platform_staff`, and a
  * non-staff caller sees empty tables regardless of this redirect.
+ *
+ * **Two currencies, not one.** A provider's cost and a customer's charge are shown side by side
+ * rather than netted whenever they disagree on currency — the margin column says so rather than
+ * guessing (D43's correction).
  */
 export default async function PlatformOrganizationPage({
   params,
@@ -47,21 +61,25 @@ export default async function PlatformOrganizationPage({
   const tenant = await getTenant(db, organizationId);
   if (!tenant) redirect('/platform');
 
-  const [states, terms, meters, products, providerRates, retailRates, summary, failures, account] =
+  const [states, terms, meters, providers, products, providerRates, retailRates, summary, detail, failures, account] =
     await Promise.all([
       moduleCommercialState(db, { organizationId }),
       listOrganizationTerms(db, { organizationId }),
       listMeters(db),
+      listProviders(db),
       listProducts(db),
       listProviderRates(db),
       listRetailRates(db),
       organizationCommercialSummary(db, { organizationId }),
+      organizationUsageDetail(db, { organizationId }),
       listProviderSyncFailures(db, { organizationId }),
       communicationsAccount(db, { organizationId, currency: tenant.currency || null }),
     ]);
 
   const productLabel = new Map(products.map((product) => [product.key, product.label]));
-  const meterOptions = meters.map((meter) => ({ value: meter.id, label: `${meter.id} (${meter.provider}, per ${meter.unit})` }));
+  const providerLabel = new Map(providers.map((provider) => [provider.key, provider.label]));
+  const meterOptions = meters.map((meter) => ({ value: meter.id, label: `${meter.id} (per ${meter.unit})` }));
+  const providerOptions = providers.map((provider) => ({ value: provider.key, label: provider.label }));
   const productOptions = products.map((product) => ({ value: product.key, label: product.label }));
 
   return (
@@ -118,6 +136,10 @@ export default async function PlatformOrganizationPage({
 
       <Section className="mt-8">
         <SectionHeading>Usage, cost, charge and margin</SectionHeading>
+        <Hint className="mt-1">
+          Cost and charge are shown in whichever currency each was actually recorded in — a
+          margin only appears where the two agree, or where nothing has been priced yet.
+        </Hint>
         {summary.length === 0 ? (
           <EmptyState className="mt-2">Nothing metered yet.</EmptyState>
         ) : (
@@ -134,12 +156,27 @@ export default async function PlatformOrganizationPage({
               </thead>
               <tbody>
                 {summary.map((row) => (
-                  <tr key={`${row.meterId}-${row.currency}`}>
+                  <tr key={`${row.meterId}-${row.customerCurrency}-${row.providerCurrency ?? 'unpriced'}`}>
                     <td className="pr-4">{row.meterId}</td>
                     <td className="pr-4 tabular-nums">{row.quantity}</td>
-                    <td className="pr-4 tabular-nums">{formatMinor(row.providerCostMinor, row.currency)}</td>
-                    <td className="pr-4 tabular-nums">{formatMinor(row.customerChargeMinor, row.currency)}</td>
-                    <td className="tabular-nums">{formatMinor(row.marginMinor, row.currency)}</td>
+                    <td className="pr-4 tabular-nums">
+                      {row.providerCurrency
+                        ? formatMinor(row.providerCostMinor, row.providerCurrency)
+                        : 'unpriced'}
+                    </td>
+                    <td className="pr-4 tabular-nums">{formatMinor(row.customerChargeMinor, row.customerCurrency)}</td>
+                    <td className="tabular-nums">
+                      {row.marginMinor === null ? (
+                        <span
+                          className="text-subtle"
+                          title="Cost and charge are in different currencies — not converted."
+                        >
+                          n/a
+                        </span>
+                      ) : (
+                        formatMinor(row.marginMinor, row.customerCurrency)
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -170,12 +207,17 @@ export default async function PlatformOrganizationPage({
               <DividedList as="div" className="mt-1">
                 {providerRates.map((rate) => (
                   <div key={rate.id} className="py-1 text-sm">
-                    {rate.meterId} — {rate.unitAmountMicros} micro-{rate.currency}/unit ({rate.approvalState})
+                    {providerLabel.get(rate.providerKey ?? '') ?? rate.providerKey} — {rate.meterId} —{' '}
+                    {rate.unitAmountMicros} micro-{rate.currency}/unit ({rate.approvalState})
                   </div>
                 ))}
               </DividedList>
             )}
-            <RecordRateForm organizationId={organizationId} kind="provider" meters={meterOptions} />
+            <RecordProviderRateForm
+              organizationId={organizationId}
+              meters={meterOptions}
+              providers={providerOptions}
+            />
           </div>
 
           <div>
@@ -191,9 +233,42 @@ export default async function PlatformOrganizationPage({
                 ))}
               </DividedList>
             )}
-            <RecordRateForm organizationId={organizationId} kind="retail" meters={meterOptions} />
+            <RecordRetailRateForm organizationId={organizationId} meters={meterOptions} />
           </div>
         </div>
+      </Section>
+
+      <Section className="mt-8">
+        <SectionHeading>Usage detail — estimate vs. reconciled</SectionHeading>
+        <Hint className="mt-1">
+          What GOLD first estimated a reading cost, and what a provider&rsquo;s own bill later
+          confirmed, side by side. The estimate is never overwritten.
+        </Hint>
+        {detail.length === 0 ? (
+          <EmptyState className="mt-2">Nothing metered yet.</EmptyState>
+        ) : (
+          <DividedList as="div" className="mt-2">
+            {detail.map((row) => (
+              <div key={row.usageEventId} className="flex flex-wrap items-baseline gap-x-3 py-2 text-sm">
+                <span className="tabular-nums text-subtle">{new Date(row.occurredAt).toLocaleString('en-CA')}</span>
+                <span className="font-medium">{row.meterId}</span>
+                <span className="text-subtle">{providerLabel.get(row.providerKey) ?? row.providerKey}</span>
+                <span>
+                  estimate:{' '}
+                  {row.estimatedCurrency
+                    ? formatMinor(Math.round(row.estimatedCostMicros / 1_000_000), row.estimatedCurrency)
+                    : 'unpriced'}
+                </span>
+                <span>
+                  reconciled:{' '}
+                  {row.reconciledCostMicros === null || !row.reconciledCurrency
+                    ? '—'
+                    : formatMinor(Math.round(row.reconciledCostMicros / 1_000_000), row.reconciledCurrency)}
+                </span>
+              </div>
+            ))}
+          </DividedList>
+        )}
       </Section>
 
       <Section className="mt-8">

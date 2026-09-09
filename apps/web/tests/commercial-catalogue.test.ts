@@ -5,6 +5,7 @@ import {
   listMeters,
   listProducts,
   listProviderRates,
+  listProviders,
   listRetailRates,
   recordProviderRate,
   recordRetailRate,
@@ -60,10 +61,17 @@ describe('the commercial catalogue (D43)', () => {
     await newAccountEmail('catalogue-witness');
   });
 
-  it('is readable vocabulary — meters and products, to anyone signed in', async () => {
+  it('is readable vocabulary — meters, providers and products, to anyone signed in', async () => {
     const meters = await listMeters(stranger);
     expect(meters.map((meter) => meter.id)).toContain('voice_minutes');
     expect(meters.map((meter) => meter.id)).toContain('ai_tokens_input');
+    // A meter is a capability, not a vendor (D43's correction) — it carries no provider field.
+    expect(meters[0]).not.toHaveProperty('provider');
+
+    const providers = await listProviders(stranger);
+    expect(providers.map((provider) => provider.key)).toEqual(
+      expect.arrayContaining(['deepgram', 'elevenlabs', 'anthropic', 'openai_compatible']),
+    );
 
     const products = await listProducts(stranger);
     expect(products.map((product) => product.key)).toContain('module:billing');
@@ -76,6 +84,7 @@ describe('the commercial catalogue (D43)', () => {
 
     await expect(
       recordProviderRate(stranger, {
+        providerKey: 'deepgram',
         meterId,
         currency,
         unitAmountMicros: 4200,
@@ -93,6 +102,7 @@ describe('the commercial catalogue (D43)', () => {
     ).rejects.toMatchObject({ code: 'commercial.forbidden' });
 
     const providerId = await recordProviderRate(staff, {
+      providerKey: 'deepgram',
       meterId,
       currency,
       unitAmountMicros: 4200,
@@ -120,6 +130,57 @@ describe('the commercial catalogue (D43)', () => {
 
     const retailRatesAsTenant = await listRetailRates(stranger, { meterId });
     expect(retailRatesAsTenant.some((rate) => rate.id === retailId)).toBe(true);
+  });
+
+  it('lets two providers price the same meter independently, without touching a business meter', async () => {
+    const meterId = 'transcription_seconds';
+
+    const deepgramId = await recordProviderRate(staff, {
+      providerKey: 'deepgram',
+      meterId,
+      currency: 'GBP',
+      unitAmountMicros: 3000,
+      source: 'Deepgram, GBP price list',
+    });
+
+    const elevenLabsId = await recordProviderRate(staff, {
+      providerKey: 'elevenlabs',
+      meterId,
+      currency: 'GBP',
+      unitAmountMicros: 5500,
+      source: 'ElevenLabs, GBP price list',
+    });
+
+    const rates = await listProviderRates(staff, { meterId, providerKey: undefined });
+    const deepgram = rates.find((rate) => rate.id === deepgramId);
+    const elevenLabs = rates.find((rate) => rate.id === elevenLabsId);
+
+    expect(deepgram?.providerKey).toBe('deepgram');
+    expect(elevenLabs?.providerKey).toBe('elevenlabs');
+    // Two different prices for the same meter, at the same moment — the whole point of naming
+    // the provider on the rate rather than on the meter.
+    expect(deepgram?.unitAmountMicros).not.toBe(elevenLabs?.unitAmountMicros);
+
+    // Anthropic and an OpenAI-compatible host can both price the same AI meter too, without a
+    // second business meter ever being created.
+    const anthropicId = await recordProviderRate(staff, {
+      providerKey: 'anthropic',
+      meterId: 'ai_tokens_input',
+      currency: 'USD',
+      unitAmountMicros: 300,
+      source: 'Anthropic price list',
+    });
+    const openaiId = await recordProviderRate(staff, {
+      providerKey: 'openai_compatible',
+      meterId: 'ai_tokens_input',
+      currency: 'USD',
+      unitAmountMicros: 150,
+      source: 'Self-hosted OpenAI-compatible model',
+    });
+    expect(anthropicId).not.toBe(openaiId);
+
+    const meters = await listMeters(staff);
+    expect(meters.filter((meter) => meter.id === 'ai_tokens_input')).toHaveLength(1);
   });
 
   it('is append-only — no update or delete grant reaches either rate table', async () => {
