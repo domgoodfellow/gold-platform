@@ -1,37 +1,36 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "app/api/*.py": {
-      "runtime": "@vercel/python@4.3.0"
-    }
+    "api/**/*.py": {}
   },
   "rewrites": [
     {
       "source": "/webhooks/stripe",
-      "destination": "/app/api/stripe_webhook"
+      "destination": "/api/stripe_webhook"
     },
     {
       "source": "/tasks/automation-tick",
-      "destination": "/app/api/automation_tick"
+      "destination": "/api/automation_tick"
     },
     {
       "source": "/ai/ask",
-      "destination": "/app/api/ai_ask"
+      "destination": "/api/ai_ask"
     },
     {
       "source": "/voice/outbound",
-      "destination": "/app/api/voice_outbound"
+      "destination": "/api/voice_outbound"
     },
     {
       "source": "/voice/inbound",
-      "destination": "/app/api/voice_inbound"
+      "destination": "/api/voice_inbound"
     },
     {
       "source": "/voice/status",
-      "destination": "/app/api/voice_status"
+      "destination": "/api/voice_status"
     },
     {
       "source": "/voice/recording",
-      "destination": "/app/api/voice_recording"
+      "destination": "/api/voice_recording"
     }
   ],
   "crons": [
