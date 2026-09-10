@@ -1,7 +1,7 @@
 import { Disclosure } from '@/components/containers/card';
 import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
-import { CustomFieldValues } from '@/components/custom-fields/values';
+import { CustomFieldValues } from '@/features/custom-fields/values';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listAssetReadings } from '@/lib/domain/assets/readings';
 import { listCustomers } from '@/lib/domain/customers/customers';

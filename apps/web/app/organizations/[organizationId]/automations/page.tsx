@@ -14,7 +14,7 @@ import {
   AutomationRuleCard,
   CreateAutomationRuleForm,
   MessageTemplateSection,
-} from './automation-forms';
+} from '@/features/automations/automation-forms';
 
 export const dynamic = 'force-dynamic';
 

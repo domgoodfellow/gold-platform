@@ -4,7 +4,10 @@ import { cx, FOCUS_RING } from '../class-names';
 /** Shadows the native `size` attribute (visible width in characters), unused here and repurposed. */
 export type ControlSize = 'default' | 'small';
 
-const CONTROL_BASE = cx('rounded border border-border focus-visible:border-accent-text', FOCUS_RING);
+const CONTROL_BASE = cx(
+  'rounded border border-border focus-visible:border-accent-text aria-invalid:border-danger',
+  FOCUS_RING,
+);
 
 const CONTROL_SIZE: Record<ControlSize, string> = {
   default: 'px-3 py-2',

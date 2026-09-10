@@ -4,7 +4,7 @@ import { SectionHeading } from '@/components/containers/section';
 import { ErrorText, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
-import { CustomFieldInputs } from '@/components/custom-fields/inputs';
+import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { createResourceAction, type CreateResourceState } from './actions';
 

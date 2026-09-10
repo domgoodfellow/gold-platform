@@ -95,8 +95,8 @@ first real caller rather than as empty folders.
 apps/
   web/                    Next.js. Every surface a browser reaches
     app/                  routes, grouped by whose surface it is
-    components/           the design system
-    features/             UI a second surface needs
+    components/           domain-agnostic design-system vocabulary
+    features/             product-capability presentation and interaction
     lib/domain/           the business rules. Nothing else decides anything
     lib/adapters/         vendors, behind capabilities
   api/                    Python. Webhooks, the clock, the AI loop
@@ -445,6 +445,9 @@ information architecture. A control reads a variable and never a literal, which 
 per-tenant theme a question of where values come from rather than a second pass over every screen.
 **No colour is keyed to what a status means.** The platform does not know what a tenant's status
 means; two words in two languages are the same shape of row.
+**Ownership.** `app/` owns routes and server composition; `features/` owns product-capability UI;
+`components/` owns domain-agnostic UI; reusable client interaction moves to `hooks/` only after
+the repeated behavior exists. Caller count is an extraction signal, not the primary boundary.
 
 ### D24 — Web and API both deploy to Vercel, and that forbids a daemon
 

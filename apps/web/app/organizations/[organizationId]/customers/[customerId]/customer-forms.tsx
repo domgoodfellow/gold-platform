@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, SelectInput, TextInput } from '@/components/controls/inputs';
-import { CustomFieldInputs } from '@/components/custom-fields/inputs';
+import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { Customer } from '@/lib/domain/customers/customers';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';

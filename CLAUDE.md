@@ -107,15 +107,14 @@ Nothing is created before a slice needs it.
 ```text
 apps/
   web/              Next.js — every surface a browser reaches, grouped by whose it is (D20)
-    app/            routes; a component with one caller sits beside its route
+    app/            routing, route handlers, server data loading and screen composition
       (marketing)/  GOLD's own site, in GOLD's voice
       (auth)/       sign in, sign up
       (public)/     book/{slug}, portal/{token} — a tenant's customers, a tenant's words
       (platform)/   the staff console (D28). No sidebar, no navigation.ts entry
       organizations/ the operator shell. Deliberately UNGROUPED — see below
-    features/       UI a second *surface* needs — see its README for the test
-    components/     the design system, in sub-folders named for `ui-spec.md`'s own sections;
-                    extracted at the third caller (D23). See its README
+    features/       product-capability presentation and interaction — see its README
+    components/     domain-agnostic design-system vocabulary, grouped by `ui-spec.md` section
     lib/domain/     the business rules. Nothing in app/ or features/ decides anything
     lib/adapters/   vendors. Domain code imports the capability, never the implementation
     scripts/demo/   the demo builder. Covered by the gate on purpose (D37)

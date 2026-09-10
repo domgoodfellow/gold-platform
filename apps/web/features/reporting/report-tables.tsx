@@ -47,7 +47,7 @@ export function FiguresTable({
           {groups.map((group) => (
             <tr
               key={`${group.groupId ?? group.label ?? 'none'}-${group.currency}`}
-              className="border-b border-black/5 dark:border-white/10"
+              className="border-b border-border/50"
             >
               <TableCell>
                 {group.label ?? <span className="text-muted">Not attributed</span>}
@@ -120,7 +120,7 @@ export function JobsTable({
           {groups.map((group) => (
             <tr
               key={group.groupId ?? group.label ?? 'none'}
-              className="border-b border-black/5 dark:border-white/10"
+              className="border-b border-border/50"
             >
               <TableCell>
                 {group.label ?? <span className="text-muted">Not attributed</span>}
@@ -167,7 +167,7 @@ export function CommittedTimeTable({
           {groups.map((group) => (
             <tr
               key={group.groupId ?? group.label ?? 'none'}
-              className="border-b border-black/5 dark:border-white/10"
+              className="border-b border-border/50"
             >
               <TableCell>
                 {group.label ?? <span className="text-muted">Not attributed</span>}

@@ -3,7 +3,7 @@
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
-import { CustomFieldInputs } from '@/components/custom-fields/inputs';
+import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';

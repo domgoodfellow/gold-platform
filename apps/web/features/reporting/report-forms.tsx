@@ -1,6 +1,7 @@
 'use client';
 
-import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
+import { Hint, TextInput } from '@/components/controls/inputs';
+import { FormActions, FormError, FormField } from '@/components/controls/form';
 import { SectionHeading } from '@/components/containers/section';
 import { Button } from '@/components/controls/button';
 import { ConfirmSubmit } from '@/components/containers/dialog';
@@ -21,7 +22,7 @@ import {
   setPinAction,
   setReportRolesAction,
   type ReportState,
-} from './actions';
+} from '@/app/organizations/[organizationId]/reports/actions';
 
 const INITIAL: ReportState = { error: null };
 /**
@@ -62,21 +63,25 @@ export function SaveReportForm({
         Nothing is copied: the figures are worked out again each time somebody opens it.
       </Hint>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <TextInput
-          name="name"
-          type="text"
-          required
-          maxLength={120}
-          placeholder="What you call this report"
-          className="text-sm sm:flex-1"
-        />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <FormField id="report-name" label="Report name" className="sm:flex-1">
+          {(field) => (
+            <TextInput
+              {...field}
+              name="name"
+              type="text"
+              required
+              maxLength={120}
+              className="w-full text-sm"
+            />
+          )}
+        </FormField>
         <Button type="submit" disabled={pending} tone="secondary" size="small">
           {pending ? 'Saving…' : 'Save'}
         </Button>
       </div>
 
-      {state.error ? <ErrorText>{state.error}</ErrorText> : null}
+      <FormError>{state.error}</FormError>
     </form>
   );
 }
@@ -130,13 +135,13 @@ export function ReportAudienceForm({
           </div>
         )}
 
-        <div className="flex gap-2">
+        <FormActions>
           <Button type="submit" disabled={pending} tone="secondary" size="small">
             {pending ? 'Saving…' : 'Who sees this'}
           </Button>
-        </div>
+        </FormActions>
 
-        <ErrorText>{state.error}</ErrorText>
+        <FormError>{state.error}</FormError>
       </form>
 
       {/*
@@ -156,7 +161,7 @@ export function ReportAudienceForm({
           size="small"
           pending={removing}
         />
-        <ErrorText>{removal.error}</ErrorText>
+        <FormError>{removal.error}</FormError>
       </form>
     </div>
   );
@@ -168,21 +173,25 @@ export function CreateDashboardForm({ organizationId }: { organizationId: string
 
   return (
     <form action={formAction} className="mt-4 flex flex-col gap-2">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <input type="hidden" name="organizationId" value={organizationId} />
-        <TextInput
-          name="name"
-          type="text"
-          required
-          maxLength={120}
-          placeholder="What you call this dashboard"
-          className="text-sm sm:flex-1"
-        />
+        <FormField id="dashboard-name" label="Dashboard name" className="sm:flex-1">
+          {(field) => (
+            <TextInput
+              {...field}
+              name="name"
+              type="text"
+              required
+              maxLength={120}
+              className="w-full text-sm"
+            />
+          )}
+        </FormField>
         <Button type="submit" disabled={pending} tone="secondary" size="small">
           {pending ? 'Adding…' : 'Add a dashboard'}
         </Button>
       </div>
-      {state.error ? <ErrorText>{state.error}</ErrorText> : null}
+      <FormError>{state.error}</FormError>
     </form>
   );
 }
@@ -242,7 +251,7 @@ export function DashboardContentsForm({
           size="small"
           pending={removing}
         />
-        <ErrorText>{removal.error}</ErrorText>
+        <FormError>{removal.error}</FormError>
       </form>
     </div>
   );
@@ -272,9 +281,7 @@ function PinForm({
         {pinned ? 'Take off' : 'Put on'}
       </Button>
       <span className={pinned ? 'font-medium' : 'text-muted'}>{report.name}</span>
-      {state.error ? (
-        <span className="text-danger">{state.error}</span>
-      ) : null}
+      <FormError className="basis-full">{state.error}</FormError>
     </form>
   );
 }
