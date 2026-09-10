@@ -5,6 +5,68 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### An organization scopes its own provider, and a generated secret lives in Vault and nowhere else
+
+Provider Bindings (D44): which external scope belongs to an organization, how GOLD provisions
+and uses it safely, and where a generated credential is retained. Twilio is the one provider
+proven end to end — a real subaccount, key and application, created idempotently and recorded
+through the same narrow-function pattern D43 established; Resend and a tenant's own sending
+domain get the lighter binding/resource support transactional email actually needs; Deepgram,
+ElevenLabs and model inference get nothing new, because nothing yet calls for a binding of their
+own.
+
+- `supabase/migrations/20260912000001_an_organization_scopes_its_own_provider_binding.sql` —
+  enables Supabase Vault; `organization_provider_bindings` (organization → provider → external
+  scope → lifecycle) and `organization_provider_resources` (one externally created thing beneath
+  a binding), both tenant-owned, RLS-scoped, with a composite foreign key leading with
+  `organization_id` (I18, I2). Neither table carries any write grant to any role.
+- `supabase/migrations/20260912000002_a_narrow_door_provisions_and_never_reads_back_a_secret.sql`
+  — `begin_provider_binding`, `set_provider_binding_status`, `record_provider_resource`,
+  `set_provider_resource_status` (all staff-only, idempotent by upsert), and
+  `store_provider_secret` — the one function that ever writes to Vault, returning only the
+  resource id it acted on. No role is granted `select` on `vault.secrets` or
+  `vault.decrypted_secrets`, and `secret_id` is withheld from every column grant.
+- `supabase/migrations/20260912000003_a_tenant_configures_only_what_is_already_bound.sql` —
+  `set_calling_number` (D39) recreated to refuse a number already bound to a *different*
+  organization, via a new `security definer` helper, `app.phone_number_owner` (needed because the
+  function itself stays `security invoker`, and an invoker-mode read would only ever see the
+  caller's own rows). `record_organization_email_domain` — a business naming its own sending
+  domain beneath GOLD's one Resend account, staff verifying it afterward through the same generic
+  resource-status door.
+- `apps/web/lib/adapters/telephony/` — `registry.ts` gains `telephonyProviderKey()` and
+  `TELEPHONY_RESOURCE_TYPES`, the one place this capability's vendor name and resource-type
+  vocabulary live, and a `telephonyProvisioner()` capability (`createSubaccount`, `createApiKey`,
+  `createTwimlApp`) beside the existing one. `telephonyProvider()` grows one argument,
+  `actingAccountSid` — GOLD's master credentials address any subaccount by naming it in the
+  request path, so no second credential is ever needed to place a call inside a business's own
+  scope. `twilio.ts` implements both, still no SDK.
+- `apps/web/lib/domain/providers/{bindings,twilio-provisioning}.ts` — the domain layer: typed
+  reads and staff-write wrappers over the narrow functions above, and
+  `provisionTelephonySubaccount`, the real lifecycle (subaccount, then key, then application),
+  idempotent at every step and recording a failure as durable binding state rather than only a
+  thrown error. `resourceType` is opaque `string` throughout, never a vendor-named union — an
+  earlier draft typed it as one and `adapters.test.ts`'s vendor-name scan (I15) caught it, the
+  same test catching a literal `'twilio'` inside the orchestration itself.
+- `apps/web/app/(platform)/platform/organizations/[organizationId]/` — a "Providers" section:
+  every binding and its resources for one business, a button to provision Twilio, a form to
+  register an existing/moved number, a generic resource-status form for staff to verify a domain
+  or mark anything failed. Nothing here can select a secret.
+- `apps/web/app/organizations/[organizationId]/settings/connections/` — the tenant-safe
+  Connections surface: phone (connected status, owned numbers, a link to where the outbound one is
+  actually chosen — one configuration path, not two), email (domain status, a form to add one),
+  AI & speech (which capabilities this deployment offers, informational only). No parent account,
+  no secret, no wholesale rate, no cost, ever.
+- `apps/web/tests/provider-bindings.test.ts` — cross-tenant isolation on both new tables; the
+  narrow functions are the only write path, for both a tenant and staff; idempotency (retrying
+  `begin`/`record` never duplicates a logical binding or resource); a failed provisioning attempt
+  is durable state; a generated secret's storing function never returns it, and neither vault
+  table is selectable by any role; a tenant cannot claim another organization's bound phone
+  number, and an unbound one is unaffected; Twilio resolution addresses a bound subaccount's own
+  scope rather than GOLD's master one.
+
+Newly enforced: **I33, I34, I35** (see `docs/domain-model.md`). `constraints.md` gains **D44**;
+its "Not built here" paragraph corrected — provider bindings were the item it named as absent.
+
 ### A provider bills GOLD in its own currency, not a tenant's, and a meter names no vendor
 
 A narrow correction to the commercial control plane (D43), found before provider bindings —

@@ -59,14 +59,18 @@ GOLD's own commercial/financial control plane: a catalogue with providers named 
 meters they answer, D41's entitlement *model* in full (its write-refusal coverage is not — see
 below), and a usage ledger recording GOLD's own provider cost, in the provider's own currency,
 alongside what a business is charged, with reconciliation as a second append-only fact rather
-than a rewrite (D43).
+than a rewrite (D43) — and, on top of that, which external provider scope belongs to which
+organization, a real Twilio subaccount, key and application provisioned and recorded through it,
+and a generated secret held in Vault that no function ever selects back out (D44).
 
 Not built: per-tenant theming, the shared control set (`docs/ui-spec.md` §4), the per-tenant
-marketing surface (D20), desktop (M10), Stripe on either side of the commercial ledger, and the
+marketing surface (D20), desktop (M10), Stripe on either side of the commercial ledger, the
 entitlement write-refusal on any module's tables but `card_payments`'s (D43 names the rest as a
-gap). Two domain capabilities are reachable from no screen — `revokePortalInvite` and
-`assignRole`; `docs/walkthrough.md` names where an operator would hit them. Do not add a third
-without noticing.
+gap), a per-tenant Deepgram, ElevenLabs or model-inference account of any kind, and a browser
+voice token signed by a business's own generated key rather than GOLD's master one (D44 names
+both as gaps). Three domain capabilities are reachable from no screen — `revokePortalInvite`,
+`assignRole` and `browserTelephoneToken`; `docs/walkthrough.md` names where an operator would hit
+the first two. Do not add a fourth without noticing.
 
 `supabase/migrations/` is the source of truth for the data model. Read it rather than
 inferring the schema, and comment the *why* rather than the *what*.
@@ -259,6 +263,17 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | A provider cost subtracted from a charge in a different currency | Nothing converts, and a guessed margin is worse than none (I10, restated for GOLD's own books) | `organization_commercial_summary` returns `margin_minor` as null whenever the two currencies disagree and the cost is not exactly zero |
 | A reconciliation that adds quantity or a customer charge | It would duplicate a fact `usage_events` already recorded once | `usage_cost_reconciliations` has no quantity column and no customer-charge column at all |
 
+### Provider bindings and secrets
+
+| Never | Because | Held by |
+|---|---|---|
+| A binding or a resource written by a general table grant | The same rule as above, restated for a third axis: staff hold no `insert`/`update`/`delete` on any table | `organization_provider_bindings` and `organization_provider_resources` hold no such grant for any role; `begin_provider_binding`, `set_provider_binding_status`, `record_provider_resource`, `set_provider_resource_status` are the only doors, each `execute`-granted to `platform_staff` alone |
+| A function that selects a decrypted secret back out | Staff necessarily holds a generated secret for the one moment it is created; nothing may ever ask for it again through this API — not staff, not a tenant, not the browser | No role holds `select` on `vault.secrets` or `vault.decrypted_secrets`; `store_provider_secret` returns the resource id it acted on, never the secret or the vault row's own id |
+| `secret_id` reaching any caller | A vault reference is exactly as sensitive as what it points to handing back | Withheld from every grant on `organization_provider_resources`, the same column-grant mechanism `usage_events` uses for GOLD's own cost |
+| A provider named in `lib/domain/` | I15, extended: a resource-type string like `twilio_subaccount` is a vendor's name wearing a different shape | `organization_provider_resources.resourceType` is opaque `string`; `lib/adapters/telephony/registry.ts` alone knows `telephonyProviderKey()` and `TELEPHONY_RESOURCE_TYPES` |
+| A tenant selecting another organization's bound resource as its own | A number or a domain typed by hand must not let GOLD use somebody else's scope (D39) | `app.phone_number_owner`, `security definer`, checked inside `set_calling_number`; a number bound to a different organization is refused, one bound to nobody is unaffected |
+| A subaccount's own credential used to place a call | GOLD's master account can already address any subaccount by naming it in the request path (D39); a second credential per business is a second thing to rotate for no isolation gained | `telephonyProvider(actingAccountSid)` authenticates with GOLD's master token throughout; only the acting account in the URL path changes |
+
 ### The AI axis
 
 | Never | Because | Held by |
@@ -350,6 +365,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | What a business is buying, and what a lapse does | D41 |
 | GOLD's own business, and why staff is a second account | D42 |
 | The commercial catalogue, entitlement's build, provider cost and margin | D43 |
+| Provider bindings, provisioning and where a generated secret lives | D44 |
 
 ## When you finish a change
 

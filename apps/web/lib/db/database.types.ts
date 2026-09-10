@@ -2122,6 +2122,131 @@ export type Database = {
           },
         ]
       }
+      organization_provider_bindings: {
+        Row: {
+          created_at: string
+          external_account_id: string | null
+          id: string
+          last_error: string | null
+          last_verified_at: string | null
+          metadata: Json
+          organization_id: string
+          provider_key: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_account_id?: string | null
+          id?: string
+          last_error?: string | null
+          last_verified_at?: string | null
+          metadata?: Json
+          organization_id: string
+          provider_key: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_account_id?: string | null
+          id?: string
+          last_error?: string | null
+          last_verified_at?: string | null
+          metadata?: Json
+          organization_id?: string
+          provider_key?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_provider_bindings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_provider_bindings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_provider_bindings_provider_key_fkey"
+            columns: ["provider_key"]
+            isOneToOne: false
+            referencedRelation: "platform_providers"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      organization_provider_resources: {
+        Row: {
+          binding_id: string
+          config: Json
+          created_at: string
+          external_id: string
+          id: string
+          last_verified_at: string | null
+          organization_id: string
+          resource_type: string
+          secret_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          binding_id: string
+          config?: Json
+          created_at?: string
+          external_id: string
+          id?: string
+          last_verified_at?: string | null
+          organization_id: string
+          resource_type: string
+          secret_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          binding_id?: string
+          config?: Json
+          created_at?: string
+          external_id?: string
+          id?: string
+          last_verified_at?: string | null
+          organization_id?: string
+          resource_type?: string
+          secret_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_provider_resources_organization_id_binding_id_fkey"
+            columns: ["organization_id", "binding_id"]
+            isOneToOne: false
+            referencedRelation: "organization_provider_bindings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "organization_provider_resources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_provider_resources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           buffer_minutes: number
@@ -3814,6 +3939,10 @@ export type Database = {
         Args: { p_membership_id: string; p_role_id: string }
         Returns: undefined
       }
+      begin_provider_binding: {
+        Args: { p_organization_id: string; p_provider_key: string }
+        Returns: string
+      }
       booking_organization: { Args: { p_slug: string }; Returns: string }
       change_work_item_status: {
         Args: { p_status_id: string; p_work_item_id: string }
@@ -4121,6 +4250,10 @@ export type Database = {
         Args: { p_detail: string; p_id: string; p_sent: boolean }
         Returns: undefined
       }
+      record_organization_email_domain: {
+        Args: { p_domain: string; p_organization_id: string }
+        Returns: string
+      }
       record_payment: {
         Args: {
           p_amount_minor: number
@@ -4151,6 +4284,17 @@ export type Database = {
           p_source: string
           p_source_url?: string
           p_unit_amount_micros: number
+        }
+        Returns: string
+      }
+      record_provider_resource: {
+        Args: {
+          p_config?: Json
+          p_external_id: string
+          p_organization_id: string
+          p_provider_key: string
+          p_resource_type: string
+          p_status?: string
         }
         Returns: string
       }
@@ -4279,6 +4423,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_provider_binding_status: {
+        Args: {
+          p_error?: string
+          p_external_account_id?: string
+          p_organization_id: string
+          p_provider_key: string
+          p_status: string
+        }
+        Returns: undefined
+      }
+      set_provider_resource_status: {
+        Args: {
+          p_error?: string
+          p_organization_id: string
+          p_resource_id: string
+          p_status: string
+        }
+        Returns: undefined
+      }
       set_type_bookable: {
         Args: {
           p_duration_minutes: number
@@ -4287,6 +4450,14 @@ export type Database = {
           p_status_id: string
         }
         Returns: undefined
+      }
+      store_provider_secret: {
+        Args: {
+          p_organization_id: string
+          p_resource_id: string
+          p_secret: string
+        }
+        Returns: string
       }
       time_committed: {
         Args: {

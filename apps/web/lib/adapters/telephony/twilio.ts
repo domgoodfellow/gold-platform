@@ -1,5 +1,13 @@
 import { createHmac, randomUUID } from 'node:crypto';
-import type { CallStatus, PlacedCall, TelephonyProvider } from './index';
+import type {
+  CallStatus,
+  PlacedCall,
+  ProvisionedApiKey,
+  ProvisionedSubaccount,
+  ProvisionedTwimlApp,
+  TelephonyProvider,
+  TelephonyProvisioner,
+} from './index';
 
 /**
  * Twilio, behind the capability its interface names.
@@ -50,15 +58,18 @@ export function twilioTelephony(config: {
   apiKeySid: string;
   apiKeySecret: string;
   appSid: string;
+  /** A business's own subaccount, addressed with the master credentials above (D39). */
+  actingAccountSid?: string | null;
 }): TelephonyProvider {
   const basic = Buffer.from(`${config.account}:${config.token}`).toString('base64');
+  const actingAccount = config.actingAccountSid || config.account;
 
   return {
     async addToRoom(input): Promise<PlacedCall> {
       // Adding a participant creates the room if it does not exist, so there is nothing to
       // create first and no window in which a room exists with nobody in it.
       const response = await fetch(
-        `${API}/Accounts/${config.account}/Conferences/${encodeURIComponent(input.room)}/Participants.json`,
+        `${API}/Accounts/${actingAccount}/Conferences/${encodeURIComponent(input.room)}/Participants.json`,
         {
           method: 'POST',
           headers: {
@@ -134,6 +145,74 @@ export function twilioTelephony(config: {
         .digest('base64url');
 
       return `${header}.${payload}.${signature}`;
+    },
+  };
+}
+
+/**
+ * Standing up a business's own scope inside GOLD's master account.
+ *
+ * **Three calls, all authenticated with the master credential, each addressing the new
+ * subaccount by naming it in the path** — the same "parent credentials reach into a subaccount"
+ * fact `twilioTelephony` above relies on for `addToRoom`. No SDK, for the reason the rest of this
+ * file gives: one HTTPS call per step, stable and specified.
+ *
+ * **Each method is one Twilio call and nothing else.** Whether a subaccount already exists for a
+ * retried provisioning attempt is `lib/domain/providers/twilio-provisioning.ts`'s question — this
+ * file has no memory of anything and creates exactly what it is asked to.
+ */
+export function twilioProvisioner(config: { account: string; token: string }): TelephonyProvisioner {
+  const basic = Buffer.from(`${config.account}:${config.token}`).toString('base64');
+
+  async function post(path: string, form: Record<string, string>): Promise<Record<string, unknown>> {
+    const response = await fetch(`${API}${path}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${basic}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams(form).toString(),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`telephony provisioning refused (${response.status}): ${detail}`);
+    }
+
+    return (await response.json()) as Record<string, unknown>;
+  }
+
+  return {
+    async createSubaccount(input): Promise<ProvisionedSubaccount> {
+      const body = await post('/Accounts.json', { FriendlyName: input.friendlyName });
+      if (typeof body.sid !== 'string') {
+        throw new Error('telephony provisioning created a subaccount with no identifier');
+      }
+      return { sid: body.sid };
+    },
+
+    async createApiKey(input): Promise<ProvisionedApiKey> {
+      // The secret is returned exactly once, by Twilio's own design — never again, from Twilio
+      // or from here. The caller must retain it now or it is gone.
+      const body = await post(`/Accounts/${input.subaccountSid}/Keys.json`, {
+        FriendlyName: input.friendlyName,
+      });
+      if (typeof body.sid !== 'string' || typeof body.secret !== 'string') {
+        throw new Error('telephony provisioning created an API key with no identifier or secret');
+      }
+      return { sid: body.sid, secret: body.secret };
+    },
+
+    async createTwimlApp(input): Promise<ProvisionedTwimlApp> {
+      const body = await post(`/Accounts/${input.subaccountSid}/Applications.json`, {
+        FriendlyName: input.friendlyName,
+        VoiceUrl: input.voiceUrl,
+        VoiceMethod: 'POST',
+      });
+      if (typeof body.sid !== 'string') {
+        throw new Error('telephony provisioning created an application with no identifier');
+      }
+      return { sid: body.sid };
     },
   };
 }

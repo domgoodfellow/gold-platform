@@ -65,6 +65,35 @@ export type TelephonyProvider = {
 };
 
 /**
+ * Creating the scope a business dials from, as a capability distinct from dialling itself.
+ *
+ * **Why a second capability rather than a fourth method on `TelephonyProvider`.** Ringing a
+ * customer into a room is something every call needs; standing up the subaccount a call happens
+ * inside is something one business needs once, done by staff rather than by whoever is on the
+ * phone. Folding the two together would mean every caller of `addToRoom` importing a surface it
+ * never uses.
+ *
+ * **Three steps and nothing beyond them**, matching what a subaccount actually needs before a
+ * call or a browser token can use it (D39): its own scope, a key to sign a token with later, and
+ * an application a browser's outgoing call can be pointed at. Which of these already exist for a
+ * retry is `lib/domain/providers/`'s question, not this one's — each method here does the one
+ * externally-visible thing its name says and nothing to check first.
+ */
+export type ProvisionedSubaccount = { sid: string };
+export type ProvisionedApiKey = { sid: string; secret: string };
+export type ProvisionedTwimlApp = { sid: string };
+
+export type TelephonyProvisioner = {
+  createSubaccount(input: { friendlyName: string }): Promise<ProvisionedSubaccount>;
+  createApiKey(input: { subaccountSid: string; friendlyName: string }): Promise<ProvisionedApiKey>;
+  createTwimlApp(input: {
+    subaccountSid: string;
+    friendlyName: string;
+    voiceUrl: string;
+  }): Promise<ProvisionedTwimlApp>;
+};
+
+/**
  * Re-exported so domain code imports the capability and nothing deeper.
  *
  * `adapters.test.ts` allows a domain file to import `@/lib/adapters/<capability>` exactly, and
@@ -72,4 +101,10 @@ export type TelephonyProvider = {
  * implementation's name arrives in the domain layer one import at a time. `./registry` is
  * therefore the single place in the tree, outside an implementation, permitted to name a carrier.
  */
-export { callbackBase, telephonyProvider } from './registry';
+export {
+  TELEPHONY_RESOURCE_TYPES,
+  callbackBase,
+  telephonyProvider,
+  telephonyProviderKey,
+  telephonyProvisioner,
+} from './registry';

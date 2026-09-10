@@ -1,10 +1,26 @@
-import { callbackBase, telephonyProvider, type CallStatus } from '@/lib/adapters/telephony';
+import {
+  callbackBase,
+  telephonyProvider,
+  telephonyProviderKey,
+  type CallStatus,
+} from '@/lib/adapters/telephony';
 import { randomUUID } from 'node:crypto';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
+import { getProviderBinding } from '@/lib/domain/providers/bindings';
 import { callingNumber } from '@/lib/domain/reception/telephony';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+
+/**
+ * The scope a business's own calls happen inside, or `null` for one with no telephony binding
+ * yet — which is every business until staff provisions one, and `telephonyProvider` reads that
+ * exactly like GOLD's master scope, unchanged (D39).
+ */
+async function actingTelephonyAccount(db: Db, organizationId: string): Promise<string | null> {
+  const binding = await getProviderBinding(db, { organizationId, providerKey: telephonyProviderKey() });
+  return binding?.status === 'active' ? binding.externalAccountId : null;
+}
 
 /**
  * A call, as business record.
@@ -153,7 +169,8 @@ export async function placeCall(
   }
 
   const reportTo = callbackBase();
-  const provider = await telephonyProvider();
+  const actingAccount = await actingTelephonyAccount(db, input.organizationId);
+  const provider = await telephonyProvider(actingAccount);
   if (!provider || !reportTo) {
     throw new DomainError(
       'This deployment cannot place calls yet. Record the call instead once you have made it.',

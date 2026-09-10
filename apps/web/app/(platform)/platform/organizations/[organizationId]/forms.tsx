@@ -4,14 +4,89 @@ import { Button } from '@/components/controls/button';
 import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
 import { useActionState } from 'react';
 import {
+  PROVISION_TWILIO_INITIAL,
   RATE_INITIAL,
+  REGISTER_RESOURCE_INITIAL,
+  SET_RESOURCE_STATUS_INITIAL,
   TERM_INITIAL,
+  provisionTwilioAction,
   recordCommercialTermAction,
   recordProviderRateAction,
   recordRetailRateAction,
+  registerPhoneNumberAction,
+  setResourceStatusAction,
 } from './actions';
 
 type Option = { value: string; label: string };
+
+/** One button, one binding. Provisioning is idempotent (`provisionTwilioBinding`), so pressing
+ * this again after a failure resumes rather than duplicates. */
+export function ProvisionTwilioForm({ organizationId }: { organizationId: string }) {
+  const [state, formAction, pending] = useActionState(provisionTwilioAction, PROVISION_TWILIO_INITIAL);
+
+  return (
+    <form action={formAction} className="mt-3 flex flex-col gap-2 text-sm">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <ErrorText>{state.error}</ErrorText>
+      {state.provisioned ? <p className="text-subtle">Provisioned.</p> : null}
+      <Button type="submit" disabled={pending} size="small" className="w-fit">
+        {pending ? 'Provisioning…' : 'Provision Twilio subaccount'}
+      </Button>
+    </form>
+  );
+}
+
+/** Registering a number this business already owns — never purchasing one (section 4's own
+ * limit): the resource model records what exists rather than acquiring anything new. */
+export function RegisterPhoneNumberForm({ organizationId }: { organizationId: string }) {
+  const [state, formAction, pending] = useActionState(registerPhoneNumberAction, REGISTER_RESOURCE_INITIAL);
+
+  return (
+    <form action={formAction} className="mt-3 flex flex-col gap-2 text-sm">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <TextInput
+        name="number"
+        type="text"
+        required
+        placeholder="+14165550142"
+        aria-label="Phone number, in this organization's Twilio scope"
+      />
+      <ErrorText>{state.error}</ErrorText>
+      {state.recorded ? <p className="text-subtle">Recorded.</p> : null}
+      <Button type="submit" disabled={pending} size="small" className="w-fit">
+        {pending ? 'Recording…' : 'Register number'}
+      </Button>
+    </form>
+  );
+}
+
+/** Verifying, or marking failed, one resource already recorded — a Resend domain, most often,
+ * since Twilio's own resources move to `active` inside provisioning itself. */
+export function SetResourceStatusForm({ organizationId }: { organizationId: string }) {
+  const [state, formAction, pending] = useActionState(setResourceStatusAction, SET_RESOURCE_STATUS_INITIAL);
+
+  return (
+    <form action={formAction} className="mt-3 flex flex-col gap-2 text-sm">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <TextInput name="resourceId" type="text" required placeholder="Resource id" aria-label="Resource id" />
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <SelectInput name="status" required aria-label="Status" className="flex-1">
+          <option value="">Status…</option>
+          <option value="active">Active / verified</option>
+          <option value="failed">Failed</option>
+          <option value="disabled">Disabled</option>
+          <option value="pending">Pending</option>
+        </SelectInput>
+        <TextInput name="errorDetail" type="text" placeholder="Error detail, if failed" aria-label="Error detail" className="flex-1" />
+      </div>
+      <ErrorText>{state.error}</ErrorText>
+      {state.recorded ? <p className="text-subtle">Recorded.</p> : null}
+      <Button type="submit" disabled={pending} size="small" className="w-fit">
+        {pending ? 'Recording…' : 'Set resource status'}
+      </Button>
+    </form>
+  );
+}
 
 /**
  * A provider rate names who; a retail rate does not (D43's correction — GOLD charges one retail

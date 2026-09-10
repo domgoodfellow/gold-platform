@@ -964,9 +964,115 @@ exists and reads empty, the same shape `platform_failures` had between M5 and M6
 the grant onto); a real currency conversion, should this platform ever build one, with a
 snapshotted rate and date rather than a division inside a report; an AI cost analyst drafting a
 provider rate from a source (`approval_state` on both rate tables exists for exactly this, and
-nothing writes a draft yet); Stripe, on either side of this ledger; provider bindings themselves
-— an organization actually choosing which provider answers which meter, Vault, provisioning; and
-the remaining five modules' entitlement maps named above.
+nothing writes a draft yet); Stripe, on either side of this ledger; and the remaining five
+modules' entitlement maps named above. **Provider bindings — an organization actually choosing
+which provider answers which meter, Vault, provisioning — arrived in D44, the record directly
+below.**
+
+---
+
+### D44 — An organization's own scope inside a provider, and where a generated secret lives
+
+**Decision.** GOLD can now record which external provider scope belongs to which organization —
+a Twilio subaccount, a Resend sending domain — and what GOLD created inside that scope, without
+turning `platform_providers` (D43's vocabulary) into a credentials table. Two new tenant-owned
+tables carry it: `organization_provider_bindings` (organization → provider → external scope →
+lifecycle) and `organization_provider_resources` (one externally created thing beneath a
+binding — a subaccount, an API key's public half, a phone number, a sender domain). Neither
+carries a secret. Twilio is the one provider proven end to end in this record — a real
+subaccount, a real generated API key, a real application — because D39 already gave it a
+concrete resource model to prove; Resend gets only what a sending domain needs (D40's own
+"nothing is metered until it costs something" restated for infrastructure); Deepgram, ElevenLabs
+and model inference get nothing, because nothing yet calls for a binding of their own — D43's
+provider vocabulary already lets their usage name a provider without one.
+
+**Not every provider gets a subaccount, and the schema does not pretend otherwise.**
+`external_account_id` on a binding is nullable, and no column, trigger or check assumes it is
+set. A binding can be `active` with no external account at all — Resend's shape, one platform
+account with a business's own domain named beneath it.
+
+**Vault, enabled for exactly one kind of fact.** GOLD's own master credentials (a Twilio account
+SID and auth token, a Resend platform key) stay deployment environment secrets, unchanged — D14
+already refused a database as the place a person reads those from, and Vault existing does not
+reopen that. What Vault holds is narrower: a credential *this platform generates* per
+organization — today, a Twilio subaccount's own API key secret — that must be retained for a
+future server-side use and never existed in any deployment's environment to begin with.
+
+**The write door that only ever writes.** `public.store_provider_secret` is the one function
+that ever calls `vault.create_secret` or `vault.update_secret` (rotation reuses the same vault
+row rather than a second live secret), and it returns the *resource id* it just acted on — never
+the vault row's own id, never the secret. No function anywhere selects a secret back out, and no
+role — not `authenticated`, not `platform_staff` — holds `select` on `vault.secrets` or
+`vault.decrypted_secrets` at all. The distinction this rests on: staff necessarily holds a
+generated secret in memory for the one moment it is created, because there is no other way to
+create it; what must never exist is a second moment, later, where that value can be asked for
+again through this API. `organization_provider_resources.secret_id` — the pointer into Vault —
+is withheld from every grant for the same reason `usage_events` withholds GOLD's own cost from a
+tenant (D43): nobody needs to read a vault reference back through PostgREST, and a column grant
+that could be read is a column grant that eventually will be.
+
+**Provisioning is application code calling a real vendor API, recorded through the same narrow
+functions as everything else on this axis.** `lib/adapters/telephony` grew a fourth and fifth
+capability — `telephonyProvisioner()` (create a subaccount, an API key, an application) beside
+the existing `telephonyProvider()` (place a call, mint a browser token) — using GOLD's *master*
+credentials throughout, never a subaccount's own. That works because Twilio lets a parent
+account's credentials address any of its subaccounts by naming that subaccount's SID in the
+request path; `telephonyProvider` grew exactly that one argument, `actingAccountSid`, and every
+call it makes on behalf of a provisioned business happens inside that business's own scope
+without a second credential existing anywhere. `lib/domain/providers/twilio-provisioning.ts`
+orchestrates the real lifecycle — subaccount, then key, then application, each recorded through
+`begin_provider_binding` / `record_provider_resource` / `store_provider_secret` — and is
+idempotent by construction: every step first asks what this organization's binding already has
+and calls the vendor only for what is missing, so pressing "provision" again after a failure
+resumes rather than duplicates. A failure is `organization_provider_bindings.status = 'failed'`
+and its own `last_error`, written before the calling code ever sees an exception — durable state,
+never only a thrown toast.
+
+**A vendor's name still never reaches the domain layer (I15), including as a resource-type
+literal.** The first draft of this record typed `organization_provider_resources.resourceType`
+as a union of strings like `'twilio_subaccount'`, and wrote `providerKey: 'twilio'` directly
+inside `lib/domain/providers/`. `adapters.test.ts`'s second assertion — the one that scans for the
+word itself, not only the import — caught both. `resourceType` is `string`, exactly as opaque as
+`externalId` already was; the literal strings belong to `lib/adapters/telephony/registry.ts`
+alone (`telephonyProviderKey()`, `TELEPHONY_RESOURCE_TYPES`), the one file I15 has always allowed
+to know a carrier's name, and every domain file asks it rather than spelling one.
+
+**Two facts, not one, about a phone number.** `organization_provider_resources` is *"this E.164
+number belongs to this organization's Twilio scope"* — a provider fact. `telephony_settings` is
+*"this organization chose this number as its default outbound identity"* — a tenant fact,
+unchanged in shape since D39's own migration. They stay two tables. What changes is that
+`set_calling_number` (recreated, D15 — a signature can be reused, a body cannot be edited) now
+refuses a number already bound to a *different* organization. A number nobody has ever bound to
+anybody stays exactly as free-text-settable as before this record: most businesses on this
+deployment have provisioned nothing yet, and requiring a binding before dialling would be a
+different, larger change than this slice asked for. The check itself needed its own `security
+definer` helper, `app.phone_number_owner` — `set_calling_number` stays `security invoker`, and an
+invoker-mode query against `organization_provider_resources` runs under the *caller's own* RLS,
+which can only ever see that caller's own rows and would silently pass every cross-tenant number
+by simply failing to notice it belonged to somebody else. The same reason `app.has_capability` and
+`app.current_tenant_ids()` are themselves `security definer`.
+
+**A tenant naming its own sending domain is a tenant door, not a staff one.** Unlike Twilio,
+Resend has no subaccount for staff to provision first — the only new fact is a business's own
+choice of domain, the same shape as choosing a calling number. `public.record_organization_email_domain`
+is `security definer` only because there is no RLS policy yet on these two tables to lean on (D40's
+"staff hold no table grant" extends to every role, tenant included, on the *new* tables), checking
+`organization.manage` inline exactly as `telephony_settings_insert` already does declaratively.
+Verifying a domain, once bound, is staff's own door (`set_provider_resource_status`) until a real
+Resend-facing verification check exists to widen that grant — the same deferral D43 already made
+for reconciliation's machine role.
+
+**Not built here.** Actually calling Resend's or Twilio's verification/status APIs to confirm a
+domain or a number automatically; a per-organization Deepgram, ElevenLabs or model-inference
+account of any kind (D43's provider vocabulary already lets usage name one without a binding, and
+nothing yet needs more); a browser voice token signed by a business's *own* generated API key
+rather than GOLD's master one — the deeper secret-resolution-at-the-moment-of-signing problem,
+which would need either a second trusted execution context this repository does not have today
+or a cryptographic construction inside Postgres this repository has never used, and building
+either speculatively, before a softphone screen exists to call it, is exactly what D23 already
+refuses; externally managed OAuth credentials (D33's axis, untouched); Activepieces; MCP or any
+external agent-tool grant; the Asset/Template Library; call transcription or AI call analysis;
+realtime voice agents; QuickBooks or bank integrations; and NextFund's own migration.
 
 ---
 

@@ -20,7 +20,15 @@ import {
   organizationUsageDetail,
 } from '@/lib/domain/commercial/usage';
 import { communicationsAccount } from '@/lib/domain/communications/credits';
-import { RecordCommercialTermForm, RecordProviderRateForm, RecordRetailRateForm } from './forms';
+import { listProviderBindings, listProviderResources } from '@/lib/domain/providers/bindings';
+import {
+  ProvisionTwilioForm,
+  RecordCommercialTermForm,
+  RecordProviderRateForm,
+  RecordRetailRateForm,
+  RegisterPhoneNumberForm,
+  SetResourceStatusForm,
+} from './forms';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,20 +69,35 @@ export default async function PlatformOrganizationPage({
   const tenant = await getTenant(db, organizationId);
   if (!tenant) redirect('/platform');
 
-  const [states, terms, meters, providers, products, providerRates, retailRates, summary, detail, failures, account] =
-    await Promise.all([
-      moduleCommercialState(db, { organizationId }),
-      listOrganizationTerms(db, { organizationId }),
-      listMeters(db),
-      listProviders(db),
-      listProducts(db),
-      listProviderRates(db),
-      listRetailRates(db),
-      organizationCommercialSummary(db, { organizationId }),
-      organizationUsageDetail(db, { organizationId }),
-      listProviderSyncFailures(db, { organizationId }),
-      communicationsAccount(db, { organizationId, currency: tenant.currency || null }),
-    ]);
+  const [
+    states,
+    terms,
+    meters,
+    providers,
+    products,
+    providerRates,
+    retailRates,
+    summary,
+    detail,
+    failures,
+    account,
+    bindings,
+    resources,
+  ] = await Promise.all([
+    moduleCommercialState(db, { organizationId }),
+    listOrganizationTerms(db, { organizationId }),
+    listMeters(db),
+    listProviders(db),
+    listProducts(db),
+    listProviderRates(db),
+    listRetailRates(db),
+    organizationCommercialSummary(db, { organizationId }),
+    organizationUsageDetail(db, { organizationId }),
+    listProviderSyncFailures(db, { organizationId }),
+    communicationsAccount(db, { organizationId, currency: tenant.currency || null }),
+    listProviderBindings(db, { organizationId }),
+    listProviderResources(db, { organizationId }),
+  ]);
 
   const productLabel = new Map(products.map((product) => [product.key, product.label]));
   const providerLabel = new Map(providers.map((provider) => [provider.key, provider.label]));
@@ -110,6 +133,68 @@ export default async function PlatformOrganizationPage({
             ))}
           </DividedList>
         )}
+      </Section>
+
+      <Section className="mt-8">
+        <SectionHeading>Providers</SectionHeading>
+        <Hint className="mt-1">
+          Which external scope belongs to this business, what GOLD created there, and its own
+          last error when something failed — never a secret, which lives in Vault and reaches
+          nobody through this screen.
+        </Hint>
+        {bindings.length === 0 ? (
+          <EmptyState className="mt-2">No provider binding yet.</EmptyState>
+        ) : (
+          <DividedList as="div" className="mt-2">
+            {bindings.map((binding) => (
+              <div key={binding.id} className="py-2 text-sm">
+                <div className="flex flex-wrap items-baseline gap-x-3">
+                  <span className="font-medium">{providerLabel.get(binding.providerKey) ?? binding.providerKey}</span>
+                  <span
+                    className={binding.status === 'failed' ? 'text-danger' : 'text-subtle'}
+                  >
+                    {binding.status}
+                  </span>
+                  {binding.externalAccountId ? (
+                    <span className="text-subtle">{binding.externalAccountId}</span>
+                  ) : null}
+                  {binding.lastVerifiedAt ? (
+                    <span className="text-subtle">
+                      verified {new Date(binding.lastVerifiedAt).toLocaleString('en-CA')}
+                    </span>
+                  ) : null}
+                </div>
+                {binding.lastError ? (
+                  <p className="mt-1 text-danger">{binding.lastError}</p>
+                ) : null}
+                <div className="mt-1 flex flex-col gap-1 pl-3">
+                  {resources
+                    .filter((resource) => resource.bindingId === binding.id)
+                    .map((resource) => (
+                      <div key={resource.id} className="flex flex-wrap items-baseline gap-x-3 text-subtle">
+                        <span>{resource.resourceType}</span>
+                        <span>{resource.externalId}</span>
+                        <span>{resource.status}</span>
+                        <span className="font-mono text-xs">{resource.id}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </DividedList>
+        )}
+
+        <div className="mt-3 grid gap-6 sm:grid-cols-2">
+          <div>
+            <p className="text-sm font-medium">Twilio</p>
+            <ProvisionTwilioForm organizationId={organizationId} />
+            <RegisterPhoneNumberForm organizationId={organizationId} />
+          </div>
+          <div>
+            <p className="text-sm font-medium">Any resource</p>
+            <SetResourceStatusForm organizationId={organizationId} />
+          </div>
+        </div>
       </Section>
 
       <Section className="mt-8">

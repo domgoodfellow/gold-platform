@@ -139,6 +139,11 @@ export default async function SettingsPage({
           href={`/organizations/${organizationId}/settings/plan`}
         />
         <ConfigCard
+          title="Connections"
+          description="Phone, email and AI — what's connected, and what to choose from."
+          href={`/organizations/${organizationId}/settings/connections`}
+        />
+        <ConfigCard
           title="Hours"
           description="When this business is open, for the schedule to read."
           href="#hours"
