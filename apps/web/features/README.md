@@ -1,38 +1,24 @@
 # `features/`
 
-UI that belongs to a capability rather than to a route, because **more than one surface renders
-it**.
+Presentation and interaction for recognizable GOLD product capabilities.
 
-Everything in `apps/web` so far has belonged to exactly one route, so its components sit beside
-that route — `work-forms.tsx` next to `/work`, `price-forms.tsx` next to `/pricing`. That is
-still the rule for anything with one caller. This directory is for the cases where it stops
-being true.
+A feature boundary answers which product workflow owns the UI, not how many routes currently call
+it. Route files load data and compose screens; features render and operate the capability; generic
+interface vocabulary stays in `components/`; business rules stay in `lib/domain/`.
 
-The first inhabitant is the public profile: the **admin** surface edits a business's public
-copy and the **booking** surface renders it, and neither route owns the other. Putting the
-editor under `/settings` and the renderer under `/book` would be the parallel set per surface
-that D23 forbids in as many words — *"one component file, extended — never a parallel set per
-surface"*.
+Current boundaries:
 
-Two more arrived with the brand engine, and each was admitted by counting surfaces rather than by
-sounding like a feature:
-
-| Directory | Surfaces that render it |
+| Feature | Owns |
 |---|---|
-| `public-profile/` | admin edits it, booking and the portal render it |
-| `branding/` | the operator shell wears it, booking and the portal wear it |
-| `locale/` | the platform console asks for a zone when provisioning, admin asks for one in settings and a currency in pricing |
+| `automations/` | Rule, condition, action and message-template UI |
+| `reporting/` | Report navigation, filters, results, dashboards and management forms |
+| `custom-fields/` | Rendering and collecting tenant-defined fields across supported entities |
+| `public-profile/` | Editing and rendering a business's public identity |
+| `branding/` | Applying a tenant's approved visual roles |
+| `locale/` | Timezone and currency controls used by organization-facing workflows |
 
-**Two things stayed in `components/` on the same test, and they are the useful comparison.**
-`custom-fields/` knows exactly what a `FieldDefinition` is — it is as domain-shaped as anything
-here — and every one of its callers is the admin surface, so it does not qualify. `credentials-form`
-and `org-shell` went the other way entirely: one surface each, so they now sit beside the routes
-that render them rather than in any shared directory at all.
+Keep a feature flat while its files remain easy to name. Add `components/`, `forms/` or `utils/`
+subdirectories only when the feature itself has enough distinct responsibilities to need them.
 
-**A feature moves here when it has a second surface, not before.** That is the same bar
-`constraints.md` sets for extracting a function ("a second caller… is enough"), applied to a
-directory. Creating `features/booking/` today by moving one route's components into it would
-buy a longer import path and nothing else.
-
-Business logic does not live here. These are components; rules are in `lib/domain`, and that
-does not bend because a directory sounds domain-shaped.
+Features may import domain types and call route-owned server actions. They do not query the
+database, reimplement validation, calculate business results or weaken authorization checks.

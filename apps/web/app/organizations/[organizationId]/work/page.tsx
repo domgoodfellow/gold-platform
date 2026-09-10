@@ -3,7 +3,7 @@ import { Card, Disclosure } from '@/components/containers/card';
 import { Badge } from '@/components/display/data';
 import { EmptyState, SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
-import { CustomFieldValues } from '@/components/custom-fields/values';
+import { CustomFieldValues } from '@/features/custom-fields/values';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';

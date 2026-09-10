@@ -1,7 +1,8 @@
 'use client';
 
 import { DividedList, EmptyState, GroupHeading, Section, SectionHeading } from '@/components/containers/section';
-import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { FormError } from '@/components/controls/form';
 import { Button } from '@/components/controls/button';
 import { Card } from '@/components/containers/card';
 import { ConfirmSubmit } from '@/components/containers/dialog';
@@ -37,7 +38,7 @@ import {
   renameRuleAction,
   setRuleEnabledAction,
   type AutomationActionState,
-} from './actions';
+} from '@/app/organizations/[organizationId]/automations/actions';
 
 const INITIAL: AutomationActionState = { error: null };
 
@@ -45,12 +46,7 @@ const INITIAL: AutomationActionState = { error: null };
 export type StatusChoice = { id: string; label: string };
 
 function Error({ state }: { state: AutomationActionState }) {
-  if (!state.error) return null;
-  return (
-    <ErrorText role="alert" className="mt-1">
-      {state.error}
-    </ErrorText>
-  );
+  return <FormError className="mt-1">{state.error}</FormError>;
 }
 
 /**

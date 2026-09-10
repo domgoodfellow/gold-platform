@@ -3,7 +3,7 @@ import { DefinitionList, Detail } from '@/components/display/data';
 import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CustomFieldValues } from '@/components/custom-fields/values';
+import { CustomFieldValues } from '@/features/custom-fields/values';
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listCustomerCalls } from '@/lib/domain/reception/calls';

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Disclosure } from '@/components/containers/card';
-import { CustomFieldValues } from '@/components/custom-fields/values';
+import { CustomFieldValues } from '@/features/custom-fields/values';
 import { DataTable } from '@/components/display/table';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';

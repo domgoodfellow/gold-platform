@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { paymentProvider } from '@/lib/adapters/payments';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
-import { CustomFieldValues } from '@/components/custom-fields/values';
+import { CustomFieldValues } from '@/features/custom-fields/values';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { getInvoiceForWorkItem, invoiceStanding } from '@/lib/domain/billing/invoices';
 import { listCustomers } from '@/lib/domain/customers/customers';

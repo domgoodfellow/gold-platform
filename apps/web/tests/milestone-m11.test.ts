@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 const APP_ROOT = fileURLToPath(new URL('../app', import.meta.url));
 const COMPONENTS_ROOT = fileURLToPath(new URL('../components', import.meta.url));
+const FEATURES_ROOT = fileURLToPath(new URL('../features', import.meta.url));
 
 /** Every `.tsx` file under `app/`, which is where a control could be spelled by hand. */
 function tsxFilesUnder(dir: string): string[] {
@@ -87,11 +88,11 @@ describe('M11 — a destructive action with nothing between it and the write', (
   const PAIRS: { actions: string; forms: string }[] = [
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/automations/actions.ts`,
-      forms: `${APP_ROOT}/organizations/[organizationId]/automations/automation-forms.tsx`,
+      forms: `${FEATURES_ROOT}/automations/automation-forms.tsx`,
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/reports/actions.ts`,
-      forms: `${APP_ROOT}/organizations/[organizationId]/reports/report-forms.tsx`,
+      forms: `${FEATURES_ROOT}/reporting/report-forms.tsx`,
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/settings/actions.ts`,
