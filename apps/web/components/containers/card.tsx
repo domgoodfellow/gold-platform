@@ -19,12 +19,15 @@ export function Card<T extends ElementType = 'div'>({
  */
 export function Disclosure({
   summary,
+  tone = 'default',
   defaultOpen,
   className,
   children,
   ...props
 }: Omit<ComponentProps<'details'>, 'title' | 'open'> & {
   summary: ReactNode;
+  /** Primary is for the screen's one leading disclosure action, never a section-local form. */
+  tone?: 'default' | 'primary';
   defaultOpen?: boolean;
 }) {
   return (
@@ -36,6 +39,7 @@ export function Disclosure({
       <summary
         className={cx(
           'cursor-pointer list-none px-4 py-3 text-sm font-medium marker:content-none',
+          tone === 'primary' && 'bg-accent text-on-accent',
           FOCUS_RING,
         )}
       >

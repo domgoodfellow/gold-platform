@@ -68,6 +68,9 @@ export async function changeStatusAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/work`);
+  revalidatePath(
+    `/organizations/${organizationId}/work/${String(formData.get('workItemId') ?? '')}`,
+  );
   return { error: null };
 }
 
@@ -100,5 +103,8 @@ export async function scheduleWorkItemAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/work`);
+  revalidatePath(
+    `/organizations/${organizationId}/work/${String(formData.get('workItemId') ?? '')}`,
+  );
   return { error: null };
 }

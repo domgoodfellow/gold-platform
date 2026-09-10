@@ -27,7 +27,7 @@ export function EditWorkItemForm({ organizationId, workItem, customers, location
   const [state, formAction, pending] = useActionState(updateWorkItemAction, INITIAL);
   const titleId = `work-title-${workItem.id}`;
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-3">
+    <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="workItemId" value={workItem.id} />
       <FormField id={titleId} label="Job title">
