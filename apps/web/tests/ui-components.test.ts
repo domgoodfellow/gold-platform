@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { FormError, FormField, type FieldControlProps } from '@/components/controls/form';
 import { TextInput } from '@/components/controls/inputs';
 import { RecordHeader } from '@/components/containers/record-header';
+import { ConfirmSubmit } from '@/components/containers/dialog';
 
 describe('shared form composition', () => {
   it('associates a field with its label, help and error', () => {
@@ -52,5 +53,27 @@ describe('record header composition', () => {
     expect(html).toContain('<h1');
     expect(html.match(/<h1/g)).toHaveLength(1);
     expect(html).toContain('Not scheduled');
+  });
+});
+
+describe('confirmation dialog composition', () => {
+  it('names and describes the modal confirmation', () => {
+    const html = renderToStaticMarkup(
+      createElement(ConfirmSubmit, {
+        formId: 'remove-line',
+        label: 'Remove',
+        confirmLabel: 'Remove line',
+        description: 'Remove this line from the quote?',
+      }),
+    );
+
+    const labelledBy = html.match(/aria-labelledby="([^"]+)"/)?.[1];
+    const describedBy = html.match(/aria-describedby="([^"]+)"/)?.[1];
+
+    expect(labelledBy).toBeTruthy();
+    expect(describedBy).toBeTruthy();
+    expect(html).toContain(`id="${labelledBy}"`);
+    expect(html).toContain(`id="${describedBy}"`);
+    expect(html).toContain('Remove this line from the quote?');
   });
 });

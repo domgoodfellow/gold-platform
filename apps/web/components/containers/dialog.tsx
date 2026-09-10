@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, type ComponentProps, type ReactNode, type RefObject } from 'react';
+import { useId, useRef, type ComponentProps, type ReactNode, type RefObject } from 'react';
 import { Button, type ButtonSize, type ButtonTone } from '../controls/button';
 import { cx } from '../class-names';
 
@@ -61,6 +61,8 @@ export function ConfirmSubmit({
   ariaLabel?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
 
   return (
     <>
@@ -75,8 +77,18 @@ export function ConfirmSubmit({
       >
         {pending ? '…' : label}
       </Button>
-      <Dialog dialogRef={ref} className="max-w-sm">
-        <p className="text-sm">{description}</p>
+      <Dialog
+        dialogRef={ref}
+        className="max-w-sm"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+      >
+        <h2 id={titleId} className="text-base font-semibold">
+          {confirmLabel}
+        </h2>
+        <p id={descriptionId} className="mt-2 text-sm text-muted">
+          {description}
+        </p>
         <div className="mt-4 flex justify-end gap-2">
           <Button type="button" tone="secondary" size="small" onClick={() => ref.current?.close()}>
             Cancel
