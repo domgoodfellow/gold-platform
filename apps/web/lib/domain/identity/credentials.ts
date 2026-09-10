@@ -48,12 +48,21 @@ export async function signInWithPassword(
 
 export async function registerWithPassword(
   db: Db,
-  input: { email: string; password: string; passwordConfirmation: string },
+  input: {
+    email: string;
+    password: string;
+    passwordConfirmation: string;
+    emailRedirectTo?: string;
+  },
 ): Promise<void> {
   const email = normaliseEmail(input.email);
   checkPassword(input.password, input.passwordConfirmation);
 
-  const { error } = await db.auth.signUp({ email, password: input.password });
+  const { error } = await db.auth.signUp({
+    email,
+    password: input.password,
+    options: input.emailRedirectTo ? { emailRedirectTo: input.emailRedirectTo } : undefined,
+  });
 
   if (error) {
     throw new DomainError(error.message, 'identity.registration_failed');

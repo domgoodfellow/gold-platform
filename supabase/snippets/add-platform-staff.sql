@@ -38,21 +38,21 @@
 -- that half is fixed by editing and running again.
 do $$
 declare
-  v_email text := 'domgoodfellow@gmail.com  ';
+  v_email text := 'domgoodfellow@gmail.com';
   v_name  text := 'Dominic';
   v_user  uuid;
 begin
-  select u.id into v_user from auth.users u where u.email = v_email;
+  select u.id into v_user from auth.users u where lower(u.email) = lower(btrim(v_email));
 
   if v_user is null then
-    raise exception 'No user with the address %. They have to sign up before they can be staff.', v_email;
+    raise exception 'No user with the address %. They have to sign up before they can be staff.', btrim(v_email);
   end if;
 
   insert into public.platform_staff (user_id, name)
-  values (v_user, v_name)
-  on conflict (user_id) do update set name = excluded.name;
+  values (v_user, btrim(v_name))
+  on conflict (user_id) do update set name = btrim(excluded.name);
 
-  raise notice '% is platform staff. They must sign in again for their token to carry the role.', v_email;
+  raise notice '% is platform staff. They must sign in again for their token to carry the role.', btrim(v_email);
 end
 $$;
 

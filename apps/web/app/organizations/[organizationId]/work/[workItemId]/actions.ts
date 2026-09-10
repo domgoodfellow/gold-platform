@@ -1,10 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { headers } from 'next/headers';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
+import { requestOrigin } from '@/lib/route/origin';
 import { requestCardPayment } from '@/lib/domain/billing/card-payments';
 import { issueInvoice, recordPayment } from '@/lib/domain/billing/invoices';
 import { addChecklistItem, setChecklistItemDone } from '@/lib/domain/work-items/checklists';
@@ -292,7 +292,7 @@ export async function requestCardPaymentAction(
       // A path this application owns, built here rather than accepted from the form. *Never
       // build an open redirector*: the destination resolves against routes we control, and a
       // submitted `returnUrl` is exactly the field that rule exists to refuse.
-      returnUrl: `${await origin()}/organizations/${organizationId}/work/${workItemId}`,
+      returnUrl: `${await requestOrigin()}/organizations/${organizationId}/work/${workItemId}`,
     });
 
     if (!requested) {
@@ -305,12 +305,4 @@ export async function requestCardPaymentAction(
     if (error instanceof DomainError) return { error: error.message, payUrl: null };
     throw error;
   }
-}
-
-/** Where this deployment is reachable, for a round trip that has to come back. */
-async function origin(): Promise<string> {
-  const headerList = await headers();
-  const host = headerList.get('host') ?? 'localhost:3000';
-  const protocol = host.startsWith('localhost') ? 'http' : 'https';
-  return `${protocol}://${host}`;
 }

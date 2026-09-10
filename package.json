@@ -7,10 +7,20 @@
     "check:api": "python -m pytest apps/api/tests -q",
     "demo": "pnpm --filter @gold/web demo",
     "demo:fresh": "pnpm db:reset && pnpm --filter @gold/web demo",
+    "db:link": "supabase link",
+    "db:migrations": "supabase migration list",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > apps/web/lib/db/database.types.ts",
-    "db:push": "supabase db push"
+    "db:types:remote": "supabase gen types typescript --linked > apps/web/lib/db/database.types.ts",
+    "db:push:dry": "supabase db push --dry-run",
+    "db:push": "supabase db push",
+    "db:query:local": "supabase db query --local",
+    "db:query:remote": "supabase db query --linked",
+    "snippet:staff:local": "supabase db query --local --file supabase/snippets/add-platform-staff.sql",
+    "snippet:staff:remote": "supabase db query --linked --file supabase/snippets/add-platform-staff.sql",
+    "snippet:workflow-review:local": "supabase db query --local --file supabase/snippets/workflow-review-target.sql",
+    "snippet:workflow-review:remote": "supabase db query --linked --file supabase/snippets/workflow-review-target.sql"
   },
   "devDependencies": {
     "supabase": "^2.22.6"

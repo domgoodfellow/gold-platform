@@ -1,9 +1,9 @@
 'use server';
 
-import { headers } from 'next/headers';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { requestPasswordReset } from '@/lib/domain/identity/credentials';
+import { requestOrigin } from '@/lib/route/origin';
 import type { CredentialsState } from '../credentials-form';
 
 /**
@@ -27,7 +27,7 @@ export async function forgotPasswordAction(
       // route it names is the only one that exchanges a recovery code, and it redirects to one
       // literal — so there is no parameter anywhere in this flow that decides where somebody
       // lands, which is `proxy.ts`'s reasoning about `?next=` applied to the same problem.
-      redirectTo: `${await origin()}/auth/recover`,
+      redirectTo: `${await requestOrigin()}/auth/recover`,
     });
   } catch (error) {
     if (error instanceof DomainError) {
@@ -37,12 +37,4 @@ export async function forgotPasswordAction(
   }
 
   return { error: null, done: true };
-}
-
-/** This deployment's own address, as the request arrived at it. */
-async function origin(): Promise<string> {
-  const heading = await headers();
-  const host = heading.get('host');
-  const protocol = heading.get('x-forwarded-proto') ?? 'http';
-  return `${protocol}://${host}`;
 }
