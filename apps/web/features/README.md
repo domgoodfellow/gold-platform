@@ -16,6 +16,8 @@ Current boundaries:
 | `public-profile/` | Editing and rendering a business's public identity |
 | `branding/` | Applying a tenant's approved visual roles |
 | `locale/` | Timezone and currency controls used by organization-facing workflows |
+| `today/` | The lifecycle-aware operational cockpit and its expanded views |
+| `work/` | Work boards, job records, checklists, consumption, pricing and billing interactions |
 
 Keep a feature flat while its files remain easy to name. Add `components/`, `forms/` or `utils/`
 subdirectories only when the feature itself has enough distinct responsibilities to need them.

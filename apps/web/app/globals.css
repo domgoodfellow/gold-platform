@@ -96,3 +96,24 @@ h1, h2, h3, h4 {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+
+/* The marketing homepage's hero panel: one orchestrated entrance on load, plus a slow ambient
+   glow behind it. Both are the single non-user-triggered motion on the page -- the tenant
+   switcher and autonomy stepper below only animate in response to a click. */
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes panel-glow {
+  0%, 100% { opacity: 0.05; }
+  50% { opacity: 0.09; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

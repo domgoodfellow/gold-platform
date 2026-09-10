@@ -1,70 +1,360 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users } from 'lucide-react';
+import {
+  Building2,
+  CalendarDays,
+  ClipboardList,
+  LayoutDashboard,
+  Settings,
+  Truck,
+  Users,
+  Wrench,
+} from 'lucide-react';
 import { Badge } from '@/components/display/data';
 import { ButtonLink } from '@/components/controls/button';
+import { FOCUS_RING, cx } from '@/components/class-names';
 
 const BUILT_ON = ['Stripe', 'Twilio', 'Resend', 'Anthropic'];
 
-/**
- * GOLD's own front door — not the tenant marketing surface D20 defers, since the business
- * making claims here is GOLD itself, not a tenant (`public-profile.test.ts` doesn't scan it).
- *
- * **Rebuilt for what the product now actually is** (product reality audit, Slice 4), after four
- * slices gave GOLD a real lifecycle (SETUP → readiness → Launch → LIVE), a real cockpit (Today),
- * a real Configuration Center (Settings) and a real split between operating Work and defining
- * it. This page sells that — the configured system, and the review that gets a business one —
- * never the platform's own internal naming for how it is built, and never the order in which
- * this document's own commercial reasoning expects one customer to buy successive pieces. Those
- * belong to `docs/`, not to somebody deciding whether to get in touch.
- *
- * **The primary CTA now has a real destination.** "Request a workflow review" (`market.md`'s own
- * three reasons a business buys, read as an offer rather than a sales script) leads to
- * `/workflow-review`, a form that writes an ordinary customer into GOLD's own tenant
- * (`lib/domain/workflow-review/workflow-review.ts`) rather than to a fabricated inbox or a
- * signup form standing in for it.
- */
-export default function Home() {
-  return (
-    <div className="flex flex-col gap-16 py-4 sm:gap-20 sm:py-6">
-      {/* Hero */}
-      <section className="flex flex-col gap-6">
-        <h1 className="max-w-2xl text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
-          Your business isn&rsquo;t the problem. Running it from five different places is.
-        </h1>
-        <p className="max-w-xl text-lg leading-relaxed text-muted">
-          Small operations businesses run real work — jobs, schedules, customers, payments — split
-          across a spreadsheet, a calendar, a phone and a few tools that don&rsquo;t talk to each
-          other. GOLD is one configured system that reflects how you already work, built with you
-          rather than bent to fit a template.
-        </p>
+const NAV_ICONS = [LayoutDashboard, ClipboardList, CalendarDays, Users, Settings];
 
-        {/* Primary, then the two doors that already exist today — never presented as equals
-            (product reality audit, Slice 4: self-service is real but not the primary motion). */}
-        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <ButtonLink href="/workflow-review" tone="primary">
-            Request a workflow review
-          </ButtonLink>
-          <p className="text-sm text-muted">
+const TENANTS = [
+  {
+    key: 'field',
+    icon: Truck,
+    name: 'Field service',
+    nav: ['Today', 'Work', 'Schedule', 'Customers', 'Settings'],
+    widgets: [
+      { title: 'Committed today', value: '6', note: '09:00 Van 2 · Install, Reyes' },
+      { title: 'Waiting to be scheduled', value: '2', note: 'Gutter clean · Okafor' },
+      { title: 'Recent activity', value: null, note: 'Invoice #41 issued' },
+    ],
+  },
+  {
+    key: 'mechanic',
+    icon: Wrench,
+    name: 'Mobile mechanic',
+    nav: ['Today', 'Jobs', 'Schedule', 'Customers', 'Settings'],
+    widgets: [
+      { title: 'Committed today', value: '5', note: '09:00 Bay 2 · Brake job, Nguyen' },
+      { title: 'Waiting to be scheduled', value: '3', note: 'Diagnostic · Alvarez' },
+      { title: 'Recent activity', value: null, note: 'Invoice #118 paid' },
+    ],
+  },
+  {
+    key: 'property',
+    icon: Building2,
+    name: 'Property management',
+    nav: ['Today', 'Units', 'Maintenance', 'Tenants', 'Settings'],
+    widgets: [
+      { title: 'Open requests', value: '4', note: 'Unit 12B · Leak reported' },
+      { title: 'Leases renewing', value: '2', note: 'Unit 4A · 30 days out' },
+      { title: 'Recent activity', value: null, note: 'Rent posted · Unit 7' },
+    ],
+  },
+] as const;
+
+type Tenant = (typeof TENANTS)[number];
+
+const STAGES = [
+  {
+    name: 'Record',
+    available: true,
+    body: 'The system captures the work, the calls and the customer history as it happens.',
+    detail:
+      'Every call, message and job update lands against the right customer automatically — nothing typed twice.',
+  },
+  {
+    name: 'Understand',
+    available: true,
+    body: 'Reports and plain-language questions expose what’s actually going on.',
+    detail:
+      '"Which jobs are behind schedule this week?" — answered from the same data, no spreadsheet export required.',
+  },
+  {
+    name: 'Assist',
+    available: true,
+    body: 'A suggestion for the next step, with your own approval before anything changes.',
+    detail: 'GOLD proposes a reschedule, a follow-up message, or a price. You approve it, or you don’t.',
+  },
+  {
+    name: 'Automate',
+    available: true,
+    body: 'Rules act on their own when something you defined happens, and messages go out in your own words.',
+    detail:
+      'Job marked complete → invoice sent → review request sent, written in your voice, without you touching it.',
+  },
+  {
+    name: 'Delegate',
+    available: false,
+    body: 'A voice agent handling bounded calls on its own.',
+    detail:
+      'Incoming call → customer matched → work item found → schedule checked → response sent, before a human picks up.',
+  },
+] as const;
+
+const CAPABILITIES = [
+  {
+    name: 'Operations',
+    body: 'Work, scheduling, resources, customers, locations and assets — the day-to-day, in one place.',
+  },
+  {
+    name: 'Communications',
+    body: 'Calls logged against the right customer, with the history there when you pick up.',
+  },
+  {
+    name: 'Money',
+    body: 'A price book, quotes, invoices and payments — the numbers a job actually turns on.',
+  },
+  {
+    name: 'Automation',
+    body: 'Rules that move work on and messages that go out, in your own words, when something you defined happens.',
+  },
+  {
+    name: 'Customer-facing',
+    body: 'A booking page and a customer portal carrying your name and your brand, not ours.',
+  },
+  {
+    name: 'Insight',
+    body: 'A daily view of what’s committed, what’s waiting and what changed, plus reports when you want more.',
+  },
+] as const;
+
+const IMPLEMENTATION = [
+  {
+    step: '01',
+    title: 'Understand the workflow',
+    body: 'We start with how your business actually runs today — the jobs, the schedule, who does what.',
+  },
+  {
+    step: '02',
+    title: 'Configure the business',
+    body: 'Work types, statuses, pricing, hours and roles get set up around that — nothing forced into a template.',
+  },
+  {
+    step: '03',
+    title: 'Review and launch',
+    body: 'You see exactly what’s been set up and what still needs attention. Launching is a decision you make.',
+  },
+  {
+    step: '04',
+    title: 'Improve over time',
+    body: 'Switch on more of the system, add rules, adjust as the business changes — the same configuration, not a new one.',
+  },
+] as const;
+
+/**
+ * A compact, non-interactive rendering of the app shell — reused by the hero (fixed to Field
+ * service) and by the tenant switcher below it (driven by the selected tab). Same skeleton
+ * every time; only the nav labels and widget data change, which is the whole thesis.
+ */
+function ShellPreview({ tenant, live }: { tenant: Tenant; live?: boolean }) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+        <span className="font-mono text-xs text-subtle">Today · {tenant.name}</span>
+        {live ? (
+          <span className="flex items-center gap-1.5 font-mono text-xs text-subtle">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground opacity-40" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-foreground" />
+            </span>
+            Live
+          </span>
+        ) : null}
+      </div>
+      <div className="grid grid-cols-[auto_1fr]">
+        <div className="hidden flex-col gap-1 border-r border-border p-3 sm:flex">
+          {tenant.nav.map((label, i) => {
+            const Icon = NAV_ICONS[i];
+            return (
+              <div
+                key={label}
+                className={
+                  i === 0
+                    ? 'flex items-center gap-2 rounded bg-foreground px-2.5 py-1.5 text-xs font-medium text-background'
+                    : 'flex items-center gap-2 rounded px-2.5 py-1.5 text-xs text-muted'
+                }
+              >
+                <Icon aria-hidden size={14} className="shrink-0" />
+                {label}
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex flex-col gap-3 p-4">
+          {tenant.widgets.map((widget) => (
+            <div key={widget.title} className="rounded border border-border p-3">
+              <p className="truncate text-xs font-medium text-muted">{widget.title}</p>
+              {widget.value ? (
+                <p className="mt-1 text-lg font-semibold tabular-nums">{widget.value}</p>
+              ) : null}
+              <p className="mt-1 truncate text-xs text-subtle">{widget.note}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Home() {
+  const [tenantIndex, setTenantIndex] = useState(0);
+  const [stageIndex, setStageIndex] = useState(3);
+  const tenant = TENANTS[tenantIndex];
+  const stage = STAGES[stageIndex];
+
+  return (
+    <div className="flex flex-col gap-24 py-6 sm:gap-32 sm:py-10">
+      {/* Hero */}
+      <section className="grid gap-10 lg:grid-cols-[1fr_440px] lg:items-center lg:gap-16">
+        <div className="flex flex-col gap-6">
+          <h1 className="max-w-xl text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
+            Your business, operating as one system.
+          </h1>
+          <p className="max-w-md text-lg leading-relaxed text-muted">
+            Work, customers, calls, scheduling, payments and automation — split today across a
+            spreadsheet, a calendar and a phone. GOLD configures them around how your business
+            actually runs.
+          </p>
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <ButtonLink href="/workflow-review" tone="primary">
+              Request a workflow review
+            </ButtonLink>
+            <a
+              href="#shell"
+              className={cx('rounded text-sm font-medium text-muted hover:text-foreground', FOCUS_RING)}
+            >
+              See GOLD in action
+            </a>
+          </div>
+          <p className="text-sm text-subtle">
             Already have an account?{' '}
             <Link href="/login" className="underline underline-offset-4">
               Log in
             </Link>
           </p>
         </div>
-        <p className="text-sm text-subtle">
-          Want to explore on your own first?{' '}
-          <Link href="/sign-up" className="underline underline-offset-4">
-            Start here
-          </Link>
-          .
-        </p>
+
+        <div className="relative">
+          <div
+            aria-hidden
+            className="absolute -inset-10 -z-10 rounded-full bg-foreground opacity-[0.05] blur-3xl motion-safe:animate-[panel-glow_6s_ease-in-out_infinite]"
+          />
+          <div className="motion-safe:animate-[panel-in_0.6s_ease-out]">
+            <ShellPreview tenant={TENANTS[0]} live />
+          </div>
+        </div>
       </section>
 
-      {/* Current problem — fragmentation, not a spreadsheet grudge */}
-      <section id="problem" className="flex flex-col gap-6">
-        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
-          Where it stands today
-        </p>
+      {/* Same shell, different businesses — the interactive proof, not a paragraph */}
+      <section id="shell" className="flex scroll-mt-20 flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            Same shell. Configured differently.
+          </h2>
+          <p className="max-w-lg text-muted">
+            The screens don&rsquo;t change business to business — the work inside them does.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Example businesses">
+          {TENANTS.map((t, i) => {
+            const Icon = t.icon;
+            const active = i === tenantIndex;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTenantIndex(i)}
+                className={cx(
+                  'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                  active
+                    ? 'border-foreground bg-foreground text-background'
+                    : 'border-border text-muted hover:text-foreground',
+                  FOCUS_RING,
+                )}
+              >
+                <Icon aria-hidden size={15} />
+                {t.name}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="max-w-2xl">
+          <ShellPreview tenant={tenant} />
+        </div>
+      </section>
+
+      {/* Autonomy spectrum — interactive stepper, one concrete example per stage */}
+      <section className="flex flex-col gap-6 rounded-lg border border-border bg-surface p-6 sm:p-8">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            How much runs on its own is up to you.
+          </h2>
+          <p className="max-w-lg text-muted">Select a stage to see what it looks like.</p>
+        </div>
+
+        <div
+          className="relative flex items-start justify-between"
+          role="tablist"
+          aria-label="Autonomy stages"
+        >
+          <div aria-hidden className="absolute left-0 right-0 top-2.5 h-px bg-border" />
+          {STAGES.map((s, i) => {
+            const active = i === stageIndex;
+            return (
+              <button
+                key={s.name}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setStageIndex(i)}
+                className={cx(
+                  'group relative flex flex-col items-center gap-2 rounded bg-surface px-1',
+                  FOCUS_RING,
+                )}
+              >
+                <span
+                  className={cx(
+                    'h-5 w-5 rounded-full border-2 transition-colors',
+                    active
+                      ? 'border-foreground bg-foreground'
+                      : 'border-border bg-surface group-hover:border-foreground',
+                  )}
+                />
+                <span className={cx('text-xs font-medium', active ? 'text-foreground' : 'text-muted')}>
+                  {s.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-border pt-6">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-semibold">{stage.name}</h3>
+            <Badge tone={stage.available ? 'neutral' : 'accent'}>
+              {stage.available ? 'Available today' : 'Direction'}
+            </Badge>
+          </div>
+          <p className="max-w-xl text-sm leading-relaxed text-muted">{stage.body}</p>
+          <p className="max-w-xl rounded border border-border bg-background p-3 font-mono text-xs leading-relaxed text-subtle">
+            {stage.detail}
+          </p>
+        </div>
+      </section>
+
+      {/* Where it stands today */}
+      <section className="flex flex-col gap-6">
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          Running it from five different places.
+        </h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {[
             ['Customer details', 'a phone, an inbox, or an old spreadsheet'],
@@ -89,135 +379,34 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Product example — grounded in the real shell, not generic SaaS chrome */}
-      <section id="example" className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
-          Example: a field-service business configured in GOLD
-        </p>
-        <div className="overflow-hidden rounded-lg border border-border shadow-sm">
-          <div className="grid grid-cols-[auto_1fr] sm:grid-cols-[180px_1fr]">
-            <div className="hidden flex-col gap-1 border-r border-border p-3 sm:flex">
-              {[
-                { label: 'Today', icon: LayoutDashboard, current: true },
-                { label: 'Work', icon: ClipboardList, current: false },
-                { label: 'Schedule', icon: CalendarDays, current: false },
-                { label: 'Customers', icon: Users, current: false },
-                { label: 'Settings', icon: Settings, current: false },
-              ].map(({ label, icon: Icon, current }) => (
-                <div
-                  key={label}
-                  className={
-                    current
-                      ? 'flex items-center gap-2 rounded bg-foreground px-2.5 py-1.5 text-sm font-medium text-background'
-                      : 'flex items-center gap-2 rounded px-2.5 py-1.5 text-sm text-muted'
-                  }
-                >
-                  <Icon aria-hidden size={16} className="shrink-0" />
-                  {label}
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-col gap-3 p-5">
-              <p className="text-sm font-semibold">Today</p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {[
-                  { title: 'Committed today', value: '6', note: '09:00 Van 2 · Install, Reyes' },
-                  { title: 'Waiting to be scheduled', value: '2', note: 'Gutter clean · Okafor' },
-                  { title: 'Recent activity', value: null, note: 'Invoice #41 issued' },
-                ].map((widget) => (
-                  <div key={widget.title} className="rounded border border-border p-3">
-                    <p className="truncate text-xs font-medium text-muted">{widget.title}</p>
-                    {widget.value ? (
-                      <p className="mt-1 text-xl font-semibold tabular-nums">{widget.value}</p>
-                    ) : null}
-                    <p className="mt-1 truncate text-xs text-subtle">{widget.note}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+      {/* Capabilities */}
+      <section className="flex flex-col gap-8">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            What a configured system can cover.
+          </h2>
+          <p className="max-w-lg text-muted">
+            You switch on what your business uses and pay for that — not a bundle of everything,
+            and not a stripped-down tier of it either.
+          </p>
         </div>
-        <p className="max-w-md text-sm text-subtle">
-          This is one example business, configured in GOLD. The screens stay the same for every
-          business — what changes is the work inside them: your own customers, your own jobs,
-          your own work types and statuses, set up around how you already run things.
-        </p>
-      </section>
-
-      {/* What GOLD can handle — capability families, not a feature checklist */}
-      <section id="capabilities" className="flex flex-col gap-8">
-        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
-          What a configured system can cover
-        </p>
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            {
-              name: 'Operations',
-              body: 'Work, scheduling, resources, customers, locations and assets — the day-to-day, in one place.',
-            },
-            {
-              name: 'Communications',
-              body: 'Calls logged against the right customer, with the history there when you pick up.',
-            },
-            {
-              name: 'Money',
-              body: 'A price book, quotes, invoices and payments — the numbers a job actually turns on.',
-            },
-            {
-              name: 'Automation',
-              body: 'Rules that move work on and messages that go out, in your own words, when something you defined happens.',
-            },
-            {
-              name: 'Customer-facing',
-              body: 'A booking page and a customer portal carrying your name and your brand, not ours.',
-            },
-            {
-              name: 'Insight',
-              body: 'A daily view of what’s committed, what’s waiting and what changed, plus reports when you want more.',
-            },
-          ].map((capability) => (
+          {CAPABILITIES.map((capability) => (
             <div key={capability.name} className="flex flex-col gap-2 border-t-2 border-foreground pt-4">
               <h3 className="text-base font-semibold">{capability.name}</h3>
               <p className="text-sm leading-relaxed text-muted">{capability.body}</p>
             </div>
           ))}
         </div>
-        <p className="max-w-xl text-sm text-muted">
-          You switch on what your business uses and pay for that — not a bundle of everything
-          above, and not a stripped-down tier of it either.
-        </p>
       </section>
 
-      {/* How implementation works — the real motion, honestly paced */}
-      <section id="how-it-works" className="flex flex-col gap-8">
-        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
-          How implementation works
-        </p>
+      {/* Implementation */}
+      <section className="flex flex-col gap-8">
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">How implementation works.</h2>
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              step: '01',
-              title: 'Understand the workflow',
-              body: 'We start with how your business actually runs today — the jobs, the schedule, who does what.',
-            },
-            {
-              step: '02',
-              title: 'Configure the business',
-              body: 'Work types, statuses, pricing, hours and roles get set up around that — nothing forced into a template.',
-            },
-            {
-              step: '03',
-              title: 'Review and launch',
-              body: 'You see exactly what’s been set up and what still needs attention before anything goes live. Launching is a decision you make, not something that happens on its own.',
-            },
-            {
-              step: '04',
-              title: 'Improve over time',
-              body: 'Switch on more of the system, add rules, adjust as the business changes — the same configuration, not a new one.',
-            },
-          ].map((phase) => (
+          {IMPLEMENTATION.map((phase) => (
             <div key={phase.step} className="flex flex-col gap-2">
-              <p className="text-sm font-semibold text-subtle">{phase.step}</p>
+              <p className="font-mono text-sm text-subtle">{phase.step}</p>
               <h3 className="text-base font-semibold">{phase.title}</h3>
               <p className="text-sm leading-relaxed text-muted">{phase.body}</p>
             </div>
@@ -225,58 +414,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Automation / AI progression — capability, not a hype ladder. Delegate is the one stage
-          not yet real, and it says so once rather than with a badge on every line. */}
-      <section id="automation" className="flex flex-col gap-8">
-        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
-          How much runs on its own is up to you
-        </p>
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
-          {[
-            {
-              name: 'Record',
-              body: 'The system captures the work, the calls and the customer history as it happens.',
-              available: true,
-            },
-            {
-              name: 'Understand',
-              body: 'Reports and plain-language questions expose what’s actually going on.',
-              available: true,
-            },
-            {
-              name: 'Assist',
-              body: 'A suggestion for the next step, with your own approval before anything changes.',
-              available: true,
-            },
-            {
-              name: 'Automate',
-              body: 'Rules act on their own when something you defined happens, and messages go out in your own words.',
-              available: true,
-            },
-            {
-              name: 'Delegate',
-              body: 'A voice agent handling bounded calls on its own.',
-              available: false,
-            },
-          ].map((stage) => (
-            <div key={stage.name} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-semibold">{stage.name}</h3>
-                <Badge tone={stage.available ? 'neutral' : 'accent'}>
-                  {stage.available ? 'Available today' : 'Direction'}
-                </Badge>
-              </div>
-              <p className="text-sm leading-relaxed text-muted">{stage.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Platform / integration trust — subordinate, real vendors only */}
+      {/* Built on */}
       <section className="flex flex-col gap-4 border-y border-border py-5 sm:flex-row sm:items-center sm:gap-10">
-        <p className="shrink-0 text-xs font-semibold uppercase tracking-wide text-subtle">
-          Built on
-        </p>
+        <p className="shrink-0 text-xs font-medium text-subtle">Built on</p>
         <div
           className="min-w-0 flex-1 overflow-hidden"
           style={{
@@ -286,14 +426,10 @@ export default function Home() {
           }}
         >
           <div
-            className="flex w-max items-center gap-12"
-            style={{ animation: 'marquee 22s linear infinite' }}
+            className="flex w-max items-center gap-12 motion-safe:animate-[marquee_22s_linear_infinite]"
           >
             {[...BUILT_ON, ...BUILT_ON].map((name, index) => (
-              <span
-                key={`${name}-${index}`}
-                className="text-base font-medium tracking-tight text-subtle"
-              >
+              <span key={`${name}-${index}`} className="text-base font-medium tracking-tight text-subtle">
                 {name}
               </span>
             ))}
@@ -301,27 +437,29 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Closing CTA */}
-      <section id="review" className="flex flex-col gap-4 pb-4 scroll-mt-6">
-        <h2 className="max-w-lg text-2xl font-semibold tracking-tight sm:text-3xl">
-          A workflow review is a conversation about how your business runs today.
-        </h2>
-        <p className="max-w-md text-muted">
-          From there: we configure GOLD around it, you review exactly what&rsquo;s been set up,
-          and you launch when it&rsquo;s ready — never before.
-        </p>
-        <div className="mt-1 flex flex-wrap items-center gap-3">
-          <ButtonLink href="/workflow-review" tone="primary">
-            Request a workflow review
-          </ButtonLink>
-        </div>
-        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
-          <Link href="/login" className="text-sm font-medium underline underline-offset-4">
-            Already have an account? Log in
-          </Link>
-          <Link href="/sign-up" className="text-sm font-medium underline underline-offset-4">
-            Want to explore on your own? Start here
-          </Link>
+      {/* Closing CTA — the one bold, inverted moment on the page */}
+      <section id="review" className="-mx-4 scroll-mt-6 rounded-lg bg-foreground px-6 py-14 text-background sm:-mx-6 sm:px-12">
+        <div className="mx-auto flex max-w-2xl flex-col items-start gap-4">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            A workflow review is a conversation about how your business runs today.
+          </h2>
+          <p className="max-w-md opacity-70">
+            From there: we configure GOLD around it, you review exactly what&rsquo;s been set up,
+            and you launch when it&rsquo;s ready — never before.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <ButtonLink href="/workflow-review" tone="primary" className="!bg-background !text-foreground">
+              Request a workflow review
+            </ButtonLink>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <Link href="/login" className="font-medium underline underline-offset-4 opacity-80 hover:opacity-100">
+              Already have an account? Log in
+            </Link>
+            <Link href="/sign-up" className="font-medium underline underline-offset-4 opacity-80 hover:opacity-100">
+              Want to explore on your own? Start here
+            </Link>
+          </div>
         </div>
       </section>
     </div>

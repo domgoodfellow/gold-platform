@@ -23,6 +23,7 @@ import { listRecentActivity } from '@/lib/domain/timeline/timeline';
 const TODAY = fileURLToPath(
   new URL('../app/organizations/[organizationId]/today/page.tsx', import.meta.url),
 );
+const TODAY_FEATURE = fileURLToPath(new URL('../features/today/today-dashboard.tsx', import.meta.url));
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
@@ -62,18 +63,16 @@ async function freshOrganization(): Promise<{ db: SupabaseClient; organizationId
 
 describe('Today, with nothing configured yet', () => {
   it('names the empty state and links to Work rather than showing two silent zeroes', () => {
-    const source = readFileSync(TODAY, 'utf8');
+    const source = `${readFileSync(TODAY, 'utf8')}\n${readFileSync(TODAY_FEATURE, 'utf8')}`;
 
     expect(source).toContain('listWorkItemTypes');
-    expect(
-      source,
-      'no empty state pointing at Work when there are no work item types',
-    ).toMatch(/types\.length === 0[\s\S]{0,300}organizations\/\$\{organizationId\}\/work/);
+    expect(source).toContain('typesConfigured={types.length > 0}');
+    expect(source).toMatch(/!typesConfigured[\s\S]{0,300}organizations\/\$\{organizationId\}\/work/);
   });
 });
 
 describe('Today, structural composition (source scan)', () => {
-  const source = readFileSync(TODAY, 'utf8');
+  const source = `${readFileSync(TODAY, 'utf8')}\n${readFileSync(TODAY_FEATURE, 'utf8')}`;
 
   it('reads readiness from the existing Slice 1 mechanism rather than a second calculation', () => {
     expect(source).toContain("import { computeReadiness } from '@/lib/domain/tenancy/lifecycle'");
@@ -82,19 +81,19 @@ describe('Today, structural composition (source scan)', () => {
 
   it('puts readiness and activity before operational widgets while in SETUP, and omits readiness entirely once LIVE', () => {
     // Rendered exactly once anywhere in the file — if LIVE also rendered it, this would be 2.
-    const readinessOccurrences = source.match(/\{readinessWidget\}/g) ?? [];
+    const readinessOccurrences = source.match(/readinessWidget : null/g) ?? [];
     expect(readinessOccurrences, 'readinessWidget is rendered more than once, or not at all').toHaveLength(1);
 
-    const setupTernary = source.indexOf('{inSetup ? (');
-    const readinessIndex = source.indexOf('{readinessWidget}');
-    const activityIndex = source.indexOf('{activityWidget}');
-    const operationalIndex = source.indexOf('{operationalWidgets}', setupTernary);
+    const setupTernary = source.indexOf('{inSetup ? readinessWidget');
+    const readinessIndex = setupTernary;
+    const activityIndex = source.indexOf('{inSetup ? activityWidget', setupTernary);
+    const operationalIndex = source.indexOf('{operations}', setupTernary);
 
     expect(setupTernary).toBeGreaterThan(-1);
     // The one rendering of readinessWidget sits inside the `inSetup ? (` branch, ahead of both
     // activity and the operational widgets — proving SETUP leads with readiness rather than
     // merely including it somewhere on the page.
-    expect(readinessIndex).toBeGreaterThan(setupTernary);
+    expect(readinessIndex).toBe(setupTernary);
     expect(readinessIndex).toBeLessThan(activityIndex);
     expect(activityIndex).toBeLessThan(operationalIndex);
   });
@@ -114,8 +113,8 @@ describe('Today, structural composition (source scan)', () => {
   });
 
   it('gates the new operational widgets on the module being enabled, never on their current count', () => {
-    expect(source).toMatch(/automationsOn \? \(/);
-    expect(source).toMatch(/receptionOn \? \(/);
+    expect(source).toMatch(/automationsOn \? \[/);
+    expect(source).toMatch(/receptionOn \? <Widget/);
     // The tell for a count-based gate would be `failedRuns.length > 0 ?` guarding the whole
     // widget rather than only its `href`/empty-state — asserted absent.
     expect(source).not.toMatch(/failedRuns\.length > 0 \?\s*\(?\s*<Widget/);

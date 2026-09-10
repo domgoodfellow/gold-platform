@@ -342,6 +342,23 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
+# "Sign in with Google" (docs/environment-setup.md, Google OAuth). Disabled until a client id and
+# secret exist: this is the ONLY place either value lives locally, sourced from `supabase/.env`
+# (gitignored, not `apps/web/.env.local`) via env() substitution — the Next.js app never reads
+# them, since Supabase itself brokers the exchange. On the hosted project the equivalent is set
+# once in Supabase Dashboard > Authentication > Providers, never in Vercel.
+[auth.external.google]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET)"
+redirect_uri = ""
+url = ""
+# Required for local sign in with Google auth (Supabase CLI's own guidance, see the apple block
+# above for the same flag).
+skip_nonce_check = true
+email_optional = false
+
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
 [auth.web3.solana]

@@ -21,6 +21,7 @@ import { createWorkItemType } from '@/lib/domain/work-items/types';
  */
 
 const ROUTES = fileURLToPath(new URL('../app/organizations/[organizationId]', import.meta.url));
+const WEB_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
@@ -65,7 +66,7 @@ describe('Settings → Work exists as a real, directly addressable route', () =>
 });
 
 describe('Work, as an operational surface (source scan)', () => {
-  const work = readFileSync(`${ROUTES}/work/page.tsx`, 'utf8');
+  const work = `${readFileSync(`${ROUTES}/work/page.tsx`, 'utf8')}\n${readFileSync(`${WEB_ROOT}/features/work/work-list.tsx`, 'utf8')}`;
 
   it('no longer renders the structural configuration forms', () => {
     for (const moved of [

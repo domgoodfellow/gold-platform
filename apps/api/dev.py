@@ -109,6 +109,8 @@ class Router(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    from app.core.config import environment_warnings
+
     port = int(os.environ.get("PORT", "8787"))
     print(f"apps/api on http://127.0.0.1:{port}")
     for route in ROUTES:
@@ -117,6 +119,8 @@ def main() -> None:
         "\nAn endpoint whose settings are unset answers 404 rather than refusing to start —\n"
         "that path is worth being able to exercise too."
     )
+    for warning in environment_warnings():
+        print(f"\nwarning: {warning}")
     HTTPServer(("127.0.0.1", port), Router).serve_forever()
 
 

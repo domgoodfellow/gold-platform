@@ -110,6 +110,31 @@ export async function setNewPassword(
   }
 }
 
+/**
+ * Start Google sign-in. Supabase brokers the whole OAuth exchange — this repository holds no
+ * Google client secret, only the URL to send the browser to and the address it wants back
+ * (docs/environment-setup.md, Google OAuth: the client id and secret live in Supabase's own
+ * provider configuration, never in this codebase or in Vercel).
+ *
+ * Returns a URL rather than redirecting itself, because there is no browser Supabase client in
+ * this codebase (every other flow here is a server action) — the caller redirects to it.
+ * `redirectTo` is a fixed literal built by the caller from its own request, for the same reason
+ * `requestPasswordReset` above takes one: a destination that travelled with the request would
+ * have to be checked against a closed set on the way in and on the way out.
+ */
+export async function signInWithGoogle(db: Db, input: { redirectTo: string }): Promise<string> {
+  const { data, error } = await db.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: input.redirectTo, skipBrowserRedirect: true },
+  });
+
+  if (error || !data.url) {
+    throw new DomainError('Google sign-in is not available right now.', 'identity.oauth_unavailable');
+  }
+
+  return data.url;
+}
+
 export async function signOut(db: Db): Promise<void> {
   const { error } = await db.auth.signOut();
 

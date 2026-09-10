@@ -27,6 +27,7 @@ import { AREA_ICONS } from '@/app/organizations/[organizationId]/org-shell';
  */
 
 const ROUTES = fileURLToPath(new URL('../app/organizations/[organizationId]', import.meta.url));
+const WEB_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 /** Direct child route directories that render a page — the areas of one business. */
 function routeSegmentsOnDisk(): string[] {
@@ -315,8 +316,8 @@ describe('a switch leads to its inputs', () => {
     // job screen, and D25 says a module hides what it owns everywhere. This one was found by
     // the product reality audit rather than caught at the time — the asset picker and badge
     // rendered regardless of whether a business had switched Assets off at all.
-    const work = readFileSync(`${ROUTES}/work/page.tsx`, 'utf8');
-    const workItem = readFileSync(`${ROUTES}/work/[workItemId]/page.tsx`, 'utf8');
+    const work = `${readFileSync(`${ROUTES}/work/page.tsx`, 'utf8')}\n${readFileSync(`${WEB_ROOT}/features/work/work-list.tsx`, 'utf8')}`;
+    const workItem = `${readFileSync(`${ROUTES}/work/[workItemId]/page.tsx`, 'utf8')}\n${readFileSync(`${WEB_ROOT}/features/work/work-item-sections.tsx`, 'utf8')}`;
 
     expect(work).toContain("enabledModules.has('assets')");
     expect(work, 'the create-work-item form is not told whether assets are enabled').toContain(

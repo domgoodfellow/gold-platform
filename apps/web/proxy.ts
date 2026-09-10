@@ -26,6 +26,9 @@ const PUBLIC_PATHS = [
   // caller with no session away itself.
   '/auth/recover',
   '/reset-password',
+  // Where a Google sign-in lands. Same standing as `/auth/recover`: reachable with no session,
+  // because arriving here with one is the point.
+  '/auth/callback',
 ];
 
 /**

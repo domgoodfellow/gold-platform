@@ -147,3 +147,32 @@ def load_voice_settings() -> VoiceSettings | None:
         return None
 
     return VoiceSettings(**values)  # type: ignore[arg-type]
+
+
+def environment_warnings() -> list[str]:
+    """Partial configuration this deployment's own graceful-degradation rules cannot see.
+
+    Every `load_*` function above already treats *any* missing value in its group as the whole
+    feature being off (D31) — that is correct and not what this checks. What none of them can
+    catch is `app.ai.registry.answering_provider()`, which chooses between two *separate*
+    providers rather than one group: `ASSISTANT_BASE_URL` set without `ASSISTANT_MODEL` (or the
+    other way round) does not disable anything, it silently falls through to whichever provider
+    is checked next — a deployment that believes it configured a self-hosted model but is quietly
+    answering with the hosted default, or vice versa. That is worth a warning nothing today prints.
+
+    Advisory only: nothing here raises, and callers choose what to do with the list. Consistent
+    with dev.py's own reasoning that a deployment with unset settings should still start.
+    """
+    warnings: list[str] = []
+
+    base_url = os.environ.get("ASSISTANT_BASE_URL")
+    model = os.environ.get("ASSISTANT_MODEL")
+    if bool(base_url) != bool(model):
+        set_name, missing_name = ("ASSISTANT_BASE_URL", "ASSISTANT_MODEL") if base_url else ("ASSISTANT_MODEL", "ASSISTANT_BASE_URL")
+        warnings.append(
+            f"{set_name} is set but {missing_name} is not — both are required together, so "
+            "answering is falling back to ANTHROPIC_API_KEY (or is unconfigured) rather than "
+            "using the endpoint this deployment thinks it pointed at."
+        )
+
+    return warnings

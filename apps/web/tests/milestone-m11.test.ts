@@ -104,11 +104,11 @@ describe('M11 — a destructive action with nothing between it and the write', (
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/work/actions.ts`,
-      forms: `${APP_ROOT}/organizations/[organizationId]/work/work-forms.tsx`,
+      forms: `${FEATURES_ROOT}/work/work-list-forms.tsx`,
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/work/[workItemId]/actions.ts`,
-      forms: `${APP_ROOT}/organizations/[organizationId]/work/[workItemId]/work-item-forms.tsx`,
+      forms: `${FEATURES_ROOT}/work/pricing-forms.tsx`,
     },
   ];
 
