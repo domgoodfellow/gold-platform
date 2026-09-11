@@ -100,7 +100,7 @@ export function SidebarButton({ className, ...props }: ComponentProps<'button'>)
 /** Shared sidebar state control; actor shells choose where the trigger belongs. */
 export function SidebarToggle({ className }: { className?: string }) {
   const collapsed = useSidebarCollapsed();
-  return <button type="button" onClick={() => writeCollapsed(!collapsed)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} className={cx(FOCUS_RING, 'flex size-10 items-center justify-center rounded hover:bg-black/5 dark:hover:bg-white/10', className)}>{collapsed ? <PanelLeftOpen aria-hidden size={18} /> : <PanelLeftClose aria-hidden size={18} />}</button>;
+  return <button type="button" onClick={() => writeCollapsed(!collapsed)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} className={cx(FOCUS_RING, 'group flex size-10 items-center justify-center rounded hover:bg-black/5 dark:hover:bg-white/10', className)}><span aria-hidden className="text-sm font-semibold group-hover:hidden group-focus:hidden">G</span><span className="hidden group-hover:flex group-focus:flex">{collapsed ? <PanelLeftOpen aria-hidden size={18} /> : <PanelLeftClose aria-hidden size={18} />}</span></button>;
 }
 
 /**

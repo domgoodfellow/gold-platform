@@ -43,6 +43,8 @@ export default async function PlatformPage() {
     redirect('/organizations');
   }
 
+  redirect('/platform/organizations');
+
   const [{ tenants, total }, failures] = await Promise.all([
     listTenants(db),
     listFailures(db),
