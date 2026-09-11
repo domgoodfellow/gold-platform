@@ -1,10 +1,24 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MODULES } from '@/lib/navigation';
 
 const root = resolve(import.meta.dirname, '..');
 const source = (path: string) => readFileSync(resolve(root, path), 'utf8');
+
+/**
+ * Every migration under `supabase/migrations/`, concatenated. D43's own catalogue is additive —
+ * `platform_products` gains a row in a *new* migration when a module gains one (the shape
+ * `20260913000001`/`20260913000002` already used for the rest of the catalogue), never an edit
+ * to the migration that first created the table (D15: a migration that may have been applied is
+ * never modified). A single-file read would fail the day a module arrived after that first one.
+ */
+const migrationsRoot = resolve(root, '../../supabase/migrations');
+const allMigrations = () =>
+  readdirSync(migrationsRoot)
+    .filter((name) => name.endsWith('.sql'))
+    .map((name) => readFileSync(resolve(migrationsRoot, name), 'utf8'))
+    .join('\n');
 
 describe('platform control-plane scope boundaries', () => {
   it('owns global rates in Pricing without an organization id', () => {
@@ -26,8 +40,8 @@ describe('platform control-plane scope boundaries', () => {
   });
 
   it('maps every code-backed module to a commercial product key', () => {
-    const migration = source('../../supabase/migrations/20260910000001_gold_sells_gold_the_commercial_catalogue.sql');
-    for (const capability of MODULES) expect(migration).toContain(`'module:${capability.key}'`);
+    const migrations = allMigrations();
+    for (const capability of MODULES) expect(migrations).toContain(`'module:${capability.key}'`);
   });
 
   it('guards all platform child routes in the shared layout', () => {

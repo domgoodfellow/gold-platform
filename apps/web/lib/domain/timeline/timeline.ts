@@ -28,6 +28,8 @@ const CUSTOMER_ACTIONS = [
   'customer.created',
   'customer.updated',
   'customer.stage_changed',
+  'customer.imported',
+  'customer.import_matched',
   'call.placed',
   'call.wrapped_up',
   'location.linked',
@@ -95,6 +97,13 @@ function describe(row: EventRow, words: Vocabulary): string {
         ? `Moved to ${name ?? 'a stage that no longer exists'}`
         : 'Taken off the pipeline';
     }
+    // Distinct from `customer.created` on purpose — a row a person typed and a row a file
+    // produced are different facts, and the timeline says which honestly rather than implying
+    // somebody sat down and entered it by hand.
+    case 'customer.imported':
+      return 'Imported from a connected data source';
+    case 'customer.import_matched':
+      return 'Updated by a connected data source';
     case 'call.placed':
       return text(row.payload, 'direction') === 'inbound' ? 'Call taken' : 'Call made';
     case 'call.wrapped_up': {

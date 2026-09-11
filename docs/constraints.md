@@ -547,6 +547,25 @@ capability it needs.
 holds the account and the credential. GOLD stores a reference, never a shared key.
 **Why.** The same reasoning as D27, on a second axis.
 
+**Built, first slice — CSV/spreadsheet import into Customers**
+(`20260914000001_a_tenant_connects_its_own_data_sources.sql`,
+`20260914000002_an_import_run_snapshots_its_mapping_and_never_rewrites_it.sql`). Six tables:
+`integration_connections` (a tenant's own authorization — RLS policy-gated like `customers`,
+deliberately not `organization_provider_bindings`, which is D44's staff-provisioned axis and
+assumes the wrong owner entirely), `integration_resources` (one sheet, tab or uploaded file
+reachable through a connection), `integration_mappings` (source column → GOLD field, `target_entity`
+closed to `'customer'` until a second one has a real caller — D7's "no seventh kind" discipline,
+one axis over), `import_runs` (snapshots the mapping it used — I8, see I36 below), `import_staging_rows`
+(one reviewed source row, durable), `external_record_links` (the idempotency backbone — I37). The
+capability is `integration.manage`; `secret_id` on `integration_connections` is withheld from
+every grant and written only through `store_integration_secret`, the same Vault shape D44's
+`store_provider_secret` already uses (I34), reapplied to a tenant-writable table. CSV needs no
+vendor handshake and is the first working connector; Google Sheets and any OAuth-based connector
+land later as a `lib/adapters/` implementation, no schema change, per D44/I15's own reasoning
+about where a vendor's name may live. `tests/integrations.test.ts` proves idempotency (re-importing
+the same file never duplicates a customer), tenancy isolation, capability refusal, and that
+disconnecting a connection never reaches a customer already imported through it.
+
 ### D34 — A tool is a function in Postgres, run under the caller's own token
 
 **Decision.** Every AI tool is a `stable`, `security invoker` Postgres function. Python holds only

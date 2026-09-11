@@ -5,6 +5,7 @@
 node_modules/
 .pnp
 .pnp.*
+.pnpm-store/
 
 # Build output
 .next/

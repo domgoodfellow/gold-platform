@@ -22,6 +22,7 @@ import {
   MapPin,
   Package,
   Phone,
+  Plug,
   Settings,
   Sparkles,
   SlidersHorizontal,
@@ -71,6 +72,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   fields: SlidersHorizontal,
   roles: UserCog,
   setup: Sparkles,
+  integrations: Plug,
   settings: Settings,
 };
 

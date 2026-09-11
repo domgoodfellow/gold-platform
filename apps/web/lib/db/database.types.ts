@@ -1526,6 +1526,77 @@ export type Database = {
           },
         ]
       }
+      external_record_links: {
+        Row: {
+          connector_key: string
+          external_record_id: string
+          first_imported_at: string
+          gold_entity_id: string
+          gold_entity_type: string
+          id: string
+          last_synced_at: string
+          organization_id: string
+          resource_id: string | null
+          run_id: string | null
+          source_hash: string | null
+        }
+        Insert: {
+          connector_key: string
+          external_record_id: string
+          first_imported_at?: string
+          gold_entity_id: string
+          gold_entity_type: string
+          id?: string
+          last_synced_at?: string
+          organization_id: string
+          resource_id?: string | null
+          run_id?: string | null
+          source_hash?: string | null
+        }
+        Update: {
+          connector_key?: string
+          external_record_id?: string
+          first_imported_at?: string
+          gold_entity_id?: string
+          gold_entity_type?: string
+          id?: string
+          last_synced_at?: string
+          organization_id?: string
+          resource_id?: string | null
+          run_id?: string | null
+          source_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_record_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_record_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_record_links_organization_id_resource_id_fkey"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "integration_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "external_record_links_organization_id_run_id_fkey"
+            columns: ["organization_id", "run_id"]
+            isOneToOne: false
+            referencedRelation: "import_runs"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       field_definitions: {
         Row: {
           created_at: string
@@ -1576,6 +1647,348 @@ export type Database = {
           },
           {
             foreignKeyName: "field_definitions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_runs: {
+        Row: {
+          connector_key: string
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          initiated_by: string
+          mapping_id: string | null
+          mapping_snapshot: Json
+          organization_id: string
+          resource_id: string | null
+          rows_created: number
+          rows_failed: number
+          rows_seen: number
+          rows_skipped: number
+          rows_updated: number
+          started_at: string
+          status: string
+        }
+        Insert: {
+          connector_key: string
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          initiated_by: string
+          mapping_id?: string | null
+          mapping_snapshot: Json
+          organization_id: string
+          resource_id?: string | null
+          rows_created?: number
+          rows_failed?: number
+          rows_seen?: number
+          rows_skipped?: number
+          rows_updated?: number
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          connector_key?: string
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          initiated_by?: string
+          mapping_id?: string | null
+          mapping_snapshot?: Json
+          organization_id?: string
+          resource_id?: string | null
+          rows_created?: number
+          rows_failed?: number
+          rows_seen?: number
+          rows_skipped?: number
+          rows_updated?: number
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_runs_organization_id_mapping_id_fkey"
+            columns: ["organization_id", "mapping_id"]
+            isOneToOne: false
+            referencedRelation: "integration_mappings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "import_runs_organization_id_resource_id_fkey"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "integration_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      import_staging_rows: {
+        Row: {
+          created_at: string
+          id: string
+          matched_customer_id: string | null
+          normalized: Json
+          organization_id: string
+          proposed_action: string
+          raw: Json
+          run_id: string
+          source_record_key: string
+          status: string
+          validation_errors: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          matched_customer_id?: string | null
+          normalized?: Json
+          organization_id: string
+          proposed_action?: string
+          raw?: Json
+          run_id: string
+          source_record_key: string
+          status?: string
+          validation_errors?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          matched_customer_id?: string | null
+          normalized?: Json
+          organization_id?: string
+          proposed_action?: string
+          raw?: Json
+          run_id?: string
+          source_record_key?: string
+          status?: string
+          validation_errors?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_staging_rows_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_staging_rows_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_staging_rows_organization_id_matched_customer_id_fkey"
+            columns: ["organization_id", "matched_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "import_staging_rows_organization_id_run_id_fkey"
+            columns: ["organization_id", "run_id"]
+            isOneToOne: false
+            referencedRelation: "import_runs"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      integration_connections: {
+        Row: {
+          account_label: string | null
+          connected_by: string
+          connector_key: string
+          created_at: string
+          id: string
+          last_verified_at: string | null
+          organization_id: string
+          scopes: string[]
+          secret_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_label?: string | null
+          connected_by: string
+          connector_key: string
+          created_at?: string
+          id?: string
+          last_verified_at?: string | null
+          organization_id: string
+          scopes?: string[]
+          secret_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_label?: string | null
+          connected_by?: string
+          connector_key?: string
+          created_at?: string
+          id?: string
+          last_verified_at?: string | null
+          organization_id?: string
+          scopes?: string[]
+          secret_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_mappings: {
+        Row: {
+          created_at: string
+          created_by: string
+          dedupe_key: string | null
+          id: string
+          mapping: Json
+          organization_id: string
+          resource_id: string
+          sync_mode: string
+          target_entity: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          dedupe_key?: string | null
+          id?: string
+          mapping?: Json
+          organization_id: string
+          resource_id: string
+          sync_mode?: string
+          target_entity?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          dedupe_key?: string | null
+          id?: string
+          mapping?: Json
+          organization_id?: string
+          resource_id?: string
+          sync_mode?: string
+          target_entity?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_mappings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_mappings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_mappings_organization_id_resource_id_fkey"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "integration_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      integration_resources: {
+        Row: {
+          connection_id: string
+          created_at: string
+          display_name: string
+          external_id: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          resource_type: string
+          status: string
+          storage_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          display_name: string
+          external_id?: string | null
+          id?: string
+          metadata?: Json
+          organization_id: string
+          resource_type: string
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          display_name?: string
+          external_id?: string | null
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          resource_type?: string
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_resources_organization_id_connection_id_fkey"
+            columns: ["organization_id", "connection_id"]
+            isOneToOne: false
+            referencedRelation: "integration_connections"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "integration_resources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_resources_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "platform_tenants"
@@ -3997,9 +4410,17 @@ export type Database = {
         }
         Returns: string
       }
+      apply_import_run: {
+        Args: { p_organization_id: string; p_run_id: string }
+        Returns: undefined
+      }
       assign_role: {
         Args: { p_membership_id: string; p_role_id: string }
         Returns: undefined
+      }
+      begin_import_run: {
+        Args: { p_mapping_id: string; p_organization_id: string }
+        Returns: string
       }
       begin_provider_binding: {
         Args: { p_organization_id: string; p_provider_key: string }
@@ -4162,6 +4583,10 @@ export type Database = {
           time_zone: string
         }[]
       }
+      disconnect_integration: {
+        Args: { p_connection_id: string; p_organization_id: string }
+        Returns: undefined
+      }
       invoiced_and_incurred: {
         Args: {
           p_customer_id?: string
@@ -4314,6 +4739,36 @@ export type Database = {
       record_external_readings: {
         Args: { p_location_id: string; p_readings: Json }
         Returns: number
+      }
+      record_integration_connection: {
+        Args: {
+          p_account_label: string
+          p_connector_key: string
+          p_organization_id: string
+        }
+        Returns: string
+      }
+      record_integration_mapping: {
+        Args: {
+          p_dedupe_key: string
+          p_mapping: Json
+          p_organization_id: string
+          p_resource_id: string
+          p_target_entity: string
+        }
+        Returns: string
+      }
+      record_integration_resource: {
+        Args: {
+          p_connection_id: string
+          p_display_name: string
+          p_external_id: string
+          p_metadata: Json
+          p_organization_id: string
+          p_resource_type: string
+          p_storage_path: string
+        }
+        Returns: string
       }
       record_message_delivery: {
         Args: { p_detail: string; p_id: string; p_sent: boolean }
@@ -4532,6 +4987,18 @@ export type Database = {
           p_status_id: string
         }
         Returns: undefined
+      }
+      stage_import_rows: {
+        Args: { p_organization_id: string; p_rows: Json; p_run_id: string }
+        Returns: number
+      }
+      store_integration_secret: {
+        Args: {
+          p_connection_id: string
+          p_organization_id: string
+          p_secret: string
+        }
+        Returns: string
       }
       store_provider_secret: {
         Args: {

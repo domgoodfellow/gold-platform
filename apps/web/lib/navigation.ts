@@ -175,6 +175,13 @@ export const MODULES = [
     // Dialer and pipeline are one module deliberately — a pipeline with no calls is a hand-kept list; calls with no pipeline are a log nobody reads twice.
     configuredAt: { segment: 'calls', section: 'setup' },
   },
+  {
+    key: 'integrations',
+    label: 'Integrations',
+    description:
+      'Connect a spreadsheet or an external system and bring its customers into GOLD, once or on a schedule. A business that enters everything by hand runs without this.',
+    configuredAt: { segment: 'integrations' },
+  },
 ] as const satisfies readonly Module[];
 
 export type ModuleKey = (typeof MODULES)[number]['key'];
@@ -244,6 +251,10 @@ export const AREAS: readonly Area[] = [
   // route, its module gate and `/setup` itself are all unchanged — only where it is *found*
   // moved, exactly as Pricing/Automations/Custom fields/People and roles already did.
   { segment: 'setup', label: 'Guided setup', group: 'configuration', module: 'drafting', sidebar: false },
+  // Its own area, not folded into Settings — a business returns here often enough (checking a
+  // run, adding a source) that it isn't a set-once switch the way pricing or automations config
+  // is, the same reasoning that keeps Automations and Guided setup each their own area.
+  { segment: 'integrations', label: 'Integrations', group: 'configuration', module: 'integrations' },
   // Names no module — it's where the switches are, so a module able to hide it would lock a business out of its own account.
   { segment: 'settings', label: 'Settings', group: 'configuration' },
 ] as const;

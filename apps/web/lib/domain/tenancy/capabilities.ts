@@ -28,6 +28,7 @@ export const CAPABILITIES = [
   'report.read',
   'report.manage',
   'call.place',
+  'integration.manage',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -73,4 +74,6 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'report.manage': 'Save reports and choose which roles see them',
   /** Its own authority for the same reason as `assistant.ask` — placing a call spends money and shares this business's number. */
   'call.place': 'Call a customer and record how it went',
+  /** Connecting a source and applying what it imports are split from `customer.create`/`customer.update` on purpose — an import run still checks those per row, so this alone cannot write a customer. */
+  'integration.manage': 'Connect external data sources and run imports',
 };
