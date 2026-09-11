@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { ButtonLink } from '@/components/controls/button';
+import { AppPage } from '@/components/containers/app-page';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
@@ -106,7 +107,7 @@ export default async function PlatformOrganizationPage({
   const productOptions = products.map((product) => ({ value: product.key, label: product.label }));
 
   return (
-    <main className="mx-auto w-full max-w-4xl p-8">
+    <AppPage width="full">
       <div className="flex items-baseline justify-between">
         <PageHeading>{tenant.name}</PageHeading>
         <ButtonLink href="/platform" tone="text" size="small">
@@ -374,6 +375,6 @@ export default async function PlatformOrganizationPage({
           </DividedList>
         )}
       </Section>
-    </main>
+    </AppPage>
   );
 }

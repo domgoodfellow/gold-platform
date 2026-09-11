@@ -2,24 +2,16 @@ import { Badge } from '@/components/display/data';
 import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
-import { Button } from '@/components/controls/button';
+import { AppPage } from '@/components/containers/app-page';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
-import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { isPlatformStaff, listFailures, listTenants } from '@/lib/domain/platform/tenants';
 import { ProvisionForm } from './provision-form';
 
 export const dynamic = 'force-dynamic';
-
-async function signOutAction() {
-  'use server';
-  const db = await getDb();
-  await signOut(db);
-  redirect('/login');
-}
 
 /**
  * The first screen in this application built for us rather than for a tenant.
@@ -57,14 +49,9 @@ export default async function PlatformPage() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-4xl p-8">
+    <AppPage width="full">
       <div className="flex items-baseline justify-between">
-        <PageHeading>Platform</PageHeading>
-        <form action={signOutAction}>
-          <Button type="submit" tone="text" size="small">
-            Log out
-          </Button>
-        </form>
+        <PageHeading>Overview</PageHeading>
       </div>
 
       <Hint className="mt-2">
@@ -212,6 +199,6 @@ export default async function PlatformPage() {
           </DividedList>
         )}
       </Section>
-    </main>
+    </AppPage>
   );
 }

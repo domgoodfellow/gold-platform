@@ -1,8 +1,10 @@
 'use client';
 
 
-import { SidebarLabel, SIDEBAR_ROW, useSidebarCollapsed } from '@/components/containers/app-shell';
+import { SidebarLabel, useSidebarCollapsed } from '@/components/containers/app-shell';
 import { Badge } from '@/components/display/data';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -167,20 +169,24 @@ export function OrgNav({
  */
 export function OrganizationSwitcher({
   mark,
+  organizationId,
   name,
   role,
 }: {
   mark: ReactNode;
+  organizationId: string;
   name: string;
   role: string;
 }) {
   const collapsed = useSidebarCollapsed();
   return (
-    <details className="group relative border-b border-border">
-      <summary
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+      <button
+        type="button"
         className={cx(
           FOCUS_RING,
-          'flex cursor-pointer list-none items-center gap-3 px-4 py-4 marker:content-none md:justify-center lg:justify-start',
+          'flex h-14 w-full items-center gap-3 border-b border-border px-4 md:justify-center lg:justify-start',
           collapsed && 'lg:justify-center',
         )}
       >
@@ -189,20 +195,20 @@ export function OrganizationSwitcher({
           <span className="block min-w-0 flex-1">
             <span className="flex items-center gap-1">
               <span className="truncate font-semibold">{name}</span>
-              <ChevronDown aria-hidden size={14} className="shrink-0 transition-transform group-open:rotate-180" />
+              <ChevronDown aria-hidden size={14} className="shrink-0" />
             </span>
             <span className="block truncate text-xs text-muted">{role}</span>
           </span>
         </SidebarLabel>
-      </summary>
-      <div className="absolute inset-x-2 top-[calc(100%+0.25rem)] z-30 rounded border border-border bg-surface p-1 shadow-lg">
-        <div className="px-3 py-2 text-sm font-medium" aria-current="true">{name}</div>
-        <Link href="/organizations?all=1" className={cx(SIDEBAR_ROW, 'w-full')}>
-          <ArrowLeftRight aria-hidden size={16} />
-          <span>All businesses</span>
-        </Link>
-      </div>
-    </details>
+      </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="bottom" align="start" className="w-60 min-w-60">
+        <DropdownMenuLabel className="flex items-center gap-3 px-2 py-2"><Avatar><AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback></Avatar><span className="min-w-0"><span className="block truncate text-sm font-medium">{name}</span><span className="block truncate text-xs font-normal text-muted">{role}</span></span></DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild><Link href={areaHref(organizationId, 'settings')}><Settings /> Organization settings</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild><Link href="/organizations?all=1"><ArrowLeftRight /> All businesses</Link></DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

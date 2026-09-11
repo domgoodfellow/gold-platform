@@ -1,11 +1,4 @@
-import {
-  AppShell,
-  SidebarButton,
-  SIDEBAR_ROW,
-} from '@/components/containers/app-shell';
-import { cx } from '@/components/class-names';
-import Link from 'next/link';
-import { ChevronDown, LogOut, UserRound } from 'lucide-react';
+import { AppShell } from '@/components/containers/app-shell';
 import { redirect } from 'next/navigation';
 import { AreaTrail, OrganizationSwitcher, OrgNav, OrgNavBar, SetupBadge, SetupEntry } from './org-shell';
 import { BrandStyle } from '@/features/branding/brand-style';
@@ -14,6 +7,7 @@ import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { requireOrganization } from '@/lib/route/organization';
+import { AccountMenu } from '@/components/containers/account-menu';
 
 /**
  * The operator shell: persistent navigation across one business's areas. Not the authorization
@@ -71,6 +65,7 @@ export default async function OrganizationLayout({
     <>
       <OrganizationSwitcher
         mark={mark}
+        organizationId={organizationId}
         name={organization.name}
         role={organization.role}
       />
@@ -95,54 +90,16 @@ export default async function OrganizationLayout({
   */
   const header = (
     <>
-      <details className="group relative min-w-0 md:hidden">
-        <summary className={cx('flex cursor-pointer list-none items-center gap-2 marker:content-none', SIDEBAR_ROW)}>
-          {logo}
-          <span className="max-w-28 truncate font-semibold">{organization.name}</span>
-          <ChevronDown aria-hidden size={14} className="shrink-0 group-open:rotate-180" />
-        </summary>
-        <div className="absolute left-0 top-[calc(100%+0.5rem)] z-30 w-48 rounded border border-border bg-surface p-1 shadow-lg">
-          <Link href="/organizations?all=1" className={cx(SIDEBAR_ROW, 'w-full')}>All businesses</Link>
-        </div>
-      </details>
-
       <AreaTrail organizationId={organizationId} />
 
       {inSetup ? <SetupBadge organizationId={organizationId} /> : null}
 
       <span className="flex-1" />
-      <details className="group relative shrink-0 md:hidden">
-        <summary className={cx(SIDEBAR_ROW, 'cursor-pointer list-none marker:content-none')} aria-label="Account menu">
-          <UserRound aria-hidden size={16} />
-          <span className="sr-only">Account menu</span>
-        </summary>
-        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-44 rounded border border-border bg-surface p-1 shadow-lg">
-          <form action={signOutAction}>
-            <SidebarButton type="submit">
-              <LogOut aria-hidden size={16} /> Log out
-            </SidebarButton>
-          </form>
-        </div>
-      </details>
+      <span className="md:hidden"><AccountMenu signOutAction={signOutAction} /></span>
     </>
   );
 
-  const sidebarFooter = (
-    <details className="group relative">
-      <summary className={cx(SIDEBAR_ROW, 'cursor-pointer list-none px-4 py-3 marker:content-none')}>
-        <UserRound aria-hidden size={18} className="shrink-0" />
-        <span className="md:hidden lg:inline">Account</span>
-      </summary>
-      <div className="absolute inset-x-2 bottom-[calc(100%+0.25rem)] z-30 rounded border border-border bg-surface p-1 shadow-lg">
-        <form action={signOutAction}>
-          <SidebarButton type="submit">
-            <LogOut aria-hidden size={16} />
-            <span>Log out</span>
-          </SidebarButton>
-        </form>
-      </div>
-    </details>
-  );
+  const sidebarFooter = <AccountMenu signOutAction={signOutAction} />;
 
   return (
     // `data-brand` sits here rather than on `<html>` — a brand belongs to one business, and this layout is the only thing that knows which.

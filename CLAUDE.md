@@ -140,7 +140,7 @@ apps/
     app/integrations/ the only place this repo's Python names a vendor
     app/api/        HTTP entrypoints — one file, one route. NOT apps/api/api/ (see its README)
   desktop/          Electron shell (M10; not before)
-packages/           Empty until a package has two consumers
+packages/           shared libraries once a generic responsibility has multiple real product-surface consumers
 supabase/           migrations, policies, snippets
 docs/
 ```
@@ -148,8 +148,9 @@ docs/
 - `apps/` means a deployable this repository ships. `pnpm-workspace.yaml` names its members rather
   than globbing, so pnpm never tries to manage the Python one; a new package adds itself by name
   (D3).
-- `packages/` stays empty until something has two consumers. One consumer buys a build step and a
-  `dist/` for no isolation.
+- A shared package needs demonstrated consumption, not speculative reuse. Multiple product
+  surfaces inside one deployable count as consumers when they use the same generic responsibility;
+  one surface still does not buy a build step and a `dist/` for no isolation.
 - **No `src/` under `apps/web`**, and none may be re-added. `@/*` resolves to `apps/web/*` in
   `tsconfig.json` and `vitest.config.mts` — two files, and they must agree.
 - **No `api/` directory under `apps/web`.** The API is `apps/api` (D26).

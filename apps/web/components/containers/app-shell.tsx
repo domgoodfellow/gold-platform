@@ -15,6 +15,8 @@ const STORAGE_KEY = 'gold.sidebar-collapsed';
 // that flipped the preference see it too, without a `useEffect`/`setState` pair reading an
 // external source on mount, which is the pattern `react-hooks/set-state-in-effect` refuses.
 const COLLAPSE_CHANGED = 'gold:sidebar-collapsed-changed';
+/** Shared by the main header and the identity control above the sidebar navigation. */
+export const SHELL_HEADER_HEIGHT = 'h-14';
 
 function readCollapsed() {
   return window.localStorage.getItem(STORAGE_KEY) === '1';
@@ -106,7 +108,8 @@ export function SidebarIdentity({ mark, label }: { mark: ReactNode; label: React
   return (
     <div
       className={cx(
-        'flex items-center gap-3 border-b border-border px-4 py-4 md:justify-center',
+        SHELL_HEADER_HEIGHT,
+        'flex items-center gap-3 border-b border-border px-4 md:justify-center',
         !collapsed && 'lg:justify-start',
       )}
     >
@@ -193,7 +196,7 @@ export function AppShell({
           scrolls underneath it, and a transparent bar would show the rows sliding through the
           text.
         */}
-        <header className="sticky top-0 z-20 flex min-h-14 items-center gap-3 border-b border-border bg-background px-4 sm:px-6">
+        <header className={cx('sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background px-4 sm:px-6', SHELL_HEADER_HEIGHT)}>
           {header}
         </header>
 
