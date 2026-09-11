@@ -13,6 +13,8 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
 import { listChecklistItems } from '@/lib/domain/work-items/checklists';
 import { listCosts, listTimeEntries } from '@/lib/domain/work-items/consumption';
 import { jobEconomics } from '@/lib/domain/work-items/economics';
+import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
+import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
 import {
@@ -22,6 +24,7 @@ import {
   WorkIdentity,
   WorkInvoiceSection,
   WorkMarginSection,
+  WorkOperationalActions,
   WorkQuoteSection,
   WorkRecordHeader,
   WorkTimeSection,
@@ -51,6 +54,8 @@ export default async function WorkItemPage({
     assets,
     invoice,
     enabledModules,
+    statuses,
+    transitions,
   ] = await Promise.all([
     listChecklistItems(db, { organizationId, workItemId }),
     listTimeEntries(db, { organizationId, workItemId }),
@@ -64,6 +69,8 @@ export default async function WorkItemPage({
     listAssets(db, { organizationId }),
     getInvoiceForWorkItem(db, { organizationId, workItemId }),
     listUsableModules(db, { organizationId }),
+    listWorkItemStatuses(db, { organizationId, typeId: workItem.type.id }),
+    listWorkItemTransitions(db, { organizationId, typeId: workItem.type.id }),
   ]);
 
   const price = priceWorkItem(lines);
@@ -86,6 +93,15 @@ export default async function WorkItemPage({
         workItem={workItem}
         definitions={definitions}
         assetsEnabled={assetsEnabled}
+      />
+      <WorkOperationalActions
+        organizationId={organizationId}
+        workItem={workItem}
+        statuses={statuses}
+        transitions={transitions}
+        resources={resourceOptions}
+        mayMove={can('work_item.transition')}
+        maySchedule={can('work_item.schedule')}
       />
       <WorkChecklistSection
         organizationId={organizationId}

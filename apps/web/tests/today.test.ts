@@ -121,6 +121,12 @@ describe('Today, structural composition (source scan)', () => {
     expect(source).not.toMatch(/failedMessages\.length > 0 \?\s*\(?\s*<Widget/);
   });
 
+  it('counts only today’s calls when naming calls that still need a write-up', () => {
+    expect(source).toContain(
+      'unwrittenCalls={todaysCalls.filter((call) => call.outcome === null).length}',
+    );
+  });
+
   it('expands Committed, Waiting and Recent activity through the existing ?widget= mechanism', () => {
     expect(source).toContain(
       "open === 'committed' || open === 'waiting' || open === 'activity'",

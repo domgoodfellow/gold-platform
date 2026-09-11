@@ -63,7 +63,7 @@ export default async function TodayPage({
       failedRuns={failedRuns}
       failedMessages={failedMessages}
       todaysCalls={todaysCalls}
-      unwrittenCalls={calls.filter((call) => call.outcome === null).length}
+      unwrittenCalls={todaysCalls.filter((call) => call.outcome === null).length}
       automationsOn={automationsOn}
       receptionOn={receptionOn}
     />

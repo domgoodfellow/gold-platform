@@ -1,4 +1,5 @@
 import { Badge, DefinitionList, Detail } from '@/components/display/data';
+import { Disclosure } from '@/components/containers/card';
 import { RecordHeader } from '@/components/containers/record-header';
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
@@ -9,6 +10,11 @@ import type { Cost, TimeEntry } from '@/lib/domain/work-items/consumption';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import type { JobEconomics } from '@/lib/domain/work-items/economics';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
+import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
+import {
+  allowedNextStatusIds,
+  type WorkItemTransition,
+} from '@/lib/domain/work-items/transitions';
 import type { PricedLine, Price } from '@/lib/domain/pricing/prices';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import type { Invoice, InvoiceStanding } from '@/lib/domain/billing/invoices';
@@ -18,6 +24,7 @@ import { EditWorkItemForm } from './details-form';
 import { RecordCostForm, RecordTimeForm } from './consumption-forms';
 import { AddPricedLineForm, RemovePricedLineForm } from './pricing-forms';
 import { IssueInvoiceForm, RecordPaymentForm, RequestCardPaymentForm } from './billing-forms';
+import { MoveWorkItemForm, ScheduleWorkItemForm } from './work-operations-forms';
 
 export function WorkRecordHeader({ organizationId, workItem, timezone }: {
   organizationId: string;
@@ -56,6 +63,67 @@ export function WorkIdentity({ workItem, definitions, assetsEnabled }: {
   );
 }
 
+/** The actions that move the job forward stay together, immediately after its identity. */
+export function WorkOperationalActions({
+  organizationId,
+  workItem,
+  statuses,
+  transitions,
+  resources,
+  mayMove,
+  maySchedule,
+}: {
+  organizationId: string;
+  workItem: WorkItem;
+  statuses: WorkItemStatus[];
+  transitions: WorkItemTransition[];
+  resources: { id: string; label: string }[];
+  mayMove: boolean;
+  maySchedule: boolean;
+}) {
+  if (!mayMove && !maySchedule) return null;
+
+  const statusNames = new Map(statuses.map((status) => [status.id, status.name]));
+  const moves = mayMove
+    ? allowedNextStatusIds(transitions, workItem.status.id).flatMap((id) => {
+        const name = statusNames.get(id);
+        return name ? [{ id, name }] : [];
+      })
+    : [];
+
+  return (
+    <Section className="mt-8" aria-labelledby="work-actions-heading">
+      <SectionHeading id="work-actions-heading">Next actions</SectionHeading>
+      {moves.length > 0 ? (
+        <div className="mt-3">
+          <MoveWorkItemForm
+            organizationId={organizationId}
+            workItemId={workItem.id}
+            moves={moves}
+          />
+        </div>
+      ) : mayMove ? (
+        <Hint weight="subtle" className="mt-1">
+          No stage moves are available from {workItem.status.label}.
+        </Hint>
+      ) : null}
+      {maySchedule ? (
+        <Disclosure
+          summary={workItem.window ? 'Change schedule' : 'Schedule this work'}
+          className="mt-3 max-w-2xl"
+        >
+          <ScheduleWorkItemForm
+            organizationId={organizationId}
+            workItemId={workItem.id}
+            resources={resources}
+            scheduled={workItem.window !== null}
+          />
+        </Disclosure>
+      ) : null}
+    </Section>
+  );
+}
+
 export function WorkDetailsSection({ organizationId, workItem, customers, locations, assets, assetsEnabled, definitions, mayEdit }: {
   organizationId: string;
   workItem: WorkItem;
@@ -66,7 +134,28 @@ export function WorkDetailsSection({ organizationId, workItem, customers, locati
   definitions: FieldDefinition[];
   mayEdit: boolean;
 }) {
-  return <Section className="mt-8"><SectionHeading>Job details</SectionHeading>{mayEdit ? <EditWorkItemForm organizationId={organizationId} workItem={workItem} customers={customers} locations={locations} assets={assets} assetsEnabled={assetsEnabled} definitions={definitions} /> : <Hint weight="subtle" className="mt-1">Your role cannot correct a job&rsquo;s details here.</Hint>}</Section>;
+  return (
+    <Section className="mt-8">
+      <SectionHeading>Job details</SectionHeading>
+      {mayEdit ? (
+        <Disclosure summary="Correct job details" className="mt-3">
+          <EditWorkItemForm
+            organizationId={organizationId}
+            workItem={workItem}
+            customers={customers}
+            locations={locations}
+            assets={assets}
+            assetsEnabled={assetsEnabled}
+            definitions={definitions}
+          />
+        </Disclosure>
+      ) : (
+        <Hint weight="subtle" className="mt-1">
+          Your role cannot correct a job&rsquo;s details here.
+        </Hint>
+      )}
+    </Section>
+  );
 }
 
 export function WorkChecklistSection({ organizationId, workItemId, checklist, mayTick, mayAdd }: {

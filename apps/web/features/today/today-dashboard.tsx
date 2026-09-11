@@ -15,6 +15,14 @@ import type { WorkItem } from '@/lib/domain/work-items/work-items';
 const PREVIEW = 4;
 type Commitment = { workItemId: string; title: string; window: Window; occupied: Window; resource: string };
 
+/** `date` is already the organization's calendar date; formatting it must not shift it again. */
+function formatBusinessDate(date: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'full',
+    timeZone: 'UTC',
+  }).format(new Date(`${date}T00:00:00Z`));
+}
+
 export function TodayDashboard({ organizationId, timezone, date, inSetup, typesConfigured, open, committed, unscheduled, workItems, readiness, activity, failedRuns, failedMessages, todaysCalls, unwrittenCalls, automationsOn, receptionOn }: {
   organizationId: string;
   timezone: string;
@@ -37,7 +45,7 @@ export function TodayDashboard({ organizationId, timezone, date, inSetup, typesC
   const area = `/organizations/${organizationId}/today`;
   const workHref = (id: string) => `/organizations/${organizationId}/work/${id}`;
   const byId = new Map(workItems.map((item) => [item.id, item]));
-  const dateLine = <Hint>{new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeZone: timezone }).format(new Date(`${date}T12:00:00Z`))} · times in {timezone}</Hint>;
+  const dateLine = <Hint>{formatBusinessDate(date)} · times in {timezone}</Hint>;
 
   const committedTable = <DataTable rows={committed} rowKey={(row) => row.workItemId} empty="Nothing is scheduled for today." columns={[
     { key: 'title', header: 'Job', emphasis: 'primary', cell: (row) => <Link href={workHref(row.workItemId)} className="underline underline-offset-4">{row.title}</Link> },
