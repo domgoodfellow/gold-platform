@@ -1,4 +1,5 @@
 import { Disclosure } from '@/components/containers/card';
+import { AppPage } from '@/components/containers/app-page';
 import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
@@ -31,15 +32,16 @@ export default async function LocationsPage({
   const mayAdd = organization.capabilities.includes('location.create');
 
   return (
-    <>
+    <AppPage width="wide">
+      <Hint>Places where this organization works, and the customers they serve.</Hint>
       {/*
         Hiding the forms is a courtesy, not the guard. `locations_insert` and
         `customer_locations_insert` both require location.create in the database, so a caller
         who reaches either action anyway is refused there.
       */}
       {mayAdd ? (
-        <div className="mt-6 flex flex-col gap-3">
-          <Disclosure summary="Add a location" defaultOpen={locations.length === 0}>
+        <div className="mt-5 flex flex-col gap-3">
+          <Disclosure summary="Add a location" tone="primary" defaultOpen={locations.length === 0}>
             <CreateLocationForm organizationId={organizationId} definitions={definitions} />
           </Disclosure>
           {/* A second disclosure rather than a section of the first: linking an existing
@@ -137,6 +139,6 @@ export default async function LocationsPage({
         />
       </div>
 
-    </>
+    </AppPage>
   );
 }

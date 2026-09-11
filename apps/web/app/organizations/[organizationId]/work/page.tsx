@@ -1,4 +1,5 @@
 import { WorkList } from '@/features/work/work-list';
+import { AppPage } from '@/components/containers/app-page';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { counted } from '@/lib/domain/counted';
 import { listCustomers } from '@/lib/domain/customers/customers';
@@ -37,7 +38,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
   const can = (capability: Capability) => organization.capabilities.includes(capability);
   const assetsEnabled = enabledModules.has('assets');
   return (
-    <WorkList
+    <AppPage width="full"><WorkList
       organizationId={organizationId}
       role={organization.role}
       timezone={organization.timezone}
@@ -56,6 +57,6 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
       mayConfigure={can('field.manage')}
       mayMove={can('work_item.transition')}
       maySchedule={can('work_item.schedule')}
-    />
+    /></AppPage>
   );
 }

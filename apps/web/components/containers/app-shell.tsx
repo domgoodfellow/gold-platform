@@ -128,11 +128,14 @@ export function SidebarIdentity({ mark, label }: { mark: ReactNode; label: React
 export function AppShell({
   header,
   sidebar,
+  sidebarFooter,
   bottomBar,
   children,
 }: {
   header: ReactNode;
   sidebar: ReactNode;
+  /** A persistent footer slot; the shell, not a page, owns its bottom placement. */
+  sidebarFooter?: ReactNode;
   bottomBar?: ReactNode;
   children: ReactNode;
 }) {
@@ -156,27 +159,30 @@ export function AppShell({
         bottom. The areas are the bottom bar there and the actions are in the header, which
         leaves nothing for this column to hold at that width.
       */}
-      <aside className="hidden md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:overflow-y-auto md:border-r md:border-border">
+      <aside className="hidden md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:overflow-hidden md:border-r md:border-border">
         <SidebarCollapsedContext.Provider value={collapsed}>
           {sidebar}
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className={cx(
-              'hidden shrink-0 items-center gap-2 border-t border-border px-4 py-2 text-sm text-muted hover:bg-black/5 dark:hover:bg-white/10 lg:flex',
-              collapsed ? 'justify-center' : 'justify-start',
-              FOCUS_RING,
-            )}
-          >
-            {collapsed ? (
-              <PanelLeftOpen aria-hidden size={18} className="shrink-0" />
-            ) : (
-              <PanelLeftClose aria-hidden size={18} className="shrink-0" />
-            )}
-            <SidebarLabel>Collapse</SidebarLabel>
-          </button>
+          <footer className="mt-auto shrink-0 border-t border-border">
+            {sidebarFooter}
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className={cx(
+                'hidden w-full items-center gap-2 px-4 py-3 text-sm text-muted hover:bg-black/5 dark:hover:bg-white/10 lg:flex',
+                collapsed ? 'justify-center' : 'justify-start',
+                FOCUS_RING,
+              )}
+            >
+              {collapsed ? (
+                <PanelLeftOpen aria-hidden size={18} className="shrink-0" />
+              ) : (
+                <PanelLeftClose aria-hidden size={18} className="shrink-0" />
+              )}
+              <SidebarLabel>Collapse</SidebarLabel>
+            </button>
+          </footer>
         </SidebarCollapsedContext.Provider>
       </aside>
 
@@ -192,7 +198,7 @@ export function AppShell({
         </header>
 
         {/* `pb-24` on phones reserves room for the fixed bottom bar; from `md` it is a column and this goes away. */}
-        <main className="mx-auto w-full max-w-5xl flex-1 p-6 pb-24 sm:p-8 md:pb-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 md:pb-6 lg:p-8">{children}</main>
       </div>
 
       {/* Outside the grid's two cells: it is `fixed` on a phone and renders nothing above `md`. */}

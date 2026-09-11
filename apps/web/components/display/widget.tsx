@@ -28,7 +28,7 @@ import { cx, FOCUS_RING } from '../class-names';
  * itself with `wide`.
  */
 export function WidgetGrid({ className, ...props }: ComponentProps<'div'>) {
-  return <div {...props} className={cx('flex flex-wrap items-stretch gap-4', className)} />;
+  return <div {...props} className={cx('grid gap-4 md:grid-cols-2 2xl:grid-cols-4', className)} />;
 }
 
 /**
@@ -71,8 +71,8 @@ export function Widget({
     <section
       {...props}
       className={cx(
-        'flex min-w-0 flex-1 flex-col rounded border border-border p-4',
-        wide ? 'basis-[36rem]' : 'basis-72',
+        'flex min-w-0 flex-col rounded border border-border bg-surface p-4',
+        wide && 'md:col-span-2',
         className,
       )}
     >

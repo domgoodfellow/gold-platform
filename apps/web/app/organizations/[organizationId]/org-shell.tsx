@@ -1,16 +1,19 @@
 'use client';
 
 
-import { SidebarLabel, useSidebarCollapsed } from '@/components/containers/app-shell';
+import { SidebarLabel, SIDEBAR_ROW, useSidebarCollapsed } from '@/components/containers/app-shell';
 import { Badge } from '@/components/display/data';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { ReactNode } from 'react';
 import {
   BarChart3,
+  ArrowLeftRight,
   Bot,
   CalendarDays,
   ChevronLeft,
+  ChevronDown,
   ClipboardList,
   Layers,
   LayoutDashboard,
@@ -122,7 +125,7 @@ export function OrgNav({
   const enabled = new Set(enabledModules);
 
   return (
-    <nav aria-label="This business" className="min-w-0 p-3">
+    <nav aria-label="This business" className="min-h-0 min-w-0 flex-1 overflow-y-auto p-3">
       {AREA_GROUPS.map((group, index) => {
         const areas = areasIn(group.key, enabled);
         // A business with every module in a section switched off has no section. Rendering the
@@ -154,6 +157,52 @@ export function OrgNav({
         );
       })}
     </nav>
+  );
+}
+
+/**
+ * Organization identity is the organization control. The only truthful destination currently
+ * available is the existing business chooser, so this intentionally does not pretend to list
+ * or create organizations that have not been loaded here.
+ */
+export function OrganizationSwitcher({
+  mark,
+  name,
+  role,
+}: {
+  mark: ReactNode;
+  name: string;
+  role: string;
+}) {
+  const collapsed = useSidebarCollapsed();
+  return (
+    <details className="group relative border-b border-border">
+      <summary
+        className={cx(
+          FOCUS_RING,
+          'flex cursor-pointer list-none items-center gap-3 px-4 py-4 marker:content-none md:justify-center lg:justify-start',
+          collapsed && 'lg:justify-center',
+        )}
+      >
+        {mark}
+        <SidebarLabel block>
+          <span className="block min-w-0 flex-1">
+            <span className="flex items-center gap-1">
+              <span className="truncate font-semibold">{name}</span>
+              <ChevronDown aria-hidden size={14} className="shrink-0 transition-transform group-open:rotate-180" />
+            </span>
+            <span className="block truncate text-xs text-muted">{role}</span>
+          </span>
+        </SidebarLabel>
+      </summary>
+      <div className="absolute inset-x-2 top-[calc(100%+0.25rem)] z-30 rounded border border-border bg-surface p-1 shadow-lg">
+        <div className="px-3 py-2 text-sm font-medium" aria-current="true">{name}</div>
+        <Link href="/organizations?all=1" className={cx(SIDEBAR_ROW, 'w-full')}>
+          <ArrowLeftRight aria-hidden size={16} />
+          <span>All businesses</span>
+        </Link>
+      </div>
+    </details>
   );
 }
 

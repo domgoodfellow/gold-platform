@@ -131,19 +131,25 @@ Three things, in the order they are read:
 
 | | What | Which widths |
 |---|---|---|
-| Left | the business's mark and name | below `md` only — the sidebar says it above that |
+| Left | the business's mark and name, which opens the business chooser | below `md` only — the sidebar says it above that |
 | Middle | where you are: the area's name, or a link back to it from a detail route | all |
-| Right | Switch business, Log out | all; labels appear from `sm` |
+| Right | account menu | below `md`; desktop account controls live in the sidebar footer |
 
 **The area's `<h1>` lives here now, and it is still one string.** `navigation.ts` supplies the
 navigation entry and the heading both, exactly as before — `AreaTrail` renders it, and what
 changed is only where. A detail route is *in* an area and not *at* it, so there the header shows
 the way back and the page writes its own `<h1>`, because a job's title is a tenant's words.
 
-**Switch business and Sign out are not navigation and no longer sit in the list of areas.** In
-the sidebar they were two rows under sixteen, which put *leave this business* in the same column
-as *go to Customers*. They stay plain rows rather than becoming `Button`s, for the reason
-`SIDEBAR_ROW` exists: chrome declares no weight in the action hierarchy (§6).
+**Organization switching belongs to the organization identity.** The identity control opens the
+existing business chooser; it does not manufacture a list or creation action without a server
+read behind it. **Sign out belongs to the account menu**, in the sidebar footer on desktop and in
+the compact header menu on a phone. Neither is an operating action or permanent page-header
+command.
+
+**The application canvas has named modes.** `AppPage` owns `reading`, `form`, `standard`, `wide`
+and `full`, so an operations surface can use its workspace without every route inventing width
+classes. Forms may remain focused inside a wide configuration canvas; `AppShell` itself never
+imposes a universal content maximum.
 
 ---
 
@@ -161,7 +167,7 @@ platform's. A business still builds report dashboards on top of it.
 
 | Rule | Why |
 |---|---|
-| The grid is flex, not columns at three breakpoints | The rule is about the tile — *no narrower than 18rem, otherwise share the row*. One column on a phone falls out of that rather than being declared |
+| The grid is CSS Grid, not a draggable layout | Today has product-owned placement. One column on a phone, two from `md`, and four on a very wide canvas gives dense, stable scanning without a persisted personalization model |
 | A widget opens to `?widget=<key>`, never to remembered state | It survives a reload, arrives with the back button, can be sent to somebody, and reads its rows on the server under the caller's own RLS. None of that is true of a panel a component remembers |
 | The expanded view replaces the grid; it does not cover it | Nothing overlays, so nothing traps focus and nothing needs an escape key. The way out is the way back |
 | The title is the link, not the whole tile | A tile whose every pixel navigates cannot hold the rows that make it worth looking at — a link inside a link is invalid, and the overlay that works around it swallows text selection |

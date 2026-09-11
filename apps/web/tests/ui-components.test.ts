@@ -5,6 +5,8 @@ import { FormError, FormField, type FieldControlProps } from '@/components/contr
 import { TextInput } from '@/components/controls/inputs';
 import { RecordHeader } from '@/components/containers/record-header';
 import { ConfirmSubmit } from '@/components/containers/dialog';
+import { AppPage } from '@/components/containers/app-page';
+import { WidgetGrid } from '@/components/display/widget';
 
 describe('shared form composition', () => {
   it('associates a field with its label, help and error', () => {
@@ -75,5 +77,22 @@ describe('confirmation dialog composition', () => {
     expect(html).toContain(`id="${labelledBy}"`);
     expect(html).toContain(`id="${describedBy}"`);
     expect(html).toContain('Remove this line from the quote?');
+  });
+});
+
+describe('application workspace composition', () => {
+  it('provides named canvas widths instead of a universal content column', () => {
+    const wide = renderToStaticMarkup(createElement(AppPage, { width: 'wide' }));
+    const full = renderToStaticMarkup(createElement(AppPage, { width: 'full' }));
+
+    expect(wide).toContain('max-w-[90rem]');
+    expect(full).toContain('max-w-none');
+  });
+
+  it('uses CSS Grid for responsive dashboard composition', () => {
+    const html = renderToStaticMarkup(createElement(WidgetGrid));
+
+    expect(html).toContain('grid');
+    expect(html).toContain('2xl:grid-cols-4');
   });
 });

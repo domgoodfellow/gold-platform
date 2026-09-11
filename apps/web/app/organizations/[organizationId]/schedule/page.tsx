@@ -1,4 +1,5 @@
 import { Button, ButtonLink } from '@/components/controls/button';
+import { AppPage } from '@/components/containers/app-page';
 import { Card } from '@/components/containers/card';
 import { Toolbar } from '@/components/display/data';
 import { Hint } from '@/components/controls/inputs';
@@ -51,7 +52,7 @@ export default async function SchedulePage({
   };
 
   return (
-    <>
+    <AppPage width="full">
       {/* I9: every window below is an absolute instant rendered in this business's own
           zone, so naming the zone is part of reading the day rather than decoration. */}
       <Hint>
@@ -158,6 +159,6 @@ export default async function SchedulePage({
         </div>
       )}
 
-    </>
+    </AppPage>
   );
 }

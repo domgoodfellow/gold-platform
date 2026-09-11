@@ -1,16 +1,13 @@
-import { Hint } from '@/components/controls/inputs';
 import {
   AppShell,
   SidebarButton,
-  SidebarIdentity,
-  SidebarLabel,
   SIDEBAR_ROW,
 } from '@/components/containers/app-shell';
 import { cx } from '@/components/class-names';
 import Link from 'next/link';
-import { ArrowLeftRight, LogOut } from 'lucide-react';
+import { ChevronDown, LogOut, UserRound } from 'lucide-react';
 import { redirect } from 'next/navigation';
-import { AreaTrail, OrgNav, OrgNavBar, SetupBadge, SetupEntry } from './org-shell';
+import { AreaTrail, OrganizationSwitcher, OrgNav, OrgNavBar, SetupBadge, SetupEntry } from './org-shell';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
@@ -72,17 +69,10 @@ export default async function OrganizationLayout({
 
   const sidebar = (
     <>
-      <SidebarIdentity
+      <OrganizationSwitcher
         mark={mark}
-        label={
-          <SidebarLabel block>
-            <span className="block min-w-0">
-              <span className="block truncate font-semibold">{organization.name}</span>
-              {/* The tenant's own word for the role, not a platform label (D6, D19). */}
-              <Hint className="block truncate">{organization.role}</Hint>
-            </span>
-          </SidebarLabel>
-        }
+        name={organization.name}
+        role={organization.role}
       />
 
       {inSetup ? <SetupEntry organizationId={organizationId} /> : null}
@@ -105,35 +95,53 @@ export default async function OrganizationLayout({
   */
   const header = (
     <>
-      <span className="flex min-w-0 items-center gap-2 md:hidden">
-        {logo}
-        <span className="truncate font-semibold">{organization.name}</span>
-      </span>
+      <details className="group relative min-w-0 md:hidden">
+        <summary className={cx('flex cursor-pointer list-none items-center gap-2 marker:content-none', SIDEBAR_ROW)}>
+          {logo}
+          <span className="max-w-28 truncate font-semibold">{organization.name}</span>
+          <ChevronDown aria-hidden size={14} className="shrink-0 group-open:rotate-180" />
+        </summary>
+        <div className="absolute left-0 top-[calc(100%+0.5rem)] z-30 w-48 rounded border border-border bg-surface p-1 shadow-lg">
+          <Link href="/organizations?all=1" className={cx(SIDEBAR_ROW, 'w-full')}>All businesses</Link>
+        </div>
+      </details>
 
       <AreaTrail organizationId={organizationId} />
 
       {inSetup ? <SetupBadge organizationId={organizationId} /> : null}
 
-      {/* Pushes what follows to the far end, so the two actions sit together whatever the trail's length. */}
       <span className="flex-1" />
-
-      <Link
-        href="/organizations?all=1"
-        aria-label="Switch business"
-        title="Switch business"
-        className={cx(SIDEBAR_ROW, 'shrink-0')}
-      >
-        <ArrowLeftRight aria-hidden size={16} className="shrink-0" />
-        <span className="hidden sm:inline">Switch business</span>
-      </Link>
-
-      <form action={signOutAction} className="shrink-0">
-        <SidebarButton type="submit" aria-label="Log out" title="Log out">
-          <LogOut aria-hidden size={16} className="shrink-0" />
-          <span className="hidden sm:inline">Log out</span>
-        </SidebarButton>
-      </form>
+      <details className="group relative shrink-0 md:hidden">
+        <summary className={cx(SIDEBAR_ROW, 'cursor-pointer list-none marker:content-none')} aria-label="Account menu">
+          <UserRound aria-hidden size={16} />
+          <span className="sr-only">Account menu</span>
+        </summary>
+        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-44 rounded border border-border bg-surface p-1 shadow-lg">
+          <form action={signOutAction}>
+            <SidebarButton type="submit">
+              <LogOut aria-hidden size={16} /> Log out
+            </SidebarButton>
+          </form>
+        </div>
+      </details>
     </>
+  );
+
+  const sidebarFooter = (
+    <details className="group relative">
+      <summary className={cx(SIDEBAR_ROW, 'cursor-pointer list-none px-4 py-3 marker:content-none')}>
+        <UserRound aria-hidden size={18} className="shrink-0" />
+        <span className="md:hidden lg:inline">Account</span>
+      </summary>
+      <div className="absolute inset-x-2 bottom-[calc(100%+0.25rem)] z-30 rounded border border-border bg-surface p-1 shadow-lg">
+        <form action={signOutAction}>
+          <SidebarButton type="submit">
+            <LogOut aria-hidden size={16} />
+            <span>Log out</span>
+          </SidebarButton>
+        </form>
+      </div>
+    </details>
   );
 
   return (
@@ -143,6 +151,7 @@ export default async function OrganizationLayout({
       <AppShell
         header={header}
         sidebar={sidebar}
+        sidebarFooter={sidebarFooter}
         bottomBar={
           <OrgNavBar organizationId={organizationId} enabledModules={[...enabledModules]} />
         }

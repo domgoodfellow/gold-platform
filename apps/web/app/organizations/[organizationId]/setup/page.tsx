@@ -1,4 +1,5 @@
 import { DividedList, EmptyState, GroupHeading, Section, SectionHeading } from '@/components/containers/section';
+import { AppPage } from '@/components/containers/app-page';
 import { Hint } from '@/components/controls/inputs';
 import Link from 'next/link';
 import {
@@ -78,7 +79,7 @@ export default async function SetupPage({
   });
 
   return (
-    <>
+    <AppPage width="standard">
       {/* **The one section that only shows while there is still a launch ahead of it.** Once
           this business is Live, everything below reverts to exactly what this page has always
           been — the drafting tool — because ordinary operation does not need a readiness
@@ -198,6 +199,6 @@ export default async function SetupPage({
       )}
 
       <ProposalHistory proposals={history.filter((entry) => entry.outcome !== 'draft')} />
-    </>
+    </AppPage>
   );
 }

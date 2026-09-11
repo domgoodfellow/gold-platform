@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import { AppPage } from '@/components/containers/app-page';
 import { Disclosure } from '@/components/containers/card';
+import { Hint } from '@/components/controls/inputs';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { DataTable } from '@/components/display/table';
 import { listCustomers } from '@/lib/domain/customers/customers';
@@ -22,12 +24,13 @@ export default async function CustomersPage({
   });
 
   return (
-    <>
+    <AppPage width="wide">
+      <Hint>People and businesses this organization works for.</Hint>
       {/* **The form is available, not permanent.** It used to render below the list, so a
           business with forty customers ended its customer screen with a create form and the
           answer to *what is on this page* was whatever fitted above it. Open by default when
           there is nothing to list, because then the form is the screen. */}
-      <Disclosure summary="Add a customer" defaultOpen={customers.length === 0} className="mt-6">
+      <Disclosure summary="Add a customer" tone="primary" defaultOpen={customers.length === 0} className="mt-5">
         <CreateCustomerForm organizationId={organizationId} definitions={definitions} />
       </Disclosure>
 
@@ -84,6 +87,6 @@ export default async function CustomersPage({
           ]}
         />
       </div>
-    </>
+    </AppPage>
   );
 }

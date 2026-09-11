@@ -1,4 +1,5 @@
 import { Disclosure } from '@/components/containers/card';
+import { AppPage } from '@/components/containers/app-page';
 import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
@@ -23,7 +24,7 @@ export default async function ResourcesPage({
   const mayAdd = organization.capabilities.includes('resource.create');
 
   return (
-    <>
+    <AppPage width="wide">
       <Hint>
         People, vehicles and equipment that work is scheduled against.
       </Hint>
@@ -34,7 +35,7 @@ export default async function ResourcesPage({
         refused there (constraints.md: hiding a UI element is not authorization).
       */}
       {mayAdd ? (
-        <Disclosure summary="Add a resource" defaultOpen={resources.length === 0} className="mt-6">
+        <Disclosure summary="Add a resource" tone="primary" defaultOpen={resources.length === 0} className="mt-5">
           <CreateResourceForm organizationId={organizationId} definitions={definitions} />
         </Disclosure>
       ) : (
@@ -64,6 +65,6 @@ export default async function ResourcesPage({
           ]}
         />
       </div>
-    </>
+    </AppPage>
   );
 }
