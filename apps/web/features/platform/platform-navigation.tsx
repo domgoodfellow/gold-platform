@@ -42,8 +42,7 @@ export function PlatformNavigation({ mobile = false }: { mobile?: boolean }) {
                 className={cx(
                   FOCUS_RING,
                   'mt-1 flex h-10 items-center gap-3 rounded-md px-3 text-sm',
-                  !mobile && 'md:justify-center lg:justify-start',
-                  collapsed && !mobile && 'lg:justify-center lg:px-0',
+                  !mobile && (collapsed ? 'justify-center px-0' : 'md:justify-center lg:justify-start'),
                   active ? 'bg-foreground font-medium text-background' : 'text-muted hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10',
                 )}
               >

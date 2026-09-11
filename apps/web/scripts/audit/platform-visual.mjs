@@ -111,6 +111,8 @@ await pause(250);
 const collapsed = await evaluate(`(() => ({
   sidebarWidth: document.querySelector('aside')?.getBoundingClientRect().width,
   collapseLabel: document.querySelector('button[aria-label="Expand sidebar"]')?.getAttribute('aria-label'),
+  logoCenterDelta: (() => { const aside = document.querySelector('aside')?.getBoundingClientRect(); const button = document.querySelector('aside button[aria-label="Expand sidebar"]')?.getBoundingClientRect(); return aside && button ? (button.left + button.width / 2) - (aside.left + aside.width / 2) : null; })(),
+  activeIconCenterDelta: (() => { const aside = document.querySelector('aside')?.getBoundingClientRect(); const icon = document.querySelector('aside nav a[aria-current="page"] svg')?.getBoundingClientRect(); return aside && icon ? (icon.left + icon.width / 2) - (aside.left + aside.width / 2) : null; })(),
   accountAtBottom: Math.abs(document.querySelector('aside footer')?.getBoundingClientRect().bottom - innerHeight) < 2,
   hasBottomCollapse: !!document.querySelector('aside footer button[aria-label*="sidebar"]')
 }))()`);

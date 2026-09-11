@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation';
 import { AccountMenu } from '@/components/containers/account-menu';
-import { AppShell, SHELL_HEADER_HEIGHT, SHELL_HEADER_STYLE, SidebarLabel, SidebarToggle } from '@/components/containers/app-shell';
+import { AppShell } from '@/components/containers/app-shell';
 import { PlatformMobileNavigation } from '@/features/platform/platform-mobile-navigation';
 import { PlatformNavigation } from '@/features/platform/platform-navigation';
+import { PlatformSidebarHeader } from '@/features/platform/platform-sidebar-header';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
@@ -28,10 +29,7 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
 
   const sidebar = (
     <>
-      <div style={SHELL_HEADER_STYLE} className={`${SHELL_HEADER_HEIGHT} flex items-center gap-2 border-b border-border px-2`}>
-        <SidebarToggle />
-        <SidebarLabel><span className="font-semibold">GOLD Platform</span></SidebarLabel>
-      </div>
+      <PlatformSidebarHeader />
       <PlatformNavigation />
     </>
   );
