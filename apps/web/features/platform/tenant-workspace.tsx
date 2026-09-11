@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cx, FOCUS_RING } from '@/components/class-names';
-import { PageHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
+import { PlatformHeaderTitle } from './platform-header-title';
 
 const sections = [['Overview', ''], ['Plan & Billing', '/commercial'], ['Providers', '/providers'], ['Usage', '/usage'], ['Failures', '/failures']] as const;
 
@@ -14,13 +14,10 @@ export function TenantWorkspaceHeader({ id, name, currency }: { id: string; name
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
-        <Link href="/platform/organizations" className="hover:underline">Organizations</Link>
-        <span aria-hidden> / </span>{name}
-      </nav>
-      <PageHeading className="mt-3">{name}</PageHeading>
-      <Hint className="mt-1 block">Tenant ID: {id} · Trades in {currency || 'an unconfigured currency'}.</Hint>
-      <nav aria-label="Tenant workspace" className="mt-5 flex gap-1 overflow-x-auto border-b border-border">
+      <PlatformHeaderTitle>{`Organizations / ${name}`}</PlatformHeaderTitle>
+      <h2 className="sr-only">{name}</h2>
+      <Hint className="block">Tenant ID: {id} · Trades in {currency || 'an unconfigured currency'}.</Hint>
+      <nav aria-label="Tenant workspace" className="mt-4 flex gap-1 overflow-x-auto border-b border-border">
         {sections.map(([label, suffix]) => {
           const href = `${base}${suffix}`;
           const active = pathname === href;

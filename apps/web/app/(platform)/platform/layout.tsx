@@ -1,9 +1,5 @@
 import { redirect } from 'next/navigation';
-import { AccountMenu } from '@/components/containers/account-menu';
-import { AppShell } from '@/components/containers/app-shell';
-import { PlatformMobileNavigation } from '@/features/platform/platform-mobile-navigation';
-import { PlatformNavigation } from '@/features/platform/platform-navigation';
-import { PlatformSidebarHeader } from '@/features/platform/platform-sidebar-header';
+import { PlatformShell } from '@/features/platform/platform-shell';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
@@ -27,21 +23,9 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
     redirect('/login');
   }
 
-  const sidebar = (
-    <>
-      <PlatformSidebarHeader />
-      <PlatformNavigation />
-    </>
-  );
-
   return (
-    <AppShell
-      footerCollapse={false}
-      header={<><PlatformMobileNavigation /><span className="font-semibold">Platform</span><span className="flex-1" /></>}
-      sidebar={sidebar}
-      sidebarFooter={<AccountMenu signOutAction={signOutAction} />}
-    >
+    <PlatformShell signOutAction={signOutAction}>
       {children}
-    </AppShell>
+    </PlatformShell>
   );
 }
