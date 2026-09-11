@@ -140,7 +140,6 @@ export function AppShell({
   header,
   sidebar,
   sidebarFooter,
-  footerCollapse = true,
   bottomBar,
   children,
 }: {
@@ -148,7 +147,6 @@ export function AppShell({
   sidebar: ReactNode;
   /** A persistent footer slot; the shell, not a page, owns its bottom placement. */
   sidebarFooter?: ReactNode;
-  footerCollapse?: boolean;
   bottomBar?: ReactNode;
   children: ReactNode;
 }) {
@@ -175,27 +173,7 @@ export function AppShell({
       <aside className="hidden md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:overflow-hidden md:border-r md:border-border">
         <SidebarCollapsedContext.Provider value={collapsed}>
           {sidebar}
-          <footer className="mt-auto shrink-0 border-t border-border">
-            {sidebarFooter}
-            {footerCollapse ? <button
-              type="button"
-              onClick={toggle}
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className={cx(
-                'hidden w-full items-center gap-2 px-4 py-3 text-sm text-muted hover:bg-black/5 dark:hover:bg-white/10 lg:flex',
-                collapsed ? 'justify-center' : 'justify-start',
-                FOCUS_RING,
-              )}
-            >
-              {collapsed ? (
-                <PanelLeftOpen aria-hidden size={18} className="shrink-0" />
-              ) : (
-                <PanelLeftClose aria-hidden size={18} className="shrink-0" />
-              )}
-              <SidebarLabel>Collapse</SidebarLabel>
-            </button> : null}
-          </footer>
+          {sidebarFooter ? <footer className="mt-auto shrink-0 border-t border-border">{sidebarFooter}</footer> : null}
         </SidebarCollapsedContext.Provider>
       </aside>
 
@@ -207,6 +185,21 @@ export function AppShell({
           text.
         */}
         <header style={SHELL_HEADER_STYLE} className={cx('sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background px-4 sm:px-6', SHELL_HEADER_HEIGHT)}>
+          {/* Collapse lives at the head of the header now, the same place the platform console's
+              own trigger sits — one location for the same control, not a footer row on one shell
+              and a header icon on the other. Never below `lg`: that's where the preference itself
+              stops applying (the tablet rail and phone bar have their own icon-only/full-label
+              states already). */}
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className={cx(FOCUS_RING, 'hidden -ml-2 size-9 shrink-0 items-center justify-center rounded hover:bg-black/5 dark:hover:bg-white/10 lg:flex')}
+          >
+            {collapsed ? <PanelLeftOpen aria-hidden size={18} /> : <PanelLeftClose aria-hidden size={18} />}
+          </button>
+          <span aria-hidden className="hidden h-5 w-px shrink-0 bg-border lg:block" />
           {header}
         </header>
 
