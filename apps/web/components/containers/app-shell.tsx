@@ -5,6 +5,7 @@ import {
   useContext,
   useSyncExternalStore,
   type ComponentProps,
+  type CSSProperties,
   type ReactNode,
 } from 'react';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
@@ -16,7 +17,8 @@ const STORAGE_KEY = 'gold.sidebar-collapsed';
 // external source on mount, which is the pattern `react-hooks/set-state-in-effect` refuses.
 const COLLAPSE_CHANGED = 'gold:sidebar-collapsed-changed';
 /** Shared by the main header and the identity control above the sidebar navigation. */
-export const SHELL_HEADER_HEIGHT = 'h-14';
+export const SHELL_HEADER_HEIGHT = 'shrink-0';
+export const SHELL_HEADER_STYLE: CSSProperties = { height: '3.5rem' };
 
 function readCollapsed() {
   return window.localStorage.getItem(STORAGE_KEY) === '1';
@@ -204,7 +206,7 @@ export function AppShell({
           scrolls underneath it, and a transparent bar would show the rows sliding through the
           text.
         */}
-        <header className={cx('sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background px-4 sm:px-6', SHELL_HEADER_HEIGHT)}>
+        <header style={SHELL_HEADER_STYLE} className={cx('sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background px-4 sm:px-6', SHELL_HEADER_HEIGHT)}>
           {header}
         </header>
 

@@ -1,2 +1,40 @@
-import { AppPage } from '@/components/containers/app-page'; import { DataTable } from '@/components/display/table'; import { PageHeading } from '@/components/containers/section'; import { MODULES, moduleConfiguration } from '@/lib/navigation';
-export default function ModulesPage(){return <AppPage width="full"><PageHeading>Code-backed modules</PageHeading><div className="mt-6"><DataTable rows={[...MODULES]} rowKey={(m)=>m.key} empty="No optional modules are implemented." columns={[{key:'label',header:'Module',emphasis:'primary',cell:(m)=>m.label},{key:'key',header:'Key',cell:(m)=>m.key},{key:'description',header:'Description',cell:(m)=>m.description},{key:'requires',header:'Depends on',cell:(m)=>'requires' in m ? m.requires ?? '—' : '—'},{key:'configuration',header:'Configured in',cell:(m)=>moduleConfiguration('organization',m).label}]}/></div></AppPage>}
+import Link from 'next/link';
+import { AppPage } from '@/components/containers/app-page';
+import { PageHeading } from '@/components/containers/section';
+import { DataTable } from '@/components/display/table';
+import { Badge } from '@/components/display/data';
+import { getDb } from '@/lib/db/server';
+import { listProducts } from '@/lib/domain/commercial/catalogue';
+import { MODULES, moduleConfiguration, type Module } from '@/lib/navigation';
+
+function surface(module: Module) {
+  return module.outside ?? moduleConfiguration('organization', module).label;
+}
+
+export default async function ModulesPage() {
+  const products = await listProducts(await getDb());
+  const byModule = new Map(products.filter((product) => product.moduleKey).map((product) => [product.moduleKey, product]));
+  const modules: readonly Module[] = MODULES;
+
+  return (
+    <AppPage width="full">
+      <PageHeading>Modules</PageHeading>
+      <p className="mt-2 max-w-3xl text-sm text-muted-foreground">Available code capabilities. A catalogue row can sell a module, but creating a new software module remains a development change.</p>
+      <div className="mt-6">
+        <DataTable
+          rows={[...modules]}
+          rowKey={(module) => module.key}
+          empty="No optional modules are implemented."
+          columns={[
+            { key: 'module', header: 'Module', emphasis: 'primary', cell: (module) => <div><span className="font-medium">{module.label}</span><span className="block max-w-lg text-xs text-muted-foreground">{module.description}</span></div> },
+            { key: 'key', header: 'Key', cell: (module) => module.key },
+            { key: 'surface', header: 'Surface', cell: (module) => surface(module) },
+            { key: 'requires', header: 'Depends on', cell: (module) => module.requires ?? '—' },
+            { key: 'product', header: 'Commercial product', cell: (module) => { const product = byModule.get(module.key); return product ? <Link href="/platform/catalog/products" className="underline underline-offset-4">{product.key}</Link> : 'Not mapped'; } },
+            { key: 'state', header: 'Sale state', cell: (module) => { const product = byModule.get(module.key); return product ? <Badge tone={product.saleStatus === 'active' ? 'success' : 'neutral'}>{product.saleStatus}</Badge> : <Badge>not sold</Badge>; } },
+          ]}
+        />
+      </div>
+    </AppPage>
+  );
+}

@@ -27,6 +27,9 @@ export type Product = {
   kind: 'platform' | 'module' | 'seat';
   moduleKey: string | null;
   label: string;
+  description: string;
+  saleStatus: 'active' | 'unlisted' | 'archived';
+  displayOrder: number;
 };
 
 export type ProductPrice = {
@@ -88,8 +91,8 @@ export async function listProviders(db: Db): Promise<Provider[]> {
 export async function listProducts(db: Db): Promise<Product[]> {
   const { data, error } = await db
     .from('platform_products')
-    .select('key, kind, module_key, label')
-    .order('kind')
+    .select('key, kind, module_key, label, description, sale_status, display_order')
+    .order('display_order')
     .order('key');
 
   if (error) throw new DomainError(error.message, 'commercial.products_failed');
@@ -99,7 +102,35 @@ export async function listProducts(db: Db): Promise<Product[]> {
     kind: row.kind as Product['kind'],
     moduleKey: row.module_key,
     label: row.label,
+    description: row.description,
+    saleStatus: row.sale_status as Product['saleStatus'],
+    displayOrder: row.display_order,
   }));
+}
+
+export async function updateProduct(
+  db: Db,
+  input: Pick<Product, 'key' | 'label' | 'description' | 'saleStatus' | 'displayOrder'>,
+): Promise<void> {
+  const { error } = await db.rpc('update_platform_product', {
+    p_product_key: input.key,
+    p_label: input.label,
+    p_description: input.description,
+    p_sale_status: input.saleStatus,
+    p_display_order: input.displayOrder,
+  });
+  if (error) {
+    throw new DomainError(
+      error.code === '42501' ? 'Only platform staff may update the product catalogue.' : error.message,
+      'commercial.update_product_failed',
+    );
+  }
+}
+
+export async function listMeterUsageObservations(db: Db): Promise<Map<string, number>> {
+  const { data, error } = await db.rpc('platform_meter_observations');
+  if (error) throw new DomainError(error.message, 'commercial.meter_observations_failed');
+  return new Map((data ?? []).map((row) => [row.meter_id, Number(row.usage_event_count)]));
 }
 
 /** GOLD's global, append-only list-price card. It deliberately has no organization id. */

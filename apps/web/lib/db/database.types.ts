@@ -2465,24 +2465,33 @@ export type Database = {
       platform_products: {
         Row: {
           created_at: string
+          description: string
+          display_order: number
           key: string
           kind: string
           label: string
           module_key: string | null
+          sale_status: string
         }
         Insert: {
           created_at?: string
+          description?: string
+          display_order?: number
           key: string
           kind: string
           label: string
           module_key?: string | null
+          sale_status?: string
         }
         Update: {
           created_at?: string
+          description?: string
+          display_order?: number
           key?: string
           kind?: string
           label?: string
           module_key?: string | null
+          sale_status?: string
         }
         Relationships: []
       }
@@ -4324,6 +4333,13 @@ export type Database = {
         }
         Returns: string
       }
+      platform_meter_observations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          meter_id: string
+          usage_event_count: number
+        }[]
+      }
       record_product_price: {
         Args: {
           p_amount_minor: number
@@ -4336,6 +4352,16 @@ export type Database = {
           p_source?: string
         }
         Returns: string
+      }
+      update_platform_product: {
+        Args: {
+          p_description: string
+          p_display_order: number
+          p_label: string
+          p_product_key: string
+          p_sale_status: string
+        }
+        Returns: undefined
       }
       record_provider_rate: {
         Args: {

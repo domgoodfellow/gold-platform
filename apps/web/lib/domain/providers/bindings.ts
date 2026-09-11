@@ -136,6 +136,17 @@ export async function listProviderBindings(
   return (data ?? []).map(toBinding).filter((row): row is ProviderBinding => row !== null);
 }
 
+/** Global binding totals for the provider control plane. Returns counts only, never credentials. */
+export async function listProviderBindingCounts(db: Db): Promise<Map<string, number>> {
+  const { data, error } = await db
+    .from('organization_provider_bindings')
+    .select('provider_key');
+  if (error) throw new DomainError(error.message, 'providers.binding_counts_failed');
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) counts.set(row.provider_key, (counts.get(row.provider_key) ?? 0) + 1);
+  return counts;
+}
+
 /** One organization's binding to one provider, or null if it has never had one. */
 export async function getProviderBinding(
   db: Db,
