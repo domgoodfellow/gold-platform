@@ -55,9 +55,7 @@ function PlatformAccountMenu({ signOutAction }: { signOutAction: () => Promise<v
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild><Link href="/organizations?all=1"><Building2 />Your businesses</Link></DropdownMenuItem>
             <DropdownMenuSeparator />
-            <form action={signOutAction}>
-              <DropdownMenuItem asChild variant="destructive"><button type="submit" className="w-full"><LogOut />Log out</button></DropdownMenuItem>
-            </form>
+            <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Log out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
