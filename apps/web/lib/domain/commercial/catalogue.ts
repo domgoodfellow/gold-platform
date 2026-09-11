@@ -29,6 +29,18 @@ export type Product = {
   label: string;
 };
 
+export type ProductPrice = {
+  id: string;
+  productKey: string;
+  currency: string;
+  amountMinor: number;
+  billingInterval: 'month' | 'year' | 'one_time';
+  effectiveFrom: string;
+  approvalState: 'draft' | 'approved';
+  source: string;
+  note: string;
+};
+
 /** A provider rate names who; a retail rate does not (`providerKey` is null on that one). */
 export type Rate = {
   id: string;
@@ -88,6 +100,13 @@ export async function listProducts(db: Db): Promise<Product[]> {
     moduleKey: row.module_key,
     label: row.label,
   }));
+}
+
+/** GOLD's global, append-only list-price card. It deliberately has no organization id. */
+export async function listProductPrices(db: Db): Promise<ProductPrice[]> {
+  const { data, error } = await db.from('platform_product_prices').select('id, product_key, currency, amount_minor, billing_interval, effective_from, approval_state, source, note').order('product_key').order('effective_from', { ascending: false });
+  if (error) throw new DomainError(error.message, 'commercial.product_prices_failed');
+  return (data ?? []).map((row) => ({ id: row.id, productKey: row.product_key, currency: row.currency, amountMinor: Number(row.amount_minor), billingInterval: row.billing_interval as ProductPrice['billingInterval'], effectiveFrom: row.effective_from, approvalState: isApprovalState(row.approval_state) ? row.approval_state : 'approved', source: row.source, note: row.note }));
 }
 
 function isApprovalState(value: string): value is Rate['approvalState'] {
@@ -220,4 +239,10 @@ export async function recordRetailRate(db: Db, input: RecordRetailRateInput): Pr
   }
 
   return data as string;
+}
+
+export async function recordProductPrice(db: Db, input: Omit<ProductPrice, 'id' | 'approvalState' | 'note'> & { approvalState?: ProductPrice['approvalState']; note?: string }): Promise<string> {
+  const { data, error } = await db.rpc('record_product_price', { p_product_key: input.productKey, p_currency: input.currency, p_amount_minor: input.amountMinor, p_billing_interval: input.billingInterval, p_effective_from: input.effectiveFrom, p_approval_state: input.approvalState ?? 'approved', p_source: input.source, p_note: input.note ?? '' });
+  if (error) throw new DomainError(error.code === '42501' ? 'Only platform staff may record a product price.' : error.message, 'commercial.record_product_price_failed');
+  return data;
 }

@@ -2486,6 +2486,56 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_product_prices: {
+        Row: {
+          amount_minor: number
+          approval_state: string
+          billing_interval: string
+          currency: string
+          effective_from: string
+          id: string
+          note: string
+          product_key: string
+          recorded_at: string
+          recorded_by: string
+          source: string
+        }
+        Insert: {
+          amount_minor: number
+          approval_state?: string
+          billing_interval?: string
+          currency: string
+          effective_from?: string
+          id?: string
+          note?: string
+          product_key: string
+          recorded_at?: string
+          recorded_by: string
+          source: string
+        }
+        Update: {
+          amount_minor?: number
+          approval_state?: string
+          billing_interval?: string
+          currency?: string
+          effective_from?: string
+          id?: string
+          note?: string
+          product_key?: string
+          recorded_at?: string
+          recorded_by?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_product_prices_product_key_fkey"
+            columns: ["product_key"]
+            isOneToOne: false
+            referencedRelation: "platform_products"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       platform_provider_rates: {
         Row: {
           approval_state: string
@@ -4274,6 +4324,19 @@ export type Database = {
         }
         Returns: string
       }
+      record_product_price: {
+        Args: {
+          p_amount_minor: number
+          p_approval_state?: string
+          p_billing_interval?: string
+          p_currency: string
+          p_effective_from?: string
+          p_note?: string
+          p_product_key: string
+          p_source?: string
+        }
+        Returns: string
+      }
       record_provider_rate: {
         Args: {
           p_approval_state?: string
@@ -4712,4 +4775,3 @@ export const Constants = {
     },
   },
 } as const
-
