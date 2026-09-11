@@ -49,7 +49,7 @@ function PlatformAccountMenu({ signOutAction }: { signOutAction: () => Promise<v
             side={isMobile ? 'bottom' : 'right'}
             align="end"
             sideOffset={8}
-            className="min-w-56 bg-background text-foreground opacity-100"
+            className="min-w-56"
           >
             <DropdownMenuLabel>Signed-in account</DropdownMenuLabel>
             <DropdownMenuSeparator />
