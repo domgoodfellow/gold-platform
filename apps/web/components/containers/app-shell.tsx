@@ -5,6 +5,7 @@ import {
   useContext,
   useSyncExternalStore,
   type ComponentProps,
+  type CSSProperties,
   type ReactNode,
 } from 'react';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
@@ -16,7 +17,8 @@ const STORAGE_KEY = 'gold.sidebar-collapsed';
 // external source on mount, which is the pattern `react-hooks/set-state-in-effect` refuses.
 const COLLAPSE_CHANGED = 'gold:sidebar-collapsed-changed';
 /** Shared by the main header and the identity control above the sidebar navigation. */
-export const SHELL_HEADER_HEIGHT = 'h-14';
+export const SHELL_HEADER_HEIGHT = 'shrink-0';
+export const SHELL_HEADER_STYLE: CSSProperties = { height: '3.5rem' };
 
 function readCollapsed() {
   return window.localStorage.getItem(STORAGE_KEY) === '1';
@@ -97,6 +99,12 @@ export function SidebarButton({ className, ...props }: ComponentProps<'button'>)
   return <button {...props} className={cx(SIDEBAR_ROW, 'w-full', className)} />;
 }
 
+/** Shared sidebar state control; actor shells choose where the trigger belongs. */
+export function SidebarToggle({ className }: { className?: string }) {
+  const collapsed = useSidebarCollapsed();
+  return <button type="button" onClick={() => writeCollapsed(!collapsed)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} className={cx(FOCUS_RING, 'group flex size-10 items-center justify-center rounded hover:bg-black/5 dark:hover:bg-white/10', className)}><span aria-hidden className="text-sm font-semibold group-hover:hidden group-focus:hidden">G</span><span className="hidden group-hover:flex group-focus:flex">{collapsed ? <PanelLeftOpen aria-hidden size={18} /> : <PanelLeftClose aria-hidden size={18} />}</span></button>;
+}
+
 /**
  * The identity row at the top of the sidebar: a mark, and beside it the business's name once
  * there is room. Centers the mark on its own whenever the label has nowhere to go — the
@@ -132,6 +140,7 @@ export function AppShell({
   header,
   sidebar,
   sidebarFooter,
+  footerCollapse = true,
   bottomBar,
   children,
 }: {
@@ -139,6 +148,7 @@ export function AppShell({
   sidebar: ReactNode;
   /** A persistent footer slot; the shell, not a page, owns its bottom placement. */
   sidebarFooter?: ReactNode;
+  footerCollapse?: boolean;
   bottomBar?: ReactNode;
   children: ReactNode;
 }) {
@@ -167,7 +177,7 @@ export function AppShell({
           {sidebar}
           <footer className="mt-auto shrink-0 border-t border-border">
             {sidebarFooter}
-            <button
+            {footerCollapse ? <button
               type="button"
               onClick={toggle}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -184,7 +194,7 @@ export function AppShell({
                 <PanelLeftClose aria-hidden size={18} className="shrink-0" />
               )}
               <SidebarLabel>Collapse</SidebarLabel>
-            </button>
+            </button> : null}
           </footer>
         </SidebarCollapsedContext.Provider>
       </aside>
@@ -196,7 +206,7 @@ export function AppShell({
           scrolls underneath it, and a transparent bar would show the rows sliding through the
           text.
         */}
-        <header className={cx('sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background px-4 sm:px-6', SHELL_HEADER_HEIGHT)}>
+        <header style={SHELL_HEADER_STYLE} className={cx('sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background px-4 sm:px-6', SHELL_HEADER_HEIGHT)}>
           {header}
         </header>
 

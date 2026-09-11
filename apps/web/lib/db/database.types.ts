@@ -2465,26 +2465,85 @@ export type Database = {
       platform_products: {
         Row: {
           created_at: string
+          description: string
+          display_order: number
           key: string
           kind: string
           label: string
           module_key: string | null
+          sale_status: string
         }
         Insert: {
           created_at?: string
+          description?: string
+          display_order?: number
           key: string
           kind: string
           label: string
           module_key?: string | null
+          sale_status?: string
         }
         Update: {
           created_at?: string
+          description?: string
+          display_order?: number
           key?: string
           kind?: string
           label?: string
           module_key?: string | null
+          sale_status?: string
         }
         Relationships: []
+      }
+      platform_product_prices: {
+        Row: {
+          amount_minor: number
+          approval_state: string
+          billing_interval: string
+          currency: string
+          effective_from: string
+          id: string
+          note: string
+          product_key: string
+          recorded_at: string
+          recorded_by: string
+          source: string
+        }
+        Insert: {
+          amount_minor: number
+          approval_state?: string
+          billing_interval?: string
+          currency: string
+          effective_from?: string
+          id?: string
+          note?: string
+          product_key: string
+          recorded_at?: string
+          recorded_by: string
+          source: string
+        }
+        Update: {
+          amount_minor?: number
+          approval_state?: string
+          billing_interval?: string
+          currency?: string
+          effective_from?: string
+          id?: string
+          note?: string
+          product_key?: string
+          recorded_at?: string
+          recorded_by?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_product_prices_product_key_fkey"
+            columns: ["product_key"]
+            isOneToOne: false
+            referencedRelation: "platform_products"
+            referencedColumns: ["key"]
+          },
+        ]
       }
       platform_provider_rates: {
         Row: {
@@ -4274,6 +4333,36 @@ export type Database = {
         }
         Returns: string
       }
+      platform_meter_observations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          meter_id: string
+          usage_event_count: number
+        }[]
+      }
+      record_product_price: {
+        Args: {
+          p_amount_minor: number
+          p_approval_state?: string
+          p_billing_interval?: string
+          p_currency: string
+          p_effective_from?: string
+          p_note?: string
+          p_product_key: string
+          p_source?: string
+        }
+        Returns: string
+      }
+      update_platform_product: {
+        Args: {
+          p_description: string
+          p_display_order: number
+          p_label: string
+          p_product_key: string
+          p_sale_status: string
+        }
+        Returns: undefined
+      }
       record_provider_rate: {
         Args: {
           p_approval_state?: string
@@ -4712,4 +4801,3 @@ export const Constants = {
     },
   },
 } as const
-

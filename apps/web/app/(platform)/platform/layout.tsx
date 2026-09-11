@@ -1,21 +1,49 @@
-import Link from 'next/link';
-import { AppShell, SidebarIdentity } from '@/components/containers/app-shell';
-import { AccountMenu } from '@/components/containers/account-menu';
-import { getDb } from '@/lib/db/server';
-import { signOut } from '@/lib/domain/identity/credentials';
 import { redirect } from 'next/navigation';
+import { AccountMenu } from '@/components/containers/account-menu';
+import { AppShell, SHELL_HEADER_HEIGHT, SHELL_HEADER_STYLE, SidebarLabel, SidebarToggle } from '@/components/containers/app-shell';
+import { PlatformMobileNavigation } from '@/features/platform/platform-mobile-navigation';
+import { PlatformNavigation } from '@/features/platform/platform-navigation';
+import { getDb } from '@/lib/db/server';
+import { DomainError } from '@/lib/domain/errors';
+import { signOut } from '@/lib/domain/identity/credentials';
+import { isPlatformStaff } from '@/lib/domain/platform/tenants';
+import { requireActor } from '@/lib/domain/tenancy/actor';
 
-export default function PlatformLayout({ children }: LayoutProps<'/platform'>) {
+export default async function PlatformLayout({ children }: LayoutProps<'/platform'>) {
+  const db = await getDb();
+  try {
+    await requireActor(db);
+  } catch (error) {
+    if (error instanceof DomainError && error.code === 'auth.required') redirect('/login');
+    throw error;
+  }
+  if (!(await isPlatformStaff(db))) redirect('/organizations');
+
   async function signOutAction() {
     'use server';
-    const db = await getDb();
-    await signOut(db);
+    const actionDb = await getDb();
+    await signOut(actionDb);
     redirect('/login');
   }
 
-  const sidebar = <>
-    <SidebarIdentity mark={<span aria-hidden className="flex size-7 items-center justify-center rounded bg-foreground text-sm font-semibold text-background">G</span>} label={<span className="hidden lg:block"><span className="block font-semibold">GOLD</span><span className="block text-xs text-muted">Platform</span></span>} />
-    <nav aria-label="Platform" className="flex-1 p-3"><ul className="space-y-1"><li><Link href="/platform" className="block rounded px-3 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10">Overview</Link></li></ul></nav>
-  </>;
-  return <AppShell header={<><span className="font-semibold">Platform</span><span className="flex-1" /></>} sidebar={sidebar} sidebarFooter={<AccountMenu signOutAction={signOutAction} />}>{children}</AppShell>;
+  const sidebar = (
+    <>
+      <div style={SHELL_HEADER_STYLE} className={`${SHELL_HEADER_HEIGHT} flex items-center gap-2 border-b border-border px-2`}>
+        <SidebarToggle />
+        <SidebarLabel><span className="font-semibold">GOLD Platform</span></SidebarLabel>
+      </div>
+      <PlatformNavigation />
+    </>
+  );
+
+  return (
+    <AppShell
+      footerCollapse={false}
+      header={<><PlatformMobileNavigation /><span className="font-semibold">Platform</span><span className="flex-1" /></>}
+      sidebar={sidebar}
+      sidebarFooter={<AccountMenu signOutAction={signOutAction} />}
+    >
+      {children}
+    </AppShell>
+  );
 }

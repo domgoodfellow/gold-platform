@@ -27,6 +27,21 @@ export type Product = {
   kind: 'platform' | 'module' | 'seat';
   moduleKey: string | null;
   label: string;
+  description: string;
+  saleStatus: 'active' | 'unlisted' | 'archived';
+  displayOrder: number;
+};
+
+export type ProductPrice = {
+  id: string;
+  productKey: string;
+  currency: string;
+  amountMinor: number;
+  billingInterval: 'month' | 'year' | 'one_time';
+  effectiveFrom: string;
+  approvalState: 'draft' | 'approved';
+  source: string;
+  note: string;
 };
 
 /** A provider rate names who; a retail rate does not (`providerKey` is null on that one). */
@@ -76,8 +91,8 @@ export async function listProviders(db: Db): Promise<Provider[]> {
 export async function listProducts(db: Db): Promise<Product[]> {
   const { data, error } = await db
     .from('platform_products')
-    .select('key, kind, module_key, label')
-    .order('kind')
+    .select('key, kind, module_key, label, description, sale_status, display_order')
+    .order('display_order')
     .order('key');
 
   if (error) throw new DomainError(error.message, 'commercial.products_failed');
@@ -87,7 +102,42 @@ export async function listProducts(db: Db): Promise<Product[]> {
     kind: row.kind as Product['kind'],
     moduleKey: row.module_key,
     label: row.label,
+    description: row.description,
+    saleStatus: row.sale_status as Product['saleStatus'],
+    displayOrder: row.display_order,
   }));
+}
+
+export async function updateProduct(
+  db: Db,
+  input: Pick<Product, 'key' | 'label' | 'description' | 'saleStatus' | 'displayOrder'>,
+): Promise<void> {
+  const { error } = await db.rpc('update_platform_product', {
+    p_product_key: input.key,
+    p_label: input.label,
+    p_description: input.description,
+    p_sale_status: input.saleStatus,
+    p_display_order: input.displayOrder,
+  });
+  if (error) {
+    throw new DomainError(
+      error.code === '42501' ? 'Only platform staff may update the product catalogue.' : error.message,
+      'commercial.update_product_failed',
+    );
+  }
+}
+
+export async function listMeterUsageObservations(db: Db): Promise<Map<string, number>> {
+  const { data, error } = await db.rpc('platform_meter_observations');
+  if (error) throw new DomainError(error.message, 'commercial.meter_observations_failed');
+  return new Map((data ?? []).map((row) => [row.meter_id, Number(row.usage_event_count)]));
+}
+
+/** GOLD's global, append-only list-price card. It deliberately has no organization id. */
+export async function listProductPrices(db: Db): Promise<ProductPrice[]> {
+  const { data, error } = await db.from('platform_product_prices').select('id, product_key, currency, amount_minor, billing_interval, effective_from, approval_state, source, note').order('product_key').order('effective_from', { ascending: false });
+  if (error) throw new DomainError(error.message, 'commercial.product_prices_failed');
+  return (data ?? []).map((row) => ({ id: row.id, productKey: row.product_key, currency: row.currency, amountMinor: Number(row.amount_minor), billingInterval: row.billing_interval as ProductPrice['billingInterval'], effectiveFrom: row.effective_from, approvalState: isApprovalState(row.approval_state) ? row.approval_state : 'approved', source: row.source, note: row.note }));
 }
 
 function isApprovalState(value: string): value is Rate['approvalState'] {
@@ -220,4 +270,10 @@ export async function recordRetailRate(db: Db, input: RecordRetailRateInput): Pr
   }
 
   return data as string;
+}
+
+export async function recordProductPrice(db: Db, input: Omit<ProductPrice, 'id' | 'approvalState' | 'note'> & { approvalState?: ProductPrice['approvalState']; note?: string }): Promise<string> {
+  const { data, error } = await db.rpc('record_product_price', { p_product_key: input.productKey, p_currency: input.currency, p_amount_minor: input.amountMinor, p_billing_interval: input.billingInterval, p_effective_from: input.effectiveFrom, p_approval_state: input.approvalState ?? 'approved', p_source: input.source, p_note: input.note ?? '' });
+  if (error) throw new DomainError(error.code === '42501' ? 'Only platform staff may record a product price.' : error.message, 'commercial.record_product_price_failed');
+  return data;
 }

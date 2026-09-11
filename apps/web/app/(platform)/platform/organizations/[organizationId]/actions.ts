@@ -3,64 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
-import { recordProviderRate, recordRetailRate } from '@/lib/domain/commercial/catalogue';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { recordProviderResource, setProviderResourceStatus } from '@/lib/domain/providers/bindings';
 import { provisionTelephonySubaccount } from '@/lib/domain/providers/twilio-provisioning';
 import { TELEPHONY_RESOURCE_TYPES, telephonyProviderKey } from '@/lib/adapters/telephony';
-
-export type RecordRateState = { error: string | null; recorded: boolean };
-
-export const RATE_INITIAL: RecordRateState = { error: null, recorded: false };
-
-export async function recordProviderRateAction(
-  _previous: RecordRateState,
-  formData: FormData,
-): Promise<RecordRateState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-
-  try {
-    await recordProviderRate(db, {
-      providerKey: String(formData.get('providerKey') ?? ''),
-      meterId: String(formData.get('meterId') ?? ''),
-      currency: String(formData.get('currency') ?? ''),
-      unitAmountMicros: Number(formData.get('unitAmountMicros') ?? 0),
-      source: String(formData.get('source') ?? ''),
-      note: String(formData.get('note') ?? ''),
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message, recorded: false };
-    throw error;
-  }
-
-  revalidatePath(`/platform/organizations/${organizationId}`);
-  return { error: null, recorded: true };
-}
-
-export async function recordRetailRateAction(
-  _previous: RecordRateState,
-  formData: FormData,
-): Promise<RecordRateState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-
-  try {
-    await recordRetailRate(db, {
-      meterId: String(formData.get('meterId') ?? ''),
-      currency: String(formData.get('currency') ?? ''),
-      unitAmountMicros: Number(formData.get('unitAmountMicros') ?? 0),
-      source: String(formData.get('source') ?? ''),
-      note: String(formData.get('note') ?? ''),
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message, recorded: false };
-    throw error;
-  }
-
-  revalidatePath(`/platform/organizations/${organizationId}`);
-  return { error: null, recorded: true };
-}
 
 export type ProvisionTwilioState = { error: string | null; provisioned: boolean };
 

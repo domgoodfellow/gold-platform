@@ -10,7 +10,7 @@ export function Badge({
   tone = 'neutral',
   className,
   ...props
-}: ComponentProps<'span'> & { tone?: 'neutral' | 'accent' }) {
+}: ComponentProps<'span'> & { tone?: 'neutral' | 'accent' | 'success' }) {
   return (
     <span
       {...props}
@@ -18,6 +18,8 @@ export function Badge({
         'inline-flex items-center rounded px-2 py-0.5 text-xs',
         tone === 'accent'
           ? 'bg-accent text-on-accent'
+          : tone === 'success'
+            ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
           : 'border border-border text-muted',
         className,
       )}

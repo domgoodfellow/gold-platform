@@ -21,12 +21,12 @@ const INITIAL: ProvisionState = { error: null, provisioned: null };
  * questions of different people, and folding them together now would produce one form with a
  * mode flag, which is the shape D29 spent a record arguing against at the layer below this one.
  */
-export function ProvisionForm() {
+export function ProvisionForm({ compact = false }: { compact?: boolean }) {
   const [state, formAction, pending] = useActionState(provisionOrganizationAction, INITIAL);
 
   return (
-    <form action={formAction} className="mt-8 flex flex-col gap-4">
-      <SectionHeading>Provision a business</SectionHeading>
+    <form action={formAction} className={compact ? 'flex flex-col gap-4' : 'mt-8 flex flex-col gap-4'}>
+      {!compact ? <SectionHeading>Provision a business</SectionHeading> : null}
 
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="flex flex-1 flex-col gap-1">
