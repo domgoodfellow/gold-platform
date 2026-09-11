@@ -21,6 +21,8 @@ export type Tenant = {
   /** What they've switched on, alphabetical. */
   moduleKeys: string[];
   lastActivityAt: string | null;
+  /** Still being configured, or running for real (`organizations.operational_state`, forward-only). */
+  operationalState: 'setup' | 'live';
 };
 
 /** Every column is nullable in the generated type though not in the table — a view can't declare `not null`. Narrowed below rather than asserted away. */
@@ -33,6 +35,7 @@ type TenantRow = {
   slug: string | null;
   module_keys: string[] | null;
   last_activity_at: string | null;
+  operational_state: string | null;
 };
 
 function toTenant(row: TenantRow): Tenant | null {
@@ -48,6 +51,8 @@ function toTenant(row: TenantRow): Tenant | null {
     slug: row.slug,
     moduleKeys: row.module_keys ?? [],
     lastActivityAt: row.last_activity_at,
+    // The column is `not null` on `organizations`; a view row with none is not a real tenant.
+    operationalState: row.operational_state === 'setup' ? 'setup' : 'live',
   };
 }
 
@@ -63,7 +68,7 @@ export async function getTenant(db: Db, organizationId: string): Promise<Tenant 
 
   const { data, error } = await db
     .from('platform_tenants')
-    .select('id, name, created_at, timezone, currency, slug, module_keys, last_activity_at')
+    .select('id, name, created_at, timezone, currency, slug, module_keys, last_activity_at, operational_state')
     .eq('id', organizationId)
     .maybeSingle();
 
@@ -92,7 +97,7 @@ export async function listTenants(
 
   const { data, error, count } = await db
     .from('platform_tenants')
-    .select('id, name, created_at, timezone, currency, slug, module_keys, last_activity_at', {
+    .select('id, name, created_at, timezone, currency, slug, module_keys, last_activity_at, operational_state', {
       count: 'exact',
     })
     .order('created_at', { ascending: false })
@@ -164,4 +169,18 @@ export async function listFailures(
       subject: (row.subject as string | null) ?? '',
       detail: (row.detail as string | null) ?? '',
     }));
+}
+
+/** How many, for a summary tile that has no use for the rows themselves. */
+export async function countFailures(db: Db): Promise<number> {
+  await requireActor(db);
+
+  const { count, error } = await db
+    .from('platform_failures')
+    .select('kind', { count: 'exact' })
+    .limit(1);
+
+  if (error) throw new DomainError(error.message, 'platform.failures_failed');
+
+  return count ?? 0;
 }

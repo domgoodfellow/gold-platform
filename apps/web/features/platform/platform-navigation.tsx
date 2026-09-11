@@ -2,24 +2,26 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, CircleDollarSign, Gauge, Landmark, Package, Plug, TriangleAlert } from 'lucide-react';
+import { Building2, CircleDollarSign, Gauge, LayoutDashboard, Landmark, Package, Plug, TriangleAlert } from 'lucide-react';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { SidebarLabel, useSidebarCollapsed } from '@/components/containers/app-shell';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export const PLATFORM_NAV = [
+  { label: 'Overview', href: '/platform', icon: LayoutDashboard, group: 'Platform' },
   { label: 'Organizations', href: '/platform/organizations', icon: Building2, group: 'Customers' },
   { label: 'Products', href: '/platform/catalog/products', icon: Package, group: 'Catalog' },
   { label: 'Modules', href: '/platform/catalog/modules', icon: Landmark, group: 'Catalog' },
   { label: 'Meters', href: '/platform/catalog/meters', icon: Gauge, group: 'Catalog' },
-  { label: 'Pricing', href: '/platform/pricing', icon: CircleDollarSign, group: 'Commercial' },
+  { label: 'Pricing', href: '/platform/pricing', icon: CircleDollarSign, group: 'Revenue' },
   { label: 'Providers', href: '/platform/providers', icon: Plug, group: 'Infrastructure' },
   { label: 'Failures', href: '/platform/failures', icon: TriangleAlert, group: 'Infrastructure' },
 ] as const;
 
-const PLATFORM_GROUPS = ['Customers', 'Catalog', 'Commercial', 'Infrastructure'] as const;
+const PLATFORM_GROUPS = ['Platform', 'Customers', 'Catalog', 'Revenue', 'Infrastructure'] as const;
 
 function isActive(pathname: string, href: string) {
+  if (href === '/platform') return pathname === href;
   return href === '/platform/organizations' ? pathname.startsWith(href) : pathname === href;
 }
 

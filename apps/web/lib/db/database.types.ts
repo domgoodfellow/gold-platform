@@ -2462,39 +2462,6 @@ export type Database = {
         }
         Relationships: []
       }
-      platform_products: {
-        Row: {
-          created_at: string
-          description: string
-          display_order: number
-          key: string
-          kind: string
-          label: string
-          module_key: string | null
-          sale_status: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string
-          display_order?: number
-          key: string
-          kind: string
-          label: string
-          module_key?: string | null
-          sale_status?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string
-          display_order?: number
-          key?: string
-          kind?: string
-          label?: string
-          module_key?: string | null
-          sale_status?: string
-        }
-        Relationships: []
-      }
       platform_product_prices: {
         Row: {
           amount_minor: number
@@ -2544,6 +2511,39 @@ export type Database = {
             referencedColumns: ["key"]
           },
         ]
+      }
+      platform_products: {
+        Row: {
+          created_at: string
+          description: string
+          display_order: number
+          key: string
+          kind: string
+          label: string
+          module_key: string | null
+          sale_status: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          key: string
+          kind: string
+          label: string
+          module_key?: string | null
+          sale_status?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          key?: string
+          kind?: string
+          label?: string
+          module_key?: string | null
+          sale_status?: string
+        }
+        Relationships: []
       }
       platform_provider_rates: {
         Row: {
@@ -3881,6 +3881,7 @@ export type Database = {
           last_activity_at: string | null
           module_keys: string[] | null
           name: string | null
+          operational_state: string | null
           slug: string | null
           timezone: string | null
         }
@@ -3891,6 +3892,7 @@ export type Database = {
           last_activity_at?: never
           module_keys?: never
           name?: string | null
+          operational_state?: string | null
           slug?: string | null
           timezone?: string | null
         }
@@ -3901,6 +3903,7 @@ export type Database = {
           last_activity_at?: never
           module_keys?: never
           name?: string | null
+          operational_state?: string | null
           slug?: string | null
           timezone?: string | null
         }
@@ -4253,6 +4256,13 @@ export type Database = {
           needed_at: string
         }[]
       }
+      platform_meter_observations: {
+        Args: never
+        Returns: {
+          meter_id: string
+          usage_event_count: number
+        }[]
+      }
       provision_organization: {
         Args: {
           p_capabilities: string[]
@@ -4324,22 +4334,6 @@ export type Database = {
         }
         Returns: string
       }
-      record_provider_payment: {
-        Args: {
-          p_amount_minor: number
-          p_provider: string
-          p_provider_reference: string
-          p_request_id: string
-        }
-        Returns: string
-      }
-      platform_meter_observations: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          meter_id: string
-          usage_event_count: number
-        }[]
-      }
       record_product_price: {
         Args: {
           p_amount_minor: number
@@ -4353,15 +4347,14 @@ export type Database = {
         }
         Returns: string
       }
-      update_platform_product: {
+      record_provider_payment: {
         Args: {
-          p_description: string
-          p_display_order: number
-          p_label: string
-          p_product_key: string
-          p_sale_status: string
+          p_amount_minor: number
+          p_provider: string
+          p_provider_reference: string
+          p_request_id: string
         }
-        Returns: undefined
+        Returns: string
       }
       record_provider_rate: {
         Args: {
@@ -4601,6 +4594,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_platform_product: {
+        Args: {
+          p_description: string
+          p_display_order: number
+          p_label: string
+          p_product_key: string
+          p_sale_status: string
+        }
+        Returns: undefined
+      }
       update_price_book_item: {
         Args: {
           p_id: string
@@ -4801,3 +4804,4 @@ export const Constants = {
     },
   },
 } as const
+

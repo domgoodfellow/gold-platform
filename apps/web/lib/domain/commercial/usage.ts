@@ -236,3 +236,15 @@ export async function listProviderSyncFailures(
     detail: row.detail,
   }));
 }
+
+/** How many, for a summary tile that has no use for the rows themselves. */
+export async function countProviderSyncFailures(db: Db): Promise<number> {
+  const { count, error } = await db
+    .from('platform_provider_sync_failures')
+    .select('id', { count: 'exact' })
+    .limit(1);
+
+  if (error) throw new DomainError(error.message, 'commercial.sync_failures_failed');
+
+  return count ?? 0;
+}

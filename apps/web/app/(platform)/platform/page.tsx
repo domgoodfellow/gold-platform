@@ -1,6 +1,11 @@
-import { redirect } from 'next/navigation';
+import { PlatformOverview } from '@/features/platform/platform-overview';
+import { getDb } from '@/lib/db/server';
+import { platformOverview } from '@/lib/domain/platform/overview';
 
-/** There is no redundant overview: Organizations is the useful first control-plane task. */
-export default function PlatformPage() {
-  redirect('/platform/organizations');
+export const dynamic = 'force-dynamic';
+
+export default async function PlatformPage() {
+  const db = await getDb();
+  const data = await platformOverview(db);
+  return <PlatformOverview {...data} />;
 }
