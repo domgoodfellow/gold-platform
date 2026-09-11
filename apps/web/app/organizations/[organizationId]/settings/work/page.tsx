@@ -1,5 +1,6 @@
 import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
+import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import Link from 'next/link';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
@@ -67,7 +68,7 @@ export default async function WorkConfigurationPage({
   const statusName = new Map(statuses.map((status) => [status.id, status.name]));
 
   return (
-    <>
+    <SettingsPageFrame organizationId={organizationId}>
       <PageHeading>Work</PageHeading>
       <Hint className="mt-1">
         The kinds of work this business does, the stages a job moves through, and the steps every
@@ -258,6 +259,6 @@ export default async function WorkConfigurationPage({
           </Hint>
         )}
       </Section>
-    </>
+    </SettingsPageFrame>
   );
 }

@@ -1,5 +1,6 @@
 import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
+import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { ButtonLink } from '@/components/controls/button';
 import { listProviders } from '@/lib/domain/commercial/catalogue';
 import { listProviderBindings, listProviderResources } from '@/lib/domain/providers/bindings';
@@ -52,7 +53,7 @@ export default async function ConnectionsPage({
   );
 
   return (
-    <>
+    <SettingsPageFrame organizationId={organizationId}>
       <PageHeading>Connections</PageHeading>
       <Hint className="mt-1">
         What this business is connected to, and what it can choose from. Never what any of it
@@ -131,6 +132,6 @@ export default async function ConnectionsPage({
           </DividedList>
         )}
       </Section>
-    </>
+    </SettingsPageFrame>
   );
 }

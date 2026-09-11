@@ -1,10 +1,9 @@
 import { Hint } from '@/components/controls/inputs';
 import { Card } from '@/components/containers/card';
-import { AppPage } from '@/components/containers/app-page';
 import { ButtonLink } from '@/components/controls/button';
 import { DividedList, Section, SectionHeading } from '@/components/containers/section';
 import { ProfileForm } from '@/features/public-profile/profile-form';
-import { SettingsNavigation } from '@/features/settings/settings-navigation';
+import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { paymentProvider } from '@/lib/adapters/payments';
 import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
@@ -96,10 +95,7 @@ export default async function SettingsPage({
   const mayConfigure = organization.capabilities.includes('field.manage');
 
   return (
-    <AppPage width="wide">
-      <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
-        <SettingsNavigation organizationId={organizationId} />
-        <div className="min-w-0">
+    <SettingsPageFrame organizationId={organizationId}>
       <Hint className="mt-1">Configure how this business works.</Hint>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -366,8 +362,6 @@ export default async function SettingsPage({
           </Hint>
         )}
       </Section>
-        </div>
-      </div>
-    </AppPage>
+    </SettingsPageFrame>
   );
 }

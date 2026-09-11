@@ -1,5 +1,6 @@
 import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
+import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { communicationsAccount } from '@/lib/domain/communications/credits';
 import { listProducts } from '@/lib/domain/commercial/catalogue';
 import { listOrganizationTerms, moduleCommercialState } from '@/lib/domain/commercial/terms';
@@ -51,7 +52,7 @@ export default async function PlanAndUsagePage({
   const productLabel = new Map(products.map((product) => [product.key, product.label]));
 
   return (
-    <>
+    <SettingsPageFrame organizationId={organizationId}>
       <PageHeading>Plan &amp; usage</PageHeading>
       <Hint className="mt-1">
         What this business is entitled to use right now, what GOLD has recorded selling it, and
@@ -130,6 +131,6 @@ export default async function PlanAndUsagePage({
           </EmptyState>
         )}
       </Section>
-    </>
+    </SettingsPageFrame>
   );
 }
