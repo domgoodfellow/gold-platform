@@ -97,6 +97,12 @@ export function SidebarButton({ className, ...props }: ComponentProps<'button'>)
   return <button {...props} className={cx(SIDEBAR_ROW, 'w-full', className)} />;
 }
 
+/** Shared sidebar state control; actor shells choose where the trigger belongs. */
+export function SidebarToggle({ className }: { className?: string }) {
+  const collapsed = useSidebarCollapsed();
+  return <button type="button" onClick={() => writeCollapsed(!collapsed)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} className={cx(FOCUS_RING, 'flex size-10 items-center justify-center rounded hover:bg-black/5 dark:hover:bg-white/10', className)}>{collapsed ? <PanelLeftOpen aria-hidden size={18} /> : <PanelLeftClose aria-hidden size={18} />}</button>;
+}
+
 /**
  * The identity row at the top of the sidebar: a mark, and beside it the business's name once
  * there is room. Centers the mark on its own whenever the label has nowhere to go — the
@@ -132,6 +138,7 @@ export function AppShell({
   header,
   sidebar,
   sidebarFooter,
+  footerCollapse = true,
   bottomBar,
   children,
 }: {
@@ -139,6 +146,7 @@ export function AppShell({
   sidebar: ReactNode;
   /** A persistent footer slot; the shell, not a page, owns its bottom placement. */
   sidebarFooter?: ReactNode;
+  footerCollapse?: boolean;
   bottomBar?: ReactNode;
   children: ReactNode;
 }) {
@@ -167,7 +175,7 @@ export function AppShell({
           {sidebar}
           <footer className="mt-auto shrink-0 border-t border-border">
             {sidebarFooter}
-            <button
+            {footerCollapse ? <button
               type="button"
               onClick={toggle}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -184,7 +192,7 @@ export function AppShell({
                 <PanelLeftClose aria-hidden size={18} className="shrink-0" />
               )}
               <SidebarLabel>Collapse</SidebarLabel>
-            </button>
+            </button> : null}
           </footer>
         </SidebarCollapsedContext.Provider>
       </aside>
