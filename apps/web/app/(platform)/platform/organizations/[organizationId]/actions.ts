@@ -18,8 +18,6 @@ export async function recordProviderRateAction(
   formData: FormData,
 ): Promise<RecordRateState> {
   const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-
   try {
     await recordProviderRate(db, {
       providerKey: String(formData.get('providerKey') ?? ''),
@@ -34,7 +32,7 @@ export async function recordProviderRateAction(
     throw error;
   }
 
-  revalidatePath(`/platform/organizations/${organizationId}`);
+  revalidatePath('/platform/pricing');
   return { error: null, recorded: true };
 }
 
@@ -43,8 +41,6 @@ export async function recordRetailRateAction(
   formData: FormData,
 ): Promise<RecordRateState> {
   const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-
   try {
     await recordRetailRate(db, {
       meterId: String(formData.get('meterId') ?? ''),
@@ -58,7 +54,7 @@ export async function recordRetailRateAction(
     throw error;
   }
 
-  revalidatePath(`/platform/organizations/${organizationId}`);
+  revalidatePath('/platform/pricing');
   return { error: null, recorded: true };
 }
 
