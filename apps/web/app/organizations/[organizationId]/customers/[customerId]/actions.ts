@@ -7,13 +7,12 @@ import { updateCustomer } from '@/lib/domain/customers/customers';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import { DomainError } from '@/lib/domain/errors';
-
-export type UploadState = { error: string | null };
+import type { UploadDocumentState } from '@/features/documents/upload-form';
 
 export async function uploadCustomerDocumentAction(
-  _previous: UploadState,
+  _previous: UploadDocumentState,
   formData: FormData,
-): Promise<UploadState> {
+): Promise<UploadDocumentState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
   const customerId = String(formData.get('customerId') ?? '');

@@ -25,11 +25,16 @@ export default async function OrganizationLayout({
 }: LayoutProps<'/organizations/[organizationId]'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  const [enabledModules, myOrganizations, staff] = await Promise.all([
+  const [enabledModules, myOrganizations, staff, { data: userData }] = await Promise.all([
     listUsableModules(db, { organizationId }),
     listMyOrganizations(db),
     isPlatformStaff(db),
+    db.auth.getUser(),
   ]);
+  // `requireOrganization` already proved a session exists; this is a second, deliberately
+  // separate read of the same session for the one extra fact the shell shows (I11's minimal
+  // `Actor` shape carries only an id).
+  const email = userData.user?.email ?? '';
   // Read here rather than per-screen, since a brand belongs to the shell — every page inside
   // inherits these roles and never has to know whose colour it's rendering.
   const brand = await getBrand(db, { organizationId });
@@ -79,6 +84,7 @@ export default async function OrganizationLayout({
       platformStaff={staff}
       enabledModules={[...enabledModules]}
       setupEntry={inSetup ? <SetupEntry organizationId={organizationId} /> : null}
+      email={email}
       signOutAction={signOutAction}
     />
   );
@@ -103,7 +109,7 @@ export default async function OrganizationLayout({
       {inSetup ? <SetupBadge organizationId={organizationId} /> : null}
 
       <span className="flex-1" />
-      <div className="md:hidden"><AccountMenu signOutAction={signOutAction} /></div>
+      <div className="md:hidden"><AccountMenu email={email} signOutAction={signOutAction} /></div>
     </header>
   );
 

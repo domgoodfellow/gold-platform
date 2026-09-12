@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DomainError } from '@/lib/domain/errors';
 import {
+  changePassword,
   registerWithPassword,
   signInWithPassword,
   signOut,
@@ -98,5 +99,39 @@ describe('password identity', () => {
 
     await signOut(db);
     expect((await db.auth.getUser()).data.user).toBeNull();
+  });
+});
+
+describe('changing password from a signed-in session', () => {
+  beforeEach(() => {
+    db = anonClient();
+    email = `user-${randomUUID().slice(0, 8)}@example.test`;
+  });
+
+  it('changes the password, which then signs in', async () => {
+    await registerWithPassword(db, { email, password: PASSWORD, passwordConfirmation: PASSWORD });
+
+    const NEW_PASSWORD = 'new-correct-horse-battery';
+    await changePassword(db, { password: NEW_PASSWORD, passwordConfirmation: NEW_PASSWORD });
+
+    const fresh = anonClient();
+    await signInWithPassword(fresh, { email, password: NEW_PASSWORD });
+    expect((await fresh.auth.getUser()).data.user?.email).toBe(email);
+  });
+
+  it('rejects a short password before it reaches the provider, same as registering', async () => {
+    await registerWithPassword(db, { email, password: PASSWORD, passwordConfirmation: PASSWORD });
+
+    await expect(
+      changePassword(db, { password: 'short', passwordConfirmation: 'short' }),
+    ).rejects.toMatchObject({ code: 'identity.password_too_short' });
+  });
+
+  it('refuses a mistyped confirmation', async () => {
+    await registerWithPassword(db, { email, password: PASSWORD, passwordConfirmation: PASSWORD });
+
+    await expect(
+      changePassword(db, { password: 'a-new-password', passwordConfirmation: 'a-typo' }),
+    ).rejects.toMatchObject({ code: 'identity.password_mismatch' });
   });
 });

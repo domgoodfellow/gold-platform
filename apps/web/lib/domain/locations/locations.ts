@@ -116,6 +116,60 @@ function one<T>(value: T | T[] | null): T | undefined {
 }
 
 /**
+ * One location, or null.
+ *
+ * Null covers both "no such location" and "not yours" indistinguishably, via RLS — the same
+ * shape `getCustomer` and `getAsset` share. The linked-customers query is the same second query
+ * `listLocations` runs, scoped to one row instead of a page of them.
+ */
+export async function getLocation(
+  db: Db,
+  input: { organizationId: string; locationId: string },
+): Promise<Location | null> {
+  const { data, error } = await db
+    .from('locations')
+    .select('id, label, address, access_notes, latitude, longitude, custom, created_at')
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.locationId)
+    .maybeSingle();
+
+  if (error) {
+    throw new DomainError(error.message, 'locations.get_failed');
+  }
+  if (!data) return null;
+
+  const { data: links, error: linkError } = await db
+    .from('customer_locations')
+    .select('customers!customer_locations_customer_same_org (id, name)')
+    .eq('organization_id', input.organizationId)
+    .eq('location_id', input.locationId);
+
+  if (linkError) {
+    throw new DomainError(linkError.message, 'locations.links_failed');
+  }
+
+  const customers = (links ?? [])
+    .map((link) => one(link.customers))
+    .filter((customer): customer is { id: string; name: string } => customer !== undefined)
+    .map((customer) => ({ id: customer.id, name: customer.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    id: data.id,
+    label: data.label,
+    address: data.address,
+    accessNotes: data.access_notes,
+    coordinates:
+      data.latitude !== null && data.longitude !== null
+        ? { latitude: data.latitude, longitude: data.longitude }
+        : null,
+    custom: (data.custom ?? {}) as CustomValues,
+    customers,
+    createdAt: data.created_at,
+  };
+}
+
+/**
  * Create a location.
  *
  * Whether the caller may is not decided here — `locations_insert` requires `location.create`,

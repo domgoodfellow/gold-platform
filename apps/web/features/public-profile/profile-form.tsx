@@ -1,7 +1,7 @@
 'use client';
 
 import { ErrorText, Hint, TextArea, TextInput } from '@/components/controls/inputs';
-import { Button } from '@/components/controls/button';
+import { Button, ButtonLink } from '@/components/controls/button';
 import { useActionState } from 'react';
 import type { PublicProfile } from '@/lib/domain/tenancy/profile';
 
@@ -22,11 +22,19 @@ export function ProfileForm({
   organizationId,
   profile,
   slug,
+  hasBookableType,
   action,
 }: {
   organizationId: string;
   profile: PublicProfile;
   slug: string | null;
+  /**
+   * Whether `/book/{slug}` actually resolves. `booking_organization` answers only for a
+   * business that has published a bookable kind of work — deliberately, so that setting a
+   * slug alone does not make a business publicly addressable (20260829000005_booking_slug.sql).
+   * A live link here would send somebody straight to a 404 until that is also true.
+   */
+  hasBookableType: boolean;
   action: (
     previous: ProfileActionState,
     formData: FormData,
@@ -111,11 +119,17 @@ export function ProfileForm({
 
       {/* Where it appears, or that it does not yet. A business with no public address has
           written copy nobody can reach, and saying so is worth more than hiding the form. */}
-      <Hint className="text-xs">
-        {slug
-          ? `Shown at /book/${slug}`
-          : 'Set a public booking address above to give this page somewhere to live.'}
-      </Hint>
+      {slug && hasBookableType ? (
+        <ButtonLink href={`/book/${slug}`} target="_blank" size="small" className="w-fit">
+          Preview /book/{slug}
+        </ButtonLink>
+      ) : (
+        <Hint className="text-xs">
+          {slug
+            ? 'Not reachable yet — publish at least one bookable kind of work first.'
+            : 'Set a public booking address above to give this page somewhere to live.'}
+        </Hint>
+      )}
 
       <ErrorText role="alert">{state.error}</ErrorText>
     </form>

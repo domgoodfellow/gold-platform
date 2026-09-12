@@ -4,6 +4,8 @@ import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CustomFieldValues } from '@/features/custom-fields/values';
+import { DocumentsSection } from '@/features/documents/section';
+import { ActivityList } from '@/features/timeline/activity-list';
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listCustomerCalls } from '@/lib/domain/reception/calls';
@@ -13,18 +15,11 @@ import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { PortalLinkForm } from '@/features/public-profile/portal-link-form';
 import { listPortalInvites } from '@/lib/domain/portal/portal';
 import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
-import { createPortalInviteAction } from './actions';
+import { createPortalInviteAction, uploadCustomerDocumentAction } from './actions';
 import { requireOrganization } from '@/lib/route/organization';
-import { UploadDocumentForm } from './upload-document-form';
 import { CallCustomerForm, EditCustomerForm } from './customer-forms';
 
 export const dynamic = 'force-dynamic';
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export default async function CustomerPage({
   params,
@@ -59,6 +54,7 @@ export default async function CustomerPage({
   // off takes the stage, the dialler and the call history off this screen too — the same rule
   // that makes switching billing off remove the quote and the invoice from a job.
   const reception = modules.has('reception');
+  const portal = modules.has('portal');
   const stage = stages.find((entry) => entry.id === customer.stageId) ?? null;
 
   return (
@@ -161,109 +157,55 @@ export default async function CustomerPage({
         </Section>
       ) : null}
 
-      <Section className="mt-10">
-        <SectionHeading>Documents</SectionHeading>
+      <DocumentsSection
+        organizationId={organizationId}
+        documents={documents}
+        mayAttach={mayAttach}
+        roleLabel={organization.role}
+        uploadAction={uploadCustomerDocumentAction}
+        hiddenFields={{ organizationId, customerId }}
+      />
 
-        {documents.length === 0 ? (
-          <EmptyState className="mt-2">Nothing attached yet.</EmptyState>
-        ) : (
-          <DividedList className="mt-2">
-            {documents.map((document) => (
-              <li key={document.id} className="flex items-baseline justify-between py-3">
-                <div>
-                  {/*
-                    Points at our own route, never at storage. The signed URL is minted when
-                    this is clicked and lives sixty seconds; a link to storage rendered into
-                    this page would be the durable URL constraints.md forbids.
-                  */}
-                  <a
-                    href={`/organizations/${organizationId}/documents/${document.id}/download`}
-                    className="font-medium underline underline-offset-4"
-                  >
-                    {document.fileName}
-                  </a>
-                  <div className="text-sm text-muted">
-                    {[document.mimeType, formatSize(document.sizeBytes)].join(' · ')}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </DividedList>
-        )}
-
-        {mayAttach ? (
-          <UploadDocumentForm organizationId={organizationId} customerId={customerId} />
-        ) : (
-          <Hint className="mt-4">
-            Your role, {organization.role}, cannot attach documents here.
+      {/* The same rule Reception follows above: a module off takes its section off this screen
+          too, not just its own area (constraints.md — "a colour keyed to what a status means"
+          sibling rule, restated for modules). */}
+      {portal ? (
+        <Section className="mt-8">
+          <SectionHeading>Portal</SectionHeading>
+          <Hint className="mt-1">
+            A link this customer can open to see their own work and invoices. Anyone holding it is
+            them, so send it the way you would send a document — and withdraw it if it goes
+            astray.
           </Hint>
-        )}
-      </Section>
 
-      <Section className="mt-8">
-        <SectionHeading>Portal</SectionHeading>
-        <Hint className="mt-1">
-          A link this customer can open to see their own work and invoices. Anyone holding it is
-          them, so send it the way you would send a document — and withdraw it if it goes
-          astray.
-        </Hint>
+          {mayAttach ? (
+            <PortalLinkForm
+              organizationId={organizationId}
+              customerId={customerId}
+              origin=""
+              createAction={createPortalInviteAction}
+            />
+          ) : (
+            <Hint className="mt-3">
+              Your role, {organization.role}, cannot invite customers here.
+            </Hint>
+          )}
 
-        {mayAttach ? (
-          <PortalLinkForm
-            organizationId={organizationId}
-            customerId={customerId}
-            origin=""
-            createAction={createPortalInviteAction}
-          />
-        ) : (
-          <Hint className="mt-3">
-            Your role, {organization.role}, cannot invite customers here.
-          </Hint>
-        )}
-
-        {invites.length > 0 ? (
-          <Hint weight="subtle" className="mt-3 text-xs">
-            {invites.filter((invite) => invite.revokedAt === null).length} active,{' '}
-            {invites.filter((invite) => invite.revokedAt !== null).length} withdrawn.
-          </Hint>
-        ) : null}
-      </Section>
+          {invites.length > 0 ? (
+            <Hint weight="subtle" className="mt-3 text-xs">
+              {invites.filter((invite) => invite.revokedAt === null).length} active,{' '}
+              {invites.filter((invite) => invite.revokedAt !== null).length} withdrawn.
+            </Hint>
+          ) : null}
+        </Section>
+      ) : null}
 
       <Section className="mt-8">
         <SectionHeading>History</SectionHeading>
         {/* The first screen that reads `events`. Not capability-gated, and deliberately: the
             table is append-only and every row on it is already restricted by RLS to this
             tenant, so there is nothing here a member of this business may not see. */}
-
-        {timeline.length === 0 ? (
-          <EmptyState weight="subtle" className="mt-1">Nothing recorded yet.</EmptyState>
-        ) : (
-          <DividedList as="ol" className="mt-2">
-            {timeline.map((entry) => (
-              <li key={entry.id} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:gap-3">
-                {/* The instant, in this business's zone (I9). `formatWindow` takes a range and
-                    this is a moment, so the same rule is applied with the same zone rather
-                    than a second formatter deciding for itself. */}
-                <time
-                  dateTime={entry.occurredAt}
-                  className="shrink-0 text-xs tabular-nums text-subtle sm:w-40 sm:pt-0.5"
-                >
-                  {new Intl.DateTimeFormat('en-GB', {
-                    dateStyle: 'medium',
-                    timeStyle: 'short',
-                    timeZone: organization.timezone,
-                  }).format(new Date(entry.occurredAt))}
-                </time>
-                <div className="min-w-0 text-sm">
-                  <div>{entry.description}</div>
-                  {/* I11 is an actor id; a name is what this tenant chose to call them, and
-                      somebody who has left the business no longer has one (D19). */}
-                  <div className="text-xs text-subtle">{entry.actorName ?? 'A former member'}</div>
-                </div>
-              </li>
-            ))}
-          </DividedList>
-        )}
+        <ActivityList timeline={timeline} timezone={organization.timezone} />
       </Section>
     </>
   );

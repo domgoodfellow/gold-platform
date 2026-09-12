@@ -5,7 +5,7 @@ import { createCustomer } from '@/lib/domain/customers/customers';
 import { createLocation, linkCustomerLocation } from '@/lib/domain/locations/locations';
 import { createResource } from '@/lib/domain/resources/resources';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
-import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
+import { listCustomerTimeline, listWorkItemTimeline } from '@/lib/domain/timeline/timeline';
 import { createWorkItemStatus, updateWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemTransition, changeWorkItemStatus } from '@/lib/domain/work-items/transitions';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
@@ -245,6 +245,51 @@ describe('a customer’s history', () => {
     const entries = await listCustomerTimeline(acme.db, {
       organizationId: acme.organizationId,
       customerId: other.customerId,
+    });
+    expect(entries).toEqual([]);
+  });
+});
+
+describe('a job’s own history', () => {
+  it('reads exactly what happened to this job — no view needed, unlike a customer’s', async () => {
+    const entries = await listWorkItemTimeline(acme.db, {
+      organizationId: acme.organizationId,
+      workItemId: acme.workItemId,
+    });
+    const actions = entries.map((entry) => entry.action);
+
+    expect(actions).toContain('work_item.created');
+    expect(actions).toContain('work_item.scheduled');
+    expect(actions).toContain('work_item.status_changed');
+    // Written against the customer row, not this job — a job's own history is narrower than
+    // the customer's, which is the whole point of having two scopes rather than one.
+    expect(actions).not.toContain('customer.created');
+  });
+
+  it('drops the redundant "on <title>" a customer’s timeline needs but a job’s own page does not', async () => {
+    const entries = await listWorkItemTimeline(acme.db, {
+      organizationId: acme.organizationId,
+      workItemId: acme.workItemId,
+    });
+    const scheduled = entries.find((entry) => entry.action === 'work_item.scheduled');
+    expect(scheduled!.description).toBe('Scheduled to Van 1');
+  });
+
+  it('is newest first', async () => {
+    const entries = await listWorkItemTimeline(acme.db, {
+      organizationId: acme.organizationId,
+      workItemId: acme.workItemId,
+    });
+    const stamps = entries.map((entry) => entry.occurredAt);
+    expect([...stamps].sort((a, b) => b.localeCompare(a))).toEqual(stamps);
+  });
+
+  it('shows one tenant nothing of another’s job', async () => {
+    const other = await newTenant('tl-other-job');
+
+    const entries = await listWorkItemTimeline(acme.db, {
+      organizationId: acme.organizationId,
+      workItemId: other.workItemId,
     });
     expect(entries).toEqual([]);
   });

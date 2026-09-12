@@ -11,6 +11,8 @@ import { addChecklistItem, setChecklistItemDone } from '@/lib/domain/work-items/
 import { addPricedLine, removePricedLine } from '@/lib/domain/pricing/prices';
 import { recordCost, recordTime } from '@/lib/domain/work-items/consumption';
 import { updateWorkItem } from '@/lib/domain/work-items/work-items';
+import { uploadDocument } from '@/lib/domain/documents/documents';
+import type { UploadDocumentState } from '@/features/documents/upload-form';
 
 export type WorkItemActionState = { error: string | null };
 
@@ -305,4 +307,35 @@ export async function requestCardPaymentAction(
     if (error instanceof DomainError) return { error: error.message, payUrl: null };
     throw error;
   }
+}
+
+export async function uploadWorkItemDocumentAction(
+  _previous: UploadDocumentState,
+  formData: FormData,
+): Promise<UploadDocumentState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const workItemId = String(formData.get('workItemId') ?? '');
+  const file = formData.get('file');
+
+  if (!(file instanceof File)) {
+    return { error: 'Choose a file first.' };
+  }
+
+  try {
+    // Not re-checked here: the composite FK on `documents.work_item_id` makes a document
+    // naming another tenant's job impossible to write, the same guarantee every other
+    // attachment action in this codebase rests on.
+    await uploadDocument(db, {
+      organizationId,
+      attachedTo: { entity: 'work_item', id: workItemId },
+      file,
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidate(organizationId, workItemId);
+  return { error: null };
 }

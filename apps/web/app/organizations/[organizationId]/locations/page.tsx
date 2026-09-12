@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Disclosure } from '@/components/containers/card';
 import { AppPage } from '@/components/containers/app-page';
 import { Hint } from '@/components/controls/inputs';
@@ -87,7 +88,14 @@ export default async function LocationsPage({
               key: 'label',
               header: 'Place',
               emphasis: 'primary',
-              cell: (location) => location.label,
+              cell: (location) => (
+                <Link
+                  href={`/organizations/${organizationId}/locations/${location.id}`}
+                  className="underline underline-offset-4"
+                >
+                  {location.label}
+                </Link>
+              ),
             },
             {
               key: 'address',

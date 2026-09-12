@@ -1,8 +1,7 @@
 'use client';
 
-import { DividedList, EmptyState, GroupHeading, Section, SectionHeading } from '@/components/containers/section';
-import { Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
-import { FormError } from '@/components/controls/form';
+import { EmptyState, GroupHeading } from '@/components/containers/section';
+import { Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import { Card } from '@/components/containers/card';
 import { ConfirmSubmit } from '@/components/containers/dialog';
@@ -14,47 +13,34 @@ import {
   METRICS,
   OPERATORS,
   TRIGGER_EVENTS,
-  TRIGGER_KINDS,
   type AutomationRule,
   type AutomationRun,
 } from '@/lib/domain/automation/rules';
-import {
-  CHANNELS,
-  PLACEHOLDERS,
-  type MessageDelivery,
-  type MessageTemplate,
-} from '@/lib/domain/automation/templates';
+import { CHANNELS, type MessageTemplate } from '@/lib/domain/automation/templates';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import {
   addActionAction,
   addConditionAction,
-  createRuleAction,
-  createTemplateAction,
   deleteRuleAction,
-  deleteTemplateAction,
-  updateTemplateAction,
   removeActionAction,
   removeConditionAction,
   renameRuleAction,
   setRuleEnabledAction,
-  type AutomationActionState,
 } from '@/app/organizations/[organizationId]/automations/actions';
-
-const INITIAL: AutomationActionState = { error: null };
+import { ActionError, INITIAL_AUTOMATION_ACTION_STATE as INITIAL } from '../shared';
+import { RuleWarnings } from '../review/rule-warnings';
 
 /** A status this business has, named by its kind of work so two "Booked" are told apart. */
 export type StatusChoice = { id: string; label: string };
-
-function Error({ state }: { state: AutomationActionState }) {
-  return <FormError className="mt-1">{state.error}</FormError>;
-}
 
 /**
  * The whole grammar, on one card, read as a sentence.
  *
  * **When … if … then**, in that order, because that is the order somebody describes a rule out
  * loud. The alternative — three tabs, or a wizard — hides two thirds of a rule from the person
- * checking whether it says what they meant.
+ * checking whether it says what they meant. Kept as one card rather than split by responsibility
+ * the way the surrounding workspace was, because splitting a rule's own WHEN/IF/THEN across
+ * files would be splitting the one thing this screen exists to keep readable as a sentence.
  */
 export function AutomationRuleCard({
   organizationId,
@@ -108,19 +94,7 @@ export function AutomationRuleCard({
         ) : null}
       </header>
 
-      {/* **Above the rule rather than beside it**, because these are reasons it will not do
-          what somebody meant — and a warning under three sections of detail is a warning nobody
-          reads. Never a refusal: a rule that looks wrong now may be right about statuses this
-          business is halfway through setting up. */}
-      {warnings.length > 0 ? (
-        <ul className="mt-3 flex flex-col gap-1 border-l-2 border-amber-500 pl-3">
-          {warnings.map((warning) => (
-            <li key={warning} className="text-sm opacity-80">
-              {warning}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <RuleWarnings warnings={warnings} />
 
       <section className="mt-4">
         <GroupHeading>If</GroupHeading>
@@ -275,12 +249,6 @@ function describeValue(value: string, statuses: StatusChoice[]): string {
 }
 
 /**
- * Minutes, in the words somebody would use.
- *
- * Stored as one number because a duration is one number; read back as hours or days because
- * "two hours" is what a business said and "120 minutes" is what the column holds.
- */
-/**
  * A rule's trigger, as a sentence.
  *
  * Three kinds and three sentences, because they are genuinely three different things and one
@@ -310,6 +278,12 @@ function describeTrigger(rule: AutomationRule, eventLabel?: string): string {
   return `When ${eventLabel ?? rule.triggerEventAction}`;
 }
 
+/**
+ * Minutes, in the words somebody would use.
+ *
+ * Stored as one number because a duration is one number; read back as hours or days because
+ * "two hours" is what a business said and "120 minutes" is what the column holds.
+ */
 function describeMinutes(minutes: number): string {
   if (minutes % 1440 === 0 && minutes >= 1440) {
     const days = minutes / 1440;
@@ -339,7 +313,7 @@ function EnableSwitch({
       <Button type="submit" disabled={pending} tone="secondary" size="small">
         {pending ? '…' : rule.enabled ? 'Switch off' : 'Switch on'}
       </Button>
-      <Error state={state} />
+      <ActionError state={state} />
     </form>
   );
 }
@@ -361,7 +335,7 @@ function DeleteRule({ organizationId, rule }: { organizationId: string; rule: Au
         size="small"
         pending={pending}
       />
-      <Error state={state} />
+      <ActionError state={state} />
     </form>
   );
 }
@@ -389,7 +363,7 @@ function RemoveCondition({
         size="tiny"
         pending={pending}
       />
-      <Error state={state} />
+      <ActionError state={state} />
     </form>
   );
 }
@@ -417,7 +391,7 @@ function RemoveAction({
         size="tiny"
         pending={pending}
       />
-      <Error state={state} />
+      <ActionError state={state} />
     </form>
   );
 }
@@ -484,7 +458,7 @@ function AddCondition({
       <Button type="submit" disabled={pending} tone="secondary" size="small">
         {pending ? '…' : 'Add condition'}
       </Button>
-      <Error state={state} />
+      <ActionError state={state} />
     </form>
   );
 }
@@ -583,317 +557,7 @@ function AddAction({
         </span>
       ) : null}
 
-      <Error state={state} />
-    </form>
-  );
-}
-
-/**
- * What this business says, and what it has said.
- *
- * **Every word here belongs to the business.** The placeholders are the platform's whole
- * contribution — five names for things it already has — and an unknown one is left exactly as
- * typed rather than blanked, because deleting somebody's sentence is worse than leaving a word
- * they will recognise as their own mistake.
- */
-export function MessageTemplateSection({
-  organizationId,
-  templates,
-  deliveries,
-  mayManage,
-  role,
-}: {
-  organizationId: string;
-  templates: MessageTemplate[];
-  deliveries: MessageDelivery[];
-  mayManage: boolean;
-  role: string;
-}) {
-  return (
-    <Section id="messages" className="mt-10 scroll-mt-6">
-      <SectionHeading>What this business says</SectionHeading>
-      <Hint className="mt-1 max-w-2xl">
-        Every word a customer reads is written here. The platform adds nothing — no greeting, no
-        signature, no footer — and puts values where you write{' '}
-        {PLACEHOLDERS.map((entry) => entry.token).join(', ')}. A message already sent keeps the
-        words it was sent with, so editing one of these changes only what happens next.
-      </Hint>
-      <Hint className="mt-1 max-w-2xl">
-        {/* Whether this installation can actually send on a channel is a fact about the sending
-            service rather than about this business, and this screen cannot see it. Rather than
-            imply everything works, it says where the answer appears: on the message itself, the
-            first time one is attempted. */}
-        Whether messages can be sent at all depends on what this installation is connected to.
-        Each one below says what happened to it, including when there was nothing to send it
-        with.
-      </Hint>
-
-      {templates.length === 0 ? (
-        <EmptyState className="mt-3">Nothing written yet.</EmptyState>
-      ) : (
-        <div className="mt-3 flex flex-col gap-4">
-          {templates.map((template) =>
-            mayManage ? (
-              <EditTemplateForm
-                key={template.id}
-                organizationId={organizationId}
-                template={template}
-              />
-            ) : (
-              <article key={template.id} className="text-sm">
-                <p className="font-medium">{template.name}</p>
-                {template.subject ? <Hint>{template.subject}</Hint> : null}
-                <Hint className="whitespace-pre-wrap">{template.body}</Hint>
-              </article>
-            ),
-          )}
-        </div>
-      )}
-
-      {mayManage ? (
-        <NewTemplateForm organizationId={organizationId} />
-      ) : (
-        <Hint className="mt-3">
-          Your role, {role}, cannot change what this business says.
-        </Hint>
-      )}
-
-      {deliveries.length > 0 ? (
-        <div className="mt-6">
-          <GroupHeading>Sent</GroupHeading>
-          <DividedList className="mt-1 text-sm">
-            {deliveries.map((delivery) => (
-              <li key={delivery.id} className="flex flex-wrap items-baseline gap-x-3 py-2">
-                <span className="text-subtle">
-                  {new Date(delivery.queuedAt).toLocaleString('en-GB')}
-                </span>
-                <span>{delivery.recipient}</span>
-                <span className="text-muted">{delivery.ruleName}</span>
-                {delivery.state === 'failed' ? (
-                  <span className="text-danger">
-                    failed — {delivery.detail}
-                  </span>
-                ) : (
-                  <span className="text-subtle">{delivery.state}</span>
-                )}
-              </li>
-            ))}
-          </DividedList>
-        </div>
-      ) : null}
-    </Section>
-  );
-}
-
-function TemplateFields({ template }: { template?: MessageTemplate }) {
-  return (
-    <>
-      <TextInput
-        name="name"
-        type="text"
-        required
-        maxLength={120}
-        defaultValue={template?.name}
-        aria-label="What this message is for"
-        placeholder="What this message is for"
-        size="small"
-      />
-      <TextInput
-        name="subject"
-        type="text"
-        maxLength={300}
-        defaultValue={template?.subject}
-        aria-label="Subject line"
-        placeholder="Subject line, for email"
-        size="small"
-      />
-      <TextArea
-        name="body"
-        required
-        maxLength={4000}
-        rows={4}
-        defaultValue={template?.body}
-        aria-label="What it says"
-        placeholder="What it says"
-        size="small"
-        className="w-full"
-      />
-    </>
-  );
-}
-
-function NewTemplateForm({ organizationId }: { organizationId: string }) {
-  const [state, formAction, pending] = useActionState(createTemplateAction, INITIAL);
-
-  return (
-    <form action={formAction} className="mt-4 flex max-w-2xl flex-col gap-2">
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <GroupHeading>New message</GroupHeading>
-      <TemplateFields />
-      <Button type="submit" disabled={pending} tone="secondary" size="small" className="w-fit">
-        {pending ? 'Adding…' : 'Add message'}
-      </Button>
-      <Error state={state} />
-    </form>
-  );
-}
-
-function EditTemplateForm({
-  organizationId,
-  template,
-}: {
-  organizationId: string;
-  template: MessageTemplate;
-}) {
-  const [state, formAction, pending] = useActionState(updateTemplateAction, INITIAL);
-  const [removeState, removeAction, removing] = useActionState(deleteTemplateAction, INITIAL);
-
-  return (
-    <div className="flex max-w-2xl flex-col gap-2">
-      <form action={formAction} className="flex flex-col gap-2">
-        <input type="hidden" name="organizationId" value={organizationId} />
-        <input type="hidden" name="templateId" value={template.id} />
-        <TemplateFields template={template} />
-        <Button type="submit" disabled={pending} tone="secondary" size="small" className="w-fit">
-          {pending ? '…' : 'Save'}
-        </Button>
-        <Error state={state} />
-      </form>
-
-      <form id={`delete-template-${template.id}`} action={removeAction}>
-        <input type="hidden" name="organizationId" value={organizationId} />
-        <input type="hidden" name="templateId" value={template.id} />
-        <ConfirmSubmit
-          formId={`delete-template-${template.id}`}
-          label="remove"
-          confirmLabel="Remove message"
-          description={`Remove "${template.name}"? Any rule using it loses its action.`}
-          tone="text"
-          size="tiny"
-          pending={removing}
-        />
-        <Error state={removeState} />
-      </form>
-    </div>
-  );
-}
-
-export function CreateAutomationRuleForm({ organizationId }: { organizationId: string }) {
-  const [state, formAction, pending] = useActionState(createRuleAction, INITIAL);
-
-  return (
-    <form action={formAction} className="mt-8 flex flex-col gap-3">
-      <input type="hidden" name="organizationId" value={organizationId} />
-
-      <SectionHeading>New rule</SectionHeading>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <TextInput
-          name="name"
-          type="text"
-          required
-          maxLength={120}
-          aria-label="What this rule is for"
-          placeholder="What this rule is for"
-          size="small"
-          className="flex-1"
-        />
-
-        {/* All three controls, submitted together and sorted out by the domain layer, which is
-            where the rule that each kind carries only what it needs already lives. */}
-        <SelectInput name="triggerKind" aria-label="What sets it off" size="small">
-          {TRIGGER_KINDS.map((entry) => (
-            <option key={entry.kind} value={entry.kind}>
-              {entry.label}
-            </option>
-          ))}
-        </SelectInput>
-
-        <SelectInput name="triggerEventAction" aria-label="Which moment" size="small">
-          {TRIGGER_EVENTS.map((entry) => (
-            <option key={entry.action} value={entry.action}>
-              {entry.label}
-            </option>
-          ))}
-        </SelectInput>
-
-        <TextInput
-          name="triggerMinutesBefore"
-          type="number"
-          min={0}
-          max={20160}
-          step={1}
-          defaultValue={120}
-          aria-label="Minutes before the job starts"
-          size="small"
-          className="w-32"
-        />
-
-        <SelectInput name="triggerMetric" aria-label="What is measured" size="small">
-          {METRICS.map((entry) => (
-            <option key={entry.metric} value={entry.metric}>
-              {entry.label}
-            </option>
-          ))}
-        </SelectInput>
-
-        <SelectInput name="triggerComparison" aria-label="Which way" size="small">
-          {COMPARISONS.map((entry) => (
-            <option key={entry.comparison} value={entry.comparison}>
-              {entry.label}
-            </option>
-          ))}
-        </SelectInput>
-
-        <TextInput
-          name="triggerThreshold"
-          type="number"
-          step="any"
-          defaultValue={0}
-          aria-label="The line"
-          size="small"
-          className="w-24"
-        />
-
-        {/* Typed, never offered from a list, and never converted. A threshold in the wrong unit
-            is a rule about something else, and the comparison in the database refuses to make
-            it rather than quietly meeting it halfway. */}
-        <TextInput
-          name="triggerUnit"
-          type="text"
-          maxLength={16}
-          placeholder="unit"
-          aria-label="Unit"
-          size="small"
-          className="w-24"
-        />
-
-        <TextInput
-          name="triggerCounterStep"
-          type="number"
-          step="any"
-          min={0}
-          placeholder="every"
-          aria-label="Counter interval"
-          size="small"
-          className="w-24"
-        />
-
-        <Button type="submit" disabled={pending} tone="secondary" size="small">
-          {pending ? 'Adding…' : 'Add rule'}
-        </Button>
-      </div>
-
-      <Hint>
-        Each kind uses only the boxes that belong to it: minutes before the job for a timed
-        rule, and what is measured, which way, where the line is and in what unit for a
-        conditions rule, and an interval for one that watches a counter on a machine. The unit
-        is yours and is shared by the last two — nothing converts between units, so a threshold
-        in one and a reading in another never meet. A rule starts with no conditions and nothing to
-        do, which means it runs and changes nothing.
-      </Hint>
-
-      <Error state={state} />
+      <ActionError state={state} />
     </form>
   );
 }
@@ -925,7 +589,7 @@ function RenameRuleForm({
       <Button type="submit" disabled={pending} tone="text" size="tiny">
         {pending ? '…' : 'rename'}
       </Button>
-      <Error state={state} />
+      <ActionError state={state} />
     </form>
   );
 }

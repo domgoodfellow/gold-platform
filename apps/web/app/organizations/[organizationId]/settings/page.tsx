@@ -4,6 +4,7 @@ import { ButtonLink } from '@/components/controls/button';
 import { DividedList, Section, SectionHeading } from '@/components/containers/section';
 import { ProfileForm } from '@/features/public-profile/profile-form';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { listBookableTypes } from '@/lib/domain/booking/booking';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { paymentProvider } from '@/lib/adapters/payments';
 import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
@@ -75,12 +76,13 @@ export default async function SettingsPage({
   const inSetup = organization.operationalState === 'setup';
 
   const provider = await paymentProvider();
-  const [hours, profile, modules, paymentAccount, brand] = await Promise.all([
+  const [hours, profile, modules, paymentAccount, brand, bookableTypes] = await Promise.all([
     listOperatingHours(db, { organizationId }),
     publicProfile(db, { organizationId, fallbackName: organization.name }),
     listModuleSettings(db, { organizationId }),
     provider ? getPaymentAccount(db, { organizationId, provider: provider.name }) : null,
     getBrand(db, { organizationId }),
+    listBookableTypes(db, { organizationId }),
   ]);
 
   // What is still missing for the modules this business has on (D31). Asked after the list,
@@ -196,6 +198,7 @@ export default async function SettingsPage({
             organizationId={organizationId}
             profile={profile}
             slug={organization.slug}
+            hasBookableType={bookableTypes.length > 0}
             action={updateProfileAction}
           />
         ) : (

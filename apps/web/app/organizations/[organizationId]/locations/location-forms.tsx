@@ -142,13 +142,19 @@ export function LocationCoordinatesForm({
   organizationId,
   location,
   mayLookUp,
+  action = locationCoordinatesAction,
 }: {
   organizationId: string;
   location: Location;
   /** Whether this deployment can ask anybody. Typing them in works either way. */
   mayLookUp: boolean;
+  /** Defaults to the list page's own action; the record page passes one that revalidates itself. */
+  action?: (
+    previous: CoordinatesActionState,
+    formData: FormData,
+  ) => Promise<CoordinatesActionState>;
 }) {
-  const [state, formAction, pending] = useActionState(locationCoordinatesAction, NO_COORDINATES);
+  const [state, formAction, pending] = useActionState(action, NO_COORDINATES);
 
   const suggested = state.suggested;
   // Remounts the two inputs when a suggestion arrives, so they show what was found rather than

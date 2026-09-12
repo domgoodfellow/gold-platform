@@ -1,8 +1,12 @@
 import { notFound } from 'next/navigation';
 import { paymentProvider } from '@/lib/adapters/payments';
+import { ActivityList } from '@/features/timeline/activity-list';
+import { DocumentsSection } from '@/features/documents/section';
+import { Section, SectionHeading } from '@/components/containers/section';
 import { getInvoiceForWorkItem, invoiceStanding } from '@/lib/domain/billing/invoices';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listCustomers } from '@/lib/domain/customers/customers';
+import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
@@ -10,6 +14,7 @@ import { listPricedLines, priceWorkItem } from '@/lib/domain/pricing/prices';
 import { listResources } from '@/lib/domain/resources/resources';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
+import { listWorkItemTimeline } from '@/lib/domain/timeline/timeline';
 import { listChecklistItems } from '@/lib/domain/work-items/checklists';
 import { listCosts, listTimeEntries } from '@/lib/domain/work-items/consumption';
 import { jobEconomics } from '@/lib/domain/work-items/economics';
@@ -17,6 +22,7 @@ import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
+import { uploadWorkItemDocumentAction } from './actions';
 import {
   WorkChecklistSection,
   WorkCostSection,
@@ -56,6 +62,8 @@ export default async function WorkItemPage({
     enabledModules,
     statuses,
     transitions,
+    documents,
+    timeline,
   ] = await Promise.all([
     listChecklistItems(db, { organizationId, workItemId }),
     listTimeEntries(db, { organizationId, workItemId }),
@@ -71,12 +79,15 @@ export default async function WorkItemPage({
     listUsableModules(db, { organizationId }),
     listWorkItemStatuses(db, { organizationId, typeId: workItem.type.id }),
     listWorkItemTransitions(db, { organizationId, typeId: workItem.type.id }),
+    listDocuments(db, { organizationId, attachedTo: { entity: 'work_item', id: workItemId } }),
+    listWorkItemTimeline(db, { organizationId, workItemId }),
   ]);
 
   const price = priceWorkItem(lines);
   const economics = jobEconomics({ lines, costs });
   const standing = invoice ? invoiceStanding(invoice) : null;
   const can = (capability: Capability) => organization.capabilities.includes(capability);
+  const mayAttach = can('document.create');
   const billingEnabled = enabledModules.has('billing');
   const assetsEnabled = enabledModules.has('assets');
   const cardsAccepted = (await paymentProvider()) !== null && enabledModules.has('card_payments');
@@ -90,6 +101,7 @@ export default async function WorkItemPage({
         timezone={organization.timezone}
       />
       <WorkIdentity
+        organizationId={organizationId}
         workItem={workItem}
         definitions={definitions}
         assetsEnabled={assetsEnabled}
@@ -160,6 +172,20 @@ export default async function WorkItemPage({
         />
       ) : null}
       {billingEnabled ? <WorkMarginSection economics={economics} /> : null}
+      <DocumentsSection
+        organizationId={organizationId}
+        documents={documents}
+        mayAttach={mayAttach}
+        roleLabel={organization.role}
+        uploadAction={uploadWorkItemDocumentAction}
+        hiddenFields={{ organizationId, workItemId }}
+      />
+      <Section className="mt-10">
+        <SectionHeading>History</SectionHeading>
+        {/* Not capability-gated, deliberately, the same as a customer's: the table is
+            append-only and RLS has already restricted every row to this tenant. */}
+        <ActivityList timeline={timeline} timezone={organization.timezone} />
+      </Section>
     </>
   );
 }

@@ -7,7 +7,7 @@ import { useActionState } from 'react';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
-import { recordReadingAction, createAssetAction, type CreateAssetState } from './actions';
+import { createAssetAction, type CreateAssetState } from './actions';
 
 const INITIAL: CreateAssetState = { error: null };
 
@@ -67,19 +67,25 @@ export function CreateAssetForm({
  *
  * The last unit used is offered back as the starting value, which is a convenience and not a
  * decision: a business that changes what it counts in types the new one.
+ *
+ * `action` travels as a prop rather than a fixed import: the assets list revalidates the list
+ * path when a reading lands, and the asset's own record page revalidates itself — two callers
+ * with two different write actions around the same domain call.
  */
 export function RecordReadingForm({
   organizationId,
   assetId,
   assetName,
   lastUnit,
+  action,
 }: {
   organizationId: string;
   assetId: string;
   assetName: string;
   lastUnit: string;
+  action: (previous: CreateAssetState, formData: FormData) => Promise<CreateAssetState>;
 }) {
-  const [state, formAction, pending] = useActionState(recordReadingAction, { error: null });
+  const [state, formAction, pending] = useActionState(action, { error: null });
 
   return (
     <form action={formAction} className="mt-1 flex flex-wrap items-center gap-2">

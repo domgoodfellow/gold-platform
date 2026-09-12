@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Disclosure } from '@/components/containers/card';
 import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
@@ -8,6 +9,7 @@ import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { requireOrganization } from '@/lib/route/organization';
+import { recordReadingAction } from './actions';
 import { CreateAssetForm, RecordReadingForm } from './create-asset-form';
 
 export const dynamic = 'force-dynamic';
@@ -84,12 +86,25 @@ export default async function AssetsPage({
                     assetId={asset.id}
                     assetName={asset.name}
                     lastUnit={readings.get(asset.id)?.unit ?? ''}
+                    action={recordReadingAction}
                   />
                 )
               : undefined
           }
           columns={[
-            { key: 'name', header: 'Asset', emphasis: 'primary', cell: (asset) => asset.name },
+            {
+              key: 'name',
+              header: 'Asset',
+              emphasis: 'primary',
+              cell: (asset) => (
+                <Link
+                  href={`/organizations/${organizationId}/assets/${asset.id}`}
+                  className="underline underline-offset-4"
+                >
+                  {asset.name}
+                </Link>
+              ),
+            },
             {
               key: 'where',
               header: 'Whose, and where',

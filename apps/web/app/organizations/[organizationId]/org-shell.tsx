@@ -353,6 +353,7 @@ export function OrgSidebar({
   platformStaff,
   enabledModules,
   setupEntry,
+  email,
   signOutAction,
   ...props
 }: {
@@ -365,6 +366,7 @@ export function OrgSidebar({
   enabledModules: string[];
   /** `<SetupEntry />`, or nothing — the layout decides, from `operationalState`, the same place `SetupBadge` is decided. */
   setupEntry?: ReactNode;
+  email: string;
   signOutAction: () => Promise<void>;
 } & React.ComponentProps<typeof Sidebar>) {
   return (
@@ -383,7 +385,7 @@ export function OrgSidebar({
         {setupEntry}
         <OrgNav organizationId={organizationId} enabledModules={enabledModules} />
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border"><AccountMenu signOutAction={signOutAction} /></SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

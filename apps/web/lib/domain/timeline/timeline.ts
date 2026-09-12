@@ -23,17 +23,19 @@ export type TimelineEntry = {
   actorName: string | null;
 };
 
-/** Actions a customer's history is made of. Anything else is noise on this screen. */
-const CUSTOMER_ACTIONS = [
-  'customer.created',
-  'customer.updated',
-  'customer.stage_changed',
-  'customer.imported',
-  'customer.import_matched',
-  'call.placed',
-  'call.wrapped_up',
-  'location.linked',
-  'document.created',
+/**
+ * Actions that happened to one job — a job's own history, and most of what a business
+ * remembers about a customer besides (customer_activity.sql). Extracted rather than left
+ * inline in `CUSTOMER_ACTIONS` now that a job's own page is the second caller.
+ *
+ * `document.created` is deliberately absent: its event is written against the document's own
+ * id, not the job's (20260827000005_documents.sql), and the payload carries no `work_item_id`
+ * to resolve it by — the same shape gap `customer_activity` works around for `location.linked`
+ * but does not yet for documents. A business attaching a file to a job today gets the file, not
+ * a line in either timeline. Fixing that is a payload change to `create_document` plus a new
+ * `customer_activity` branch, and belongs to its own change rather than riding in on this one.
+ */
+const WORK_ITEM_ACTIONS = [
   'work_item.created',
   'work_item.booked',
   'work_item.status_changed',
@@ -46,6 +48,20 @@ const CUSTOMER_ACTIONS = [
   'work_item.updated',
   'invoice.issued',
   'payment.recorded',
+] as const;
+
+/** Actions a customer's history is made of. Anything else is noise on this screen. */
+const CUSTOMER_ACTIONS = [
+  'customer.created',
+  'customer.updated',
+  'customer.stage_changed',
+  'customer.imported',
+  'customer.import_matched',
+  'call.placed',
+  'call.wrapped_up',
+  'location.linked',
+  'document.created',
+  ...WORK_ITEM_ACTIONS,
 ] as const;
 
 /**
@@ -293,6 +309,65 @@ export async function listRecentActivity(
     workItems: new Map((jobs.data ?? []).map((row) => [row.id, row.title])),
     stages: new Map((stages.data ?? []).map((row) => [row.id, row.name])),
     outcomes: new Map((outcomes.data ?? []).map((row) => [row.id, row.name])),
+  };
+  const names = new Map((members.data ?? []).map((row) => [row.user_id, row.display_name]));
+
+  return rows.map((row) => ({
+    id: row.id,
+    occurredAt: row.occurred_at,
+    action: row.action,
+    description: describe(row, words),
+    actorName: names.get(row.actor_id) ?? null,
+  }));
+}
+
+/**
+ * One job's own history, newest first — the same interpretive core as `listCustomerTimeline`
+ * (`describe`, the vocabulary lookups), reused rather than copied. No view is needed here the
+ * way `customer_activity` is for a customer: every `WORK_ITEM_ACTIONS` event is written with
+ * `entity_type = 'work_item'` and `entity_id` equal to this job's own id, so a direct filter on
+ * `events` is the whole query, with RLS doing the tenant scoping it always does.
+ */
+export async function listWorkItemTimeline(
+  db: Db,
+  input: { organizationId: string; workItemId: string; limit?: number },
+): Promise<TimelineEntry[]> {
+  const limit = input.limit ?? 100;
+
+  const { data, error } = await db
+    .from('events')
+    .select('id, action, payload, occurred_at, actor_id, entity_id')
+    .eq('organization_id', input.organizationId)
+    .eq('entity_type', 'work_item')
+    .eq('entity_id', input.workItemId)
+    .in('action', WORK_ITEM_ACTIONS as unknown as string[])
+    .order('occurred_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new DomainError(error.message, 'timeline.work_item_failed');
+  }
+
+  const rows = (data ?? []) as EventRow[];
+  if (rows.length === 0) return [];
+
+  const [statuses, resources, members] = await Promise.all([
+    db.from('work_item_statuses').select('id, name').eq('organization_id', input.organizationId),
+    db.from('resources').select('id, name').eq('organization_id', input.organizationId),
+    db
+      .from('memberships')
+      .select('user_id, display_name')
+      .eq('organization_id', input.organizationId),
+  ]);
+
+  const words: Vocabulary = {
+    statuses: new Map((statuses.data ?? []).map((row) => [row.id, row.name])),
+    resources: new Map((resources.data ?? []).map((row) => [row.id, row.name])),
+    // Every row here already is this job, so `describe`'s " on <title>" would be a redundant
+    // echo on the job's own page — an empty map is what makes it fall back to the bare sentence.
+    workItems: new Map(),
+    stages: new Map(),
+    outcomes: new Map(),
   };
   const names = new Map((members.data ?? []).map((row) => [row.user_id, row.display_name]));
 

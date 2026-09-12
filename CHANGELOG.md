@@ -5,6 +5,32 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Asset, Location and Resource are records, not list rows
+
+- `docs/ui-domain-coverage.md` — a domain-to-UI coverage audit, inventorying every product
+  capability against what actually reaches a screen. Kept as a living index: update a row's
+  status in the same change that changes the surface it describes.
+- New record pages: `/assets/[assetId]`, `/locations/[locationId]`, `/resources/[resourceId]` —
+  identity, custom fields, and (for assets and locations) documents and related work, using
+  new `getAsset`, `getLocation`, `getResource` domain reads and optional `assetId`/`locationId`/
+  `resourceId` filters on `listWorkItems` and `listAssets`. Work Item's Customer, Asset,
+  Location and Resource fields now link to these instead of naming them as text.
+- `features/documents/` extracted from the customer page's inline implementation and composed
+  into Asset, Location and Work Item — closing the gap between what `DOCUMENT_ENTITIES` allows
+  and what actually had an upload/list UI.
+- `features/timeline/` extracted the same way; Work Item gained its own history section
+  (`listWorkItemTimeline`, a direct `events` filter — no view needed, unlike a customer's).
+  `WORK_ITEM_ACTIONS` split out of `CUSTOMER_ACTIONS` as the second caller for it.
+- `/account` — a destination for the signed-in human, independent of organization or platform
+  context: email, a password-change form (`changePassword`, reusing `CredentialsForm`), business
+  memberships, and a platform link when applicable. `AccountMenu` now shows the signed-in email.
+- Settings' public-page section now offers a real Preview link to `/book/{slug}`, shown only once
+  it would actually resolve — `booking_organization`'s bookable-type requirement (a deliberate
+  privacy opt-in) was read, understood, and left untouched rather than weakened.
+- `features/automations/automation-forms.tsx` (931 lines) split into `rules/`, `templates/`,
+  `activity/` and `review/`, each with a real, immediate caller. No domain validation, server
+  action, or the WHEN/IF/THEN rule-editor's one-card mental model changed.
+
 ### A homepage is published data with reviewable history
 
 - `public_sites`, `public_pages`, and `public_page_revisions` give each business stable site/page

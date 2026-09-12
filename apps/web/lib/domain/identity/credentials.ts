@@ -120,6 +120,26 @@ export async function setNewPassword(
 }
 
 /**
+ * Change password for somebody already signed in.
+ *
+ * The same Supabase call `setNewPassword` makes for a recovery link, with its own message
+ * rather than that one's: nobody reaching this from a signed-in account page arrived holding an
+ * expired link, so telling them so would be wrong rather than merely unlikely.
+ */
+export async function changePassword(
+  db: Db,
+  input: { password: string; passwordConfirmation: string },
+): Promise<void> {
+  checkPassword(input.password, input.passwordConfirmation);
+
+  const { error } = await db.auth.updateUser({ password: input.password });
+
+  if (error) {
+    throw new DomainError(error.message, 'identity.password_change_failed');
+  }
+}
+
+/**
  * Start Google sign-in. Supabase brokers the whole OAuth exchange — this repository holds no
  * Google client secret, only the URL to send the browser to and the address it wants back
  * (docs/environment-setup.md, Google OAuth: the client id and secret live in Supabase's own

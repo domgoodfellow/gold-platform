@@ -14,7 +14,11 @@ import {
   SidebarRail,
 } from '@gold/ui/components/sidebar';
 
-export function AppSidebar({ signOutAction, ...props }: React.ComponentProps<typeof Sidebar> & { signOutAction: () => Promise<void> }) {
+export function AppSidebar({
+  email,
+  signOutAction,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { email: string; signOutAction: () => Promise<void> }) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
@@ -30,7 +34,7 @@ export function AppSidebar({ signOutAction, ...props }: React.ComponentProps<typ
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent><PlatformNavigation /></SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border"><AccountMenu signOutAction={signOutAction} /></SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

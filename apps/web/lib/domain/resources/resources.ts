@@ -51,6 +51,36 @@ export async function listResources(
 }
 
 /**
+ * One resource, or null.
+ *
+ * Null covers both "no such resource" and "not yours" indistinguishably, via RLS — the same
+ * shape `getCustomer`, `getAsset` and `getLocation` share.
+ */
+export async function getResource(
+  db: Db,
+  input: { organizationId: string; resourceId: string },
+): Promise<Resource | null> {
+  const { data, error } = await db
+    .from('resources')
+    .select('id, name, custom, created_at')
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.resourceId)
+    .maybeSingle();
+
+  if (error) {
+    throw new DomainError(error.message, 'resources.get_failed');
+  }
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    name: data.name,
+    custom: (data.custom ?? {}) as CustomValues,
+    createdAt: data.created_at,
+  };
+}
+
+/**
  * Record something the business can schedule work against.
  *
  * Whether the caller may is not decided here — `resources_insert` requires `resource.create`,

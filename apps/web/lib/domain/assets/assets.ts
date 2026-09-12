@@ -39,12 +39,20 @@ function one<T>(value: T | T[] | null): T | undefined {
 
 export async function listAssets(
   db: Db,
-  input: { organizationId: string; limit?: number },
+  input: { organizationId: string; locationId?: string; limit?: number },
 ): Promise<Counted<Asset>> {
-  const { data, error, count } = await db
+  let query = db
     .from('assets')
     .select(ASSET_SELECT, { count: 'exact' })
-    .eq('organization_id', input.organizationId)
+    .eq('organization_id', input.organizationId);
+
+  // Optional, for the same reason `listWorkItems`'s `typeId` and `assetId` filters are: the
+  // assets list asks for everything, and a location's own record page asks what sits there.
+  if (input.locationId) {
+    query = query.eq('location_id', input.locationId);
+  }
+
+  const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .limit(input.limit ?? LIST_LIMIT);
 
@@ -68,6 +76,41 @@ export async function listAssets(
     }),
     count,
   );
+}
+
+/**
+ * One asset, or null.
+ *
+ * Null covers both "no such asset" and "not yours" without the caller being able to tell them
+ * apart — RLS produces that indistinguishability for free, exactly as it does for `getCustomer`.
+ */
+export async function getAsset(
+  db: Db,
+  input: { organizationId: string; assetId: string },
+): Promise<Asset | null> {
+  const { data, error } = await db
+    .from('assets')
+    .select(ASSET_SELECT)
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.assetId)
+    .maybeSingle();
+
+  if (error) {
+    throw new DomainError(error.message, 'assets.get_failed');
+  }
+  if (!data) return null;
+
+  const customer = one(data.customer);
+  const location = one(data.location);
+
+  return {
+    id: data.id,
+    name: data.name,
+    customer: customer ? { id: customer.id, label: customer.name } : null,
+    location: location ? { id: location.id, label: location.label } : null,
+    custom: (data.custom ?? {}) as CustomValues,
+    createdAt: data.created_at,
+  };
 }
 
 /**

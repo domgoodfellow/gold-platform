@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Badge, DefinitionList, Detail } from '@/components/display/data';
 import { Disclosure } from '@/components/containers/card';
 import { RecordHeader } from '@/components/containers/record-header';
@@ -44,7 +45,8 @@ export function WorkRecordHeader({ organizationId, workItem, timezone }: {
   );
 }
 
-export function WorkIdentity({ workItem, definitions, assetsEnabled }: {
+export function WorkIdentity({ organizationId, workItem, definitions, assetsEnabled }: {
+  organizationId: string;
   workItem: WorkItem;
   definitions: FieldDefinition[];
   assetsEnabled: boolean;
@@ -53,10 +55,48 @@ export function WorkIdentity({ workItem, definitions, assetsEnabled }: {
     <section aria-label="Job overview" className="mt-5 rounded border border-border p-4">
       <DefinitionList>
         <Detail label="Stage"><Badge>{workItem.status.label}</Badge></Detail>
-        <Detail label="Customer">{workItem.customer?.label}</Detail>
-        <Detail label="Assigned to">{workItem.resource?.label}</Detail>
-        <Detail label="Location">{workItem.location?.label}</Detail>
-        {assetsEnabled ? <Detail label="Asset">{workItem.asset?.label}</Detail> : null}
+        <Detail label="Customer">
+          {workItem.customer ? (
+            <Link
+              href={`/organizations/${organizationId}/customers/${workItem.customer.id}`}
+              className="underline underline-offset-4"
+            >
+              {workItem.customer.label}
+            </Link>
+          ) : null}
+        </Detail>
+        <Detail label="Assigned to">
+          {workItem.resource ? (
+            <Link
+              href={`/organizations/${organizationId}/resources/${workItem.resource.id}`}
+              className="underline underline-offset-4"
+            >
+              {workItem.resource.label}
+            </Link>
+          ) : null}
+        </Detail>
+        <Detail label="Location">
+          {workItem.location ? (
+            <Link
+              href={`/organizations/${organizationId}/locations/${workItem.location.id}`}
+              className="underline underline-offset-4"
+            >
+              {workItem.location.label}
+            </Link>
+          ) : null}
+        </Detail>
+        {assetsEnabled ? (
+          <Detail label="Asset">
+            {workItem.asset ? (
+              <Link
+                href={`/organizations/${organizationId}/assets/${workItem.asset.id}`}
+                className="underline underline-offset-4"
+              >
+                {workItem.asset.label}
+              </Link>
+            ) : null}
+          </Detail>
+        ) : null}
       </DefinitionList>
       <CustomFieldValues definitions={definitions} custom={workItem.custom} />
     </section>

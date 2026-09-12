@@ -96,8 +96,16 @@ describe('M11 — a destructive action with nothing between it and the write', (
   // rather than counted, so a new destructive action added without one fails by name.
   const PAIRS: { actions: string; forms: string }[] = [
     {
+      // Split from one `automation-forms.tsx` into per-responsibility files (rules/templates/
+      // activity/review) once that file passed 900 lines — each destructive action from this
+      // one `actions.ts` still needs its `ConfirmSubmit`, just checked against whichever new
+      // file actually calls it now.
       actions: `${APP_ROOT}/organizations/[organizationId]/automations/actions.ts`,
-      forms: `${FEATURES_ROOT}/automations/automation-forms.tsx`,
+      forms: `${FEATURES_ROOT}/automations/rules/rule-card.tsx`,
+    },
+    {
+      actions: `${APP_ROOT}/organizations/[organizationId]/automations/actions.ts`,
+      forms: `${FEATURES_ROOT}/automations/templates/template-section.tsx`,
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/reports/actions.ts`,

@@ -50,18 +50,27 @@ function one<T>(value: T | T[] | null): T | undefined {
 }
 
 /**
- * The work items of one organization, optionally of one type.
+ * The work items of one organization, optionally of one type, asset, location, or resource.
  *
- * Both callers are real, which is why `typeId` is optional rather than required: a board
- * shows one type's work, and "everything this business has recorded" is the other question
- * anyone asks. Neither is a speculative generalisation of the other.
+ * Five real callers, which is why every filter is optional rather than required: a board shows
+ * one type's work, "everything this business has recorded" is the other question anyone asks,
+ * and an asset's, a location's or a resource's own record page each ask a version of a third —
+ * what work has been done to this, at this, or by this. None is a speculative generalisation of
+ * the others.
  *
  * The `organization_id` filter is an optimisation, not the boundary — RLS has already
  * restricted these rows, and every embedded row besides.
  */
 export async function listWorkItems(
   db: Db,
-  input: { organizationId: string; typeId?: string; limit?: number },
+  input: {
+    organizationId: string;
+    typeId?: string;
+    assetId?: string;
+    locationId?: string;
+    resourceId?: string;
+    limit?: number;
+  },
 ): Promise<Counted<WorkItem>> {
   let query = db
     .from('work_items')
@@ -70,6 +79,15 @@ export async function listWorkItems(
 
   if (input.typeId) {
     query = query.eq('type_id', input.typeId);
+  }
+  if (input.assetId) {
+    query = query.eq('asset_id', input.assetId);
+  }
+  if (input.resourceId) {
+    query = query.eq('resource_id', input.resourceId);
+  }
+  if (input.locationId) {
+    query = query.eq('location_id', input.locationId);
   }
 
   const { data, error, count } = await query

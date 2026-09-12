@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Disclosure } from '@/components/containers/card';
 import { AppPage } from '@/components/containers/app-page';
 import { Hint } from '@/components/controls/inputs';
@@ -50,7 +51,19 @@ export default async function ResourcesPage({
           rowKey={(resource) => resource.id}
           empty="No resources yet."
           columns={[
-            { key: 'name', header: 'Name', emphasis: 'primary', cell: (r) => r.name },
+            {
+              key: 'name',
+              header: 'Name',
+              emphasis: 'primary',
+              cell: (r) => (
+                <Link
+                  href={`/organizations/${organizationId}/resources/${r.id}`}
+                  className="underline underline-offset-4"
+                >
+                  {r.name}
+                </Link>
+              ),
+            },
             ...(definitions.length > 0
               ? [
                   {

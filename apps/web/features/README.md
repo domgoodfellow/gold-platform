@@ -13,6 +13,8 @@ Current boundaries:
 | `automations/` | Rule, condition, action and message-template UI |
 | `reporting/` | Report navigation, filters, results, dashboards and management forms |
 | `custom-fields/` | Rendering and collecting tenant-defined fields across supported entities |
+| `documents/` | Listing, uploading and presenting documents attached to any entity `DOCUMENT_ENTITIES` allows |
+| `timeline/` | Rendering a record's own history — the interpretive work stays in `lib/domain/timeline/` |
 | `public-profile/` | Editing and rendering a business's public identity |
 | `branding/` | Applying a tenant's approved visual roles |
 | `locale/` | Timezone and currency controls used by organization-facing workflows |

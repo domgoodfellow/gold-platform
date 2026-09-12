@@ -1,5 +1,5 @@
 import { Hint } from '@/components/controls/inputs';
-import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { EmptyState } from '@/components/containers/section';
 import { listAutomationRules, listAutomationRuns } from '@/lib/domain/automation/rules';
 import { reviewAutomationRules } from '@/lib/domain/automation/review';
 import {
@@ -10,11 +10,10 @@ import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { requireOrganization } from '@/lib/route/organization';
-import {
-  AutomationRuleCard,
-  CreateAutomationRuleForm,
-  MessageTemplateSection,
-} from '@/features/automations/automation-forms';
+import { AutomationRuleCard } from '@/features/automations/rules/rule-card';
+import { CreateAutomationRuleForm } from '@/features/automations/rules/create-rule-form';
+import { MessageTemplateSection } from '@/features/automations/templates/template-section';
+import { RunLog } from '@/features/automations/activity/run-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,32 +118,7 @@ export default async function AutomationsPage({
         role={organization.role}
       />
 
-      {runs.length > 0 ? (
-        <Section className="mt-10">
-          <SectionHeading>What the rules have done</SectionHeading>
-          <Hint className="mt-1">
-            Newest first. A rule that did not apply records nothing — what is here is what
-            happened.
-          </Hint>
-          <DividedList className="mt-2">
-            {runs.map((run) => (
-              <li key={run.id} className="flex flex-wrap items-baseline gap-x-3 py-2 text-sm">
-                <span className="text-subtle">
-                  {new Date(run.occurredAt).toLocaleString('en-GB')}
-                </span>
-                <span className="font-medium">{run.ruleName}</span>
-                {run.outcome === 'failed' ? (
-                  <span className="text-danger">
-                    failed — {run.detail}
-                  </span>
-                ) : (
-                  <span className="text-muted">ran</span>
-                )}
-              </li>
-            ))}
-          </DividedList>
-        </Section>
-      ) : null}
+      <RunLog runs={runs} />
     </>
   );
 }
