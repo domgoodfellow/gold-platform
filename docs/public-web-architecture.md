@@ -8,44 +8,36 @@ system without becoming a second product beside the operating platform?** It rec
 surface, the intended information architecture, and the boundaries for the next implementation
 slices. It does not track delivery status; shipped work remains in `CHANGELOG.md`.
 
-## Current public route audit
+## Current public surface
 
-The proxy's closed public set is authoritative for anonymous reachability. Route groups are layout
-boundaries, not URL or security boundaries.
+The proxy's closed public set is authoritative for anonymous reachability. Route groups are
+layout boundaries, not URL or security boundaries.
 
-| Route | Audience / purpose | CTA | Current sections and components | Data source | SEO state | Problems | Action |
-|---|---|---|---|---|---|---|---|
-| `/` | Prospect; understand GOLD and choose a next step | Workflow review; secondary product demonstration | Hero, interactive business shell, autonomy stages, problem framing, capabilities, implementation, provider marquee, closing CTA; `(marketing)/page.tsx`, `SiteShell`, shared controls | Hardcoded React arrays and copy | One root title/description; one H1; no canonical, social metadata, structured data, sitemap, or explicit index policy | Entire page is a client component; mutable marketing copy is compiled; provider technology is weak proof; login appears in header, hero, and close; no product-level routes or legal links | **Redesign/refactor**, retaining the truthful positioning and interactive proof |
-| `/workflow-review` | Prospect; submit a sales/discovery request | Submit request; secondary return home/login after success | Heading, expectation copy, `WorkflowReviewForm` | React copy; narrow RPC writes `customers` + `events` into platform-configured GOLD organization | Inherits generic root metadata | No route description/canonical; attribution and abuse controls absent; no displayed privacy purpose/retention notice | **Retain/connect**; it is the strongest existing conversion path |
-| `/login` | Tenant user or platform operator; authenticate one identity | Log in; Google OAuth; recovery | `CredentialsForm`, Google action, account/recovery links | Supabase Auth | Title only; indexability unspecified | No intended host/org return; shared auth chrome offered Create Account even on signup; platform and tenant entry share no context cue | **Refactor** |
-| `/sign-up` | New account holder; create identity | Create account; Google OAuth | `CredentialsForm`, Google action, login link | Supabase Auth | Title only | Duplicate Create Account CTA in auth header; signup does not create a tenant (correct) but origin/context is not preserved | **Refactor** |
-| `/forgot-password` | Existing account holder; start recovery | Send recovery link | `CredentialsForm` | Supabase Auth | Title only | Generic metadata only; otherwise purpose and enumeration-safe success state are good | **Retain** |
-| `/reset-password` | Verified recovery session; set password | Save and continue | `CredentialsForm`; server session guard | Supabase Auth | Title only | No explicit noindex | **Retain/configure SEO** |
-| `/auth/callback` | OAuth callback; exchange code and route account | None | Route handler | Supabase Auth + pending invitation cookie | Non-page | Always falls back to `/organizations`; does not preserve a safe intended route or hostname context | **Refactor** |
-| `/auth/recover` | Recovery callback; exchange code | None | Route handler | Supabase Auth | Non-page | Correctly keeps relative redirect/cookie host | **Retain** |
-| `/book/[slug]` | Tenant customer; see bookable work and select a time | Select slot/book | `PublicHeader`, `BrandStyle`, booking form and domain scheduling/pricing | Organization, profile, brand, work types, price book, availability; anonymous actor + RLS | Dynamic; no route metadata; index policy unspecified | It is a transaction surface, not a tenant website; a slug is not a hostname; no canonical relationship to a future primary tenant domain | **Retain/connect** to future site renderer |
-| `/book/[slug]/[workItemId]` | Booking customer; read back their booking | Keep page | `PublicHeader`, booking details | Caller-scoped work item, price lines, tenant profile | Dynamic; noindex unspecified | Sensitive-by-context confirmation URL should never enter search | **Retain/noindex** |
-| `/portal/[token]` | Tenant customer; inspect work and invoices | Read-only | `PublicHeader`, `BrandStyle`, tables/lists | Token claim, anonymous external actor, tenant-scoped operational records | Dynamic; noindex unspecified | URL token is a credential; must not be indexed or placed in sitemap/referrers | **Retain/noindex** |
-| `/organizations/accept-invite/[token]` | Invited tenant user; authenticate and accept membership | Sign in/sign up or accept | Invitation page and form | Invitation RPC/session identity | Public by proxy; no metadata | Token route needs noindex/referrer discipline and context-preserving auth | **Retain/refactor** |
+| Route | Current purpose and truth | Required follow-through |
+|---|---|---|
+| `/` | GOLD's homepage renders the one immutable revision selected by the publishing model. Canonical/social metadata, `robots.txt`, a deliberate two-route sitemap and JSON-LD are built; drafts, review and history are not anonymous. | Expand the sitemap only as approved public routes gain substantive content; keep structured claims tied to published facts. |
+| `/workflow-review` | Working conversion form with route metadata; a narrow RPC attributes a Customer and Event to the platform-configured GOLD organization. | Add displayed privacy purpose/retention and abuse controls. |
+| `/login`, `/sign-up`, password routes | One identity serves Organization and Platform Context. Auth layout is noindex; invitation/recovery callbacks work without a second account or re-login. | Preserve safe intended route and hostname context. |
+| `/book/[slug]` | Tenant-branded transaction flow over the real Scheduling and Pricing domain. | Connect it to the tenant's primary public site and canonical host rather than treating the slug as distribution. |
+| `/book/[slug]/[workItemId]` | Caller-scoped booking confirmation under the noindex public layout. | Preserve referrer/search leakage controls. |
+| `/portal/[token]` | Token-credentialed, read-only tenant customer surface under the noindex public layout. | Preserve strict referrer discipline. |
+| `/organizations/accept-invite/[token]` | Noindex, context-preserving organization invitation acceptance with exact-email validation. | Retain token-safe auth redirects. |
 
-There are no duplicate public pages. The main redundancy is action-level: login was repeated three
-times on the homepage and account creation was shown by the auth shell while the signup page was
-already doing exactly that. The only dead CTA found historically, workflow review, has already been
-connected. Current orphan concepts are the public profile and brand outside booking/portal: GOLD's
-own marketing site does not consume its organization record. Placeholder/future content is labelled
-`Direction` in the autonomy control, which is honest but should not be principal launch proof.
+The organization-side Website settings now provide a real edit, preview, revision and publish
+foundation. The built homepage vocabulary is intentionally narrow and typed; publishing
+atomically advances the public pointer, published revisions are immutable, and anonymous reads
+use `published_gold_homepage()` rather than table access. Tenant brand settings and logo also
+drive authenticated and selected public surfaces.
 
-Hardcoded business-facing material exists in `TENANTS`, `STAGES`, `CAPABILITIES`, `IMPLEMENTATION`,
-and the provider list on the homepage. The first four describe GOLD's platform offer, not a tenant's
-business records; they still need revision/publishing semantics because marketing must be editable.
-The provider list is implementation machinery and should leave the sales narrative.
+This is not yet tenant website distribution. There is no public hostname resolver for each
+organization, verified custom-domain lifecycle, governed public media library, additional/legal
+page publication, full public authentication-context preservation, or complete attribution/
+consent layer. The site at GOLD's root proves publishing mechanics for GOLD; it does not imply
+that a tenant's published revision is reachable on that tenant's host.
 
-The domain has public profiles, brand settings/logos, locations, bookable work types, price-book
-items, documents, operational assets, customer stages, and platform products. Only profile, brand,
-bookable work, and price are surfaced publicly. Conversely, navigation, page sections, FAQs,
-testimonials, SEO fields, domains, consent, attribution, and legal publication have no domain
-representation. `assets` means equipment/property the business operates on; it is **not** a media
-library, so overloading it for logos and photographs would corrupt the domain vocabulary.
+Operational `assets` are customer/business equipment and property. Public images and downloads
+need a distinct governed media concept; reusing `assets` would corrupt both authorization and
+language.
 
 ## Proposed GOLD sitemap and conversion intent
 
@@ -242,8 +234,8 @@ publish.
 
 | Classification | Requirements |
 |---|---|
-| **ALREADY GOOD** | One identity; independent platform/membership facts; RLS tenant boundary; public profile/brand on tenant transactional surfaces; narrow workflow-review write; booking/portal domain reuse; responsive shared controls |
-| **REFACTOR** | Auth intended-context routing; public header/footer information architecture; operational `assets` naming ambiguity for media |
+| **ALREADY GOOD** | One identity; independent platform/membership facts; RLS tenant boundary; profile/brand projection; narrow workflow-review write; booking/portal domain reuse; typed immutable homepage revisions; preview/publish; narrow anonymous projection; responsive shared controls |
+| **REFACTOR** | Auth intended-context routing and public header/footer information architecture |
 | **CONNECT EXISTING** | Work types as service capability; price book as offer input; locations/hours; documents; customer events and stages; commercial catalogue where public terms are explicitly approved |
 | **CONFIGURE** | Production canonical origin; workflow-review target; deployment domain; analytics/consent provider; support/privacy contacts |
 | **BUILD** | Media library; hostname mapping; legal versions/acceptance; attribution; abuse controls; French routing/content |
@@ -256,6 +248,6 @@ publish.
 The SEO/canonical/noindex foundation and the structured publishing slice are built. The homepage
 now reads one tagged published projection, uses GOLD's canonical organization profile/brand, and
 shares its typed renderer with a manager-only preview; only publish invalidates that projection.
-Next add media assets and legal versions. Hostname/domain
-mapping follows once one published site can render correctly on the platform domain; external
-embeds/headless reads follow the same published projection rather than inventing another source.
+M16 next adds governed media and legal versions, then hostname/domain mapping and tenant
+distribution. External embeds/headless reads must follow the same published projection rather
+than inventing another source.

@@ -148,13 +148,13 @@ Setup sequence:
 1. Sign up normally with the email you want to use for GOLD internals.
 2. Run `supabase/snippets/add-platform-staff.sql` against the target Supabase project, editing
    `v_email` and `v_name` first.
-3. Sign out and sign in again. The staff Postgres role is minted into the next token, not the
-   current one.
-4. Visit `/platform`.
+3. Reload; the next request checks the staff row live.
+4. Visit `/platform` or choose Platform Administration in the context switcher.
 
-Important: a staff account should be separate from a tenant/operator account. The current auth
-hook replaces the JWT role with `platform_staff`, so one human who both runs GOLD and operates a
-tenant should use two sign-ins.
+The same identity may also be an ordinary member of one or more organizations. Staff authority
+is checked live by `app.is_platform_staff()`; it does not replace the JWT role. Reload after
+adding the row and use the context switcher—no second account, logout or re-login is required.
+Support sessions are an audit record and do not widen access to tenant operational data.
 
 ## DO NOT CONFIGURE YET
 
@@ -170,7 +170,7 @@ tenant should use two sign-ins.
 | PROJECT | VARIABLE | ENVIRONMENT | STATUS | SECRET? | VERCEL SENSITIVE? | SOURCE | READY FOR ME TO ENTER NOW? | NOTES |
 |---|---|---|---|---|---|---|---|---|
 | Web | `NEXT_PUBLIC_SUPABASE_URL` | Preview + Production | READY TO CONFIGURE | NO | NO | Supabase project URL | YES | Browser-visible. |
-| Web | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Preview + Production | READY TO CONFIGURE | NO | NO | Supabase anon/public key | YES | Browser-visible; current source reads this exact name. |
+| Web | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Preview + Production | READY TO CONFIGURE | NO | NO | Supabase publishable key | YES | Browser-visible and the tracked Web environment contract. The current database helpers retain an anon-key compatibility fallback; do not use that fallback for new configuration. |
 | Web | `SITE_URL` | Preview + Production | READY TO CONFIGURE | NO | NO | Canonical GOLD web origin, for example `https://gold.example` | YES | Server-read public configuration; sitemap, canonical, and social metadata share it. |
 | Web | `ASSISTANT_API_URL` | Production | READY TO CONFIGURE | NO | NO | API production URL | YES, once API URL is known | Server-side only. |
 | Web | `ASSISTANT_API_URL` | Preview | DO NOT CONFIGURE YET | NO | NO | Stable API Preview URL | NO | Wait for stable Preview API target. |

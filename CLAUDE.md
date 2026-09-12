@@ -35,6 +35,7 @@ tellings of one thing and no way to tell which is stale.
 | [docs/roadmap.md](docs/roadmap.md) | You are deciding whether something belongs now |
 | [docs/walkthrough.md](docs/walkthrough.md) | You need to drive the running application by hand |
 | [docs/ui-spec.md](docs/ui-spec.md) | You are building or changing a screen |
+| [docs/public-web-architecture.md](docs/public-web-architecture.md) | You are touching GOLD's site, tenant publishing, public auth, domains, media or legal pages |
 
 `docs/starting_conversation.txt` is an archived source, not a governing document. It is
 superseded by `docs/constraints.md` wherever the two disagree.
@@ -45,38 +46,35 @@ of what was built to this one.
 
 ## Current state
 
-M1 through M8 are met, both of M8's criteria included, and so is M11. **Each milestone is one
-test, and the test is the definition** — read `apps/web/tests/milestone-m1.test.ts` through
-`milestone-m11.test.ts` rather than any summary of them. `docs/roadmap.md` holds the criteria,
-the deferrals, and the two claims this repository has had to withdraw.
+The Foundation and M1–M8/M11 slices are substantial: tenancy and RBAC, shared business records,
+work and Scheduling, tenant Pricing/quotes/invoices/payments/job economics, Automations, reports,
+Ask and guided setup, provider callbacks, platform administration, invitations and support
+audit, shared UI packages, tenant theming, record surfaces, and the typed public-site
+revision/publishing foundation.
 
-Built: the kernel (tenancy, memberships, events, customers, roles, field definitions, locations,
-resources, assets, documents, operating hours), the work engine, the configuration engine, the
-automation engine, the AI question tools and the onboarding proposal, the aggregate layer, saved
-reports and dashboards, reception — a customer's stage, a call as a conference, the words a
-business uses for both, and the carrier's own callbacks finishing the row (D38, D39) — and
-GOLD's own commercial/financial control plane: a catalogue with providers named apart from the
-meters they answer, D41's entitlement *model* in full (its write-refusal coverage is not — see
-below), and a usage ledger recording GOLD's own provider cost, in the provider's own currency,
-alongside what a business is charged, with reconciliation as a second append-only fact rather
-than a rewrite (D43) — and, on top of that, which external provider scope belongs to which
-organization, a real Twilio subaccount, key and application provisioned and recorded through it,
-and a generated secret held in Vault that no function ever selects back out (D44) — and platform
-authority as a fact checked live rather than a role a session had to wear instead of its own
-organization memberships, organization invitations closing the gap direct member-adding left, a
-staff-opened and audited support session, and the shared `packages/*` layer, each with a real
-consumer (D45).
+The present commercial persistence is flatter than the target model. `platform_products` are
+sellable recurring line items, commercial terms record paid periods, wanted-intersection-paid
+module state is computed, effective-dated rates and usage/cost ledgers exist, and Twilio has the
+deepest provider binding/resource/provisioning path. They are not yet the canonical
+Product/Module/Feature catalogue, reusable Plans/Add-ons, Subscription lifecycle, resolved
+Limits, or a fully enforced entitlement plane. Entitlement resolution is generalized; write
+enforcement is proven only for `card_payments`. M17 requires every applicable optional
+Product/Module to enforce Plan/Add-on → Entitlement → UI → domain/server → database write
+boundaries before migration readiness. Voice is the primary usage writer.
 
-Not built: per-tenant theming, the shared control set (`docs/ui-spec.md` §4), the per-tenant
-marketing surface (D20), desktop (M10), Stripe on either side of the commercial ledger, the
-entitlement write-refusal on any module's tables but `card_payments`'s (D43 names the rest as a
-gap), a per-tenant Deepgram, ElevenLabs or model-inference account of any kind, and a browser
-voice token signed by a business's own generated key rather than GOLD's master one (D44 names
-both as gaps), and a support session reaching a tenant's own operational tables — customers, work
-items, and the rest — rather than only what `platform_staff` already read before D45 (a named,
-deliberate gap, not an oversight). Three domain capabilities are reachable from no screen —
-`revokePortalInvite`, `assignRole` and `browserTelephoneToken`; `docs/walkthrough.md` names where
-an operator would hit the first two. Do not add a fourth without noticing.
+M9 is not met. Calls, conferences, participant/events, inbound/outbound/status/recording
+callbacks, provider resources and recording metadata exist. Transcription, analysis, attachment
+of that analysis to the timeline, the reviewed domain-action loop, browser softphone and
+realtime voice agent do not yet form the required end-to-end front desk.
+
+The remaining active work is M12–M18: catalogue and commercial normalization, BusinessOS,
+provider and Voice hardening, Financial Operations separation, tenant public distribution, and
+a platform-hardening/dogfood gate before NextFund migration. `domain-model.md` owns the
+canonical terms. `roadmap.md` owns the sequence and criteria.
+
+Three domain/runtime capabilities have no operator UI: `revokePortalInvite`, `assignRole` and
+`browserTelephoneToken`. Asset and Location timelines are not surfaced; Resource has no
+domain-level document relation. Keep these gaps explicit.
 
 `supabase/migrations/` is the source of truth for the data model. Read it rather than
 inferring the schema, and comment the *why* rather than the *what*.
@@ -102,7 +100,8 @@ Report a failure verbatim; do not summarise one.
 - The tests talk to a **real Postgres with real RLS**, as two genuinely signed-in users. A policy
   cannot be proven by a fake, and a service-role client would bypass the thing under test.
   `pnpm db:start` must be running.
-- `apps/web` needs `.env.local` — copy `apps/web/.env.example`. Anon key only. **Nothing in
+- `apps/web` needs `.env.local` — copy `apps/web/.env.example` and configure
+  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. **Nothing in
   `apps/web` may hold a service-role key.**
 - A change to `supabase/config.toml` needs the stack **restarted, not reset**:
   `npx supabase stop`, then `start`. `db:reset` re-applies migrations against the
@@ -128,23 +127,22 @@ apps/
       (marketing)/  GOLD's own site, in GOLD's voice
       (auth)/       sign in, sign up
       (public)/     book/{slug}, portal/{token} — a tenant's customers, a tenant's words
-      (platform)/   the staff console (D28). No sidebar, no navigation.ts entry
+      (platform)/   the staff console (D45). Shared Sidebar, separate platform navigation model
       organizations/ the operator shell. Deliberately UNGROUPED — see below
     features/       product-capability presentation and interaction — see its README
-    components/     domain-agnostic design-system vocabulary, grouped by `ui-spec.md` section
+    components/     generic composed app controls and containers
     lib/domain/     the business rules. Nothing in app/ or features/ decides anything
     lib/adapters/   vendors. Domain code imports the capability, never the implementation
     scripts/demo/   the demo builder. Covered by the gate on purpose (D37)
     proxy.ts        Next 16's middleware. Refreshes the session; not the auth boundary (I12)
     tests/          the suites. Real Postgres — see Commands
-  api/              Python. Webhook ingress (D26), the automation clock (D24, D30), the tool
-                    loop (D34). Serverless on Vercel — never a daemon, which D24 forbids
+  api/              Python. Provider ingress, automation clock and AI loop; Vercel serverless
+    api/            physical HTTP entrypoints — one file per handler
     app/core/       configuration, database handles, the one place a machine token is minted
     app/ai/         the tool loop and its two registries. No SQL, no arithmetic
     app/channels/   sending a message to a person, as a capability
     app/conditions/ what the world is doing at a place, as a capability
     app/integrations/ the only place this repo's Python names a vendor
-    app/api/        HTTP entrypoints — one file, one route. NOT apps/api/api/ (see its README)
   desktop/          Electron shell (M10; not before)
 packages/           each with a real, immediate consumer inside apps/web (D45); packages/sdk stays deferred
   types/            ContextDescriptor and the other cross-cutting shapes — never Capability, which stays the domain layer's
@@ -199,9 +197,13 @@ The full set is `docs/constraints.md`. These are the ones generated code breaks 
 - An LLM gets domain tools with validation and permissions attached, or it gets nothing.
 - What a caller agreed to is copied onto the row, never joined to (I8). There are two deliberate
   exceptions and both are listed below.
-- A **module** is what a tenant switches on and is billed for; an **engine** is code that owns
-  entities and rules. They are not one-to-one, and only the engine is governed by the
-  two-pieces-of-evidence bar. Name the noun before applying a rule to it (D25).
+- A **Product** is a customer-facing family; a **Module** is a coherent area inside it; a
+  **Feature** is a concrete capability; Plans and Add-ons package them; a Subscription resolves
+  to Entitlements and Limits. An **engine** is technical ownership of a load-bearing calculation
+  or runtime. Name the noun before applying a rule to it (D25, D46).
+- Scheduling alone owns time/resource commitment. Booking, Maintenance and Dispatch are policies
+  and interfaces over it; only an independent geographic route/travel optimizer may earn another
+  engine.
 - **A direct instruction to build something is evidence on its own.** The two-pieces-of-evidence
   bar exists to stop an engine being invented speculatively, ahead of real use — not to make the
   owner argue with his own documents. Told to build it, build it, and update the row it closes

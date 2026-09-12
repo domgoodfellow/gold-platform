@@ -11,9 +11,9 @@ another customer's rows, or a record you cannot reconstruct is destroyed. Break 
 that keep the code sane* and you lose an afternoon. Both are worth following. Only one is worth
 stopping a release for.
 
-**Nothing here says "never build this."** Where something is not built, it is in *Deferred, with
-triggers* at the bottom, with the specific event that starts it. If you find a refusal in this
-file with no trigger, that is a defect — report it.
+**Nothing here says "never build this."** Unbuilt work is either active in `roadmap.md` with
+acceptance criteria or in *Decided, not yet built* below with the event that starts it. If you
+find a refusal with neither a milestone nor a trigger, that is a defect — report it.
 
 ---
 
@@ -33,17 +33,18 @@ Everything else in this document is that principle applied to a specific fork in
 
 ---
 
-## The four layers
+## The architecture layers
 
 Every part of this platform sits in exactly one of these. Naming the layer is the first step in
 any design conversation, because the rules that apply are different in each.
 
 | Layer | What it is | Who changes it | Where it lives |
 |---|---|---|---|
-| **1. Kernel** | The entities every business gets and none can decline | Us, in a migration | `lib/domain/`, `supabase/migrations/` |
-| **2. Engines** | Code that owns rules — scheduling, pricing, automation, reporting | Us, in a migration | `lib/domain/<engine>/`, plus Postgres functions and constraints |
-| **3. Modules** | Capabilities a tenant switches on and is billed for | A tenant, with a switch | `lib/navigation.ts` `MODULES`, plus a row |
-| **4. Configuration** | Everything a business says about itself | A tenant, on a screen | Rows in their own tables |
+| **1. Foundation** | Shared tenant entities and services every Product relies on | Us, in migrations and domain code | `lib/domain/`, `supabase/migrations/` |
+| **2. Engines and runtimes** | Code that owns load-bearing calculations or execution | Us, with invariant tests | `lib/domain/`, API runtime and database functions |
+| **3. Product catalogue** | Products, Modules and Features packaged into Plans and Add-ons | Platform staff; resolved for each Subscription | Catalogue, commercial and entitlement rows |
+| **4. Organization configuration** | What a business says about itself and how entitled capabilities behave | An organization administrator | Tenant-owned rows and product settings |
+| **5. Provider control plane** | Capability bindings, resources, health, usage and cost | Platform staff initially; tenant scope where explicitly supported | Provider bindings/resources, Vault and usage ledger |
 
 **The kernel is:** organizations, memberships, users (via Supabase auth), roles, customers,
 locations, assets, documents, resources, operating hours, events, custom fields, statuses.
@@ -52,10 +53,10 @@ locations, assets, documents, resources, operating hours, events, custom fields,
 capabilities, prices, hours, currency, timezone, automations, message templates, reports,
 dashboards. None of it is hardcoded. All of it is rows the tenant owns.
 
-**A module is not a directory.** It is a row and a line in `MODULES`. An engine is not a
-product. The two are not one-to-one: Scheduling, Dispatch, Bookings and Maintenance are four
-modules over one scheduling engine, and CRM is a module with no engine at all. Confusing them
-once deleted a feature — see D25.
+**A module is not a directory.** It is a coherent functional area inside a customer-facing
+Product. Current module rows and `MODULES` are a flatter implementation of that target model.
+An engine is not a Product: Scheduling owns time/resource commitment while Booking, Maintenance
+and Dispatch are policies and interfaces over it. See D25 and `domain-model.md`.
 
 ---
 
@@ -65,19 +66,14 @@ Each owns entities and rules. This is the honest state, not the plan.
 
 | Engine | What it owns | State |
 |---|---|---|
-| **Work** | Work item types, statuses, transitions, checklists, time entries, costs | Built |
 | **Scheduling** | The calendar, availability, resource assignment, operating hours, double-booking | Built |
 | **Pricing** | Price book, quoted lines, invoices, payments, job economics | Built |
 | **Automation** | Rules, conditions, actions, message templates, deliveries, counters, external readings | Built |
-| **Reporting** | Aggregates, saved reports, audiences, dashboards | Built |
-| **Booking** | The public booking flow and the external actor axis | Built |
-| **AI** | Domain tools, the answering loop, drafted configuration | Built |
-| **Communications** | Sending on a channel, as a capability | Adapter and templates built; channels are per-deployment |
-| **Commercial** | GOLD's own catalogue, entitlement terms, provider and retail rates, the usage ledger — GOLD selling GOLD, never a tenant's own books (D42, D43) | Built — D41, generalized |
-| **Maintenance** | Customer-owned assets, readings, condition-triggered work | Assets and readings built; recurring plans are not |
-| **Dispatch** | Routes, travel time, geographic assignment | Not built — see *Deferred* |
-| **Inventory** | Stock levels, suppliers, purchase orders, shipments | Not built — see *Deferred* |
-| **Voice** | Calls as conferences, participants, carrier callbacks, a customer's stage | Built — M9 |
+
+Work, Booking, Maintenance, Dispatch, Voice, Communications, CRM, Insights and Customer
+Experience are important Products, Modules or capabilities, but that does not make them engines.
+AI is a horizontal Intelligence runtime. A future geographic route/travel optimizer may earn a
+separate engine only when it owns an independent optimization problem.
 
 **The calendar is part of the scheduling engine, and scheduling is an engine.** There is no
 `calendars` table because a calendar is work items organised by time and resource — that is a
@@ -101,12 +97,12 @@ apps/
     lib/domain/           the business rules. Nothing else decides anything
     lib/adapters/         vendors, behind capabilities
   api/                    Python. Webhooks, the clock, the AI loop
+    api/                  Vercel HTTP entrypoints — one file, one route
     app/core/             configuration, database handles, tokens
     app/ai/               the loop, the tool registry, the provider registry
     app/channels/         sending a message, as a capability
     app/conditions/       what the world is doing at a place
     app/integrations/     the only place Python names a vendor
-    app/api/              HTTP entrypoints — one file, one route
   desktop/                Electron shell — M10
 packages/                 types, schemas, ui, config — each with a real consumer inside apps/web (D45); sdk still waits, see D13
 supabase/                 migrations, policies, snippets
@@ -298,7 +294,10 @@ an edit — it is a new choice, and the old value stays where it is, which is I8
 
 ### D8 — The documentation budget
 
-**Decision.** Eight files in `docs/` until there is a paying tenant. A new document requires
+**Decision.** Eight governing Markdown files in `docs/` until there is a paying tenant:
+`constraints.md`, `domain-model.md`, `market.md`, `public-web-architecture.md`,
+`roadmap.md`, `ui-spec.md`, `vision.md` and `walkthrough.md`. The archival source
+`starting_conversation.txt` is non-governing and excluded. A new governing document requires
 deleting or absorbing an existing one, or naming a decision made wrong *twice* without it.
 **Never write:** naming conventions, cleanup rules, refactoring rules, import boundaries,
 documentation maps, maintenance indexes, correction notes.
@@ -393,13 +392,14 @@ schedulable thing, not an account. The two are joined, never merged.
 **Why.** A van is a resource and has no login. An office manager has a login and is never
 scheduled. Merging them makes both wrong.
 
-### D20 — The four surfaces, and what each waits on
+### D20 — Surface ownership and public distribution
 
-**Decision.** Four surfaces: GOLD's own site, the operator shell, public booking, the customer
-portal. All four have a working foundation. The site axis now has stable tenant-owned sites/pages,
+**Decision.** Six surfaces: GOLD's own site, the organization operator shell, public booking,
+the customer portal, Platform Context and authentication. Each has explicit ownership. The site
+axis now has stable tenant-owned sites/pages,
 typed homepage revisions, review/publish, and one renderer at GOLD's root. Arbitrary hostname
-routing, custom domains, media management, and legal-page authoring remain deferred; this first
-renderer does not imply those distribution features exist.
+routing, custom domains, media management and legal-page authoring are active M16 work; this
+first renderer does not imply those distribution features exist.
 **What is shared.** One row of canonical profile copy per tenant, rendered at the top of any public surface:
 display name, tagline, intro, contact, address. The line is that **a business's own voice carries
 anything it claims, and the platform speaks only where it describes application state.** A
@@ -444,12 +444,12 @@ would otherwise have to trust.
 
 ### D23 — The interface has a decided visual language
 
-**Decision.** One design system in `apps/web/components/`, one set of colour roles read from
-variables, one neutral treatment for tenant-owned words. `docs/ui-spec.md` holds the surfaces, the
-renderings and the control set.
-**Why.** Five surfaces do not share a navigation model, and only the operator shell has an
-information architecture. A control reads a variable and never a literal, which is what makes a
-per-tenant theme a question of where values come from rather than a second pass over every screen.
+**Decision.** One layered design system: `packages/ui` owns generic shadcn primitives,
+`apps/web/components` owns generic composed application controls, and `apps/web/features`
+owns product-capability UI. Both organization and platform shells use the shared shadcn Sidebar
+through `AppShell`, with separate navigation models; the phone bottom bar remains an intentional
+organization-shell adaptation. Colour roles and tenant brand values flow through variables.
+`docs/ui-spec.md` holds the surfaces and acceptance rules.
 **No colour is keyed to what a status means.** The platform does not know what a tenant's status
 means; two words in two languages are the same shape of row.
 **Ownership.** `app/` owns routes and server composition; `features/` owns product-capability UI;
@@ -476,13 +476,15 @@ is configured inside another's screen declares that dependency.
 
 ### D26 — `apps/api` arrives at M4, and webhook ingress is what brings it
 
-**Decision.** The Python deployable exists because Stripe calls in with no human session. It now
-holds three endpoints: the webhook, the automation tick, and the AI ask.
+**Decision.** The Python deployable exists because providers and scheduled work call in with no
+browser session. Its Vercel handlers live in `apps/api/api/`: Stripe webhook, automation tick,
+AI ask, and Voice inbound, outbound, status and recording callbacks. Runtime implementation
+lives under `apps/api/app/`.
 **Why not a route in `apps/web`.** A second thing called *api*, inside the app that is not the
 API. There is no `api/` directory under `apps/web` and none may be added.
-**The three differ deliberately.** The webhook and the tick hold Postgres roles with no table
-grants, because no person is present. The AI endpoint holds **no role** and forwards the asking
-person's own token, because somebody is sitting there.
+**The trust paths differ deliberately.** Machine callbacks and cron use narrow Postgres roles
+with no general table grants. The AI endpoint holds **no role** and forwards the asking person's
+own token because somebody is sitting there.
 
 ### D27 — A tenant connects their own processor; GOLD never holds their keys or their money
 
@@ -491,10 +493,12 @@ their customer. GOLD is never in the flow.
 **Why.** Holding a tenant's money makes this a payment facilitator, which is a different company
 with different regulators.
 
-### D28 — Platform staff are a Postgres role, not a membership and not a service key
+### D28 — Historical platform-staff role mechanism (superseded by D45)
 
-**Decision.** GOLD staff arrive as the `platform_staff` Postgres role, because
-`custom_access_token_hook` rewrites the token's role claim for a user listed in `platform_staff`.
+**Historical decision.** GOLD staff originally arrived as the `platform_staff` Postgres role
+because `custom_access_token_hook` rewrote the token's role claim for a listed user.
+**D45 supersedes that mechanism.** Staff authority is now checked live while the caller remains
+`authenticated`; the security intent below remains historical context, not current setup advice.
 Identity still reaches Postgres as the caller's own JWT.
 **Why.** Every other caller narrows by construction; staff need the opposite — read across every
 tenant while being a member of none. A membership would put a GOLD user id inside a tenant's rows.
@@ -636,26 +640,21 @@ wrong and change this table.
 
 | Thing | Waiting on | Trigger |
 |---|---|---|
-| **Tenant website distribution** — hostname resolution, custom domains, media and additional/legal pages above the built site/revision foundation | One approved site now renders at GOLD's root; domain ownership and legal content each add a separate authority model | A customer needs its own host or approved non-homepage content |
-| **The shared control set** — Button, Input, Field, Dialog, Empty state | Nothing. `ui-spec.md` §4 has the inventory and states the acceptance test | Already earned. The design work is done; what remains is writing the controls |
-| **Per-tenant theming** | The control set above, so a theme is a change of values rather than a pass over every screen | Control set lands, then a tenant asks |
 | `packages/sdk` | Somebody outside this repository integrating | The first tenant or partner who asks for an API. `apps/web` calls its own domain layer directly and needs no indirection layer in front of it — building one now would be the "empty package with no caller" shape this file already refuses elsewhere |
-| **Dispatch engine** — routes, travel time, geographic assignment | A business whose work is genuinely route-shaped | A field-service tenant with mobile technicians and more than a handful of daily jobs |
+| **Geographic route/travel optimizer** | A distinct optimization problem beyond Scheduling's ownership of time and resource commitment | A route-shaped tenant whose daily work cannot be assigned adequately using the Scheduling engine |
 | **Inventory engine** — stock levels, suppliers, purchase orders | D12 admits the vertical; the engine is a scope decision | An e-commerce or parts-heavy tenant |
 | **Recurring maintenance plans** | Recurrence on a calendar — *every first Monday* — is a different question from an interval | A maintenance tenant with contracted plans |
-| **Voice plane and the dialer** | M9, D5 | Call volume, not audience: thirty calls need a phone and a list |
 | **Desktop** | M10 | No customer has asked |
 | **Calendar recurrence** — *every first Monday* | A different question from an interval, which is built | A tenant whose plans are dated rather than metered |
 | **Approval workflows** on work items | Changes the commitment flow | A business whose jobs need signing off before they proceed |
 | **Richer message templates** — amount, address, who is coming, a link to the customer's own page | Nothing. It is a list rather than a mechanism | Each one must be fillable *reliably every time*; a placeholder that is sometimes blank is a sentence that is sometimes nonsense |
 | **Drafting templates from what a business already sends** | Nothing structural — a template is still a row the business owns | The same shape as drafted configuration: propose, review, apply |
-| **Two-way email** — a customer's reply attaching to the job it is about | A grant against somebody else's mailbox, refreshing tokens, and a matching problem with no perfect answer | M9, which owns communications. The hardest third of a comms feature does not go first |
-| **Terminology overrides** per tenant | A second vertical, before the shape is knowable | The second vertical |
 | **Group and proximity discounting** | Travel cost modelling, so a discount never exceeds what the business provably saved | A business that actually routes |
-| **Business templates** — a cloneable bundle of modules, statuses, fields and roles | Two businesses configured by hand first | The source conversation calls this the thing that turns four apps into a product, and it is — **second**. A template is an extract of configuration that has already proven itself; cloned earlier, it clones a guess |
-| **Incumbent displacement** — import, parity, a reason to switch | Deliberately not scoped | Phase two. Named so it is a recorded decision rather than an assumption |
-| **A platform-wide commercial aggregate** — usage/revenue/margin summed across every organization, not one at a time | `organization_commercial_summary` is scoped to one organization (I29–I32's own tests exercise it per-tenant only); generalizing its `p_organization_id` to accept `null` is the honest fix, reusing the identical SQL and grant rather than a second calculation in TypeScript (which I4/I5's "exactly one calculation" reasoning would refuse) | The first real need for a platform-wide number, since it touches a function with four load-bearing invariants and deserves a reviewed change of its own |
-| **`@gold/ui`'s `Card` on four platform-console screens renders un-themed** — `bg-card`/`text-card-foreground`/`text-muted-foreground` fall back to Tailwind's default palette, since `globals.css`'s nine roles (`ui-spec.md` §3) define none of them | A retrofit onto GOLD's own nine roles was built once and reverted — the product owner prefers shadcn's `Card` visually as it stands | Either an explicit decision that the platform console keeps a deliberately different, unthemed look from the operator shell, or aliasing `--card`/`--card-foreground`/`--muted-foreground` onto the nine roles. Neither chosen yet; both remain open |
+
+Website distribution, shared controls, theming, Voice, two-way email, terminology, reusable
+business setup, platform-wide usage visibility and incumbent migration are no longer deferred:
+they are built foundations or active roadmap work. Moving them out of this table does not claim
+completion; `roadmap.md` owns their remaining acceptance criteria.
 
 Two of these carry reasoning worth keeping in full, because finding it out later is expensive.
 
@@ -801,10 +800,11 @@ no update policy today. Merging terms into `communication_credits`: a term is da
 is drawn down, and forcing a fixed subscription price into a balance rebuilds the metering utility
 D40 refused.
 
-**An unpaid module goes read-only, and never goes dark.** Writes to what that module owns are
-refused, with a sentence naming the module and the date its term ended. Reads never stop, export
-never stops, and no row becomes invisible — a business that stops paying must always be able to
-leave with everything it recorded.
+**Target enforcement behavior: an unpaid module goes read-only, and never goes dark.** Writes to
+what that module owns must be refused, with a sentence naming the module and the date its term
+ended. Reads and export remain available. Today the generalized resolution model computes this
+state, but only `card_payments` enforces it at its write boundary; M17 owns complete applicable
+coverage.
 
 **Refused by a trigger, not by a policy**, and that distinction is D25 surviving contact with
 money. No RLS policy consults entitlement. A policy makes rows disappear and cannot explain
@@ -829,17 +829,12 @@ conformance test yet asserting every module-owning table carries the trigger, be
 this bullet calls for has not been written for the rest of them. That is the next slice's
 opening line, not a defect in this one — see D43.
 
-### D42 — GOLD runs its own business as an ordinary tenant, and staff is a separate account
+### D42 — GOLD dogfoods as an ordinary tenant (account split superseded by D45)
 
-**Decision.** GOLD-the-business is a tenant with no exemption of any kind. The people who run GOLD
-hold **two accounts**: one listed in `platform_staff`, and one that is an ordinary member of
-GOLD's own organization.
-
-**Why two.** D28 makes staff a Postgres role holding no write grant on any table. A single account
-that was both would be an operator who cannot write anything, and `/organizations` would redirect
-them to `/platform` before they found out. That is not an obstacle to route around — it is the
-axis working. Acting as GOLD and acting as a business are two authorization contexts, and putting
-both in one token is the thing D28 refuses.
+**Current decision.** GOLD-the-business is a tenant with no exemption of any kind. One identity
+may simultaneously hold Platform Context authority and ordinary memberships, including
+membership in GOLD's own organization. The two contexts remain separate choices in the product,
+but D45 removed the historical two-account and re-login mechanism.
 
 **Why a tenant at all.** This file's own *Known defects* section already says GOLD dogfoods its
 own Organization Context exactly as any other business does, and that what GOLD's own use needs
@@ -858,28 +853,34 @@ person may write one either way; D41's rule is unchanged.
 ledger, on GOLD's own processor account, in the opposite direction. GOLD's tenant may well use
 `billing` for its own consulting invoices; subscription revenue never travels through it.
 
-**Rejected, for now.** Staffhood claimed per session — the token hook grants the staff role only
-when the sign-in asked for it. It is safe: the claim can only *reduce* privilege, since the hook
-still verifies the listing, and one account with two doors is the nicer product. It is deferred
-rather than refused because it costs a change to the most security-sensitive function in this
-repository in order to save a second login. **Trigger:** the two logins actually getting in the
-way.
+**Historical note.** Session-claimed staffhood was once deferred as an escape from two logins.
+D45 instead implemented live authority checks and a context switcher, so that deferral is closed.
 
 ---
 
 ### D43 — GOLD's own commercial/financial control plane, and what it amends
 
+**Access-mechanism note.** This record predates D45. References below to grants or functions
+being available to the `platform_staff` Postgres role describe the historical mechanism; D45's
+live `app.is_platform_staff()`/`app.require_platform_staff()` checks are current.
+
 **Decision.** GOLD can now answer, for any tenant: what it bought, what it is entitled to use
 right now, what GOLD charged it, what it used, what that usage cost GOLD at a provider, and the
-margin between the two. D41 (entitlement) is the middle of this and is built in full by this
-record rather than left as a separate deferral; the rest generalizes D40's usage thinking past
+margin between the two. D41's entitlement **resolution model** is the middle of this and is
+built in full; enforcement remains partial and is separately qualified below. The rest
+generalizes D40's usage thinking past
 voice, SMS and email to every meter this platform will eventually price — call recording,
 transcription, text-to-speech, AI tokens, email sends, and whatever a future provider adds.
 
 **The catalogue, and a correction found writing the first provider bindings against it.**
 `platform_meters` (what can be metered) and `platform_products` (what GOLD sells, recurring: the
 base platform, one row per real module, a seat) are platform vocabulary, migration-written, like
-`communication_channel` was. Neither is authorization and neither is read by any policy. **A
+`communication_channel` was. Neither is authorization and neither is read by any policy.
+These are the current persistence model: `platform_products` rows are sellable line items,
+not the canonical customer-facing Product families, and `organization_commercial_terms` are
+not yet Plans or Subscriptions. The target vocabulary and correspondence are authoritative in
+`domain-model.md`; migration must preserve current facts without pretending the target exists.
+**A
 meter first shipped naming one provider each — `transcription_seconds` said `deepgram`,
 `ai_tokens_input` said `anthropic` — which cannot express Deepgram *or* ElevenLabs both
 transcribing, or an OpenAI-compatible host sitting beside Anthropic on the same meter.**
@@ -1216,16 +1217,49 @@ in that table's own words, not a rule broken. **`packages/sdk` stays deferred** 
 this repository needs an indirection layer in front of its own domain calls, and building one
 with no real caller is exactly the "empty package" shape this file already refuses.
 
-**Left exactly as it was, and said so rather than silently swept in.** Teams — `domain-model.md`
-already reasons that a grouping earns a table when something filters, assigns or reports by it,
-and nothing does yet; that reasoning is restated, not overridden. The organization shell's
-responsive frame (`AppShell`, three tiers: icon rail, full sidebar, phone bottom bar) is
-unchanged — its content was rebuilt on `@gold/ui`'s primitives where that was safe
-(`OrganizationSwitcher`, now a real list of the caller's own organizations plus Platform
-Administration when they hold that authority too), but shadcn's own `SidebarProvider`/`Sidebar`
-system was not adopted wholesale, since `SidebarMenuButton` and friends require that provider and
-`AppShell`'s three-tier behaviour has no equivalent in shadcn's own two-tier model without being
-rebuilt on top of it — a larger, separate piece of work than this record's own scope.
+**Subsequent UI convergence.** Teams remain deferred for the reason in `domain-model.md`.
+Both Organization Context and Platform Context now use `AppShell` over `@gold/ui`'s shadcn
+`SidebarProvider`/`Sidebar`. They deliberately supply separate navigation models, and the
+organization shell retains its phone bottom bar. `OrganizationSwitcher` lists the caller's
+organizations and Platform Administration when both contexts are available.
+
+---
+
+### D46 — Catalogue, Plans, Subscriptions and Entitlements are separate facts
+
+**Decision.** The canonical chain is Product catalogue → Plans and Add-ons → an organization's
+Subscription → resolved Entitlements and Limits → organization configuration → provider
+capabilities/bindings/resources → runtime → Usage, Cost and Health. Products are CRM,
+Communications, Operations, Financial Operations, Automation, Insights and Customer Experience.
+Modules and Features sit beneath them. Existing `platform_products` and commercial-term rows
+are migration inputs, not evidence that the target Plan/Subscription model is already built.
+Entitlements are distinct from RBAC capabilities. See `domain-model.md` for exact terms.
+
+### D47 — BusinessOS is shared context, not an eighth Product or a second data model
+
+**Decision.** BusinessOS names the shared identity, purpose, audience, Business Offerings,
+voice, policies, brand and operating context Products consume. Extend Organization, profiles,
+brand settings and other precise existing owners. Customer Experience projects that context to
+public surfaces; it does not own it. Business Offerings describe what is offered; Financial
+Operations' Price Book governs what is charged. BusinessOS is context, never a generic rules
+dump: Pricing, Scheduling, Financial Operations and Automation retain their deterministic rules.
+
+### D48 — Intelligence is horizontal and providers supply capabilities
+
+**Decision.** Intelligence owns model-provider routing, fallback, budgets, quotas, concurrency,
+metering, cost, health, audit, tools, safety and agents. Product AI features stay in their
+Products; GOLD Intelligence may package them as an Add-on. AI Receptionist is a Solution
+composed from Voice, Automation, CRM and Intelligence. Product code depends on abstract provider
+capabilities, never supplier brands. Local model bindings are Platform Context only initially;
+tenant-managed endpoints, credentials and model choice remain deferred.
+
+### D49 — Platform hardened means routine operation needs no developer back channel
+
+**Decision.** A capability is not operationally hardened while normal catalogue, subscription,
+organization configuration, provider provisioning, health, drift, retry, usage or support work
+requires Claude, VS Code, GitHub, Supabase Studio, manual SQL, a provider console or environment
+editing. The pre-NextFund gate in `roadmap.md` makes these control surfaces and recovery paths
+acceptance criteria, not optional polish.
 
 ---
 
@@ -1242,6 +1276,5 @@ advice.
   (D42, D45; no exemption, and no "tenant zero" special-casing anywhere), and what GOLD's own use
   needs in order to be shown to a prospect counts as evidence. `market.md` says this already; this
   file now agrees with it.
-- **`market.md` and this file disagreed about the tenant marketing surface** for as long as one
-  deferred what the other called a revenue line. The *Deferred* table above is where that is
-  settled; if they diverge again, `market.md` wins on anything about money.
+- **`market.md` and this file once disagreed about the tenant marketing surface.** M16 now owns
+  public distribution while `market.md` owns demand and commercial hypotheses.

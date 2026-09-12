@@ -62,138 +62,147 @@ Use `/verify <n>` to audit one. "The code appears to do the right thing" is not 
 Invariants are added when a rule becomes load-bearing, not in anticipation. Each new one
 arrives with the slice that enforces it.
 
-## Core entities
+## Foundation entities
 
-The kernel. Every engine consumes these rather than defining its own, and every module is
-sold on top of them.
+The foundation is shared by every Product. It is not itself a sellable Product and no Product
+may create a second version of one of these concepts.
 
-**Organization** — the tenant. Owns settings, operating hours, currency, timezone, enabled
-modules, terminology, and business rules. A Private deployment is a database with one row
-here.
+**Organization** is the tenant. **User / Membership / Role** binds global identity from
+`auth.users` to an organization and its capabilities. **Customer, Location, Asset, Resource,
+Work Item, Document/File, Event/Timeline and Field Definition** are shared business objects.
+Work Item remains the universal operational object; Calendar is a view over scheduled work;
+Activity is an Event. Tasks are Work Items configured with task-like types and statuses.
 
-**User / Membership** — identity is global and lives in `auth.users`; this repository owns
-no users table and no profile mirror (`constraints.md` D19). Membership binds a user to an
-organization with a role, capabilities, and the name *that organization* uses for them.
-Roles are per-tenant data, and so is the name: the same account can be "Sam" to one tenant
-and "S. Okafor, Contractor" to another.
+The foundation also owns organization configuration, notifications and deliveries, audit,
+normalized usage, provider bindings and external connections. A future Team entity is earned
+only when assignment, filtering or reporting actually needs membership groups. Editable notes
+and per-recipient notifications likewise remain distinct future concepts rather than being
+forced into the append-only Event table.
 
-**Customer** — individual or company, with contacts, locations, communication history,
-documents, and financial history. The CRM timeline hangs off this.
+## Canonical product and commercial model
 
-**Location** — an address with access instructions, associated customers, assets, and work.
-Distinct from Customer because one customer can have many sites and one site can serve many
-customers.
+Use this vocabulary in product and platform UI. Existing persistence names are mapped below;
+they are not permission to preserve ambiguous product language.
 
-**Asset** — anything the business owns, services, rents, sells, or tracks. Machines,
-vehicles, equipment, properties, customer-owned equipment.
+| Concept | Meaning | Repository correspondence |
+|---|---|---|
+| Product | Customer-facing capability family: CRM, Communications, Operations, Financial Operations, Automation, Insights, or Customer Experience. | Architectural target. Current `platform_products` rows are recurring sellable line items, not yet this Product catalogue. |
+| Module | Coherent functional area inside a Product, such as Communications / Voice. | `platform_modules` and `organization_modules` are a useful but flatter current model. Existing module keys remain valid persistence identifiers during migration. |
+| Feature | Concrete capability inside a Module, such as Recording or Transcription. | Not yet a first-class catalogue entity. Some features exist directly in routes, policies, and domain functions. |
+| Plan | Reusable package of Products, Modules, Features, limits, allowances and defaults. | Not yet modeled. Do not call an effective-dated product price or a commercial-term row a Plan. |
+| Add-on | Optional separately purchased capability or bundle, such as GOLD Intelligence or an AI Receptionist solution. | Not yet first-class. Do not infer an Add-on from a module toggle. |
+| Subscription | One organization's active Plan, Add-ons, overrides and lifecycle. | Currently product-language abstraction over effective commercial terms, not a first-class persisted Subscription aggregate. |
+| Entitlement | Resolved right to use a Product, Module or Feature. | Wanted-intersection-paid module resolution is generalized; write enforcement is complete only for `card_payments`. An entitlement is not an RBAC capability. |
+| Limit / quota | Constraint on entitled use. | Meters and usage exist, but Plan allowances and the full limit-resolution hierarchy do not. |
+| Meter | Normalized measure of use. | `platform_meters`, rates, usage events and reconciliations are built; current production writing is concentrated in Voice. |
 
-**Work Item** — the universal operational object, with a per-tenant `type` and configurable
-statuses. A job, service call, inspection, delivery, installation, booking, or appointment
-is a Work Item with different configuration, not a different table.
+The catalogue terminology is the canonical product model. Current commercial persistence is
+flatter and will be normalized/reused deliberately during the hardening milestones rather than
+replaced by a parallel entitlement system.
 
-**Resource** — a person, vehicle, or piece of equipment that a Work Item consumes for a
-window of time. Scheduling and dispatch both operate on Resources; this is what keeps them
-one engine rather than two.
+“Commercial” remains acceptable in persistence and accounting-oriented internal names such as
+`organization_commercial_terms`. Product UI should prefer Catalogue, Plans, Subscriptions,
+Entitlements, Usage and Billing because each names a different thing.
 
-**Document** — a file attached to any entity, with metadata in Postgres and bytes in object
-storage under a tenant-scoped path.
+Entitlement **resolution** answers whether the organization has the right to use a capability.
+Entitlement **enforcement** ensures every consequential UI, domain/server, direct RPC and
+automation write refuses that work when the right is absent. Resolution is generalized today;
+enforcement is partial. The complete path is Plan/Add-on → Entitlement → navigation/UI
+availability → domain/server authorization → database enforcement where appropriate.
 
-**Event** — append-only. Every consequential state change writes one. This single table
-serves the customer timeline, automation triggers, reporting, and AI context. It is the
-highest-leverage thing in the kernel and cannot be backfilled — it ships in the first slice
-that writes state.
+Entitlement and limit resolution must follow this order: platform hard limit, Plan allowance,
+Add-on allowance, organization override, user or concurrency limit, then provider operational
+limit. An AI request additionally checks the actor's permission, safety policy, provider
+capability and allowed model; it records raw provider usage, normalized usage and cost. No
+credit unit, allowance, price or overage rule is authoritative until it is explicitly modeled.
 
-**Field Definition** — the per-tenant, per-entity registry governing what may appear in each
-entity's `custom` JSONB column. See `constraints.md` D7.
+GOLD dogfoods this model as an ordinary internal organization with an ordinary Plan,
+Subscription and broad Entitlements. There is no tenant-zero, magic slug or unmetered bypass.
 
-### Named in the conversation, answered here
+## Product boundaries
 
-`docs/starting_conversation.txt` lists entities every business gets. Two are absent above
-and their absence is a decision rather than an omission.
+| Product | Owns |
+|---|---|
+| CRM | Customers and contacts, sales, CRM configuration and CRM intelligence. |
+| Communications | Voice, SMS and Email. |
+| Operations | Work, Scheduling, Resources, Assets and Locations, plus dispatch policy. |
+| Financial Operations | Tenant pricing and Price Book, quotes, invoices, payments and job economics. This is separate from GOLD's own Plans, subscriptions and billing. |
+| Automation | Workflows, triggers, conditions, actions, AI actions, execution and human review. |
+| Insights | Dashboards, reports, analytics and Ask GOLD experiences. |
+| Customer Experience | Website, booking, portal, forms, public brand/assets and domains. Public pages project business context; they do not own it. |
 
-**Task** is a Work Item. A task is a unit of work with a state and usually an assignee, which
-is what a Work Item is; a tenant that wants one configures a type whose statuses are *To do*
-and *Done*. A separate table would be a second thing needing assignment, status, timeline and
-permissions — and the moment a task needed scheduling there would be two schedulers.
+Business Offerings answer “what do we offer and how do we describe it?” and belong to shared
+BusinessOS context. Financial Operations' Price Book answers “what do we charge and under
+which pricing rules?” A Product may read both but must not merge them.
 
-**Team** is not yet anything. It is a grouping of memberships, and grouping earns a table
-when something filters, assigns, or reports by it. Nothing does: a role already carries what
-a member may do, and dispatch does not exist. When work is assigned to a team rather than a
-person, that is the change that adds it — and see `constraints.md` D19, because a Team is
-about identity and this repository deliberately owns very little of that.
+Two financial directions must never share a ledger merely because GOLD dogfoods the platform:
 
-**Calendar** is a view, not an entity. It is Work Items organised by time and resource, which
-is the scheduling core reading its own rows back. A `calendar` table would be a second place a
-scheduled thing could live, and the two would disagree the first time one was written without
-the other.
+| Plane | Money direction | Owns |
+|---|---|---|
+| GOLD Plans & Billing | Organization → GOLD | Catalogue, Plans, Add-ons, Subscription terms, Entitlements, Usage/credits, retail rates, provider costs, GOLD invoices/payments and margin. |
+| Financial Operations | Tenant customer → Tenant | Price Book, quotes/estimates, invoices, payments, job economics and tenant revenue/margin. |
 
-**Activity** is an Event. The append-only table already serves the customer timeline,
-automation triggers, reporting, and AI context; a parallel activity log would be the same rows
-written twice with no rule about which is authoritative.
+CRM may display those business facts and Operations may contribute costs; neither absorbs
+Financial Operations. GOLD's internal organization uses Financial Operations only for its own
+customers, never as a shortcut for GOLD subscription revenue.
 
-*Notes* and *Notifications* appear in that list too and are deliberately **not** answered
-here. Neither reduces cleanly to something that exists — a note is editable and `events` is
-not, and a notification needs delivery and per-recipient read state that nothing models. They
-get a decision when something needs them, not before.
+## BusinessOS
+
+BusinessOS is the product-facing name for shared tenant semantic and operating context:
+identity, purpose, audience, Business Offerings, voice and messaging, policies, brand direction
+and operating configuration. Today that context is partly represented by Organization,
+organization profiles, brand settings, operating hours, work types and public-site content.
+Extend those precise owners; do not create a parallel “business context” record that drifts.
+Purpose, audience, voice, broader policies and strategic context are not yet complete.
+BusinessOS supplies context; it never overrides deterministic ownership. Pricing rules remain
+with Financial Operations/Pricing, availability and booking commitment with Scheduling,
+routing optimization with its owning policy/optimizer, invoice behavior with Financial
+Operations, and workflow execution with Automation.
+
+## Provider and Intelligence control planes
+
+A **Provider** is a supplier. A **provider capability** is the abstract service GOLD needs; a
+**provider binding** is an organization's configured relationship to a supplier; a **provider
+resource** is the concrete external number, domain, account or similar object. Product features
+depend on capabilities, never on a provider brand. One supplier may implement several
+capabilities: Twilio can provide telephony voice, number inventory and SMS; Resend can provide
+email; Stripe can provide payments; an AI provider can provide model inference.
+
+Provider ownership may be platform-managed or tenant-specific and must be explicit. Twilio has
+the deepest current binding/resource/provisioning path; Resend is lighter. Automated health,
+drift detection and repair are still part of platform hardening.
+
+Intelligence is a horizontal runtime for model providers, routing, fallback, budgets, quotas,
+concurrency, metering, cost, health, audit, tools, safety and agents. Product-specific AI
+features stay inside their Products. GOLD Intelligence may package those features commercially;
+AI Receptionist is a Solution composed from Communications / Voice, Automation, CRM and the
+Intelligence runtime, not a new engine or Product.
+
+Initially local-model bindings are Platform Context only. GOLD's internal organization may
+consume those capabilities through ordinary managed features. External tenant organizations may
+also consume managed AI-backed GOLD features, but cannot configure Ollama URLs/local inference
+endpoints, view platform credentials, or select arbitrary internal models. Tenant-managed model
+credentials, endpoints, model selection and dedicated inference are deferred until their control
+and isolation model is designed.
 
 ## Engine ownership
 
-**An engine is code that owns entities and rules. It is not a module** — a module is what a
-tenant switches on and is billed for, it is a row rather than a directory, and nothing in this
-section governs it. `constraints.md` D25 pins the two words apart and explains what the
-collision cost.
+An engine is code that owns a load-bearing calculation or runtime, not something a tenant buys.
+Products, Modules, Features and Add-ons are commercial/product taxonomy; engines are technical
+ownership boundaries.
 
 | Engine | Owns |
 |---|---|
-| Pricing | `priceWorkItem` — the price book, quoted lines, invoices, payments, job economics (I4). |
-| Scheduling | `freeWindows` and `listSchedule` — the calendar, availability, resource assignment, operating hours, double-booking (I5, I7). |
+| Pricing | `priceWorkItem`, tenant Price Book calculation, quoted and invoice line semantics, and job economics (I4). It does not own GOLD Plans or subscription billing. |
+| Scheduling | `freeWindows`, `listSchedule`, resource commitment, availability, operating hours and conflict prevention (I5, I7). |
+| Automation | The single trigger-condition-action execution runtime and its recorded outcomes (I22-I25). |
 
-**Stale until this line, this table said `*(none yet)*`.** `constraints.md`'s own Engines table
-has listed both of these as **Built** since M2/M3 — this table simply hadn't been updated to
-agree with it. The definition above still holds: an engine appears here on two independent
-pieces of evidence, and each of these has them — the prior repositories `vision.md` names, plus
-the invariant machinery (I4, I5, I7) that would break if either calculation moved.
+Scheduling owns every time/resource commitment. Booking, Maintenance and Dispatch are Modules,
+policies and interfaces over the Scheduling engine; they must not grow separate calendars or
+availability calculations. Only a future route/travel optimizer with its own independent
+optimization rules may earn a separate engine boundary. Automation and workflows similarly
+share one execution runtime even when they have different authoring experiences.
 
-Filled in as engines are extracted. An engine appears here on two independent pieces of
-evidence, at least one from a system that shipped — never in anticipation, and never on the
-strength of one source's requirements. A direct instruction is evidence in its own right, since
-the bar exists to stop speculative building, not to require a second customer before the owner's
-own request counts.
-
-**A module needs no entry here at all.** CRM is a module with no engine: the timeline is a
-projection of `events` and the intelligence is arithmetic over work items, prices and payments.
-Weather is another (D11). That is the normal case, and an engine with no module is the
-suspicious one.
-
-## Not yet engines
-
-Named by the vision, deliberately absent. Create each **on two independent pieces of
-evidence, at least one from a system that shipped** — not on a second call site. A second
-caller inside one business is grounds for extracting a function into the domain layer, which
-is a cheaper and different thing (`constraints.md`, Scope and abstraction). Several of the
-names below are also *module* names, and that is not a contradiction: `bookings` may be a
-module a tenant enables long before any code is extracted under that name.
-
-`scheduling` · `dispatch` · `pricing` · `inventory` · `maintenance` · `bookings` ·
-`communications` · `finance` · `automations` · `reporting`
-
-Their eventual existence is not permission to stub them now. An empty directory with a
-`README` describing future intent is a speculative abstraction with extra steps.
-
-## The scheduling engine is one engine
-
-`constraints.md` does not repeat this, so it is recorded here.
-
-Scheduling, Dispatch, Booking, and Maintenance are frequently described as four engines.
-They are one engine with four policies. All four reduce to the same statement:
-
-> A unit of work needs a time, a resource, and a place, subject to constraints.
-
-Built as separate engines, they become four calendars, four availability models, and four
-conflict-resolution bugs. Build one scheduling core over Work Item and Resource; Booking,
-Dispatch, and Maintenance are rule sets and screens above it. **They are still four modules** —
-a tenant enables Bookings without enabling Dispatch — which is the clearest illustration of why
-D25 separates the words: one engine, four things a business can buy.
-
-The same collapse applies to automations and workflows: one trigger-condition-action runtime,
-two authoring interfaces.
+Communications, CRM, Insights, Customer Experience, Voice and AI are not engines merely because
+they are important product areas. Add an engine only when a distinct load-bearing calculation or
+runtime has evidence and enforced invariants; do not stub future engine directories.

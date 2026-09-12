@@ -56,7 +56,8 @@ reports and a dashboard each. Prints their URLs, accounts, and the one shared pa
 ## Standing it up
 
 1. `pnpm db:start` — needs Docker. Prints an API URL, an anon key and a service-role key.
-2. Put the anon key in `apps/web/.env.local` (copy `apps/web/.env.example` first). Nothing in
+2. Put the publishable key in `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in
+   `apps/web/.env.local` (copy `apps/web/.env.example` first). Nothing in
    `apps/web` may hold the service-role key.
 3. Put what the tests need in `.env.test` — gitignored, the only place a service-role key
    belongs, since the suites create users before signing in as them.
@@ -71,10 +72,12 @@ cannot reach from any screen" for where that breaks down.
 
 ### 1. Two people, not one
 
-Sign up twice — `/sign-up` — in two browser sessions. `addMember` refuses an address with no
-account behind it, and there's no invitation email yet (M6 owns channels). The second account is
-also how you see I12 later: a member whose role lacks a capability still sees every screen and is
-told why the form isn't theirs.
+Sign up twice — `/sign-up` — in two browser sessions. You can add an existing account directly
+or invite an address that has not signed up yet. When `RESEND_API_KEY` and
+`PLATFORM_EMAIL_FROM_ADDRESS` are configured, the invitation link is emailed; otherwise the
+creator can copy the one-time link from the success state. The second account is also how you
+see I12 later: a member whose role lacks a capability is refused by policy even if they invoke
+the write directly.
 
 ### 1b. Forgetting the password — the only flow with a round trip in it
 
@@ -108,8 +111,9 @@ The staff-provisioned door still exists and is what M5's console proves, so it i
 once: log in as the staff account from *The other side* below, provision a business for the
 first of your two sign-ups (`createBusinessAction`'s staff-facing counterpart on `/platform`),
 then sign in as them. Both doors write the same `organization.created` event — one flagged
-`provisioned`, one not — and both call `app.enable_default_modules` before handing you the same
-empty business described below.
+`provisioned`, one not — and hand you the same empty business described below. Founding access
+is recorded through `app.grant_founding_terms`; the retired
+`app.enable_default_modules` path is not part of the current flow.
 
 The provisioning form asks four things, each deliberate:
 
@@ -118,10 +122,9 @@ The provisioning form asks four things, each deliberate:
 - *Timezone* — write-once at founding; UTC is the default rather than the server's zone.
 - *Currency* — required, no default — there's no neutral currency to pick.
 
-You get one membership with every capability, the kernel (work, schedule, customers, locations,
-resources, fields, roles, settings — none switchable off), and two modules on: **Billing** and
-**Guided setup**. The second is on because a first-run screen you have to discover in Settings is
-not a first-run screen; it is still a module and still one click from off.
+You get one membership with every capability, the Foundation (work, schedule, customers,
+locations, resources, fields, roles and settings), and the founding commercial terms/module
+state granted through the same ordinary path the platform uses for other organizations.
 
 **Assets, public booking, the portal and card payments all start off.** Settings → *What this
 business uses* — flip Assets and Billing and watch the sidebar change; switching Billing off also
@@ -170,6 +173,12 @@ A brand-new business has no vocabulary, so the board is empty.
   enough to overlap two committed jobs is refused by the database.
 
 ### 5. Who the work is for — *Customers*, *Locations*
+
+Open Customer, Location and Asset records rather than judging them from list rows. Customer
+shows its documents, custom fields and timeline. Location and Asset have real detail routes and
+document relationships; their event timelines are not yet surfaced. Resource has a detail
+experience but no domain-level Document relationship. Custom-field editing is currently
+surfaced for Customer and Work Item, not every entity whose database row supports `custom`.
 
 Create a customer, create a location, link them. The customer's detail page is the CRM screen —
 locations, documents, a timeline read from `events` (a projection, not a table of its own), and
@@ -220,6 +229,14 @@ portal's own link, which only ever proved somebody held it. **Try it twice as th
 account**, back to back — the second attempt is refused too, not silently repeated; the row
 already says *accepted*.
 
+### 9c. Publish the business — *Settings* → *Website*
+
+Edit the typed homepage sections, save a draft, preview it, and publish. Publishing creates an
+immutable revision and atomically selects it; subsequent editing creates another draft. GOLD's
+configured public homepage proves this at the root route. A tenant's published revision is not
+yet distributed to a resolved tenant hostname: custom domains, governed media, additional/legal
+pages, public auth context and attribution remain M16 work.
+
 ### 10. Trying to break it — the part worth doing twice
 
 - **Double-book a resource.** Overlapping windows on one resource — refused by
@@ -246,8 +263,10 @@ listed in a table, not by clicking, and checked live rather than minted at log-i
    Open the context switcher (top of the sidebar) on any business this account already belongs to
    and a new **Platform** entry has appeared alongside it — one account, two contexts, at once.
 
-`/platform` lists every business — arrival date, currency, modules, last activity — each rendered
-in that tenant's own zone and currency.
+`/platform` provides a separate platform Sidebar for Overview, Organizations, Products,
+Modules, Meters, Pricing, Providers and Failures. Organization detail exposes that tenant's
+commercial terms, provider bindings/resources, usage and support-session entry. These routes
+never enter the tenant `navigation.ts` model.
 
 **Provision a business.** *Provision a business* asks the same four things as founding, plus
 whose business it is — that person must already have an account. Log in as that owner: they have
@@ -336,8 +355,8 @@ has no Ask screen at all.
 model on that deployment. Missing the first, the screen says this installation can't answer;
 missing the second, it says so in the far side's own words.
 
-**A model on your own machine** — the same path a business that won't let rows leave the building
-uses in production:
+**A model on the platform operator's own infrastructure** — useful for local development and
+for GOLD-managed deployment, not an organization setting:
 
 ```bash
 ollama pull qwen3.5:9b            # tool-calling is what matters; `ollama list` shows which have it
@@ -351,6 +370,11 @@ python apps/api/dev.py            # :8787
 
 Both settings are required together — no default model name, since one that resolves to a tag you
 don't have makes the deployment look configured and answer 404 on every question.
+
+Only Platform Context configures this binding initially. GOLD's internal organization and
+external tenants may consume managed AI-backed features through their ordinary entitlements,
+but an external tenant cannot set an Ollama URL, choose an internal model or view platform
+credentials. Tenant-managed model bindings remain deferred.
 
 **Anything hosted speaking the same dialect** is the same three settings, including Gemini's
 OpenAI-compatible endpoint. Worth knowing: a free tier is usually free because the provider may
@@ -374,17 +398,31 @@ function the schedule screen calls runs under your session — a colleague witho
 `work_item.schedule` gets the policy's refusal on the row; a taken window gets the exclusion
 constraint's. Either way it's decided once — the buttons don't come back.
 
+### 13. Exercise the Voice foundation — *Calls*
+
+With Twilio credentials, callback URL, binding and number resources configured by Platform
+Context, place an outbound call or receive one through the API callbacks. The call is modeled as
+a conference with participant/event rows; inbound, outbound, status and recording callbacks
+attach provider facts, and completed usage can enter the normalized ledger. The Calls UI exposes
+the business record, stage and outcome foundation.
+
+Do not use this walkthrough as evidence that M9 is complete. Recording metadata is present, but
+the end-to-end recording → transcription → analysis → timeline → reviewed domain action loop is
+not. There is no browser softphone consumer or realtime voice agent. Provider configuration and
+normal recovery still require hardening through M14/M17.
+
 ---
 
 ## What you cannot reach from any screen
 
-Two capabilities exist in the domain layer, are covered by tests, and have no route, form or
-button — the honest residue of M4:
+Three capabilities exist in the domain/runtime layer, are covered by tests, and have no
+operator control — the honest current residue:
 
 | Capability | Function | What its absence blocks |
 |---|---|---|
 | Withdraw a customer's portal link | `revokePortalInvite` | The portal page's own comment says "the business revokes it". Today the business cannot. |
 | Change an existing member's role | `assignRole` | A role is assigned when somebody is added and never changed afterwards. |
+| Mint a browser telephony token | `browserTelephoneToken` | The token boundary exists, but no browser softphone consumes it; Voice is provider/callback foundation rather than M9's completed front desk. |
 
 **A third capability was on this list and isn't any more.** `setTypeBookable` — publishing a kind
 of work to the public page — is now a section on the **Work** screen under the selected kind,

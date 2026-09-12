@@ -13,26 +13,24 @@ A milestone number is identity, not sequence — cited across hundreds of docume
 migrations, so it is never renumbered, only appended to. M11 sits above M9 in the list below and
 runs before it; the number still means M11.
 
-1. **M5 — the platform side.** Every signed customer walks through provisioning first.
-2. **M6 — workflows and automations.** Pulled ahead of its original slot: M5's console couldn't
-   answer *what is failing* until something recorded a failure, and M6 gives it a writer (D30).
-3. **M8's second criterion — describe a business, get a proposed configuration.** Self-serve
-   founding reopened (`20260901000001`); D29 says this proposal flow is the only thing standing
-   between that door and hand-configuration. D32 holds the decisions.
-4. **Tenant marketing and branding.** D20's deferral, revisited — a named revenue line
-   (`market.md`), no milestone number yet. A tenant's own integrations (D33) is the second
-   unnumbered entry.
-5. **M8's first criterion — asking the system questions.** Shipped ahead of M7: a tool cannot
-   contain a calculation (D34, a tool is `stable`/`security invoker`), so a report-shaped question
-   with no aggregate yet just answers *I cannot answer that* rather than inventing one.
-6. **M7 — reporting and dashboards.** Unlocks the report-shaped half of the question tools.
-7. **M11 — the interface, second pass. Met.** The first appended number: its prerequisite (the
-   control set, `ui-spec.md`) had already shipped, and building M9's new screens over a control
-   set with no focus states or confirmations would repeat the M3-into-M4 mistake at a larger size.
-8. **M9 — reception and sales.** D5's reasoning is unchanged.
-9. **M10 — desktop.** No customer has asked.
+M0–M8 and M11 established the current platform foundation. The active pre-NextFund sequence is:
 
-M8 splits across two entries above because its two criteria share a number, not a dependency.
+1. **M12 — catalogue, Plans, Subscriptions and Entitlements.**
+2. **M13 — BusinessOS and reusable organization configuration.**
+3. **M14 — provider control plane, proven through Voice**, enabling M9 without replacing it.
+4. **M15 — Financial Operations boundary and migration.**
+5. **M16 — Customer Experience distribution.**
+6. **M17 — platform hardening and GOLD dogfood gate.**
+7. **M18 — NextFund migration and parity.**
+8. **M10 — desktop**, still waiting on demonstrated demand.
+
+Inside M12–M17, preserve this dependency order: normalize catalogue and commercial semantics;
+ship platform catalogue/Plan controls; complete BusinessOS; harden provider configuration;
+take Voice through the whole control plane; expose CRM configuration; separate Financial
+Operations; apply the control-plane pattern to Email, SMS and Automation; finish public
+distribution/media/legal/domain work; expose Insights, usage and cost; add provisioning health,
+drift and retry; dogfood it; then prove migration readiness. Numbers remain identities, so M9's
+front-desk outcome is completed through M14 rather than renumbered.
 
 GOLD runs as an ordinary tenant (customers, work items, scheduling) alongside all of this and is
 not itself a milestone — a field only our own pipeline wants is one caller, and building for one
@@ -114,8 +112,9 @@ because nothing asked for one yet; a rule the catalogue can't express belongs in
 
 Terminology: a tenant already names its own things (statuses, roles, fields, display names) —
 that's what "standing up a shape" means, and it shipped across M1–M2. What's *not* built is
-overriding the platform's own nouns (Work Item, Resource, Customer) in tenant chrome — deferred
-under "Decided, not yet built" until a second vertical shows the shape.
+overriding the platform's own nouns (Work Item, Resource, Customer) in tenant chrome. The second
+vertical has now triggered that work; M13 owns its deliberate shape rather than retrofitting it
+into this historical milestone.
 
 The interface also lands here for the first time: an operator shell, real responsiveness, and
 shared form components extracted at their third caller.
@@ -363,9 +362,9 @@ and all three drafting-adapter files, failing on either business's vocabulary ap
 
 ## M9 — Vertical two: reception and sales
 
-> **Done when:** a business runs its front desk on GOLD — a call is placed or answered, recorded,
-> transcribed, analysed, and attached to the customer timeline as events — and the analysis
-> proposes actions that the domain layer executes rather than performing them itself.
+> **Done when:** a business can run its front desk on GOLD: call placed/answered, recorded,
+> transcribed, analysed, attached to timeline, with proposed actions executed through domain
+> layer.
 
 Renamed from "Communications and the dialer," which described the plumbing rather than the
 business function it serves.
@@ -436,5 +435,95 @@ has a matching `ConfirmSubmit`.
 Goes before M9 for D23's own reason, reused: M9 is a new family of screens, and building it over a
 control set with no focus states or confirmations repeats the M3-into-M4 mistake at a larger size.
 
-Not a per-tenant theme (still D20's deferral), not `packages/ui` (M10), not a design-tokens
-document (`globals.css` already is one, executable).
+Per-tenant theming and `packages/ui` are now built. `globals.css` remains the executable
+token definition rather than gaining a second design-tokens document.
+
+---
+
+## M12 — Catalogue, Plans, Subscriptions and Entitlements
+
+> **Done when:** platform staff can define the canonical Product → Module → Feature catalogue,
+> package reusable Plans and Add-ons with allowances, activate an organization's Subscription,
+> and both platform staff and the organization can inspect the same resolved Entitlements and
+> Limits without SQL or environment edits.
+
+This milestone proves catalogue and entitlement **resolution**, not universal write enforcement.
+Normalize/reuse current `platform_products`, modules and commercial terms deliberately rather
+than creating a parallel entitlement system. Entitlements remain separate from RBAC capabilities.
+Resolution follows platform hard limits,
+Plan allowance, Add-on allowance, organization override, user/concurrency limit and provider
+operational limit. Existing effective-dated price and usage history remains attributable.
+
+## M13 — BusinessOS and reusable organization configuration
+
+> **Done when:** an administrator can establish shared business identity, positioning, audience,
+> offerings, voice and operating context once, and every applicable Product that needs that
+> context consumes the authoritative BusinessOS representation rather than maintaining a
+> duplicate. At least two independent Product surfaces must prove the shared-context path.
+
+Extend existing Organization, profile, brand, hours, work-type and site owners. Include
+terminology and reusable business setup where evidence has made their shape concrete. Keep
+Business Offerings separate from Financial Operations' Price Book.
+
+## M14 — Provider control plane, proven through Voice
+
+> **Done when:** platform staff can provision, inspect, diagnose and remediate the capability,
+> binding and resources behind an entitled organization's Voice service, and that organization
+> can place or receive a call through those resources with Usage, Cost and Health recorded—all
+> without SQL, environment editing or the Twilio console.
+
+This proves the provider control plane using the chain Catalogue → Communications → Voice →
+Features → Plan/Add-on → Subscription → Entitlements → organization Voice configuration →
+provider capability → Twilio binding/resources → runtime → Usage/Cost/Health. It does **not**
+mean “Voice is finished”: M9 alone owns recording → transcription → analysis → timeline →
+proposed domain action, and depends on M14's operable provider path. The current call,
+conference, callback, recording metadata, binding and usage foundation is the starting point.
+M14 proves the reusable provider contract through Voice; M17 owns applying the proven pattern
+across Email, SMS and Automation. Local-model bindings remain Platform Context only in this
+phase.
+
+## M15 — Financial Operations boundary
+
+> **Done when:** a tenant can price, quote, invoice and record or collect payment from its own
+> customers through Financial Operations while GOLD independently manages that tenant's Plan,
+> Subscription, usage and charges through Plans & Billing; the two flows use separate ownership,
+> payment/provider bindings and ledgers, and neither can mutate or settle the other's financial
+> records.
+
+Preserve the existing `billing` and `card_payments` persistence keys during migration.
+Scope richer pricing rules, discounting, taxes, acceptance, refunds and accounting integrations
+from evidence rather than treating the Product boundary as proof they are built.
+
+## M16 — Customer Experience distribution
+
+> **Done when:** an organization can publish its approved site to its own resolved hostname with
+> governed media, required legal pages, correct public authentication context and attributable
+> booking/form actions.
+
+Build from the revision and publishing foundation. Domain verification, routing, asset
+ownership, preview/publish states, legal content and public-to-tenant attribution must be
+observable and recoverable.
+
+## M17 — Platform hardening and GOLD dogfood gate
+
+> **Done when:** GOLD runs an ordinary fully-entitled, fully-metered Subscription and routine
+> catalogue, provisioning, configuration, health, drift, retry, usage, cost and support work can
+> be completed through product controls without Claude, VS Code, GitHub, Supabase Studio, manual
+> SQL, provider consoles or environment editing.
+
+Every applicable optional Product/Module must follow Plan/Add-on → Entitlement → navigation/UI
+availability → domain/server authorization → database write enforcement at its consequential
+write boundaries. A direct RPC or automation may not bypass a missing entitlement. Demonstrate
+failures and retries, entitlement/permission/quota/provider-limit behavior, and migration
+rehearsal with audit evidence. Remaining CRM self-service, two-way Email, terminology,
+cross-product configuration, Insights and usage visibility gaps are complete only insofar as
+this externally observable gate requires them. This is the pre-NextFund hardening gate.
+
+## M18 — NextFund migration and parity
+
+> **Done when:** NextFund's source data and indispensable workflows are inventoried, mapped,
+> rehearsed, reconciled and cut over with rollback evidence, and the reason to switch is measured
+> without introducing a customer-specific fork.
+
+M18 cannot start as a production migration until M17 passes. Gaps discovered in rehearsal feed
+the reusable Product and migration model; they do not bypass it.

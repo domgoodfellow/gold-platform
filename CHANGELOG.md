@@ -5,11 +5,24 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Governing documentation reconciled to the product
+
+- Reconciled the eight governing docs, `CLAUDE.md`, `SETUP.md` and the API README against
+  current routes, domain code, migrations, tests and the connected GOLD Financial Model.
+- Defined the canonical Product → Module → Feature → Plan/Add-on → Subscription →
+  Entitlement/Limit model, BusinessOS, horizontal Intelligence runtime, provider capabilities
+  and the separate tenant Financial Operations/platform subscription planes.
+- Corrected current truth for D45's one-identity contexts, shared Sidebar/control/theming work,
+  public-site publishing, invitation email, API entrypoints/environment variables, Voice's built
+  foundation and M9's remaining end-to-end criterion.
+- Moved triggered work into appended M12–M18 milestones and established the platform-hardening
+  gate before NextFund migration. Retired `docs/ui-domain-coverage.md` after absorbing its
+  durable gaps into `ui-spec.md`, `walkthrough.md` and `roadmap.md`.
+
 ### Asset, Location and Resource are records, not list rows
 
-- `docs/ui-domain-coverage.md` — a domain-to-UI coverage audit, inventorying every product
-  capability against what actually reaches a screen. Kept as a living index: update a row's
-  status in the same change that changes the surface it describes.
+- A domain-to-UI audit captured every product capability against what reached a screen; that
+  temporary audit has now been absorbed into the governing docs and retired.
 - New record pages: `/assets/[assetId]`, `/locations/[locationId]`, `/resources/[resourceId]` —
   identity, custom fields, and (for assets and locations) documents and related work, using
   new `getAsset`, `getLocation`, `getResource` domain reads and optional `assetId`/`locationId`/

@@ -1,166 +1,102 @@
 # Market
 
-> Who buys this, why they switch, and what they are charged for.
+This document describes demand and commercial hypotheses. It does not report repository status;
+the roadmap and changelog do that.
 
-The demand-side counterpart to `vision.md`. That document says what the product is; this one
-says who wants it and what they pay for. Neither can be derived from the other, and until this
-file existed the repository had eight thousand lines about the machine and none about the buyer.
+## Buyer and problem
 
-**This document is held to the same evidence bar as the code.** `constraints.md` refuses to
-build an engine before two independent pieces of evidence want it. Most of the claims below do
-not clear that bar yet, and the last section says which ones and what would settle them.
+GOLD is aimed first at owner-led and operations-led service businesses whose customer, work,
+communication and cash workflows are split across spreadsheets and several disconnected SaaS
+tools. The strongest early buyer:
 
-It is deliberately the shortest document in `docs/`. Reasoning that grows past a page belongs
-in a decision record.
+- has enough volume that missed calls, duplicate entry, scheduling friction and slow follow-up
+  cost real money;
+- lacks a dedicated internal software team;
+- needs flexibility in terminology and workflow but cannot fund a bespoke system;
+- wants one accountable operating partner instead of assembling and maintaining an integration
+  stack;
+- can adopt in stages while preserving evidence, permissions and financial history.
 
----
+Field service, property and asset service, professional service, maintenance, installation and
+similar businesses are promising starting segments. These are hypotheses to validate through
+sales conversations and observed use, not a claim that one vertical defines the platform.
 
-## Who we sell to
+## Jobs customers hire GOLD to do
 
-**An operations business running on a spreadsheet, a phone and a notebook.** Nothing digital in
-place, or something so thin it does not count — a booking inbox, a shared calendar, a WhatsApp
-group.
+1. Capture and understand every customer interaction, especially a call that would otherwise be
+   missed or forgotten.
+2. Turn demand into correctly scoped, scheduled and assigned work.
+3. Keep customer, site, asset, work, document and communication context together.
+4. Quote, invoice, take payment and understand whether work was economically worthwhile.
+5. Automate repeatable follow-up without inventing business language or bypassing approval.
+6. Publish an accurate public presence and let customers take approved self-service actions.
+7. Make operating performance visible without rebuilding a spreadsheet every week.
 
-The competitor is nothing, and that is the whole wedge:
+The wedge is a reliable front desk: a placed or answered call becomes an attributable recording,
+transcript and analysis on the relevant timeline, and approved proposed actions execute through
+the normal domain layer. The larger product is the operating system around that loop.
 
-- No incumbent contract to break.
-- No data migration.
-- No retraining away from a system somebody already knows.
-- No feature-parity checklist. Anything beats a notebook.
+## Commercial model
 
-**Three reasons they buy, in the order they say them:**
+The canonical commercial chain is Product catalogue → Plans and Add-ons → organization
+Subscription → Entitlements and Limits → measured Usage. GOLD should sell customer outcomes and
+normalized usage, not expose a vendor's token, minute or infrastructure vocabulary as the
+product model.
 
-1. *"We need to be digital."* Nothing in place. This is the first sale.
-2. *"We want AI and automation."* A system exists and feels dated. This is the second sale, to
-   the same customer, and it is the one with margin in it.
-3. *"We need a website and branding."* Later, same customer, third sale.
+A Plan is a reusable package; an Add-on is an optional capability or bundle; a Subscription is
+the customer's active commercial relationship. Entitlements answer what may be used. RBAC
+capabilities answer who may operate it. Limits and allowances constrain use, and meters preserve
+the usage evidence required for billing, margin and capacity decisions.
 
-That ordering is the upsell path, which is why one customer is worth more than one
-implementation fee.
+The GOLD Financial Model in the owner's connected Drive supports this shape as planning
+evidence: it separates recurring packages, optional AI/voice capabilities, usage, implementation
+and support, and models provider costs and margins by meter. Its prices, vendors, conversion
+rates, volume assumptions and target margins remain hypotheses. They do not authorize hardcoded
+prices, promise a feature, or prove a provider is integrated.
 
-**Who we do not sell to yet.** A business already running ServiceTitan, Jobber, Simpro or
-Housecall. Displacement is phase two — see the last section for what it needs.
+GOLD's subscription revenue and provider costs are a platform financial control plane. A
+tenant's Price Book, quotes, invoices, payments and job economics are the separate Financial
+Operations Product.
 
----
+## Packaging principles
 
-## What we sell
+- Package coherent outcomes, not route access.
+- Preserve a usable base experience; do not manufacture dependency traps between Products.
+- Make metered use, included allowance, overage policy and operational limits explicit.
+- Offer managed Intelligence without making tenants administer model infrastructure.
+- Treat AI Receptionist as a Solution assembled from Voice, Automation, CRM and Intelligence,
+  not as a new isolated Product.
+- Let GOLD dogfood through an ordinary Plan and Subscription with full Entitlements and normal
+  metering; never create a tenant-zero or unmetered exception.
+- Keep implementation and migration work visible as services when it is materially distinct
+  from recurring software value.
 
-**Configured deployments.** The platform is the delivery mechanism; the invoice is for a
-working operation.
+## Adoption and displacement
 
-| Line | What it is | Billed |
-|---|---|---|
-| Implementation | Discovery, configuration, data entry, training, launch | Per engagement, up front |
-| Platform and modules | Recurring, per tenant, by what is switched on | Monthly from launch |
+A prospect does not switch because GOLD has more menu items. It switches when the path from its
+current system is credible and the first operating loop is measurably better. Adoption therefore
+requires:
 
-`vision.md`'s three tiers describe layers of *capability*. This table is the *money*, and the
-two are different axes: a tenant on the base tier with five modules can pay more than one on
-the AI tier with two. Per-seat is not the primary lever, per `vision.md`; the dialer (D5) is
-the exception.
+- a clear inventory and mapping of source data;
+- repeatable import with reconciliation and rollback evidence;
+- parity for the workflows that cannot stop on cutover day;
+- staged activation, health checks and recoverable provisioning;
+- a reason to switch expressed in fewer missed interactions, faster work-to-cash, lower
+  administrative effort or better operating visibility.
 
-Prices are not in this file, or any file in `docs/` — D8.
+NextFund is the first named migration program, but it begins only after the platform-hardening
+gate in the roadmap. Its needs are evidence for reusable Products and migration tooling, not
+permission for a customer-specific fork.
 
----
+## Evidence discipline
 
-## Why a platform rather than a fork per customer
+Commercial decisions should distinguish:
 
-The agency model has a failure mode with a name: every customer becomes a fork, and by the
-fifth you are maintaining five codebases and selling none of them.
+- **Observed:** behavior in a real organization, a sales conversation, a signed commitment or
+  measured cost/usage.
+- **Modeled:** the financial spreadsheet's scenarios and vendor assumptions.
+- **Proposed:** packaging, positioning or pricing awaiting validation.
 
-The platform is what makes the model scale. **The margin on implementation #10 differs from
-implementation #1 only if #10 is configuration rather than code.** That is why
-`configureBusiness` has no branch in it — the unit economics of this business, written as a
-function.
-
----
-
-## The demo
-
-`tire-app-template`: single-tenant, in production on Vercel and Supabase — marketing site,
-booking and payment, admin dashboard, integrations. Thirty tables, zero tenancy columns. One
-business, hand-built.
-
-**The demo is the pair, not either half.**
-
-- Built once as a bespoke application: months.
-- Rebuilt inside GOLD as a `BusinessShape` through `configureBusiness`: an afternoon.
-
-The bespoke one shows a product. The configured one shows a platform. Side by side they show
-the business model, which is the thing actually being sold.
-
-Its second use is as **the first real entry in the configuration library**. M3's test configures
-two invented businesses; this is a real one with a production twin to check the result against.
-
----
-
-## What this implies for the roadmap
-
-`roadmap.md` was sequenced for a self-serve engine, against a business model that had never
-been written down. It owns sequence and now carries the order under *Order of work*; this table
-is the demand-side reason for it, not a second copy of it. Where the two disagree, the roadmap
-is the one to change.
-
-| Milestone | Change | Why |
-|---|---|---|
-| M5 — the platform side | **Unchanged, first** | The factory floor. Every signed customer walks through provisioning. |
-| AI onboarding (M8) | **Moves up** | The only build with two beneficiaries: the tenant's self-serve door, and our implementation margin. |
-| Tenant marketing and branding (D20) | **Moves up** | A named revenue line and the third sale to the same customer. `organization_profiles` is the seed; it has no milestone number yet. |
-| M6 workflows, M7 reporting | Unchanged | Real products; neither is in the pitch. |
-| M9 — dialer | **Unchanged, second vertical** | D5's reasoning holds. GOLD is a user of it too — outbound to un-digitized businesses is vertical two, and GOLD's own Organization Context switches the module on like anyone else, no exemption (D42, D45). The trigger to build is call volume, not audience: thirty calls need a phone and a list. |
-| M10 — desktop | **Out of the near path** | No customer has asked. |
-
-**GOLD, dogfooding its own Organization Context (D42, D45),** runs alongside all of it and costs
-nothing: an ordinary organization with ordinary memberships, distinct from platform authority —
-checked live (`app.is_platform_staff()`), never a Postgres role a session had to wear instead of
-its own — that D28 keeps out of every tenant. Our own implementation pipeline is customers, work
-items and scheduling — the exact path a tenant uses. The risk to watch: a field our own pipeline
-wants is *one* caller, and `constraints.md` is right to refuse it.
-
----
-
-## What blocks the first customer
-
-| Blocker | State |
-|---|---|
-| ~~`setTypeBookable` has no route~~ | **Closed.** Publishing is a section on the Work screen, under the kind of work being published. The public flow is demonstrable by hand. |
-| GOLD is not deployed | Tracked on GitHub, but nowhere live: no `.vercel` directory, no hosting config, and `vercel.json` exists only under `apps/api`. |
-| Operator provisioning | M5, next. |
-| Tenant marketing surface | Deferred by D20; `tire-app-template` holds the pattern in `site_content`. |
-| Taking money from a tenant's customers | D27 decided, no route built. |
-| Billing the tenant | Implementation and platform fees are invoiced. **One metered cost is not: reaching people.** Calls, texts and email are paid for with credit bought in advance — a thing purchased, not a bill sent, so there is no arrears and no credit risk (D40). |
-
----
-
-## What is evidence and what is assumption
-
-| Claim | Basis | Status |
-|---|---|---|
-| Field-service operations generalise across business shapes | Three prior repositories, one in production | **Evidence** |
-| `tire-app-template`'s shape is a real business's shape | In production | **Evidence** |
-| A voice plane can be built and run | `nextfund-portal` | **Evidence** |
-| Businesses with no system will pay for a configured deployment | — | **Assumption** |
-| The AI and automation upsell lands as a second sale | — | **Assumption** |
-| Implementation compresses enough to hold margin at volume | — | **Assumption** |
-| Marketing and branding is a third sale to the same customer | — | **Assumption** |
-
-Four blanks this document cannot fill from inside the repository:
-
-- **The first customer, by name.**
-- **What they pay today, and to whom.**
-- **The geography and the trade.**
-- **The price points**, which D8 keeps out of `docs/` in any case.
-
-**Every row marked *Assumption* is answered by a sales call, not by a commit.** The first three
-calls are the instrument. Until they happen, this document is a hypothesis with a table of
-contents, and it should be revised or deleted on what they return.
-
----
-
-## What phase two needs
-
-Displacing an incumbent requires three things this platform does not have and should not build
-speculatively: import from the formats incumbents export, parity on the two or three features
-that actually hold a customer, and a reason to move stronger than *ours is nicer*.
-
-Deliberately not scoped. It is named here so that "we will go after them later" is a recorded
-decision rather than an assumption nobody wrote down.
+No durable document should turn modeled values into facts. Record actual usage and provider cost,
+compare actuals with estimates, and revise packaging from evidence while preserving the
+catalogue/Plan/Subscription/Entitlement boundaries.

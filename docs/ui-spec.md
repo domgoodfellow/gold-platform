@@ -2,8 +2,8 @@
 
 Admitted as a Tier 1 document by D23's trigger, which fired when the second and third surfaces
 shipped and went unnoticed until the fifth. `constraints.md` D23 holds the decisions; this
-document holds what three surfaces' worth of navigation models are too much for one decision
-record to carry. Where the two disagree, D23 governs.
+document holds the surface, navigation and control relationships that are too much for one
+decision record to carry. Where the two disagree, D23 governs.
 
 Harvested from `tire-app-template/docs/ui-spec.md` the way D1 says to harvest — the reasoning,
 cited, never the code, and not all of the reasoning. That source is a single-tenant application,
@@ -23,8 +23,9 @@ ahead of it. What is recorded there is what was built and what it replaced.
 
 ## 1. The surfaces
 
-Six, and only two of them share a navigation model. That is the reason this file exists rather
-than another paragraph in D23.
+Six. The two authenticated workspaces share shell and Sidebar infrastructure but deliberately
+do not share a navigation model. That is the reason this file exists rather than another
+paragraph in D23.
 
 | Surface | Whose it is | Navigation | Where |
 |---|---|---|---|
@@ -32,15 +33,15 @@ than another paragraph in D23.
 | Operator shell | a business's own staff | full IA, three renderings (§2) | `app/organizations/[organizationId]/` |
 | Public booking | a stranger with no account | none — one linear flow | `app/(public)/book/[slug]/` |
 | Customer portal | one customer of one business | none — a single page of their own things | `app/(public)/portal/[token]/` |
-| Platform console | GOLD staff, members of nothing | none — one list, deliberately no sidebar | `app/(platform)/platform/` |
+| Platform console | GOLD staff, who may also hold tenant memberships | platform administration IA in the shared Sidebar | `app/(platform)/platform/` |
 | Auth | anybody | GOLD's own header and footer (`SiteShell`) | `app/(auth)/` |
 
 Three consequences that are easy to undo.
 
-**Only the operator shell has an information architecture.** The others are flows or single
-pages, and giving any of them a sidebar would import an operator's mental model into a place
-where it means nothing. A customer must never meet a business-configuration concept, and a
-stranger booking a slot must never meet one at all.
+**The operator and platform shells each have an information architecture.** The tenant model
+comes from `lib/navigation.ts`; the platform model comes from
+`features/platform/platform-navigation.tsx`. Public, portal and auth surfaces remain flows or
+single-purpose pages. A customer must never meet a business-configuration concept.
 
 **`SiteShell` is GOLD's chrome and belongs on GOLD's pages only** — the front page and the four
 credential screens, which is why those two rows share a description above. It is a header saying
@@ -49,10 +50,10 @@ wordmark on somebody else's shop front. D20 keeps the platform out of a tenant's
 and `public-profile.test.ts` now fails the build on a `SiteShell` anywhere under `app/(public)/` —
 the structural form of the sentence rule the rest of that suite enforces.
 
-**The platform console has no `navigation.ts` entry and must not gain one.** Those nouns belong
-to a business and the console is not one. `navigation.test.ts` scans
-`organizations/[organizationId]/` for areas, which is why that directory is ungrouped while
-these four are grouped.
+**Platform pages never enter tenant `navigation.ts`.** Platform Overview, Organizations,
+Products, Modules, Meters, Pricing, Providers and Failures are a separate IA because they govern
+GOLD itself, not one business. Both models render through the shared `AppShell` and shadcn
+Sidebar primitives.
 
 ---
 
@@ -105,10 +106,9 @@ area could live.
 
 **The desktop sidebar does collapse, to the tablet rail's own icon-only width.** Unlike a phone
 drawer this needs none of that machinery — nothing overlays, nothing traps focus, the column
-just narrows — so `AppShell` (`components/containers/app-shell.tsx`) holds it as a `localStorage`
-preference read through `useSyncExternalStore`, applying only from `lg` up. Still one `AREAS`
-list; the identity block compacts the same way nav labels already did for the tablet rail, via
-the shared `SidebarLabel`.
+just narrows. `AppShell` uses `@gold/ui`'s `SidebarProvider`; the shared shadcn implementation
+persists collapse state in its `sidebar_state` cookie. Each context maps its own navigation
+model. The identity block compacts with the labels.
 
 **The sidebar is not there at all on a phone.** It used to be, which put the business's identity
 and the shell's own actions in a band above every screen while the same areas sat in the bar at
@@ -232,10 +232,10 @@ statuses, the tenant owns them, and §7 is why.
 
 ## 4. The control set
 
-Built. The set lives under `apps/web/components/`, in sub-folders named for the sections of this
-document rather than for a taxonomy invented alongside it — so the file is under the heading you
-would look the control up by. `components/README.md` carries the split and, more usefully, what
-was moved *out* of the directory and on what test. No screen spells a control by hand.
+Built in three deliberate layers. `packages/ui` owns generic shadcn primitives.
+`apps/web/components` owns generic composed application controls and containers.
+`apps/web/features` owns product-capability UI. A repeated product concept does not move into
+the generic layers merely because it has multiple call sites.
 
 | Control | File | Call sites |
 |---|---|---|
@@ -250,18 +250,11 @@ was moved *out* of the directory and on what test. No screen spells a control by
 | `Badge` · `DefinitionList` · `Detail` · `Stat` · `StatRow` · `Toolbar` | `display/data.tsx` | the detail screens and Today |
 | `cx` | `class-names.ts` | the others |
 
-**A second `Dialog`, `Table` and `Badge` arrived on an operator-shell screen, named rather than
-hidden (D45).** `@gold/ui/components/{dialog,table,badge}` are shadcn primitives, extracted
-verbatim from what the platform console already used, and the new People & Access invite flow
-(`app/organizations/[organizationId]/roles/`) uses them directly rather than `containers/
-dialog.tsx`/`display/table.tsx`/`display/data.tsx`'s `Badge`. This is exactly the "second control
-belonging to one surface" this section's own acceptance test would ordinarily refuse — it stands
-because the shared control set §4 describes was already only ever the operator shell's own set,
-and the platform console has used `@gold/ui` primitives directly since before this record
-(`app-sidebar.tsx`, `tenant-workspace.tsx`) with no reconciliation between the two attempted yet.
-The new invite flow is a small, deliberate step *toward* one shared set rather than a third one —
-not a full fix, and not pretended to be one. Untouched: `containers/dialog.tsx`'s own neutral-
-treatment rule for `Badge` (§7) still governs every other tenant screen.
+The operator and platform surfaces have converged on those layers. Dialog, Table, Badge, Card
+and Sidebar primitives come from `@gold/ui`; composed controls retain the application behavior
+that primitives intentionally do not own. `globals.css` aliases `--card`,
+`--card-foreground` and `--muted-foreground` to GOLD's semantic roles, so the platform Card
+does not carry an unthemed exception.
 
 **What it replaced, measured before and after.** 23 local style constants across eight names —
 `INPUT_CLASS` in ten files, then `INPUT`, `CELL`, `FIELD`, `BUTTON`, `SMALL_INPUT`,
@@ -418,14 +411,31 @@ standing to give.
 
 ---
 
-## 9. What this document does not decide
+## 9. Control-plane placement
 
-- **The marketing surface.** A per-tenant *site*, with pages and editable blocks, is still
-  deferred under D20. Per-tenant **theming** no longer is: §3's last three roles are a tenant's
-  and D23 carries the amendment. The two were one entry here because both were called *theme*,
-  and separating them is what showed one of them had never been blocked.
+Platform Context owns catalogue, Product/Module/Feature definitions, Plans, Add-ons, provider
+capability inventory, platform-managed bindings, rates, health, drift, usage/cost and
+organization-level Subscription inspection. Organization Context owns BusinessOS, Product
+settings, tenant-owned provider connections where supported, usage/allowance visibility and the
+business's own Financial Operations.
+
+A person who has both contexts uses the context switcher; neither sidebar absorbs the other's
+nouns. Product settings are grouped under the Product they configure even when the permanent
+tenant navigation links to a smaller set of daily operating areas.
+
+Record surfaces preserve the current asymmetry honestly: Customer and Work Item expose custom
+field editing and timelines; Asset and Location record pages exist but do not yet expose their
+timelines, and Resource has no domain-level document relationship. These gaps belong to Product
+work, not new generic controls.
+
+## 10. What this document does not decide
+
+- **The marketing surface.** The tenant site/revision editor, preview and publishing foundation
+  exists. Hostname resolution, custom domains, governed media, additional/legal pages and public
+  attribution remain active roadmap work. Per-tenant application theming is already built and
+  is a separate concern.
 - **A component-naming convention.** Refused by D23 under D8's never-write list. Name the file
   after the control.
 - **Any value.** See the opening.
-- **The desktop rendering of anything.** M10, where `packages/ui` is extracted because a second
-  consumer exists — which §4's one set is what makes cheap.
+- **Desktop packaging.** M10 decides Electron and device integrations. `packages/ui` is already
+  extracted and shared; no UI fork is authorized.
