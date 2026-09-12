@@ -1,6 +1,7 @@
 'use client';
 
-import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
+import { FormError, FormField } from '@/components/controls/form';
+import { Hint, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import { useActionState, type ReactNode } from 'react';
 
@@ -52,45 +53,34 @@ export function CredentialsForm({
   return (
     <form action={formAction} className="mt-6 flex flex-col gap-4">
       {wantsEmail ? (
-        <div className="flex flex-col gap-1">
-          <FieldLabel htmlFor="email">Email</FieldLabel>
-          <TextInput id="email" name="email" type="email" required autoComplete="email" />
-        </div>
+        <FormField id="email" label="Email">
+          {(field) => <TextInput {...field} name="email" type="email" required autoComplete="email" />}
+        </FormField>
       ) : null}
 
       {wantsPassword ? (
-        <div className="flex flex-col gap-1">
-          <FieldLabel htmlFor="password">Password</FieldLabel>
-          <TextInput
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete={passwordAutoComplete}
-          />
-        </div>
+        <FormField id="password" label="Password">
+          {(field) => (
+            <TextInput {...field} name="password" type="password" required autoComplete={passwordAutoComplete} />
+          )}
+        </FormField>
       ) : null}
 
       {/* Whether they match is decided in `domain/identity`, not here — this field only
           collects the second reading. */}
       {confirmPassword ? (
-        <div className="flex flex-col gap-1">
-          <FieldLabel htmlFor="passwordConfirmation">Confirm password</FieldLabel>
-          <TextInput
-            id="passwordConfirmation"
-            name="passwordConfirmation"
-            type="password"
-            required
-            autoComplete="new-password"
-          />
-        </div>
+        <FormField id="passwordConfirmation" label="Confirm password">
+          {(field) => (
+            <TextInput {...field} name="passwordConfirmation" type="password" required autoComplete="new-password" />
+          )}
+        </FormField>
       ) : null}
 
       <Button type="submit" disabled={pending}>
         {pending ? pendingLabel : submitLabel}
       </Button>
 
-      <ErrorText role="alert">{state.error}</ErrorText>
+      <FormError>{state.error}</FormError>
 
       {state.done && successMessage ? <Hint role="status">{successMessage}</Hint> : null}
     </form>

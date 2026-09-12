@@ -1,17 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2, ChevronUp, LogOut } from 'lucide-react';
+import { AccountMenu } from '@/components/containers/account-menu';
 import { PlatformNavigation } from '@/features/platform/platform-navigation';
-import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@gold/ui/components/dropdown-menu';
 import {
   Sidebar,
   SidebarContent,
@@ -21,47 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  useSidebar,
 } from '@gold/ui/components/sidebar';
-
-function PlatformAccountMenu({ signOutAction }: { signOutAction: () => Promise<void> }) {
-  const { isMobile } = useSidebar();
-
-  return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              tooltip="Account"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar className="size-8 rounded-lg"><AvatarFallback className="rounded-lg">U</AvatarFallback></Avatar>
-              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">Account</span>
-                <span className="truncate text-xs text-sidebar-foreground/70">Signed in</span>
-              </div>
-              <ChevronUp aria-hidden className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side={isMobile ? 'bottom' : 'right'}
-            align="end"
-            sideOffset={8}
-            className="min-w-56"
-          >
-            <DropdownMenuLabel>Signed-in account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild><Link href="/organizations?all=1"><Building2 />Your businesses</Link></DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Log out</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
-  );
-}
 
 export function AppSidebar({ signOutAction, ...props }: React.ComponentProps<typeof Sidebar> & { signOutAction: () => Promise<void> }) {
   return (
@@ -79,7 +30,7 @@ export function AppSidebar({ signOutAction, ...props }: React.ComponentProps<typ
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent><PlatformNavigation /></SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border"><PlatformAccountMenu signOutAction={signOutAction} /></SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border"><AccountMenu signOutAction={signOutAction} /></SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

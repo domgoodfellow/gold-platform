@@ -1,6 +1,6 @@
 import { AppShell } from '@/components/containers/app-shell';
 import { redirect } from 'next/navigation';
-import { AreaTrail, OrganizationSwitcher, OrgNav, OrgNavBar, SetupBadge, SetupEntry } from './org-shell';
+import { AreaTrail, OrgNavBar, OrgSidebar, SetupBadge, SetupEntry } from './org-shell';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
@@ -10,6 +10,8 @@ import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { requireOrganization } from '@/lib/route/organization';
 import { AccountMenu } from '@/components/containers/account-menu';
+import { Separator } from '@gold/ui/components/separator';
+import { SidebarTrigger } from '@gold/ui/components/sidebar';
 
 /**
  * The operator shell: persistent navigation across one business's areas. Not the authorization
@@ -68,55 +70,50 @@ export default async function OrganizationLayout({
   const inSetup = organization.operationalState === 'setup';
 
   const sidebar = (
-    <>
-      <OrganizationSwitcher
-        mark={mark}
-        organizationId={organizationId}
-        name={organization.name}
-        role={organization.role}
-        organizations={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
-        platformStaff={staff}
-      />
-
-      {inSetup ? <SetupEntry organizationId={organizationId} /> : null}
-
-      <OrgNav organizationId={organizationId} enabledModules={[...enabledModules]} />
-    </>
+    <OrgSidebar
+      organizationId={organizationId}
+      mark={mark}
+      name={organization.name}
+      role={organization.role}
+      organizations={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
+      platformStaff={staff}
+      enabledModules={[...enabledModules]}
+      setupEntry={inSetup ? <SetupEntry organizationId={organizationId} /> : null}
+      signOutAction={signOutAction}
+    />
   );
 
   /*
-    The header. Three things, in the order somebody reads them: whose business this is (on a
-    phone, where the sidebar cannot say so), where in it you are, and the two actions that belong
-    to the shell rather than to any screen.
+    The header. Three things, in the order somebody reads them: the sidebar's own trigger (from
+    `md` up, where the sidebar exists at all), where in it you are, and the two actions that
+    belong to the shell rather than to any screen.
 
-    Switch business and Sign out moved here out of the sidebar. In a column they were two rows
-    sitting under sixteen areas, which put *leave this business* in the same list as *go to
-    Customers*; they are not navigation and they now read as what they are. They stay plain
-    rows rather than becoming `Button`s for the reason `SIDEBAR_ROW` exists — chrome declares no
-    weight — and their labels appear from `sm` up, the icon and its accessible name carrying them
-    on a narrow screen.
+    Switch business and Sign out live in the sidebar footer's account menu, not the header list
+    of areas — they are not navigation. On a phone, where the sidebar itself renders nothing
+    (`OrgNavBar` carries navigation instead), the same account menu appears here so the actions
+    are not lost at that width.
   */
   const header = (
-    <>
+    <header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center gap-3 border-b border-border bg-background px-4 sm:px-6">
+      <SidebarTrigger className="hidden -ml-2 md:flex" />
+      <Separator orientation="vertical" className="hidden data-[orientation=vertical]:h-4 md:block" />
+
       <AreaTrail organizationId={organizationId} />
 
       {inSetup ? <SetupBadge organizationId={organizationId} /> : null}
 
       <span className="flex-1" />
-      <span className="md:hidden"><AccountMenu signOutAction={signOutAction} /></span>
-    </>
+      <div className="md:hidden"><AccountMenu signOutAction={signOutAction} /></div>
+    </header>
   );
-
-  const sidebarFooter = <AccountMenu signOutAction={signOutAction} />;
 
   return (
     // `data-brand` sits here rather than on `<html>` — a brand belongs to one business, and this layout is the only thing that knows which.
     <div data-brand className="min-h-full">
       <BrandStyle brand={brand} />
       <AppShell
-        header={header}
         sidebar={sidebar}
-        sidebarFooter={sidebarFooter}
+        header={header}
         bottomBar={
           <OrgNavBar organizationId={organizationId} enabledModules={[...enabledModules]} />
         }

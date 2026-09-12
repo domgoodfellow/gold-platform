@@ -1,11 +1,22 @@
 'use client';
 
-
-import { SidebarLabel, useSidebarCollapsed } from '@/components/containers/app-shell';
+import { AccountMenu } from '@/components/containers/account-menu';
 import { Badge } from '@/components/display/data';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
-import { Button } from '@gold/ui/components/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@gold/ui/components/dropdown-menu';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from '@gold/ui/components/sidebar';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -78,47 +89,13 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   settings: Settings,
 };
 
-function NavLink({
-  organizationId,
-  area,
-  current,
-  className,
-}: {
-  organizationId: string;
-  area: Area;
-  current: boolean;
-  className: string;
-}) {
-  const Icon = AREA_ICONS[area.segment];
-  const collapsed = useSidebarCollapsed();
-
-  return (
-    <Link
-      href={areaHref(organizationId, area.segment)}
-      aria-current={current ? 'page' : undefined}
-      aria-label={area.label}
-      title={area.label}
-      className={cx(
-        className,
-        FOCUS_RING,
-        'flex items-center justify-center gap-2',
-        !collapsed && 'lg:justify-start',
-        current
-          ? 'bg-foreground font-medium text-background'
-          : 'hover:bg-black/5 dark:hover:bg-white/10',
-      )}
-    >
-      {Icon ? <Icon aria-hidden size={18} className="shrink-0" /> : null}
-      <SidebarLabel>{area.label}</SidebarLabel>
-    </Link>
-  );
-}
-
 /**
- * The tablet and desktop rendering: a column of labelled sections in `AREA_GROUPS` order, with
- * operations first and configuration last (D23 — never reach today's work through settings).
- * Icon-only between `md` and `lg`, icon and label from `lg`. `OrgNavBar` below is the phone
- * rendering of the same list. One `AREAS`, two presentations, so they cannot drift.
+ * The tablet and desktop rendering: `Sidebar`'s own grouped-menu vocabulary, one `SidebarGroup`
+ * per `AREA_GROUPS` entry in order — operations first and configuration last (D23 — never reach
+ * today's work through settings). Collapse-to-icon, the tooltip that appears while collapsed,
+ * and the `md`-and-up-only rendering are all `Sidebar`'s own, not reimplemented here. `OrgNavBar`
+ * below is the phone rendering of the same list. One `AREAS`, two presentations, so they cannot
+ * drift.
  */
 export function OrgNav({
   organizationId,
@@ -131,35 +108,35 @@ export function OrgNav({
   const enabled = new Set(enabledModules);
 
   return (
-    <nav aria-label="This business" className="min-h-0 min-w-0 flex-1 overflow-y-auto p-3">
-      {AREA_GROUPS.map((group, index) => {
+    <nav aria-label="This business">
+      {AREA_GROUPS.map((group) => {
         const areas = areasIn(group.key, enabled);
         // A business with every module in a section switched off has no section. Rendering the
         // heading anyway would name a part of the application that is not there for them.
         if (areas.length === 0) return null;
 
         return (
-          <div key={group.key} className={index === 0 ? '' : 'mt-4 border-t border-border pt-4'}>
-            {/* Hidden with the labels in the icon-only rail: a heading over three icons is a
-                word with nothing to attach to. The rule between sections still separates them. */}
-            <SidebarLabel block>
-              <span className="mb-1 block px-3 text-xs uppercase tracking-wide text-subtle">
-                {group.label}
-              </span>
-            </SidebarLabel>
-            <ul className="flex flex-col gap-1">
-              {areas.map((area) => (
-                <li key={area.segment}>
-                  <NavLink
-                    organizationId={organizationId}
-                    area={area}
-                    current={area.segment === segment}
-                    className="rounded px-3 py-1.5 text-sm"
-                  />
-                </li>
-              ))}
-            </ul>
-          </div>
+          <SidebarGroup key={group.key}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {areas.map((area) => {
+                  const Icon = AREA_ICONS[area.segment];
+                  const current = area.segment === segment;
+                  return (
+                    <SidebarMenuItem key={area.segment}>
+                      <SidebarMenuButton asChild isActive={current} tooltip={area.label}>
+                        <Link href={areaHref(organizationId, area.segment)} aria-current={current ? 'page' : undefined}>
+                          {Icon ? <Icon aria-hidden /> : null}
+                          <span>{area.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         );
       })}
     </nav>
@@ -196,78 +173,108 @@ export function OrganizationSwitcher({
   organizations: SwitchableOrganization[];
   platformStaff: boolean;
 }) {
-  const collapsed = useSidebarCollapsed();
   const others = organizations.filter((organization) => organization.id !== organizationId);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          className={cx(
-            FOCUS_RING,
-            'h-14 w-full justify-start gap-3 rounded-none border-b border-border px-4 md:justify-center lg:justify-start',
-            collapsed && 'lg:justify-center',
-          )}
-        >
-          {mark}
-          <SidebarLabel block>
-            <span className="block min-w-0 flex-1">
-              <span className="flex items-center gap-1">
-                <span className="truncate font-semibold">{name}</span>
-                <ChevronsUpDown aria-hidden size={14} className="shrink-0" />
-              </span>
-              <span className="block truncate text-xs text-muted">{role}</span>
-            </span>
-          </SidebarLabel>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="bottom" align="start" className="w-64 min-w-64">
-        <DropdownMenuLabel className="flex items-center gap-3 px-2 py-2"><Avatar><AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback></Avatar><span className="min-w-0"><span className="block truncate text-sm font-medium">{name}</span><span className="block truncate text-xs font-normal text-muted">{role}</span></span></DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild><Link href={areaHref(organizationId, 'settings')}><Settings /> Organization settings</Link></DropdownMenuItem>
-
-        {others.length > 0 ? (
-          <>
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              size="lg"
+              tooltip={name}
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              {mark}
+              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                <span className="flex items-center gap-1">
+                  <span className="truncate font-semibold">{name}</span>
+                  <ChevronsUpDown aria-hidden className="size-3.5 shrink-0" />
+                </span>
+                <span className="truncate text-xs text-sidebar-foreground/70">{role}</span>
+              </div>
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="bottom" align="start" className="w-64 min-w-64">
+            <DropdownMenuLabel className="flex items-center gap-3 px-2 py-2"><Avatar><AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback></Avatar><span className="min-w-0"><span className="block truncate text-sm font-medium">{name}</span><span className="block truncate text-xs font-normal text-muted">{role}</span></span></DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">Organizations</DropdownMenuLabel>
-            {others.map((organization) => (
-              <DropdownMenuItem key={organization.id} asChild>
-                <Link href={`/organizations/${organization.id}`}>
-                  <Building2 /> {organization.name}
-                </Link>
-              </DropdownMenuItem>
-            ))}
-          </>
-        ) : null}
+            <DropdownMenuItem asChild><Link href={areaHref(organizationId, 'settings')}><Settings /> Organization settings</Link></DropdownMenuItem>
 
-        {platformStaff ? (
-          <>
+            {others.length > 0 ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">Organizations</DropdownMenuLabel>
+                {others.map((organization) => (
+                  <DropdownMenuItem key={organization.id} asChild>
+                    <Link href={`/organizations/${organization.id}`}>
+                      <Building2 /> {organization.name}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </>
+            ) : null}
+
+            {platformStaff ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">Platform</DropdownMenuLabel>
+                <DropdownMenuItem asChild>
+                  <Link href="/platform">
+                    <ShieldCheck /> Platform Administration
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            ) : null}
+
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">Platform</DropdownMenuLabel>
-            <DropdownMenuItem asChild>
-              <Link href="/platform">
-                <ShieldCheck /> Platform Administration
-              </Link>
-            </DropdownMenuItem>
-          </>
-        ) : null}
+            <DropdownMenuItem asChild><Link href="/organizations?all=1">All businesses</Link></DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  );
+}
 
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild><Link href="/organizations?all=1">All businesses</Link></DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+/** A single row in the phone bar — plain Tailwind, not `Sidebar`'s vocabulary, since this list never collapses and never sits inside a `Sidebar` at all (see `OrgNavBar`). */
+function PhoneNavLink({
+  organizationId,
+  area,
+  current,
+}: {
+  organizationId: string;
+  area: Area;
+  current: boolean;
+}) {
+  const Icon = AREA_ICONS[area.segment];
+
+  return (
+    <Link
+      href={areaHref(organizationId, area.segment)}
+      aria-current={current ? 'page' : undefined}
+      aria-label={area.label}
+      title={area.label}
+      className={cx(
+        FOCUS_RING,
+        'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm',
+        current ? 'bg-foreground font-medium text-background' : 'hover:bg-black/5 dark:hover:bg-white/10',
+      )}
+    >
+      {Icon ? <Icon aria-hidden size={18} className="shrink-0" /> : null}
+      <span className="min-w-0">{area.label}</span>
+    </Link>
   );
 }
 
 /**
  * The phone rendering of the same `AREAS` list — a fixed bar along the bottom that scrolls
- * sideways rather than collapsing into a drawer (`ui-spec.md` §2 says why).
+ * sideways rather than collapsing into a drawer (`ui-spec.md` §2 says why: a drawer needs
+ * state, a toggle, a focus trap and an escape key to be correct, and a bar needs none of it).
  *
- * It is a separate export rather than a second `<nav>` inside `OrgNav` because the sidebar it
- * used to sit in is now hidden below `md`, and `display: none` on an ancestor takes a `fixed`
- * descendant with it. Same list, same `NavLink`, still two renderings and not three.
+ * It renders outside `Sidebar` entirely, never inside it: shadcn's own mobile rendering below
+ * `md` is an off-canvas sheet, which is exactly the drawer this bar exists to avoid. `AppShell`
+ * places it as a sibling of `SidebarInset`, and no trigger anywhere reaches the sidebar's sheet
+ * below `md`, so that sheet mounts closed and renders nothing at that width — this bar is what a
+ * phone actually sees.
  */
 export function OrgNavBar({
   organizationId,
@@ -289,11 +296,10 @@ export function OrgNavBar({
           (area) => area.sidebar !== false && (!area.module || enabled.has(area.module)),
         ).map((area) => (
           <li key={area.segment} className="shrink-0">
-            <NavLink
+            <PhoneNavLink
               organizationId={organizationId}
               area={area}
               current={area.segment === segment}
-              className="rounded px-3 py-1.5 text-sm"
             />
           </li>
         ))}
@@ -303,31 +309,83 @@ export function OrgNavBar({
 }
 
 /**
- * The one entry that is not in `AREAS` at all. Business Setup is implementation infrastructure
- * while a business is in Setup — not a switched-on capability — so it does not belong to a
- * group the way an ordinary area does, and it is shown above every group rather than filed
- * inside Configuration beside the things a business adjusts twice a year. `layout.tsx` decides
- * when: only while `organization.operationalState === 'setup'`.
+ * The elevated, accent-coloured entry Business Setup gets instead of an ordinary row — not a
+ * `SidebarGroupLabel`'d group of its own, since `SetupBadge`/the layout decide *when* (only
+ * while `organization.operationalState === 'setup'`), and this is just what it looks like once
+ * that's true. Same collapse-to-icon and tooltip behaviour as every other row.
  */
 export function SetupEntry({ organizationId }: { organizationId: string }) {
-  const collapsed = useSidebarCollapsed();
   const current = currentSegment(usePathname()) === 'setup';
 
   return (
-    <div className="border-b border-border p-3">
-      <Link
-        href={areaHref(organizationId, 'setup')}
-        aria-current={current ? 'page' : undefined}
-        className={cx(
-          FOCUS_RING,
-          'flex items-center justify-center gap-2 rounded bg-accent px-3 py-1.5 text-sm font-medium text-on-accent',
-          !collapsed && 'lg:justify-start',
-        )}
-      >
-        <Sparkles aria-hidden size={18} className="shrink-0" />
-        <SidebarLabel>Set up your business</SidebarLabel>
-      </Link>
-    </div>
+    <SidebarGroup>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            asChild
+            isActive={current}
+            tooltip="Set up your business"
+            className="bg-accent text-on-accent hover:bg-accent hover:text-on-accent data-[active=true]:bg-accent data-[active=true]:text-on-accent"
+          >
+            <Link href={areaHref(organizationId, 'setup')} aria-current={current ? 'page' : undefined}>
+              <Sparkles aria-hidden />
+              <span>Set up your business</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarGroup>
+  );
+}
+
+/**
+ * The whole operator sidebar: identity and business switching in the header, Business Setup
+ * (while it applies) and the grouped area list in the content, the account menu in the footer.
+ * `collapsible="icon"` and everything collapse-related is `Sidebar`'s own state, shared with the
+ * platform console rather than a second, `localStorage`-backed implementation beside it.
+ */
+export function OrgSidebar({
+  organizationId,
+  mark,
+  name,
+  role,
+  organizations,
+  platformStaff,
+  enabledModules,
+  setupEntry,
+  signOutAction,
+  ...props
+}: {
+  organizationId: string;
+  mark: ReactNode;
+  name: string;
+  role: string;
+  organizations: SwitchableOrganization[];
+  platformStaff: boolean;
+  enabledModules: string[];
+  /** `<SetupEntry />`, or nothing — the layout decides, from `operationalState`, the same place `SetupBadge` is decided. */
+  setupEntry?: ReactNode;
+  signOutAction: () => Promise<void>;
+} & React.ComponentProps<typeof Sidebar>) {
+  return (
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
+        <OrganizationSwitcher
+          mark={mark}
+          organizationId={organizationId}
+          name={name}
+          role={role}
+          organizations={organizations}
+          platformStaff={platformStaff}
+        />
+      </SidebarHeader>
+      <SidebarContent>
+        {setupEntry}
+        <OrgNav organizationId={organizationId} enabledModules={enabledModules} />
+      </SidebarContent>
+      <SidebarFooter className="border-t border-sidebar-border"><AccountMenu signOutAction={signOutAction} /></SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
   );
 }
 

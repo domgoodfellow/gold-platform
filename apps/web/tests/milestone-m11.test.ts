@@ -2,6 +2,10 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
+const SIDEBAR_PRIMITIVE = fileURLToPath(
+  new URL('../../../packages/ui/src/components/sidebar.tsx', import.meta.url),
+);
+
 /**
  * M11 — the interface, second pass. `roadmap.md`'s criterion: an operator can drive the whole
  * application from a keyboard and always see where they are, no destructive action completes
@@ -63,10 +67,15 @@ describe('M11 — a control file with no focus treatment', () => {
     `${COMPONENTS_ROOT}/controls/button.tsx`,
     `${COMPONENTS_ROOT}/controls/inputs.tsx`,
     `${COMPONENTS_ROOT}/containers/card.tsx`,
-    // The shell's own rows — the navigation links here, and `SIDEBAR_ROW`/`SidebarButton` in
-    // `app-shell.tsx`, which is where the sign-out control moved when the first test in this
-    // file caught it spelled by hand under `app/`.
-    `${COMPONENTS_ROOT}/containers/app-shell.tsx`,
+    // The shell's own rows. `app-shell.tsx` used to hold the sign-out control by hand
+    // (`SIDEBAR_ROW`/`SidebarButton`, which is where it moved when the first test in this file
+    // caught it spelled raw under `app/`) and its own collapse toggle; both are gone now that
+    // every shell shares the real `Sidebar` primitive (`SidebarMenuButton`, `SidebarTrigger`,
+    // `SidebarRail`) instead of a bespoke `localStorage` implementation reimplementing the same
+    // rows beside it — so the control, and its focus ring, live there instead.
+    SIDEBAR_PRIMITIVE,
+    // The phone bar's own rows — never `Sidebar`'s vocabulary (`ui-spec.md` §2), so they still
+    // need their own focus ring, spelled directly in the shell that owns them.
     `${APP_ROOT}/organizations/[organizationId]/org-shell.tsx`,
   ];
 

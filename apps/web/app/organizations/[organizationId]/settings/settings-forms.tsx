@@ -1,6 +1,7 @@
 'use client';
 
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { FormField } from '@/components/controls/form';
 import { Badge } from '@/components/display/data';
 import { Button } from '@/components/controls/button';
 import { ConfirmSubmit } from '@/components/containers/dialog';
@@ -59,15 +60,11 @@ export function OrganizationSettingsForm({
       <input type="hidden" name="organizationId" value={organizationId} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <TextInput
-          name="name"
-          type="text"
-          required
-          maxLength={200}
-          defaultValue={name}
-          aria-label="Organization name"
-          className="flex-1"
-        />
+        <FormField id="org-name" label="Organization name" className="flex-1">
+          {(field) => (
+            <TextInput {...field} name="name" type="text" required maxLength={200} defaultValue={name} />
+          )}
+        </FormField>
       </div>
 
       {/* The same two controls the founding form uses, so there is one answer to "how does a
@@ -83,43 +80,37 @@ export function OrganizationSettingsForm({
           the room, inspecting the machine — so the label describes the effect rather than any
           one reason. Zero is a real answer and the default: a business that has said nothing
           gets no gap invented on its behalf. */}
-      <label className="flex flex-col gap-1 text-sm">
-        <span>Time a resource stays busy after a job (minutes)</span>
-        <TextInput
-          name="bufferMinutes"
-          type="number"
-          required
-          min={0}
-          max={1440}
-          step={1}
-          defaultValue={bufferMinutes}
-          className="flex-1"
-        />
-        <span className="text-xs text-muted">
-          Nothing else can be booked on that resource until this has passed. Changing it moves
-          nothing, but work already scheduled too close together will be refused.
-        </span>
-      </label>
+      <FormField
+        id="org-buffer-minutes"
+        label="Time a resource stays busy after a job (minutes)"
+        hint="Nothing else can be booked on that resource until this has passed. Changing it moves nothing, but work already scheduled too close together will be refused."
+      >
+        {(field) => (
+          <TextInput {...field} name="bufferMinutes" type="number" required min={0} max={1440} step={1} defaultValue={bufferMinutes} />
+        )}
+      </FormField>
 
       {/* Empty until the business asks for one. The platform does not invent a slug from the
           name: that would be the platform naming a business, and the first tenant called
           "Smith & Sons" would find it had opinions about apostrophes. */}
-      <label className="flex flex-col gap-1 text-sm">
-        <span>Public booking address</span>
-        <TextInput
-          name="slug"
-          type="text"
-          maxLength={63}
-          pattern="[a-z0-9][a-z0-9-]{1,62}"
-          defaultValue={slug ?? ''}
-          placeholder="your-business"
-          className="flex-1"
-        />
-        <span className="text-xs text-muted">
-          Customers book at /book/&lt;this&gt;. Leave it empty to have no public page. Changing
-          it breaks links already shared.
-        </span>
-      </label>
+      <FormField
+        id="org-slug"
+        label="Public booking address"
+        optional
+        hint="Customers book at /book/<this>. Leave it empty to have no public page. Changing it breaks links already shared."
+      >
+        {(field) => (
+          <TextInput
+            {...field}
+            name="slug"
+            type="text"
+            maxLength={63}
+            pattern="[a-z0-9][a-z0-9-]{1,62}"
+            defaultValue={slug ?? ''}
+            placeholder="your-business"
+          />
+        )}
+      </FormField>
 
       <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Saving…' : 'Save'}

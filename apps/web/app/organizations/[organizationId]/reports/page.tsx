@@ -1,3 +1,5 @@
+import { Lock } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@gold/ui/components/alert';
 import { Hint } from '@/components/controls/inputs';
 import {
   DashboardView,
@@ -50,11 +52,14 @@ export default async function ReportsPage({
     return (
       <>
         <Hint className="mt-1">What this business has invoiced, and what its work has consumed.</Hint>
-        <Hint className="mt-8">
-          Your role, {organization.role}, cannot see this business&apos;s figures. Reading a total
-          is a different thing from reading the rows behind it — anybody here can open one
-          invoice on the job it belongs to, and this page adds a year of them up.
-        </Hint>
+        <Alert className="mt-8">
+          <Lock aria-hidden />
+          <AlertTitle>Your role, {organization.role}, cannot see this business&apos;s figures</AlertTitle>
+          <AlertDescription>
+            Reading a total is a different thing from reading the rows behind it — anybody here
+            can open one invoice on the job it belongs to, and this page adds a year of them up.
+          </AlertDescription>
+        </Alert>
       </>
     );
   }

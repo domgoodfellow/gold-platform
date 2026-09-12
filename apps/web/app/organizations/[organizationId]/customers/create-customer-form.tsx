@@ -1,8 +1,9 @@
 'use client';
 
 import { SectionHeading } from '@/components/containers/section';
-import { ErrorText, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
+import { FormActions, FormError, FormField } from '@/components/controls/form';
+import { TextInput } from '@/components/controls/inputs';
 import { useActionState } from 'react';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
@@ -26,38 +27,26 @@ export function CreateCustomerForm({
       <SectionHeading>New customer</SectionHeading>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <TextInput
-          name="name"
-          type="text"
-          required
-          maxLength={200}
-          placeholder="Name"
-          aria-label="Name"
-          className="flex-1"
-        />
-        <TextInput
-          name="email"
-          type="email"
-          placeholder="Email (optional)"
-          aria-label="Email"
-          className="flex-1"
-        />
-        <TextInput
-          name="phone"
-          type="tel"
-          placeholder="Phone (optional)"
-          aria-label="Phone"
-          className="flex-1"
-        />
+        <FormField id="new-customer-name" label="Name" className="flex-1">
+          {(field) => <TextInput {...field} name="name" type="text" required maxLength={200} />}
+        </FormField>
+        <FormField id="new-customer-email" label="Email" optional className="flex-1">
+          {(field) => <TextInput {...field} name="email" type="email" />}
+        </FormField>
+        <FormField id="new-customer-phone" label="Phone" optional className="flex-1">
+          {(field) => <TextInput {...field} name="phone" type="tel" />}
+        </FormField>
       </div>
 
       <CustomFieldInputs definitions={definitions} />
 
-      <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? 'Adding…' : 'Add customer'}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending} className="w-fit">
+          {pending ? 'Adding…' : 'Add customer'}
+        </Button>
+      </FormActions>
 
-      <ErrorText role="alert">{state.error}</ErrorText>
+      <FormError>{state.error}</FormError>
     </form>
   );
 }

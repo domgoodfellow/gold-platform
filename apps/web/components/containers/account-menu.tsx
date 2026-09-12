@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2, ChevronUp, LogOut, UserRound } from 'lucide-react';
+import { Building2, ChevronUp, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import {
   DropdownMenu,
@@ -11,49 +11,50 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@gold/ui/components/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@gold/ui/components/tooltip';
-import { cx, FOCUS_RING } from '@/components/class-names';
-import { useSidebarCollapsed } from './app-shell';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@gold/ui/components/sidebar';
 
-/** The truthful, shared person/session menu used by tenant and platform shells. */
+/**
+ * The truthful, shared person/session menu, one implementation for every shell's sidebar
+ * footer. It used to exist twice — this version, hand-rolled around `useSidebarCollapsed`, and
+ * `PlatformAccountMenu` in `app-sidebar.tsx`, built the same afternoon against the platform
+ * console's own `Sidebar` and already tooltip-aware for free. Now that both shells sit inside
+ * the same `SidebarProvider`, there is one menu rather than two only ever a few lines apart.
+ */
 export function AccountMenu({ signOutAction }: { signOutAction: () => Promise<void> }) {
-  const collapsed = useSidebarCollapsed();
-  const trigger = (
-    <button
-      type="button"
-      aria-label="Account menu"
-      className={cx(
-        FOCUS_RING,
-        'flex h-10 w-full items-center gap-2 rounded px-3 text-left text-sm hover:bg-black/5 dark:hover:bg-white/10',
-        collapsed ? 'justify-center px-0' : 'md:justify-center md:px-0 lg:justify-start lg:px-3',
-      )}
-    >
-      <Avatar size="sm"><AvatarFallback>U</AvatarFallback></Avatar>
-      <span className={cx('min-w-0 flex-1', collapsed ? 'hidden' : 'md:hidden lg:block')}>
-        <span className="block truncate font-medium">Account</span>
-      </span>
-      <ChevronUp aria-hidden size={14} className={cx('shrink-0', collapsed ? 'hidden' : 'md:hidden lg:block')} />
-    </button>
-  );
+  const { isMobile } = useSidebar();
 
   return (
-    <DropdownMenu>
-      {collapsed ? (
-        <Tooltip>
-          <TooltipTrigger asChild><DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger></TooltipTrigger>
-          <TooltipContent side="right">Account</TooltipContent>
-        </Tooltip>
-      ) : <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>}
-      <DropdownMenuContent side="top" align="start" className="w-64 min-w-64">
-        <DropdownMenuLabel className="flex items-center gap-3 px-2 py-2">
-          <Avatar><AvatarFallback>U</AvatarFallback></Avatar>
-          <span className="min-w-0"><span className="block text-sm font-medium">Signed-in account</span><span className="block truncate text-xs font-normal text-muted">Account destinations</span></span>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild><Link href="/organizations?all=1"><Building2 /> Your businesses</Link></DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut /> Log out</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              size="lg"
+              tooltip="Account"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <Avatar className="size-8 rounded-lg"><AvatarFallback className="rounded-lg">U</AvatarFallback></Avatar>
+              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">Account</span>
+                <span className="truncate text-xs text-sidebar-foreground/70">Signed in</span>
+              </div>
+              <ChevronUp aria-hidden className="ml-auto size-4" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side={isMobile ? 'bottom' : 'right'}
+            align="end"
+            sideOffset={8}
+            className="min-w-56"
+          >
+            <DropdownMenuLabel>Signed-in account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild><Link href="/organizations?all=1"><Building2 />Your businesses</Link></DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Log out</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
   );
 }

@@ -39,7 +39,9 @@ export default async function RolesPage({
               <Disclosure summary="Add somebody" defaultOpen={members.length <= 1} className="flex-1">
                 <AddMemberForm organizationId={organizationId} roles={roles} />
               </Disclosure>
-              <InviteMemberForm organizationId={organizationId} roles={roles} />
+              <Disclosure summary="Invite by email" className="flex-1">
+                <InviteMemberForm organizationId={organizationId} roles={roles} />
+              </Disclosure>
             </div>
             {invitations.length > 0 ? (
               <div className="mt-4">
