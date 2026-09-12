@@ -4,9 +4,10 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
  * What the people who run GOLD can see of the businesses running on it. Never asks
- * `app.has_capability` and never takes an `organizationId` — platform staff are members of
- * nothing (D28), so the boundary is the Postgres role the caller arrives in, not a role check
- * in TypeScript (I12). No `requireStaff()` for the same reason.
+ * `app.has_capability` and never takes an `organizationId` — the boundary is `platform_staff`,
+ * read live under RLS (`isPlatformStaff`, below), not a Postgres role a session had to wear
+ * instead of its own organization memberships (D45). No `requireStaff()` for the same reason:
+ * nothing here is protected by a TypeScript check.
  */
 
 export type Tenant = {

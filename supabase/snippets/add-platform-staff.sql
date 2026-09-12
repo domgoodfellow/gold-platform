@@ -12,16 +12,10 @@
 --
 -- **The person must already have signed up**, because the row references `auth.users`.
 --
--- **Their next token carries the role, not their current one.** The claim is minted at
--- sign-in, so somebody promoted while signed in stays `authenticated` until they sign in
--- again. That is ordinary session behaviour and not something this axis invented.
---
--- **A staff account is a different account from an operator account.** The hook replaces the
--- `role` claim outright, so a user who is both staff and a member of an organization loses the
--- membership half while signed in: their tenant policies key on `authenticated` and they are
--- no longer wearing it. That is D28 working as intended — our people are not in a customer's
--- list of who works at their business — and it means one human who both runs GOLD and operates
--- a tenant needs two sign-ins.
+-- **One identity, not a separate account.** `platform_staff` is read live, under whichever role
+-- the caller already is (D45) — nobody swaps a Postgres role or mints a second token to hold
+-- this. A person who both runs GOLD and operates a tenant keeps their one sign-in and their
+-- organization memberships; this row only adds platform authority alongside them.
 
 -- ---------------------------------------------------------------------------
 -- Add them
@@ -52,7 +46,7 @@ begin
   values (v_user, btrim(v_name))
   on conflict (user_id) do update set name = btrim(excluded.name);
 
-  raise notice '% is platform staff. They must sign in again for their token to carry the role.', btrim(v_email);
+  raise notice '% is platform staff. The next read of this table under their session sees it — nothing to sign in again for.', btrim(v_email);
 end
 $$;
 

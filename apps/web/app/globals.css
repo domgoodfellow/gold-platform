@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Tailwind v4's automatic content detection walks this file's own directory tree and does not
+   follow the pnpm symlink to a workspace package's real source, so a class that appears only
+   inside `@gold/ui` (the shared sidebar, sheet, dropdown-menu, alert, sonner — every consumer
+   listed in `packages/ui`'s README) is never scanned and never generated. Registered explicitly
+   rather than left to be found. */
+@source "../../../packages/ui/src";
+
 /* The colour roles. `docs/ui-spec.md` §3 says why each one exists; this file is where the
    values live and is the only place they may. A role is named for what it is used for, never
    for a business meaning -- there is no `success` and no `pending`, because a status is a row

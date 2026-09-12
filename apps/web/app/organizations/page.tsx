@@ -10,6 +10,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { AREAS, areaHref } from '@/lib/navigation';
+import { resolveOrganizationsLanding } from '@/lib/route/landing';
 import { CreateBusinessForm } from './create-business-form';
 
 export const dynamic = 'force-dynamic';
@@ -36,19 +37,12 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
     throw error;
   }
 
-  // **Staff belong to no organization, so this page is empty for them and correct for them.**
-  // That is the axis working — `listMyOrganizations` filters on the caller's own membership
-  // rows and they have none — and it is a terrible place to land. Sending them on is
-  // convenience of exactly the kind `proxy.ts` already is: delete this and a staff member sees
-  // an accurate empty list rather than anything they should not.
-  //
-  // It cannot loop with the redirect on `/platform`, which sends a non-staff caller here:
-  // both ask `isPlatformStaff`, and one answer cannot satisfy both conditions.
-  if (await isPlatformStaff(db)) {
-    redirect('/platform');
-  }
-
-  const organizations = await listMyOrganizations(db);
+  // Platform authority and organization membership are two independent facts about one
+  // identity (D45), read together rather than one gating the other — a caller who holds both
+  // is not routed as though only one were true. `resolveOrganizationsLanding` is the decision
+  // itself, pulled out pure so `landing.test.ts` can exercise every combination with no session
+  // and no database.
+  const [staff, organizations] = await Promise.all([isPlatformStaff(db), listMyOrganizations(db)]);
 
   /*
     **One business is not a choice, and a whole page to make it is a page in the way.** Most
@@ -61,8 +55,16 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
     becoming unreachable by accident.
   */
   const { all } = await searchParams;
-  if (organizations.length === 1 && !all) {
-    redirect(areaHref(organizations[0].id, AREAS[0].segment));
+  const landing = resolveOrganizationsLanding({ organizations, staff, showAll: Boolean(all) });
+
+  // It cannot loop with the redirect on `/platform`, which sends a non-staff caller here: that
+  // redirect fires on `!staff`, this one only on zero organizations, and one answer cannot
+  // satisfy both.
+  if (landing.kind === 'platform') {
+    redirect('/platform');
+  }
+  if (landing.kind === 'enter') {
+    redirect(areaHref(landing.organizationId, AREAS[0].segment));
   }
 
   return (
@@ -123,6 +125,18 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
               <span className="shrink-0 text-sm text-muted">{organization.role}</span>
             </li>
           ))}
+          {/* Platform authority is a context this identity can also choose, alongside every
+              organization above rather than in place of any of them (D45). The switcher inside
+              an organization already offers this same link; this list is the other place a
+              staff member with organizations lands, so it offers it too. */}
+          {staff ? (
+            <li className="flex items-baseline justify-between gap-4 py-3">
+              <Link href="/platform" className="font-medium underline underline-offset-4">
+                Platform Administration
+              </Link>
+              <span className="shrink-0 text-sm text-muted">GOLD staff</span>
+            </li>
+          ) : null}
         </DividedList>
       )}
     </main>
