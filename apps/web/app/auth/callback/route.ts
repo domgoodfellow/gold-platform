@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getDb } from '@/lib/db/server';
+import { consumePendingInviteDestination } from '@/lib/route/pending-invite';
 
 /**
  * Where a Google sign-in lands after Supabase brokers the exchange.
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
 
   const db = await getDb();
   const { error } = await db.auth.exchangeCodeForSession(code);
+  if (error) return to('/login');
 
-  return to(error ? '/login' : '/organizations');
+  return to((await consumePendingInviteDestination()) ?? '/organizations');
 }

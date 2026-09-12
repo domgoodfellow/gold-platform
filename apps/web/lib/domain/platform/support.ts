@@ -1,5 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
  * Support access, kept separate from membership (D28, restated). Starting a session is the one
@@ -44,15 +45,25 @@ export async function endSupportSession(db: Db, input: { id: string }): Promise<
   }
 }
 
-/** The session that would let a support-mode view render right now, if any — active, not expired, not ended. */
+/**
+ * The session that would let a support-mode view render right now, if any — active, not
+ * expired, not ended, and **this caller's own**. The select policy on
+ * `platform_support_sessions` admits every staff member's rows, not only the caller's — that is
+ * deliberate, for a future audit screen — so this is the one place that narrows to "mine," or a
+ * second staff member opening the same organization would see (and could be shown UI implying
+ * they could end) the first staff member's session instead of their own.
+ */
 export async function activeSupportSession(
   db: Db,
   input: { organizationId: string },
 ): Promise<SupportSession | null> {
+  const actor = await requireActor(db);
+
   const { data, error } = await db
     .from('platform_support_sessions')
     .select('id, organization_id, reason, started_at, expires_at, ended_at')
     .eq('organization_id', input.organizationId)
+    .eq('staff_user_id', actor.id)
     .is('ended_at', null)
     .gt('expires_at', new Date().toISOString())
     .order('started_at', { ascending: false })

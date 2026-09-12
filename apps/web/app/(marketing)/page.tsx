@@ -13,7 +13,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { Badge } from '@/components/display/data';
-import { ButtonLink } from '@/components/controls/button';
+import { Button, ButtonLink } from '@/components/controls/button';
 import { FOCUS_RING, cx } from '@/components/class-names';
 
 const BUILT_ON = ['Stripe', 'Twilio', 'Resend', 'Anthropic'];
@@ -25,7 +25,13 @@ const TENANTS = [
     key: 'field',
     icon: Truck,
     name: 'Field service',
-    nav: ['Today', 'Work', 'Schedule', 'Customers', 'Settings'],
+    nav: [
+      { label: 'Today' },
+      { label: 'Work' },
+      { label: 'Schedule' },
+      { label: 'Customers' },
+      { label: 'Settings' },
+    ],
     widgets: [
       { title: 'Committed today', value: '6', note: '09:00 Van 2 · Install, Reyes' },
       { title: 'Waiting to be scheduled', value: '2', note: 'Gutter clean · Okafor' },
@@ -36,7 +42,13 @@ const TENANTS = [
     key: 'mechanic',
     icon: Wrench,
     name: 'Mobile mechanic',
-    nav: ['Today', 'Jobs', 'Schedule', 'Customers', 'Settings'],
+    nav: [
+      { label: 'Today' },
+      { label: 'Jobs' },
+      { label: 'Schedule' },
+      { label: 'Customers' },
+      { label: 'Settings' },
+    ],
     widgets: [
       { title: 'Committed today', value: '5', note: '09:00 Bay 2 · Brake job, Nguyen' },
       { title: 'Waiting to be scheduled', value: '3', note: 'Diagnostic · Alvarez' },
@@ -47,10 +59,16 @@ const TENANTS = [
     key: 'property',
     icon: Building2,
     name: 'Property management',
-    nav: ['Today', 'Units', 'Maintenance', 'Tenants', 'Settings'],
+    nav: [
+      { label: 'Today' },
+      { label: 'Units' },
+      { label: 'Maintenance' },
+      { label: 'Tenants' },
+      { label: 'Settings' },
+    ],
     widgets: [
       { title: 'Open requests', value: '4', note: 'Unit 12B · Leak reported' },
-      { title: 'Leases renewing', value: '2', note: 'Unit 4A · 30 days out' },
+      { title: 'Leases renewing', value: '2', note: 'Unit 4A · renewal coming up' },
       { title: 'Recent activity', value: null, note: 'Rent posted · Unit 7' },
     ],
   },
@@ -167,11 +185,11 @@ function ShellPreview({ tenant, live }: { tenant: Tenant; live?: boolean }) {
       </div>
       <div className="grid grid-cols-[auto_1fr]">
         <div className="hidden flex-col gap-1 border-r border-border p-3 sm:flex">
-          {tenant.nav.map((label, i) => {
+          {tenant.nav.map((item, i) => {
             const Icon = NAV_ICONS[i];
             return (
               <div
-                key={label}
+                key={item.label}
                 className={
                   i === 0
                     ? 'flex items-center gap-2 rounded bg-foreground px-2.5 py-1.5 text-xs font-medium text-background'
@@ -179,7 +197,7 @@ function ShellPreview({ tenant, live }: { tenant: Tenant; live?: boolean }) {
                 }
               >
                 <Icon aria-hidden size={14} className="shrink-0" />
-                {label}
+                {item.label}
               </div>
             );
           })}
@@ -256,7 +274,8 @@ export default function Home() {
             Same shell. Configured differently.
           </h2>
           <p className="max-w-lg text-muted">
-            The screens don&rsquo;t change business to business — the work inside them does.
+            The screens stay the same from business to business — only the work inside them
+            changes. Below is one example business, shown three ways it could be configured.
           </p>
         </div>
 
@@ -265,26 +284,30 @@ export default function Home() {
             const Icon = t.icon;
             const active = i === tenantIndex;
             return (
-              <button
+              <Button
                 key={t.key}
                 type="button"
+                tone="secondary"
                 role="tab"
                 aria-selected={active}
                 onClick={() => setTenantIndex(i)}
                 className={cx(
-                  'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                  '!rounded-full flex items-center gap-2 text-sm font-medium transition-colors',
                   active
-                    ? 'border-foreground bg-foreground text-background'
-                    : 'border-border text-muted hover:text-foreground',
-                  FOCUS_RING,
+                    ? '!border-foreground !bg-foreground !text-background'
+                    : '!border-border !text-muted hover:!text-foreground',
                 )}
               >
                 <Icon aria-hidden size={15} />
                 {t.name}
-              </button>
+              </Button>
             );
           })}
         </div>
+
+        <p className="text-sm text-subtle">
+          Example: {tenant.name}, configured in GOLD.
+        </p>
 
         <div className="max-w-2xl">
           <ShellPreview tenant={tenant} />
@@ -309,16 +332,14 @@ export default function Home() {
           {STAGES.map((s, i) => {
             const active = i === stageIndex;
             return (
-              <button
+              <Button
                 key={s.name}
                 type="button"
+                tone="secondary"
                 role="tab"
                 aria-selected={active}
                 onClick={() => setStageIndex(i)}
-                className={cx(
-                  'group relative flex flex-col items-center gap-2 rounded bg-surface px-1',
-                  FOCUS_RING,
-                )}
+                className="group relative flex flex-col items-center gap-2 rounded bg-surface !border-0 !px-1 !py-0"
               >
                 <span
                   className={cx(
@@ -331,7 +352,7 @@ export default function Home() {
                 <span className={cx('text-xs font-medium', active ? 'text-foreground' : 'text-muted')}>
                   {s.name}
                 </span>
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -380,7 +401,7 @@ export default function Home() {
       </section>
 
       {/* Capabilities */}
-      <section className="flex flex-col gap-8">
+      <section id="capabilities" className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             What a configured system can cover.
@@ -414,7 +435,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Built on */}
+      {/* Vendor strip, deliberately subordinate */}
       <section className="flex flex-col gap-4 border-y border-border py-5 sm:flex-row sm:items-center sm:gap-10">
         <p className="shrink-0 text-xs font-medium text-subtle">Built on</p>
         <div
@@ -439,7 +460,7 @@ export default function Home() {
 
       {/* Closing CTA — the one bold, inverted moment on the page */}
       <section id="review" className="-mx-4 scroll-mt-6 rounded-lg bg-foreground px-6 py-14 text-background sm:-mx-6 sm:px-12">
-        <div className="mx-auto flex max-w-2xl flex-col items-start gap-4">
+        <div className="mx-auto flex w-full max-w-2xl flex-col items-start gap-4">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             A workflow review is a conversation about how your business runs today.
           </h2>

@@ -1,8 +1,9 @@
-import Link from 'next/link';
+import { Button } from '@/components/controls/button';
 import { PageHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { getDb } from '@/lib/db/server';
 import { AcceptInvitationForm } from './accept-form';
+import { continueToLoginAction, continueToSignUpAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,16 +19,22 @@ export default async function AcceptInvitePage({
       <>
         <PageHeading>You&rsquo;ve been invited</PageHeading>
         <Hint className="mt-4">
-          Sign in, or create an account with the email address this invitation was sent to, then
-          come back to this link to accept it.
+          Sign in, or create an account with the email address this invitation was sent to — you&rsquo;ll
+          land back here to accept it.
         </Hint>
         <div className="mt-6 flex gap-4">
-          <Link href="/login" className="underline underline-offset-4">
-            Log in
-          </Link>
-          <Link href="/sign-up" className="underline underline-offset-4">
-            Create an account
-          </Link>
+          <form action={continueToLoginAction}>
+            <input type="hidden" name="token" value={token} />
+            <Button type="submit" tone="text">
+              Log in
+            </Button>
+          </form>
+          <form action={continueToSignUpAction}>
+            <input type="hidden" name="token" value={token} />
+            <Button type="submit" tone="text">
+              Create an account
+            </Button>
+          </form>
         </div>
       </>
     );

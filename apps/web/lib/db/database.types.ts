@@ -5017,6 +5017,7 @@ export type Database = {
         Args: { p_at?: string; p_currency: string; p_meter_id: string }
         Returns: number
       }
+      revoke_invitation: { Args: { p_id: string }; Returns: undefined }
       run_due_automations: { Args: never; Returns: number }
       schedule_ahead: {
         Args: { p_days?: number; p_organization_id: string }

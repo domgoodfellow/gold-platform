@@ -51,7 +51,13 @@ export async function inviteMember(
   return data as string;
 }
 
-/** Invitations still open — accepted and revoked ones are history, not shown here. */
+/**
+ * Invitations still open — accepted and revoked ones are history, not shown here, and neither
+ * is one that has quietly expired: `accepted_at`/`revoked_at` being null only means nobody has
+ * *acted* on it, not that it could still be accepted. A business re-inviting the same address
+ * closes an expired row automatically (`invite_member`); until that happens, this list must not
+ * keep calling it "pending" itself.
+ */
 export async function listPendingInvitations(
   db: Db,
   input: { organizationId: string },
@@ -62,6 +68,7 @@ export async function listPendingInvitations(
     .eq('organization_id', input.organizationId)
     .is('accepted_at', null)
     .is('revoked_at', null)
+    .gt('expires_at', new Date().toISOString())
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -81,16 +88,21 @@ export async function listPendingInvitations(
   });
 }
 
-/** An update, not a delete — the same reason `revokePortalInvite` keeps its row. */
+/**
+ * An update, not a delete — the same reason `revokePortalInvite` keeps its row. Goes through
+ * `revoke_invitation` rather than a column update: `revoked_at` carries no update grant to
+ * `authenticated` at all (20260915000005), so this is the only door, and it is the only path
+ * that can move the column at all — never back to null, never on an already-accepted row.
+ */
 export async function revokeInvitation(db: Db, input: { id: string }): Promise<void> {
   await requireActor(db);
 
-  const { error } = await db
-    .from('organization_invitations')
-    .update({ revoked_at: new Date().toISOString() })
-    .eq('id', input.id);
+  const { error } = await db.rpc('revoke_invitation', { p_id: input.id });
 
   if (error) {
+    if (error.code === '42501') {
+      throw new DomainError('You cannot revoke that invitation.', 'invitations.revoke_forbidden');
+    }
     throw new DomainError(error.message, 'invitations.revoke_failed');
   }
 }

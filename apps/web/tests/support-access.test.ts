@@ -155,6 +155,29 @@ describe('platform support sessions', () => {
     expect(active).toBeNull();
   });
 
+  it('shows each staff member only their own session, never a colleague’s', async () => {
+    // The bug this guards: the select policy deliberately admits every staff member's rows (a
+    // future audit screen wants that), so `activeSupportSession` — "is there one *I* should act
+    // on" — has to narrow to the caller itself. Without that, a second staff member opening the
+    // same organization would see the first one's session, including its reason, and could be
+    // shown UI implying they could end a session that isn't theirs.
+    const { organizationId } = await freshOrganization();
+    const mine = await startSupportSession(staff.db, { organizationId, reason: 'mine' });
+
+    const asMe = await activeSupportSession(staff.db, { organizationId });
+    expect(asMe?.id).toBe(mine);
+    expect(asMe?.reason).toBe('mine');
+
+    // A colleague who has opened no session of their own here sees none — not staff's.
+    const asColleague = await activeSupportSession(otherStaff.db, { organizationId });
+    expect(asColleague).toBeNull();
+
+    // The colleague opens their own; each still sees only their own from here on.
+    const theirs = await startSupportSession(otherStaff.db, { organizationId, reason: 'theirs' });
+    expect((await activeSupportSession(staff.db, { organizationId }))?.id).toBe(mine);
+    expect((await activeSupportSession(otherStaff.db, { organizationId }))?.id).toBe(theirs);
+  });
+
   it('is invisible to the organization itself', async () => {
     const { organizationId, owner: member } = await freshOrganization();
     await startSupportSession(staff.db, { organizationId, reason: 'not the tenant’s business' });

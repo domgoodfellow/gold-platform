@@ -1,6 +1,5 @@
 'use server';
 
-import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { InviteMemberSchema } from '@gold/schemas';
 import { platformEmailSender } from '@/lib/adapters/email';
@@ -9,6 +8,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { inviteMember, revokeInvitation } from '@/lib/domain/tenancy/invitations';
 import { createRole } from '@/lib/domain/tenancy/roles';
+import { requestOrigin } from '@/lib/route/origin';
 
 export type CreateRoleState = { error: string | null };
 
@@ -95,13 +95,13 @@ export async function inviteMemberAction(
     throw error;
   }
 
-  // The origin of the request that's actually serving this, never a configured "site URL" —
-  // this works identically across local dev, preview and production with nothing to keep in
-  // sync (D24's reasoning about deployment-neutral code, applied to a link rather than a query).
-  const requestHeaders = await headers();
-  const host = requestHeaders.get('host') ?? 'localhost:3000';
-  const protocol = host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https';
-  const link = `${protocol}://${host}/organizations/accept-invite/${token}`;
+  // The same helper `forgot-password`, `sign-up` and OAuth already build a link against —
+  // one place this repository reads a request's own origin, not a fourth reimplementation of
+  // it. Still the request's own `Host`/`X-Forwarded-Proto` today, not a hostname this platform
+  // has resolved and allowlisted itself — that trust model arrives with actual hostname routing
+  // (`infrastructure/deployment/domains/README.md`), and this link construction moves onto it
+  // then rather than guessing at it now.
+  const link = `${await requestOrigin()}/organizations/accept-invite/${token}`;
 
   // Best-effort: an invite that could not be emailed is still a real invite. The link is always
   // shown regardless, exactly as `create_portal_invite`'s own token is shown so it can be resent.

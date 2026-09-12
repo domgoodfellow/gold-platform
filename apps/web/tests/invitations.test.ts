@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -163,9 +163,7 @@ describe('organization invitations', () => {
     const pg = new Client(CONNECTION);
     await pg.connect();
     try {
-      const hash = await import('node:crypto').then((c) =>
-        c.createHash('sha256').update(first).digest('hex'),
-      );
+      const hash = createHash('sha256').update(first).digest('hex');
       await pg.query(
         `update public.organization_invitations set expires_at = now() - interval '1 minute'
           where token_hash = $1`,
@@ -257,5 +255,93 @@ describe('organization invitations', () => {
       created_by: stranger.userId,
     });
     expect(error).not.toBeNull();
+  });
+
+  it('cannot be un-revoked or re-revoked through any path, direct or otherwise', async () => {
+    const invitee = `monotonic-${randomUUID().slice(0, 8)}@example.test`;
+    await inviteMember(admin.db, { organizationId, email: invitee, roleId });
+    const pending = await listPendingInvitations(admin.db, { organizationId });
+    const invitation = pending.find((i) => i.email === invitee)!;
+
+    await revokeInvitation(admin.db, { id: invitation.id });
+
+    // No column grant survives to attempt this through — a direct update, even to null, is a
+    // missing privilege, not a policy decline.
+    const direct = await admin.db
+      .from('organization_invitations')
+      .update({ revoked_at: null })
+      .eq('id', invitation.id);
+    expect(direct.error).not.toBeNull();
+
+    // Revoking an already-revoked invitation a second time is a safe no-op, not an error and
+    // not a way to disturb the row further.
+    await expect(revokeInvitation(admin.db, { id: invitation.id })).resolves.toBeUndefined();
+
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      const { rows } = await pg.query(
+        'select revoked_at from public.organization_invitations where id = $1',
+        [invitation.id],
+      );
+      expect(rows[0].revoked_at).not.toBeNull();
+    } finally {
+      await pg.end();
+    }
+  });
+
+  it('cannot be revoked once accepted', async () => {
+    const joiner = await signUp('inv-accepted-then-revoke');
+    const token = await inviteMember(admin.db, { organizationId, email: joiner.email, roleId });
+    await acceptInvitation(joiner.db, { token, displayName: 'Already In' });
+
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    let id: string;
+    try {
+      const { rows } = await pg.query(
+        'select id from public.organization_invitations where organization_id = $1 and email = $2',
+        [organizationId, joiner.email],
+      );
+      id = rows[0].id;
+    } finally {
+      await pg.end();
+    }
+
+    await revokeInvitation(admin.db, { id });
+
+    const pg2 = new Client(CONNECTION);
+    await pg2.connect();
+    try {
+      const { rows } = await pg2.query(
+        'select revoked_at, accepted_at from public.organization_invitations where id = $1',
+        [id],
+      );
+      expect(rows[0].revoked_at).toBeNull();
+      expect(rows[0].accepted_at).not.toBeNull();
+    } finally {
+      await pg2.end();
+    }
+  });
+
+  it('does not show an expired invitation as pending', async () => {
+    const invitee = `stale-${randomUUID().slice(0, 8)}@example.test`;
+    const token = await inviteMember(admin.db, { organizationId, email: invitee, roleId });
+
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      const hash = createHash('sha256').update(token).digest('hex');
+      await pg.query(
+        `update public.organization_invitations set expires_at = now() - interval '1 minute'
+          where token_hash = $1`,
+        [hash],
+      );
+    } finally {
+      await pg.end();
+    }
+
+    const pending = await listPendingInvitations(admin.db, { organizationId });
+    expect(pending.some((i) => i.email === invitee)).toBe(false);
   });
 });

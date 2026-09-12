@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { registerWithPassword } from '@/lib/domain/identity/credentials';
 import { requestOrigin } from '@/lib/route/origin';
+import { consumePendingInviteDestination } from '@/lib/route/pending-invite';
 import type { CredentialsState } from '../credentials-form';
 
 export async function signUpAction(
@@ -27,5 +28,5 @@ export async function signUpAction(
     throw error;
   }
 
-  redirect('/organizations');
+  redirect((await consumePendingInviteDestination()) ?? '/organizations');
 }
