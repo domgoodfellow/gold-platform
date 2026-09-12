@@ -1,6 +1,6 @@
 """Serve the handlers locally, so there is somewhere to send a request that production receives.
 
-Development only. In production Vercel invokes each file under `app/api/` directly and this
+Development only. In production Vercel invokes each file under `api/` directly and this
 file is not deployed — `.vercelignore` excludes it. It exists because a Vercel function has no
 server of its own, and an endpoint you cannot reach locally is an endpoint you debug in
 production.
@@ -54,7 +54,7 @@ _load_env()
 def _routes() -> dict[str, type[BaseHTTPRequestHandler]]:
     """Path to handler, taken from what production is configured with.
 
-    A rewrite's destination is a file path (`/app/api/automation_tick`); the handler is the
+    A rewrite's destination is a file path (`/api/automation_tick`); the handler is the
     class named `handler` inside it, which is the name Vercel requires. Reading it this way
     means a route that works here is a route that exists there.
     """

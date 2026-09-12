@@ -17,8 +17,9 @@ import { asPlatformStaff } from './helpers/founding';
  * suites in one run, so a fresh organization created here is one of however many already exist —
  * the same reasoning `platform-staff.test.ts` gives for finding tenants by id rather than reading
  * the whole table. What's provable honestly is that creating one setup-state and one live-state
- * organization moves the two counters by exactly one each, and that they always sum back to the
- * total — never that the database started empty.
+ * organization moves the two counters by exactly one each, and that global lifecycle counts
+ * always sum to the global total — never that the database started empty. The recently
+ * provisioned list is capped independently.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -43,9 +44,9 @@ async function signedInStranger(label: string): Promise<{ db: SupabaseClient; us
 }
 
 describe('the platform overview', () => {
-  it('counts organizations by lifecycle state, and the two always sum to the total', async () => {
+  it('keeps global lifecycle counts exact when the recent-organizations page is capped', async () => {
     const staff = await asPlatformStaff();
-    const before = await platformOverview(staff);
+    const before = await platformOverview(staff, { recentLimit: 1 });
     expect(before.organizations.live + before.organizations.settingUp).toBe(before.organizations.total);
 
     const setup = await signedInStranger('overview-setup');
@@ -66,11 +67,13 @@ describe('the platform overview', () => {
     });
     await launchOrganization(live.db, { organizationId: launched });
 
-    const after = await platformOverview(staff);
+    const after = await platformOverview(staff, { recentLimit: 1 });
     expect(after.organizations.settingUp).toBe(before.organizations.settingUp + 1);
     expect(after.organizations.live).toBe(before.organizations.live + 1);
     expect(after.organizations.total).toBe(before.organizations.total + 2);
     expect(after.organizations.live + after.organizations.settingUp).toBe(after.organizations.total);
+    expect(after.organizations.total).toBeGreaterThan(after.organizations.recent.length);
+    expect(after.organizations.recent).toHaveLength(1);
 
     // The freshly created organizations are the newest in the database, so the most recent one
     // (launched, and therefore created second) leads the console's own "recently provisioned"

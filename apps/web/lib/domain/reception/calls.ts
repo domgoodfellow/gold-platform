@@ -158,7 +158,7 @@ export async function placeCall(
   db: Db,
   input: { organizationId: string; customerId: string; toNumber: string },
 ): Promise<{ callId: string; room: string }> {
-  const actor = await requireActor(db);
+  await requireActor(db);
 
   const to = input.toNumber.trim();
   if (!/^\+[1-9][0-9]{7,14}$/.test(to)) {

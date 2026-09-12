@@ -5,6 +5,12 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Platform lifecycle metrics are global
+
+- Platform Overview now obtains exact global `live` and `setting up` counts independently
+  from its capped recently-provisioned list, so lifecycle counts always sum to the displayed
+  organization total.
+
 ### Governing documentation reconciled to the product
 
 - Reconciled the eight governing docs, `CLAUDE.md`, `SETUP.md` and the API README against

@@ -63,6 +63,41 @@ export type TenantPage = {
   total: number;
 };
 
+export type TenantOperationalCounts = {
+  total: number;
+  live: number;
+  settingUp: number;
+};
+
+/**
+ * Exact platform-wide lifecycle counts. Kept separate from `listTenants`: a capped page is the
+ * right source for a table and the wrong source for global metrics.
+ */
+export async function countTenantsByOperationalState(db: Db): Promise<TenantOperationalCounts> {
+  await requireActor(db);
+
+  const [liveResult, setupResult] = await Promise.all([
+    db.from('platform_tenants').select('id', { count: 'exact', head: true }).eq('operational_state', 'live'),
+    db.from('platform_tenants').select('id', { count: 'exact', head: true }).eq('operational_state', 'setup'),
+  ]);
+
+  if (liveResult.error || setupResult.error) {
+    throw new DomainError(
+      liveResult.error?.message ?? setupResult.error?.message ?? 'Organization counts were unavailable.',
+      'platform.tenants_failed',
+    );
+  }
+  if (liveResult.count === null || setupResult.count === null) {
+    throw new DomainError('Organization counts were unavailable.', 'platform.tenants_failed');
+  }
+
+  return {
+    total: liveResult.count + setupResult.count,
+    live: liveResult.count,
+    settingUp: setupResult.count,
+  };
+}
+
 /** One tenant, for a detail screen that already has its id (from `listTenants`'s own rows). */
 export async function getTenant(db: Db, organizationId: string): Promise<Tenant | null> {
   await requireActor(db);

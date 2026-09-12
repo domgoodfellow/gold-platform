@@ -1,7 +1,7 @@
 """The carrier saying where the audio ended up.
 
 **A separate route from the status callback rather than a branch inside it**, because
-`app/api/` is one file one route and because the two carry different payloads that mean
+`api/` is one file per route and because the two carry different payloads that mean
 different things. It is also the endpoint everything downstream waits on: no recording, no
 transcript; no transcript, no summary, no objection detection, and nothing to assist a person
 with while they are still talking.
