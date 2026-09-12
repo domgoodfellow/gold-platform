@@ -3,6 +3,15 @@ import { HomepageRenderer } from '@/features/public-site/homepage-renderer';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { canonicalUrl } from '@/lib/seo/site';
 
+/**
+ * Every other database-backed route in this app declares this for the same reason: prerendering
+ * at build time would run this query against whatever schema the build environment has, before
+ * a deploy's migrations are guaranteed to have landed there. Left implicitly static, this page
+ * alone would fail `next build` the moment a migration this projection depends on hasn't reached
+ * that database yet — see `public-site-schema.test.ts` for the enforcement.
+ */
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getPublishedGoldHomepage();
   return { title: site.seoTitle, description: site.seoDescription, alternates: { canonical: '/' } };

@@ -7,6 +7,14 @@ import { BrandStyle } from '@/features/branding/brand-style';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { getPublicDb } from '@/lib/db/public';
 
+/**
+ * Every page in this group inherits this layout's own fetch of the published homepage — brand,
+ * logo, nav copy — so leaving it implicitly static would prerender `/login`, `/sign-up` and
+ * `/workflow-review` against the database at build time too, not just `/`. Forced dynamic here
+ * for the same reason `page.tsx` is; see the comment there and `public-site-schema.test.ts`.
+ */
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getPublishedGoldHomepage();
   return {

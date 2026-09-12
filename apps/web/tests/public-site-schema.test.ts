@@ -33,4 +33,9 @@ describe('public homepage section vocabulary', () => {
     expect(access).not.toContain("'/preview/'");
     expect(previewLayout).toContain('index: false');
   });
+
+  it('never lets the homepage prerender at build time against a database migrations have not reached yet', () => {
+    const page = readFileSync(fileURLToPath(new URL('../app/(marketing)/page.tsx', import.meta.url)), 'utf8');
+    expect(page).toContain("export const dynamic = 'force-dynamic'");
+  });
 });
