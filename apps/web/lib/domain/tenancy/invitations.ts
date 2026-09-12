@@ -45,6 +45,12 @@ export async function inviteMember(
     if (error.code === '22023') {
       throw new DomainError('That is not an email address.', 'invitations.email_invalid');
     }
+    if (error.code === 'GD004') {
+      throw new DomainError(
+        'That person is already a member of this organization.',
+        'invitations.already_member',
+      );
+    }
     throw new DomainError(error.message, 'invitations.invite_failed');
   }
 
@@ -126,6 +132,12 @@ export async function acceptInvitation(
       throw new DomainError(
         'That invitation is not valid, or was sent to a different address.',
         'invitations.invalid',
+      );
+    }
+    if (error.code === 'GD004') {
+      throw new DomainError(
+        'You are already a member of this organization.',
+        'invitations.already_member',
       );
     }
     throw new DomainError(error.message, 'invitations.accept_failed');

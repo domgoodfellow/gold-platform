@@ -61,6 +61,35 @@ operational tables (customers, work items, and the rest) — a future, separate 
 existing reasoning. A support session shows a member's display name, never their role's name —
 staff have never held `select` on `roles`, and this record does not add it.
 
+### Four correctness gaps in the D45 identity/invitation/support slice, closed before real use
+
+A narrow follow-up pass, found by review rather than by a new feature: an anonymous Supabase
+session (D22 — booking, the portal) was being routed and displayed as though it might be a
+signed-in GOLD account; an invitation could silently do nothing to membership while still marking
+itself accepted; revoking an invitation left no audit trail; and a support session had no limit on
+how many could be open for one staff member on one organization at once.
+
+- `apps/web/lib/domain/identity/session.ts` — `SessionIdentity` (`none`/`anonymous`/`account`),
+  replacing `userId: string | null` wherever a caller needs to tell an anonymous session apart
+  from a permanent account. `apps/web/lib/db/session.ts` and `apps/web/lib/route/access.ts` (the
+  proxy's routing rules, pulled out so they're testable with no `NextRequest`) both use it: an
+  anonymous session can still reach `/login`/`/sign-up`, but is no longer treated as signed in for
+  reaching an organization or for the accept-invite page's acceptance form.
+- `supabase/migrations/20260915000008_an_invitation_needs_a_permanent_account_and_no_existing_membership.sql`
+  — `accept_invitation` refuses an anonymous caller outright (the same reasoning
+  `create_organization` already applies) and attempts the membership insert *before* writing
+  `accepted_at`, so a membership arriving through another path first is a refusal, not a false
+  accepted state. `invite_member` refuses to invite an address already a member of that
+  organization — an invitation adds somebody, it does not change an existing member's role.
+- `supabase/migrations/20260915000009_revoking_an_invitation_writes_an_event.sql` —
+  `revoke_invitation` writes `organization.member_invitation_revoked`, only when it actually moved
+  the row.
+- `supabase/migrations/20260915000010_a_support_session_is_at_most_one_per_staff_and_organization.sql`
+  — a partial unique index, `platform_support_sessions_staff_org_open_unique`, plus an idempotent,
+  advisory-lock-serialized `start_support_session`: the same staff member opening the same
+  organization twice gets the same session back rather than a second row, concurrent starts for
+  the same pair cannot race into two, and an ended or expired session never blocks a later one.
+
 ### An organization scopes its own provider, and a generated secret lives in Vault and nowhere else
 
 Provider Bindings (D44): which external scope belongs to an organization, how GOLD provisions

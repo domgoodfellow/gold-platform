@@ -12,11 +12,14 @@ const ROUTE = fileURLToPath(new URL('../app/(marketing)/workflow-review', import
 const page = readFileSync(`${ROUTE}/page.tsx`, 'utf8');
 const form = readFileSync(`${ROUTE}/workflow-review-form.tsx`, 'utf8');
 const actions = readFileSync(`${ROUTE}/actions.ts`, 'utf8');
-const proxy = readFileSync(fileURLToPath(new URL('../proxy.ts', import.meta.url)), 'utf8');
+const access = readFileSync(
+  fileURLToPath(new URL('../lib/route/access.ts', import.meta.url)),
+  'utf8',
+);
 
 describe('the route is reachable with no session', () => {
   it('is listed in the proxy\'s closed set of public paths', () => {
-    expect(proxy).toMatch(/'\/workflow-review'/);
+    expect(access).toMatch(/'\/workflow-review'/);
   });
 });
 

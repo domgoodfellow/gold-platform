@@ -185,4 +185,93 @@ describe('platform support sessions', () => {
     expect(error).toBeNull();
     expect(data).toEqual([]);
   });
+
+  it('does not open a second active session when the same staff member opens the same organization twice', async () => {
+    const { organizationId } = await freshOrganization();
+    const first = await startSupportSession(staff.db, { organizationId, reason: 'first look' });
+    const second = await startSupportSession(staff.db, { organizationId, reason: 'looking again' });
+    expect(second).toBe(first);
+
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      const { rows } = await pg.query(
+        `select count(*)::int as n from public.platform_support_sessions
+          where organization_id = $1 and staff_user_id = $2 and ended_at is null`,
+        [organizationId, staff.userId],
+      );
+      expect(rows[0].n).toBe(1);
+    } finally {
+      await pg.end();
+    }
+  });
+
+  it('does not create two active sessions when two starts race for the same staff member and organization', async () => {
+    const { organizationId } = await freshOrganization();
+    const [a, b] = await Promise.all([
+      startSupportSession(staff.db, { organizationId, reason: 'race a' }),
+      startSupportSession(staff.db, { organizationId, reason: 'race b' }),
+    ]);
+    expect(a).toBe(b);
+
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      const { rows } = await pg.query(
+        `select count(*)::int as n from public.platform_support_sessions
+          where organization_id = $1 and staff_user_id = $2 and ended_at is null`,
+        [organizationId, staff.userId],
+      );
+      expect(rows[0].n).toBe(1);
+    } finally {
+      await pg.end();
+    }
+  });
+
+  it('lets the same staff member support two different organizations independently', async () => {
+    const one = await freshOrganization();
+    const two = await freshOrganization();
+    const idOne = await startSupportSession(staff.db, { organizationId: one.organizationId });
+    const idTwo = await startSupportSession(staff.db, { organizationId: two.organizationId });
+    expect(idOne).not.toBe(idTwo);
+    expect((await activeSupportSession(staff.db, { organizationId: one.organizationId }))?.id).toBe(
+      idOne,
+    );
+    expect((await activeSupportSession(staff.db, { organizationId: two.organizationId }))?.id).toBe(
+      idTwo,
+    );
+  });
+
+  it('opens a genuinely new session once the previous one has ended', async () => {
+    const { organizationId } = await freshOrganization();
+    const first = await startSupportSession(staff.db, { organizationId, reason: 'first visit' });
+    await endSupportSession(staff.db, { id: first });
+
+    const second = await startSupportSession(staff.db, { organizationId, reason: 'second visit' });
+    expect(second).not.toBe(first);
+    expect((await activeSupportSession(staff.db, { organizationId }))?.id).toBe(second);
+  });
+
+  it('opens a genuinely new session once the previous one has lapsed on its own', async () => {
+    const { organizationId } = await freshOrganization();
+    const first = await startSupportSession(staff.db, {
+      organizationId,
+      reason: 'about to expire',
+    });
+
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      await pg.query(
+        `update public.platform_support_sessions set expires_at = now() - interval '1 minute' where id = $1`,
+        [first],
+      );
+    } finally {
+      await pg.end();
+    }
+
+    const second = await startSupportSession(staff.db, { organizationId, reason: 'back again' });
+    expect(second).not.toBe(first);
+    expect((await activeSupportSession(staff.db, { organizationId }))?.id).toBe(second);
+  });
 });

@@ -344,4 +344,169 @@ describe('organization invitations', () => {
     const pending = await listPendingInvitations(admin.db, { organizationId });
     expect(pending.some((i) => i.email === invitee)).toBe(false);
   });
+
+  it('refuses acceptance from an anonymous Supabase session, even with no matching email to fail on', async () => {
+    const invitee = `anon-${randomUUID().slice(0, 8)}@example.test`;
+    const token = await inviteMember(admin.db, { organizationId, email: invitee, roleId });
+
+    const anon = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { error: signInError } = await anon.auth.signInAnonymously();
+    if (signInError) throw signInError;
+
+    await expect(
+      acceptInvitation(anon, { token, displayName: 'Anonymous' }),
+    ).rejects.toMatchObject({ code: 'invitations.invalid' });
+  });
+
+  it('refuses to invite someone who already has an account and is already a member here', async () => {
+    const already = await signUp('inv-already-member');
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      await pg.query(
+        `insert into public.memberships (organization_id, user_id, role_id, display_name, created_by)
+         values ($1, $2, $3, 'Already Here', $4)`,
+        [organizationId, already.userId, roleId, admin.userId],
+      );
+    } finally {
+      await pg.end();
+    }
+
+    await expect(
+      inviteMember(admin.db, { organizationId, email: already.email, roleId }),
+    ).rejects.toMatchObject({ code: 'invitations.already_member' });
+  });
+
+  it('never changes an existing member’s role through invite creation or acceptance', async () => {
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    let elevatedRoleId: string;
+    try {
+      const { rows } = await pg.query(
+        `insert into public.roles (organization_id, name, capabilities, created_by)
+         values ($1, 'Elevated', $2, $3) returning id`,
+        [organizationId, ['role.manage'], admin.userId],
+      );
+      elevatedRoleId = rows[0].id;
+    } finally {
+      await pg.end();
+    }
+
+    const already = await signUp('inv-role-guard');
+    const pg2 = new Client(CONNECTION);
+    await pg2.connect();
+    try {
+      await pg2.query(
+        `insert into public.memberships (organization_id, user_id, role_id, display_name, created_by)
+         values ($1, $2, $3, 'Original Role', $4)`,
+        [organizationId, already.userId, roleId, admin.userId],
+      );
+    } finally {
+      await pg2.end();
+    }
+
+    // Inviting them into a different role is refused outright, not silently applied.
+    await expect(
+      inviteMember(admin.db, { organizationId, email: already.email, roleId: elevatedRoleId }),
+    ).rejects.toMatchObject({ code: 'invitations.already_member' });
+
+    const pg3 = new Client(CONNECTION);
+    await pg3.connect();
+    try {
+      const { rows } = await pg3.query(
+        'select role_id from public.memberships where organization_id = $1 and user_id = $2',
+        [organizationId, already.userId],
+      );
+      expect(rows[0].role_id).toBe(roleId);
+    } finally {
+      await pg3.end();
+    }
+  });
+
+  it('refuses acceptance, without a false accepted state, when membership arrived through another path first', async () => {
+    const joiner = await signUp('inv-race-joiner');
+    const token = await inviteMember(admin.db, { organizationId, email: joiner.email, roleId });
+
+    // Simulates a second admin adding them directly (or any other path to membership) between
+    // the invitation being sent and being accepted.
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      await pg.query(
+        `insert into public.memberships (organization_id, user_id, role_id, display_name, created_by)
+         values ($1, $2, $3, 'Added Another Way', $4)`,
+        [organizationId, joiner.userId, roleId, admin.userId],
+      );
+    } finally {
+      await pg.end();
+    }
+
+    await expect(
+      acceptInvitation(joiner.db, { token, displayName: 'Too Late' }),
+    ).rejects.toMatchObject({ code: 'invitations.already_member' });
+
+    const pg2 = new Client(CONNECTION);
+    await pg2.connect();
+    try {
+      const { rows } = await pg2.query(
+        'select accepted_at from public.organization_invitations where organization_id = $1 and email = $2',
+        [organizationId, joiner.email],
+      );
+      expect(rows[0].accepted_at).toBeNull();
+
+      const memberships = await pg2.query(
+        'select count(*)::int as n from public.memberships where organization_id = $1 and user_id = $2',
+        [organizationId, joiner.userId],
+      );
+      expect(memberships.rows[0].n).toBe(1);
+    } finally {
+      await pg2.end();
+    }
+  });
+
+  it('records who revoked an invitation, and does not double-record a repeat or a too-late revoke', async () => {
+    const invitee = `audit-${randomUUID().slice(0, 8)}@example.test`;
+    await inviteMember(admin.db, { organizationId, email: invitee, roleId });
+    const pending = await listPendingInvitations(admin.db, { organizationId });
+    const invitation = pending.find((i) => i.email === invitee)!;
+
+    await revokeInvitation(admin.db, { id: invitation.id });
+
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      const { rows } = await pg.query(
+        `select actor_id, payload from public.events
+          where organization_id = $1 and action = 'organization.member_invitation_revoked'
+            and payload ->> 'invitation_id' = $2`,
+        [organizationId, invitation.id],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].actor_id).toBe(admin.userId);
+      expect(rows[0].payload.email).toBe(invitee);
+      expect(rows[0].payload.role_id).toBe(roleId);
+    } finally {
+      await pg.end();
+    }
+
+    // A second revoke of the same (already-revoked) invitation is a safe no-op per
+    // 20260915000005 — and must not add a second event for a revocation that did not happen.
+    await revokeInvitation(admin.db, { id: invitation.id });
+
+    const pg2 = new Client(CONNECTION);
+    await pg2.connect();
+    try {
+      const { rows } = await pg2.query(
+        `select count(*)::int as n from public.events
+          where organization_id = $1 and action = 'organization.member_invitation_revoked'
+            and payload ->> 'invitation_id' = $2`,
+        [organizationId, invitation.id],
+      );
+      expect(rows[0].n).toBe(1);
+    } finally {
+      await pg2.end();
+    }
+  });
 });
