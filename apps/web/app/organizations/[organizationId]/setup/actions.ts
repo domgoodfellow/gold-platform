@@ -12,6 +12,7 @@ import {
   reviseConfigurationProposal,
 } from '@/lib/domain/configuration/proposals';
 import { launchOrganization } from '@/lib/domain/tenancy/lifecycle';
+import { invalidateGoldHomepageIfReferenced } from '@/lib/domain/public-site/cached';
 
 export type SetupActionState = { error: string | null };
 
@@ -113,6 +114,9 @@ export async function applyAction(
     }
 
     await applyConfigurationProposal(db, { organizationId, proposalId });
+    // A reviewed setup proposal may carry canonical profile or brand fields. Those are referenced
+    // by the public projection rather than copied into a page revision.
+    await invalidateGoldHomepageIfReferenced(db, organizationId);
   });
 }
 

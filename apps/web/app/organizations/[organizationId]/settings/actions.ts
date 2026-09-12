@@ -12,6 +12,7 @@ import {
 import { removeLogo, setBrand, uploadLogo } from '@/lib/domain/branding/brand';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { setPublicProfile } from '@/lib/domain/tenancy/profile';
+import { invalidateGoldHomepageIfReferenced } from '@/lib/domain/public-site/cached';
 
 export type SettingsActionState = { error: string | null };
 
@@ -37,6 +38,7 @@ export async function updateOrganizationAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/settings`);
+  await invalidateGoldHomepageIfReferenced(db, organizationId);
   return { error: null };
 }
 
@@ -113,6 +115,7 @@ export async function updateProfileAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/settings`);
+  await invalidateGoldHomepageIfReferenced(db, organizationId);
   return { error: null };
 }
 
@@ -203,6 +206,7 @@ export async function updateBrandAction(
   }
 
   revalidatePath(`/organizations/${organizationId}`, 'layout');
+  await invalidateGoldHomepageIfReferenced(db, organizationId);
   return { error: null };
 }
 
@@ -226,6 +230,7 @@ export async function uploadLogoAction(
   }
 
   revalidatePath(`/organizations/${organizationId}`, 'layout');
+  await invalidateGoldHomepageIfReferenced(db, organizationId);
   return { error: null };
 }
 
@@ -244,5 +249,6 @@ export async function removeLogoAction(
   }
 
   revalidatePath(`/organizations/${organizationId}`, 'layout');
+  await invalidateGoldHomepageIfReferenced(db, organizationId);
   return { error: null };
 }
