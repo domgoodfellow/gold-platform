@@ -2448,6 +2448,67 @@ export type Database = {
           },
         ]
       }
+      organization_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          created_by: string
+          email: string
+          expires_at: string
+          id: string
+          organization_id: string
+          revoked_at: string | null
+          role_id: string
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by: string
+          email: string
+          expires_at?: string
+          id?: string
+          organization_id: string
+          revoked_at?: string | null
+          role_id: string
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          organization_id?: string
+          revoked_at?: string | null
+          role_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invitations_role_same_org"
+            columns: ["organization_id", "role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       organization_modules: {
         Row: {
           enabled_at: string
@@ -3182,6 +3243,51 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      platform_support_sessions: {
+        Row: {
+          ended_at: string | null
+          expires_at: string
+          id: string
+          organization_id: string
+          reason: string | null
+          staff_user_id: string
+          started_at: string
+        }
+        Insert: {
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          organization_id: string
+          reason?: string | null
+          staff_user_id: string
+          started_at?: string
+        }
+        Update: {
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          organization_id?: string
+          reason?: string | null
+          staff_user_id?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_support_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_support_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       price_book_items: {
         Row: {
@@ -4371,6 +4477,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_invitation: {
+        Args: { p_display_name: string; p_token: string }
+        Returns: string
+      }
       add_checklist_item: {
         Args: { p_label: string; p_position: number; p_work_item_id: string }
         Returns: string
@@ -4569,7 +4679,6 @@ export type Database = {
         Returns: string
       }
       credit_balance: { Args: { p_organization_id: string }; Returns: number }
-      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       customers_not_contacted: {
         Args: { p_days?: number; p_organization_id: string }
         Returns: {
@@ -4586,6 +4695,11 @@ export type Database = {
       disconnect_integration: {
         Args: { p_connection_id: string; p_organization_id: string }
         Returns: undefined
+      }
+      end_support_session: { Args: { p_id: string }; Returns: undefined }
+      invite_member: {
+        Args: { p_email: string; p_organization_id: string; p_role_id: string }
+        Returns: string
       }
       invoiced_and_incurred: {
         Args: {
@@ -4991,6 +5105,10 @@ export type Database = {
       stage_import_rows: {
         Args: { p_organization_id: string; p_rows: Json; p_run_id: string }
         Returns: number
+      }
+      start_support_session: {
+        Args: { p_organization_id: string; p_reason?: string }
+        Returns: string
       }
       store_integration_secret: {
         Args: {

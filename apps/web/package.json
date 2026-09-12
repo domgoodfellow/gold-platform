@@ -14,6 +14,10 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
+    "@gold/config": "workspace:*",
+    "@gold/schemas": "workspace:*",
+    "@gold/types": "workspace:*",
+    "@gold/ui": "workspace:*",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.60.0",
     "class-variance-authority": "^0.7.1",

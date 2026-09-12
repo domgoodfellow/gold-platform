@@ -11,7 +11,7 @@ import { asPlatformStaff } from './helpers/founding';
 
 /**
  * `/platform`'s own landing screen — replacing a redirect straight to Organizations with a real
- * summary once there was enough platform state to summarise (`ui-system-audit.md`).
+ * summary once there was enough platform state to summarise.
  *
  * **Every assertion is a delta, not an absolute count.** The local stack is not reset between
  * suites in one run, so a fresh organization created here is one of however many already exist —
@@ -109,7 +109,7 @@ describe('the platform overview', () => {
     const after = await platformOverview(staff);
     expect(after.failures.operational).toBe(before.failures.operational + 1);
     // Nothing in this test writes a provider-reconciliation failure — the honest empty state
-    // named in `ui-system-audit.md` §F stays honest, unmoved by an unrelated write.
+    // stays honest, unmoved by an unrelated write.
     expect(after.failures.providerReconciliation).toBe(before.failures.providerReconciliation);
   });
 

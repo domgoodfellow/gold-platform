@@ -80,10 +80,10 @@ describe('schema conformance', () => {
         order by t.relname, i.relname`,
     );
 
-    // **Two exceptions, and they share one rule rather than being two lapses.**
+    // **Three exceptions, and they share one rule rather than being separate lapses.**
     //
     // I2 exists so one tenant's uniqueness cannot block another's: two businesses must both be
-    // able to call a status "Booked". Both indexes below are the opposite question — **an
+    // able to call a status "Booked". Every index below is the opposite question — **an
     // identifier the outside world *presents* must be resolvable without already knowing which
     // tenant it belongs to**, while an identifier the inside world *uses* is scoped by the
     // tenant that owns it.
@@ -94,8 +94,13 @@ describe('schema conformance', () => {
     //     `app.current_external_tenant()` would then have a set to return.
     //   * `customer_portal_invites_token_unique` is a secret a customer arrives holding, with
     //     no tenant in hand to scope it by.
+    //   * `organization_invitations_token_hash_unique` is the same shape one axis over
+    //     (20260915000003) — a hash of a secret an invitee arrives holding, looked up by
+    //     `accept_invitation` before that caller has any membership for a tenant to be scoped
+    //     by. Hashed rather than plaintext (it grants a role, not a view), which changes what is
+    //     stored but not why the index cannot lead with `organization_id`.
     //
-    // Named individually rather than excluded by a pattern, so a third cannot arrive quietly
+    // Named individually rather than excluded by a pattern, so a fourth cannot arrive quietly
     // by matching a rule somebody loosened. A new entry here should have to argue for itself.
     expect(rows).toEqual([
       {
@@ -107,6 +112,11 @@ describe('schema conformance', () => {
         table_name: 'external_actors',
         index_name: 'external_actors_one_tenant_per_user',
         first: 'user_id',
+      },
+      {
+        table_name: 'organization_invitations',
+        index_name: 'organization_invitations_token_hash_unique',
+        first: 'token_hash',
       },
     ]);
   });

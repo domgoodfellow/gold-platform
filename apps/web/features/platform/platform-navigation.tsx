@@ -10,7 +10,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@/components/ui/sidebar';
+} from '@gold/ui/components/sidebar';
 
 export const PLATFORM_NAV = [
   { label: 'Overview', href: '/platform', icon: LayoutDashboard, group: 'Platform' },

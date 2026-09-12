@@ -116,9 +116,13 @@ export async function listTenants(
 }
 
 /**
- * Whether this caller is platform staff. Asked of the database, never of a JWT claim — this
- * reads a table only the staff role may read, so the answer *is* the policy's answer. Used only
- * to choose between the console and a redirect; nothing is protected by it.
+ * Whether this caller is platform staff. Asked of the database, never of a JWT claim or a
+ * Postgres role — `platform_staff_self_select` (20260915000001) admits this read exactly when
+ * `app.is_platform_staff()` says so, the same live table read every policy and "narrow door"
+ * function in this schema now checks, so a row being visible here *is* the answer. `app.*`
+ * functions are never exposed to PostgREST directly (only `public.*` ones are), which is why
+ * this stays a table read rather than an RPC call. Used only to choose between the console and a
+ * redirect; nothing is protected by it — RLS is.
  */
 export async function isPlatformStaff(db: Db): Promise<boolean> {
   const { data } = await db.auth.getUser();

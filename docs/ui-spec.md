@@ -250,6 +250,19 @@ was moved *out* of the directory and on what test. No screen spells a control by
 | `Badge` · `DefinitionList` · `Detail` · `Stat` · `StatRow` · `Toolbar` | `display/data.tsx` | the detail screens and Today |
 | `cx` | `class-names.ts` | the others |
 
+**A second `Dialog`, `Table` and `Badge` arrived on an operator-shell screen, named rather than
+hidden (D45).** `@gold/ui/components/{dialog,table,badge}` are shadcn primitives, extracted
+verbatim from what the platform console already used, and the new People & Access invite flow
+(`app/organizations/[organizationId]/roles/`) uses them directly rather than `containers/
+dialog.tsx`/`display/table.tsx`/`display/data.tsx`'s `Badge`. This is exactly the "second control
+belonging to one surface" this section's own acceptance test would ordinarily refuse — it stands
+because the shared control set §4 describes was already only ever the operator shell's own set,
+and the platform console has used `@gold/ui` primitives directly since before this record
+(`app-sidebar.tsx`, `tenant-workspace.tsx`) with no reconciliation between the two attempted yet.
+The new invite flow is a small, deliberate step *toward* one shared set rather than a third one —
+not a full fix, and not pretended to be one. Untouched: `containers/dialog.tsx`'s own neutral-
+treatment rule for `Badge` (§7) still governs every other tenant screen.
+
 **What it replaced, measured before and after.** 23 local style constants across eight names —
 `INPUT_CLASS` in ten files, then `INPUT`, `CELL`, `FIELD`, `BUTTON`, `SMALL_INPUT`,
 `SELECT_CLASS`, `COORDINATE_INPUT` — are gone, along with every hand-written colour. The most

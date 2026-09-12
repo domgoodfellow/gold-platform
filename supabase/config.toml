@@ -284,14 +284,14 @@ max_frequency = "5s"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# Ours puts a user listed in `platform_staff` into the `platform_staff` Postgres role by
-# rewriting the token's `role` claim -- see 20260830000002. It is a no-op for everyone else,
-# which matters because it runs for every token this project issues, anonymous booking
-# visitors included. On a hosted project this must be enabled in project config as well; it is
-# the one part of the staff axis that is not a checked-in file.
-[auth.hook.custom_access_token]
-enabled = true
-uri = "pg-functions://postgres/public/custom_access_token_hook"
+# Retired by 20260915000001: platform authority used to be granted by rewriting the token's
+# `role` claim to `platform_staff` (a separate Postgres role), which meant a staff member lost
+# their own organization memberships for as long as they held it. Staff are now checked live,
+# by `app.is_platform_staff()`/`app.require_platform_staff()` reading the `platform_staff` table
+# directly from every policy and narrow-door function -- no claim, no role, no hook needed.
+# [auth.hook.custom_access_token]
+# enabled = true
+# uri = "pg-functions://postgres/public/custom_access_token_hook"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]

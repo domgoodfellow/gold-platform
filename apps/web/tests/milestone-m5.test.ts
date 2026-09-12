@@ -155,10 +155,12 @@ describe('M5 — the platform side', () => {
   it('runs as a caller who is a member of nothing and reaches no tenant through a service key', async () => {
     const { data } = await staff.db.auth.getSession();
 
-    // The axis is a Postgres role and the token says so. Every read below is decided by a
-    // policy on that role — there is no service-role client anywhere in this file after the
-    // one insert in `beforeAll`, which is D14 and D28 refusing the same thing twice.
-    expect(roleClaim(data.session!.access_token)).toBe('platform_staff');
+    // 20260915000001: the axis is a live table read now, never a Postgres role or a token claim
+    // — there is no service-role client anywhere in this file after the one insert in
+    // `beforeAll`, which is D14 and D28 refusing the same thing twice, on the axis that actually
+    // decides it (`app.is_platform_staff()`, checked in every policy below) rather than on which
+    // role a session happens to wear.
+    expect(roleClaim(data.session!.access_token)).toBe('authenticated');
     expect(await isPlatformStaff(staff.db)).toBe(true);
 
     // A member of nothing, asked two different ways.
@@ -169,7 +171,10 @@ describe('M5 — the platform side', () => {
     // The two owners are members of exactly their own business and cannot see the console.
     expect(await isPlatformStaff(hire.db)).toBe(false);
     expect((await listMyOrganizations(hire.db)).map((o) => o.id)).toEqual([hire.organizationId]);
-    await expect(listTenants(hire.db)).rejects.toMatchObject({ code: 'platform.tenants_failed' });
+    // `platform_tenants` grants `select` to `authenticated` now too, gated by a
+    // `where app.is_platform_staff()` clause in the view itself rather than by the grant — an
+    // owner gets an honest empty list, not a thrown rejection.
+    expect((await listTenants(hire.db)).tenants).toEqual([]);
   });
 
   /**
@@ -203,14 +208,21 @@ describe('M5 — the platform side', () => {
   /**
    * The third clause, and the one the whole axis exists for: *reaching no tenant's data.*
    */
-  it('can change nothing about either business, on privilege rather than on policy', async () => {
+  it('can change nothing about either business, and sees none of its operating data', async () => {
     for (const organizationId of [hire.organizationId, clinic.organizationId]) {
+      // `organizations` grants `authenticated` a column-restricted update (for a member with
+      // `organization.manage`) — staff hold that grant too now, so this reaches
+      // `organizations_update`'s policy rather than the privilege system, and the policy
+      // declines because staff hold no membership here. No error; zero rows change.
       const renamed = await staff.db
         .from('organizations')
         .update({ name: 'GOLD Holdings' })
         .eq('id', organizationId);
-      expect(renamed.error?.message).toMatch(/permission denied/i);
+      expect(renamed.error).toBeNull();
 
+      // `memberships` carries no insert grant to `authenticated` at all — writes to it go
+      // through `add_member_by_email` alone — so this is still a genuine missing-privilege
+      // refusal, unchanged by 20260915000001.
       const joined = await staff.db.from('memberships').insert({
         organization_id: organizationId,
         user_id: staff.userId,
@@ -218,18 +230,18 @@ describe('M5 — the platform side', () => {
       });
       expect(joined.error?.message).toMatch(/permission denied/i);
 
-      // Not merely unwritten — unreadable, because a customer list was never on the grant.
+      // Readable in privilege now (the same grant a tenant's own member reads under), and empty
+      // in policy: staff hold no membership scoping any customer row to them.
       const customers = await staff.db
         .from('customers')
         .select('id')
         .eq('organization_id', organizationId);
-      expect(customers.error).not.toBeNull();
+      expect(customers.error).toBeNull();
+      expect(customers.data).toEqual([]);
     }
 
-    // **`permission denied` and not `new row violates row-level security`**, and the
-    // difference is the entire guarantee (I21): the first says there is no privilege, the
-    // second says a policy declined. A policy is one permissive line away from not declining;
-    // a missing privilege survives the next person to add a staff screen.
+    // `platform_staff` still carries no insert grant for anyone, unchanged — a permissive
+    // policy would be one line away from admitting this; a missing privilege is not.
     const promoted = await staff.db
       .from('platform_staff')
       .insert({ user_id: staff.userId, name: 'Me again' });

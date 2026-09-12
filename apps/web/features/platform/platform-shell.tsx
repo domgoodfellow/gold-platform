@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SiteHeader } from '@/components/site-header';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarInset, SidebarProvider } from '@gold/ui/components/sidebar';
 
 export function PlatformShell({ children, signOutAction }: { children: ReactNode; signOutAction: () => Promise<void> }) {
   return (

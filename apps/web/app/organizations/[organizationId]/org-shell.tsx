@@ -3,19 +3,20 @@
 
 import { SidebarLabel, useSidebarCollapsed } from '@/components/containers/app-shell';
 import { Badge } from '@/components/display/data';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
+import { Button } from '@gold/ui/components/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@gold/ui/components/dropdown-menu';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import {
   BarChart3,
-  ArrowLeftRight,
   Bot,
+  Building2,
   CalendarDays,
   ChevronLeft,
-  ChevronDown,
+  ChevronsUpDown,
   ClipboardList,
   Layers,
   LayoutDashboard,
@@ -24,6 +25,7 @@ import {
   Phone,
   Plug,
   Settings,
+  ShieldCheck,
   Sparkles,
   SlidersHorizontal,
   Tag,
@@ -164,51 +166,96 @@ export function OrgNav({
   );
 }
 
+/** One organization the caller can switch into — never more than `listMyOrganizations` itself would return under the caller's own RLS. */
+export type SwitchableOrganization = {
+  id: string;
+  name: string;
+  role: string;
+};
+
 /**
- * Organization identity is the organization control. The only truthful destination currently
- * available is the existing business chooser, so this intentionally does not pretend to list
- * or create organizations that have not been loaded here.
+ * Organization identity is the organization control, and — since platform authority stopped
+ * being a Postgres role a session had to choose between wearing and being a member
+ * (20260915000001) — the one place a caller who holds both sees them side by side in one menu.
+ * `organizations` is never a static or guessed list: it is exactly what `listMyOrganizations`
+ * returned for this caller, under their own RLS, and `platformStaff` is `isPlatformStaff`'s own
+ * answer — nothing here decides who may see what.
  */
 export function OrganizationSwitcher({
   mark,
   organizationId,
   name,
   role,
+  organizations,
+  platformStaff,
 }: {
   mark: ReactNode;
   organizationId: string;
   name: string;
   role: string;
+  organizations: SwitchableOrganization[];
+  platformStaff: boolean;
 }) {
   const collapsed = useSidebarCollapsed();
+  const others = organizations.filter((organization) => organization.id !== organizationId);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-      <button
-        type="button"
-        className={cx(
-          FOCUS_RING,
-          'flex h-14 w-full items-center gap-3 border-b border-border px-4 md:justify-center lg:justify-start',
-          collapsed && 'lg:justify-center',
-        )}
-      >
-        {mark}
-        <SidebarLabel block>
-          <span className="block min-w-0 flex-1">
-            <span className="flex items-center gap-1">
-              <span className="truncate font-semibold">{name}</span>
-              <ChevronDown aria-hidden size={14} className="shrink-0" />
+        <Button
+          type="button"
+          variant="ghost"
+          className={cx(
+            FOCUS_RING,
+            'h-14 w-full justify-start gap-3 rounded-none border-b border-border px-4 md:justify-center lg:justify-start',
+            collapsed && 'lg:justify-center',
+          )}
+        >
+          {mark}
+          <SidebarLabel block>
+            <span className="block min-w-0 flex-1">
+              <span className="flex items-center gap-1">
+                <span className="truncate font-semibold">{name}</span>
+                <ChevronsUpDown aria-hidden size={14} className="shrink-0" />
+              </span>
+              <span className="block truncate text-xs text-muted">{role}</span>
             </span>
-            <span className="block truncate text-xs text-muted">{role}</span>
-          </span>
-        </SidebarLabel>
-      </button>
+          </SidebarLabel>
+        </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="bottom" align="start" className="w-60 min-w-60">
+      <DropdownMenuContent side="bottom" align="start" className="w-64 min-w-64">
         <DropdownMenuLabel className="flex items-center gap-3 px-2 py-2"><Avatar><AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback></Avatar><span className="min-w-0"><span className="block truncate text-sm font-medium">{name}</span><span className="block truncate text-xs font-normal text-muted">{role}</span></span></DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild><Link href={areaHref(organizationId, 'settings')}><Settings /> Organization settings</Link></DropdownMenuItem>
-        <DropdownMenuItem asChild><Link href="/organizations?all=1"><ArrowLeftRight /> All businesses</Link></DropdownMenuItem>
+
+        {others.length > 0 ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">Organizations</DropdownMenuLabel>
+            {others.map((organization) => (
+              <DropdownMenuItem key={organization.id} asChild>
+                <Link href={`/organizations/${organization.id}`}>
+                  <Building2 /> {organization.name}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </>
+        ) : null}
+
+        {platformStaff ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">Platform</DropdownMenuLabel>
+            <DropdownMenuItem asChild>
+              <Link href="/platform">
+                <ShieldCheck /> Platform Administration
+              </Link>
+            </DropdownMenuItem>
+          </>
+        ) : null}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild><Link href="/organizations?all=1">All businesses</Link></DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

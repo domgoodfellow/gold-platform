@@ -233,13 +233,20 @@ describe('the operator door (D29)', () => {
       currency: 'EUR',
     });
 
-    // Created by this very caller, one line ago, and still unreachable for writing. The
-    // distinction the whole axis rests on: a missing privilege, not a policy declining.
+    // Created by this very caller, one line ago, and still unreachable for writing. Two
+    // different refusals now, and both are I21 -- 20260915000001 stopped staff wearing a
+    // separate Postgres role, so `organizations`'s ordinary member-facing update grant applies to
+    // them too; what refuses them is `organizations_update`'s policy declining because they hold
+    // no membership here, not a missing privilege. `memberships` carries no insert grant to
+    // `authenticated` at all -- writes to it go through `add_member_by_email` alone -- so that
+    // half is still a genuine missing-privilege refusal, unchanged.
     const renamed = await staff.db
       .from('organizations')
       .update({ name: 'Ours Now' })
       .eq('id', id);
-    expect(renamed.error?.message).toMatch(/permission denied/i);
+    // No error at all -- a policy decline is a silent zero-row match, not a thrown refusal. The
+    // name-check after both attempts is the actual proof, not this line.
+    expect(renamed.error).toBeNull();
 
     const joined = await staff.db.from('memberships').insert({
       organization_id: id,
@@ -262,8 +269,12 @@ describe('the operator door (D29)', () => {
       }),
     ).rejects.toMatchObject({ code: 'platform.provision_failed' });
 
-    // The refusal is the grant rather than the function's own check: `authenticated` holds no
-    // execute on it at all, so a stranger never reaches the scope check inside.
+    // The refusal used to be the grant alone -- `authenticated` held no execute on this function
+    // at all, so a stranger never reached the scope check inside. 20260915000001 widened that
+    // grant (staff needed to call it as `authenticated`, once being staff stopped being a
+    // separate Postgres role) and leaned instead on the function's own inline check, the same
+    // shape `app.require_platform_staff()` formalises elsewhere. The refusal still happens; it
+    // now happens one line further in.
     const direct = await stranger.db.rpc('provision_organization', {
       p_owner_email: stranger.email,
       p_name: 'Self Dealt Ltd',
@@ -274,6 +285,7 @@ describe('the operator door (D29)', () => {
       p_currency: 'EUR',
     });
     expect(direct.error).not.toBeNull();
+    expect(direct.error?.message ?? '').toMatch(/platform staff/i);
   });
 
   it('fails loudly on an owner with no account, rather than making a business nobody can reach', async () => {

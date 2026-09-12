@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Building2, ChevronUp, LogOut, UserRound } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,8 +10,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+} from '@gold/ui/components/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@gold/ui/components/tooltip';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { useSidebarCollapsed } from './app-shell';
 

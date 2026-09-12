@@ -1,9 +1,13 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { InviteMemberSchema } from '@gold/schemas';
+import { platformEmailSender } from '@/lib/adapters/email';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { addMember } from '@/lib/domain/tenancy/members';
+import { inviteMember, revokeInvitation } from '@/lib/domain/tenancy/invitations';
 import { createRole } from '@/lib/domain/tenancy/roles';
 
 export type CreateRoleState = { error: string | null };
@@ -52,6 +56,83 @@ export async function addMemberAction(
       displayName: String(formData.get('displayName') ?? ''),
       roleId: String(formData.get('roleId') ?? ''),
     });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/roles`);
+  return { error: null };
+}
+
+export type InviteMemberState = { error: string | null; link: string | null };
+
+export async function inviteMemberAction(
+  _previous: InviteMemberState,
+  formData: FormData,
+): Promise<InviteMemberState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  const parsed = InviteMemberSchema.safeParse({
+    organizationId,
+    email: formData.get('email'),
+    roleId: formData.get('roleId'),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'That invitation is not valid.', link: null };
+  }
+
+  let token: string;
+  try {
+    token = await inviteMember(db, parsed.data);
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message, link: null };
+    }
+    throw error;
+  }
+
+  // The origin of the request that's actually serving this, never a configured "site URL" —
+  // this works identically across local dev, preview and production with nothing to keep in
+  // sync (D24's reasoning about deployment-neutral code, applied to a link rather than a query).
+  const requestHeaders = await headers();
+  const host = requestHeaders.get('host') ?? 'localhost:3000';
+  const protocol = host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https';
+  const link = `${protocol}://${host}/organizations/accept-invite/${token}`;
+
+  // Best-effort: an invite that could not be emailed is still a real invite. The link is always
+  // shown regardless, exactly as `create_portal_invite`'s own token is shown so it can be resent.
+  const sender = await platformEmailSender();
+  if (sender) {
+    try {
+      await sender.send({
+        to: parsed.data.email,
+        subject: "You've been invited to join a business on GOLD",
+        text: `You've been invited to join a business on GOLD. Open this link to accept:\n\n${link}\n\nIf you weren't expecting this, you can ignore it.`,
+      });
+    } catch {
+      // Swallowed on purpose — the copyable link below is the fallback, not a second attempt.
+    }
+  }
+
+  revalidatePath(`/organizations/${organizationId}/roles`);
+  return { error: null, link };
+}
+
+export type RevokeInvitationState = { error: string | null };
+
+export async function revokeInvitationAction(
+  _previous: RevokeInvitationState,
+  formData: FormData,
+): Promise<RevokeInvitationState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await revokeInvitation(db, { id: String(formData.get('id') ?? '') });
   } catch (error) {
     if (error instanceof DomainError) {
       return { error: error.message };

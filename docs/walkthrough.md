@@ -203,6 +203,23 @@ credential, and the page doesn't pretend otherwise. Every word that isn't applic
 the business's own copy from Settings → Public page — no platform sentence appears on a public
 surface.
 
+### 9b. Bring somebody else in — invitations
+
+Settings → People (also reachable at `/roles`) → *Invite by email*. Type an address nobody here
+has an account under yet, pick a role, send it. A link appears either way — copy it — and, if
+`RESEND_API_KEY`/`PLATFORM_EMAIL_FROM_ADDRESS` are configured for `apps/web`, an email goes out
+too; unconfigured is a complete state, not a broken one, since the link always shows.
+
+Open the link in a private window. Signed out, it asks you to log in or sign up first — do either
+with **the exact address the invite was sent to**, then return to the same link. It asks what to
+call you here, then hands you the role that was chosen, and you land inside the business.
+
+**Try the same link signed in as a different account.** Refused — the invitation checks the
+accepting account's own email against the invited address, higher stakes than the customer
+portal's own link, which only ever proved somebody held it. **Try it twice as the same
+account**, back to back — the second attempt is refused too, not silently repeated; the row
+already says *accepted*.
+
 ### 10. Trying to break it — the part worth doing twice
 
 - **Double-book a resource.** Overlapping windows on one resource — refused by
@@ -218,33 +235,51 @@ surface.
 
 ## The other side: the platform console
 
-`/platform` is the first screen built for the people who run GOLD — reachable only by being put
-into a Postgres role, not by clicking.
+`/platform` is the first screen built for the people who run GOLD — reachable only by being
+listed in a table, not by clicking, and checked live rather than minted at log-in (D45).
 
 1. **Sign up a third account** at `/sign-up`, normally.
 2. **Run `supabase/snippets/add-platform-staff.sql`** in Studio's SQL editor, address and
    name edited at the top — raises if the address matches no user.
-3. **Log out and log in again.** The role is a claim on the token, minted at log-in — staying
-   signed in after promotion keeps the old token.
+3. **Reload — no need to log out and back in.** `app.is_platform_staff()` reads the
+   `platform_staff` table live, on every request; there is no claim minted at sign-in to go stale.
+   Open the context switcher (top of the sidebar) on any business this account already belongs to
+   and a new **Platform** entry has appeared alongside it — one account, two contexts, at once.
 
 `/platform` lists every business — arrival date, currency, modules, last activity — each rendered
 in that tenant's own zone and currency.
 
 **Provision a business.** *Provision a business* asks the same four things as founding, plus
 whose business it is — that person must already have an account. Log in as that owner: they have
-the founding role and every capability, and their *People* list has one row, not you. Nothing in
-their organization, role or membership records a GOLD user id — their event log does, saying the
-business was provisioned and by whom.
+the founding role (**Admin**, D45 — tenant vocabulary, not an authorization primitive) and every
+capability, and their *People* list has one row, not you. Nothing in their organization, role or
+membership records a GOLD user id — their event log does, saying the business was provisioned and
+by whom.
 
 **Try to reach a tenant anyway.** Take an organization id off the console and open
 `/organizations/{id}/work` as staff: a 404, since `getOrganization` filters on membership and
-staff hold none. Try to write anything (Studio's SQL editor, role set to staff) — `permission
-denied`, a missing privilege rather than a policy declining (I21): no write policy names this
-role, and it holds no write grant either, so a permissive policy added later still hits a wall.
+staff hold none — unchanged by D45, since staff were never granted a membership, only a wider
+read. Try to write to a table staff have no legitimate reason to touch — `memberships`, straight
+through Studio's SQL editor as that user — and it is still `permission denied`, a missing
+privilege rather than a policy declining (I21): the table carries no insert grant to
+`authenticated` at all, staff included. What changed is that this is no longer testable by
+setting Studio's role to a Postgres role called `staff` — that role doesn't exist any more. The
+check now travels with the user, not the connection.
 
-**One human who both runs GOLD and operates a business needs two accounts.** The hook replaces
-the `role` claim outright, so a staff member who is also a tenant member loses the membership half
-while signed in as staff.
+**Open a support session on a business you are not a member of.** From that business's row in
+`/platform/organizations`, *Open organization* asks why (optional) and starts a session —
+`platform_support_sessions`, one row, staff id and organization id and an expiry. It reveals a
+short People list (display names only — staff have never held `select` on `roles`, so no role
+name shows here) and nothing else; the tenant's own operating data stays exactly as unreachable
+as the previous paragraph proved. End it early from the same banner, or let the four-hour expiry
+do it.
+
+**One human who both runs GOLD and operates a business needs exactly one account, as of D45.**
+Before this record, the sign-in hook replaced the `role` claim outright, so a staff member who was
+also a tenant member lost the membership half while signed in as staff — this walkthrough used to
+say so, in the past tense it now deserves. Sign in as the account from step 1, join a business
+through the ordinary founding flow, and the context switcher shows that business *and* Platform
+Administration together, no second account required.
 
 ---
 

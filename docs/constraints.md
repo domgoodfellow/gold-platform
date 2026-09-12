@@ -108,7 +108,7 @@ apps/
     app/integrations/     the only place Python names a vendor
     app/api/              HTTP entrypoints — one file, one route
   desktop/                Electron shell — M10
-packages/                 shared code, when a second app consumes it — see D13
+packages/                 types, schemas, ui, config — each with a real consumer inside apps/web (D45); sdk still waits, see D13
 supabase/                 migrations, policies, snippets
 docs/
 ```
@@ -121,10 +121,12 @@ what TypeScript cannot do — webhook ingress with no human session, a clock, a 
 `lib/domain/`, which is the thing this whole document exists to prevent. The layer is real; it
 lives on the other side.
 
-**On `packages/`.** The source tree lists `types`, `schemas`, `ui`, `config`, `sdk`. Every one of
-them is a real target. None is built yet because each needs a second consumer to be anything but
-a build step — and the second consumer is a named, scheduled thing rather than a hypothetical.
-See D13 and the *Deferred* table, which give each one its trigger.
+**On `packages/`.** `types`, `schemas`, `ui` and `config` are built (D45) — each arrived with a
+real, immediate consumer inside `apps/web`, not ahead of one: `@gold/types`'s `ContextDescriptor`
+is what the context switcher and the organization resolver hand around, `@gold/schemas` validates
+the invitation and support-session forms, `@gold/ui` holds the shadcn primitives extracted from
+`apps/web/components/ui/`, and `@gold/config` holds the shared `tsconfig` the other three extend.
+`packages/sdk` is still not built — see D13 and the *Deferred* table for its trigger.
 
 ---
 
@@ -343,9 +345,11 @@ root `check` is `pnpm -r --stream check`; each package owns its own gate. No Tur
 **Why.** A dependency graph with one node does not need a scheduler.
 **Rejected.** npm, whose workspace support is weaker where D3 needs it. Turbo, until there is a
 graph worth scheduling.
-**Trigger to revisit.** The first real second package — `packages/ui` when desktop arrives, or
-`packages/types` when `apps/api` shares generated types with `apps/web`. At that point `pnpm -r`
-rebuilds what did not change and Turbo's caching starts earning its configuration.
+**Trigger to revisit.** `packages/types`, `packages/schemas`, `packages/ui` and `packages/config`
+are real now (D45), each with a real consumer inside `apps/web` — the dependency graph genuinely
+has more than one node today. `pnpm -r` still rebuilds every package on every run regardless of
+what changed; the trigger for Turbo specifically is the day that rebuild cost is felt, not merely
+the day a second package exists.
 **Note.** This rule governs build tooling only. It defers no feature. Code in `apps/web/lib/` is
 fully built and shipped; it is simply not separately published.
 
@@ -633,10 +637,7 @@ wrong and change this table.
 | **Per-tenant marketing surface** — a tenant's site with pages and editable blocks | Nothing technical. `market.md` names it as the third sale to the same customer and moves it up | The next real customer conversation. This is a **revenue line**, and it is the oldest deferral here |
 | **The shared control set** — Button, Input, Field, Dialog, Empty state | Nothing. `ui-spec.md` §4 has the inventory and states the acceptance test | Already earned. The design work is done; what remains is writing the controls |
 | **Per-tenant theming** | The control set above, so a theme is a change of values rather than a pass over every screen | Control set lands, then a tenant asks |
-| `packages/ui` | A second app consuming it | `apps/desktop` — M10 |
-| `packages/types` / `packages/schemas` | `apps/api` and `apps/web` needing to agree on a generated shape | The first type that must be identical in both runtimes |
-| `packages/sdk` | Somebody outside this repository integrating | The first tenant or partner who asks for an API |
-| `packages/config` | Two packages sharing lint or tsconfig | The second node package of any kind |
+| `packages/sdk` | Somebody outside this repository integrating | The first tenant or partner who asks for an API. `apps/web` calls its own domain layer directly and needs no indirection layer in front of it — building one now would be the "empty package with no caller" shape this file already refuses elsewhere |
 | **Dispatch engine** — routes, travel time, geographic assignment | A business whose work is genuinely route-shaped | A field-service tenant with mobile technicians and more than a handful of daily jobs |
 | **Inventory engine** — stock levels, suppliers, purchase orders | D12 admits the vertical; the engine is a scope decision | An e-commerce or parts-heavy tenant |
 | **Recurring maintenance plans** | Recurrence on a calendar — *every first Monday* — is a different question from an interval | A maintenance tenant with contracted plans |
@@ -651,6 +652,8 @@ wrong and change this table.
 | **Group and proximity discounting** | Travel cost modelling, so a discount never exceeds what the business provably saved | A business that actually routes |
 | **Business templates** — a cloneable bundle of modules, statuses, fields and roles | Two businesses configured by hand first | The source conversation calls this the thing that turns four apps into a product, and it is — **second**. A template is an extract of configuration that has already proven itself; cloned earlier, it clones a guess |
 | **Incumbent displacement** — import, parity, a reason to switch | Deliberately not scoped | Phase two. Named so it is a recorded decision rather than an assumption |
+| **A platform-wide commercial aggregate** — usage/revenue/margin summed across every organization, not one at a time | `organization_commercial_summary` is scoped to one organization (I29–I32's own tests exercise it per-tenant only); generalizing its `p_organization_id` to accept `null` is the honest fix, reusing the identical SQL and grant rather than a second calculation in TypeScript (which I4/I5's "exactly one calculation" reasoning would refuse) | The first real need for a platform-wide number, since it touches a function with four load-bearing invariants and deserves a reviewed change of its own |
+| **`@gold/ui`'s `Card` on four platform-console screens renders un-themed** — `bg-card`/`text-card-foreground`/`text-muted-foreground` fall back to Tailwind's default palette, since `globals.css`'s nine roles (`ui-spec.md` §3) define none of them | A retrofit onto GOLD's own nine roles was built once and reverted — the product owner prefers shadcn's `Card` visually as it stands | Either an explicit decision that the platform console keeps a deliberately different, unthemed look from the operator shell, or aliasing `--card`/`--card-foreground`/`--muted-foreground` onto the nine roles. Neither chosen yet; both remain open |
 
 Two of these carry reasoning worth keeping in full, because finding it out later is expensive.
 
@@ -836,9 +839,10 @@ them to `/platform` before they found out. That is not an obstacle to route arou
 axis working. Acting as GOLD and acting as a business are two authorization contexts, and putting
 both in one token is the thing D28 refuses.
 
-**Why a tenant at all.** This file's own *Known defects* section already says GOLD is tenant zero
-and that what tenant zero needs counts as evidence. Reception's first real user is GOLD's own
-sales calls, which is the module it most needs to sell.
+**Why a tenant at all.** This file's own *Known defects* section already says GOLD dogfoods its
+own Organization Context exactly as any other business does, and that what GOLD's own use needs
+counts as evidence. Reception's first real user is GOLD's own sales calls, which is the module it
+most needs to sell.
 
 **Load-bearing.** No branch anywhere names GOLD's organization id, and no code path is reserved
 for it. Its modules are ordinary D41 terms at zero price — the same rows a paying customer's
@@ -1098,6 +1102,131 @@ realtime voice agents; QuickBooks or bank integrations; and NextFund's own migra
 
 ---
 
+### D45 — Platform Context and Organization Context are two independently-true facts, and platform authority stops being a Postgres role a session had to choose
+
+**Decision.** "Platform Context" and "Organization Context" are the two names for where a caller
+is acting — restating D28/D42 under words that also name what changed. GOLD dogfoods the
+Organization Context path exactly as any other business does (D42; no exemption of any kind);
+what this record retires is the assumption that a single caller could hold only one of the two
+contexts at once. Before this migration
+(`supabase/migrations/20260915000001_platform_staff_is_checked_not_worn.sql`), a user listed in
+`platform_staff` had their JWT `role` claim rewritten from `authenticated` to a separate
+`platform_staff` Postgres role at sign-in — D28's own words said the consequence plainly:
+"somebody who is both staff and a member of an organization loses the membership half while
+signed in ... one human who both runs GOLD and operates a tenant needs two sign-ins." That was
+D28 working as designed, and it is also the thing the owner said explicitly not to want.
+
+**What changed, mechanically.** `app.is_platform_staff()` (boolean, for a policy predicate) and
+the pre-existing `app.require_platform_staff()` (raises, for a function body) both read
+`platform_staff` live, under whichever role the caller already is — never a role swap, never a
+claim. Every table `platform_staff` used to read via a role-scoped `using (true)` policy now
+reads it via `for select to authenticated using (app.is_platform_staff())` instead, additive to
+whatever member-facing policy the table already had; every "narrow door" write function
+(`provision_organization`, `record_provider_rate`, `record_commercial_term`, and the rest) widens
+its `execute` grant to `authenticated` and keeps the same internal staff check it already had —
+the grant stopped being the enforcement, and the check the writers already carried is what was
+already actually holding.
+
+**The one place a grant alone was the enforcement, corrected rather than carried forward.**
+`organization_commercial_summary` and `organization_usage_detail` were `security invoker`,
+reading `usage_events`'s withheld columns (`provider_key`, `provider_currency`,
+`provider_cost_micros`, I29) under whichever role called them — safe only because
+`platform_staff`'s role-scoped grant was the sole path to them. A column grant is not
+row-conditional, so once staff are `authenticated` too, invoker mode can never reach those
+columns for anyone, staff included. Both are now `security definer`, with
+`app.require_platform_staff()` as their first statement — the same shape every other narrow-door
+function already uses, applied here to a read instead of a write. `usage_events` and
+`usage_cost_reconciliations` themselves are untouched: `authenticated` still cannot select the
+withheld columns directly, for any row, and `usage_cost_reconciliations` keeps no grant to
+`authenticated` at all, on purpose, since nothing in the domain layer reads it except through
+that now-guarded function.
+
+**I21's enforcement mechanism moved, and this file says so rather than softening the invariant.**
+I21 used to be held by privilege absence specifically — `platform-staff.test.ts` asserted a
+literal `permission denied`, and the gap between a missing grant and a declining policy was the
+whole of the guarantee. It is now held by a live check instead, the same standing `app.
+has_capability` already has under I16 ("a function that raises on the check counts as enforcing
+it, even with no policy of its own"). What I21 claims — staff read everything, write nothing
+belonging to a tenant that already exists — has not weakened; a table staff have no legitimate
+reason to touch (`memberships` inserts, `platform_staff` inserts) still has no grant to
+`authenticated` at all and still fails on a missing privilege, unchanged.
+
+**A staff-only console view needed its own guard, found while widening the grant.**
+`platform_tenants` (a security_invoker view, staff console only) had no tenant-facing purpose but
+also no guard of its own — its whole protection was that nobody but `platform_staff` could reach
+it. `organizations` already carries a legitimate member-facing policy, so opening the view's
+grant to `authenticated` without more would have let an ordinary member read their own
+organization back through a view meant only for the console. Corrected with a
+`where app.is_platform_staff()` clause in the view body itself — the same shape the two functions
+above needed, one level up. `platformOverview` (`apps/web/lib/domain/platform/overview.ts`), a
+TypeScript composition over several of these readers, had the identical latent problem one layer
+higher: its "staff only" behaviour was accidental, inherited from whichever underlying read used
+to fail first for a non-staff caller. It now checks `isPlatformStaff()` explicitly, itself,
+before composing anything.
+
+**Support access is a third, explicit, session-scoped fact — separate from both authority and
+membership, and it grants nothing.** `platform_support_sessions` records that and why a staff
+member opened one organization from the platform console; `start_support_session`/
+`end_support_session` are staff-checked narrow doors, the `record_provider_resource` shape.
+**It widens no read.** `platform_staff` already reads `organizations` and `memberships` in full
+(D28); a session is the audit trail for that action, not a new path to it — `listMembersForSupport`
+reads `memberships` exactly as it always could, `roles` still untouched (staff have never held
+`select` on it, and this record does not add it, so a support view shows a member's display name
+without their role's name — a real, named gap, not an oversight). **Not built here:** the RLS
+widening that would let a support session reach a tenant's own operational tables (customers,
+work items, and the rest) — a real, separate, future slice, deliberately not a side effect of
+this one.
+
+**The organization's top ordinary role is named `Admin`, and it is tenant vocabulary, not an
+authorization primitive.** `FOUNDING_ROLE` (`apps/web/lib/domain/tenancy/organizations.ts`)
+changed from `'Owner'` to `'Admin'` — a change to the platform's own *default word*, nothing
+more: `roles.name` was already tenant-owned data (D6), capabilities are the only thing
+`app.has_capability` has ever checked, and nothing anywhere gained a branch on this string. A
+narrow, one-time data migration
+(`supabase/migrations/20260915000002_the_founding_role_is_called_admin.sql`) renames existing
+seed-created rows named exactly `Owner` holding exactly the founding capability set — the
+platform correcting its own default, the same latitude this file already grants "before a paying
+tenant" elsewhere — and leaves alone any role a business already renamed or that holds a
+different capability set under that name, since either could only mean a business chose it
+themselves. Stated once, plainly: an organization `admin` administers that organization only, and
+platform authority (`platform_staff`) is a separate axis that this name never implies.
+
+**Organization invitations close the gap `add_member_by_email` left**
+(`supabase/migrations/20260915000003_organization_invitations.sql`) — inviting somebody who does
+not have an account yet. Modeled on `customer_portal_invites`, with the one difference that
+matters: a portal link is view-only and stores its token in plaintext, stated as a shared-
+document-link security model; this grants a role, so `organization_invitations` stores only a
+`sha256` hash, returns the plaintext once to the caller who made it, and `accept_invitation`
+hashes the presented token the same way before comparing. `role.manage` is reused rather than a
+new capability — inviting is the authority `add_member_by_email` already required. Acceptance
+additionally refuses unless the accepting account's own email matches the invited address, higher
+stakes than the portal's view-only link accepts.
+
+**The package layer arrives, each with an immediate consumer, per this file's own trigger
+table.** `packages/types`, `packages/schemas`, `packages/ui`, `packages/config` are real now —
+`@gold/types`'s `ContextDescriptor` is what the context switcher and the organization resolver
+hand around; `@gold/schemas` validates the two new forms this record adds; `@gold/ui` holds the
+shadcn primitives extracted from `apps/web/components/ui/` verbatim (plus `Alert`, `Dialog`,
+`Table`, `Badge`, this record's own first callers) as subpath exports
+(`@gold/ui/components/<name>`), never one barrel; `@gold/config` holds the shared `tsconfig`
+those three now extend. This is "being told to build one directly is itself the trigger," stated
+in that table's own words, not a rule broken. **`packages/sdk` stays deferred** — nothing inside
+this repository needs an indirection layer in front of its own domain calls, and building one
+with no real caller is exactly the "empty package" shape this file already refuses.
+
+**Left exactly as it was, and said so rather than silently swept in.** Teams — `domain-model.md`
+already reasons that a grouping earns a table when something filters, assigns or reports by it,
+and nothing does yet; that reasoning is restated, not overridden. The organization shell's
+responsive frame (`AppShell`, three tiers: icon rail, full sidebar, phone bottom bar) is
+unchanged — its content was rebuilt on `@gold/ui`'s primitives where that was safe
+(`OrganizationSwitcher`, now a real list of the caller's own organizations plus Platform
+Administration when they hold that authority too), but shadcn's own `SidebarProvider`/`Sidebar`
+system was not adopted wholesale, since `SidebarMenuButton` and friends require that provider and
+`AppShell`'s three-tier behaviour has no equivalent in shadcn's own two-tier model without being
+rebuilt on top of it — a larger, separate piece of work than this record's own scope.
+
+---
+
 ## Known defects in this document
 
 Recorded rather than quietly fixed, because a constraints file that hides its own faults is
@@ -1107,8 +1236,10 @@ advice.
 - **The evidence bar has no exit for a pre-revenue product.** Admissible evidence is prior
   repositories or a signed customer. The prior repositories are finite and all from one author, so
   "two independent pieces" is weaker than it sounds. The resolution in practice is that **the demo
-  is a caller** — GOLD is tenant zero, and what tenant zero needs in order to be shown to a
-  prospect counts. `market.md` says this already; this file now agrees with it.
+  is a caller** — GOLD dogfoods its own Organization Context exactly as any other business does
+  (D42, D45; no exemption, and no "tenant zero" special-casing anywhere), and what GOLD's own use
+  needs in order to be shown to a prospect counts as evidence. `market.md` says this already; this
+  file now agrees with it.
 - **`market.md` and this file disagreed about the tenant marketing surface** for as long as one
   deferred what the other called a revenue line. The *Deferred* table above is where that is
   settled; if they diverge again, `market.md` wins on anything about money.

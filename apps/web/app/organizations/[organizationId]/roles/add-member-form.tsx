@@ -58,9 +58,7 @@ export function AddMemberForm({
         {pending ? 'Adding…' : 'Add person'}
       </Button>
 
-      <Hint weight="subtle">
-        They need an account already. There are no invitations yet.
-      </Hint>
+      <Hint weight="subtle">They need an account already — invite them by email instead if not.</Hint>
 
       <ErrorText role="alert">{state.error}</ErrorText>
     </form>

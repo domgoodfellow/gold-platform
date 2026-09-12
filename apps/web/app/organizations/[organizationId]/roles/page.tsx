@@ -4,11 +4,14 @@ import { Hint } from '@/components/controls/inputs';
 import { SectionHeading } from '@/components/containers/section';
 import { DataTable } from '@/components/display/table';
 import { CAPABILITY_LABELS } from '@/lib/domain/tenancy/capabilities';
+import { listPendingInvitations } from '@/lib/domain/tenancy/invitations';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireOrganization } from '@/lib/route/organization';
 import { AddMemberForm } from './add-member-form';
 import { CreateRoleForm } from './create-role-form';
+import { InviteMemberForm } from './invite-member-form';
+import { PendingInvitations } from './pending-invitations';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,9 +21,10 @@ export default async function RolesPage({
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const [roles, members] = await Promise.all([
+  const [roles, members, invitations] = await Promise.all([
     listRoles(db, { organizationId }),
     listMembers(db, { organizationId }),
+    listPendingInvitations(db, { organizationId }),
   ]);
   const mayManage = organization.capabilities.includes('role.manage');
 
@@ -30,9 +34,22 @@ export default async function RolesPage({
         <SectionHeading>People</SectionHeading>
 
         {mayManage ? (
-          <Disclosure summary="Add somebody" defaultOpen={members.length <= 1} className="mt-2">
-            <AddMemberForm organizationId={organizationId} roles={roles} />
-          </Disclosure>
+          <>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Disclosure summary="Add somebody" defaultOpen={members.length <= 1} className="flex-1">
+                <AddMemberForm organizationId={organizationId} roles={roles} />
+              </Disclosure>
+              <InviteMemberForm organizationId={organizationId} roles={roles} />
+            </div>
+            {invitations.length > 0 ? (
+              <div className="mt-4">
+                <Hint weight="subtle" className="mb-2">
+                  Pending invitations
+                </Hint>
+                <PendingInvitations organizationId={organizationId} invitations={invitations} />
+              </div>
+            ) : null}
+          </>
         ) : (
           <Hint className="mt-2">
             Your role, {organization.role}, cannot add people here.

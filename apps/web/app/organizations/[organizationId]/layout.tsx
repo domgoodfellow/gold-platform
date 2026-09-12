@@ -5,6 +5,8 @@ import { BrandStyle } from '@/features/branding/brand-style';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
+import { isPlatformStaff } from '@/lib/domain/platform/tenants';
+import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { requireOrganization } from '@/lib/route/organization';
 import { AccountMenu } from '@/components/containers/account-menu';
@@ -21,7 +23,11 @@ export default async function OrganizationLayout({
 }: LayoutProps<'/organizations/[organizationId]'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  const enabledModules = await listUsableModules(db, { organizationId });
+  const [enabledModules, myOrganizations, staff] = await Promise.all([
+    listUsableModules(db, { organizationId }),
+    listMyOrganizations(db),
+    isPlatformStaff(db),
+  ]);
   // Read here rather than per-screen, since a brand belongs to the shell — every page inside
   // inherits these roles and never has to know whose colour it's rendering.
   const brand = await getBrand(db, { organizationId });
@@ -68,6 +74,8 @@ export default async function OrganizationLayout({
         organizationId={organizationId}
         name={organization.name}
         role={organization.role}
+        organizations={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
+        platformStaff={staff}
       />
 
       {inSetup ? <SetupEntry organizationId={organizationId} /> : null}

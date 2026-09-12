@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Building2, ChevronUp, LogOut } from 'lucide-react';
 import { PlatformNavigation } from '@/features/platform/platform-navigation';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@gold/ui/components/dropdown-menu';
 import {
   Sidebar,
   SidebarContent,
@@ -22,7 +22,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
   useSidebar,
-} from '@/components/ui/sidebar';
+} from '@gold/ui/components/sidebar';
 
 function PlatformAccountMenu({ signOutAction }: { signOutAction: () => Promise<void> }) {
   const { isMobile } = useSidebar();

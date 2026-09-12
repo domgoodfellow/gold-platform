@@ -118,11 +118,16 @@ describe('the commercial catalogue (D43)', () => {
     });
     expect(retailId).toBeTruthy();
 
-    // GOLD's own cost: staff only. Never granted to a signed-in tenant at all.
+    // GOLD's own cost: staff only. `platform_provider_rates` grants `select` to `authenticated`
+    // now that staff read it as themselves rather than as a separate Postgres role
+    // (20260915000001), so a stranger's call no longer fails outright — the row policy declines
+    // instead, and `listProviderRates` has nothing to throw on. An empty list is the honest
+    // negative; a rejection would now be testing for a mechanism that no longer exists here.
     const providerRates = await listProviderRates(staff, { meterId });
     expect(providerRates.some((rate) => rate.id === providerId)).toBe(true);
 
-    await expect(listProviderRates(stranger, { meterId })).rejects.toBeTruthy();
+    const providerRatesAsStranger = await listProviderRates(stranger, { meterId });
+    expect(providerRatesAsStranger).toEqual([]);
 
     // What GOLD charges: readable by anyone signed in — a business is entitled to know.
     const retailRatesAsStaff = await listRetailRates(staff, { meterId });

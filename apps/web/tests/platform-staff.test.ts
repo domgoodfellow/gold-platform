@@ -4,6 +4,8 @@ import { Client } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { configureBusiness } from '@/lib/domain/configuration/configure';
 import { isPlatformStaff, listTenants } from '@/lib/domain/platform/tenants';
+import { addMember } from '@/lib/domain/tenancy/members';
+import { listRoles } from '@/lib/domain/tenancy/roles';
 import { foundBusiness } from './helpers/founding';
 
 /**
@@ -11,20 +13,29 @@ import { foundBusiness } from './helpers/founding';
  *
  * Every other suite here signs in as somebody scoped narrowly by construction — a member
  * through `memberships`, an outsider bound to exactly one tenant. This one signs in as the
- * opposite: a caller who is a member of nothing and must nonetheless see everything.
+ * opposite: a caller who reads across every tenant regardless of which, if any, they belong to.
  *
- * **The assertion that carries the record is that writes fail on a missing privilege rather
- * than on a policy.** D28 says a platform-staff path reads what it needs and writes nothing a
- * tenant owns. A policy is the usual way to say that here and it would not be enough: the next
- * person to add a staff screen writes a policy, and a permissive one is one line. The role
- * holds no `insert`, `update` or `delete` grant on any table at all, so a permissive policy
- * would still hit `permission denied` — which is what the write tests below check for by
- * message, not merely by failure.
+ * **Rewritten by 20260915000001.** Platform authority used to be a Postgres role a session wore
+ * *instead of* `authenticated`, minted by rewriting the JWT `role` claim — which is why staff
+ * used to lose their own organization memberships for as long as they held it, one sign-in
+ * standing for exactly one context. That is gone. Staff now stay `authenticated` and are
+ * recognised by a live table read (`app.is_platform_staff()` in a policy,
+ * `app.require_platform_staff()` inside a function body), so the same identity can hold platform
+ * authority and a real organization membership at once and switch between the two — see the
+ * describe block below this one, which is the capability this rewrite exists to prove.
  *
- * **The second assertion is the one that would break everything else.** The access-token hook
- * runs for every token this project issues, so the no-op path is exercised here on purpose: an
- * ordinary member must still come back as `authenticated`. If that regressed, every other suite
- * would fail — but they would fail confusingly, and this says why in one line.
+ * **What the assertion had to change to, and why that is not a weaker claim.** D28 still says a
+ * platform-staff path reads what it needs and writes nothing a tenant owns — that has not moved.
+ * What *has* moved is which of two honest refusals a given table produces. A table staff have no
+ * legitimate reason to touch at all (`memberships` inserts, `platform_staff` inserts,
+ * `automation_runs` writes) still has no grant to `authenticated`, so those still fail on a
+ * missing privilege, unchanged. A table ordinary tenants already read or write under
+ * `authenticated` (`organizations`, `customers`, `message_templates`, and the rest) now correctly
+ * treats staff the same way it treats a member of no organizations: the grant exists, so the
+ * question moves to the row policy, which declines by returning nothing rather than by raising —
+ * exactly how every other RLS decline in this schema already behaves for everyone else. Testing
+ * for "permission denied" on those tables would now be testing for the wrong mechanism; the tests
+ * below check the actual, honest outcome instead: an empty result, or zero rows changed.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -83,7 +94,9 @@ async function signedInUser(
  * Somebody promoted while signed in keeps an `authenticated` token until their next one, which
  * is ordinary session behaviour rather than anything this axis invented.
  */
-async function signedInStaff(name: string): Promise<{ db: SupabaseClient; userId: string }> {
+async function signedInStaff(
+  name: string,
+): Promise<{ db: SupabaseClient; userId: string; email: string }> {
   const { email, password, userId } = await newUser('staff');
 
   const pg = new Client(CONNECTION);
@@ -94,10 +107,10 @@ async function signedInStaff(name: string): Promise<{ db: SupabaseClient; userId
   ]);
   await pg.end();
 
-  return { db: await signIn(email, password), userId };
+  return { db: await signIn(email, password), userId, email };
 }
 
-let staff: { db: SupabaseClient; userId: string };
+let staff: { db: SupabaseClient; userId: string; email: string };
 let member: { db: SupabaseClient; userId: string; email: string };
 let alphaId: string;
 let betaId: string;
@@ -154,27 +167,78 @@ describe('the platform staff axis (D28)', () => {
     staff = await signedInStaff('Dominic');
   });
 
-  it('puts a staff member into the platform_staff Postgres role', async () => {
-    const { data } = await staff.db.auth.getSession();
-    expect(claimsOf(data.session!.access_token).role).toBe('platform_staff');
-  });
-
-  it('leaves everybody else on authenticated, which is the half that could break sign-in', async () => {
-    // The hook runs on every token this project issues. A no-op that stopped being one would
-    // take every other suite in this directory with it.
-    const { data } = await member.db.auth.getSession();
-    expect(claimsOf(data.session!.access_token).role).toBe('authenticated');
+  it('stays on authenticated, staff and ordinary member alike', async () => {
+    // The one claim this whole rewrite exists to establish. Before 20260915000001 this test
+    // asserted the opposite -- that staff were rewritten to a `platform_staff` role and lost the
+    // `authenticated` one. There is no longer a hook, a claim, or a role to lose.
+    const staffSession = await staff.db.auth.getSession();
+    const memberSession = await member.db.auth.getSession();
+    expect(claimsOf(staffSession.data.session!.access_token).role).toBe('authenticated');
+    expect(claimsOf(memberSession.data.session!.access_token).role).toBe('authenticated');
   });
 
   it('holds no membership in any tenant, which is what makes it a fourth shape', async () => {
     // D28 rejected giving staff a membership in every tenant as "cheapest, and also the leak".
-    // Staff can read `memberships` precisely so this is checkable from inside the axis.
+    // Staff can read `memberships` precisely so this is checkable from inside the axis. This
+    // stays true of *this* staff fixture because nothing here ever adds one for them — it is no
+    // longer true of the axis in general, which the next test proves directly.
     const { data } = await staff.db
       .from('memberships')
       .select('organization_id')
       .eq('user_id', staff.userId);
 
     expect(data).toEqual([]);
+  });
+
+  it('holding platform authority does not cost a real membership — the whole point of this rewrite', async () => {
+    // A second staff member, added to Alpha as an ordinary member through the same door any
+    // colleague would use. Before 20260915000001 this was structurally impossible to observe:
+    // signing in rewrote the token's role away from `authenticated`, so a staff member's own
+    // membership row existed but nothing they did while signed in could ever read under it.
+    const dual = await signedInStaff('Dual-Hat');
+    const [foundingRole] = await listRoles(member.db, { organizationId: alphaId });
+
+    await addMember(member.db, {
+      organizationId: alphaId,
+      email: dual.email,
+      displayName: 'Dominic, also staff',
+      roleId: foundingRole.id,
+    });
+
+    // Reads across every tenant, exactly as before —
+    const { data: crossTenant, error: crossTenantError } = await dual.db
+      .from('organizations')
+      .select('id')
+      .in('id', [alphaId, betaId]);
+    expect(crossTenantError).toBeNull();
+    expect((crossTenant ?? []).map((row) => row.id).sort()).toEqual([alphaId, betaId].sort());
+
+    // — *and* reaches Alpha's own operating data as a genuine member, in the same session, with
+    // no second sign-in. This is the capability the role-swap made impossible.
+    const { data: ownWork, error: ownWorkError } = await dual.db
+      .from('work_items')
+      .select('id')
+      .eq('organization_id', alphaId);
+    expect(ownWorkError).toBeNull();
+    expect(ownWork).toEqual([]);
+
+    const { data: membership, error: membershipError } = await dual.db
+      .from('memberships')
+      .select('organization_id, display_name')
+      .eq('organization_id', alphaId)
+      .eq('user_id', dual.userId);
+    expect(membershipError).toBeNull();
+    expect(membership?.[0]?.display_name).toBe('Dominic, also staff');
+
+    // Still not a member of Beta, which staff-ness never grants on its own — only the
+    // organization-wide staff read does, and that is a different, wider policy from membership.
+    const { data: notBetaMember, error: notBetaMemberError } = await dual.db
+      .from('memberships')
+      .select('organization_id')
+      .eq('organization_id', betaId)
+      .eq('user_id', dual.userId);
+    expect(notBetaMemberError).toBeNull();
+    expect(notBetaMember).toEqual([]);
   });
 
   it('sees every tenant, including two it founded neither of', async () => {
@@ -216,34 +280,42 @@ describe('the platform staff axis (D28)', () => {
     expect((events ?? []).some((row) => row.action === 'organization.created')).toBe(true);
   });
 
-  it('reads nothing it was not granted, so the grant list is the boundary', async () => {
-    // `customers` and `work_items` carry a tenant's actual operating data and are deliberately
-    // not on the console's list. This fails on a missing privilege, not on an empty result —
-    // an empty result would mean a policy declined and a wider policy would undo it.
+  it('sees nothing in a tenant’s own operating data, because it holds no membership there', async () => {
+    // `customers`, `work_items` and `price_book_items` already grant `select` to `authenticated`
+    // for their owning tenant's own members — staff hold that same base privilege now, so the
+    // question is answered by the row policy rather than by the grant. A member of nothing sees
+    // nothing: an empty result, cleanly, not an error.
     for (const table of ['customers', 'work_items', 'price_book_items'] as const) {
-      const { error } = await staff.db.from(table).select('id');
-      expect(error?.message ?? '').toContain('permission denied');
+      const { data, error } = await staff.db.from(table).select('id');
+      expect(error, table).toBeNull();
+      expect(data, table).toEqual([]);
     }
   });
 
-  it('cannot write a tenant’s data, and fails on privilege rather than on policy', async () => {
-    // The assertion D28's invariant actually rests on. A policy would make these fail too, and
-    // a policy is one line away from permitting them; a missing grant is not.
+  it('cannot write a tenant’s data — a missing grant where none exists, a declining policy where one does', async () => {
+    // `organizations` has no insert grant to `authenticated` at all (creation happens only
+    // through `create_organization`/`provision_organization`) and no delete grant either — both
+    // still fail on a missing privilege, unchanged by 20260915000001.
     const inserted = await staff.db
       .from('organizations')
       .insert({ name: 'Staff Ltd', currency: 'EUR' });
     expect(inserted.error?.message ?? '').toContain('permission denied');
 
+    const deleted = await staff.db.from('organizations').delete().eq('id', alphaId);
+    expect(deleted.error?.message ?? '').toContain('permission denied');
+
+    // `organizations` *does* grant `update (name, timezone, currency, buffer_minutes, slug)` to
+    // `authenticated`, for a member with `organization.manage` to edit their own business —
+    // staff hold that grant too now, so this update reaches `organizations_update`'s policy
+    // rather than the privilege system, and the policy declines because staff hold no membership
+    // here. No error; zero rows change.
     const updated = await staff.db
       .from('organizations')
       .update({ name: 'Renamed by staff' })
       .eq('id', alphaId);
-    expect(updated.error?.message ?? '').toContain('permission denied');
+    expect(updated.error).toBeNull();
 
-    const deleted = await staff.db.from('organizations').delete().eq('id', alphaId);
-    expect(deleted.error?.message ?? '').toContain('permission denied');
-
-    // And the tenant's own row is untouched by all three.
+    // The tenant's own row is untouched by all three attempts.
     const { data } = await staff.db.from('organizations').select('name').eq('id', alphaId);
     expect(data?.[0]?.name).toContain('Alpha Groundworks');
   });
@@ -259,8 +331,14 @@ describe('the platform staff axis (D28)', () => {
   });
 
   it('is invisible to a tenant, who cannot see that the staff list exists', async () => {
-    const { error } = await member.db.from('platform_staff').select('user_id');
-    expect(error?.message ?? '').toContain('permission denied');
+    // `platform_staff` now grants `select` to `authenticated` in full (staff need to read their
+    // own listing as themselves), gated by `platform_staff_self_select`'s
+    // `app.is_platform_staff()` check. An ordinary member fails that check, so the row is
+    // filtered rather than the query refused — the same table is just as unreadable to them as
+    // before, by a different honest mechanism.
+    const { data, error } = await member.db.from('platform_staff').select('user_id');
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
   });
 
   it('lists every tenant through the console, in each tenant’s own terms', async () => {
@@ -291,12 +369,15 @@ describe('the platform staff axis (D28)', () => {
     expect([...times].sort().reverse()).toEqual(times);
   });
 
-  it('does not let a member reach the console view at all', async () => {
-    // Two boundaries, and this is the outer one: the view is granted to `platform_staff` and
-    // to nobody else, so a member is refused before any policy is consulted.
-    await expect(listTenants(member.db)).rejects.toMatchObject({
-      code: 'platform.tenants_failed',
-    });
+  it('shows a member nothing through the console view, rather than refusing the query', async () => {
+    // `platform_tenants` now grants `select` to `authenticated` (staff need to reach it as
+    // themselves), so the boundary moved from the grant into the view's own body: it carries a
+    // `where app.is_platform_staff()` clause precisely because `organizations` already has a
+    // legitimate member-facing policy that would otherwise let a member read their own row back
+    // through a view meant only for the console. A member gets an empty list, the same honest
+    // "no such row for you" every other RLS decline in this schema produces — not a thrown error.
+    const { tenants } = await listTenants(member.db);
+    expect(tenants).toEqual([]);
   });
 
   it('builds that view as security_invoker, so it carries no visibility of its own', async () => {
@@ -320,9 +401,9 @@ describe('the platform staff axis (D28)', () => {
   });
 
   it('answers the staff question from the database rather than from the session', async () => {
-    // `isPlatformStaff` reads a table only the staff role may read, so the answer is a
-    // policy's answer. A member gets `permission denied`, which is the correct negative rather
-    // than an error worth surfacing — the domain function turns it into `false`.
+    // `isPlatformStaff` reads `platform_staff` under the caller's own RLS, gated by
+    // `app.is_platform_staff()` — a live table read, never a claim on the token. A member sees
+    // no row (an empty result, not an error) and the domain function turns that into `false`.
     expect(await isPlatformStaff(staff.db)).toBe(true);
     expect(await isPlatformStaff(member.db)).toBe(false);
   });
@@ -390,12 +471,17 @@ describe('what is failing, on the console', () => {
   });
 
   it('does not read what a business says to its own customers', async () => {
-    // **Deliberately not granted.** A template is what a business says to its own customers and
-    // a reading is what somebody outside said about its sites; neither is needed to know that a
-    // thing failed. The console reads the fact and its cause, and does not read the mail.
+    // A template is what a business says to its own customers and a reading is what somebody
+    // outside said about its sites; neither is needed to know that a thing failed, and neither
+    // was ever on the console's own list of concerns. These three already grant `select` to
+    // `authenticated` for their owning tenant's own members, same as `customers` above — staff
+    // hold that grant too now, and see nothing, because the row policy scopes it to a
+    // membership they don't have. The console reads the fact and its cause, and does not read
+    // the mail.
     for (const table of ['message_templates', 'external_readings', 'asset_readings'] as const) {
-      const { error } = await staff.db.from(table).select('id');
-      expect(error?.message ?? '', table).toContain('permission denied');
+      const { data, error } = await staff.db.from(table).select('id');
+      expect(error, table).toBeNull();
+      expect(data, table).toEqual([]);
     }
   });
 

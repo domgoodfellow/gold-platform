@@ -128,7 +128,7 @@ describe('members', () => {
 
     expect(mine.filter((o) => o.id === organizationId)).toHaveLength(1);
     expect(theirs.filter((o) => o.id === organizationId)).toHaveLength(1);
-    expect(mine.find((o) => o.id === organizationId)?.role).toBe('Owner');
+    expect(mine.find((o) => o.id === organizationId)?.role).toBe('Admin');
     expect(theirs.find((o) => o.id === organizationId)?.role).toBe('Technician');
   });
 

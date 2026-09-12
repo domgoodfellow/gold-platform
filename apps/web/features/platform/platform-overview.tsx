@@ -12,7 +12,8 @@ import type { PlatformOverview as PlatformOverviewData } from '@/lib/domain/plat
  * `Widget`/`WidgetGrid` vocabulary Today uses, not the tenant-configured `dashboards` in
  * `lib/domain/reporting/`. Four numbers and one table, all read straight off `PlatformOverview`
  * (`lib/domain/platform/overview.ts`) with no arithmetic performed here — see
- * `docs/ui-system-audit.md` §F for what was deliberately left off this screen and why.
+ * `docs/constraints.md`'s "Decided, not yet built" table for what was deliberately left off this
+ * screen and why.
  */
 export function PlatformOverview({ organizations, failures, catalogue, rates }: PlatformOverviewData) {
   const totalFailures = failures.operational + failures.providerReconciliation;

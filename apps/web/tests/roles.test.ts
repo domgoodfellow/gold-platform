@@ -70,7 +70,7 @@ describe('roles and capabilities', () => {
   it('gives the founder a role that is data, not an enum', async () => {
     const roles = await listRoles(owner.db, { organizationId });
     expect(roles).toHaveLength(1);
-    expect(roles[0].name).toBe('Owner');
+    expect(roles[0].name).toBe('Admin');
     expect(roles[0].capabilities.slice().sort()).toEqual([...CAPABILITIES].sort());
   });
 
@@ -97,7 +97,7 @@ describe('roles and capabilities', () => {
 
   it('refuses two roles with the same name in one tenant (I2)', async () => {
     await expect(
-      createRole(owner.db, { organizationId, name: 'owner', capabilities: [] }),
+      createRole(owner.db, { organizationId, name: 'admin', capabilities: [] }),
     ).rejects.toMatchObject({ code: 'roles.name_taken' });
   });
 
@@ -105,13 +105,13 @@ describe('roles and capabilities', () => {
     const other = await signUp('other');
     const otherOrganizationId = await foundBusiness({ ownerEmail: other.email, name: 'Other Ltd', displayName: 'Founder', currency: 'EUR' });
 
-    // Both organizations now hold a role called Owner. If roles_org_name_unique had lost
+    // Both organizations now hold a role called Admin. If roles_org_name_unique had lost
     // its leading organization_id, the second create_organization would already have failed.
     const mine = await listRoles(owner.db, { organizationId });
     const theirs = await listRoles(other.db, { organizationId: otherOrganizationId });
 
-    expect(mine.some((r) => r.name === 'Owner')).toBe(true);
-    expect(theirs.some((r) => r.name === 'Owner')).toBe(true);
+    expect(mine.some((r) => r.name === 'Admin')).toBe(true);
+    expect(theirs.some((r) => r.name === 'Admin')).toBe(true);
   });
 
   it('enforces the capability in the database, not just the domain (I12)', async () => {

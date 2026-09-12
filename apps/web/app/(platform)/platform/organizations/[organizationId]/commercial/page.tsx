@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { AppPage } from '@/components/containers/app-page';
 import { DataTable } from '@/components/display/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { getDb } from '@/lib/db/server';
 import { getTenant } from '@/lib/domain/platform/tenants';
 import { listOrganizationTerms, moduleCommercialState } from '@/lib/domain/commercial/terms';

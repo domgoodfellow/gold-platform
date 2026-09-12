@@ -6,7 +6,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+} from '@gold/ui/components/breadcrumb';
 import { PageHeading } from './section';
 
 export type RecordCrumb = { label: ReactNode; href?: string };

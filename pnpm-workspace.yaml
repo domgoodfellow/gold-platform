@@ -2,6 +2,15 @@ packages:
   # Named, not globbed: apps/ means "a deployable this repo ships" (D3), and apps/api is
   # Python -- pnpm must not try to manage it. A new pnpm package adds itself here by name.
   - "apps/web"
+  # Each one exists because it now has a real, immediate consumer inside apps/web -- not ahead
+  # of one. See constraints.md's "Decided, not yet built" table: a direct instruction to build
+  # is itself a trigger, and each of these four is genuinely used starting in the same change
+  # that added it. packages/sdk stays out: nothing inside this repo needs an indirection layer
+  # in front of its own domain calls yet.
+  - "packages/types"
+  - "packages/schemas"
+  - "packages/ui"
+  - "packages/config"
 
 # Merged up from the nested apps/web/pnpm-workspace.yaml that create-next-app wrote.
 # A pnpm-workspace.yaml inside a package makes that directory its own workspace root and

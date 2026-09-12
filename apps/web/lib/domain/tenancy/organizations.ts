@@ -55,8 +55,13 @@ export function normaliseName(value: string): string {
   return name;
 }
 
-/** What the first membership's role is called, through either door — a row in `roles`, renameable without a migration (D6). */
-export const FOUNDING_ROLE = 'Owner';
+/**
+ * What the first membership's role is called, through either door — a row in `roles`,
+ * renameable without a migration (D6). `Admin`, not `Owner`: the highest ordinary organization
+ * role and platform authority (`platform_staff`) are two different axes (D28), and this is only
+ * ever the tenant's own vocabulary for the first one — nothing anywhere branches on this string.
+ */
+export const FOUNDING_ROLE = 'Admin';
 
 // The embed is hinted with the constraint name since the reference is composite
 // (organization_id, role_id) -> roles (organization_id, id). Written as one string literal,

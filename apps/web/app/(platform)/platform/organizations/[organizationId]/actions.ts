@@ -6,6 +6,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { recordProviderResource, setProviderResourceStatus } from '@/lib/domain/providers/bindings';
 import { provisionTelephonySubaccount } from '@/lib/domain/providers/twilio-provisioning';
+import { endSupportSession, startSupportSession } from '@/lib/domain/platform/support';
 import { TELEPHONY_RESOURCE_TYPES, telephonyProviderKey } from '@/lib/adapters/telephony';
 
 export type ProvisionTwilioState = { error: string | null; provisioned: boolean };
@@ -86,6 +87,47 @@ export async function setResourceStatusAction(
 
   revalidatePath(`/platform/organizations/${organizationId}`);
   return { error: null, recorded: true };
+}
+
+export type SupportSessionState = { error: string | null };
+
+export const SUPPORT_SESSION_INITIAL: SupportSessionState = { error: null };
+
+export async function startSupportSessionAction(
+  _previous: SupportSessionState,
+  formData: FormData,
+): Promise<SupportSessionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const reason = String(formData.get('reason') ?? '').trim();
+
+  try {
+    await startSupportSession(db, { organizationId, reason: reason || undefined });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/platform/organizations/${organizationId}`);
+  return { error: null };
+}
+
+export async function endSupportSessionAction(
+  _previous: SupportSessionState,
+  formData: FormData,
+): Promise<SupportSessionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await endSupportSession(db, { id: String(formData.get('sessionId') ?? '') });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/platform/organizations/${organizationId}`);
+  return { error: null };
 }
 
 export type RecordTermState = { error: string | null; recorded: boolean };

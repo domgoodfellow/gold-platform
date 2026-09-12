@@ -1,7 +1,7 @@
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeading, SectionHeading } from '@/components/containers/section';
 import { DataTable } from '@/components/display/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { ProductPriceForm } from '@/features/platform/pricing/product-price-form';
 import { ProviderRateForm, RetailRateForm } from '@/features/platform/pricing/rate-forms';
 import { getDb } from '@/lib/db/server';

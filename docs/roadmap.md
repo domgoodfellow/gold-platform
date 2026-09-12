@@ -224,6 +224,14 @@ stay together — `createRole` and everything after it are keyed to `app.current
 platform staff are a member of nothing. So GOLD creates, and whoever configures configures — D29's
 own axis, arriving because nothing else was possible.
 
+**Corrected by D45, stated here rather than left to mislead.** "Staff are a Postgres role" and
+"the one write `platform_staff` gets" were both true when M5 shipped and are not true now: staff
+are checked live (`app.is_platform_staff()`/`app.require_platform_staff()`), never a role a
+session wears instead of `authenticated`, and there are now several staff-only writes, each its
+own staff-checked function. What M5's own criterion asked for — read across every tenant, hold no
+membership anywhere by default, write nothing belonging to a tenant that already exists — still
+holds exactly as stated; only the mechanism holding it moved. See D45.
+
 ---
 
 ## M6 — Workflows, automations, and the channels they act through
@@ -366,9 +374,9 @@ This milestone buys a second host (D24): a call is a persistent media stream for
 which serverless isn't. `apps/api` stays; a realtime deployment target sits beside it.
 
 GOLD is a user of this milestone, not only its vendor — selling configured deployments to
-businesses with no system is outbound calling, so GOLD switches the module on like any tenant
-(tenant zero, no fork). The trigger to build is call volume, not audience: thirty calls need a
-phone and a list.
+businesses with no system is outbound calling, so GOLD switches the module on like any tenant,
+in its own Organization Context, no exemption and no fork (D42, D45). The trigger to build is
+call volume, not audience: thirty calls need a phone and a list.
 
 Two-way email lands here too — the half of "communications" that isn't the dialer. Reading a
 mailbox so a reply attaches to its job needs an authorization against somebody else's account,
@@ -389,8 +397,10 @@ delegate. Live rebuttals and voice agents are the last two, not the first.
 > forked UI, and adds only what a browser genuinely cannot do — device access, local printing,
 > tray, hotkeys, headset integration.
 
-Electron is another client, not another product. `packages/ui` is extracted here, at the moment a
-second consumer exists, and not before.
+Electron is another client, not another product, and it will be `@gold/ui`'s second real
+consumer once it exists — `@gold/ui` itself was extracted ahead of that (D45), the day it had an
+immediate consumer inside `apps/web`, per `constraints.md`'s own rule that a direct instruction to
+build is itself a trigger. What M10 still waits on is Electron, not the package.
 
 ---
 

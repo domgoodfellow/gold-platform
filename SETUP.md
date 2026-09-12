@@ -179,6 +179,8 @@ tenant should use two sign-ins.
 | Web | `STRIPE_CONNECT_CLIENT_ID` | Preview | READY TO CONFIGURE - TEST/NON-PRODUCTION ONLY | NO | NO | Stripe Connect test/sandbox client ID, `ca_...` | YES | Pair with test secret key. |
 | Web | `STRIPE_CONNECT_CLIENT_ID` | Production | READY TO CONFIGURE | NO | NO | Stripe Connect live client ID, `ca_...` | YES, when going live | Pair with live secret key. |
 | Web | `ANTHROPIC_API_KEY` | Preview + Production | READY TO CONFIGURE | YES | YES | Anthropic Console | OPTIONAL | Enables setup drafting. |
+| Web | `RESEND_API_KEY` | Preview + Production | READY TO CONFIGURE | YES | YES | Resend Dashboard | OPTIONAL | GOLD's own platform email (organization invitations) — a separate concern from the API project's `RESEND_API_KEY`, which is a tenant's own channel. Same account may issue both in practice. |
+| Web | `PLATFORM_EMAIL_FROM_ADDRESS` | Preview + Production | READY TO CONFIGURE | NO | NO | Verified sender/domain | OPTIONAL | Pair with Web's `RESEND_API_KEY`. Unconfigured means invitations still work — the copyable link is always shown regardless. |
 | Web | `TWILIO_ACCOUNT_SID` | Production | READY TO CONFIGURE | NO | NO | Twilio Console | OPTIONAL | Needed for telephony provisioning/browser calling. |
 | Web | `TWILIO_AUTH_TOKEN` | Production | READY TO CONFIGURE | YES | YES | Twilio Console | OPTIONAL | Sensitive. |
 | Web | `TWILIO_API_KEY_SID` | Production | READY TO CONFIGURE | NO | NO | Twilio Console | OPTIONAL | Browser Voice SDK. |

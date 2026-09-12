@@ -5,6 +5,62 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Platform Context and Organization Context, one identity holding both, and the pieces that follow from it
+
+D45. Platform authority stops being a Postgres role a session had to wear instead of
+`authenticated` — the mechanism that used to force "somebody who is both staff and a member of an
+organization loses the membership half while signed in." Staff are checked live
+(`app.is_platform_staff()`/`app.require_platform_staff()`) from inside a policy or a function
+body, so one identity can hold platform authority and any number of organization memberships at
+once and switch between them in the context switcher. The organization's top ordinary role is
+renamed to `Admin` (tenant vocabulary, never an authorization primitive — nothing branches on the
+string). Organization invitations close the gap direct member-adding left, with a hashed token
+unlike the customer portal's own plaintext one. Platform support access becomes a real, audited,
+expiring session rather than a click with no record. `packages/types`, `packages/schemas`,
+`packages/ui` and `packages/config` arrive, each with a real consumer in the same change.
+
+- `supabase/migrations/20260915000001_platform_staff_is_checked_not_worn.sql` — `app.
+  is_platform_staff()`; every table `platform_staff` read via its own Postgres role now reads it
+  via a policy on `authenticated` instead; every narrow-door write function widens its grant to
+  `authenticated`, keeping the internal staff check it already had; `organization_commercial_summary`/
+  `organization_usage_detail` become `security definer` (a column grant could no longer do the
+  job once staff share `authenticated`'s own); `platform_tenants` gains a `where
+  app.is_platform_staff()` clause in its own body; the `platform_staff` Postgres role and its
+  sign-in hook are retired.
+- `supabase/migrations/20260915000002_the_founding_role_is_called_admin.sql` — `FOUNDING_ROLE`
+  becomes `'Admin'`; a scoped data migration renames existing seed-created `Owner` rows holding
+  exactly the founding capability set, and no others.
+- `supabase/migrations/20260915000003_organization_invitations.sql` — `organization_invitations`
+  (hashed token, `role.manage` reused), `invite_member`/`accept_invitation`; acceptance refuses
+  unless the accepting account's own email matches the invited address.
+- `supabase/migrations/20260915000004_platform_support_sessions.sql` — `platform_support_sessions`,
+  `start_support_session`/`end_support_session`; grants no read beyond what staff already held.
+- `apps/web/lib/domain/tenancy/invitations.ts`, `apps/web/lib/domain/platform/support.ts` — the
+  domain layer for both; `apps/web/lib/adapters/email/` — a small new capability, GOLD's own
+  transactional email, distinct from a tenant's billed channel.
+- `apps/web/app/organizations/[organizationId]/org-shell.tsx` — `OrganizationSwitcher` lists the
+  caller's real organizations and, when they hold platform authority, Platform Administration,
+  sourced from `listMyOrganizations`/`isPlatformStaff` rather than a static link; its raw
+  `<button>` becomes `@gold/ui`'s `Button`, closing one of `milestone-m11.test.ts`'s two
+  violations as a side effect.
+- `apps/web/app/(platform)/platform/organizations/[organizationId]/` — an "Open organization"
+  action and, once a session is active, a support-view banner and a People list.
+- `packages/types`, `packages/schemas`, `packages/ui`, `packages/config` — registered in
+  `pnpm-workspace.yaml`; `@gold/ui` holds the shadcn primitives moved from `apps/web/components/
+  ui/`, exported as subpaths, plus `Alert`/`Dialog`/`Table`/`Badge`, this record's own first
+  callers.
+- Docs: `docs/domain-model.md` I21 rewritten (mechanism moved, claim unchanged), I38/I39 added;
+  `docs/constraints.md` D45; `CLAUDE.md`, `docs/market.md`, `docs/roadmap.md` corrected wherever
+  they described the retired role-swap or used "tenant zero" language; `docs/ui-system-audit.md`
+  retired per its own stated lifecycle (Phase 1 landed), its two still-open items folded into
+  `docs/constraints.md`'s deferred table.
+
+**Not built, named rather than left unstated.** Support access does not reach a tenant's own
+operational tables (customers, work items, and the rest) — a future, separate slice. Teams and
+`packages/sdk` stay deferred, per `docs/domain-model.md`'s and `docs/constraints.md`'s own
+existing reasoning. A support session shows a member's display name, never their role's name —
+staff have never held `select` on `roles`, and this record does not add it.
+
 ### An organization scopes its own provider, and a generated secret lives in Vault and nowhere else
 
 Provider Bindings (D44): which external scope belongs to an organization, how GOLD provisions

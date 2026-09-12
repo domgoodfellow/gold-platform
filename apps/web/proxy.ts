@@ -56,11 +56,22 @@ const BOOKING_PREFIX = '/book/';
  */
 const PORTAL_PREFIX = '/portal/';
 
+/**
+ * Accepting an organization invitation, on the same terms as booking and the portal.
+ *
+ * The token in the path is the credential, checked by `accept_invitation` against a row — not by
+ * anything here. This only declines to redirect a signed-out invitee away before the page can
+ * greet them with a sign-in/sign-up prompt; a stranger reaching this prefix with an invented
+ * token gets the page's own "not valid" refusal, not access to anything.
+ */
+const ACCEPT_INVITE_PREFIX = '/organizations/accept-invite/';
+
 function isPublic(pathname: string): boolean {
   return (
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith(BOOKING_PREFIX) ||
-    pathname.startsWith(PORTAL_PREFIX)
+    pathname.startsWith(PORTAL_PREFIX) ||
+    pathname.startsWith(ACCEPT_INVITE_PREFIX)
   );
 }
 

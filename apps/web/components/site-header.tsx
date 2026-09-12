@@ -1,8 +1,8 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { Separator } from '@/components/ui/separator';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@gold/ui/components/separator';
+import { SidebarTrigger } from '@gold/ui/components/sidebar';
 import { usePlatformHeaderOverride } from '@/features/platform/platform-header-title';
 
 const TITLES: Array<[prefix: string, title: string]> = [

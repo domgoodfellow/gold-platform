@@ -61,16 +61,22 @@ below), and a usage ledger recording GOLD's own provider cost, in the provider's
 alongside what a business is charged, with reconciliation as a second append-only fact rather
 than a rewrite (D43) — and, on top of that, which external provider scope belongs to which
 organization, a real Twilio subaccount, key and application provisioned and recorded through it,
-and a generated secret held in Vault that no function ever selects back out (D44).
+and a generated secret held in Vault that no function ever selects back out (D44) — and platform
+authority as a fact checked live rather than a role a session had to wear instead of its own
+organization memberships, organization invitations closing the gap direct member-adding left, a
+staff-opened and audited support session, and the shared `packages/*` layer, each with a real
+consumer (D45).
 
 Not built: per-tenant theming, the shared control set (`docs/ui-spec.md` §4), the per-tenant
 marketing surface (D20), desktop (M10), Stripe on either side of the commercial ledger, the
 entitlement write-refusal on any module's tables but `card_payments`'s (D43 names the rest as a
 gap), a per-tenant Deepgram, ElevenLabs or model-inference account of any kind, and a browser
 voice token signed by a business's own generated key rather than GOLD's master one (D44 names
-both as gaps). Three domain capabilities are reachable from no screen — `revokePortalInvite`,
-`assignRole` and `browserTelephoneToken`; `docs/walkthrough.md` names where an operator would hit
-the first two. Do not add a fourth without noticing.
+both as gaps), and a support session reaching a tenant's own operational tables — customers, work
+items, and the rest — rather than only what `platform_staff` already read before D45 (a named,
+deliberate gap, not an oversight). Three domain capabilities are reachable from no screen —
+`revokePortalInvite`, `assignRole` and `browserTelephoneToken`; `docs/walkthrough.md` names where
+an operator would hit the first two. Do not add a fourth without noticing.
 
 `supabase/migrations/` is the source of truth for the data model. Read it rather than
 inferring the schema, and comment the *why* rather than the *what*.
@@ -140,7 +146,11 @@ apps/
     app/integrations/ the only place this repo's Python names a vendor
     app/api/        HTTP entrypoints — one file, one route. NOT apps/api/api/ (see its README)
   desktop/          Electron shell (M10; not before)
-packages/           shared libraries once a generic responsibility has multiple real product-surface consumers
+packages/           each with a real, immediate consumer inside apps/web (D45); packages/sdk stays deferred
+  types/            ContextDescriptor and the other cross-cutting shapes — never Capability, which stays the domain layer's
+  schemas/          Zod validation for forms — a better error message, never a second authorization
+  ui/               shadcn primitives, subpath-exported (@gold/ui/components/<name>), never one barrel
+  config/           shared tsconfig and non-secret static identifiers only — no mutable configuration, ever
 supabase/           migrations, policies, snippets
 docs/
 ```
@@ -158,6 +168,10 @@ docs/
   anonymous caller may open, by path, and a group does not change a path.
 - `organizations/` is ungrouped because `navigation.test.ts` scans `[organizationId]/` for areas,
   and a group folder would hide its children from that scan.
+- **Platform Context** (`(platform)/`) and **Organization Context** (`organizations/`) are the two
+  names for where a caller is acting. GOLD holds no exemption in either (D42, D45) — the same
+  identity can hold platform authority and an organization membership at once and switch between
+  them, and `platform_staff` is a table checked live, never a role a session had to choose (D45).
 
 ## Rules that hold in every change
 
@@ -254,9 +268,9 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 
 | Never | Because | Held by |
 |---|---|---|
-| A rate or a term written by a general table grant | D40's rule, restated: staff hold no `insert`/`update`/`delete` on any table. A rate or a term is a narrow `SECURITY DEFINER` function's job, checked and audited, never a grant somebody widens later | `platform_provider_rates`, `platform_retail_rates`, `organization_commercial_terms` hold no such grant for any role; `public.record_provider_rate`, `public.record_retail_rate`, `public.record_commercial_term` are the only doors, each `execute`-granted to `platform_staff` alone |
+| A rate or a term written by a general table grant | D40's rule, restated: staff hold no `insert`/`update`/`delete` on any table. A rate or a term is a narrow `SECURITY DEFINER` function's job, checked and audited, never a grant somebody widens later | `platform_provider_rates`, `platform_retail_rates`, `organization_commercial_terms` hold no such grant for any role; `public.record_provider_rate`, `public.record_retail_rate`, `public.record_commercial_term` are the only doors — `execute`-granted to `authenticated`, each staff-checked internally by `app.require_platform_staff()` (D45) |
 | An RLS policy that reads entitlement | D25 surviving the arrival of money: a module is billing and navigation, never authorization, and a lapsed term must never become an access-control decision | No policy anywhere selects from `organization_commercial_terms`; the refusal is `app.check_module_entitlement`, a trigger |
-| GOLD's own provider cost, a reconciliation, or the margin either implies, reaching a tenant | A business is entitled to know what it is charged, never what it costs GOLD to serve it or who GOLD used | `platform_provider_rates` and `usage_cost_reconciliations` have no grant to `authenticated`; `usage_events`'s grant to `authenticated` omits `provider_key`/`provider_currency`/`provider_cost_micros`; `public.organization_commercial_summary` and `public.organization_usage_detail` are `platform_staff`-only |
+| GOLD's own provider cost, a reconciliation, or the margin either implies, reaching a tenant | A business is entitled to know what it is charged, never what it costs GOLD to serve it or who GOLD used | `platform_provider_rates` and `usage_cost_reconciliations` have no grant to `authenticated`; `usage_events`'s grant to `authenticated` omits `provider_key`/`provider_currency`/`provider_cost_micros`; `public.organization_commercial_summary` and `public.organization_usage_detail` are `security definer`, staff-checked internally, and never reachable through the withheld columns any other way (D45) |
 | A recorded amount below one minor unit | I10 | Only a *rate* (price per unit) carries micro-minor-unit precision; every disclosed total still rounds once, at render |
 | A second retail price for voice, SMS or email | `communication_rates` (D40) already answers it | `platform_retail_rates` holds no row for those three meters |
 | A provider named on a meter | Two providers may answer one meter (Deepgram or ElevenLabs, both `transcription_seconds`); a meter that named one could not express the second | `platform_meters` carries no provider column; `platform_provider_rates` is keyed by `(provider_key, meter_id, currency, effective_from)` |
@@ -267,7 +281,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 
 | Never | Because | Held by |
 |---|---|---|
-| A binding or a resource written by a general table grant | The same rule as above, restated for a third axis: staff hold no `insert`/`update`/`delete` on any table | `organization_provider_bindings` and `organization_provider_resources` hold no such grant for any role; `begin_provider_binding`, `set_provider_binding_status`, `record_provider_resource`, `set_provider_resource_status` are the only doors, each `execute`-granted to `platform_staff` alone |
+| A binding or a resource written by a general table grant | The same rule as above, restated for a third axis: staff hold no `insert`/`update`/`delete` on any table | `organization_provider_bindings` and `organization_provider_resources` hold no such grant for any role; `begin_provider_binding`, `set_provider_binding_status`, `record_provider_resource`, `set_provider_resource_status` are the only doors — `execute`-granted to `authenticated`, each staff-checked internally by `app.require_platform_staff()` (D45) |
 | A function that selects a decrypted secret back out | Staff necessarily holds a generated secret for the one moment it is created; nothing may ever ask for it again through this API — not staff, not a tenant, not the browser | No role holds `select` on `vault.secrets` or `vault.decrypted_secrets`; `store_provider_secret` returns the resource id it acted on, never the secret or the vault row's own id |
 | `secret_id` reaching any caller | A vault reference is exactly as sensitive as what it points to handing back | Withheld from every grant on `organization_provider_resources`, the same column-grant mechanism `usage_events` uses for GOLD's own cost |
 | A provider named in `lib/domain/` | I15, extended: a resource-type string like `twilio_subaccount` is a vendor's name wearing a different shape | `organization_provider_resources.resourceType` is opaque `string`; `lib/adapters/telephony/registry.ts` alone knows `telephonyProviderKey()` and `TELEPHONY_RESOURCE_TYPES` |
@@ -310,7 +324,8 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | A tenant id in a public URL | The id must be one the server resolved, never one a URL supplied (D17) | `/book/[slug]` resolves through `public.booking_organization` |
 | An organization id accepted by a privileged public write | A parameter the caller supplies is a parameter the caller chose, no matter which layer read it first (D17, D22) | `request_workflow_review` takes no such argument; the target comes from `platform_settings`, readable by no role through PostgREST, set by hand (D42) |
 | A platform sentence on a public page | A claim a business makes about itself is configuration | `public-profile.test.ts` scans the source of `app/(public)/`, so this fails at the gate rather than in front of a customer |
-| An insert, update or delete grant to `platform_staff` | Staff may bring a tenant into existence and may never reach into one that exists (I21) | No write policy names the role *and* the role holds no such grant; `platform-staff.test.ts` asserts `permission denied` rather than merely a failure |
+| An insert, update or delete grant to `authenticated` on `memberships` or `platform_staff` (the table) | Staff may bring a tenant into existence and may never reach into one that exists (I21). Every other narrow-door write staff make is a function with `app.require_platform_staff()` inside it, not a table grant — a check can be argued with; a missing privilege cannot | Neither table carries such a grant to any role; `platform-staff.test.ts` asserts `permission denied` on both, specifically, rather than merely a failure |
+| A Postgres role a session wears instead of `authenticated` to signal platform authority | It costs the same session a real organization membership for as long as it holds that role — the thing D45 retired, precisely because the owner said not to want it | `app.is_platform_staff()`/`app.require_platform_staff()` read `platform_staff` live, under whichever role the caller already is (D45) |
 | `security_definer` on `platform_tenants` | It would be the service-role client D14 refuses, with extra steps | `pg_class.reloptions`, read by the test rather than trusting the definition |
 | An `organization_id` on `platform_staff` | Not being scoped to a tenant is the entire point, which puts it outside I2 rather than in breach of it | No such column |
 | A `customer_id` on `external_actors` | An outsider who can write a customer id onto their own binding can write somebody else's | The column grant refuses it; the binding is immutable, and `created_by` is what scopes an outsider to their own rows |
@@ -355,6 +370,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | Modules against engines | D25 |
 | Payments, and whose account holds the money | D26, D27, D33 |
 | Platform staff, provisioning, the two doors | D28, D29 |
+| Platform Context, Organization Context, one identity holding both, the `Admin` rename, invitations, support sessions, the package layer | D45 |
 | Automation, and the switch that leads to its inputs | D11, D30, D31 |
 | The onboarding proposal | D32 |
 | The AI tool loop | D34 |

@@ -244,17 +244,17 @@ describe('a generated secret is written, never read back', () => {
   });
 
   it('grants nobody — not a tenant, not staff — any way to select a decrypted vault secret', async () => {
-    // The actual security boundary: neither role holds a grant on either vault table at all, so
-    // there is no query — through PostgREST or otherwise — that could ever return one.
-    for (const role of ['authenticated', 'platform_staff']) {
-      const { rows } = await pg.query(
-        `select has_table_privilege($1, 'vault.secrets', 'select') as secrets,
-                has_table_privilege($1, 'vault.decrypted_secrets', 'select') as decrypted`,
-        [role],
-      );
-      expect(rows[0].secrets).toBe(false);
-      expect(rows[0].decrypted).toBe(false);
-    }
+    // The actual security boundary: `authenticated` holds no grant on either vault table at all,
+    // so there is no query — through PostgREST or otherwise — that could ever return one.
+    // `platform_staff` stopped being a Postgres role under 20260915000001 (staff are
+    // `authenticated` now, recognised by a table read rather than a role), so there is no second
+    // role left to check here — checking `authenticated` alone covers staff and tenant both.
+    const { rows } = await pg.query(
+      `select has_table_privilege('authenticated', 'vault.secrets', 'select') as secrets,
+              has_table_privilege('authenticated', 'vault.decrypted_secrets', 'select') as decrypted`,
+    );
+    expect(rows[0].secrets).toBe(false);
+    expect(rows[0].decrypted).toBe(false);
 
     // Nor is `secret_id` itself reachable through the resource row, for either role.
     const resources = await listProviderResources(staff, { organizationId: tenant.organizationId });

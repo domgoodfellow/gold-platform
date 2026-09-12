@@ -102,18 +102,19 @@ is the one to change.
 
 | Milestone | Change | Why |
 |---|---|---|
-| M5 — platform side | **Unchanged, first** | The factory floor. Every signed customer walks through provisioning. |
+| M5 — the platform side | **Unchanged, first** | The factory floor. Every signed customer walks through provisioning. |
 | AI onboarding (M8) | **Moves up** | The only build with two beneficiaries: the tenant's self-serve door, and our implementation margin. |
 | Tenant marketing and branding (D20) | **Moves up** | A named revenue line and the third sale to the same customer. `organization_profiles` is the seed; it has no milestone number yet. |
 | M6 workflows, M7 reporting | Unchanged | Real products; neither is in the pitch. |
-| M9 — dialer | **Unchanged, second vertical** | D5's reasoning holds. GOLD is a user of it too — outbound to un-digitized businesses is vertical two, and tenant zero switches the module on like anyone else. The trigger to build is call volume, not audience: thirty calls need a phone and a list. |
+| M9 — dialer | **Unchanged, second vertical** | D5's reasoning holds. GOLD is a user of it too — outbound to un-digitized businesses is vertical two, and GOLD's own Organization Context switches the module on like anyone else, no exemption (D42, D45). The trigger to build is call volume, not audience: thirty calls need a phone and a list. |
 | M10 — desktop | **Out of the near path** | No customer has asked. |
 
-**GOLD as tenant zero** runs alongside all of it and costs nothing: an ordinary organization
-with ordinary memberships, distinct from the `platform_staff` role that D28 keeps out of every
-tenant. Our own implementation pipeline is customers, work items and scheduling — the exact
-path a tenant uses. The risk to watch: a field our own pipeline wants is *one* caller, and
-`constraints.md` is right to refuse it.
+**GOLD, dogfooding its own Organization Context (D42, D45),** runs alongside all of it and costs
+nothing: an ordinary organization with ordinary memberships, distinct from platform authority —
+checked live (`app.is_platform_staff()`), never a Postgres role a session had to wear instead of
+its own — that D28 keeps out of every tenant. Our own implementation pipeline is customers, work
+items and scheduling — the exact path a tenant uses. The risk to watch: a field our own pipeline
+wants is *one* caller, and `constraints.md` is right to refuse it.
 
 ---
 

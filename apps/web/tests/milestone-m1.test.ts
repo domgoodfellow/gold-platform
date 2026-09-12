@@ -303,7 +303,7 @@ describe('M1 — the kernel', () => {
       expect(statuses.map((r) => r.id)).toEqual([self.statusId]);
       expect(workItems.map((r) => r.id)).toEqual([self.workItemId]);
       expect(members).toHaveLength(2);
-      expect(roles.map((r) => r.name).sort()).toEqual(['Owner', SHARED.roleName].sort());
+      expect(roles.map((r) => r.name).sort()).toEqual(['Admin', SHARED.roleName].sort());
 
       // And nothing of the other tenant's is anywhere in there.
       const everything = [
@@ -347,7 +347,7 @@ describe('M1 — the kernel', () => {
       const asFounder = await getOrganization(tenant.founder.db, tenant.organizationId);
       const asStaff = await getOrganization(tenant.staff.db, tenant.organizationId);
 
-      expect(asFounder?.role).toBe('Owner');
+      expect(asFounder?.role).toBe('Admin');
       expect(asStaff?.role).toBe(SHARED.roleName);
       expect(asStaff?.capabilities).toEqual(['customer.create']);
     }
