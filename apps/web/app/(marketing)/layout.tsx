@@ -2,6 +2,24 @@ import Link from 'next/link';
 import { ButtonLink } from '@/components/controls/button';
 import { FOCUS_RING, cx } from '@/components/class-names';
 import { SiteShell } from '@/components/containers/site-shell';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  openGraph: {
+    type: 'website',
+    siteName: 'GOLD',
+    title: 'GOLD | One operating system for your business',
+    description:
+      'Connect work, customers, scheduling, communications, payments and automation in one configurable business system.',
+    url: '/',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'GOLD | One operating system for your business',
+    description:
+      'Connect work, customers, scheduling, communications, payments and automation in one configurable business system.',
+  },
+};
 
 /**
  * GOLD's own front door, in GOLD's own chrome — the same header and footer the credential

@@ -5,6 +5,11 @@ import { getDb } from '@/lib/db/server';
 import { resolveSessionIdentity } from '@/lib/domain/identity/session';
 import { AcceptInvitationForm } from './accept-form';
 import { continueToLoginAction, continueToSignUpAction } from './actions';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, noarchive: true },
+};
 
 export const dynamic = 'force-dynamic';
 

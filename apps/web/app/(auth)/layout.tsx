@@ -1,5 +1,9 @@
-import { ButtonLink } from '@/components/controls/button';
 import { SiteShell } from '@/components/containers/site-shell';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 /**
  * The four credential screens — log in, sign up, ask for a recovery link, set a new one.
@@ -14,16 +18,7 @@ import { SiteShell } from '@/components/containers/site-shell';
  */
 export default function AuthLayout({ children }: LayoutProps<'/'>) {
   return (
-    <SiteShell
-      // Not a link to the screen you are already on: from any of these four, the useful other
-      // place is the front page, and the wordmark already goes there. What this offers instead
-      // is the one thing the marketing page sells.
-      action={
-        <ButtonLink href="/sign-up" tone="secondary" size="small">
-          Create an account
-        </ButtonLink>
-      }
-    >
+    <SiteShell>
       {/* Centred in what is left after the header and footer, and never wider than a form wants
           to be read at. */}
       <div className="flex flex-1 items-center justify-center">

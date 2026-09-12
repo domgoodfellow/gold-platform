@@ -5,6 +5,34 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### The public front door has a production web foundation
+
+- `docs/public-web-architecture.md` — repository-backed audit of every anonymous route, proposed
+  sitemap and conversion intent, canonical-versus-presentation content model, authentication and
+  tenant-host routing, hosted/external/headless/migration website modes, domain records, legal
+  document versioning, current primary-source legal/provider research, SEO/locale/performance
+  targets, and a classified implementation gap matrix.
+- `apps/web/app/(marketing)/page.tsx` — rebuilt as an editorial Server Component: one primary
+  workflow-review conversion, a static product rendering based on real GOLD concepts, clearer
+  outcome/problem/configuration/implementation/trust sections, and no page-wide interaction state
+  or provider-technology marquee. Honest Organization/WebSite/WebPage JSON-LD describes only what
+  the page visibly claims.
+- `apps/web/lib/seo/site.ts`, root metadata, `robots.ts`, and `sitemap.ts` — one configured
+  canonical deployment origin, canonical/Open Graph/Twitter foundations, an explicit crawl policy,
+  and a sitemap containing only the two indexable marketing routes. Canonicals never reflect a
+  caller-controlled Host header.
+- Auth and tenant transaction layouts now explicitly emit `noindex`; booking confirmations,
+  portals, invitation tokens, and credential pages do not become search results. The shared auth
+  header no longer repeats “Create an account” on the signup route.
+- The workflow-review intake now applies server-side length and basic contact validation before it
+  creates an anonymous actor, mirrors those limits in browser controls, and explains the immediate
+  use of submitted details without treating an enquiry as marketing consent.
+- Separate application and tenant-public 404 states keep useful recovery on GOLD's own site while
+  preventing an invalid tenant link from acquiring GOLD's marketing chrome.
+- `apps/web/tests/{marketing-homepage,public-seo}.test.ts` — source and pure-function guards for
+  conversion hierarchy, zero page-level client state, truthful structured data, canonical safety,
+  crawl boundaries, noindex behavior, and tenant-brand separation.
+
 ### Platform Context and Organization Context, one identity holding both, and the pieces that follow from it
 
 D45. Platform authority stops being a Postgres role a session had to wear instead of

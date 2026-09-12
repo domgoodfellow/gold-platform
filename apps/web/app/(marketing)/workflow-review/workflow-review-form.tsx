@@ -5,6 +5,7 @@ import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import { FOCUS_RING, cx } from '@/components/class-names';
+import { WORKFLOW_REVIEW_LIMITS } from '@/lib/domain/workflow-review/limits';
 
 export type WorkflowReviewState = { error: string | null; done: boolean };
 
@@ -46,39 +47,44 @@ export function WorkflowReviewForm({
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="name">Your name</FieldLabel>
-        <TextInput id="name" name="name" type="text" required autoComplete="name" />
+        <TextInput id="name" name="name" type="text" required maxLength={WORKFLOW_REVIEW_LIMITS.name} autoComplete="name" />
       </div>
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="businessName">Business name</FieldLabel>
-        <TextInput id="businessName" name="businessName" type="text" required autoComplete="organization" />
+        <TextInput id="businessName" name="businessName" type="text" required maxLength={WORKFLOW_REVIEW_LIMITS.businessName} autoComplete="organization" />
       </div>
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="email">Email</FieldLabel>
-        <TextInput id="email" name="email" type="email" required autoComplete="email" />
+        <TextInput id="email" name="email" type="email" required maxLength={WORKFLOW_REVIEW_LIMITS.email} autoComplete="email" />
       </div>
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="phone">Phone (optional)</FieldLabel>
-        <TextInput id="phone" name="phone" type="tel" autoComplete="tel" />
+        <TextInput id="phone" name="phone" type="tel" maxLength={WORKFLOW_REVIEW_LIMITS.phone} autoComplete="tel" />
       </div>
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="context">How does your business run today?</FieldLabel>
         <Hint id="context-hint">The tools you use now, and where they fall short.</Hint>
-        <TextArea id="context" name="context" rows={4} aria-describedby="context-hint" />
+        <TextArea id="context" name="context" rows={4} maxLength={WORKFLOW_REVIEW_LIMITS.context} aria-describedby="context-hint" />
       </div>
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="teamSize">Team size (optional)</FieldLabel>
-        <TextInput id="teamSize" name="teamSize" type="text" />
+        <TextInput id="teamSize" name="teamSize" type="text" maxLength={WORKFLOW_REVIEW_LIMITS.teamSize} />
       </div>
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="businessType">What kind of business is this? (optional)</FieldLabel>
-        <TextInput id="businessType" name="businessType" type="text" />
+        <TextInput id="businessType" name="businessType" type="text" maxLength={WORKFLOW_REVIEW_LIMITS.businessType} />
       </div>
+
+      <Hint weight="subtle">
+        We use these details to respond to this request and keep the conversation with the
+        business record it concerns. Submitting this form does not opt you into marketing messages.
+      </Hint>
 
       <Button type="submit" disabled={pending}>
         {pending ? 'Sending…' : 'Request a workflow review'}

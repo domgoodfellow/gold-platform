@@ -1,5 +1,19 @@
 import { requestWorkflowReviewAction } from './actions';
 import { WorkflowReviewForm } from './workflow-review-form';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Workflow review · GOLD',
+  description:
+    'Map the workflow that is holding your operation back and identify where GOLD can connect the work.',
+  alternates: { canonical: '/workflow-review' },
+  openGraph: {
+    title: 'Request a workflow review · GOLD',
+    description:
+      'Map the workflow that is holding your operation back and identify where GOLD can connect the work.',
+    url: '/workflow-review',
+  },
+};
 
 export default function WorkflowReviewPage() {
   return (

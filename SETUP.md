@@ -171,6 +171,7 @@ tenant should use two sign-ins.
 |---|---|---|---|---|---|---|---|---|
 | Web | `NEXT_PUBLIC_SUPABASE_URL` | Preview + Production | READY TO CONFIGURE | NO | NO | Supabase project URL | YES | Browser-visible. |
 | Web | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Preview + Production | READY TO CONFIGURE | NO | NO | Supabase anon/public key | YES | Browser-visible; current source reads this exact name. |
+| Web | `SITE_URL` | Preview + Production | READY TO CONFIGURE | NO | NO | Canonical GOLD web origin, for example `https://gold.example` | YES | Server-read public configuration; sitemap, canonical, and social metadata share it. |
 | Web | `ASSISTANT_API_URL` | Production | READY TO CONFIGURE | NO | NO | API production URL | YES, once API URL is known | Server-side only. |
 | Web | `ASSISTANT_API_URL` | Preview | DO NOT CONFIGURE YET | NO | NO | Stable API Preview URL | NO | Wait for stable Preview API target. |
 | Web | `GEOCODING_CONTACT` | Preview + Production | READY TO CONFIGURE | NO | NO | Ops contact email | YES | Not a credential. |

@@ -271,4 +271,33 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
       }),
     ).rejects.toMatchObject({ code: 'workflow_review.name_required' });
   });
+
+  it('rejects oversized and malformed public input before opening an anonymous session', async () => {
+    const visitor = anonClient();
+    await expect(
+      requestWorkflowReview(visitor, {
+        name: 'A'.repeat(201),
+        businessName: 'Bounded Ltd',
+        email: 'person@example.test',
+        phone: '',
+        context: '',
+        teamSize: '',
+        businessType: '',
+      }),
+    ).rejects.toMatchObject({ code: 'workflow_review.field_too_long' });
+
+    await expect(
+      requestWorkflowReview(visitor, {
+        name: 'A Person',
+        businessName: 'Validated Ltd',
+        email: 'not-an-address',
+        phone: '',
+        context: '',
+        teamSize: '',
+        businessType: '',
+      }),
+    ).rejects.toMatchObject({ code: 'workflow_review.email_invalid' });
+
+    expect((await visitor.auth.getUser()).data.user).toBeNull();
+  });
 });
