@@ -243,20 +243,19 @@ publish.
 | Classification | Requirements |
 |---|---|
 | **ALREADY GOOD** | One identity; independent platform/membership facts; RLS tenant boundary; public profile/brand on tenant transactional surfaces; narrow workflow-review write; booking/portal domain reuse; responsive shared controls |
-| **REFACTOR** | Client-heavy/hardcoded homepage; repeated CTA hierarchy; auth intended-context routing; public header/footer information architecture; operational `assets` naming ambiguity for media |
-| **CONNECT EXISTING** | GOLD organization profile/brand; work types as service capability; price book as offer input; locations/hours; documents; customer events and stages; commercial catalogue where public terms are explicitly approved |
+| **REFACTOR** | Auth intended-context routing; public header/footer information architecture; operational `assets` naming ambiguity for media |
+| **CONNECT EXISTING** | Work types as service capability; price book as offer input; locations/hours; documents; customer events and stages; commercial catalogue where public terms are explicitly approved |
 | **CONFIGURE** | Production canonical origin; workflow-review target; deployment domain; analytics/consent provider; support/privacy contacts |
-| **BUILD** | Structured site/page revisions; preview/review/publish; media library; hostname mapping; published public resolver/API; legal versions/acceptance; attribution; abuse controls; cache invalidation; French routing/content |
+| **BUILD** | Media library; hostname mapping; legal versions/acceptance; attribution; abuse controls; French routing/content |
 | **RESEARCH** | Counsel-reviewed Quebec/Canada/US scope; accessibility obligations by market; subprocessors/transfers; registrar/reseller economics and `.ca` requirements; analytics consent choice |
 | **DEFER** | Arbitrary drag-and-drop builder; domain registration/reselling; full external SDK; articles/industry directory without content owners; multi-template marketplace; translation automation |
 | **REMOVE** | Provider-technology marquee as marketing proof; duplicate/route-inappropriate auth CTA; any future dead footer link or invented proof |
 
 ## Recommended sequence
 
-First, ship the SEO/canonical/noindex foundation, server-render the editorial homepage with small
-interactive islands, correct CTA hierarchy, and test the public route contract. Next, add one
-migration for structured sites, immutable revisions, typed homepage sections, and a narrow
-published-site reader; connect GOLD's organization profile/brand and provide draft/preview/publish
-inside the existing Configuration Center. Then add media assets and legal versions. Hostname/domain
+The SEO/canonical/noindex foundation and the structured publishing slice are built. The homepage
+now reads one tagged published projection, uses GOLD's canonical organization profile/brand, and
+shares its typed renderer with a manager-only preview; only publish invalidates that projection.
+Next add media assets and legal versions. Hostname/domain
 mapping follows once one published site can render correctly on the platform domain; external
 embeds/headless reads follow the same published projection rather than inventing another source.

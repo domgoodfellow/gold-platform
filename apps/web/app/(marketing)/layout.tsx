@@ -3,23 +3,17 @@ import { ButtonLink } from '@/components/controls/button';
 import { FOCUS_RING, cx } from '@/components/class-names';
 import { SiteShell } from '@/components/containers/site-shell';
 import type { Metadata } from 'next';
+import { BrandStyle } from '@/features/branding/brand-style';
+import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
+import { getPublicDb } from '@/lib/db/public';
 
-export const metadata: Metadata = {
-  openGraph: {
-    type: 'website',
-    siteName: 'GOLD',
-    title: 'GOLD | One operating system for your business',
-    description:
-      'Connect work, customers, scheduling, communications, payments and automation in one configurable business system.',
-    url: '/',
-  },
-  twitter: {
-    card: 'summary',
-    title: 'GOLD | One operating system for your business',
-    description:
-      'Connect work, customers, scheduling, communications, payments and automation in one configurable business system.',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getPublishedGoldHomepage();
+  return {
+    openGraph: { type: 'website', siteName: site.profile.displayName, title: site.seoTitle, description: site.seoDescription, url: '/' },
+    twitter: { card: 'summary', title: site.seoTitle, description: site.seoDescription },
+  };
+}
 
 /**
  * GOLD's own front door, in GOLD's own chrome — the same header and footer the credential
@@ -33,9 +27,15 @@ export const metadata: Metadata = {
  * implementation sold through a workflow review, not self-service signup, so the button that
  * gets the strong treatment is the review, and signing in is the plain link beside it.
  */
-export default function MarketingLayout({ children }: LayoutProps<'/'>) {
+export default async function MarketingLayout({ children }: LayoutProps<'/'>) {
+  const site = await getPublishedGoldHomepage();
   return (
-    <SiteShell
+    <div data-brand>
+      <BrandStyle brand={site.brand} />
+      <SiteShell
+      name={site.profile.displayName}
+      logoUrl={site.brand.logoPath ? getPublicDb().storage.from('brand').getPublicUrl(site.brand.logoPath).data.publicUrl : null}
+      footerLine={site.profile.tagline ?? 'One system that runs your business.'}
       nav={
         <div className="flex items-center gap-6 text-sm text-muted">
           <Link href="#how-it-works" className={cx('rounded hover:text-foreground', FOCUS_RING)}>
@@ -61,6 +61,7 @@ export default function MarketingLayout({ children }: LayoutProps<'/'>) {
       }
     >
       {children}
-    </SiteShell>
+      </SiteShell>
+    </div>
   );
 }

@@ -396,9 +396,11 @@ scheduled. Merging them makes both wrong.
 ### D20 — The four surfaces, and what each waits on
 
 **Decision.** Four surfaces: GOLD's own site, the operator shell, public booking, the customer
-portal. Three are built. The **per-tenant marketing surface** — a tenant's own site with pages and
-editable blocks — is the one still deferred.
-**What is built instead.** One row of copy per tenant, rendered at the top of any public surface:
+portal. All four have a working foundation. The site axis now has stable tenant-owned sites/pages,
+typed homepage revisions, review/publish, and one renderer at GOLD's root. Arbitrary hostname
+routing, custom domains, media management, and legal-page authoring remain deferred; this first
+renderer does not imply those distribution features exist.
+**What is shared.** One row of canonical profile copy per tenant, rendered at the top of any public surface:
 display name, tagline, intro, contact, address. The line is that **a business's own voice carries
 anything it claims, and the platform speaks only where it describes application state.** A
 business that has configured nothing renders its own name and stops.
@@ -634,7 +636,7 @@ wrong and change this table.
 
 | Thing | Waiting on | Trigger |
 |---|---|---|
-| **Per-tenant marketing surface** — a tenant's site with pages and editable blocks | Nothing technical. `market.md` names it as the third sale to the same customer and moves it up | The next real customer conversation. This is a **revenue line**, and it is the oldest deferral here |
+| **Tenant website distribution** — hostname resolution, custom domains, media and additional/legal pages above the built site/revision foundation | One approved site now renders at GOLD's root; domain ownership and legal content each add a separate authority model | A customer needs its own host or approved non-homepage content |
 | **The shared control set** — Button, Input, Field, Dialog, Empty state | Nothing. `ui-spec.md` §4 has the inventory and states the acceptance test | Already earned. The design work is done; what remains is writing the controls |
 | **Per-tenant theming** | The control set above, so a theme is a change of values rather than a pass over every screen | Control set lands, then a tenant asks |
 | `packages/sdk` | Somebody outside this repository integrating | The first tenant or partner who asks for an API. `apps/web` calls its own domain layer directly and needs no indirection layer in front of it — building one now would be the "empty package with no caller" shape this file already refuses elsewhere |

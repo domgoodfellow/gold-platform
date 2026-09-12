@@ -1,0 +1,59 @@
+'use server';
+
+import { updateTag, revalidatePath } from 'next/cache';
+import { PublicHomepageRevisionSchema } from '@gold/schemas';
+import { getDb } from '@/lib/db/server';
+import { DomainError } from '@/lib/domain/errors';
+import { GOLD_HOMEPAGE_CACHE_TAG } from '@/lib/domain/public-site/cached';
+import { createHomepageDraft, publishHomepageRevision, submitHomepageRevision, updateHomepageDraft } from '@/lib/domain/public-site/public-site';
+
+export type WebsiteActionState = { error: string | null; success?: string };
+
+function ids(formData: FormData) {
+  return { organizationId: String(formData.get('organizationId') ?? ''), revisionId: String(formData.get('revisionId') ?? '') };
+}
+
+function failure(error: unknown): WebsiteActionState {
+  if (error instanceof DomainError) return { error: error.message };
+  return { error: error instanceof Error ? error.message : 'The website could not be changed.' };
+}
+
+export async function createDraftAction(_state: WebsiteActionState, formData: FormData): Promise<WebsiteActionState> {
+  const { organizationId } = ids(formData);
+  try { await createHomepageDraft(await getDb(), organizationId); }
+  catch (error) { return failure(error); }
+  revalidatePath(`/organizations/${organizationId}/settings/website`);
+  return { error: null, success: 'Draft ready.' };
+}
+
+export async function saveDraftAction(_state: WebsiteActionState, formData: FormData): Promise<WebsiteActionState> {
+  const identity = ids(formData);
+  try {
+    const content = PublicHomepageRevisionSchema.parse({
+      seoTitle: formData.get('seoTitle'), seoDescription: formData.get('seoDescription'),
+      sections: JSON.parse(String(formData.get('sections') ?? 'null')),
+    });
+    await updateHomepageDraft(await getDb(), { ...identity, ...content });
+  } catch (error) { return failure(error); }
+  revalidatePath(`/organizations/${identity.organizationId}/settings/website`);
+  return { error: null, success: 'Draft saved.' };
+}
+
+export async function submitRevisionAction(_state: WebsiteActionState, formData: FormData): Promise<WebsiteActionState> {
+  const identity = ids(formData);
+  try { await submitHomepageRevision(await getDb(), identity.organizationId, identity.revisionId); }
+  catch (error) { return failure(error); }
+  revalidatePath(`/organizations/${identity.organizationId}/settings/website`);
+  return { error: null, success: 'Sent for review.' };
+}
+
+export async function publishRevisionAction(_state: WebsiteActionState, formData: FormData): Promise<WebsiteActionState> {
+  const identity = ids(formData);
+  try { await publishHomepageRevision(await getDb(), identity.organizationId, identity.revisionId); }
+  catch (error) { return failure(error); }
+  // Draft saves and review transitions never touch public output. This is deliberately the only
+  // website action that expires the anonymous projection.
+  updateTag(GOLD_HOMEPAGE_CACHE_TAG);
+  revalidatePath(`/organizations/${identity.organizationId}/settings/website`);
+  return { error: null, success: 'Published.' };
+}

@@ -3198,18 +3198,31 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          gold_public_organization_id: string | null
+          gold_public_site_id: string | null
           singleton: boolean
           workflow_review_organization_id: string | null
         }
         Insert: {
+          gold_public_organization_id?: string | null
+          gold_public_site_id?: string | null
           singleton?: boolean
           workflow_review_organization_id?: string | null
         }
         Update: {
+          gold_public_organization_id?: string | null
+          gold_public_site_id?: string | null
           singleton?: boolean
           workflow_review_organization_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "platform_settings_gold_public_site_fk"
+            columns: ["gold_public_organization_id", "gold_public_site_id"]
+            isOneToOne: false
+            referencedRelation: "public_sites"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "platform_settings_workflow_review_organization_id_fkey"
             columns: ["workflow_review_organization_id"]
@@ -3332,6 +3345,155 @@ export type Database = {
             foreignKeyName: "price_book_items_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_page_revisions: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          created_source: string
+          id: string
+          organization_id: string
+          page_id: string
+          published_at: string | null
+          published_by: string | null
+          revision_number: number
+          sections: Json
+          seo_description: string
+          seo_title: string
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_source: string
+          id?: string
+          organization_id: string
+          page_id: string
+          published_at?: string | null
+          published_by?: string | null
+          revision_number: number
+          sections: Json
+          seo_description: string
+          seo_title: string
+          status: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_source?: string
+          id?: string
+          organization_id?: string
+          page_id?: string
+          published_at?: string | null
+          published_by?: string | null
+          revision_number?: number
+          sections?: Json
+          seo_description?: string
+          seo_title?: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_page_revisions_organization_id_page_id_fkey"
+            columns: ["organization_id", "page_id"]
+            isOneToOne: false
+            referencedRelation: "public_pages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      public_pages: {
+        Row: {
+          created_at: string
+          current_published_revision_id: string | null
+          id: string
+          organization_id: string
+          page_key: string
+          site_id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          current_published_revision_id?: string | null
+          id?: string
+          organization_id: string
+          page_key: string
+          site_id: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          current_published_revision_id?: string | null
+          id?: string
+          organization_id?: string
+          page_key?: string
+          site_id?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_pages_organization_id_site_id_fkey"
+            columns: ["organization_id", "site_id"]
+            isOneToOne: false
+            referencedRelation: "public_sites"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "public_pages_published_revision_belongs_to_page"
+            columns: ["organization_id", "id", "current_published_revision_id"]
+            isOneToOne: false
+            referencedRelation: "public_page_revisions"
+            referencedColumns: ["organization_id", "page_id", "id"]
+          },
+        ]
+      }
+      public_sites: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          default_locale: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          default_locale?: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          default_locale?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_sites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_sites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
           },
@@ -4631,6 +4793,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_public_homepage_draft: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
       create_resource: {
         Args: { p_custom: Json; p_name: string; p_organization_id: string }
         Returns: string
@@ -4814,6 +4980,19 @@ export type Database = {
         }
         Returns: string
       }
+      public_homepage_editor_state: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      public_homepage_preview: {
+        Args: { p_organization_id: string; p_revision_id: string }
+        Returns: Json
+      }
+      publish_public_homepage_revision: {
+        Args: { p_organization_id: string; p_revision_id: string }
+        Returns: undefined
+      }
+      published_gold_homepage: { Args: never; Returns: Json }
       queued_messages: {
         Args: { p_limit?: number }
         Returns: {
@@ -5127,6 +5306,10 @@ export type Database = {
         }
         Returns: string
       }
+      submit_public_homepage_revision: {
+        Args: { p_organization_id: string; p_revision_id: string }
+        Returns: undefined
+      }
       time_committed: {
         Args: {
           p_customer_id?: string
@@ -5196,6 +5379,16 @@ export type Database = {
           p_name: string
           p_unit: string
           p_unit_amount_minor: number
+        }
+        Returns: undefined
+      }
+      update_public_homepage_draft: {
+        Args: {
+          p_organization_id: string
+          p_revision_id: string
+          p_sections: Json
+          p_seo_description: string
+          p_seo_title: string
         }
         Returns: undefined
       }

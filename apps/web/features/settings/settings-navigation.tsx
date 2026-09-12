@@ -7,6 +7,7 @@ import { cx, FOCUS_RING } from '@/components/class-names';
 const entries = [
   { label: 'Business', href: '#business', root: true },
   { label: 'Public presence', href: '#public-page', root: true },
+  { label: 'Website', href: 'website', root: false },
   { label: 'Hours', href: '#hours', root: true },
   { label: 'Modules & features', href: '#modules', root: true },
   { label: 'Work', href: 'work', root: false },

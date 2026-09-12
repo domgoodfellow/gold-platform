@@ -5,6 +5,28 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A homepage is published data with reviewable history
+
+- `public_sites`, `public_pages`, and `public_page_revisions` give each business stable site/page
+  identity and immutable, tenant-consistent revisions. A page advances through draft, review and
+  publish by narrow `organization.manage` functions; publishing archives the previous revision
+  and writes the accountable event in the same transaction.
+- The homepage vocabulary is six closed, typed sections (`hero`, `problem`, `capabilities`,
+  `process`, `trust`, `cta`), validated independently by Zod and PostgreSQL. Neither schema
+  accepts HTML, component names, arbitrary fields, or external CTA URLs.
+- `published_gold_homepage()` is the only anonymous read: one deployment-selected published
+  projection plus the GOLD organization's canonical public profile and brand. Tables, drafts,
+  revision history, membership, and platform authority remain unreachable.
+- Configuration Center now has a Website route with section editors, revision history and an
+  authenticated no-index preview that uses the same renderer as `/`. Draft saves and review do
+  not invalidate public output; the publish action alone expires the tagged homepage cache.
+- The deployment setup snippet idempotently bootstraps the exact previously shipped homepage into
+  revision 1. Existing sites and history are preserved; no application fallback carries a second
+  live copy.
+- `public-site-schema.test.ts` and `public-site-publishing.test.ts` cover the closed section model,
+  anonymous boundary, draft non-leakage, lifecycle, capability/cross-tenant refusals, composite
+  ownership and published immutability. Checked-in database types were regenerated.
+
 ### The public front door has a production web foundation
 
 - `docs/public-web-architecture.md` — repository-backed audit of every anonymous route, proposed

@@ -23,9 +23,15 @@ begin
 
   update public.platform_settings set workflow_review_organization_id = v_org_id where singleton;
 
+  -- The same ordinary GOLD organization owns the root website. This is idempotent: an existing
+  -- page and all revision history are retained; only an absent first published revision is
+  -- bootstrapped from the shipped homepage copy.
+  perform app.bootstrap_gold_public_site(v_org_id);
+
   raise notice 'Workflow-review submissions will land on organization % (%).', v_slug, v_org_id;
 end
 $$;
 
 -- What it is set to today.
-select workflow_review_organization_id from public.platform_settings;
+select workflow_review_organization_id, gold_public_organization_id, gold_public_site_id
+from public.platform_settings;

@@ -16,7 +16,7 @@ export async function getDb(): Promise<Db> {
 
   return createServerClient<Database>(
     requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-    requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+    publicKey(),
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
@@ -41,5 +41,11 @@ function requireEnv(name: string): string {
   if (!value) {
     throw new Error(`Missing environment variable: ${name}`);
   }
+  return value;
+}
+
+function publicKey(): string {
+  const value = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!value) throw new Error('Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.');
   return value;
 }

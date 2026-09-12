@@ -21,6 +21,9 @@ import { cx, FOCUS_RING } from '../class-names';
 export function SiteShell({
   nav,
   action,
+  name = 'GOLD',
+  logoUrl = null,
+  footerLine = 'One system that runs your business.',
   children,
 }: {
   /**
@@ -33,6 +36,9 @@ export function SiteShell({
   nav?: ReactNode;
   /** What sits opposite the wordmark — the link the reader most likely wants next. */
   action?: ReactNode;
+  name?: string;
+  logoUrl?: string | null;
+  footerLine?: string;
   children: ReactNode;
 }) {
   return (
@@ -45,7 +51,12 @@ export function SiteShell({
             href="/"
             className={cx('rounded shrink-0 text-lg font-semibold tracking-tight', FOCUS_RING)}
           >
-            GOLD
+            {logoUrl ? (
+              // Organization-owned bytes in the public brand bucket; the host is deployment data.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="" className="mr-2 inline-block max-h-8 max-w-24 object-contain" />
+            ) : null}
+            <span>{name}</span>
           </Link>
           {nav ? <nav className="hidden min-w-0 flex-1 sm:block">{nav}</nav> : null}
           {action}
@@ -66,8 +77,8 @@ export function SiteShell({
       */}
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-4 text-sm text-muted sm:px-6">
-          <span>GOLD</span>
-          <span>One system that runs your business.</span>
+          <span>{name}</span>
+          <span>{footerLine}</span>
         </div>
       </footer>
     </div>

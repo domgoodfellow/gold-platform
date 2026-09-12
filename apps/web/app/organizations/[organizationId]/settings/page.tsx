@@ -155,6 +155,11 @@ export default async function SettingsPage({
           href="#public-page"
         />
         <ConfigCard
+          title="Website"
+          description="Draft, preview, review and publish the public homepage."
+          href={`/organizations/${organizationId}/settings/website`}
+        />
+        <ConfigCard
           title="Payments & integrations"
           description="Connecting a payment processor, and other integrations."
           href="#getting-paid"
