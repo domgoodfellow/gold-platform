@@ -6,7 +6,7 @@ import { cx, FOCUS_RING } from '@/components/class-names';
 import { Hint } from '@/components/controls/inputs';
 import { PlatformHeaderTitle } from './platform-header-title';
 
-const sections = [['Overview', ''], ['Plan & Billing', '/commercial'], ['Providers', '/providers'], ['Usage', '/usage'], ['Failures', '/failures']] as const;
+const sections = [['Overview', ''], ['Plan & Entitlements', '/commercial'], ['Providers', '/providers'], ['Usage', '/usage'], ['Failures', '/failures']] as const;
 
 export function TenantWorkspaceHeader({ id, name, currency }: { id: string; name: string; currency: string }) {
   const pathname = usePathname();

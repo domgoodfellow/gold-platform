@@ -1263,6 +1263,68 @@ acceptance criteria, not optional polish.
 
 ---
 
+### D50 — The canonical catalogue and Plans are additive, alongside the legacy commercial layer, never a replacement of it
+
+**Decision.** `platform_catalog_products` (seven rows, locked by key), `platform_catalog_modules`,
+`platform_catalog_features`, `platform_catalog_feature_dependencies` and
+`platform_catalog_runtime_mappings` are the canonical Product → Module → Feature hierarchy D46
+named. `platform_plans` (kind `plan` or `addon`), three typed grant tables, `platform_plan_quotas`
+and `platform_plan_prices` are Plans/Add-ons above it. `organization_plan_assignments`,
+`organization_plan_agreements` and `organization_plan_quota_overrides` are one organization's
+provenance. None of this renames, joins against for authorization, or reduces the load-bearing
+status of `platform_products`, `MODULES`, `organization_modules`, `organization_commercial_terms`,
+or any other table D41/D43/D44 already built — a legacy organization with no Plan assignment
+resolves exactly as it did before this record, because nothing in its path changed.
+
+**Why a many-to-many runtime mapping table rather than a column on the legacy Product.** A single
+runtime module can implement pieces of more than one canonical Product — `reception` backs
+Communications/Voice's inbound and outbound calling *and* CRM/Sales' pipeline and stages, at once.
+A `family_key` column on `platform_products` (an earlier draft's shape) can only ever say one
+thing about one row. `platform_catalog_runtime_mappings` is the seam instead: one canonical
+Feature may carry several mappings (`module_key`, `product_key`, `capability_key`, `provider_key`,
+or `kernel` for an always-on kernel entity with no module to switch), and the same legacy key may
+back Features under several different canonical Products.
+
+**Why three typed grant tables and not one polymorphic one.** I18 already refuses a polymorphic
+`(entity_type, entity_id)` attachment outside `events`, for the same reason a JSONB reference
+column is refused in D7: it accepts a value no foreign key can see. A Plan's entitlement grant at
+Product grain, Module grain and Feature grain are three tables instead, each a real foreign key
+into its own target — the same fix this schema already used for `document.created`'s owning id.
+
+**Why a whole-Product or whole-Module grant only ever covers `available` Features.** Granting a
+Product must never silently promise a planned or partial Feature runs today. Resolution
+(`app.plan_grants_feature`) checks `implementation_state = 'available'` at the moment it is asked,
+computed fresh rather than snapshotted onto the grant row (I41) — the same "computed, never
+stored" reasoning I4 and I5 already hold for price and availability, applied to entitlement.
+
+**Why assigning a Plan never writes `organization_modules` or `organization_commercial_terms`.** A
+draft of this record had `record_plan_assignment` also switch on the Plan's modules, to make one
+staff action fully self-sufficient. That would have been staff reaching into an *existing*
+organization's own operational state (`organization_modules`, the "wanted" axis a business
+configures for itself, D25) — the one thing D29 refuses even though it already permits staff to
+record a commercial fact (a term, now also a Plan assignment) about that same organization. A Plan
+assignment is therefore pure provenance for the paid/entitled side; the organization still
+switches its own modules on, exactly as before, and a platform staff member who is also an
+ordinary member of GOLD's own organization does exactly that in Organization Context (D42).
+
+**Why a Plan's standard price is never the sum of its Features' list prices.** Feature-level list
+prices (where they exist, on legacy `platform_products` via `platform_product_prices`) describe
+what a component might cost standalone; a Plan's own `platform_plan_prices` is a separate,
+directly-set number, append-only and effective-dated exactly like every other rate card in this
+schema. An organization's negotiated `organization_plan_agreements` overrides the standard price
+from its own `effective_from` onward without rewriting either the standard history or an earlier
+agreement — `organization_plan_price` reads the latest applicable row of whichever table wins.
+
+**GOLD Internal is seeded as a Plan definition by this migration, and assigned to GOLD's own
+organization by nobody this migration names.** The same D42 reasoning `platform_meters` and the
+founding modules already rest on: a migration cannot name an organization id that exists in only
+one deployment. The Plan (`billable = false`, every current Product granted whole, structured
+quotas, metering left on) is platform vocabulary and belongs in a migration; assigning it to
+GOLD's own organization is a platform-staff action performed once through the ordinary Plan &
+Entitlements UI this record also ships — proving that UI by using it, rather than a snippet.
+
+---
+
 ## Known defects in this document
 
 Recorded rather than quietly fixed, because a constraints file that hides its own faults is

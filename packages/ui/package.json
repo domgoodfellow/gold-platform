@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./components/accordion": "./src/components/accordion.tsx",
     "./components/alert": "./src/components/alert.tsx",
     "./components/avatar": "./src/components/avatar.tsx",
     "./components/badge": "./src/components/badge.tsx",
@@ -18,6 +19,7 @@
     "./components/skeleton": "./src/components/skeleton.tsx",
     "./components/sonner": "./src/components/sonner.tsx",
     "./components/table": "./src/components/table.tsx",
+    "./components/tabs": "./src/components/tabs.tsx",
     "./components/tooltip": "./src/components/tooltip.tsx",
     "./hooks/use-mobile": "./src/hooks/use-mobile.ts"
   },

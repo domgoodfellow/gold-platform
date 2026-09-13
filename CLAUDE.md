@@ -384,6 +384,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | GOLD's own business, and why staff is a second account | D42 |
 | The commercial catalogue, entitlement's build, provider cost and margin | D43 |
 | Provider bindings, provisioning and where a generated secret lives | D44 |
+| The canonical Product/Module/Feature catalogue, Plans/Add-ons, and how they coexist with the legacy commercial layer | D46, D50 |
 
 ## When you finish a change
 

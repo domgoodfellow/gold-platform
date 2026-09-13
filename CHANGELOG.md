@@ -5,6 +5,85 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### The canonical Product/Module/Feature catalogue, and Plans/Add-ons above it
+
+D46, D50. GOLD can now define the seven canonical Products, package reusable Plans and Add-ons
+over them with structured quotas and effective-dated prices, assign a Plan to an organization, and
+inspect the resolved result — entirely additively, alongside `platform_products`, `MODULES`,
+`organization_modules` and `organization_commercial_terms`, none of which changed shape or lost a
+single historical row.
+
+- `supabase/migrations/20260918000001_the_canonical_catalogue_and_plans.sql` — twelve new tables.
+  Catalogue: `platform_catalog_products` (seven rows, locked by a key `CHECK` with no insert grant
+  to any role, ever), `platform_catalog_modules`, `platform_catalog_features` (four independent
+  axes — lifecycle, implementation state, packaging default, sale status — plus metered/AI flags
+  and advisory meter/provider-capability arrays), `platform_catalog_feature_dependencies`,
+  `platform_catalog_runtime_mappings` (many-to-many: one legacy `MODULES` key such as `reception`
+  backs canonical Features under more than one Product at once — Communications/Voice's calling
+  Features and CRM/Sales' pipeline Features alike). Plans: `platform_plans` (`plan`, exclusive per
+  organization at a time, or `addon`, which stacks), three typed entitlement-grant tables
+  (`platform_plan_product_grants`/`_module_grants`/`_feature_grants` — deliberately not one
+  polymorphic table, I18's own refusal one layer up), `platform_plan_quotas` (structured — key,
+  label, unit, included quantity, period, hard limit, overage policy — never free text),
+  `platform_plan_prices` (append-only, effective-dated, never the sum of Feature prices).
+  Organization provenance: `organization_plan_assignments` (partial exclusion keeps one base Plan
+  at a time while Add-ons stack freely), `organization_plan_agreements` (a negotiated price
+  override), `organization_plan_quota_overrides`. Every write goes through a staff-checked
+  `SECURITY DEFINER` function following D45's live-check pattern; resolution
+  (`app.plan_grants_feature`, `organization_effective_entitlements`,
+  `organization_effective_quotas`, `organization_plan_price`) is computed fresh, never stored
+  (I41). Seeds all seven Products, thirty Modules, a curated and truthfully-marked set of
+  Features (66 available, 11 partial, 38 planned against real repository evidence), thirty-seven
+  runtime mappings, one Feature dependency (AI Call Summary requires Transcription), and the
+  `gold_internal` Plan definition (non-billable, every current Product granted whole, three
+  structured quotas) — not yet assigned to any organization, since a migration cannot name GOLD's
+  own organization id in a deployment it does not know (D42's own reasoning, one layer up).
+- `apps/web/lib/domain/catalogue/` — `catalogue.ts`, `plans.ts`, `organization-plans.ts`. Never
+  touches `lib/domain/commercial/`, which stays exactly what it was.
+- Platform UI: `/platform/catalog` (the seven Products, browsed as cards with a real
+  implementation-coverage bar, not a dense table), `/platform/catalog/families/[familyKey]`
+  (Product detail — Tabs for Overview/Modules & Features/Plans/Requirements, an Accordion per
+  Module, a Feature Sheet showing status, dependencies, runtime mappings and which Plans grant
+  it), `/platform/catalog/plans` and `/platform/catalog/plans/[planKey]` (Plan detail — Tabs for
+  Entitlements/Quotas/Pricing/Organizations, with per-Product/Module/Feature grant toggles and an
+  explicit "not granted" state so a planned Feature can never be silently promised). The existing
+  `/platform/catalog/products`, `/modules` and `/meters` pages are unchanged and reachable one
+  click deeper as advanced/legacy views; the sidebar's "Products" link now opens the new landing
+  page instead. `/platform/organizations/[organizationId]/commercial` (nav label now "Plan &
+  Entitlements", same URL) gained a Current Plan card with an Assign-Plan Sheet, a resolved
+  Products & Features list, and Quotas/Overrides/History tabs, alongside its unchanged legacy
+  terms and module-state sections.
+- Tenant UI: `settings/plan` gained a "Your Plan" section, structured usage allowances, and an
+  "Available Features" list distinguishing Included·On / Included·Off / Not included / Planned —
+  all additive above the page's unchanged existing sections, so an organization with no Plan
+  assignment (every organization today, until one is deliberately assigned) sees exactly what it
+  saw before this change.
+- `packages/ui` gained `Tabs` and `Accordion` (radix-ui-backed), this record's own first callers,
+  following D45's own extraction rule; `Sheet` (already present, unused) gets its first real
+  callers here. `docs/ui-spec.md` §5 now names both Sheet implementations explicitly rather than
+  letting the platform admin one silently contradict the organization shell's `Disclosure` guidance.
+- `apps/web/tests/catalogue-plans.test.ts` (13 tests, real Postgres/RLS) and
+  `apps/web/e2e/catalog-plans.spec.ts` (4 Playwright journeys) prove: the locked seven Products;
+  one runtime key backing Features across two Products; entitlement resolution order and its
+  "available-only" restriction; Add-ons stacking while two base Plans collide; a Plan edit never
+  rewriting a historical assignment; structured quota round-tripping and organization overrides;
+  Plan price history never being rewritten by a later price or a negotiated agreement; GOLD
+  Internal assignable through the identical door as any other Plan, with no tenancy bypass; a
+  legacy organization with no Plan assignment still resolving through the untouched D41 path; and
+  full tenant isolation on all three new organization-scoped tables. `docs/domain-model.md` gained
+  I41 and a rewritten canonical-model correspondence table; `docs/constraints.md` gained D50.
+- **Deliberately deferred, named rather than silently skipped**: runtime enforcement of any quota
+  (the read exists; nothing yet refuses a write over it); per-item Plan-assignment price overrides
+  (a bespoke agreement still goes through the pre-existing ad-hoc `record_commercial_term`, one
+  line at a time); provider-readiness states (Setup required/Degraded) in the entitlement
+  presentation — the type is there, nothing populates it yet, since no provider-health signal
+  exists to read; assigning `gold_internal` to GOLD's actual organization (a one-time manual step
+  through the new UI, not a migration); a Command/Combobox primitive (every list this slice needed
+  to search was small enough for a plain filtered list); a Drawer primitive (`Sheet side="bottom"`
+  covers the same case); and a second Dialog/AlertDialog implementation (the existing native
+  `<dialog>`-based `Dialog`/`ConfirmSubmit` already serves both roles, and a parallel pair is
+  exactly what M11 was fought to prevent).
+
 ### A document's own event names what it was attached to; a small browser harness proves the UI that depends on it
 
 - `document.created` previously carried no owning id — written against the document's own row,

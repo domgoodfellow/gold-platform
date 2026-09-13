@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
+import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { recordProviderResource, setProviderResourceStatus } from '@/lib/domain/providers/bindings';
 import { provisionTelephonySubaccount } from '@/lib/domain/providers/twilio-provisioning';
 import { endSupportSession, startSupportSession } from '@/lib/domain/platform/support';
@@ -158,5 +159,33 @@ export async function recordCommercialTermAction(
   }
 
   revalidatePath(`/platform/organizations/${organizationId}`);
+  return { error: null, recorded: true };
+}
+
+export type RecordPlanAssignmentState = { error: string | null; recorded: boolean };
+
+export const PLAN_ASSIGNMENT_INITIAL: RecordPlanAssignmentState = { error: null, recorded: false };
+
+export async function recordPlanAssignmentAction(
+  _previous: RecordPlanAssignmentState,
+  formData: FormData,
+): Promise<RecordPlanAssignmentState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await recordPlanAssignment(db, {
+      organizationId,
+      planId: String(formData.get('planId') ?? ''),
+      periodStart: String(formData.get('periodStart') ?? ''),
+      periodEnd: String(formData.get('periodEnd') ?? ''),
+      note: String(formData.get('note') ?? ''),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message, recorded: false };
+    throw error;
+  }
+
+  revalidatePath(`/platform/organizations/${organizationId}/commercial`);
   return { error: null, recorded: true };
 }

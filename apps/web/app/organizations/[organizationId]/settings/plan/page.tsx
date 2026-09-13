@@ -6,6 +6,16 @@ import { listProducts } from '@/lib/domain/commercial/catalogue';
 import { listOrganizationTerms, moduleCommercialState } from '@/lib/domain/commercial/terms';
 import { listUsageEvents } from '@/lib/domain/commercial/usage';
 import { requireOrganization } from '@/lib/route/organization';
+import { getPlanById } from '@/lib/domain/catalogue/plans';
+import { listCatalogFeatures, listCatalogModules, listCatalogProducts } from '@/lib/domain/catalogue/catalogue';
+import {
+  currentAddonAssignments,
+  currentPlanAssignment,
+  organizationEffectiveQuotas,
+  organizationResolvedFeatureStates,
+} from '@/lib/domain/catalogue/organization-plans';
+import { deriveOrganizationFeatureState, EntitlementStatus } from '@/features/catalogue/feature-badges';
+import { moduleConfiguration, MODULES } from '@/lib/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,15 +51,30 @@ export default async function PlanAndUsagePage({
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const [states, terms, products, usage, account] = await Promise.all([
+  const [states, terms, products, usage, account, basePlanAssignment, addonAssignments, resolvedFeatures, quotas] = await Promise.all([
     moduleCommercialState(db, { organizationId }),
     listOrganizationTerms(db, { organizationId }),
     listProducts(db),
     listUsageEvents(db, { organizationId, limit: 50 }),
     communicationsAccount(db, { organizationId, currency: organization.currency }),
+    currentPlanAssignment(db, { organizationId }),
+    currentAddonAssignments(db, { organizationId }),
+    organizationResolvedFeatureStates(db, { organizationId }),
+    organizationEffectiveQuotas(db, { organizationId }),
   ]);
 
   const productLabel = new Map(products.map((product) => [product.key, product.label]));
+
+  const [basePlan, addonPlans, catalogModules, catalogFeatures] = await Promise.all([
+    basePlanAssignment ? getPlanById(db, basePlanAssignment.planId) : Promise.resolve(null),
+    Promise.all(addonAssignments.map((a) => getPlanById(db, a.planId))),
+    listCatalogModules(db),
+    listCatalogFeatures(db),
+  ]);
+  const catalogProducts = await listCatalogProducts(db);
+  const productByModuleId = new Map(catalogModules.map((m) => [m.id, catalogProducts.find((p) => p.id === m.productId)]));
+  const moduleByFeatureId = new Map(catalogFeatures.map((f) => [f.id, catalogModules.find((m) => m.id === f.moduleId)]));
+  const resolvedByFeatureId = new Map(resolvedFeatures.map((r) => [r.featureId, r]));
 
   return (
     <SettingsPageFrame organizationId={organizationId}>
@@ -58,6 +83,74 @@ export default async function PlanAndUsagePage({
         What this business is entitled to use right now, what GOLD has recorded selling it, and
         what it has used. Nothing here is what any of it cost GOLD to provide.
       </Hint>
+
+      <Section className="mt-8">
+        <SectionHeading>Your Plan</SectionHeading>
+        {basePlan ? (
+          <div className="mt-2 text-sm">
+            <p className="font-medium">{basePlan.label}</p>
+            {addonPlans.length > 0 ? (
+              <p className="mt-1 text-muted">Add-ons: {addonPlans.map((p) => p?.label).filter(Boolean).join(', ')}</p>
+            ) : null}
+          </div>
+        ) : (
+          <EmptyState className="mt-2">
+            This organization does not currently have a standard Plan. Existing purchased terms
+            below still apply.
+          </EmptyState>
+        )}
+      </Section>
+
+      {quotas.length > 0 ? (
+        <Section className="mt-8">
+          <SectionHeading>Usage allowances</SectionHeading>
+          <DividedList as="div" className="mt-2">
+            {quotas.map((quota) => (
+              <div key={`${quota.planKey}-${quota.allowanceKey}`} className="flex flex-wrap items-baseline gap-x-3 py-2 text-sm">
+                <span className="font-medium">{quota.label}</span>
+                <span className="text-muted">
+                  {quota.includedQuantity.toLocaleString()} {quota.unit}
+                  {quota.period !== 'none' ? ` / ${quota.period}` : ''}
+                </span>
+                {quota.overridden ? <span className="text-xs text-subtle">(adjusted for this business)</span> : null}
+              </div>
+            ))}
+          </DividedList>
+        </Section>
+      ) : null}
+
+      <Section className="mt-8">
+        <SectionHeading>Available Features</SectionHeading>
+        <Hint className="mt-1">Grouped by Product. Planned Features are shown for visibility only — nothing here claims they run today.</Hint>
+        <DividedList as="div" className="mt-2">
+          {catalogFeatures.map((feature) => {
+            const resolved = resolvedByFeatureId.get(feature.id);
+            if (!resolved) return null;
+            const catalogModule = moduleByFeatureId.get(feature.id);
+            const product = catalogModule ? productByModuleId.get(catalogModule.id) : undefined;
+            const runtimeModule = resolved.moduleKey ? MODULES.find((m) => m.key === resolved.moduleKey) : undefined;
+            const configureHref = runtimeModule ? moduleConfiguration(organizationId, runtimeModule).href : null;
+            return (
+              <div key={feature.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                <div>
+                  <span className="font-medium">{feature.label}</span>
+                  <span className="ml-2 text-xs text-subtle">
+                    {product?.label} · {catalogModule?.label}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <EntitlementStatus state={deriveOrganizationFeatureState(resolved)} />
+                  {configureHref && resolved.entitled ? (
+                    <a href={configureHref} className="text-xs underline underline-offset-4">
+                      Configure
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </DividedList>
+      </Section>
 
       <Section className="mt-8">
         <SectionHeading>What this business uses</SectionHeading>

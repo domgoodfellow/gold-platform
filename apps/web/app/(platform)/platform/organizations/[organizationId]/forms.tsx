@@ -1,15 +1,25 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@gold/ui/components/sheet';
+import {
+  PLAN_ASSIGNMENT_INITIAL,
   PROVISION_TWILIO_INITIAL,
   REGISTER_RESOURCE_INITIAL,
   SET_RESOURCE_STATUS_INITIAL,
   TERM_INITIAL,
   provisionTwilioAction,
   recordCommercialTermAction,
+  recordPlanAssignmentAction,
   registerPhoneNumberAction,
   setResourceStatusAction,
 } from './actions';
@@ -29,6 +39,51 @@ export function RegisterPhoneNumberForm({ organizationId }: { organizationId: st
 export function SetResourceStatusForm({ organizationId }: { organizationId: string }) {
   const [state, action, pending] = useActionState(setResourceStatusAction, SET_RESOURCE_STATUS_INITIAL);
   return <form action={action} className="flex max-w-sm flex-col gap-2"><input type="hidden" name="organizationId" value={organizationId} /><TextInput name="resourceId" required placeholder="Resource ID" /><SelectInput name="status" required aria-label="Status"><option value="">Status…</option><option value="active">Active / verified</option><option value="pending">Pending</option><option value="failed">Failed</option><option value="disabled">Disabled</option></SelectInput><TextInput name="errorDetail" placeholder="Error detail, if failed" /><ErrorText>{state.error}</ErrorText>{state.recorded ? <p className="text-sm text-muted-foreground">Recorded.</p> : null}<Button type="submit" size="small" className="w-fit" disabled={pending}>{pending ? 'Recording…' : 'Update resource'}</Button></form>;
+}
+
+export function AssignPlanSheet({ organizationId, plans }: { organizationId: string; plans: Option[] }) {
+  const [state, action, pending] = useActionState(recordPlanAssignmentAction, PLAN_ASSIGNMENT_INITIAL);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button type="button" size="small">
+          Change Plan
+        </Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Assign a Plan</SheetTitle>
+          <SheetDescription>
+            Pays for nothing on its own and switches nothing on — this records which package the
+            organization has. The organization still enables its own modules.
+          </SheetDescription>
+        </SheetHeader>
+        <form action={action} className="flex flex-col gap-3 px-4">
+          <input type="hidden" name="organizationId" value={organizationId} />
+          <SelectInput name="planId" required aria-label="Plan">
+            <option value="">Choose a Plan or Add-on…</option>
+            {plans.map((plan) => (
+              <option key={plan.value} value={plan.value}>
+                {plan.label}
+              </option>
+            ))}
+          </SelectInput>
+          <div className="grid grid-cols-2 gap-2">
+            <TextInput name="periodStart" type="date" required aria-label="Period start" />
+            <TextInput name="periodEnd" type="date" required aria-label="Period end" defaultValue="9999-12-31" />
+          </div>
+          <TextInput name="note" placeholder="Note (optional)" />
+          <ErrorText role="alert">{state.error}</ErrorText>
+          {state.recorded ? <Hint role="status">Assigned.</Hint> : null}
+          <Button type="submit" size="small" className="w-fit" disabled={pending}>
+            {pending ? 'Assigning…' : 'Assign'}
+          </Button>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
 }
 
 export function RecordCommercialTermForm({ organizationId, products }: { organizationId: string; products: Option[] }) {

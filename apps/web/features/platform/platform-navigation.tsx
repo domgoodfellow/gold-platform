@@ -15,8 +15,8 @@ import {
 export const PLATFORM_NAV = [
   { label: 'Overview', href: '/platform', icon: LayoutDashboard, group: 'Platform' },
   { label: 'Organizations', href: '/platform/organizations', icon: Building2, group: 'Customers' },
-  { label: 'Products', href: '/platform/catalog/products', icon: Package, group: 'Catalog' },
-  { label: 'Modules', href: '/platform/catalog/modules', icon: Landmark, group: 'Catalog' },
+  { label: 'Products', href: '/platform/catalog', icon: Package, group: 'Catalog' },
+  { label: 'Plans & Add-ons', href: '/platform/catalog/plans', icon: Landmark, group: 'Catalog' },
   { label: 'Meters', href: '/platform/catalog/meters', icon: Gauge, group: 'Catalog' },
   { label: 'Pricing', href: '/platform/pricing', icon: CircleDollarSign, group: 'Revenue' },
   { label: 'Providers', href: '/platform/providers', icon: Plug, group: 'Infrastructure' },

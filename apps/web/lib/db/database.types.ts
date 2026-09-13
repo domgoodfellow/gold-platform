@@ -2545,6 +2545,183 @@ export type Database = {
           },
         ]
       }
+      organization_plan_agreements: {
+        Row: {
+          amount_minor: number
+          currency: string
+          effective_from: string
+          id: string
+          note: string
+          organization_id: string
+          plan_id: string
+          recorded_at: string
+          recorded_by: string
+        }
+        Insert: {
+          amount_minor: number
+          currency: string
+          effective_from?: string
+          id?: string
+          note?: string
+          organization_id: string
+          plan_id: string
+          recorded_at?: string
+          recorded_by: string
+        }
+        Update: {
+          amount_minor?: number
+          currency?: string
+          effective_from?: string
+          id?: string
+          note?: string
+          organization_id?: string
+          plan_id?: string
+          recorded_at?: string
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_plan_agreements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_plan_agreements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_plan_agreements_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_plan_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          id: string
+          note: string
+          organization_id: string
+          period_end: string
+          period_start: string
+          plan_id: string
+          plan_kind: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          id?: string
+          note?: string
+          organization_id: string
+          period_end: string
+          period_start: string
+          plan_id: string
+          plan_kind: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          id?: string
+          note?: string
+          organization_id?: string
+          period_end?: string
+          period_start?: string
+          plan_id?: string
+          plan_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_plan_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_plan_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_plan_assignments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_plan_quota_overrides: {
+        Row: {
+          allowance_key: string
+          effective_from: string
+          hard_limit: number | null
+          id: string
+          included_quantity: number
+          note: string
+          organization_id: string
+          plan_id: string
+          recorded_at: string
+          recorded_by: string
+        }
+        Insert: {
+          allowance_key: string
+          effective_from?: string
+          hard_limit?: number | null
+          id?: string
+          included_quantity: number
+          note?: string
+          organization_id: string
+          plan_id: string
+          recorded_at?: string
+          recorded_by: string
+        }
+        Update: {
+          allowance_key?: string
+          effective_from?: string
+          hard_limit?: number | null
+          id?: string
+          included_quantity?: number
+          note?: string
+          organization_id?: string
+          plan_id?: string
+          recorded_at?: string
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_plan_quota_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_plan_quota_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_plan_quota_overrides_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_profiles: {
         Row: {
           address: string | null
@@ -2915,6 +3092,204 @@ export type Database = {
           },
         ]
       }
+      platform_catalog_feature_dependencies: {
+        Row: {
+          feature_id: string
+          requires_feature_id: string
+        }
+        Insert: {
+          feature_id: string
+          requires_feature_id: string
+        }
+        Update: {
+          feature_id?: string
+          requires_feature_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_catalog_feature_dependencies_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_catalog_feature_dependencies_requires_feature_id_fkey"
+            columns: ["requires_feature_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_features"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_catalog_features: {
+        Row: {
+          ai_powered: boolean
+          created_at: string
+          description: string
+          display_order: number
+          id: string
+          implementation_state: string
+          key: string
+          label: string
+          lifecycle: string
+          meter_ids: string[]
+          metered: boolean
+          module_id: string
+          packaging_default: string
+          provider_capabilities: string[]
+          sale_status: string
+        }
+        Insert: {
+          ai_powered?: boolean
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          implementation_state: string
+          key: string
+          label: string
+          lifecycle?: string
+          meter_ids?: string[]
+          metered?: boolean
+          module_id: string
+          packaging_default?: string
+          provider_capabilities?: string[]
+          sale_status?: string
+        }
+        Update: {
+          ai_powered?: boolean
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          implementation_state?: string
+          key?: string
+          label?: string
+          lifecycle?: string
+          meter_ids?: string[]
+          metered?: boolean
+          module_id?: string
+          packaging_default?: string
+          provider_capabilities?: string[]
+          sale_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_catalog_features_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_catalog_modules: {
+        Row: {
+          created_at: string
+          description: string
+          display_order: number
+          id: string
+          key: string
+          label: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          key: string
+          label: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          key?: string
+          label?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_catalog_modules_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_catalog_products: {
+        Row: {
+          created_at: string
+          description: string
+          display_order: number
+          id: string
+          key: string
+          label: string
+          lifecycle: string
+          sale_status: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          key: string
+          label: string
+          lifecycle?: string
+          sale_status?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          key?: string
+          label?: string
+          lifecycle?: string
+          sale_status?: string
+        }
+        Relationships: []
+      }
+      platform_catalog_runtime_mappings: {
+        Row: {
+          created_at: string
+          feature_id: string
+          id: string
+          mapping_kind: string
+          mapping_value: string
+          note: string
+        }
+        Insert: {
+          created_at?: string
+          feature_id: string
+          id?: string
+          mapping_kind: string
+          mapping_value: string
+          note?: string
+        }
+        Update: {
+          created_at?: string
+          feature_id?: string
+          id?: string
+          mapping_kind?: string
+          mapping_value?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_catalog_runtime_mappings_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_features"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_meters: {
         Row: {
           created_at: string
@@ -2933,6 +3308,269 @@ export type Database = {
           description?: string
           id?: string
           unit?: string
+        }
+        Relationships: []
+      }
+      platform_plan_feature_grants: {
+        Row: {
+          created_at: string
+          feature_id: string
+          included: boolean
+          plan_id: string
+        }
+        Insert: {
+          created_at?: string
+          feature_id: string
+          included: boolean
+          plan_id: string
+        }
+        Update: {
+          created_at?: string
+          feature_id?: string
+          included?: boolean
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_feature_grants_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_plan_feature_grants_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_plan_module_grants: {
+        Row: {
+          created_at: string
+          granted_scope: string
+          module_id: string
+          plan_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_scope?: string
+          module_id: string
+          plan_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_scope?: string
+          module_id?: string
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_module_grants_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_plan_module_grants_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_plan_prices: {
+        Row: {
+          amount_minor: number
+          approval_state: string
+          billing_interval: string
+          captured_at: string
+          currency: string
+          effective_from: string
+          id: string
+          note: string
+          plan_id: string
+          recorded_by: string
+          source: string
+          source_url: string | null
+        }
+        Insert: {
+          amount_minor: number
+          approval_state?: string
+          billing_interval: string
+          captured_at?: string
+          currency: string
+          effective_from?: string
+          id?: string
+          note?: string
+          plan_id: string
+          recorded_by: string
+          source?: string
+          source_url?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          approval_state?: string
+          billing_interval?: string
+          captured_at?: string
+          currency?: string
+          effective_from?: string
+          id?: string
+          note?: string
+          plan_id?: string
+          recorded_by?: string
+          source?: string
+          source_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_prices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_plan_product_grants: {
+        Row: {
+          created_at: string
+          granted_scope: string
+          plan_id: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_scope?: string
+          plan_id: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_scope?: string
+          plan_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_product_grants_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_plan_product_grants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_plan_quotas: {
+        Row: {
+          allowance_key: string
+          created_at: string
+          display_order: number
+          hard_limit: number | null
+          id: string
+          included_quantity: number
+          label: string
+          meter_id: string | null
+          overage_policy: string
+          period: string
+          plan_id: string
+          service_class: string | null
+          unit: string
+        }
+        Insert: {
+          allowance_key: string
+          created_at?: string
+          display_order?: number
+          hard_limit?: number | null
+          id?: string
+          included_quantity: number
+          label: string
+          meter_id?: string | null
+          overage_policy?: string
+          period?: string
+          plan_id: string
+          service_class?: string | null
+          unit: string
+        }
+        Update: {
+          allowance_key?: string
+          created_at?: string
+          display_order?: number
+          hard_limit?: number | null
+          id?: string
+          included_quantity?: number
+          label?: string
+          meter_id?: string | null
+          overage_policy?: string
+          period?: string
+          plan_id?: string
+          service_class?: string | null
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_quotas_meter_id_fkey"
+            columns: ["meter_id"]
+            isOneToOne: false
+            referencedRelation: "platform_meters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_plan_quotas_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_plans: {
+        Row: {
+          billable: boolean
+          created_at: string
+          created_by: string
+          description: string
+          display_order: number
+          id: string
+          key: string
+          kind: string
+          label: string
+          sale_status: string
+        }
+        Insert: {
+          billable?: boolean
+          created_at?: string
+          created_by: string
+          description?: string
+          display_order?: number
+          id?: string
+          key: string
+          kind: string
+          label: string
+          sale_status?: string
+        }
+        Update: {
+          billable?: boolean
+          created_at?: string
+          created_by?: string
+          description?: string
+          display_order?: number
+          id?: string
+          key?: string
+          kind?: string
+          label?: string
+          sale_status?: string
         }
         Relationships: []
       }
@@ -4665,6 +5303,15 @@ export type Database = {
         }
         Returns: string
       }
+      add_runtime_mapping: {
+        Args: {
+          p_feature_id: string
+          p_mapping_kind: string
+          p_mapping_value: string
+          p_note?: string
+        }
+        Returns: string
+      }
       add_type_checklist_item: {
         Args: {
           p_label: string
@@ -4704,6 +5351,10 @@ export type Database = {
         Returns: undefined
       }
       claim_portal_invite: { Args: { p_token: string }; Returns: string }
+      clear_plan_feature_override: {
+        Args: { p_feature_id: string; p_plan_id: string }
+        Returns: undefined
+      }
       create_asset: {
         Args: {
           p_custom: Json
@@ -4780,6 +5431,18 @@ export type Database = {
           p_name: string
           p_role: string
           p_timezone: string
+        }
+        Returns: string
+      }
+      create_plan: {
+        Args: {
+          p_billable: boolean
+          p_description: string
+          p_display_order?: number
+          p_key: string
+          p_kind: string
+          p_label: string
+          p_sale_status: string
         }
         Returns: string
       }
@@ -4863,6 +5526,14 @@ export type Database = {
         Returns: undefined
       }
       end_support_session: { Args: { p_id: string }; Returns: undefined }
+      grant_plan_module: {
+        Args: { p_module_id: string; p_plan_id: string }
+        Returns: undefined
+      }
+      grant_plan_product: {
+        Args: { p_plan_id: string; p_product_key: string }
+        Returns: undefined
+      }
       invite_member: {
         Args: { p_email: string; p_organization_id: string; p_role_id: string }
         Returns: string
@@ -4930,9 +5601,41 @@ export type Database = {
           quantity: number
         }[]
       }
+      organization_effective_entitlements: {
+        Args: { p_at?: string; p_organization_id: string }
+        Returns: {
+          feature_id: string
+          plan_id: string
+          plan_key: string
+        }[]
+      }
+      organization_effective_quotas: {
+        Args: { p_at?: string; p_organization_id: string }
+        Returns: {
+          allowance_key: string
+          hard_limit: number
+          included_quantity: number
+          label: string
+          meter_id: string
+          overage_policy: string
+          overridden: boolean
+          period: string
+          plan_key: string
+          service_class: string
+          unit: string
+        }[]
+      }
       organization_launch_blockers: {
         Args: { p_id: string }
         Returns: string[]
+      }
+      organization_plan_price: {
+        Args: { p_at?: string; p_organization_id: string; p_plan_id: string }
+        Returns: {
+          amount_minor: number
+          currency: string
+          source: string
+        }[]
       }
       organization_usage_detail: {
         Args: { p_organization_id: string }
@@ -4959,6 +5662,12 @@ export type Database = {
           longitude: number
           metric: string
           needed_at: string
+        }[]
+      }
+      plan_entitled_features: {
+        Args: { p_plan_id: string }
+        Returns: {
+          feature_id: string
         }[]
       }
       platform_meter_observations: {
@@ -5082,6 +5791,52 @@ export type Database = {
         }
         Returns: string
       }
+      record_plan_agreement: {
+        Args: {
+          p_amount_minor: number
+          p_currency: string
+          p_effective_from?: string
+          p_note?: string
+          p_organization_id: string
+          p_plan_id: string
+        }
+        Returns: string
+      }
+      record_plan_assignment: {
+        Args: {
+          p_note?: string
+          p_organization_id: string
+          p_period_end: string
+          p_period_start: string
+          p_plan_id: string
+        }
+        Returns: string
+      }
+      record_plan_price: {
+        Args: {
+          p_amount_minor: number
+          p_billing_interval: string
+          p_currency: string
+          p_effective_from?: string
+          p_note?: string
+          p_plan_id: string
+          p_source?: string
+          p_source_url?: string
+        }
+        Returns: string
+      }
+      record_plan_quota_override: {
+        Args: {
+          p_allowance_key: string
+          p_effective_from?: string
+          p_hard_limit?: number
+          p_included_quantity: number
+          p_note?: string
+          p_organization_id: string
+          p_plan_id: string
+        }
+        Returns: string
+      }
       record_product_price: {
         Args: {
           p_amount_minor: number
@@ -5171,6 +5926,14 @@ export type Database = {
         Returns: string
       }
       remove_operating_hours: { Args: { p_id: string }; Returns: undefined }
+      remove_plan_quota: {
+        Args: { p_allowance_key: string; p_plan_id: string }
+        Returns: undefined
+      }
+      remove_runtime_mapping: {
+        Args: { p_mapping_id: string }
+        Returns: undefined
+      }
       remove_type_checklist_item: { Args: { p_id: string }; Returns: undefined }
       remove_work_item_priced_line: {
         Args: { p_id: string }
@@ -5197,6 +5960,14 @@ export type Database = {
         Returns: number
       }
       revoke_invitation: { Args: { p_id: string }; Returns: undefined }
+      revoke_plan_module: {
+        Args: { p_module_id: string; p_plan_id: string }
+        Returns: undefined
+      }
+      revoke_plan_product: {
+        Args: { p_plan_id: string; p_product_key: string }
+        Returns: undefined
+      }
       run_due_automations: { Args: never; Returns: number }
       schedule_ahead: {
         Args: { p_days?: number; p_organization_id: string }
@@ -5253,6 +6024,26 @@ export type Database = {
           p_tagline: string
         }
         Returns: undefined
+      }
+      set_plan_feature_override: {
+        Args: { p_feature_id: string; p_included: boolean; p_plan_id: string }
+        Returns: undefined
+      }
+      set_plan_quota: {
+        Args: {
+          p_allowance_key: string
+          p_display_order?: number
+          p_hard_limit?: number
+          p_included_quantity: number
+          p_label: string
+          p_meter_id?: string
+          p_overage_policy?: string
+          p_period?: string
+          p_plan_id: string
+          p_service_class?: string
+          p_unit: string
+        }
+        Returns: string
       }
       set_provider_binding_status: {
         Args: {
@@ -5330,6 +6121,43 @@ export type Database = {
         Args: { p_work_item_id: string }
         Returns: undefined
       }
+      update_catalog_feature: {
+        Args: {
+          p_ai_powered: boolean
+          p_description: string
+          p_display_order: number
+          p_feature_id: string
+          p_implementation_state: string
+          p_label: string
+          p_lifecycle: string
+          p_meter_ids: string[]
+          p_metered: boolean
+          p_packaging_default: string
+          p_provider_capabilities: string[]
+          p_sale_status: string
+        }
+        Returns: undefined
+      }
+      update_catalog_module: {
+        Args: {
+          p_description: string
+          p_display_order: number
+          p_label: string
+          p_module_id: string
+        }
+        Returns: undefined
+      }
+      update_catalog_product: {
+        Args: {
+          p_description: string
+          p_display_order: number
+          p_key: string
+          p_label: string
+          p_lifecycle: string
+          p_sale_status: string
+        }
+        Returns: undefined
+      }
       update_customer: {
         Args: {
           p_custom: Json
@@ -5360,6 +6188,17 @@ export type Database = {
           p_name: string
           p_slug: string
           p_timezone: string
+        }
+        Returns: undefined
+      }
+      update_plan: {
+        Args: {
+          p_billable: boolean
+          p_description: string
+          p_display_order: number
+          p_label: string
+          p_plan_id: string
+          p_sale_status: string
         }
         Returns: undefined
       }
