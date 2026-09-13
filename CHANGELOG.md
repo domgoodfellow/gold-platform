@@ -5,6 +5,38 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A document's own event names what it was attached to; a small browser harness proves the UI that depends on it
+
+- `document.created` previously carried no owning id — written against the document's own row,
+  with a payload of only `file_name`/`size_bytes` — so neither a customer's nor a job's history
+  could ever attribute an upload to itself, despite both already listing the action in their
+  vocabulary. `20260917000001_a_document_event_carries_its_owner.sql` has `create_document` write
+  whichever of `customer_id`/`location_id`/`asset_id`/`work_item_id` the upload named (the same
+  payload-carries-the-owner shape `location.linked` already used for its own polymorphic-subject
+  hazard), gives `customer_activity` the matching branches, and backfills every historical
+  `document.created` event from `documents` in the same migration. `listWorkItemTimeline` runs a
+  second, direct query for it now that the payload carries `work_item_id`.
+- Fixed a real hydration mismatch on every page rendering `CurrencyField` (Settings among them):
+  `Intl.DisplayNames`'s currency names genuinely differ between Node's server-side ICU and a
+  browser's for at least one currency in the supported list. The option list now renders codes
+  only through the server render and the client's first pass, and fills in names only once
+  mounted (`useSyncExternalStore`, not an effect + `setState`, which the lint rule this repo
+  already enforces refuses).
+- Added `apps/web/e2e/` — a small Playwright harness (one browser, no visual snapshots) proving
+  UX journeys static tests cannot: record navigation for Asset/Location/Resource, a Work Item's
+  relationship links, uploading a document and seeing it in that record's own history, reaching
+  `/account` through the account menu, the Automations workspace's content surviving its
+  file-level decomposition, and the public booking preview from Settings. `globalSetup` reuses
+  `pnpm demo`'s real businesses and domain calls rather than a second fixture story.
+- Replaced the Products catalogue's `<details>` popover — floating over its own data-table row,
+  with no page, no breadcrumb, and (found while replacing it) a live 500: `actions.ts` exported
+  a plain object from a `'use server'` file, which Next.js refuses to build a client reference
+  for, so the popover's save button had never actually worked — with a real record page,
+  `/platform/catalog/products/[productKey]`. Product keys are `kind:name` (`module:assistant`),
+  and Next's dynamic route matching does not resolve a segment containing a colon, encoded or
+  not; the route spells it with `~` instead (`productKeyToUrlSegment`/`FromUrlSegment`) and
+  converts back before it ever reaches the domain layer.
+
 ### Platform lifecycle metrics are global
 
 - Platform Overview now obtains exact global `live` and `setting up` counts independently

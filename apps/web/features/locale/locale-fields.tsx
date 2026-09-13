@@ -1,7 +1,19 @@
 'use client';
 
 import { FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
+
+/** Never changes after mount, so there is nothing to subscribe to — only the two snapshots
+ * (server always false, client always true) matter. React's own escape hatch for a value that
+ * is correctly different between the server render and the client one, without the effect/
+ * setState round trip `react-hooks/set-state-in-effect` refuses. */
+function useIsClient(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
 /**
  * Where a business is, and what it trades in.
@@ -85,13 +97,25 @@ export function TimeZoneField({
 export function CurrencyField({ defaultValue }: { defaultValue?: string }) {
   const codes = useMemo(() => supported('currency'), []);
 
+  // Names, not just the list, are ICU output — and ICU's own CLDR data genuinely differs
+  // between Node's build (server render) and a browser's (hydration) for at least some
+  // currencies ("BYN" alone renders "Belarusian Rouble" server-side and "Belarusian Ruble" in
+  // Chromium on some paired versions), which React reports as a hydration mismatch and then
+  // discards and re-renders the whole tree to recover from. The list of codes is stable across
+  // both runtimes; only the display name is not. So the first render — server and the client's
+  // first pass alike — shows codes alone, deterministic on both sides, and the name is filled
+  // in only after mount, the same "client-only, once mounted" escape hatch Next's own hydration
+  // guidance recommends for a value that cannot be the same on both renders.
+  const mounted = useIsClient();
+
   const names = useMemo(() => {
+    if (!mounted) return null;
     try {
       return new Intl.DisplayNames(undefined, { type: 'currency' });
     } catch {
       return null;
     }
-  }, []);
+  }, [mounted]);
 
   return (
     <div className="flex flex-1 flex-col gap-1">

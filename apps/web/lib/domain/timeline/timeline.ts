@@ -28,12 +28,12 @@ export type TimelineEntry = {
  * remembers about a customer besides (customer_activity.sql). Extracted rather than left
  * inline in `CUSTOMER_ACTIONS` now that a job's own page is the second caller.
  *
- * `document.created` is deliberately absent: its event is written against the document's own
- * id, not the job's (20260827000005_documents.sql), and the payload carries no `work_item_id`
- * to resolve it by — the same shape gap `customer_activity` works around for `location.linked`
- * but does not yet for documents. A business attaching a file to a job today gets the file, not
- * a line in either timeline. Fixing that is a payload change to `create_document` plus a new
- * `customer_activity` branch, and belongs to its own change rather than riding in on this one.
+ * `document.created` is deliberately absent from this list rather than folded in: its event is
+ * always written against the document's own id, never the job's
+ * (20260827000005_documents.sql/20260917000001_a_document_event_carries_its_owner.sql), so it
+ * can never satisfy an `entity_type = 'work_item'` filter no matter what this list contains.
+ * `listWorkItemTimeline` below fetches it as its own second query instead, the same shape
+ * `customer_activity`'s view resolves it with for a customer.
  */
 const WORK_ITEM_ACTIONS = [
   'work_item.created',
@@ -323,10 +323,14 @@ export async function listRecentActivity(
 
 /**
  * One job's own history, newest first — the same interpretive core as `listCustomerTimeline`
- * (`describe`, the vocabulary lookups), reused rather than copied. No view is needed here the
- * way `customer_activity` is for a customer: every `WORK_ITEM_ACTIONS` event is written with
- * `entity_type = 'work_item'` and `entity_id` equal to this job's own id, so a direct filter on
- * `events` is the whole query, with RLS doing the tenant scoping it always does.
+ * (`describe`, the vocabulary lookups), reused rather than copied.
+ *
+ * Two queries rather than a view: every `WORK_ITEM_ACTIONS` event is written with
+ * `entity_type = 'work_item'` and `entity_id` equal to this job's own id, so a direct filter is
+ * the whole answer for those. A `document.created` event is never written that way — it is
+ * always against the document's own id — so it is fetched separately, filtered on the
+ * `work_item_id` its payload now carries (20260917000001), the same resolution
+ * `customer_activity`'s view does in SQL for a customer.
  */
 export async function listWorkItemTimeline(
   db: Db,
@@ -334,21 +338,32 @@ export async function listWorkItemTimeline(
 ): Promise<TimelineEntry[]> {
   const limit = input.limit ?? 100;
 
-  const { data, error } = await db
-    .from('events')
-    .select('id, action, payload, occurred_at, actor_id, entity_id')
-    .eq('organization_id', input.organizationId)
-    .eq('entity_type', 'work_item')
-    .eq('entity_id', input.workItemId)
-    .in('action', WORK_ITEM_ACTIONS as unknown as string[])
-    .order('occurred_at', { ascending: false })
-    .limit(limit);
+  const [ownEvents, documentEvents] = await Promise.all([
+    db
+      .from('events')
+      .select('id, action, payload, occurred_at, actor_id, entity_id')
+      .eq('organization_id', input.organizationId)
+      .eq('entity_type', 'work_item')
+      .eq('entity_id', input.workItemId)
+      .in('action', WORK_ITEM_ACTIONS as unknown as string[]),
+    db
+      .from('events')
+      .select('id, action, payload, occurred_at, actor_id, entity_id')
+      .eq('organization_id', input.organizationId)
+      .eq('action', 'document.created')
+      .eq('payload->>work_item_id', input.workItemId),
+  ]);
 
-  if (error) {
-    throw new DomainError(error.message, 'timeline.work_item_failed');
+  if (ownEvents.error) {
+    throw new DomainError(ownEvents.error.message, 'timeline.work_item_failed');
+  }
+  if (documentEvents.error) {
+    throw new DomainError(documentEvents.error.message, 'timeline.work_item_failed');
   }
 
-  const rows = (data ?? []) as EventRow[];
+  const rows = [...(ownEvents.data ?? []), ...(documentEvents.data ?? [])]
+    .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at))
+    .slice(0, limit) as EventRow[];
   if (rows.length === 0) return [];
 
   const [statuses, resources, members] = await Promise.all([

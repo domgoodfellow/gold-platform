@@ -85,6 +85,18 @@ beforeAll(async () => {
   pg = new Client({ connectionString: CONNECTION });
   await pg.connect();
 
+  // `platform_provider_rates` is GOLD's own catalogue — global, append-only, never seeded
+  // (D43's own rule) and never tenant-scoped, unlike everything else this file writes. The
+  // first test below depends on nothing having priced `twilio`/`voice_minutes` yet; on a
+  // shared local database that has run this file before without a `db:reset` in between, an
+  // earlier run's own rate is still the latest one `app.provider_rate_at` will find, since it
+  // reads across every organization by provider and meter alone. The only rows that could ever
+  // exist there in a dev environment are this file's own, so removing them here restores the
+  // precondition the first test needs — it is this suite's own residue, not another test's.
+  await pg.query(
+    `delete from public.platform_provider_rates where provider_key = 'twilio' and meter_id = 'voice_minutes'`,
+  );
+
   // Twenty minor units a minute, retail — communication_rates, unchanged by this slice.
   await pg.query(
     `insert into public.communication_rates (currency, channel, unit_amount_minor)

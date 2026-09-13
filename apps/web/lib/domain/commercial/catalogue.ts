@@ -32,6 +32,26 @@ export type Product = {
   displayOrder: number;
 };
 
+/**
+ * A product key as a URL path segment, and back.
+ *
+ * `platform_products.key` is `kind:name` for a module or a seat ("module:assistant",
+ * "seat:reception_agent") — a real, load-bearing colon, not decoration. Next's own router does
+ * not resolve a dynamic segment correctly when the requested path contains one, encoded or not
+ * (confirmed empirically: an unencoded and a `%3A`-encoded colon both 404 against
+ * `[productKey]`, while the identical route with no colon in the key resolves correctly) — so
+ * the record route swaps it for `~`, a character RFC 3986 leaves unreserved and none of this
+ * catalogue's keys otherwise use, and swaps it back on the way in. The key stored and compared
+ * everywhere else in this file is never touched; only its spelling in a URL is.
+ */
+export function productKeyToUrlSegment(key: string): string {
+  return key.replace(/:/g, '~');
+}
+
+export function productKeyFromUrlSegment(segment: string): string {
+  return segment.replace(/~/g, ':');
+}
+
 export type ProductPrice = {
   id: string;
   productKey: string;
@@ -106,6 +126,28 @@ export async function listProducts(db: Db): Promise<Product[]> {
     saleStatus: row.sale_status as Product['saleStatus'],
     displayOrder: row.display_order,
   }));
+}
+
+/** One product, or null — the record page's own read, rather than filtering `listProducts`. */
+export async function getProduct(db: Db, key: string): Promise<Product | null> {
+  const { data, error } = await db
+    .from('platform_products')
+    .select('key, kind, module_key, label, description, sale_status, display_order')
+    .eq('key', key)
+    .maybeSingle();
+
+  if (error) throw new DomainError(error.message, 'commercial.product_failed');
+  if (!data) return null;
+
+  return {
+    key: data.key,
+    kind: data.kind as Product['kind'],
+    moduleKey: data.module_key,
+    label: data.label,
+    description: data.description,
+    saleStatus: data.sale_status as Product['saleStatus'],
+    displayOrder: data.display_order,
+  };
 }
 
 export async function updateProduct(

@@ -1,7 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { listProductPrices, listProducts, recordProductPrice, updateProduct } from '@/lib/domain/commercial/catalogue';
+import {
+  getProduct,
+  listProductPrices,
+  listProducts,
+  productKeyFromUrlSegment,
+  productKeyToUrlSegment,
+  recordProductPrice,
+  updateProduct,
+} from '@/lib/domain/commercial/catalogue';
 import { listOrganizationTerms, recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { provisionOrganization } from '@/lib/domain/platform/provision';
 import { asPlatformStaff, newAccountEmail } from './helpers/founding';
@@ -43,5 +51,24 @@ describe('staff-managed product catalogue', () => {
     await expect(updateProduct(stranger, product)).rejects.toMatchObject({ code: 'commercial.update_product_failed' });
     await updateProduct(staff, { ...product, description: 'Quotes, invoices, payments, and tenant billing.' });
     expect((await listProducts(staff)).find((entry) => entry.key === product.key)?.description).toContain('invoices');
+  });
+
+  it('reads one product by its key, or null for one that does not exist', async () => {
+    expect(await getProduct(staff, 'module:billing')).toMatchObject({ key: 'module:billing' });
+    expect(await getProduct(staff, 'module:does-not-exist')).toBeNull();
+  });
+
+  it('round-trips a product key through its URL spelling, including the colon a key always carries', async () => {
+    // `platform_products.key` is `kind:name` for a module or a seat — a real colon, not
+    // decoration. Next's dynamic route matching does not resolve `[productKey]` correctly when
+    // the requested path segment contains one (confirmed empirically against a running server:
+    // both an unencoded and a percent-encoded colon 404, while the identical route with no
+    // colon in the key resolves), so the record route spells it with `~` instead and this
+    // proves the round trip rather than only the browser page that depends on it.
+    for (const key of ['module:billing', 'seat:reception_agent', 'platform_base']) {
+      const segment = productKeyToUrlSegment(key);
+      expect(segment).not.toContain(':');
+      expect(productKeyFromUrlSegment(segment)).toBe(key);
+    }
   });
 });

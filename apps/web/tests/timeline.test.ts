@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createCustomer } from '@/lib/domain/customers/customers';
+import { uploadDocument } from '@/lib/domain/documents/documents';
 import { createLocation, linkCustomerLocation } from '@/lib/domain/locations/locations';
 import { createResource } from '@/lib/domain/resources/resources';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
@@ -292,5 +293,61 @@ describe('a job’s own history', () => {
       workItemId: other.workItemId,
     });
     expect(entries).toEqual([]);
+  });
+});
+
+describe('a document\'s upload is attributed to the record it was attached to (20260917000001)', () => {
+  it('shows a customer\'s own document upload in their own history', async () => {
+    await uploadDocument(acme.db, {
+      organizationId: acme.organizationId,
+      attachedTo: { entity: 'customer', id: acme.customerId },
+      file: new File(['x'], 'contract.txt', { type: 'text/plain' }),
+    });
+
+    const entries = await listCustomerTimeline(acme.db, {
+      organizationId: acme.organizationId,
+      customerId: acme.customerId,
+    });
+    const uploaded = entries.find((entry) => entry.action === 'document.created');
+    expect(uploaded?.description).toBe('Document attached: contract.txt');
+  });
+
+  it('shows a document uploaded to a job in both that job\'s own history and its customer\'s', async () => {
+    await uploadDocument(acme.db, {
+      organizationId: acme.organizationId,
+      attachedTo: { entity: 'work_item', id: acme.workItemId },
+      file: new File(['x'], 'job-photo.txt', { type: 'text/plain' }),
+    });
+
+    const jobHistory = await listWorkItemTimeline(acme.db, {
+      organizationId: acme.organizationId,
+      workItemId: acme.workItemId,
+    });
+    expect(jobHistory.find((entry) => entry.action === 'document.created')?.description).toBe(
+      'Document attached: job-photo.txt',
+    );
+
+    // The job belongs to acme.customerId, so this is also that customer's history — a
+    // document attached to a job is exactly as much a customer's history as anything else
+    // that happened on that job (customer_activity.sql's own stated reasoning).
+    const customerHistory = await listCustomerTimeline(acme.db, {
+      organizationId: acme.organizationId,
+      customerId: acme.customerId,
+    });
+    expect(
+      customerHistory.some(
+        (entry) =>
+          entry.action === 'document.created' &&
+          entry.description === 'Document attached: job-photo.txt',
+      ),
+    ).toBe(true);
+  });
+
+  it('does not show one customer\'s document to another', async () => {
+    const customerHistory = await listCustomerTimeline(acme.db, {
+      organizationId: acme.organizationId,
+      customerId: acme.otherCustomerId,
+    });
+    expect(customerHistory.map((entry) => entry.action)).not.toContain('document.created');
   });
 });

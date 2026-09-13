@@ -305,4 +305,57 @@ describe('documents', () => {
       expect(event.actor_id).toBe(alice.userId);
     }
   });
+
+  it('carries the attachment target in the event payload, not just the document\'s own id (20260917000001)', async () => {
+    // `entity_id` on a document.created event is the document's own id — never the customer's
+    // or the asset's — so the payload is the only place a reader can learn which record this
+    // upload belongs to. Without it, no timeline can ever attribute the event.
+    const documentId = await uploadDocument(alice.db, {
+      organizationId: alice.organizationId,
+      attachedTo: { entity: 'customer', id: alice.customerId },
+      file: fileNamed('attribution-check.txt'),
+    });
+
+    const { data, error } = await alice.db
+      .from('events')
+      .select('entity_type, payload')
+      .eq('organization_id', alice.organizationId)
+      .eq('action', 'document.created')
+      .eq('entity_id', documentId)
+      .single();
+
+    expect(error).toBeNull();
+    // The subject is still the document — this is the same precedent `location.linked` set
+    // for carrying an owner in the payload rather than changing what the event is about.
+    expect(data!.entity_type).toBe('document');
+    expect(data!.payload).toMatchObject({ customer_id: alice.customerId });
+    // Exactly one owner key travels — the other three are null-stripped, not present as null.
+    expect(data!.payload).not.toHaveProperty('location_id');
+    expect(data!.payload).not.toHaveProperty('asset_id');
+    expect(data!.payload).not.toHaveProperty('work_item_id');
+  });
+
+  it('attributes an asset\'s document to the asset, not a customer, in its payload', async () => {
+    const assetId = await createAsset(alice.db, {
+      organizationId: alice.organizationId,
+      name: 'Attributed compressor',
+    });
+    const documentId = await uploadDocument(alice.db, {
+      organizationId: alice.organizationId,
+      attachedTo: { entity: 'asset', id: assetId },
+      file: fileNamed('asset-manual.txt'),
+    });
+
+    const { data, error } = await alice.db
+      .from('events')
+      .select('payload')
+      .eq('organization_id', alice.organizationId)
+      .eq('action', 'document.created')
+      .eq('entity_id', documentId)
+      .single();
+
+    expect(error).toBeNull();
+    expect(data!.payload).toMatchObject({ asset_id: assetId });
+    expect(data!.payload).not.toHaveProperty('customer_id');
+  });
 });
