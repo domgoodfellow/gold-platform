@@ -12,6 +12,7 @@ import { AddMemberForm } from './add-member-form';
 import { CreateRoleForm } from './create-role-form';
 import { InviteMemberForm } from './invite-member-form';
 import { PendingInvitations } from './pending-invitations';
+import { RoleAssignmentControl } from './role-assignment-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,9 +76,23 @@ export default async function RolesPage({
               {
                 key: 'role',
                 header: 'Role',
-                // A badge, and a neutral one: the tenant's own word for the job, and the
-                // platform does not know whether *Dispatcher* outranks *Fitter* (§7).
-                cell: (member) => <Badge>{member.role.name}</Badge>,
+                // A badge, and a neutral one, for a caller who cannot change it: the tenant's
+                // own word for the job, and the platform does not know whether *Dispatcher*
+                // outranks *Fitter* (§7). A caller with role.manage gets the same neutral list
+                // of names, but as a control rather than a label — `assign_role`'s own
+                // invariant (never leave nobody who can manage roles) is what actually decides
+                // whether a given change sticks, not anything drawn here.
+                cell: (member) =>
+                  mayManage ? (
+                    <RoleAssignmentControl
+                      organizationId={organizationId}
+                      membershipId={member.id}
+                      currentRoleId={member.role.id}
+                      roles={roles}
+                    />
+                  ) : (
+                    <Badge>{member.role.name}</Badge>
+                  ),
               },
             ]}
           />

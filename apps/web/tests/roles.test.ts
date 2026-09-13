@@ -166,6 +166,24 @@ describe('roles and capabilities', () => {
     ).resolves.toBeTypeOf('string');
   });
 
+  it('refuses assigning a role that belongs to another organization (I18)', async () => {
+    // The composite foreign key `memberships_role_same_org` is what actually refuses this —
+    // `assignRole`'s own RLS-backed update happily reaches the owner's own membership, and it is
+    // the role id naming a row that does not exist for *this* organization that fails.
+    const stranger = await signUp('stranger');
+    const strangerOrganizationId = await foundBusiness({
+      ownerEmail: stranger.email,
+      name: `Stranger ${randomUUID().slice(0, 6)}`,
+      displayName: 'Founder',
+      currency: 'EUR',
+    });
+    const strangerRoles = await listRoles(stranger.db, { organizationId: strangerOrganizationId });
+
+    await expect(
+      assignRole(owner.db, { membershipId: ownerMembershipId, roleId: strangerRoles[0].id }),
+    ).rejects.toMatchObject({ code: 'roles.role_not_found' });
+  });
+
   it('refuses role management to someone without the capability (I12)', async () => {
     const outsider = await signUp('outsider');
     await expect(

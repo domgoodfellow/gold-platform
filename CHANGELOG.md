@@ -5,6 +5,48 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### An operator can change a member's role and revoke a customer's portal link
+
+Closes the two P0 gaps `docs/product-surface-audit.md` named: `assignRole` and
+`revokePortalInvite` already existed in the domain layer, tested, with no screen that reached
+either. Both are pure application-layer slices — no migration, no new capability, no new route.
+
+- **People & Roles** (`/roles`). The Role column is a control for a caller holding
+  `role.manage` rather than a label: a member row's role is now a `<select>`
+  (`role-assignment-control.tsx`) that submits itself on change through a new
+  `assignRoleAction`, calling `assignRole()` unchanged. `assign_role`'s own last-manager
+  invariant is the only thing that ever refuses a change — surfaced next to the row, which also
+  snaps the control back to whatever role is actually still assigned rather than showing a
+  choice that never took effect. `assignRole()` gained one more mapped database error
+  (`23503`, a role belonging to another organization) in the same shape `addMember()` already
+  handles.
+- **Customer Portal** (a customer's own record, Portal section). Replaced the "N active, M
+  withdrawn" count with an actual lifecycle list — Active links, each shown as a re-copyable
+  link exactly like a freshly created one, with a Revoke button; Withdrawn links, kept as
+  history. `revokePortalInvite()` now checks the row its own `update` actually touched: a
+  caller without `customer.create`, or an id belonging to another organization, previously
+  returned success while silently changing nothing — it now raises `portal.revoke_forbidden`.
+  `PortalInvite` now carries `token`, deliberately: the token was already recoverable by design
+  (`create_portal_invite`'s own comment, and no policy withheld the column) but the TypeScript
+  reader never projected it, so a business that lost a link it sent could not actually read it
+  again despite the domain layer's own claim that it could.
+- **Fixed a pre-existing capability/UI mismatch.** The customer page gated the entire Portal
+  section on `document.create` — the variable already in scope for the Documents section next
+  to it — while `customer_portal_invites`' own RLS policies have only ever checked
+  `customer.create`. A role holding one capability but not the other saw the wrong answer.
+  Replaced with `mayManagePortalAccess`, reading the capability the database actually checks.
+  Also fixed a second, adjacent bug this surfaced: the portal-link form's `origin` prop was
+  hardcoded to `''`, so every "send this to the customer" link rendered as a bare
+  `/portal/{token}` path rather than a URL. Both the create form and the new invite list now
+  read the request's real origin (`requestOrigin()`, the same helper the invitation-link flow
+  already uses).
+- **`features/public-profile/portal-link-form.tsx` moved to `features/portal-access/`**,
+  joined by a new `invite-list.tsx`. Customer portal access and a business's own public identity
+  were never the same product capability; they only shared a directory while portal access was
+  a single one-file form. `apps/web/features/README.md` updated to match.
+- `docs/walkthrough.md` §9/§9b and `CLAUDE.md`'s capability-gap note updated; `browserTelephoneToken`
+  remains the one capability this repository still cannot reach from any screen.
+
 ### The canonical Product/Module/Feature catalogue, and Plans/Add-ons above it
 
 D46, D50. GOLD can now define the seven canonical Products, package reusable Plans and Add-ons

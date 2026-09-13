@@ -7,7 +7,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { inviteMember, revokeInvitation } from '@/lib/domain/tenancy/invitations';
-import { createRole } from '@/lib/domain/tenancy/roles';
+import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { requestOrigin } from '@/lib/route/origin';
 
 export type CreateRoleState = { error: string | null };
@@ -120,6 +120,39 @@ export async function inviteMemberAction(
 
   revalidatePath(`/organizations/${organizationId}/roles`);
   return { error: null, link };
+}
+
+export type AssignRoleState = { error: string | null };
+
+/**
+ * Point an existing membership at a different role.
+ *
+ * The last-manager invariant, whether the role belongs to this organization, and whether the
+ * caller may do this at all are all decided inside `assign_role`/`memberships_update` — this
+ * action contributes nothing but forwarding the two ids and turning a `DomainError` into
+ * something the row can display next to itself.
+ */
+export async function assignRoleAction(
+  _previous: AssignRoleState,
+  formData: FormData,
+): Promise<AssignRoleState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await assignRole(db, {
+      membershipId: String(formData.get('membershipId') ?? ''),
+      roleId: String(formData.get('roleId') ?? ''),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/roles`);
+  return { error: null };
 }
 
 export type RevokeInvitationState = { error: string | null };

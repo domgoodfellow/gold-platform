@@ -10,3 +10,5 @@ export function loadDemoContext(): DemoContext {
 
 export const OWNER_STORAGE_STATE = path.join(__dirname, '.auth', 'owner.json');
 export const STAFF_STORAGE_STATE = path.join(__dirname, '.auth', 'staff.json');
+/** The demo's own reduced-role colleague (`business.member` in `scripts/demo/businesses.ts`) — signed in with no `role.manage` and no `customer.create`. */
+export const COLLEAGUE_STORAGE_STATE = path.join(__dirname, '.auth', 'colleague.json');

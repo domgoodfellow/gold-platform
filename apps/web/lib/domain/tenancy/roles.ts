@@ -118,6 +118,12 @@ export async function assignRole(
     if (error.code === '42501') {
       throw new DomainError('You cannot manage roles here.', 'roles.forbidden');
     }
+    // The composite foreign key refusing a role that belongs to another organization. From
+    // this caller's position that role does not exist — the same shape `addMember` already
+    // gives this exact database error.
+    if (error.code === '23503') {
+      throw new DomainError('No such role here.', 'roles.role_not_found');
+    }
     throw new DomainError(error.message, 'roles.assign_failed');
   }
 }

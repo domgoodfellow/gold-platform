@@ -16,6 +16,7 @@ Current boundaries:
 | `documents/` | Listing, uploading and presenting documents attached to any entity `DOCUMENT_ENTITIES` allows |
 | `timeline/` | Rendering a record's own history — the interpretive work stays in `lib/domain/timeline/` |
 | `public-profile/` | Editing and rendering a business's public identity |
+| `portal-access/` | Making, listing and revoking one customer's own portal links — the customer's access to their own things, not the business's public one |
 | `branding/` | Applying a tenant's approved visual roles |
 | `locale/` | Timezone and currency controls used by organization-facing workflows |
 | `today/` | The lifecycle-aware operational cockpit and its expanded views |

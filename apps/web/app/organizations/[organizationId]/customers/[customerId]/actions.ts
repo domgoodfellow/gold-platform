@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
-import { createPortalInvite } from '@/lib/domain/portal/portal';
+import { createPortalInvite, revokePortalInvite } from '@/lib/domain/portal/portal';
 import { updateCustomer } from '@/lib/domain/customers/customers';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import { uploadDocument } from '@/lib/domain/documents/documents';
@@ -69,6 +69,31 @@ export async function createPortalInviteAction(
 
   revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
   return { error: null, token };
+}
+
+/**
+ * Withdraw one of this customer's portal links.
+ *
+ * `revokePortalInvite` now raises rather than silently touching zero rows when the caller lacks
+ * `customer.create` or the id belongs to another organization's invite — see its own comment.
+ */
+export async function revokePortalInviteAction(
+  _previous: { error: string | null },
+  formData: FormData,
+): Promise<{ error: string | null }> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const customerId = String(formData.get('customerId') ?? '');
+
+  try {
+    await revokePortalInvite(db, { id: String(formData.get('id') ?? '') });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
+  return { error: null };
 }
 
 export type EditCustomerState = { error: string | null };

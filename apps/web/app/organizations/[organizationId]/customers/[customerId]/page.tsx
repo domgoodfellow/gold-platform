@@ -15,11 +15,17 @@ import { listCustomerCalls } from '@/lib/domain/reception/calls';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
-import { PortalLinkForm } from '@/features/public-profile/portal-link-form';
+import { PortalLinkForm } from '@/features/portal-access/portal-link-form';
+import { PortalInviteList } from '@/features/portal-access/invite-list';
 import { listPortalInvites } from '@/lib/domain/portal/portal';
 import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
-import { createPortalInviteAction, uploadCustomerDocumentAction } from './actions';
+import {
+  createPortalInviteAction,
+  revokePortalInviteAction,
+  uploadCustomerDocumentAction,
+} from './actions';
 import { requireOrganization } from '@/lib/route/organization';
+import { requestOrigin } from '@/lib/route/origin';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +42,7 @@ export default async function CustomerPage({
     notFound();
   }
 
+  const origin = await requestOrigin();
   const [documents, definitions, timeline, invites, modules, stages, calls] = await Promise.all([
     listDocuments(db, {
       organizationId,
@@ -52,6 +59,12 @@ export default async function CustomerPage({
   const mayAttach = organization.capabilities.includes('document.create');
   const mayEdit = organization.capabilities.includes('customer.update');
   const mayCall = organization.capabilities.includes('call.place');
+  // `customer_portal_invites_insert`/`_update` both check `customer.create` — inviting a
+  // customer to their own portal is authorized as a fact about the customer relationship, not
+  // as a document attachment. This used to read `mayAttach` because that variable already
+  // existed nearby, which quietly meant a role could attach files but not manage portal access,
+  // or the reverse, with nothing on screen saying so.
+  const mayManagePortalAccess = organization.capabilities.includes('customer.create');
   // **The module hides more than its own area, which is what makes the switch real.** Reception
   // off takes the stage, the dialler and the call history off this screen too — the same rule
   // that makes switching billing off remove the quote and the invoice from a job.
@@ -157,25 +170,27 @@ export default async function CustomerPage({
             astray.
           </Hint>
 
-          {mayAttach ? (
-            <PortalLinkForm
-              organizationId={organizationId}
-              customerId={customerId}
-              origin=""
-              createAction={createPortalInviteAction}
-            />
+          {mayManagePortalAccess ? (
+            <>
+              <PortalLinkForm
+                organizationId={organizationId}
+                customerId={customerId}
+                origin={origin}
+                createAction={createPortalInviteAction}
+              />
+              <PortalInviteList
+                organizationId={organizationId}
+                customerId={customerId}
+                invites={invites}
+                origin={origin}
+                revokeAction={revokePortalInviteAction}
+              />
+            </>
           ) : (
             <Hint className="mt-3">
-              Your role, {organization.role}, cannot invite customers here.
+              Your role, {organization.role}, cannot manage this customer&apos;s portal access.
             </Hint>
           )}
-
-          {invites.length > 0 ? (
-            <Hint weight="subtle" className="mt-3 text-xs">
-              {invites.filter((invite) => invite.revokedAt === null).length} active,{' '}
-              {invites.filter((invite) => invite.revokedAt !== null).length} withdrawn.
-            </Hint>
-          ) : null}
         </Section>
       ) : null}
 

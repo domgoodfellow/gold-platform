@@ -72,9 +72,9 @@ provider and Voice hardening, Financial Operations separation, tenant public dis
 a platform-hardening/dogfood gate before NextFund migration. `domain-model.md` owns the
 canonical terms. `roadmap.md` owns the sequence and criteria.
 
-Three domain/runtime capabilities have no operator UI: `revokePortalInvite`, `assignRole` and
-`browserTelephoneToken`. Asset and Location timelines are not surfaced; Resource has no
-domain-level document relation. Keep these gaps explicit.
+One domain/runtime capability has no operator UI: `browserTelephoneToken` — the token boundary
+exists, but no browser softphone consumes it yet (M9/M14). Asset and Location timelines are not
+surfaced; Resource has no domain-level document relation. Keep these gaps explicit.
 
 `supabase/migrations/` is the source of truth for the data model. Read it rather than
 inferring the schema, and comment the *why* rather than the *what*.

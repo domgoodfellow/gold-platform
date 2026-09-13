@@ -273,6 +273,42 @@ describe('a customer, in a portal', () => {
     expect(data!.map((row) => row.id)).toEqual([shop.organizationId]);
   });
 
+  it('lets the business read a link’s own token back, since a lost link must be resendable', async () => {
+    // `create_portal_invite`'s own comment says why: it is a shareable link, not a password.
+    // `listPortalInvites` used to omit the column entirely, which contradicted that on the
+    // reader's own terms — this is the fix, proven from the reader a screen actually calls.
+    const token = await createPortalInvite(shop.db, { customerId: shop.customerId });
+    const invites = await listPortalInvites(shop.db, {
+      organizationId: shop.organizationId,
+      customerId: shop.customerId,
+    });
+    expect(invites.some((invite) => invite.token === token)).toBe(true);
+  });
+
+  it('refuses to revoke a link outside the caller’s authority, and leaves it untouched', async () => {
+    // `revokePortalInvite` used to succeed silently here: RLS matched zero rows and the update
+    // call itself raised no error. The fix checks what the update actually touched.
+    const token = await createPortalInvite(shop.db, { customerId: shop.customerId });
+    const [invite] = (
+      await listPortalInvites(shop.db, {
+        organizationId: shop.organizationId,
+        customerId: shop.customerId,
+      })
+    ).filter((entry) => entry.token === token);
+
+    await expect(revokePortalInvite(rival.db, { id: invite.id })).rejects.toMatchObject({
+      code: 'portal.revoke_forbidden',
+    });
+
+    const [after] = (
+      await listPortalInvites(shop.db, {
+        organizationId: shop.organizationId,
+        customerId: shop.customerId,
+      })
+    ).filter((entry) => entry.id === invite.id);
+    expect(after.revokedAt).toBeNull();
+  });
+
   it('shows the business its own invitations and never another’s', async () => {
     const { data } = await rival.db
       .from('customer_portal_invites')

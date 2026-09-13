@@ -13,6 +13,8 @@ import { getOrganization, listMyOrganizations, updateOrganization } from '../lib
 import { listWorkItems } from '../lib/domain/work-items/work-items';
 import { listBookableTypes } from '../lib/domain/booking/booking';
 import { setTypeBookable } from '../lib/domain/work-items/types';
+import { listUsableModules, setModuleEnabled } from '../lib/domain/tenancy/modules';
+import { recordCommercialTerm } from '../lib/domain/commercial/terms';
 
 /**
  * Sets up exactly what the smoke suite needs on top of `pnpm demo`, and nothing else.
@@ -93,6 +95,37 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   const workItemId = workItems[0]?.id;
   if (!customerId || !locationId || !workItemId) {
     throw new Error('e2e/global-setup: demo data is missing a customer, location or work item.');
+  }
+
+  // The demo shapes (`scripts/demo/businesses.ts`) don't enable `portal` — this stack's own
+  // operator-path specs are what needs it. D41: wanted and paid are two rows, so switching the
+  // module on is not enough by itself; the module-owning term is what `run.ts` also records for
+  // everything a demo shape switches on beyond its zero-price founding set, done here the same
+  // way for the one module none of the shapes ask for.
+  const usableModules = await listUsableModules(db, { organizationId });
+  if (!usableModules.has('portal')) {
+    await setModuleEnabled(db, { organizationId, key: 'portal', enabled: true });
+
+    const staffDb = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const staffSignIn = await staffDb.auth.signInWithPassword({
+      email: 'staff@gold.test',
+      password: DEMO_PASSWORD,
+    });
+    if (staffSignIn.error) {
+      throw new Error(
+        `e2e/global-setup: could not sign in as platform staff to record a commercial term for portal (${staffSignIn.error.message})`,
+      );
+    }
+    await recordCommercialTerm(staffDb, {
+      organizationId,
+      productKey: 'module:portal',
+      periodStart: new Date().toISOString().slice(0, 10),
+      periodEnd: '9999-12-31',
+      priceMinor: 0,
+      note: 'E2E fixture: switched on and paid for, so the Portal operator-path specs have something real to exercise.',
+    });
   }
 
   // One asset, created only if the fixture from a previous run is not already there.
@@ -200,6 +233,19 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   await staffPage.waitForURL(/\/(platform|organizations)/, { timeout: 15_000 });
   await staffPage.context().storageState({ path: path.join(AUTH_DIR, 'staff.json') });
   await staffPage.close();
+
+  // `business.member` — the colleague `run.ts` adds on a reduced, `role.manage`-less role
+  // (`businesses.ts`'s own comment: "so I12 is something to look at rather than read about").
+  // A signed-in session for them is what makes the operator-path specs able to prove a control
+  // is genuinely absent for a caller who lacks the capability, not merely absent for nobody.
+  const colleaguePage = await browser.newPage({ baseURL } as never);
+  await colleaguePage.goto(`${baseURL}/login`);
+  await colleaguePage.getByLabel('Email').fill(business.member.email);
+  await colleaguePage.getByLabel('Password').fill(DEMO_PASSWORD);
+  await colleaguePage.getByRole('button', { name: 'Log in' }).click();
+  await colleaguePage.waitForURL(/\/organizations/, { timeout: 15_000 });
+  await colleaguePage.context().storageState({ path: path.join(AUTH_DIR, 'colleague.json') });
+  await colleaguePage.close();
 
   await browser.close();
 }

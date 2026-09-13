@@ -12,6 +12,14 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 export type PortalInvite = {
   id: string;
   customerId: string;
+  /**
+   * The shareable link's own credential — recoverable on purpose. `create_portal_invite`'s own
+   * comment says why: a business that has lost the link it sent must be able to read it again
+   * and send the same one, because this is a shared-document link, not a password. Nothing about
+   * a revoked invite's token still working — `claim_portal_invite` filters `revoked_at is null`
+   * — so there is no reason to withhold it here either.
+   */
+  token: string;
   createdAt: string;
   revokedAt: string | null;
 };
@@ -48,7 +56,7 @@ export async function listPortalInvites(
 ): Promise<PortalInvite[]> {
   const { data, error } = await db
     .from('customer_portal_invites')
-    .select('id, customer_id, created_at, revoked_at')
+    .select('id, customer_id, token, created_at, revoked_at')
     .eq('organization_id', input.organizationId)
     .eq('customer_id', input.customerId)
     .order('created_at', { ascending: false });
@@ -60,22 +68,34 @@ export async function listPortalInvites(
   return (data ?? []).map((row) => ({
     id: row.id,
     customerId: row.customer_id,
+    token: row.token,
     createdAt: row.created_at,
     revokedAt: row.revoked_at,
   }));
 }
 
-/** An update, not a delete — a business wants to see that a link existed and was withdrawn. */
+/**
+ * An update, not a delete — a business wants to see that a link existed and was withdrawn.
+ *
+ * Checks `returning` rather than trusting an error-free response, the same shape
+ * `change_work_item_status` already uses: `customer_portal_invites_update` requires
+ * `customer.create`, and a caller without it does not raise here — the policy simply matches
+ * no row. Without this check that would look identical to success.
+ */
 export async function revokePortalInvite(db: Db, input: { id: string }): Promise<void> {
   await requireActor(db);
 
-  const { error } = await db
+  const { data, error } = await db
     .from('customer_portal_invites')
     .update({ revoked_at: new Date().toISOString() })
-    .eq('id', input.id);
+    .eq('id', input.id)
+    .select('id');
 
   if (error) {
     throw new DomainError(error.message, 'portal.revoke_failed');
+  }
+  if (!data || data.length === 0) {
+    throw new DomainError('No such link, or you may not revoke it.', 'portal.revoke_forbidden');
   }
 }
 

@@ -212,6 +212,14 @@ credential, and the page doesn't pretend otherwise. Every word that isn't applic
 the business's own copy from Settings → Public page — no platform sentence appears on a public
 surface.
 
+**Withdraw it from the same section.** The customer's own Portal section lists every link this
+business has ever made for them, split into *Active* and *Withdrawn*. Each active row shows its
+own link, readable and re-copyable — it is a shareable link, not a password, so a business that
+has lost the one it sent can read it again rather than issuing a second — and a **Revoke** button.
+Press it, and that row moves to *Withdrawn*; open the same link in the private window again and it
+now says it is not valid, the same sentence an invented token gets. A role without
+`customer.create` sees neither the create form nor the list, only the reason.
+
 ### 9b. Bring somebody else in — invitations
 
 Settings → People (also reachable at `/roles`) → *Invite by email*. Type an address nobody here
@@ -228,6 +236,13 @@ accepting account's own email against the invited address, higher stakes than th
 portal's own link, which only ever proved somebody held it. **Try it twice as the same
 account**, back to back — the second attempt is refused too, not silently repeated; the row
 already says *accepted*.
+
+**Change somebody's role from the same People table.** For a caller with `role.manage`, the Role
+column is a select rather than a label — pick a different one and it takes effect immediately,
+no separate save. Try demoting the only member who can manage roles, including yourself: refused,
+with *that would leave nobody able to manage roles here* shown next to that row, and the select
+snaps back to what is actually still assigned. Demote anyone else while a second manager remains
+and it succeeds the same way.
 
 ### 9c. Publish the business — *Settings* → *Website*
 
@@ -415,18 +430,19 @@ normal recovery still require hardening through M14/M17.
 
 ## What you cannot reach from any screen
 
-Three capabilities exist in the domain/runtime layer, are covered by tests, and have no
-operator control — the honest current residue:
+One capability exists in the domain/runtime layer, is covered by tests, and has no operator
+control — the honest current residue:
 
 | Capability | Function | What its absence blocks |
 |---|---|---|
-| Withdraw a customer's portal link | `revokePortalInvite` | The portal page's own comment says "the business revokes it". Today the business cannot. |
-| Change an existing member's role | `assignRole` | A role is assigned when somebody is added and never changed afterwards. |
 | Mint a browser telephony token | `browserTelephoneToken` | The token boundary exists, but no browser softphone consumes it; Voice is provider/callback foundation rather than M9's completed front desk. |
 
-**A third capability was on this list and isn't any more.** `setTypeBookable` — publishing a kind
+**Two capabilities were on this list and aren't any more.** `setTypeBookable` — publishing a kind
 of work to the public page — is now a section on the **Work** screen under the selected kind,
-gated on the booking module. The stand-in snippet is deleted.
+gated on the booking module. Changing an existing member's role (`assignRole`) and withdrawing a
+customer's portal link (`revokePortalInvite`) are now the role control on `/roles`'s People table
+and the Active/Withdrawn list under a customer's own Portal section, respectively — see §9 and
+§9b below. Every stand-in snippet for any of these is deleted.
 
 **A fourth thing needs database access, and it isn't a debt.** Adding somebody to
 `platform_staff` is a hand-run snippet (`supabase/snippets/add-platform-staff.sql`) —

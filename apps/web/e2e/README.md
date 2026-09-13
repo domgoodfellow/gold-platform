@@ -33,7 +33,10 @@ create:
 - one document each on a customer and a work item,
 - a public slug and a bookable kind of work, so the Public Presence preview has somewhere real to
   point at (`booking_organization`'s bookable-type requirement is a deliberate privacy opt-in —
-  this satisfies it rather than bypassing it).
+  this satisfies it rather than bypassing it),
+- the `portal` module, switched on **and** given a commercial term — neither demo shape asks for
+  it, and D41 means the switch alone would leave it wanted but not paid, so the Portal section
+  would still render nothing to test against.
 
 It is idempotent: re-running it against data an earlier run already touched adds nothing a second
 time, so it is safe to run before every invocation rather than only once per `demo:fresh`. It also
@@ -50,8 +53,10 @@ One spec file per durable journey (see each file's own doc comment for why it's 
 record navigation (Asset/Location/Resource list → record), a Work Item's relationship links,
 uploading a document and seeing it in that record's activity history (proving the
 `document.created` attribution fix), reaching `/account` through the account menu, the
-Automations workspace after its file-level decomposition, and the public booking preview link
-from Settings.
+Automations workspace after its file-level decomposition, the public booking preview link from
+Settings, and the two operator paths `docs/product-surface-audit.md` found unreachable —
+reassigning a member's role and revoking a customer's portal link, each also proven absent for a
+caller who lacks the governing capability.
 
 ## What's deliberately not here
 
