@@ -5346,6 +5346,30 @@ export type Database = {
         Returns: string
       }
       booking_organization: { Args: { p_slug: string }; Returns: string }
+      change_customer_stage: {
+        Args: {
+          p_customer_id: string
+          p_organization_id: string
+          p_stage_id: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string
+          custom: Json
+          email: string | null
+          id: string
+          name: string
+          organization_id: string
+          phone: string | null
+          stage_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "customers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       change_work_item_status: {
         Args: { p_status_id: string; p_work_item_id: string }
         Returns: undefined
@@ -5724,6 +5748,41 @@ export type Database = {
           p_status: string
         }
         Returns: string
+      }
+      record_call_outcome: {
+        Args: {
+          p_call_id: string
+          p_duration_seconds: number
+          p_note: string
+          p_organization_id: string
+          p_outcome_id: string
+          p_status: string
+        }
+        Returns: {
+          conference_name: string | null
+          created_at: string
+          created_by: string
+          customer_id: string
+          direction: string
+          duration_seconds: number | null
+          ended_at: string | null
+          external_id: string | null
+          from_number: string
+          id: string
+          note: string
+          organization_id: string
+          outcome_id: string | null
+          recording_url: string | null
+          started_at: string
+          status: string
+          to_number: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "calls"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       record_commercial_term: {
         Args: {

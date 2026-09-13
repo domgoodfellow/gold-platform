@@ -21,11 +21,22 @@ provider's log is outside every boundary this platform draws.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Protocol
 
 import httpx
 
-from app.core.config import AssistantSettings
+
+class SupabaseCallerSettings(Protocol):
+    """What forwarding a caller's own token needs: where to send it and which project.
+
+    A `Protocol` rather than a concrete dataclass, because two features now share this shape --
+    `AssistantSettings` (asking a question) and `DomainSettings` (a CRM/Voice command) -- for two
+    separate reasons to exist. Structural typing is the point: neither has to inherit from the
+    other, or from anything, to be usable here.
+    """
+
+    supabase_url: str
+    supabase_anon_key: str
 
 
 class ToolFailed(RuntimeError):
@@ -38,8 +49,22 @@ class ToolFailed(RuntimeError):
     """
 
 
+class CommandFailed(RuntimeError):
+    """Postgres refused a domain command, in its own words and its own error code.
+
+    Distinct from `ToolFailed`: a tool's failure is handed to a model as an ordinary event, but a
+    domain command's caller (`apps/api/app/domains/**`) needs the SQLSTATE too, to translate a
+    check violation into a validation error and an RLS refusal into a not-found one rather than
+    showing a browser Postgres's own words (`app/domains/errors.py`).
+    """
+
+    def __init__(self, message: str, *, sqlstate: str | None) -> None:
+        super().__init__(message)
+        self.sqlstate = sqlstate
+
+
 def call_tool(
-    settings: AssistantSettings,
+    settings: SupabaseCallerSettings,
     *,
     token: str,
     function: str,
@@ -84,3 +109,45 @@ def call_tool(
         raise ToolFailed("this tool did not answer with rows")
 
     return answered
+
+
+def call_command(
+    settings: SupabaseCallerSettings,
+    *,
+    token: str,
+    function: str,
+    arguments: dict[str, Any],
+) -> dict[str, Any]:
+    """Call one narrow write RPC under the caller's own token, and return the row it wrote.
+
+    The write half of what `call_tool` is for reads: `apps/api/app/domains/**`'s commands each
+    name a function declared `returns public.<table>` (a single row), not `returns setof` (many)
+    -- PostgREST answers a scalar-returning function with one JSON object, so this does not share
+    `call_tool`'s "must be a list" shape. The one thing both keep in common is the whole reason
+    either can exist without a role of its own: the token forwarded is the caller's, and RLS on
+    the underlying table is what actually decides whether the write happens (D17, D34).
+    """
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/{function}",
+        headers={
+            "apikey": settings.supabase_anon_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={
+            key if key.startswith("p_") else f"p_{key}": value
+            for key, value in arguments.items()
+        },
+        timeout=15.0,
+    )
+
+    if response.status_code >= 400:
+        body: dict[str, Any] = {}
+        if response.headers.get("content-type", "").startswith("application/json"):
+            body = response.json()
+        raise CommandFailed(
+            body.get("message") or f"the database refused ({response.status_code})",
+            sqlstate=body.get("code"),
+        )
+
+    return response.json()

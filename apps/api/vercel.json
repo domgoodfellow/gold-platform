@@ -34,6 +34,14 @@
     {
       "source": "/voice/recording",
       "destination": "/api/voice_recording"
+    },
+    {
+      "source": "/crm/change-customer-stage",
+      "destination": "/api/crm_change_customer_stage"
+    },
+    {
+      "source": "/voice/wrap-up-call",
+      "destination": "/api/voice_wrap_up_call"
     }
   ],
   "crons": [

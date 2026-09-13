@@ -2,12 +2,12 @@ import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { Disclosure } from '@/components/containers/card';
 import { Hint } from '@/components/controls/inputs';
-import { CustomFieldValues } from '@/features/custom-fields/values';
-import { DataTable } from '@/components/display/table';
+import { CreateCustomerForm } from '@/features/crm/customers/create-customer-form';
+import { CustomerTable } from '@/features/crm/customers/customer-table';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { requireOrganization } from '@/lib/route/organization';
-import { CreateCustomerForm } from './create-customer-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,15 +17,29 @@ export default async function CustomersPage({
   const { organizationId } = await params;
   const { db } = await requireOrganization(organizationId);
 
-  const customers = await listCustomers(db, { organizationId });
-  const definitions = await listFieldDefinitions(db, {
-    organizationId,
-    entityType: 'customer',
-  });
+  const [customers, definitions, modules] = await Promise.all([
+    listCustomers(db, { organizationId }),
+    listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
+    listUsableModules(db, { organizationId }),
+  ]);
 
   return (
     <AppPage width="wide">
-      <Hint>People and businesses this organization works for.</Hint>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <Hint>People and businesses this organization works for.</Hint>
+        {/* CRM/Sales's own canonical board — a Communications/Voice module switches this on,
+            since `reception` is the runtime module backing both, but the board itself belongs
+            here, not to Calls. */}
+        {modules.has('reception') ? (
+          <Link
+            href={`/organizations/${organizationId}/customers/pipeline`}
+            className="text-sm underline underline-offset-4"
+          >
+            Pipeline →
+          </Link>
+        ) : null}
+      </div>
+
       {/* **The form is available, not permanent.** It used to render below the list, so a
           business with forty customers ended its customer screen with a create form and the
           answer to *what is on this page* was whatever fitted above it. Open by default when
@@ -35,57 +49,7 @@ export default async function CustomersPage({
       </Disclosure>
 
       <div className="mt-6">
-        <DataTable
-          rows={customers}
-          rowKey={(customer) => customer.id}
-          empty="No customers yet."
-          columns={[
-            {
-              key: 'name',
-              header: 'Name',
-              emphasis: 'primary',
-              cell: (customer) => (
-                <Link
-                  href={`/organizations/${organizationId}/customers/${customer.id}`}
-                  className="underline underline-offset-4"
-                >
-                  {customer.name}
-                </Link>
-              ),
-            },
-            {
-              key: 'contact',
-              header: 'Contact',
-              cell: (customer) =>
-                customer.email || customer.phone ? (
-                  // Stacked rather than joined by a separator: an address and a number are two
-                  // things somebody copies one at a time, and a middle dot between them is
-                  // picked up by a double-click.
-                  <div className="flex flex-col">
-                    {customer.email ? <span>{customer.email}</span> : null}
-                    {customer.phone ? <span className="text-muted">{customer.phone}</span> : null}
-                  </div>
-                ) : (
-                  <span className="text-subtle">—</span>
-                ),
-            },
-            // This business's own fields, in its own order. Secondary because a business with
-            // six custom fields would otherwise have a six-column table nobody can read — they
-            // stay in full on the card rendering, which is where there is room for them.
-            ...(definitions.length > 0
-              ? [
-                  {
-                    key: 'custom',
-                    header: 'Details',
-                    emphasis: 'secondary' as const,
-                    cell: (customer: (typeof customers)[number]) => (
-                      <CustomFieldValues definitions={definitions} custom={customer.custom} />
-                    ),
-                  },
-                ]
-              : []),
-          ]}
-        />
+        <CustomerTable organizationId={organizationId} customers={customers} definitions={definitions} />
       </div>
     </AppPage>
   );

@@ -7,7 +7,10 @@ import { TextInput } from '@/components/controls/inputs';
 import { useActionState } from 'react';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
-import { createCustomerAction, type CreateCustomerState } from './actions';
+import {
+  createCustomerAction,
+  type CreateCustomerState,
+} from '@/app/organizations/[organizationId]/customers/actions';
 
 const INITIAL: CreateCustomerState = { error: null };
 

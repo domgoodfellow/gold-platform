@@ -111,6 +111,36 @@ def load_runner_settings() -> RunnerSettings | None:
 
 
 @dataclass(frozen=True)
+class DomainSettings:
+    """What a domain command needs, and it is the same two fields as `AssistantSettings`.
+
+    **A separate name rather than reusing that one.** `apps/api/app/domains/**` is a fourth
+    feature by the same reasoning `RunnerSettings` gives for the second and third: a deployment
+    answering questions and a deployment accepting CRM/Voice writes are separately switchable,
+    even though today they read the same two environment variables. Naming this after the
+    assistant feature would tie a change to that feature to something it has nothing to do with.
+
+    **No JWT secret, for the same reason `AssistantSettings` has none.** A domain command forwards
+    the operator's own token (D17, D34) rather than minting one for a machine role.
+    """
+
+    supabase_url: str
+    supabase_anon_key: str
+
+
+def load_domain_settings() -> DomainSettings | None:
+    values = {
+        "supabase_url": os.environ.get("SUPABASE_URL"),
+        "supabase_anon_key": os.environ.get("SUPABASE_ANON_KEY"),
+    }
+
+    if not all(values.values()):
+        return None
+
+    return DomainSettings(**values)  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
 class VoiceSettings:
     """What hearing from the carrier needs.
 

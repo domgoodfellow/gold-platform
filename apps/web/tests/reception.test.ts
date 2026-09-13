@@ -9,7 +9,7 @@ import {
 } from '@/lib/domain/customers/stages';
 import { createRole } from '@/lib/domain/tenancy/roles';
 import { addMember } from '@/lib/domain/tenancy/members';
-import { listCustomerCalls, recordCall, recordCallOutcome } from '@/lib/domain/reception/calls';
+import { listCustomerCalls, recordCall } from '@/lib/domain/reception/calls';
 import { createCallOutcome, listCallOutcomes } from '@/lib/domain/reception/outcomes';
 import { callingNumber, setCallingNumber } from '@/lib/domain/reception/telephony';
 import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
@@ -299,6 +299,10 @@ describe('a call', () => {
   });
 
   it('carries the tenant’s own word for how it went, and the platform’s own fact beside it', async () => {
+    // Called through `record_call_outcome` directly rather than through a TypeScript domain
+    // function: this write is now authoritative in `apps/api/app/domains/communications/voice`,
+    // reaching this same RPC over its own HTTP call — see that module's own comment. What this
+    // suite proves is the RPC's own behavior under real RLS, exactly as it did before the move.
     const outcomeId = await createCallOutcome(floor.db, {
       organizationId: floor.organizationId,
       name: 'Gatekeeper',
@@ -318,13 +322,15 @@ describe('a call', () => {
       toNumber: '+14165550142',
     });
 
-    await recordCallOutcome(floor.db, {
-      organizationId: floor.organizationId,
-      callId,
-      outcomeId,
-      note: 'Asked us to call back Thursday.',
-      durationSeconds: 42,
+    const { error } = await floor.db.rpc('record_call_outcome', {
+      p_organization_id: floor.organizationId,
+      p_call_id: callId,
+      p_outcome_id: outcomeId,
+      p_note: 'Asked us to call back Thursday.',
+      p_duration_seconds: 42,
+      p_status: null,
     });
+    expect(error).toBeNull();
 
     const [call] = await listCustomerCalls(floor.db, {
       organizationId: floor.organizationId,
@@ -354,14 +360,15 @@ describe('a call', () => {
       toNumber: '+14165550142',
     });
 
-    await expect(
-      recordCallOutcome(floor.db, {
-        organizationId: floor.organizationId,
-        callId,
-        outcomeId: theirOutcome,
-        note: '',
-      }),
-    ).rejects.toThrow();
+    const { error } = await floor.db.rpc('record_call_outcome', {
+      p_organization_id: floor.organizationId,
+      p_call_id: callId,
+      p_outcome_id: theirOutcome,
+      p_note: '',
+      p_duration_seconds: null,
+      p_status: null,
+    });
+    expect(error).not.toBeNull();
   });
 
   it('is invisible to another business (I1)', async () => {
@@ -431,12 +438,15 @@ describe('the loop the module exists for', () => {
       fromNumber: '+14165550100',
       toNumber: '+14165550142',
     });
-    await recordCallOutcome(floor.db, {
-      organizationId: floor.organizationId,
-      callId,
-      outcomeId,
-      note: 'Wants a proposal.',
+    const { error } = await floor.db.rpc('record_call_outcome', {
+      p_organization_id: floor.organizationId,
+      p_call_id: callId,
+      p_outcome_id: outcomeId,
+      p_note: 'Wants a proposal.',
+      p_duration_seconds: null,
+      p_status: null,
     });
+    expect(error).toBeNull();
     await updateCustomer(floor.db, {
       organizationId: floor.organizationId,
       customerId,
@@ -455,6 +465,96 @@ describe('the loop the module exists for', () => {
     expect(descriptions).toContain('Call written up: Interested');
     // The tenant's word, resolved at read time — the same treatment a work item's status gets.
     expect(descriptions).toContain('Moved to Booked a meeting');
+  });
+});
+
+describe('moving a customer along the pipeline, on its own', () => {
+  // `change_customer_stage` is the RPC `apps/api/app/domains/crm/stages.py::change_customer_stage`
+  // calls under the operator's own forwarded token — see that module's own comment for why this
+  // is a command of its own rather than a reuse of `update_customer`. What is tested here is the
+  // RPC itself, exactly as `update_customer`'s own stage-changing behavior is proven above.
+
+  it('moves the customer and writes the same event update_customer would', async () => {
+    const stageId = await createCustomerStage(floor.db, {
+      organizationId: floor.organizationId,
+      name: 'Board stage',
+      position: 1,
+    });
+    const customerId = await createCustomer(floor.db, {
+      organizationId: floor.organizationId,
+      name: 'Board Ltd',
+    });
+
+    const { data, error } = await floor.db.rpc('change_customer_stage', {
+      p_organization_id: floor.organizationId,
+      p_customer_id: customerId,
+      p_stage_id: stageId,
+    });
+    expect(error).toBeNull();
+    expect((data as { stage_id: string } | null)?.stage_id).toEqual(stageId);
+
+    const customer = await getCustomer(floor.db, {
+      organizationId: floor.organizationId,
+      customerId,
+    });
+    expect(customer?.stageId).toEqual(stageId);
+
+    const timeline = await listCustomerTimeline(floor.db, {
+      organizationId: floor.organizationId,
+      customerId,
+    });
+    expect(timeline.map((entry) => entry.description)).toContain(`Moved to Board stage`);
+  });
+
+  it('writes no event when the board re-submits the column a card is already in', async () => {
+    const stageId = await createCustomerStage(floor.db, {
+      organizationId: floor.organizationId,
+      name: 'Steady stage',
+      position: 2,
+    });
+    const customerId = await createCustomer(floor.db, {
+      organizationId: floor.organizationId,
+      name: 'Steady Ltd',
+    });
+
+    await floor.db.rpc('change_customer_stage', {
+      p_organization_id: floor.organizationId,
+      p_customer_id: customerId,
+      p_stage_id: stageId,
+    });
+    const before = await listCustomerTimeline(floor.db, {
+      organizationId: floor.organizationId,
+      customerId,
+    });
+
+    // The same column again — a no-op write, not a move.
+    await floor.db.rpc('change_customer_stage', {
+      p_organization_id: floor.organizationId,
+      p_customer_id: customerId,
+      p_stage_id: stageId,
+    });
+    const after = await listCustomerTimeline(floor.db, {
+      organizationId: floor.organizationId,
+      customerId,
+    });
+
+    expect(after).toHaveLength(before.length);
+  });
+
+  it('cannot move another business’s customer (I2)', async () => {
+    const customerId = await createCustomer(floor.db, {
+      organizationId: floor.organizationId,
+      name: 'Not Yours Ltd',
+    });
+
+    const { data, error } = await other.db.rpc('change_customer_stage', {
+      p_organization_id: floor.organizationId,
+      p_customer_id: customerId,
+      p_stage_id: null,
+    });
+
+    expect(error).not.toBeNull();
+    expect(data).toBeNull();
   });
 });
 

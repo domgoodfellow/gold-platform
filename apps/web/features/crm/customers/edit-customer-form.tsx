@@ -7,19 +7,25 @@ import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { Customer } from '@/lib/domain/customers/customers';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
-import { editCustomerAction, type EditCustomerState } from './actions';
-import { placeCallAction, recordCallAction, type FormState } from '../../calls/actions';
+import {
+  editCustomerAction,
+  type EditCustomerState,
+} from '@/app/organizations/[organizationId]/customers/[customerId]/actions';
 
 const EDIT_INITIAL: EditCustomerState = { error: null };
-const CALL_INITIAL: FormState = { error: null };
 
 /**
  * Correcting a customer, and moving them along.
  *
  * **The stage selector is here rather than on a board of its own**, because moving a
  * relationship is something somebody does while looking at the person, not while looking at a
- * pipeline. A board is a way of reading the same column and it can be built later; this is the
- * write.
+ * pipeline. `features/crm/sales/pipeline-board.tsx` is that board, with its own stage control
+ * calling a different, FastAPI-authoritative write (`apps/api/app/domains/crm/stages.py`) — this
+ * form keeps the one it already had, `updateCustomer`, unchanged: correcting a name, an email,
+ * a phone number and a stage together remains one act, and splitting it here to route the stage
+ * field through a second network call would trade the atomic write this form has always made for
+ * two requests that can now fail independently of each other, which is a regression this
+ * extraction must not introduce.
  *
  * `stages` is empty for a business that has named none, and the selector then offers only *No
  * stage* — which is the platform saying nothing rather than proposing a pipeline.
@@ -102,80 +108,5 @@ export function EditCustomerForm({
 
       {state.error ? <ErrorText>{state.error}</ErrorText> : null}
     </form>
-  );
-}
-
-/**
- * Ring them, or write down that somebody already did.
- *
- * **Two buttons on one form, and they are two different acts.** Placing a call asks the carrier
- * to ring and fails loudly on a deployment that has none. Recording one is a person saying what
- * happened on their mobile. Collapsing them would mean a button that sometimes dials and
- * sometimes does not, which is the dead end D31 names.
- */
-export function CallCustomerForm({
-  organizationId,
-  customerId,
-  phone,
-}: {
-  organizationId: string;
-  customerId: string;
-  phone: string | null;
-}) {
-  const [placeState, placeAction, placing] = useActionState(placeCallAction, CALL_INITIAL);
-  const [recordState, recordAction, recording] = useActionState(recordCallAction, CALL_INITIAL);
-
-  return (
-    <div className="mt-2 flex flex-col gap-3">
-      <form action={placeAction} className="flex flex-col gap-2 sm:flex-row">
-        <input type="hidden" name="organizationId" value={organizationId} />
-        <input type="hidden" name="customerId" value={customerId} />
-        <TextInput
-          name="toNumber"
-          type="tel"
-          required
-          defaultValue={phone ?? ''}
-          placeholder="+14165550142"
-          aria-label="Number to call"
-          className="flex-1"
-        />
-        <Button type="submit" disabled={placing}>
-          Call
-        </Button>
-      </form>
-
-      {placeState.error ? <ErrorText>{placeState.error}</ErrorText> : null}
-
-      <form action={recordAction} className="flex flex-col gap-2 sm:flex-row">
-        <input type="hidden" name="organizationId" value={organizationId} />
-        <input type="hidden" name="customerId" value={customerId} />
-        <SelectInput name="direction" defaultValue="outbound" aria-label="Which way">
-          <option value="outbound">We called them</option>
-          <option value="inbound">They called us</option>
-        </SelectInput>
-        <TextInput
-          name="fromNumber"
-          type="tel"
-          required
-          placeholder="From, e.g. +14165550100"
-          aria-label="From"
-          className="flex-1"
-        />
-        <TextInput
-          name="toNumber"
-          type="tel"
-          required
-          defaultValue={phone ?? ''}
-          placeholder="To"
-          aria-label="To"
-          className="flex-1"
-        />
-        <Button type="submit" tone="secondary" disabled={recording}>
-          Write it down
-        </Button>
-      </form>
-
-      {recordState.error ? <ErrorText>{recordState.error}</ErrorText> : null}
-    </div>
   );
 }

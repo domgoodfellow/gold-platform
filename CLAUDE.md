@@ -136,9 +136,10 @@ apps/
     scripts/demo/   the demo builder. Covered by the gate on purpose (D37)
     proxy.ts        Next 16's middleware. Refreshes the session; not the auth boundary (I12)
     tests/          the suites. Real Postgres — see Commands
-  api/              Python. Provider ingress, automation clock and AI loop; Vercel serverless
+  api/              Python. Provider ingress, automation clock, AI loop and a narrow domain layer; Vercel serverless
     api/            physical HTTP entrypoints — one file per handler
     app/core/       configuration, database handles, the one place a machine token is minted
+    app/domains/    a named, narrow set of commands reachable from more than one caller (D2, D51). Not a second `lib/domain/`
     app/ai/         the tool loop and its two registries. No SQL, no arithmetic
     app/channels/   sending a message to a person, as a capability
     app/conditions/ what the world is doing at a place, as a capability
@@ -363,7 +364,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 
 | Subject | Start at |
 |---|---|
-| The two runtimes, and what may live in Python | D2, D30 |
+| The two runtimes, and what may live in Python | D2, D30, D51 |
 | Repository shape, workspaces, migrations, the gate | D3, D13, D15, D16 |
 | Statuses, custom fields, terminology | D6, D7, D18 |
 | Tenant identity, and the caller's own JWT | D14, D17 |

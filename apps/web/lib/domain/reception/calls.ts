@@ -330,70 +330,7 @@ export async function recordCall(
 }
 
 /**
- * How it went, once somebody knows.
- *
- * The outcome is the tenant's word; the note is the person's own. Neither is required, because a
- * call somebody has not got round to writing up is an ordinary state and forcing a word out of
- * them produces a wrong one.
- */
-export async function recordCallOutcome(
-  db: Db,
-  input: {
-    organizationId: string;
-    callId: string;
-    outcomeId: string | null;
-    note: string;
-    durationSeconds?: number | null;
-    status?: CallStatus;
-  },
-): Promise<void> {
-  const actor = await requireActor(db);
-
-  if (input.durationSeconds != null) {
-    if (!Number.isInteger(input.durationSeconds) || input.durationSeconds < 0) {
-      throw new DomainError(
-        'A call lasts a whole number of seconds.',
-        'calls.duration_invalid',
-      );
-    }
-  }
-
-  const { data, error } = await db
-    .from('calls')
-    .update({
-      outcome_id: input.outcomeId,
-      note: input.note.trim(),
-      duration_seconds: input.durationSeconds ?? null,
-      status: input.status ?? 'completed',
-      ended_at: new Date().toISOString(),
-    })
-    .eq('id', input.callId)
-    .eq('organization_id', input.organizationId)
-    .select('id, customer_id');
-
-  if (error) {
-    throw new DomainError(error.message, 'calls.outcome_failed');
-  }
-
-  const row = (data ?? [])[0];
-  if (!row) {
-    throw new DomainError(
-      'That call is not yours to write up.',
-      'calls.outcome_refused',
-    );
-  }
-
-  await writeCallEvent(db, {
-    organizationId: input.organizationId,
-    customerId: row.customer_id,
-    actorId: actor.id,
-    action: 'call.wrapped_up',
-    payload: { call_id: row.id, outcome_id: input.outcomeId },
-  });
-}
-
-/**
- * One event writer for three callers, extracted rather than copied.
+ * One event writer, extracted rather than copied.
  *
  * **Written against the customer rather than against the call**, which is the whole reason a
  * call shows up on a customer's timeline without a line of new SQL: `customer_activity` resolves

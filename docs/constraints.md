@@ -222,10 +222,15 @@ platform is not.
 
 ### D2 — Python is the second runtime; TypeScript owns the transactional domain
 
-**Decision.** `lib/domain/` in TypeScript owns every business rule and every transactional write.
-Python owns what has no human session: webhook ingress, the clock, the model loop.
+**Decision.** `lib/domain/` in TypeScript owns essentially every business rule and every
+transactional write. Python owns what has no human session — webhook ingress, the clock, the
+model loop — plus, since D51, a narrow, named set of commands genuinely reachable from more than
+one caller.
 **Why.** One transactional domain, one place a rule can live. Two would be two implementations.
-**Rejected.** A Python domain layer with `domains/crm`, `domains/scheduling` and the rest.
+**Rejected, narrowed by D51.** A *wholesale* Python domain layer mirroring `lib/domain/` —
+`domains/crm`, `domains/scheduling` and the rest, as a second home for rules that have exactly one
+caller today — stays rejected for the reason above. D51 is not that: it is two commands, named,
+each with its TypeScript equivalent retired rather than duplicated.
 
 ### D3 — Python lives in `apps/api/`, and the workspace glob is explicit
 
@@ -1322,6 +1327,42 @@ one deployment. The Plan (`billable = false`, every current Product granted whol
 quotas, metering left on) is platform vocabulary and belongs in a migration; assigning it to
 GOLD's own organization is a platform-staff action performed once through the ordinary Plan &
 Entitlements UI this record also ships — proving that UI by using it, rather than a snippet.
+
+### D51 — `apps/api/app/domains/` exists, narrowly, superseding D2's rejection of it
+
+**Decision.** D2 rejected "a Python domain layer with `domains/crm`, `domains/scheduling` and the
+rest" outright. That rejection was of a *wholesale* move and stays correct as one — `lib/domain/`
+in TypeScript remains authoritative for essentially every business rule and every transactional
+write this platform has. What D2 did not anticipate, and what this record narrows it to, is a
+single, named exception: a business operation reachable from more than one caller (a person's
+browser, an AI tool, a worker) that would otherwise need its own copy in each. The first two are
+`apps/api/app/domains/crm/stages.py::change_customer_stage` and
+`apps/api/app/domains/communications/voice/wrap_up.py::wrap_up_call`.
+
+**Why these two, and not more.** Both already had a narrow, single-purpose Postgres write worth
+giving its own RPC (`change_customer_stage`, `record_call_outcome` — see the migration that adds
+them), and both are genuinely reachable from more than one caller in the near term (a pipeline
+board an AI tool could move a card on; a call wrap-up an AI call-summary tool could file). A
+command with exactly one caller today stays in `lib/domain/`, in TypeScript, where D2's original
+reasoning — one transactional domain, one place a rule can live — still fully applies.
+
+**The shape, reusing D34's rather than inventing a second one.** Every command under
+`apps/api/app/domains/` is `security invoker`, calls one narrow Postgres RPC, and forwards the
+caller's own access token rather than minting one — `app.core.caller.call_command`, the write
+sibling of D34's `call_tool`. There is still no Postgres role for this axis and nothing here
+authorizes anything RLS would not authorize again a moment later; a domain module's own job is
+translating what the database said (`app.domains.errors`), not deciding on its own account.
+
+**Load-bearing.** `apps/web/lib/api/` is the one place `apps/web` calls one of these commands, and
+a route's server action is the one caller of that — no feature component calls `fetch` itself.
+Postgres keeps every tenant/RLS/invariant guarantee unchanged: `customers_update` and
+`calls_update` are exactly as they were, and the two new functions add no grant a table-wide
+policy would have to widen. When an existing TypeScript command moves here, it is retired rather
+than kept running in parallel — `recordCallOutcome` (formerly in
+`apps/web/lib/domain/reception/calls.ts`) no longer exists; `updateCustomer`'s own stage-changing
+path was deliberately left alone because it remains a different act (see that function's own
+comment for why moving a card from a board and correcting a customer's details in one sitting are
+not the same operation, even though both touch `customers.stage_id`).
 
 ---
 

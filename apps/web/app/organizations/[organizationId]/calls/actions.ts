@@ -2,18 +2,20 @@
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
-import { createCustomerStage, updateCustomerStage } from '@/lib/domain/customers/stages';
 import { DomainError } from '@/lib/domain/errors';
+import { requireAccessToken } from '@/lib/api/client';
+import { wrapUpCall } from '@/lib/api/voice';
 import { createCallOutcome } from '@/lib/domain/reception/outcomes';
-import { placeCall, recordCall, recordCallOutcome } from '@/lib/domain/reception/calls';
+import { placeCall, recordCall } from '@/lib/domain/reception/calls';
 import { setCallingNumber } from '@/lib/domain/reception/telephony';
 
 /**
- * The reception module's writes.
+ * The Voice module's writes.
  *
- * Every one of them is a thin translation of a form into a domain call. Nothing here decides
- * anything: whether the caller may is decided by the policy on the table, and what the words
- * mean is decided by the business that typed them.
+ * **Stage actions moved to `customers/pipeline/actions.ts`.** Naming and moving a pipeline stage
+ * are CRM/Sales's own configuration and command, and stayed bundled here only because the
+ * `reception` module's history bundled the two Products' screens together — see the Pipeline
+ * page's own comment.
  */
 
 export type FormState = { error: string | null };
@@ -35,38 +37,6 @@ async function attempt(
 
   revalidatePath(`/organizations/${organizationId}${path}`);
   return { error: null };
-}
-
-export async function createStageAction(
-  _previous: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-
-  return attempt(organizationId, '/calls', () =>
-    createCustomerStage(db, {
-      organizationId,
-      name: String(formData.get('name') ?? ''),
-      position: Number(formData.get('position') ?? 0),
-    }),
-  );
-}
-
-export async function updateStageAction(
-  _previous: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-
-  return attempt(organizationId, '/calls', () =>
-    updateCustomerStage(db, {
-      id: String(formData.get('id') ?? ''),
-      name: String(formData.get('name') ?? ''),
-      position: Number(formData.get('position') ?? 0),
-    }),
-  );
 }
 
 export async function createOutcomeAction(
@@ -134,6 +104,14 @@ export async function recordCallAction(
   );
 }
 
+/**
+ * How it went, filled in after the call.
+ *
+ * Reaches `apps/api/app/domains/communications/voice/wrap_up.py::wrap_up_call` under the
+ * operator's own forwarded access token (D17, D34) — the FastAPI-authoritative write for this
+ * act, replacing what `recordCallOutcome` (formerly in `lib/domain/reception/calls.ts`) used to
+ * perform as two separate requests to Postgres.
+ */
 export async function wrapUpCallAction(
   _previous: FormState,
   formData: FormData,
@@ -143,8 +121,10 @@ export async function wrapUpCallAction(
   const outcomeId = String(formData.get('outcomeId') ?? '');
   const duration = String(formData.get('durationSeconds') ?? '');
 
-  return attempt(organizationId, '/calls', () =>
-    recordCallOutcome(db, {
+  return attempt(organizationId, '/calls', async () => {
+    const token = await requireAccessToken(db);
+    await wrapUpCall({
+      token,
       organizationId,
       callId: String(formData.get('callId') ?? ''),
       // An empty select means nobody has said yet, which is a real answer and not a validation
@@ -152,8 +132,8 @@ export async function wrapUpCallAction(
       outcomeId: outcomeId === '' ? null : outcomeId,
       note: String(formData.get('note') ?? ''),
       durationSeconds: duration === '' ? null : Number(duration),
-    }),
-  );
+    });
+  });
 }
 
 /**

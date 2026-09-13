@@ -1,11 +1,14 @@
 import { Hint } from '@/components/controls/inputs';
 import { DefinitionList, Detail } from '@/components/display/data';
-import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { DocumentsSection } from '@/features/documents/section';
 import { ActivityList } from '@/features/timeline/activity-list';
+import { EditCustomerForm } from '@/features/crm/customers/edit-customer-form';
+import { CallCustomerForm } from '@/features/communications/voice/call-customer-form';
+import { CallHistory } from '@/features/communications/voice/call-history';
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listCustomerCalls } from '@/lib/domain/reception/calls';
@@ -17,7 +20,6 @@ import { listPortalInvites } from '@/lib/domain/portal/portal';
 import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
 import { createPortalInviteAction, uploadCustomerDocumentAction } from './actions';
 import { requireOrganization } from '@/lib/route/organization';
-import { CallCustomerForm, EditCustomerForm } from './customer-forms';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,32 +116,9 @@ export default async function CustomerPage({
         <Section className="mt-10">
           <SectionHeading>Calls</SectionHeading>
 
-          {calls.length === 0 ? (
-            <EmptyState className="mt-2">No calls with this customer.</EmptyState>
-          ) : (
-            <DividedList className="mt-2">
-              {calls.map((call) => (
-                <li key={call.id} className="py-3">
-                  <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-medium">
-                      {call.direction === 'inbound' ? 'Inbound' : 'Outbound'}
-                    </span>
-                    <span className="text-sm text-muted">
-                      {[
-                        call.toNumber,
-                        call.status.replace('_', ' '),
-                        call.durationSeconds === null ? null : `${call.durationSeconds}s`,
-                        call.outcome?.name ?? null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </span>
-                  </div>
-                  {call.note ? <p className="mt-1 text-sm">{call.note}</p> : null}
-                </li>
-              ))}
-            </DividedList>
-          )}
+          <div className="mt-2">
+            <CallHistory calls={calls} empty="No calls with this customer." />
+          </div>
 
           {/* Hiding it is a courtesy, not the guard: `calls_insert` requires call.place in the
               database, so a caller reaching the action anyway is refused there (I12). */}
