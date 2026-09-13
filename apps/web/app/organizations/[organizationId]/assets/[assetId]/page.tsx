@@ -6,10 +6,12 @@ import { DividedList, EmptyState, Section, SectionHeading } from '@/components/c
 import { Hint } from '@/components/controls/inputs';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { DocumentsSection } from '@/features/documents/section';
+import { ActivityList } from '@/features/timeline/activity-list';
 import { getAsset } from '@/lib/domain/assets/assets';
 import { listAssetReadings } from '@/lib/domain/assets/readings';
 import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { listAssetTimeline } from '@/lib/domain/timeline/timeline';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
 import { recordReadingAction, uploadAssetDocumentAction } from './actions';
@@ -30,11 +32,12 @@ export default async function AssetPage({
     notFound();
   }
 
-  const [readings, definitions, documents, workItems] = await Promise.all([
+  const [readings, definitions, documents, workItems, timeline] = await Promise.all([
     listAssetReadings(db, { organizationId, assetId }),
     listFieldDefinitions(db, { organizationId, entityType: 'asset' }),
     listDocuments(db, { organizationId, attachedTo: { entity: 'asset', id: assetId } }),
     listWorkItems(db, { organizationId, assetId }),
+    listAssetTimeline(db, { organizationId, assetId }),
   ]);
 
   const mayRecord = organization.capabilities.includes('asset.create');
@@ -142,6 +145,15 @@ export default async function AssetPage({
         uploadAction={uploadAssetDocumentAction}
         hiddenFields={{ organizationId, assetId }}
       />
+
+      <Section className="mt-10">
+        <SectionHeading>History</SectionHeading>
+        {/* Not capability-gated, the same reasoning Customer and Work Item's own History
+            sections give: `events` is already restricted by RLS to this tenant, so there is
+            nothing here a member of this business may not see. Separate from Readings above,
+            deliberately — a reading is the counter log, this is what happened around the asset. */}
+        <ActivityList timeline={timeline} timezone={organization.timezone} />
+      </Section>
     </>
   );
 }

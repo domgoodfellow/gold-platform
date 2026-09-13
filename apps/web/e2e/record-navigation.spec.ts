@@ -22,6 +22,12 @@ test('opens the asset list, follows a row to its record, and finds readings and 
   await expect(page.getByRole('heading', { name: 'Readings' })).toBeVisible();
   await expect(page.getByText('42', { exact: false })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible();
+
+  // The reading itself stays a dedicated log, not folded into History — this asset's creation
+  // is what proves the timeline reader is actually wired to the route rather than merely present
+  // in the domain layer.
+  await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
+  await expect(page.getByText('Asset created')).toBeVisible();
 });
 
 test('opens the location list and follows a row to its record', async ({ page }) => {
@@ -38,6 +44,9 @@ test('opens the location list and follows a row to its record', async ({ page })
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(label.trim());
   }
   await expect(page.getByRole('heading', { name: 'Coordinates' })).toBeVisible();
+
+  await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
+  await expect(page.getByText('Location created')).toBeVisible();
 });
 
 test('opens the resource list and follows a row to its record', async ({ page }) => {

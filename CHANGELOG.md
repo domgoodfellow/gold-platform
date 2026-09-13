@@ -5,6 +5,49 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Location and Asset expose their own History
+
+Closes the P1 gap `docs/product-surface-audit.md` named: `features/timeline/activity-list.tsx`
+was wired to Customer and Work Item only, though the events a Location or Asset accumulates
+already existed. Two new domain readers, `listLocationTimeline` and `listAssetTimeline`
+(`lib/domain/timeline/timeline.ts`), each with deliberately narrower attribution than a naive
+`entity_id` join would give — no schema change.
+
+- **Location's History** admits `location.created` and `location.linked` directly (both are
+  already written against the location's own id — the one place I11's polymorphic-subject hazard
+  never applied), a document attached here (`document.created`, filtered on the `location_id` its
+  payload has carried since `20260917000001`), and a job edited to name this location
+  (`work_item.updated`, which snapshots `location_id`). A job's *creation* is deliberately absent:
+  `create_work_item`'s own event has never copied `location_id` into its payload, and joining
+  instead to `work_items.location_id` — ordinary, mutable state — would attribute a job's current
+  location onto the moment it was created, misattributing history for any job whose location
+  later changed (I8).
+- **Asset's History** admits `asset.created` directly, a document attached here, and both
+  `work_item.created` and `work_item.updated` — unlike Location, `create_work_item`'s event has
+  carried `asset_id` since the column arrived, so no such gap exists here.
+- **Readings stay a separate, dedicated log.** `recordAssetReading` writes only `asset_readings`,
+  no `events` row — nothing here fabricates one to make a reading appear in History.
+- `describe()` (the shared sentence-per-action function every timeline reader calls) gained cases
+  for `location.created` and `asset.created`, and a `perspective` parameter so `location.linked`
+  reads correctly from the location's own side ("Customer linked: Ariane Blais") rather than
+  reusing the sentence written for a customer's own timeline ("Linked to a location").
+- Both record pages gained a **History** section, reusing `ActivityList` unchanged — no new
+  component, no new route, no new capability gate (the same reasoning Customer and Work Item's
+  own History sections already use: RLS on `events` is the only guard needed).
+- New correspondence tests (`tests/location-asset-timeline.test.ts`) prove positive and negative
+  attribution for both readers, including the two asymmetric absences above, cross-tenant
+  isolation, and newest-first ordering. E2E coverage extended: `record-navigation.spec.ts` proves
+  the History section is reachable on both record pages against seeded demo data; `documents.spec.ts`
+  proves a document uploaded through the real browser control to a Location or Asset appears in
+  that record's own history, alongside the existing Customer case.
+- **Investigated and deliberately not changed:** `apps/web/app/organizations/[organizationId]/assets/[assetId]/page.tsx`'s
+  reading list formats `readAt` with `new Date(...).toLocaleString('en-GB')` and no `timeZone`,
+  which renders in the server process's own zone rather than the tenant's (I9). Not fixed here —
+  the same pattern (`toLocaleString`/`toLocaleDateString` with no `timeZone`) appears in over a
+  dozen other files across both the organization and platform shells, so this is a pre-existing,
+  repository-wide gap rather than a defect isolated to the page this slice touched, and fixing it
+  properly belongs to its own slice rather than expanding this one.
+
 ### An operator can change a member's role and revoke a customer's portal link
 
 Closes the two P0 gaps `docs/product-surface-audit.md` named: `assignRole` and

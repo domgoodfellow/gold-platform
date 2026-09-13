@@ -50,6 +50,20 @@ const WORK_ITEM_ACTIONS = [
   'payment.recorded',
 ] as const;
 
+/** Events written directly against a location — `entity_type = 'location'`, no second query needed for these two. */
+const LOCATION_DIRECT_ACTIONS = ['location.created', 'location.linked'] as const;
+
+/** Events written directly against an asset. */
+const ASSET_DIRECT_ACTIONS = ['asset.created'] as const;
+
+/**
+ * The only two `work_item.*` actions that snapshot `asset_id` in their own payload
+ * (`create_work_item`, `update_work_item`) — see `listAssetTimeline`'s own comment for why nothing
+ * else in `WORK_ITEM_ACTIONS` qualifies and why this is not the same list `update_work_item`
+ * offers `location_id` from too.
+ */
+const ASSET_WORK_ITEM_ACTIONS = ['work_item.created', 'work_item.updated'] as const;
+
 /** Actions a customer's history is made of. Anything else is noise on this screen. */
 const CUSTOMER_ACTIONS = [
   'customer.created',
@@ -89,6 +103,8 @@ type Vocabulary = {
   /** Empty for a business that has not switched reception on, which reads as "no word for it". */
   stages: Map<string, string>;
   outcomes: Map<string, string>;
+  /** Only resolved by a caller that needs to name a customer from a payload id — today, a location's own timeline reading `location.linked` from the other side. */
+  customers?: Map<string, string>;
 };
 
 function text(payload: Record<string, unknown>, key: string): string | null {
@@ -96,8 +112,17 @@ function text(payload: Record<string, unknown>, key: string): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-/** The platform's words, not the tenant's — only the looked-up strings from `words` are tenant-authored. */
-function describe(row: EventRow, words: Vocabulary): string {
+/**
+ * The platform's words, not the tenant's — only the looked-up strings from `words` are
+ * tenant-authored.
+ *
+ * `perspective` disambiguates the one action written against the *other* side of what it
+ * describes: `location.linked` names the location and carries the customer in its payload
+ * (I11), so "Linked to a location" reads correctly from a customer's own timeline but makes no
+ * sense on the location's — there it is the customer who did the linking, and the location's
+ * timeline says so instead, the same relationship named from its own side.
+ */
+function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): string {
   const job = words.workItems.get(row.entity_id);
   const on = job ? ` on ${job}` : '';
 
@@ -127,8 +152,18 @@ function describe(row: EventRow, words: Vocabulary): string {
       const name = outcome ? words.outcomes.get(outcome) : null;
       return name ? `Call written up: ${name}` : 'Call written up';
     }
-    case 'location.linked':
+    case 'location.linked': {
+      if (perspective === 'location') {
+        const customerId = text(row.payload, 'customer_id');
+        const name = customerId ? (words.customers?.get(customerId) ?? null) : null;
+        return name ? `Customer linked: ${name}` : 'A customer was linked here';
+      }
       return 'Linked to a location';
+    }
+    case 'location.created':
+      return 'Location created';
+    case 'asset.created':
+      return 'Asset created';
     case 'document.created':
       return `Document attached: ${text(row.payload, 'file_name') ?? 'a file'}`;
     case 'work_item.created':
@@ -381,6 +416,234 @@ export async function listWorkItemTimeline(
     // Every row here already is this job, so `describe`'s " on <title>" would be a redundant
     // echo on the job's own page — an empty map is what makes it fall back to the bare sentence.
     workItems: new Map(),
+    stages: new Map(),
+    outcomes: new Map(),
+  };
+  const names = new Map((members.data ?? []).map((row) => [row.user_id, row.display_name]));
+
+  return rows.map((row) => ({
+    id: row.id,
+    occurredAt: row.occurred_at,
+    action: row.action,
+    description: describe(row, words),
+    actorName: names.get(row.actor_id) ?? null,
+  }));
+}
+
+/**
+ * A place's own history, newest first: direct events, documents attached here, and the moments a
+ * job was edited to name this location.
+ *
+ * **Why `work_item.created` is absent and `work_item.updated` is not.** `create_work_item`'s own
+ * event has never copied `location_id` into its payload — only `customer_id`, `resource_id` and
+ * `asset_id` ever have (`20260828000002`, the latest definition). That is a gap in what was
+ * written down, not a gap in what happened, and this reader does not paper over it with a join to
+ * `work_items.location_id` — a job's location is ordinary, mutable state (`updateWorkItem`), so a
+ * current-state join would attribute a job's *today's* location onto the moment it was created,
+ * which is exactly the falsified history I8 exists to refuse. `update_work_item`'s own event does
+ * snapshot `location_id` (`20260829000001`), so a job edited to name this location is truthfully
+ * this location's history from that edit forward — the same reasoning `listWorkItemTimeline`
+ * already applies to attributing `document.created` by payload rather than by `entity_id`.
+ *
+ * **`location.linked` needs no second query.** Unlike a customer's timeline, which has to recover
+ * it from the *other* side (`customer_activity.sql`), this event is already written directly
+ * against the location's own id — a location's own history is the one place I11's polymorphic-
+ * subject hazard never applied.
+ */
+export async function listLocationTimeline(
+  db: Db,
+  input: { organizationId: string; locationId: string; limit?: number },
+): Promise<TimelineEntry[]> {
+  const limit = input.limit ?? 100;
+
+  const [ownEvents, documentEvents, workItemEvents] = await Promise.all([
+    db
+      .from('events')
+      .select('id, action, payload, occurred_at, actor_id, entity_id')
+      .eq('organization_id', input.organizationId)
+      .eq('entity_type', 'location')
+      .eq('entity_id', input.locationId)
+      .in('action', LOCATION_DIRECT_ACTIONS as unknown as string[]),
+    db
+      .from('events')
+      .select('id, action, payload, occurred_at, actor_id, entity_id')
+      .eq('organization_id', input.organizationId)
+      .eq('action', 'document.created')
+      .eq('payload->>location_id', input.locationId),
+    db
+      .from('events')
+      .select('id, action, payload, occurred_at, actor_id, entity_id')
+      .eq('organization_id', input.organizationId)
+      .eq('action', 'work_item.updated')
+      .eq('payload->>location_id', input.locationId),
+  ]);
+
+  if (ownEvents.error) {
+    throw new DomainError(ownEvents.error.message, 'timeline.location_failed');
+  }
+  if (documentEvents.error) {
+    throw new DomainError(documentEvents.error.message, 'timeline.location_failed');
+  }
+  if (workItemEvents.error) {
+    throw new DomainError(workItemEvents.error.message, 'timeline.location_failed');
+  }
+
+  const rows = [
+    ...(ownEvents.data ?? []),
+    ...(documentEvents.data ?? []),
+    ...(workItemEvents.data ?? []),
+  ]
+    .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at))
+    .slice(0, limit) as EventRow[];
+  if (rows.length === 0) return [];
+
+  // Bounded by what this batch actually names, not by the whole business — the same discipline
+  // `listRecentActivity` documents for the same reason. Read off `rows`, already cast and
+  // already trimmed to `limit`, rather than the three pre-slice result sets.
+  const jobIds = [
+    ...new Set(rows.filter((row) => row.action === 'work_item.updated').map((row) => row.entity_id)),
+  ];
+  const customerIds = [
+    ...new Set(
+      rows
+        .filter((row) => row.action === 'location.linked')
+        .map((row) => text(row.payload, 'customer_id'))
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+
+  const [jobs, customers, members] = await Promise.all([
+    jobIds.length > 0
+      ? db
+          .from('work_items')
+          .select('id, title')
+          .eq('organization_id', input.organizationId)
+          .in('id', jobIds)
+      : Promise.resolve({ data: [] as { id: string; title: string }[], error: null }),
+    customerIds.length > 0
+      ? db
+          .from('customers')
+          .select('id, name')
+          .eq('organization_id', input.organizationId)
+          .in('id', customerIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[], error: null }),
+    db
+      .from('memberships')
+      .select('user_id, display_name')
+      .eq('organization_id', input.organizationId),
+  ]);
+
+  const words: Vocabulary = {
+    statuses: new Map(),
+    resources: new Map(),
+    workItems: new Map((jobs.data ?? []).map((row) => [row.id, row.title])),
+    stages: new Map(),
+    outcomes: new Map(),
+    customers: new Map((customers.data ?? []).map((row) => [row.id, row.name])),
+  };
+  const names = new Map((members.data ?? []).map((row) => [row.user_id, row.display_name]));
+
+  return rows.map((row) => ({
+    id: row.id,
+    occurredAt: row.occurred_at,
+    action: row.action,
+    description: describe(row, words, 'location'),
+    actorName: names.get(row.actor_id) ?? null,
+  }));
+}
+
+/**
+ * What work is about, and its own history: direct events, documents attached here, and the two
+ * `work_item.*` actions that actually snapshot `asset_id` in their own payload.
+ *
+ * **Both `work_item.created` and `work_item.updated` qualify here, unlike a location's.**
+ * `create_work_item`'s event has carried `asset_id` since the column itself arrived
+ * (`20260827000004`) — the asymmetry with `location_id` above is a fact about what one event
+ * writer copied and the other didn't, not a difference this reader invents. No other
+ * `work_item.*` action carries `asset_id` (`status_changed`, `scheduled`, `unscheduled`, a priced
+ * line, a cost, an invoice, a payment — none of them do), so nothing else here would be
+ * truthfully attributable without joining to the asset a job currently names, which is exactly
+ * the current-state hazard this reader refuses for the same reason `listLocationTimeline` does.
+ *
+ * **Readings are deliberately absent.** `recordAssetReading` writes no `events` row at all — only
+ * `asset_readings`, an append-only counter log read by its own dedicated section. Nothing here
+ * fabricates one.
+ */
+export async function listAssetTimeline(
+  db: Db,
+  input: { organizationId: string; assetId: string; limit?: number },
+): Promise<TimelineEntry[]> {
+  const limit = input.limit ?? 100;
+
+  const [ownEvents, documentEvents, workItemEvents] = await Promise.all([
+    db
+      .from('events')
+      .select('id, action, payload, occurred_at, actor_id, entity_id')
+      .eq('organization_id', input.organizationId)
+      .eq('entity_type', 'asset')
+      .eq('entity_id', input.assetId)
+      .in('action', ASSET_DIRECT_ACTIONS as unknown as string[]),
+    db
+      .from('events')
+      .select('id, action, payload, occurred_at, actor_id, entity_id')
+      .eq('organization_id', input.organizationId)
+      .eq('action', 'document.created')
+      .eq('payload->>asset_id', input.assetId),
+    db
+      .from('events')
+      .select('id, action, payload, occurred_at, actor_id, entity_id')
+      .eq('organization_id', input.organizationId)
+      .in('action', ASSET_WORK_ITEM_ACTIONS as unknown as string[])
+      .eq('payload->>asset_id', input.assetId),
+  ]);
+
+  if (ownEvents.error) {
+    throw new DomainError(ownEvents.error.message, 'timeline.asset_failed');
+  }
+  if (documentEvents.error) {
+    throw new DomainError(documentEvents.error.message, 'timeline.asset_failed');
+  }
+  if (workItemEvents.error) {
+    throw new DomainError(workItemEvents.error.message, 'timeline.asset_failed');
+  }
+
+  const rows = [
+    ...(ownEvents.data ?? []),
+    ...(documentEvents.data ?? []),
+    ...(workItemEvents.data ?? []),
+  ]
+    .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at))
+    .slice(0, limit) as EventRow[];
+  if (rows.length === 0) return [];
+
+  // Bounded by what this batch actually names, not by the whole business — the same discipline
+  // `listRecentActivity` documents for the same reason.
+  const jobIds = [
+    ...new Set(
+      rows
+        .filter((row) => (ASSET_WORK_ITEM_ACTIONS as readonly string[]).includes(row.action))
+        .map((row) => row.entity_id),
+    ),
+  ];
+
+  const [jobs, members] = await Promise.all([
+    jobIds.length > 0
+      ? db
+          .from('work_items')
+          .select('id, title')
+          .eq('organization_id', input.organizationId)
+          .in('id', jobIds)
+      : Promise.resolve({ data: [] as { id: string; title: string }[], error: null }),
+    db
+      .from('memberships')
+      .select('user_id, display_name')
+      .eq('organization_id', input.organizationId),
+  ]);
+
+  const words: Vocabulary = {
+    statuses: new Map(),
+    resources: new Map(),
+    workItems: new Map((jobs.data ?? []).map((row) => [row.id, row.title])),
     stages: new Map(),
     outcomes: new Map(),
   };

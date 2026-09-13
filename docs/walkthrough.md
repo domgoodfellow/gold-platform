@@ -174,11 +174,16 @@ A brand-new business has no vocabulary, so the board is empty.
 
 ### 5. Who the work is for — *Customers*, *Locations*
 
-Open Customer, Location and Asset records rather than judging them from list rows. Customer
-shows its documents, custom fields and timeline. Location and Asset have real detail routes and
-document relationships; their event timelines are not yet surfaced. Resource has a detail
-experience but no domain-level Document relationship. Custom-field editing is currently
-surfaced for Customer and Work Item, not every entity whose database row supports `custom`.
+Open Customer, Location and Asset records rather than judging them from list rows. Customer,
+Location and Asset each show their documents, custom fields and a History section built on the
+same `ActivityList`. A Location's History admits its own creation and linking events, a document
+attached there, and a job's own edit the moment it is corrected to name that location — not a
+job's creation, since `create_work_item`'s event never snapshotted `location_id` and joining to a
+job's *current* location would misattribute history to a job that has since moved elsewhere. An
+Asset's History has no such gap: both a job's creation and its later edits snapshot `asset_id`.
+Resource has a detail experience but no domain-level Document relationship. Custom-field editing
+is currently surfaced for Customer and Work Item, not every entity whose database row supports
+`custom`.
 
 Create a customer, create a location, link them. The customer's detail page is the CRM screen —
 locations, documents, a timeline read from `events` (a projection, not a table of its own), and

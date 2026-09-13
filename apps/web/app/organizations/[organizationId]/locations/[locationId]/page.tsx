@@ -6,12 +6,14 @@ import { DividedList, EmptyState, Section, SectionHeading } from '@/components/c
 import { Hint } from '@/components/controls/inputs';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { DocumentsSection } from '@/features/documents/section';
+import { ActivityList } from '@/features/timeline/activity-list';
 import { geocodingProvider } from '@/lib/adapters/geocoding';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { getLocation } from '@/lib/domain/locations/locations';
+import { listLocationTimeline } from '@/lib/domain/timeline/timeline';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
 import { LocationCoordinatesForm } from '../location-forms';
@@ -33,13 +35,14 @@ export default async function LocationPage({
     notFound();
   }
 
-  const [customers, definitions, documents, assets, workItems, geocoding] = await Promise.all([
+  const [customers, definitions, documents, assets, workItems, geocoding, timeline] = await Promise.all([
     listCustomers(db, { organizationId }),
     listFieldDefinitions(db, { organizationId, entityType: 'location' }),
     listDocuments(db, { organizationId, attachedTo: { entity: 'location', id: locationId } }),
     listAssets(db, { organizationId, locationId }),
     listWorkItems(db, { organizationId, locationId }),
     geocodingProvider(),
+    listLocationTimeline(db, { organizationId, locationId }),
   ]);
 
   const mayEdit = organization.capabilities.includes('location.create');
@@ -170,6 +173,14 @@ export default async function LocationPage({
         uploadAction={uploadLocationDocumentAction}
         hiddenFields={{ organizationId, locationId }}
       />
+
+      <Section className="mt-10">
+        <SectionHeading>History</SectionHeading>
+        {/* Not capability-gated, the same reasoning Customer and Work Item's own History
+            sections give: `events` is already restricted by RLS to this tenant, so there is
+            nothing here a member of this business may not see. */}
+        <ActivityList timeline={timeline} timezone={organization.timezone} />
+      </Section>
     </>
   );
 }

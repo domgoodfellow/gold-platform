@@ -50,13 +50,14 @@ the same guard `scripts/demo/run.ts` applies to itself.
 ## What's covered
 
 One spec file per durable journey (see each file's own doc comment for why it's there):
-record navigation (Asset/Location/Resource list → record), a Work Item's relationship links,
-uploading a document and seeing it in that record's activity history (proving the
-`document.created` attribution fix), reaching `/account` through the account menu, the
-Automations workspace after its file-level decomposition, the public booking preview link from
-Settings, and the two operator paths `docs/product-surface-audit.md` found unreachable —
-reassigning a member's role and revoking a customer's portal link, each also proven absent for a
-caller who lacks the governing capability.
+record navigation (Asset/Location/Resource list → record, each now including its own History
+section), a Work Item's relationship links, uploading a document to a Customer, Work Item,
+Location or Asset and seeing it in that record's own activity history (proving both the
+`document.created` attribution fix and `listLocationTimeline`/`listAssetTimeline`), reaching
+`/account` through the account menu, the Automations workspace after its file-level decomposition,
+the public booking preview link from Settings, and the two operator paths
+`docs/product-surface-audit.md` found unreachable — reassigning a member's role and revoking a
+customer's portal link, each also proven absent for a caller who lacks the governing capability.
 
 ## What's deliberately not here
 

@@ -435,10 +435,13 @@ A person who has both contexts uses the context switcher; neither sidebar absorb
 nouns. Product settings are grouped under the Product they configure even when the permanent
 tenant navigation links to a smaller set of daily operating areas.
 
-Record surfaces preserve the current asymmetry honestly: Customer and Work Item expose custom
-field editing and timelines; Asset and Location record pages exist but do not yet expose their
-timelines, and Resource has no domain-level document relationship. These gaps belong to Product
-work, not new generic controls.
+Record surfaces preserve the current asymmetry honestly: Customer, Work Item, Location and Asset
+all expose a History section built on the same `ActivityList`; custom field editing is still
+surfaced only for Customer and Work Item, and Resource has no domain-level document relationship.
+Location and Asset's own timeline readers (`listLocationTimeline`/`listAssetTimeline`) admit only
+what the underlying events truthfully snapshot — a job's *current* location or asset is never
+joined in, since both are mutable and a current-state join would misattribute history (I8). These
+gaps belong to Product work, not new generic controls.
 
 ## 10. What this document does not decide
 
