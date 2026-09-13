@@ -5,6 +5,68 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A customer sees what they're billed, and can pay it themselves
+
+Closes the P1 gap `docs/product-surface-audit.md` named: a customer's own record showed no
+invoices, and the portal could show an outstanding balance with no way to act on it —
+Financial Operations content that CRM and Customer Experience each half-surfaced without the
+loop closing anywhere.
+
+- **`listCustomerInvoices`** (`lib/domain/billing/invoices.ts`) — every invoice a customer has
+  been billed across all of their work, batched (one query for the invoices, one for every
+  line, one for every payment, grouped in memory) rather than one round trip per invoice.
+  Filters on the invoice's own snapshotted `customer_id`, never a work item's mutable one — an
+  invoice's customer cannot change after issue (no update policy exists on `invoices` at all),
+  so this was already the historical truth and needed no new attribution logic, only a new
+  reader. The Customer record gained an **Invoices** section, gated on `billing` exactly as the
+  Work Item screen's own invoice section already is.
+- **A customer can now pay their own outstanding invoice from the portal.** Three narrow
+  `SECURITY DEFINER` functions — `begin_external_card_payment`, `confirm_external_card_payment`,
+  `external_card_payment_availability` — are the external axis's only doors onto
+  `payment_requests`; no RLS policy grants that table, or `payment_accounts`, to
+  `app.current_external_tenant()` at all (D22's "an external actor holds insert on exactly one
+  table," extended to a second axis via a function rather than a widened grant — see the new
+  I42). Each derives the caller's own external scope, re-proves the invoice is truthfully
+  theirs, and computes the outstanding amount in SQL — the same arithmetic
+  `invoiceStanding()`/`priceWorkItem()` already perform in TypeScript, pinned by a
+  correspondence test rather than trusted from a client or duplicated freely (D35's shape). The
+  browser submits an invoice id and nothing else; amount, currency, tenant and processor account
+  are all derived.
+- **`requestCardPayment` and the new `requestPortalCardPayment` share one implementation of
+  "ask the provider and record its reply"** (`askProviderToCollect`,
+  `lib/domain/billing/card-payments.ts`) — what differs between an operator and a portal
+  customer is authorization and where the request lands, never how the processor is asked.
+  `PayInvoiceForm` (`app/(public)/portal/[token]/`) redirects the customer straight to checkout
+  rather than handing back a link for them to send to themselves, which is what the operator's
+  own "take a payment" control still correctly does — a different act for a different caller.
+- **The processor's return URL is deliberately not `/portal/{token}`.** That token is the
+  portal's whole credential, and handing it to a third party as a `success_url`/`cancel_url`
+  would disclose it for no reason this flow needs. `/portal/payment-return` is a static,
+  token-free page; a checkout redirect is never treated as proof of payment (only the existing
+  verified webhook writes a `payments` row), and the page says so rather than showing a false
+  "paid."
+- **Fixed a pre-existing bug found while reusing this code.** `payment_requests` has carried
+  only `select, insert` to `authenticated` since `20260829000008` — no migration since ever
+  added `update`, so `requestCardPayment`'s own correction of `provider_reference` to the
+  processor's real session id has always failed with a bare permission error, for every
+  operator, on every real request. Not load-bearing for money moving correctly (the webhook
+  resolves a settlement by `payment_requests.id`, never by this column), but a live checkout
+  session was being created and then the caller was thrown an exception anyway. Fixed with a
+  column-scoped `update (provider_reference)` grant behind the same `payment.record` capability
+  the insert already requires, the same shape `customer_portal_invites`' `revoked_at` grant
+  already uses.
+- One migration: `20260920000001_a_customer_pays_their_own_invoice.sql` — the three new
+  functions, the operator grant fix, and no schema (no new column, no new table).
+- Tests: `tests/portal-payments.test.ts` (own/other-customer/other-tenant/settled/module-off
+  refusals, no `payments` row written, the operator grant fix proven both ways, and
+  `listCustomerInvoices` checked against the per-invoice reader for the identical figure);
+  `e2e/portal-payments.spec.ts` (the Invoices section is reachable, and no Pay control renders
+  in this deployment, which has no processor configured — proving the safe default through a
+  real browser rather than mocking a payment provider Playwright must never call for real).
+  Fixed an unrelated, pre-existing ambiguity this surfaced in `record-navigation.spec.ts`: its
+  own `getByText('42')` could match a `documents.spec.ts` upload's `Date.now()`-based filename
+  once both specs had run against the same asset in one session.
+
 ### Location and Asset expose their own History
 
 Closes the P1 gap `docs/product-surface-audit.md` named: `features/timeline/activity-list.tsx`

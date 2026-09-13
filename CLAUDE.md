@@ -279,6 +279,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | A provider named on a meter | Two providers may answer one meter (Deepgram or ElevenLabs, both `transcription_seconds`); a meter that named one could not express the second | `platform_meters` carries no provider column; `platform_provider_rates` is keyed by `(provider_key, meter_id, currency, effective_from)` |
 | A provider cost subtracted from a charge in a different currency | Nothing converts, and a guessed margin is worse than none (I10, restated for GOLD's own books) | `organization_commercial_summary` returns `margin_minor` as null whenever the two currencies disagree and the cost is not exactly zero |
 | A reconciliation that adds quantity or a customer charge | It would duplicate a fact `usage_events` already recorded once | `usage_cost_reconciliations` has no quantity column and no customer-charge column at all |
+| An RLS grant on `payment_requests`/`payment_accounts` for the external axis | D22's rule, one axis over: an external actor holds insert on exactly one table, its own binding — a customer paying their own invoice is a second write, not a wider grant on the same one | No policy for `app.current_external_tenant()` exists on either table; `begin_external_card_payment`, `confirm_external_card_payment` and `external_card_payment_availability` are the only doors, each deriving scope itself and re-proving invoice ownership rather than trusting an earlier read (I42) |
 
 ### Provider bindings and secrets
 

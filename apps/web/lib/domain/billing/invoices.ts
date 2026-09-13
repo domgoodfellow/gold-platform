@@ -113,6 +113,101 @@ export async function getInvoiceForWorkItem(
   };
 }
 
+/**
+ * What this customer has actually been billed, across every job they've ever had — not which
+ * jobs currently point to them. `invoices.customer_id` is snapshotted at `issue_invoice` and
+ * never updated afterward (no update policy exists on `invoices` at all), so filtering on it
+ * directly is already the historical truth (I8); nothing here joins through a work item's own,
+ * mutable `customer_id`.
+ *
+ * **Batched rather than one query per invoice.** A customer's own record is exactly the
+ * "dozens of invoices" case the portal's original per-invoice reads were never written for —
+ * two extra queries, scoped to the invoice ids this customer actually has, rather than one for
+ * every invoice's lines and another for every invoice's payments.
+ */
+export async function listCustomerInvoices(
+  db: Db,
+  input: { organizationId: string; customerId: string },
+): Promise<Invoice[]> {
+  const { data: invoices, error } = await db
+    .from('invoices')
+    .select('id, work_item_id, number, billed_to, customer_id, currency, issued_at, due_at')
+    .eq('organization_id', input.organizationId)
+    .eq('customer_id', input.customerId)
+    .order('issued_at', { ascending: false });
+
+  if (error) {
+    throw new DomainError(error.message, 'invoices.customer_read_failed');
+  }
+  if (!invoices || invoices.length === 0) return [];
+
+  const invoiceIds = invoices.map((invoice) => invoice.id);
+
+  const [linesResult, paymentsResult] = await Promise.all([
+    db
+      .from('invoice_lines')
+      .select('id, invoice_id, description, unit, unit_amount_minor, currency, quantity, position')
+      .eq('organization_id', input.organizationId)
+      .in('invoice_id', invoiceIds)
+      .order('position', { ascending: true }),
+    db
+      .from('payments')
+      .select('id, invoice_id, amount_minor, currency, received_at, provider, note')
+      .eq('organization_id', input.organizationId)
+      .in('invoice_id', invoiceIds)
+      .order('received_at', { ascending: true }),
+  ]);
+
+  if (linesResult.error) {
+    throw new DomainError(linesResult.error.message, 'invoices.lines_failed');
+  }
+  if (paymentsResult.error) {
+    throw new DomainError(paymentsResult.error.message, 'payments.list_failed');
+  }
+
+  const linesByInvoice = new Map<string, InvoiceLine[]>();
+  for (const row of linesResult.data ?? []) {
+    const existing = linesByInvoice.get(row.invoice_id) ?? [];
+    existing.push({
+      id: row.id,
+      description: row.description,
+      unit: row.unit,
+      unitAmountMinor: row.unit_amount_minor,
+      currency: row.currency,
+      quantity: row.quantity,
+      position: row.position,
+    });
+    linesByInvoice.set(row.invoice_id, existing);
+  }
+
+  const paymentsByInvoice = new Map<string, Payment[]>();
+  for (const row of paymentsResult.data ?? []) {
+    const existing = paymentsByInvoice.get(row.invoice_id) ?? [];
+    existing.push({
+      id: row.id,
+      amountMinor: row.amount_minor,
+      currency: row.currency,
+      receivedAt: row.received_at,
+      provider: row.provider,
+      note: row.note,
+    });
+    paymentsByInvoice.set(row.invoice_id, existing);
+  }
+
+  return invoices.map((row) => ({
+    id: row.id,
+    workItemId: row.work_item_id,
+    number: row.number,
+    billedTo: row.billed_to,
+    customerId: row.customer_id,
+    currency: row.currency,
+    issuedAt: row.issued_at,
+    dueAt: row.due_at,
+    lines: linesByInvoice.get(row.id) ?? [],
+    payments: paymentsByInvoice.get(row.id) ?? [],
+  }));
+}
+
 export async function listInvoiceLines(
   db: Db,
   input: { organizationId: string; invoiceId: string },

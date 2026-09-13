@@ -1,6 +1,6 @@
 import { Hint } from '@/components/controls/inputs';
 import { DefinitionList, Detail } from '@/components/display/data';
-import { PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CustomFieldValues } from '@/features/custom-fields/values';
@@ -9,6 +9,7 @@ import { ActivityList } from '@/features/timeline/activity-list';
 import { EditCustomerForm } from '@/features/crm/customers/edit-customer-form';
 import { CallCustomerForm } from '@/features/communications/voice/call-customer-form';
 import { CallHistory } from '@/features/communications/voice/call-history';
+import { invoiceStanding, listCustomerInvoices } from '@/lib/domain/billing/invoices';
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listCustomerCalls } from '@/lib/domain/reception/calls';
@@ -19,6 +20,7 @@ import { PortalLinkForm } from '@/features/portal-access/portal-link-form';
 import { PortalInviteList } from '@/features/portal-access/invite-list';
 import { listPortalInvites } from '@/lib/domain/portal/portal';
 import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
+import { formatMoney } from '@/lib/domain/work-items/consumption';
 import {
   createPortalInviteAction,
   revokePortalInviteAction,
@@ -43,7 +45,7 @@ export default async function CustomerPage({
   }
 
   const origin = await requestOrigin();
-  const [documents, definitions, timeline, invites, modules, stages, calls] = await Promise.all([
+  const [documents, definitions, timeline, invites, modules, stages, calls, invoices] = await Promise.all([
     listDocuments(db, {
       organizationId,
       attachedTo: { entity: 'customer', id: customerId },
@@ -54,6 +56,7 @@ export default async function CustomerPage({
     listUsableModules(db, { organizationId }),
     listCustomerStages(db, { organizationId }),
     listCustomerCalls(db, { organizationId, customerId }),
+    listCustomerInvoices(db, { organizationId, customerId }),
   ]);
 
   const mayAttach = organization.capabilities.includes('document.create');
@@ -70,6 +73,7 @@ export default async function CustomerPage({
   // that makes switching billing off remove the quote and the invoice from a job.
   const reception = modules.has('reception');
   const portal = modules.has('portal');
+  const billing = modules.has('billing');
   const stage = stages.find((entry) => entry.id === customer.stageId) ?? null;
 
   return (
@@ -157,6 +161,60 @@ export default async function CustomerPage({
         uploadAction={uploadCustomerDocumentAction}
         hiddenFields={{ organizationId, customerId }}
       />
+
+      {/* The same rule Reception follows above: switching billing off already removes the quote,
+          invoice and margin sections from every job screen (M4) — this is that rule's second
+          caller, not a new interpretation of it. */}
+      {billing ? (
+        <Section className="mt-8">
+          <SectionHeading>Invoices</SectionHeading>
+
+          {invoices.length === 0 ? (
+            <EmptyState className="mt-2">Nothing invoiced yet.</EmptyState>
+          ) : (
+            <DividedList className="mt-2">
+              {invoices.map((invoice) => {
+                const standing = invoiceStanding(invoice);
+                return (
+                  <li key={invoice.id} className="flex flex-col gap-1 py-2 text-sm">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <Link
+                        href={`/organizations/${organizationId}/work/${invoice.workItemId}`}
+                        className="font-medium underline underline-offset-4"
+                      >
+                        Invoice #{invoice.number}
+                      </Link>
+                      <span className="shrink-0 text-subtle">
+                        {new Intl.DateTimeFormat('en-GB', {
+                          dateStyle: 'medium',
+                          timeZone: organization.timezone,
+                        }).format(new Date(invoice.issuedAt))}
+                        {invoice.dueAt
+                          ? ` · due ${new Intl.DateTimeFormat('en-GB', {
+                              dateStyle: 'medium',
+                              timeZone: organization.timezone,
+                            }).format(new Date(invoice.dueAt))}`
+                          : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-3 text-muted">
+                      <span>{standing.settled ? 'Settled' : 'Outstanding'}</span>
+                      <span className="shrink-0 tabular-nums">
+                        {standing.total
+                          ? formatMoney(standing.total.totalMinor, standing.total.currency)
+                          : '—'}
+                        {!standing.settled && standing.outstandingMinor !== null && standing.total
+                          ? ` (${formatMoney(standing.outstandingMinor, standing.total.currency)} due)`
+                          : null}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </DividedList>
+          )}
+        </Section>
+      ) : null}
 
       {/* The same rule Reception follows above: a module off takes its section off this screen
           too, not just its own area (constraints.md — "a colour keyed to what a status means"

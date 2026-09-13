@@ -20,7 +20,10 @@ test('opens the asset list, follows a row to its record, and finds readings and 
   await expect(page).toHaveURL(new RegExp(`/assets/${ctx.assetId}$`));
   await expect(page.getByRole('heading', { name: 'E2E Test Compressor', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Readings' })).toBeVisible();
-  await expect(page.getByText('42', { exact: false })).toBeVisible();
+  // The exact reading text, not a bare "42" — `documents.spec.ts` uploads a file named with
+  // `Date.now()`, and an epoch timestamp routinely contains "42" as a substring, which made
+  // this ambiguous the day both specs ran against the same asset in one session.
+  await expect(page.getByText('42 hours', { exact: false })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible();
 
   // The reading itself stays a dedicated log, not folded into History — this asset's creation

@@ -210,12 +210,24 @@ derived on every read. With `STRIPE_SECRET_KEY` set and *Card payments* on, a ca
 appears; connect the business's own processor account from Settings → Getting paid — GOLD stores
 an `acct_` id, never a key.
 
+**A customer's own record shows every invoice across all of their work**, not only the one on the
+job you happen to have open — Customers → any customer → *Invoices*: number, related job, dates,
+total and standing, each drawn from the same `invoiceStanding` a job's own page reads.
+
 ### 9. The customer's own view
 
 Customer detail → **portal link** → open `/portal/{token}` in a private window. The token is the
 credential, and the page doesn't pretend otherwise. Every word that isn't application state is
 the business's own copy from Settings → Public page — no platform sentence appears on a public
 surface.
+
+**An outstanding invoice, with card payments connected, carries its own Pay control.** The
+customer clicks it and goes straight to the processor's own checkout — no link handed back for
+them to send to themselves, the way the operator's own "take a payment" control still works.
+Nothing is recorded as paid on the way back: the processor's redirect lands on a token-free
+`/portal/payment-return`, deliberately not `/portal/{token}` itself, so this credential is never
+handed to a third party. Reopen the original link to see the invoice's real, webhook-confirmed
+standing.
 
 **Withdraw it from the same section.** The customer's own Portal section lists every link this
 business has ever made for them, split into *Active* and *Withdrawn*. Each active row shows its

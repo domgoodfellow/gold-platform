@@ -5337,6 +5337,15 @@ export type Database = {
         Args: { p_membership_id: string; p_role_id: string }
         Returns: undefined
       }
+      begin_external_card_payment: {
+        Args: { p_invoice_id: string; p_provider: string }
+        Returns: {
+          account_id: string
+          currency: string
+          outstanding_minor: number
+          request_id: string
+        }[]
+      }
       begin_import_run: {
         Args: { p_mapping_id: string; p_organization_id: string }
         Returns: string
@@ -5377,6 +5386,10 @@ export type Database = {
       claim_portal_invite: { Args: { p_token: string }; Returns: string }
       clear_plan_feature_override: {
         Args: { p_feature_id: string; p_plan_id: string }
+        Returns: undefined
+      }
+      confirm_external_card_payment: {
+        Args: { p_provider_reference: string; p_request_id: string }
         Returns: undefined
       }
       create_asset: {
@@ -5550,6 +5563,14 @@ export type Database = {
         Returns: undefined
       }
       end_support_session: { Args: { p_id: string }; Returns: undefined }
+      external_card_payment_availability: {
+        Args: { p_invoice_id: string; p_provider: string }
+        Returns: {
+          account_id: string
+          currency: string
+          outstanding_minor: number
+        }[]
+      }
       grant_plan_module: {
         Args: { p_module_id: string; p_plan_id: string }
         Returns: undefined
