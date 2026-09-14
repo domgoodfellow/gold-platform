@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { Separator } from '@gold/ui/components/separator';
 import { SidebarTrigger } from '@gold/ui/components/sidebar';
 import { usePlatformHeaderOverride } from '@/features/platform/platform-header-title';
+import { WorkspaceHeaderActions } from '@/components/containers/workspace-right-rail';
 
 const TITLES: Array<[prefix: string, title: string]> = [
   ['/platform/organizations', 'Organizations'],
@@ -29,7 +30,8 @@ export function SiteHeader() {
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
-        <h1 className="truncate text-sm font-semibold sm:text-base">{override ?? titleFor(pathname)}</h1>
+        <h1 className="min-w-0 flex-1 truncate text-sm font-semibold sm:text-base">{override ?? titleFor(pathname)}</h1>
+        <WorkspaceHeaderActions />
       </div>
     </header>
   );

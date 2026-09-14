@@ -6,7 +6,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -15,6 +14,12 @@ import Link from 'next/link';
 import { ArrowRight, Bot, Settings, X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { Sheet, SheetContent } from '@gold/ui/components/sheet';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  type PanelSize,
+} from '@gold/ui/components/resizable';
 import { cx, FOCUS_RING } from '@/components/class-names';
 
 /**
@@ -48,6 +53,10 @@ type RailContextValue = {
 
 const RailContext = createContext<RailContextValue | null>(null);
 
+// Pixels — `react-resizable-panels`' `Panel` treats a bare number as pixels (a string is what it
+// reads as a percentage), so this keeps the same units the rail already persisted under
+// `WIDTH_STORAGE_KEY` while gaining the library's accessible drag/keyboard-resize handling in
+// place of the hand-rolled `mousemove` listener this replaces.
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 600;
 const DEFAULT_WIDTH = 380;
@@ -262,75 +271,55 @@ function RailBody({ mode, configure, agent }: { mode: RailMode; configure: Confi
   );
 }
 
-function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
-  const dragging = useRef(false);
-
-  useEffect(() => {
-    function handleMove(event: MouseEvent) {
-      if (!dragging.current) return;
-      onResize(-event.movementX);
-    }
-    function handleUp() {
-      dragging.current = false;
-    }
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
-    };
-  }, [onResize]);
-
-  return (
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="Resize panel"
-      onMouseDown={() => {
-        dragging.current = true;
-      }}
-      className="w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-border active:bg-border"
-    />
-  );
-}
-
 /**
- * The single rail host: docked beside the workspace from `lg` up, an overlay Sheet below it.
- * Content (Agent, Configure) is supplied by whoever registered it — this component owns only the
- * mode switch, the dock/overlay choice, and the resize handle.
+ * The single rail host, shared by every shell that mounts a `WorkspaceRailProvider` (Organization
+ * and Platform alike — see `WorkspaceShell`): docked beside `main` from `lg` up, an overlay Sheet
+ * below it. Content (Agent, Configure) is supplied by whoever registered it; this component owns
+ * only the mode switch, the dock/overlay choice, and — docked — the resizable split itself,
+ * `react-resizable-panels` rather than a hand-rolled `mousemove` listener, so the divider is a
+ * real, keyboard-operable ARIA `separator` rather than a mouse-only affordance.
  */
-export function WorkspaceRightRail() {
+export function WorkspaceRightRail({ main }: { main: ReactNode }) {
   const { mode, close, configure, agent, width, setWidth } = useWorkspaceRail();
   const isDocked = useIsDocked();
   const open = mode !== 'closed';
   const title = mode === 'agent' ? 'Agent' : (configure?.title ?? 'Configure');
 
   if (isDocked) {
-    if (!open) return null;
+    if (!open) return <>{main}</>;
     return (
-      // `sticky` + an explicit viewport-relative height, rather than relying on flex stretch
-      // matching its row sibling — the workspace column can render far taller than the viewport
-      // (a long Work list), and stretch would have made the rail that tall too: real, but
-      // scrolled out of view along with the rest of the page, so nothing in it was ever visible.
-      <div className="sticky top-0 flex h-svh shrink-0" style={{ width }}>
-        <ResizeHandle onResize={(delta) => setWidth(width + delta)} />
-        <aside
-          aria-label={title}
-          className="flex min-h-0 flex-1 flex-col border-l border-border bg-background"
+      <ResizablePanelGroup orientation="horizontal" className="min-h-svh w-full">
+        <ResizablePanel id="workspace-main" groupResizeBehavior="preserve-relative-size">
+          {main}
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel
+          id="workspace-rail"
+          defaultSize={width}
+          minSize={MIN_WIDTH}
+          maxSize={MAX_WIDTH}
+          groupResizeBehavior="preserve-pixel-size"
+          onResize={(size: PanelSize) => setWidth(size.inPixels)}
+          className="flex flex-col border-l border-border bg-background"
         >
-          <RailHeader title={title} onClose={close} settingsHref={mode === 'configure' ? configure?.settingsHref : undefined} />
-          <RailBody mode={mode} configure={configure} agent={agent} />
-        </aside>
-      </div>
+          <aside aria-label={title} className="flex h-full min-h-0 flex-1 flex-col">
+            <RailHeader title={title} onClose={close} settingsHref={mode === 'configure' ? configure?.settingsHref : undefined} />
+            <RailBody mode={mode} configure={configure} agent={agent} />
+          </aside>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     );
   }
 
   return (
-    <Sheet open={open} onOpenChange={(next) => !next && close()}>
-      <SheetContent side="bottom" showCloseButton={false} className="flex h-[85vh] flex-col gap-0 p-0">
-        <RailHeader title={title} onClose={close} settingsHref={mode === 'configure' ? configure?.settingsHref : undefined} />
-        <RailBody mode={mode} configure={configure} agent={agent} />
-      </SheetContent>
-    </Sheet>
+    <>
+      {main}
+      <Sheet open={open} onOpenChange={(next) => !next && close()}>
+        <SheetContent side="bottom" showCloseButton={false} className="flex h-[85vh] flex-col gap-0 p-0">
+          <RailHeader title={title} onClose={close} settingsHref={mode === 'configure' ? configure?.settingsHref : undefined} />
+          <RailBody mode={mode} configure={configure} agent={agent} />
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

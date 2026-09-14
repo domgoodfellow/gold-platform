@@ -6,6 +6,7 @@ import { signOut } from '@/lib/domain/identity/credentials';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { canAnswerPlatformQuestions } from '@/lib/domain/assistant/platform-questions';
 
 export default async function PlatformLayout({ children }: LayoutProps<'/platform'>) {
   const db = await getDb();
@@ -25,7 +26,10 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
   // The same read the organization shell already makes for its own switcher (D45: one identity,
   // both facts, at once) — so a staff member who also belongs to one or more businesses can move
   // to any of them from here without a detour through /account or /organizations.
-  const businesses = await listMyOrganizations(db);
+  const [businesses, canAnswerAgent] = await Promise.all([
+    listMyOrganizations(db),
+    canAnswerPlatformQuestions(),
+  ]);
 
   async function signOutAction() {
     'use server';
@@ -43,6 +47,7 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
         name: organization.name,
         role: organization.role,
       }))}
+      canAnswerAgent={canAnswerAgent}
     >
       {children}
     </PlatformShell>

@@ -20,6 +20,7 @@
     "./components/item": "./src/components/item.tsx",
     "./components/label": "./src/components/label.tsx",
     "./components/native-select": "./src/components/native-select.tsx",
+    "./components/resizable": "./src/components/resizable.tsx",
     "./components/separator": "./src/components/separator.tsx",
     "./components/sheet": "./src/components/sheet.tsx",
     "./components/sidebar": "./src/components/sidebar.tsx",
@@ -36,6 +37,7 @@
     "cn": "^0.2.6",
     "lucide-react": "^1.41.0",
     "radix-ui": "^1.6.7",
+    "react-resizable-panels": "^4.12.4",
     "sonner": "^2.0.8"
   },
   "peerDependencies": {

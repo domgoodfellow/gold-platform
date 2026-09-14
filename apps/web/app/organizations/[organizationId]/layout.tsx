@@ -1,4 +1,3 @@
-import { AppShell } from '@/components/containers/app-shell';
 import { redirect } from 'next/navigation';
 import { AreaTrail, OrgNavBar, OrgSidebar, SetupBadge, SetupEntry } from './org-shell';
 import { BrandStyle } from '@/features/branding/brand-style';
@@ -16,12 +15,9 @@ import { requireOrganization } from '@/lib/route/organization';
 import { AccountMenu } from '@/components/containers/account-menu';
 import { Separator } from '@gold/ui/components/separator';
 import { SidebarTrigger } from '@gold/ui/components/sidebar';
-import {
-  WorkspaceHeaderActions,
-  WorkspaceRailProvider,
-  WorkspaceRightRail,
-} from '@/components/containers/workspace-right-rail';
-import { AgentRail } from '@/features/agent/agent-rail';
+import { WorkspaceHeaderActions } from '@/components/containers/workspace-right-rail';
+import { WorkspaceShell } from '@/components/containers/workspace-shell';
+import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
 import { canAnswerQuestions, listAgentRuns } from '@/lib/domain/assistant/questions';
 
 /**
@@ -143,34 +139,29 @@ export default async function OrganizationLayout({
     // `data-brand` sits here rather than on `<html>` — a brand belongs to one business, and this layout is the only thing that knows which.
     <div data-brand className="min-h-full">
       <BrandStyle brand={brand} />
-      <WorkspaceRailProvider>
-        <div className="flex min-h-full w-full">
-          <div className="min-w-0 flex-1">
-            <AppShell
-              sidebar={sidebar}
-              header={header}
-              bottomBar={
-                <OrgNavBar
-                  organizationId={organizationId}
-                  enabledModules={[...enabledModules]}
-                  featureAvailability={[...featureAvailability]}
-                  capabilities={organization.capabilities}
-                />
-              }
-            >
-              {children}
-            </AppShell>
-          </div>
-          <AgentRail
+      <WorkspaceShell
+        sidebar={sidebar}
+        header={header}
+        bottomBar={
+          <OrgNavBar
+            organizationId={organizationId}
+            enabledModules={[...enabledModules]}
+            featureAvailability={[...featureAvailability]}
+            capabilities={organization.capabilities}
+          />
+        }
+        agent={
+          <TenantAgentRail
             organizationId={organizationId}
             organizationName={organization.name}
             canAnswer={canAnswer}
             mayAsk={organization.capabilities.includes('assistant.ask')}
             runs={agentRuns}
           />
-          <WorkspaceRightRail />
-        </div>
-      </WorkspaceRailProvider>
+        }
+      >
+        {children}
+      </WorkspaceShell>
     </div>
   );
 }
