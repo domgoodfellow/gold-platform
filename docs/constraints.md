@@ -479,6 +479,15 @@ engine, and CRM is a module with no engine at all.
 kernel misfiled. A module hides what it owns *everywhere*, not only its own area. A module that
 is configured inside another's screen declares that dependency.
 
+**Amended for the canonical catalogue's Activation axis.** This module is opt-in — a business
+starts with the operational core and switches on everything else deliberately (D41's four-state
+table). The canonical Feature layer above it answers a different question with the opposite
+default: an *entitled* Feature is active unless the organization deliberately disables it
+(opt-out), because GOLD has already decided what it provides and a tenant's only lever is turning
+an entitled, ordinary capability off. The two are not in tension — a legacy module a business has
+never switched on is simply never entitled at the Feature layer, so there is nothing to opt out
+of. See `domain-model.md`'s Activation/Readiness rows and `organization_feature_activation_overrides`.
+
 ### D26 — `apps/api` arrives at M4, and webhook ingress is what brings it
 
 **Decision.** The Python deployable exists because providers and scheduled work call in with no
@@ -810,6 +819,16 @@ what that module owns must be refused, with a sentence naming the module and the
 ended. Reads and export remain available. Today the generalized resolution model computes this
 state, but only `card_payments` enforces it at its write boundary; M17 owns complete applicable
 coverage.
+
+**Amended: deactivation is now a fact this table's own absence of a row can no longer prove
+alone.** Before `organization_feature_activation_overrides` existed, "wanted, no term" (row two of
+the table above) was the only shape that distinguished a business that never asked for a module
+from one that switched it off deliberately — and it conflated that with paid-but-lapsed. The
+canonical Feature layer now records a deliberate opt-out as its own fact, independent of whether a
+term exists at all (`domain-model.md`'s Activation row). This table's own four states are
+unchanged and still legacy-load-bearing; the backfill migration
+(`20260921000001`) reads exactly one of them — paid, wanted-absent — as the one case with
+independent evidence of a deliberate deactivation worth preserving as an override.
 
 **Refused by a trigger, not by a policy**, and that distinction is D25 surviving contact with
 money. No RLS policy consults entitlement. A policy makes rows disappear and cannot explain
