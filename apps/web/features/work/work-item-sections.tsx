@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { Badge, DefinitionList, Detail } from '@/components/display/data';
 import { Disclosure } from '@/components/containers/card';
 import { RecordHeader } from '@/components/containers/record-header';
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { ChecklistItem } from '@/lib/domain/work-items/checklists';
@@ -21,7 +23,6 @@ import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import type { Invoice, InvoiceStanding } from '@/lib/domain/billing/invoices';
 import { formatWindow } from '@/lib/domain/scheduling/window';
 import { AddChecklistItemForm, ChecklistItemControl } from './checklist-forms';
-import { EditWorkItemForm } from './details-form';
 import { RecordCostForm, RecordTimeForm } from './consumption-forms';
 import { AddPricedLineForm, RemovePricedLineForm } from './pricing-forms';
 import { IssueInvoiceForm, RecordPaymentForm, RequestCardPaymentForm } from './billing-forms';
@@ -164,40 +165,6 @@ export function WorkOperationalActions({
   );
 }
 
-export function WorkDetailsSection({ organizationId, workItem, customers, locations, assets, assetsEnabled, definitions, mayEdit }: {
-  organizationId: string;
-  workItem: WorkItem;
-  customers: { id: string; label: string }[];
-  locations: { id: string; label: string }[];
-  assets: { id: string; label: string }[];
-  assetsEnabled: boolean;
-  definitions: FieldDefinition[];
-  mayEdit: boolean;
-}) {
-  return (
-    <Section className="mt-8">
-      <SectionHeading>Job details</SectionHeading>
-      {mayEdit ? (
-        <Disclosure summary="Correct job details" className="mt-3">
-          <EditWorkItemForm
-            organizationId={organizationId}
-            workItem={workItem}
-            customers={customers}
-            locations={locations}
-            assets={assets}
-            assetsEnabled={assetsEnabled}
-            definitions={definitions}
-          />
-        </Disclosure>
-      ) : (
-        <Hint weight="subtle" className="mt-1">
-          Your role cannot correct a job&rsquo;s details here.
-        </Hint>
-      )}
-    </Section>
-  );
-}
-
 export function WorkChecklistSection({ organizationId, workItemId, checklist, mayTick, mayAdd }: {
   organizationId: string;
   workItemId: string;
@@ -264,4 +231,40 @@ export function WorkInvoiceSection({ organizationId, workItemId, invoice, standi
 
 export function WorkMarginSection({ economics }: { economics: JobEconomics }) {
   return <Section className="mt-8"><SectionHeading>Margin</SectionHeading>{economics.marginMinor !== null && economics.currency ? <p className="mt-2 flex justify-between gap-3 text-sm font-medium"><span>{economics.marginMinor < 0 ? 'Loss on this job' : 'Margin on this job'}</span><span className="tabular-nums">{formatMoney(economics.marginMinor, economics.currency)}</span></p> : <Hint weight="subtle" className="mt-1">{economics.revenue === null ? 'Nothing is priced on this job yet, so there is nothing to compare its costs against.' : 'This job is priced in one currency and its costs are recorded in another, so there is no single margin. The two totals are above.'}</Hint>}</Section>;
+}
+
+/**
+ * The job's own tab chrome. Each slot is built by the page from the same section components
+ * this file always exported — the tabs decide layout only, and every existing gating condition
+ * (billing, module, capability) stays exactly where the page already put it.
+ */
+export function WorkItemTabs({
+  overview,
+  execution,
+  financials,
+  documents,
+  activity,
+}: {
+  overview: ReactNode;
+  execution: ReactNode;
+  financials: ReactNode;
+  documents: ReactNode;
+  activity: ReactNode;
+}) {
+  return (
+    <Tabs defaultValue="overview" className="mt-8">
+      <TabsList>
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="execution">Execution</TabsTrigger>
+        <TabsTrigger value="financials">Financials</TabsTrigger>
+        <TabsTrigger value="documents">Documents</TabsTrigger>
+        <TabsTrigger value="activity">Activity</TabsTrigger>
+      </TabsList>
+      <TabsContent value="overview" className="mt-6">{overview}</TabsContent>
+      <TabsContent value="execution" className="mt-6">{execution}</TabsContent>
+      <TabsContent value="financials" className="mt-6">{financials}</TabsContent>
+      <TabsContent value="documents" className="mt-6">{documents}</TabsContent>
+      <TabsContent value="activity" className="mt-6">{activity}</TabsContent>
+    </Tabs>
+  );
 }

@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/controls/button';
 import { FormActions, FormError, FormField } from '@/components/controls/form';
 import { TextInput } from '@/components/controls/inputs';
@@ -10,12 +11,12 @@ import type { CustomValues, FieldDefinition } from '@/lib/domain/fields/field-de
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import {
   updateWorkItemAction,
-  type WorkItemActionState,
+  type UpdateWorkItemState,
 } from '@/app/organizations/[organizationId]/work/[workItemId]/actions';
 
-const INITIAL: WorkItemActionState = { error: null };
+const INITIAL: UpdateWorkItemState = { error: null, updated: false };
 
-export function EditWorkItemForm({ organizationId, workItem, customers, locations, assets, assetsEnabled, definitions }: {
+export function EditWorkItemForm({ organizationId, workItem, customers, locations, assets, assetsEnabled, definitions, onUpdated }: {
   organizationId: string;
   workItem: WorkItem;
   customers: SelectOption[];
@@ -23,8 +24,16 @@ export function EditWorkItemForm({ organizationId, workItem, customers, location
   assets: SelectOption[];
   assetsEnabled: boolean;
   definitions: FieldDefinition[];
+  onUpdated?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(updateWorkItemAction, INITIAL);
+
+  useEffect(() => {
+    if (state.updated) {
+      toast.success('Job details saved');
+      onUpdated?.();
+    }
+  }, [state.updated, onUpdated]);
   const titleId = `work-title-${workItem.id}`;
   return (
     <form action={formAction} className="flex flex-col gap-3">

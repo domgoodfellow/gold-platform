@@ -25,6 +25,12 @@ export type WorkItemActionState = { error: string | null };
  */
 export type CardPaymentActionState = { error: string | null; payUrl: string | null };
 
+/**
+ * The details Sheet's own state, because it needs to know when it succeeded in order to close
+ * itself — the same reasoning `CardPaymentActionState` rests on, one line up.
+ */
+export type UpdateWorkItemState = { error: string | null; updated: boolean };
+
 function revalidate(organizationId: string, workItemId: string) {
   revalidatePath(`/organizations/${organizationId}/work/${workItemId}`);
 }
@@ -181,9 +187,9 @@ export async function removePricedLineAction(
 }
 
 export async function updateWorkItemAction(
-  _previous: WorkItemActionState,
+  _previous: UpdateWorkItemState,
   formData: FormData,
-): Promise<WorkItemActionState> {
+): Promise<UpdateWorkItemState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
   const workItemId = String(formData.get('workItemId') ?? '');
@@ -203,12 +209,12 @@ export async function updateWorkItemAction(
       custom: customValuesFromFormData(formData),
     });
   } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
+    if (error instanceof DomainError) return { error: error.message, updated: false };
     throw error;
   }
 
   revalidate(organizationId, workItemId);
-  return { error: null };
+  return { error: null, updated: true };
 }
 
 /**
