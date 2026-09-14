@@ -45,7 +45,7 @@ export async function createFieldAction(
   // The organization id comes from a hidden field a client could edit, and it's deliberately not
   // re-checked here — `field_definitions_insert` requires membership and `field.manage`, so
   // tampering produces a refusal rather than a leak.
-  revalidatePath(`/organizations/${organizationId}/fields`);
+  revalidatePath(`/organizations/${organizationId}/settings/data-automation`);
   return { error: null };
 }
 
@@ -80,6 +80,6 @@ export async function updateFieldAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/fields`);
+  revalidatePath(`/organizations/${organizationId}/settings/data-automation`);
   return { error: null };
 }

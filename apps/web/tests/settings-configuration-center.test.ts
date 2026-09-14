@@ -27,31 +27,62 @@ const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
+/**
+ * Superseded (2026 Settings migration): the ConfigCard tile grid this block used to assert on
+ * `settings/page.tsx` was itself the god-page symptom a later architecture pass named and
+ * removed — a hub of "View →" cards sitting above the very sections it linked to, three
+ * competing tables of contents for one set of things (grid, anchors, persistent rail). The
+ * persistent Settings rail (`features/settings/settings-navigation.tsx`) is now the one index,
+ * and every destination below is a real route rather than an anchor a grid pointed at.
+ */
 describe('Settings, as the Configuration Center (source scan)', () => {
-  const settings = readFileSync(`${ROUTES}/settings/page.tsx`, 'utf8');
+  const navigation = readFileSync(
+    fileURLToPath(new URL('../features/settings/settings-navigation.tsx', import.meta.url)),
+    'utf8',
+  );
 
-  it('exposes a configuration map rather than only the original six sections', () => {
-    expect(settings, 'no ConfigCard hub above the existing sections').toContain('ConfigCard');
+  it('groups Personal, Business and GOLD Account separately, never flattened into one list', () => {
+    expect(navigation).toContain("heading: 'Personal'");
+    expect(navigation).toContain("heading: 'Business'");
+    expect(navigation).toContain("heading: 'GOLD Account'");
   });
 
   it('reaches Work configuration', () => {
-    expect(settings).toContain('/settings/work');
+    expect(navigation).toContain("segment: 'work'");
+    expect(readFileSync(`${ROUTES}/settings/work/page.tsx`, 'utf8')).toContain('WorkConfigurationPage');
   });
 
-  it('reaches Pricing', () => {
-    expect(settings).toMatch(/\/organizations\/\$\{organizationId\}\/pricing/);
+  it('reaches Business commerce, which reuses Pricing’s own content', () => {
+    expect(navigation).toContain("segment: 'commerce'");
+    expect(readFileSync(`${ROUTES}/settings/commerce/page.tsx`, 'utf8')).toContain('CreatePriceItemForm');
   });
 
-  it('reaches Automations', () => {
-    expect(settings).toMatch(/\/organizations\/\$\{organizationId\}\/automations/);
+  it('reaches Data & automation, which reuses the Automations screen’s own content', () => {
+    expect(navigation).toContain("segment: 'data-automation'");
+    expect(readFileSync(`${ROUTES}/settings/data-automation/page.tsx`, 'utf8')).toContain(
+      'CreateAutomationRuleForm',
+    );
   });
 
-  it('reaches Custom fields', () => {
-    expect(settings).toMatch(/\/organizations\/\$\{organizationId\}\/fields/);
+  it('reaches Custom fields, under Data & automation', () => {
+    expect(readFileSync(`${ROUTES}/settings/data-automation/page.tsx`, 'utf8')).toContain('CreateFieldForm');
   });
 
-  it('reaches People & roles', () => {
-    expect(settings).toMatch(/\/organizations\/\$\{organizationId\}\/roles/);
+  it('reaches People & access', () => {
+    expect(navigation).toContain("segment: 'people'");
+    expect(readFileSync(`${ROUTES}/settings/people/page.tsx`, 'utf8')).toContain('AddMemberForm');
+  });
+
+  it('sends every retired top-level route to its new home rather than a dead end', () => {
+    for (const [segment, destination] of [
+      ['roles', 'settings/people'],
+      ['fields', 'settings/data-automation'],
+      ['automations', 'settings/data-automation'],
+      ['pricing', 'settings/commerce'],
+    ] as const) {
+      const page = readFileSync(`${ROUTES}/${segment}/page.tsx`, 'utf8');
+      expect(page, `${segment} no longer redirects to ${destination}`).toContain(destination);
+    }
   });
 });
 

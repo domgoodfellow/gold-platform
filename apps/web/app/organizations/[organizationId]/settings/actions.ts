@@ -37,7 +37,7 @@ export async function updateOrganizationAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings`);
+  revalidatePath(`/organizations/${organizationId}/settings/general`);
   await invalidateGoldHomepageIfReferenced(db, organizationId);
   return { error: null };
 }
@@ -63,7 +63,7 @@ export async function addOperatingHoursAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings`);
+  revalidatePath(`/organizations/${organizationId}/settings/work`);
   return { error: null };
 }
 
@@ -81,7 +81,7 @@ export async function removeOperatingHoursAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings`);
+  revalidatePath(`/organizations/${organizationId}/settings/work`);
   return { error: null };
 }
 

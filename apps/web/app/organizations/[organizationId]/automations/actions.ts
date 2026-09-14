@@ -39,7 +39,7 @@ async function run(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/automations`);
+  revalidatePath(`/organizations/${organizationId}/settings/data-automation`);
   return { error: null };
 }
 

@@ -1,6 +1,5 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { DividedList, PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import { CredentialsForm } from '@/app/(auth)/credentials-form';
@@ -8,9 +7,6 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
-import { isPlatformStaff } from '@/lib/domain/platform/tenants';
-import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import { AREAS, areaHref } from '@/lib/navigation';
 import { changePasswordAction } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -23,12 +19,15 @@ async function signOutAction() {
 }
 
 /**
- * The one destination for a signed-in human, independent of which business or platform context
- * they are currently in — the same identity holds both (D45), and this page belongs to neither.
+ * Personal Settings: identity and security for the signed-in person, independent of which
+ * business or Platform context they are currently operating in (D45) — this page belongs to
+ * neither. Cross-context navigation (switching business, entering Platform Administration)
+ * belongs to `ContextSwitcher` alone, rendered in both shells' sidebar headers; this page no
+ * longer duplicates that list.
  *
- * Deliberately narrow: only facts GOLD can truthfully own. There is no display name or avatar
- * field here because none is persisted anywhere authoritative — inventing one on this screen
- * would be the platform answering a question nobody was asked (constraints.md).
+ * Deliberately narrow: only facts GOLD can truthfully own. There is no display name, avatar or
+ * preferences section here because none is persisted anywhere authoritative — inventing one on
+ * this screen would be the platform answering a question nobody was asked (constraints.md).
  */
 export default async function AccountPage() {
   const db = await getDb();
@@ -50,11 +49,6 @@ export default async function AccountPage() {
     throw error;
   }
 
-  const [organizations, staff] = await Promise.all([
-    listMyOrganizations(db),
-    isPlatformStaff(db),
-  ]);
-
   return (
     <main className="mx-auto w-full max-w-2xl p-8">
       <div className="flex items-baseline justify-between">
@@ -66,11 +60,14 @@ export default async function AccountPage() {
         </form>
       </div>
 
-      <Hint className="mt-3">{email}</Hint>
+      <Section className="mt-6">
+        <SectionHeading>Profile &amp; identity</SectionHeading>
+        <Hint className="mt-2">{email}</Hint>
+      </Section>
 
-      {hasPassword ? (
-        <Section className="mt-10">
-          <SectionHeading>Password</SectionHeading>
+      <Section className="mt-10">
+        <SectionHeading>Security &amp; sign-in</SectionHeading>
+        {hasPassword ? (
           <CredentialsForm
             action={changePasswordAction}
             fields="password"
@@ -80,47 +77,10 @@ export default async function AccountPage() {
             passwordAutoComplete="new-password"
             successMessage="Password changed."
           />
-        </Section>
-      ) : (
-        <Hint className="mt-10">
-          Signed in with Google. There is no password here to change.
-        </Hint>
-      )}
-
-      <Section className="mt-10">
-        <SectionHeading>Businesses</SectionHeading>
-
-        {organizations.length === 0 ? (
-          <Hint className="mt-2">Not a member of any business yet.</Hint>
         ) : (
-          <DividedList className="mt-2">
-            {organizations.map((organization) => (
-              <li key={organization.id} className="flex items-baseline justify-between gap-4 py-3">
-                <Link
-                  href={areaHref(organization.id, AREAS[0].segment)}
-                  className="font-medium underline underline-offset-4"
-                >
-                  {organization.name}
-                </Link>
-                <span className="shrink-0 text-sm text-muted">{organization.role}</span>
-              </li>
-            ))}
-          </DividedList>
+          <Hint className="mt-2">Signed in with Google. There is no password here to change.</Hint>
         )}
-
-        <Link href="/organizations?all=1" className="mt-3 inline-block text-sm underline underline-offset-4">
-          Switch business
-        </Link>
       </Section>
-
-      {staff ? (
-        <Section className="mt-10">
-          <SectionHeading>Platform</SectionHeading>
-          <Link href="/platform" className="underline underline-offset-4">
-            Platform Administration
-          </Link>
-        </Section>
-      ) : null}
     </main>
   );
 }
