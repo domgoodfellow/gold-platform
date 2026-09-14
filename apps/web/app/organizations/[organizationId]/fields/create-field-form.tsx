@@ -10,6 +10,7 @@ import {
   FIELD_KINDS,
   FIELD_KIND_LABELS,
   offersOptions,
+  type CustomFieldEntity,
   type FieldKind,
 } from '@/lib/domain/fields/field-definitions';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
@@ -52,7 +53,16 @@ function OptionsInput({ name, defaultValue }: { name: string; defaultValue?: str
   );
 }
 
-export function CreateFieldForm({ organizationId }: { organizationId: string }) {
+export function CreateFieldForm({
+  organizationId,
+  entityType,
+}: {
+  organizationId: string;
+  /** Locks the field to one entity — used where a scoped configuration surface (e.g. Work's
+   * Fields tab) must not let someone define a field on a different entity from inside it. Left
+   * undefined for the general, cross-entity Settings surface, which still offers the choice. */
+  entityType?: CustomFieldEntity;
+}) {
   const [state, formAction, pending] = useActionState(createFieldAction, INITIAL);
   // The one piece of state on this screen, and it buys one thing: the choices box appears when
   // a kind that offers choices is selected. Rendering it always would ask every business to
@@ -65,18 +75,22 @@ export function CreateFieldForm({ organizationId }: { organizationId: string }) 
 
       <SectionHeading>New field</SectionHeading>
 
-      <SelectInput
-        name="entityType"
-        defaultValue="customer"
-        aria-label="Applies to"
-        className="w-fit"
-      >
-        {CUSTOM_FIELD_ENTITIES.map((entity) => (
-          <option key={entity} value={entity}>
-            {CUSTOM_FIELD_ENTITY_LABELS[entity]}
-          </option>
-        ))}
-      </SelectInput>
+      {entityType ? (
+        <input type="hidden" name="entityType" value={entityType} />
+      ) : (
+        <SelectInput
+          name="entityType"
+          defaultValue="customer"
+          aria-label="Applies to"
+          className="w-fit"
+        >
+          {CUSTOM_FIELD_ENTITIES.map((entity) => (
+            <option key={entity} value={entity}>
+              {CUSTOM_FIELD_ENTITY_LABELS[entity]}
+            </option>
+          ))}
+        </SelectInput>
+      )}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <TextInput
@@ -166,6 +180,7 @@ export function EditFieldForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="fieldId" value={definition.id} />
       <input type="hidden" name="kind" value={definition.kind} />
+      <input type="hidden" name="entityType" value={definition.entityType} />
 
       <TextInput
         name="position"

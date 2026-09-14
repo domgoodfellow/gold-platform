@@ -1,25 +1,17 @@
-import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { DividedList, PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import Link from 'next/link';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
+import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { listTypeChecklistItems } from '@/lib/domain/work-items/checklists';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
 import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { requireOrganization } from '@/lib/route/organization';
-import {
-  AddTypeChecklistItemForm,
-  CreateStatusForm,
-  CreateTransitionForm,
-  CreateTypeForm,
-  EditStatusForm,
-  PublishTypeForm,
-  RenameTypeForm,
-  TypeChecklistItemRow,
-} from './work-config-forms';
+import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 import { AddOperatingHoursForm, OperatingHoursRow } from '../settings-forms';
 
 export const dynamic = 'force-dynamic';
@@ -48,7 +40,7 @@ export default async function WorkConfigurationPage({
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
 
-  const [statuses, transitions, templateSteps, prices, booking, enabledModules, hours] = await Promise.all([
+  const [statuses, transitions, templateSteps, fieldDefinitions, prices, booking, enabledModules, hours] = await Promise.all([
     selectedType
       ? listWorkItemStatuses(db, { organizationId, typeId: selectedType.id })
       : Promise.resolve([]),
@@ -58,6 +50,7 @@ export default async function WorkConfigurationPage({
     selectedType
       ? listTypeChecklistItems(db, { organizationId, typeId: selectedType.id })
       : Promise.resolve([]),
+    listFieldDefinitions(db, { organizationId, entityType: 'work_item' }),
     listPriceBookItems(db, { organizationId }),
     selectedType
       ? getTypeBooking(db, { organizationId, typeId: selectedType.id })
@@ -68,7 +61,6 @@ export default async function WorkConfigurationPage({
 
   const mayConfigure = organization.capabilities.includes('field.manage');
   const bookingEnabled = enabledModules.has('booking');
-  const statusName = new Map(statuses.map((status) => [status.id, status.name]));
 
   return (
     <SettingsPageFrame organizationId={organizationId}>
@@ -82,186 +74,27 @@ export default async function WorkConfigurationPage({
         >
           Doing today&rsquo;s work
         </Link>{' '}
-        happens on its own screen; this is where its shape is defined.
+        happens on its own screen; this is where its shape is defined. The same configuration is
+        also reachable from there, via Configure.
       </Hint>
 
-      {types.length > 0 ? (
-        <nav className="mt-4 flex flex-wrap gap-2" aria-label="Kind of work">
-          {types.map((type) => {
-            const current = type.id === selectedType?.id;
-            return (
-              <Link
-                key={type.id}
-                href={`/organizations/${organizationId}/settings/work?type=${type.id}`}
-                aria-current={current ? 'page' : undefined}
-                className={
-                  current
-                    ? 'rounded bg-foreground px-3 py-1 text-sm text-background'
-                    : 'rounded border border-border px-3 py-1 text-sm'
-                }
-              >
-                {type.name}
-              </Link>
-            );
-          })}
-        </nav>
-      ) : null}
-
-      {selectedType === null ? (
-        <EmptyState className="mt-6">
-          No kinds of work defined yet. What this business does is yours to name — the platform
-          has no opinion.
-        </EmptyState>
-      ) : (
-        <>
-          <Section className="mt-8">
-            <SectionHeading>{selectedType.name} statuses</SectionHeading>
-            <Hint className="mt-1">
-              {statuses.length === 0
-                ? 'None yet. These are yours to name — the platform has no opinion.'
-                : statuses.map((status) => status.name).join(' → ')}
-            </Hint>
-
-            {mayConfigure && statuses.length > 0 ? (
-              <DividedList as="div" className="mt-3">
-                {statuses.map((status) => (
-                  <EditStatusForm
-                    key={status.id}
-                    organizationId={organizationId}
-                    status={status}
-                  />
-                ))}
-              </DividedList>
-            ) : null}
-
-            {mayConfigure ? (
-              <CreateStatusForm organizationId={organizationId} typeId={selectedType.id} />
-            ) : (
-              <Hint className="mt-2">
-                Your role, {organization.role}, cannot configure statuses here.
-              </Hint>
-            )}
-          </Section>
-
-          <Section className="mt-10">
-            <SectionHeading>Allowed moves</SectionHeading>
-            {/* An unconfigured type is frozen, not unconstrained — I13 has exactly one
-                reading when a tenant has configured no transitions at all. Saying so here is
-                the difference between a board that looks broken and one that is unfinished. */}
-            <Hint className="mt-1">
-              {transitions.length === 0
-                ? 'None yet, so nothing on this board can move. Wire the moves this business actually makes.'
-                : transitions
-                    .map(
-                      (transition) =>
-                        `${statusName.get(transition.fromStatusId) ?? '?'} → ${
-                          statusName.get(transition.toStatusId) ?? '?'
-                        }`,
-                    )
-                    .join(' · ')}
-            </Hint>
-
-            {mayConfigure ? (
-              <CreateTransitionForm
-                organizationId={organizationId}
-                typeId={selectedType.id}
-                statuses={statuses}
-              />
-            ) : (
-              <Hint className="mt-2">
-                Your role, {organization.role}, cannot configure transitions here.
-              </Hint>
-            )}
-          </Section>
-
-          <Section className="mt-10">
-            <SectionHeading>Steps every {selectedType.name} involves</SectionHeading>
-            {/* Copied onto each job at creation, never joined. Editing this list does not
-                reach a job that already exists — which is what makes editing it safe (I8). */}
-            <Hint className="mt-1">
-              {templateSteps.length === 0
-                ? 'None. Work items of this kind start with an empty checklist.'
-                : 'Copied onto each new work item. Changing them leaves existing work alone.'}
-            </Hint>
-
-            {templateSteps.length > 0 ? (
-              <DividedList as="div" className="mt-2">
-                {templateSteps.map((item) =>
-                  mayConfigure ? (
-                    <TypeChecklistItemRow
-                      key={item.id}
-                      organizationId={organizationId}
-                      item={item}
-                    />
-                  ) : (
-                    <Hint key={item.id} className="py-1">
-                      {item.label}
-                    </Hint>
-                  ),
-                )}
-              </DividedList>
-            ) : null}
-
-            {mayConfigure ? (
-              <AddTypeChecklistItemForm
-                organizationId={organizationId}
-                typeId={selectedType.id}
-              />
-            ) : null}
-          </Section>
-
-          {/* A module hides what it owns everywhere, not only its own area — publishing a type
-              is the per-type half of public booking, and the address itself stays configured in
-              Settings' own public-page section (`outstandingModuleSetup` names both). */}
-          {bookingEnabled ? (
-            <Section className="mt-10">
-              <SectionHeading>Publish to the public booking page</SectionHeading>
-              <PublishTypeForm
-                organizationId={organizationId}
-                typeId={selectedType.id}
-                typeName={selectedType.name}
-                statuses={statuses}
-                prices={prices}
-                booking={booking}
-                disabled={!mayConfigure}
-              />
-              {!mayConfigure ? (
-                <Hint className="mt-2">
-                  Your role, {organization.role}, cannot change what this business publishes.
-                </Hint>
-              ) : null}
-            </Section>
-          ) : null}
-
-          {mayConfigure ? (
-            <Section className="mt-10">
-              <SectionHeading>Rename this kind of work</SectionHeading>
-              <RenameTypeForm
-                organizationId={organizationId}
-                typeId={selectedType.id}
-                name={selectedType.name}
-              />
-            </Section>
-          ) : null}
-        </>
-      )}
-
-      <Section className="mt-10">
-        <SectionHeading>Kinds of work</SectionHeading>
-        <Hint className="mt-1">
-          {types.length === 0
-            ? 'None yet. A type is what scopes a board — statuses belong to one.'
-            : types.map((type) => type.name).join(' · ')}
-        </Hint>
-
-        {mayConfigure ? (
-          <CreateTypeForm organizationId={organizationId} />
-        ) : (
-          <Hint className="mt-2">
-            Your role, {organization.role}, cannot configure work item types here.
-          </Hint>
-        )}
-      </Section>
+      <div className="mt-6">
+        <WorkConfiguration
+          organizationId={organizationId}
+          role={organization.role}
+          mayConfigure={mayConfigure}
+          types={types}
+          selectedType={selectedType}
+          statuses={statuses}
+          transitions={transitions}
+          templateSteps={templateSteps}
+          fieldDefinitions={fieldDefinitions}
+          prices={prices}
+          booking={booking}
+          bookingEnabled={bookingEnabled}
+          typeHref={(typeId) => `/organizations/${organizationId}/settings/work?type=${typeId}`}
+        />
+      </div>
 
       <Section className="mt-10">
         <SectionHeading>Scheduling</SectionHeading>

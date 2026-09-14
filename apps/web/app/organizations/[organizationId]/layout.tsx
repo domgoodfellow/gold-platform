@@ -16,6 +16,13 @@ import { requireOrganization } from '@/lib/route/organization';
 import { AccountMenu } from '@/components/containers/account-menu';
 import { Separator } from '@gold/ui/components/separator';
 import { SidebarTrigger } from '@gold/ui/components/sidebar';
+import {
+  WorkspaceHeaderActions,
+  WorkspaceRailProvider,
+  WorkspaceRightRail,
+} from '@/components/containers/workspace-right-rail';
+import { AgentRail } from '@/features/agent/agent-rail';
+import { canAnswerQuestions, listAgentRuns } from '@/lib/domain/assistant/questions';
 
 /**
  * The operator shell: persistent navigation across one business's areas. Not the authorization
@@ -29,11 +36,13 @@ export default async function OrganizationLayout({
 }: LayoutProps<'/organizations/[organizationId]'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  const [featureStates, myOrganizations, staff, { data: userData }] = await Promise.all([
+  const [featureStates, myOrganizations, staff, { data: userData }, agentRuns, canAnswer] = await Promise.all([
     organizationResolvedFeatureStates(db, { organizationId }),
     listMyOrganizations(db),
     isPlatformStaff(db),
     db.auth.getUser(),
+    listAgentRuns(db, { organizationId }),
+    canAnswerQuestions(),
   ]);
   // The shell's navigation gate, resolved once for both desktop and mobile (`OrgSidebar`/`OrgNav`
   // and `OrgNavBar` share the one `visibleAreas`/`areasIn` predicate in `lib/navigation.ts`).
@@ -125,7 +134,8 @@ export default async function OrganizationLayout({
       {inSetup ? <SetupBadge organizationId={organizationId} /> : null}
 
       <span className="flex-1" />
-      <div className="md:hidden"><AccountMenu email={email} signOutAction={signOutAction} /></div>
+      <WorkspaceHeaderActions />
+      <div className="md:hidden"><AccountMenu email={email} signOutAction={signOutAction} compact /></div>
     </header>
   );
 
@@ -133,20 +143,34 @@ export default async function OrganizationLayout({
     // `data-brand` sits here rather than on `<html>` — a brand belongs to one business, and this layout is the only thing that knows which.
     <div data-brand className="min-h-full">
       <BrandStyle brand={brand} />
-      <AppShell
-        sidebar={sidebar}
-        header={header}
-        bottomBar={
-          <OrgNavBar
+      <WorkspaceRailProvider>
+        <div className="flex min-h-full w-full">
+          <div className="min-w-0 flex-1">
+            <AppShell
+              sidebar={sidebar}
+              header={header}
+              bottomBar={
+                <OrgNavBar
+                  organizationId={organizationId}
+                  enabledModules={[...enabledModules]}
+                  featureAvailability={[...featureAvailability]}
+                  capabilities={organization.capabilities}
+                />
+              }
+            >
+              {children}
+            </AppShell>
+          </div>
+          <AgentRail
             organizationId={organizationId}
-            enabledModules={[...enabledModules]}
-            featureAvailability={[...featureAvailability]}
-            capabilities={organization.capabilities}
+            organizationName={organization.name}
+            canAnswer={canAnswer}
+            mayAsk={organization.capabilities.includes('assistant.ask')}
+            runs={agentRuns}
           />
-        }
-      >
-        {children}
-      </AppShell>
+          <WorkspaceRightRail />
+        </div>
+      </WorkspaceRailProvider>
     </div>
   );
 }

@@ -28,10 +28,15 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@go
 export function AccountMenu({
   email,
   signOutAction,
+  compact = false,
 }: {
   /** The signed-in Supabase Auth email. Every caller resolves it the same way: `db.auth.getUser()`. */
   email: string;
   signOutAction: () => Promise<void>;
+  /** Avatar only, no name/status text or chevron — the phone header's own copy of this menu
+   * (`layout.tsx`, `md:hidden`) sits beside the page title and now two more controls (Configure,
+   * Agent); the full `lg` sidebar-footer treatment left almost nothing for the title itself. */
+  compact?: boolean;
 }) {
   const { isMobile } = useSidebar();
 
@@ -41,7 +46,7 @@ export function AccountMenu({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
-              size="lg"
+              size={compact ? 'default' : 'lg'}
               tooltip={email}
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
@@ -50,11 +55,15 @@ export function AccountMenu({
                   {email.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{email}</span>
-                <span className="truncate text-xs text-sidebar-foreground/70">Signed in</span>
-              </div>
-              <ChevronUp aria-hidden className="ml-auto size-4" />
+              {compact ? null : (
+                <>
+                  <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">{email}</span>
+                    <span className="truncate text-xs text-sidebar-foreground/70">Signed in</span>
+                  </div>
+                  <ChevronUp aria-hidden className="ml-auto size-4" />
+                </>
+              )}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

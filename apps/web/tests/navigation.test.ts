@@ -474,13 +474,21 @@ describe('a switch leads to its inputs', () => {
     //
     // Read from source for the reason the section check above is: the alternative is trusting
     // that whoever moves this section remembers what it was conditional on.
-    const workConfig = readFileSync(`${ROUTES}/settings/work/page.tsx`, 'utf8');
+    //
+    // `WorkConfiguration` (`features/work/configuration/`) is the shared component behind both
+    // Settings → Work and the Work workspace's own Configure rail (contract: one configuration
+    // surface, two hosts) — the gate itself lives there now, not in either page.
+    const workConfig = readFileSync(
+      fileURLToPath(new URL('../features/work/configuration/work-configuration.tsx', import.meta.url)),
+      'utf8',
+    );
+    const settingsWorkPage = readFileSync(`${ROUTES}/settings/work/page.tsx`, 'utf8');
 
     expect(workConfig).toContain('PublishTypeForm');
     expect(workConfig, 'the publish section is not gated on the booking module').toMatch(
       /bookingEnabled\s*\?[\s\S]{0,400}PublishTypeForm/,
     );
-    expect(workConfig).toContain("enabledModules.has('booking')");
+    expect(settingsWorkPage).toContain("enabledModules.has('booking')");
   });
 
   it('gates the asset reference on a job on the assets module, on both the board and the job page', () => {

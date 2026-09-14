@@ -18,17 +18,27 @@ function optionsFromFormData(formData: FormData): string[] {
 
 export type CreateFieldState = { error: string | null };
 
+/** Fields also rendered on the Work workspace's own Configure rail need that route revalidated too, or an edit made there would show stale until the next unrelated navigation. */
+function revalidateFieldSurfaces(organizationId: string, entityType: string) {
+  revalidatePath(`/organizations/${organizationId}/settings/data-automation`);
+  if (entityType === 'work_item') {
+    revalidatePath(`/organizations/${organizationId}/work`);
+    revalidatePath(`/organizations/${organizationId}/settings/work`);
+  }
+}
+
 export async function createFieldAction(
   _previous: CreateFieldState,
   formData: FormData,
 ): Promise<CreateFieldState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  const entityType = String(formData.get('entityType') ?? '');
 
   try {
     await createFieldDefinition(db, {
       organizationId,
-      entityType: String(formData.get('entityType') ?? ''),
+      entityType,
       key: String(formData.get('key') ?? ''),
       label: String(formData.get('label') ?? ''),
       kind: String(formData.get('kind') ?? ''),
@@ -45,7 +55,7 @@ export async function createFieldAction(
   // The organization id comes from a hidden field a client could edit, and it's deliberately not
   // re-checked here — `field_definitions_insert` requires membership and `field.manage`, so
   // tampering produces a refusal rather than a leak.
-  revalidatePath(`/organizations/${organizationId}/settings/data-automation`);
+  revalidateFieldSurfaces(organizationId, entityType);
   return { error: null };
 }
 
@@ -80,6 +90,6 @@ export async function updateFieldAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/data-automation`);
+  revalidateFieldSurfaces(organizationId, String(formData.get('entityType') ?? ''));
   return { error: null };
 }
