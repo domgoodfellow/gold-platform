@@ -2448,6 +2448,49 @@ export type Database = {
           },
         ]
       }
+      organization_feature_activation_overrides: {
+        Row: {
+          disabled_at: string
+          disabled_by: string
+          feature_id: string
+          organization_id: string
+        }
+        Insert: {
+          disabled_at?: string
+          disabled_by: string
+          feature_id: string
+          organization_id: string
+        }
+        Update: {
+          disabled_at?: string
+          disabled_by?: string
+          feature_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_feature_activation_overrides_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_feature_activation_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_feature_activation_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_invitations: {
         Row: {
           accepted_at: string | null
