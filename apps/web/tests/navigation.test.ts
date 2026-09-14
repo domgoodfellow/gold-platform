@@ -10,6 +10,7 @@ import {
   areasIn,
   currentSegment,
   moduleConfiguration,
+  visibleAreas,
   type Module,
 } from '@/lib/navigation';
 import { AREA_ICONS } from '@/app/organizations/[organizationId]/org-shell';
@@ -220,6 +221,130 @@ describe('modules', () => {
     expect(AREA_GROUPS.reduce((sum, group) => sum + areasIn(group.key).length, 0)).toBe(
       sidebarAreas,
     );
+  });
+});
+
+/**
+ * Canonical Feature-level gating (M17 closure slice). `Area.featureKeys` and
+ * `availableFeatureKeys(organizationResolvedFeatureStates(...))` are what let one area resolve
+ * against the *specific* canonical Feature(s) it is the surface for, rather than the coarser
+ * legacy `ModuleKey` several Features can share. No database here — these are properties of the
+ * pure predicate (`areaEntitled`/`visibleAreas`/`areasIn`), proven with hand-built resolved
+ * states rather than a live resolver; `feature-activation.test.ts` covers the resolver itself
+ * against real Postgres.
+ */
+describe('canonical Feature-level navigation gating', () => {
+  const calls = AREAS.find((area) => area.segment === 'calls')!;
+
+  it('is defined for the areas the audit named, using real catalogue feature keys', () => {
+    expect(AREAS.find((a) => a.segment === 'ask')?.featureKeys).toEqual(['ask_gold']);
+    expect(AREAS.find((a) => a.segment === 'reports')?.featureKeys).toEqual([
+      'saved_dashboards',
+      'saved_reports',
+      'utilization',
+    ]);
+    expect(calls.featureKeys).toEqual(['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions']);
+    expect(AREAS.find((a) => a.segment === 'pricing')?.featureKeys).toEqual([
+      'price_book',
+      'quote_creation',
+      'invoices',
+    ]);
+    expect(AREAS.find((a) => a.segment === 'automations')?.featureKeys).toEqual([
+      'rule_authoring',
+      'domain_event_trigger',
+      'email_action',
+      'run_history',
+    ]);
+    expect(AREAS.find((a) => a.segment === 'integrations')?.featureKeys).toEqual(['csv_import']);
+    expect(AREAS.find((a) => a.segment === 'assets')?.featureKeys).toEqual(['assets']);
+  });
+
+  it('hides a feature-specific area once every one of its backing Features is unavailable (disabled)', () => {
+    const enabled = new Set(['reception']);
+    const withAllActive = new Set(calls.featureKeys);
+    expect(areasIn('records', enabled, undefined, withAllActive).map((a) => a.segment)).toContain('calls');
+
+    // Every Calls-backing Feature disabled (the activation override cleared them from
+    // `availableFeatureKeys`) — the area disappears even though the legacy module is still on.
+    const noneActive = new Set<string>();
+    expect(areasIn('records', enabled, undefined, noneActive).map((a) => a.segment)).not.toContain('calls');
+  });
+
+  it('restores the area once a backing Feature is available again (override removed)', () => {
+    const enabled = new Set(['reception']);
+    const oneRestored = new Set(['outbound_calling']);
+    expect(areasIn('records', enabled, undefined, oneRestored).map((a) => a.segment)).toContain('calls');
+  });
+
+  it('hides a feature-specific area the organization is simply not entitled to', () => {
+    // No Calls-backing key present at all — never entitled, not merely disabled — same absence.
+    const enabled = new Set(['reception']);
+    const unentitled = new Set(['pipeline']); // a sibling Feature under the same legacy module key
+    expect(areasIn('records', enabled, undefined, unentitled).map((a) => a.segment)).not.toContain('calls');
+  });
+
+  it('keeps a feature-specific area visible when it is merely setup_required rather than off', () => {
+    // Readiness ('ready' vs 'setup_required') plays no part in `availableFeatureKeys` — a Feature
+    // that is implemented, entitled and active still counts even with nothing configured yet.
+    // Only 'unavailable' (not implemented, not entitled, or disabled) is ever absent from the set.
+    const available = new Set(['outbound_calling']);
+    expect(areasIn('records', new Set(['reception']), undefined, available).map((a) => a.segment)).toContain(
+      'calls',
+    );
+  });
+
+  it('still requires a relevant capability on top of Feature availability', () => {
+    const enabled = new Set(['reception']);
+    const available = new Set(calls.featureKeys);
+
+    const noCapability = areasIn('records', enabled, new Set<Capability>(), available);
+    expect(noCapability.map((a) => a.segment)).not.toContain('calls');
+
+    const withCapability = areasIn('records', enabled, new Set<Capability>(['call.place']), available);
+    expect(withCapability.map((a) => a.segment)).toContain('calls');
+  });
+
+  it('leaves kernel areas untouched by feature availability, empty or not', () => {
+    const shown = areasIn('operations', new Set(), undefined, new Set());
+    for (const segment of ['today', 'work', 'schedule']) {
+      expect(shown.map((a) => a.segment)).toContain(segment);
+    }
+  });
+
+  it('proves the shared-module granularity fix: a sibling Feature staying active must not keep a different area visible', () => {
+    // The real production seam (D46): `pipeline`, `configurable_stages` and `qualification_state`
+    // (the CRM pipeline, which Customers reads) share the legacy `reception` module key with
+    // `inbound_calling`/`outbound_calling`/`recording`/`call_dispositions` (Calls). A raw
+        // module-key gate (`activeModuleKeys`) reports `reception` as "active" as long as any one of
+    // those seven Features is active — which is exactly the bug: Calls must not ride along on a
+    // sibling Feature it does not actually surface.
+    const enabledAtModuleLevel = new Set(['reception']); // module reads "active" via the legacy gate
+    const onlyPipelineActive = new Set(['pipeline']); // none of Calls' own featureKeys
+
+    // The legacy module-only call (no featureAvailability) would show it — the very gap this
+    // slice closes for callers that do supply the canonical resolution.
+    expect(areasIn('records', enabledAtModuleLevel).map((a) => a.segment)).toContain('calls');
+
+    // With featureAvailability supplied, Calls is correctly absent despite the module key
+    // reading "active", because none of its own backing Features are in the available set.
+    expect(areasIn('records', enabledAtModuleLevel, undefined, onlyPipelineActive).map((a) => a.segment)).not.toContain(
+      'calls',
+    );
+  });
+
+  it('computes identical eligibility for desktop (grouped areasIn) and mobile (flat visibleAreas) from the same input', () => {
+    const enabled = new Set(['reception', 'billing', 'assets']);
+    const capabilities = new Set<Capability>(['call.place', 'price.manage']);
+    const available = new Set(['outbound_calling', 'inbound_calling', 'price_book', 'assets']);
+
+    const desktop = AREA_GROUPS.flatMap((group) => areasIn(group.key, enabled, capabilities, available)).map(
+      (a) => a.segment,
+    );
+    const mobile = visibleAreas(enabled, capabilities, available).map((a) => a.segment);
+
+    // Presentation differs (grouped vs. flat); the set of eligible segments must not.
+    expect(new Set(desktop)).toEqual(new Set(mobile));
+    expect(desktop.length).toBe(mobile.length);
   });
 });
 
@@ -455,22 +580,26 @@ describe('an area hidden from the sidebar', () => {
     }
   });
 
-  it('is absent from the sidebar, the tablet rail and the phone bar alike — one AREAS list, not two', () => {
-    // `OrgNav` (desktop and tablet, via `areasIn`) and `OrgNavBar` (phone) are two renderings
-    // of the one `AREAS` array, per `ui-spec.md` §2 — never a second list kept in step by hand.
-    // `OrgNav` gets the filter for free by calling `areasIn`; `OrgNavBar` filters `AREAS`
-    // directly (it always has, for the module check) and Slice 3 extended that same inline
-    // filter rather than introducing a parallel one.
+  it('is absent from the sidebar, the tablet rail and the phone bar alike — one shared predicate, not two', () => {
+    // `OrgNav` (desktop and tablet, via `areasIn`) and `OrgNavBar` (phone) are two renderings of
+    // the one `visibleAreas` predicate in `lib/navigation.ts`, per `ui-spec.md` §2 — never a
+    // second, independently-filtered copy of `AREAS` kept in step by hand. Both used to filter
+    // `sidebar !== false` themselves; `OrgNavBar` now calls the same `visibleAreas` function
+    // `areasIn` is built from, so a change to eligibility (the module gate, the canonical
+    // Feature gate, or the capability layer) cannot update one renderer and miss the other.
     const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
     const navigation = readFileSync(fileURLToPath(new URL('../lib/navigation.ts', import.meta.url)), 'utf8');
 
-    expect(navigation, 'areasIn (which OrgNav calls) should filter on sidebar').toContain(
+    expect(navigation, 'visibleAreas (which both areasIn and OrgNavBar call) should filter on sidebar').toContain(
       'area.sidebar !== false',
     );
-    expect(shell, 'OrgNavBar should filter the same AREAS array on the same flag').toContain(
-      'area.sidebar !== false',
+    expect(shell, 'OrgNavBar should call the shared visibleAreas function rather than filtering AREAS itself').toContain(
+      'visibleAreas(',
     );
-    // Both renderers still map the one imported `AREAS`/`areasIn` — not a locally declared list.
+    expect(shell, 'OrgNavBar should not keep its own competing eligibility filter').not.toMatch(
+      /AREAS\.filter/,
+    );
+    // Both renderers still map the one imported `AREAS`/`areasIn`/`visibleAreas` — not a locally declared list.
     expect(shell).toContain("from '@/lib/navigation'");
   });
 });

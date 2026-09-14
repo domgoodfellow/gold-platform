@@ -7,7 +7,11 @@ import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import { listUsableModules } from '@/lib/domain/tenancy/modules';
+import {
+  activeModuleKeys,
+  availableFeatureKeys,
+  organizationResolvedFeatureStates,
+} from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganization } from '@/lib/route/organization';
 import { AccountMenu } from '@/components/containers/account-menu';
 import { Separator } from '@gold/ui/components/separator';
@@ -25,12 +29,22 @@ export default async function OrganizationLayout({
 }: LayoutProps<'/organizations/[organizationId]'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  const [enabledModules, myOrganizations, staff, { data: userData }] = await Promise.all([
-    listUsableModules(db, { organizationId }),
+  const [featureStates, myOrganizations, staff, { data: userData }] = await Promise.all([
+    organizationResolvedFeatureStates(db, { organizationId }),
     listMyOrganizations(db),
     isPlatformStaff(db),
     db.auth.getUser(),
   ]);
+  // The shell's navigation gate, resolved once for both desktop and mobile (`OrgSidebar`/`OrgNav`
+  // and `OrgNavBar` share the one `visibleAreas`/`areasIn` predicate in `lib/navigation.ts`).
+  // `enabledModules` still answers the legacy module-key question — for the kernel and for an
+  // area like Guided Setup whose module has no canonical Feature mapping yet — but through the
+  // canonical resolver's own override-aware `activeModuleKeys`, not a raw `listUsableModules`
+  // read: a business that has disabled every Feature backing a module must not still see that
+  // module as "on" here. `featureAvailability` is the new, finer-grained layer `Area.featureKeys`
+  // resolve against.
+  const enabledModules = activeModuleKeys(featureStates);
+  const featureAvailability = availableFeatureKeys(featureStates);
   // `requireOrganization` already proved a session exists; this is a second, deliberately
   // separate read of the same session for the one extra fact the shell shows (I11's minimal
   // `Actor` shape carries only an id).
@@ -83,6 +97,7 @@ export default async function OrganizationLayout({
       organizations={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
       platformStaff={staff}
       enabledModules={[...enabledModules]}
+      featureAvailability={[...featureAvailability]}
       capabilities={organization.capabilities}
       setupEntry={inSetup ? <SetupEntry organizationId={organizationId} /> : null}
       email={email}
@@ -125,6 +140,7 @@ export default async function OrganizationLayout({
           <OrgNavBar
             organizationId={organizationId}
             enabledModules={[...enabledModules]}
+            featureAvailability={[...featureAvailability]}
             capabilities={organization.capabilities}
           />
         }

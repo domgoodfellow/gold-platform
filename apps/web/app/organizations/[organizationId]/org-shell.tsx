@@ -47,18 +47,21 @@ import {
   areaHref,
   areaRootSegment,
   areasIn,
-  areaVisibleTo,
   currentSegment,
+  visibleAreas,
   type Area,
 } from '@/lib/navigation';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
 /**
  * The two pieces of the shell that need to know which area is on screen. Client components
- * because a layout can't read its own pathname server-side. Neither reads a capability
- * (navigation shows every area to every member); they do read which modules are enabled, since
- * that's the business's own shape rather than a permission — decided server-side under RLS and
- * passed down from the layout.
+ * because a layout can't read its own pathname server-side. Both read the same three facts the
+ * layout resolves once and passes down — legacy module keys, the canonical resolver's available
+ * Feature keys, and this role's capabilities — through the one shared `visibleAreas`/`areasIn`
+ * predicate, so desktop and mobile can never disagree about what a caller can see. Most of the
+ * kernel and general-purpose areas still show themselves to every member regardless of
+ * capability (I12): `Area.relevantCapabilities` is the narrow, feature-specific exception, and a
+ * business's own module/entitlement shape (not a permission) is what the other two axes decide.
  */
 
 /**
@@ -99,20 +102,24 @@ export function OrgNav({
   organizationId,
   enabledModules,
   capabilities,
+  featureAvailability,
 }: {
   organizationId: string;
   enabledModules: string[];
-  /** Which areas this role's capabilities make relevant — layered on top of the module gate (I12). */
+  /** Which areas this role's capabilities make relevant — layered on top of the module/feature gate (I12). */
   capabilities: Capability[];
+  /** Canonical Feature keys this business is currently entitled to, active and implemented for — `availableFeatureKeys(organizationResolvedFeatureStates(...))`, resolved once by the layout. */
+  featureAvailability: string[];
 }) {
   const segment = currentSegment(usePathname());
   const enabled = new Set(enabledModules);
   const capabilitySet = new Set(capabilities);
+  const featureSet = new Set(featureAvailability);
 
   return (
     <nav aria-label="This business">
       {AREA_GROUPS.map((group) => {
-        const areas = areasIn(group.key, enabled, capabilitySet);
+        const areas = areasIn(group.key, enabled, capabilitySet, featureSet);
         // A business with every module in a section switched off has no section. Rendering the
         // heading anyway would name a part of the application that is not there for them.
         if (areas.length === 0) return null;
@@ -192,14 +199,18 @@ export function OrgNavBar({
   organizationId,
   enabledModules,
   capabilities,
+  featureAvailability,
 }: {
   organizationId: string;
   enabledModules: string[];
   capabilities: Capability[];
+  /** Same resolved set `OrgNav` receives — one shared predicate (`visibleAreas`), so the two can't drift. */
+  featureAvailability: string[];
 }) {
   const segment = currentSegment(usePathname());
   const enabled = new Set(enabledModules);
   const capabilitySet = new Set(capabilities);
+  const featureSet = new Set(featureAvailability);
 
   return (
     <nav
@@ -207,12 +218,7 @@ export function OrgNavBar({
       className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background md:hidden"
     >
       <ul className="flex gap-1 overflow-x-auto p-2">
-        {AREAS.filter(
-          (area) =>
-            area.sidebar !== false &&
-            (!area.module || enabled.has(area.module)) &&
-            areaVisibleTo(area, capabilitySet),
-        ).map((area) => (
+        {visibleAreas(enabled, capabilitySet, featureSet).map((area) => (
           <li key={area.segment} className="shrink-0">
             <PhoneNavLink
               organizationId={organizationId}
@@ -271,6 +277,7 @@ export function OrgSidebar({
   platformStaff,
   enabledModules,
   capabilities,
+  featureAvailability,
   setupEntry,
   email,
   signOutAction,
@@ -284,6 +291,7 @@ export function OrgSidebar({
   platformStaff: boolean;
   enabledModules: string[];
   capabilities: Capability[];
+  featureAvailability: string[];
   /** `<SetupEntry />`, or nothing — the layout decides, from `operationalState`, the same place `SetupBadge` is decided. */
   setupEntry?: ReactNode;
   email: string;
@@ -301,7 +309,12 @@ export function OrgSidebar({
       </SidebarHeader>
       <SidebarContent>
         {setupEntry}
-        <OrgNav organizationId={organizationId} enabledModules={enabledModules} capabilities={capabilities} />
+        <OrgNav
+          organizationId={organizationId}
+          enabledModules={enabledModules}
+          capabilities={capabilities}
+          featureAvailability={featureAvailability}
+        />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
       <SidebarRail />

@@ -232,6 +232,18 @@ export type Area = {
    * Direct navigation to the route underneath is unaffected either way; RLS decides that.
    */
   relevantCapabilities?: readonly Capability[];
+  /**
+   * The canonical `platform_catalog_features.key` value(s) that actually back this area's
+   * surface — route metadata (an identifying key, nothing copied from the catalogue itself),
+   * used to resolve visibility against `organizationResolvedFeatureStates` rather than against
+   * `area.module` alone. One legacy `ModuleKey` can back several canonical Features (D46's
+   * many-to-many seam via `platform_catalog_runtime_mappings`), so gating on `module` alone
+   * would show this area whenever *any* sibling feature sharing that module key stayed active —
+   * `featureKeys` names the specific one(s) this area is actually the surface for. Absent for
+   * the kernel and for an area whose module has no canonical feature mapping yet (Guided
+   * setup/`drafting`) — both keep the legacy module-only gate.
+   */
+  featureKeys?: readonly string[];
 };
 
 /** Operational areas first, configuration last — a claim about what an operator does all day, not an alphabetisation. */
@@ -242,22 +254,26 @@ export const AREAS: readonly Area[] = [
   { segment: 'schedule', label: 'Schedule', group: 'operations' },
   { segment: 'resources', label: 'Resources', group: 'operations' },
   // Operational, not configuration — asking what's at risk of being late happens mid-shift, and nothing here is configured at all.
-  { segment: 'ask', label: 'Ask', group: 'operations', module: 'assistant', relevantCapabilities: ['assistant.ask'] },
+  { segment: 'ask', label: 'Ask', group: 'operations', module: 'assistant', relevantCapabilities: ['assistant.ask'], featureKeys: ['ask_gold'] },
   // Last in operations, on purpose — reading what a month came to is periodic, not part of the loop that gets work done.
-  { segment: 'reports', label: 'Reports', group: 'operations', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'] },
+  { segment: 'reports', label: 'Reports', group: 'operations', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
 
   { segment: 'customers', label: 'Customers', group: 'records' },
   // Beside Customers — the same loop from the other end: who to ring is a question about the customer list.
-  { segment: 'calls', label: 'Calls', group: 'records', module: 'reception', relevantCapabilities: ['call.place'] },
+  // The specific Communications/Voice features this surface is — not `pipeline`/`configurable_stages`/
+  // `qualification_state`, which also map to the `reception` module key but back the CRM pipeline
+  // (Customers), a different surface entirely (D46's many-to-many seam, and the reason `featureKeys`
+  // exists rather than gating on `module` alone).
+  { segment: 'calls', label: 'Calls', group: 'records', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
   { segment: 'locations', label: 'Locations', group: 'records' },
-  { segment: 'assets', label: 'Assets', group: 'records', module: 'assets' },
+  { segment: 'assets', label: 'Assets', group: 'records', module: 'assets', featureKeys: ['assets'] },
 
   // Turning this off also takes priced lines and the invoice off a job screen — see the work item route.
   // `sidebar: false` below: Settings is the primary door to each of these now (Slice 3). The
   // route, the module gate and the capability underneath are all exactly what they were —
   // bookmarks, deep links and `moduleConfiguration`'s own hrefs keep working unchanged.
-  { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing', sidebar: false, parent: 'settings', relevantCapabilities: ['price.manage'] },
-  { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations', sidebar: false, parent: 'settings', relevantCapabilities: ['automation.manage'] },
+  { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing', sidebar: false, parent: 'settings', relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
+  { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations', sidebar: false, parent: 'settings', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
   { segment: 'fields', label: 'Custom fields', group: 'configuration', sidebar: false, parent: 'settings', relevantCapabilities: ['field.manage'] },
   { segment: 'roles', label: 'People and roles', group: 'configuration', sidebar: false, parent: 'settings', relevantCapabilities: ['role.manage'] },
   // `sidebar: false`: Business Setup is implementation infrastructure, not a permanent tenant
@@ -267,11 +283,15 @@ export const AREAS: readonly Area[] = [
   // avoid. While LIVE, the route recedes to a Settings hub card instead of the sidebar. The
   // route, its module gate and `/setup` itself are all unchanged — only where it is *found*
   // moved, exactly as Pricing/Automations/Custom fields/People and roles already did.
+  // No `featureKeys`: no canonical Feature currently maps to `module_key = 'drafting'`
+  // (`20260918000001`'s seed has no such runtime mapping) — a real gap, not an oversight, kept
+  // on the legacy module-only gate rather than inventing a catalogue identifier that doesn't
+  // exist yet.
   { segment: 'setup', label: 'Guided setup', group: 'configuration', module: 'drafting', sidebar: false, relevantCapabilities: ['configuration.propose'] },
   // Its own area, not folded into Settings — a business returns here often enough (checking a
   // run, adding a source) that it isn't a set-once switch the way pricing or automations config
   // is, the same reasoning that keeps Automations and Guided setup each their own area.
-  { segment: 'integrations', label: 'Integrations', group: 'configuration', module: 'integrations', relevantCapabilities: ['integration.manage'] },
+  { segment: 'integrations', label: 'Integrations', group: 'configuration', module: 'integrations', relevantCapabilities: ['integration.manage'], featureKeys: ['csv_import'] },
   // Names no module — it's where the switches are, so a module able to hide it would lock a business out of its own account.
   { segment: 'settings', label: 'Settings', group: 'configuration' },
 ] as const;
@@ -286,24 +306,57 @@ export function areaVisibleTo(area: Area, capabilities?: ReadonlySet<Capability>
 }
 
 /**
- * `enabled` is module keys, not capabilities (D25) — entitlement/activation, layered under this.
- * `capabilities` is the new, narrower layer on top (I12, evolved): a role lacking every
- * capability an area names does not see it, in addition to the existing module gate. Passing
- * neither shows everything a business has switched on, exactly as before this parameter existed.
+ * Whether `area` is entitled — the layer under `areaVisibleTo`'s capability check.
+ *
+ * An area naming `featureKeys` resolves against those specific canonical Features when a
+ * resolved `featureAvailability` set is supplied — the granularity the raw module-key gate
+ * cannot express, since one `ModuleKey` can back several Features and a sibling staying active
+ * must not keep a *different* Feature's area visible. Everything else (the kernel, and an area
+ * whose module has no canonical Feature yet) keeps the legacy `enabled.has(area.module)` gate —
+ * also what a `featureKeys` area falls back to when no `featureAvailability` is supplied, so
+ * every existing caller of `areasIn` that only ever passed module keys keeps working unchanged.
  */
+export function areaEntitled(
+  area: Area,
+  enabled?: ReadonlySet<string>,
+  featureAvailability?: ReadonlySet<string>,
+): boolean {
+  if (area.featureKeys && featureAvailability) {
+    return area.featureKeys.some((key) => featureAvailability.has(key));
+  }
+  // No module named means the kernel — not something a business switched on, so not something it can switch off.
+  return !area.module || !enabled || enabled.has(area.module);
+}
+
+/**
+ * Every area visible in navigation for the given state — one predicate, so `OrgNav` (grouped)
+ * and `OrgNavBar` (flat, phone) can never diverge on eligibility even though they render
+ * differently (D4 of this slice). `enabled` is legacy module keys, `featureAvailability` is the
+ * canonical resolver's available-and-entitled-and-active Feature keys
+ * (`availableFeatureKeys(organizationResolvedFeatureStates(...))`), and `capabilities` is the
+ * role-relevance layer (I12, evolved) — all three optional, and passing none shows everything a
+ * business has switched on, exactly as before either of the latter two existed.
+ */
+export function visibleAreas(
+  enabled?: ReadonlySet<string>,
+  capabilities?: ReadonlySet<Capability>,
+  featureAvailability?: ReadonlySet<string>,
+): Area[] {
+  return AREAS.filter(
+    (area) =>
+      area.sidebar !== false &&
+      areaEntitled(area, enabled, featureAvailability) &&
+      areaVisibleTo(area, capabilities),
+  );
+}
+
 export function areasIn(
   group: AreaGroup,
   enabled?: ReadonlySet<string>,
   capabilities?: ReadonlySet<Capability>,
+  featureAvailability?: ReadonlySet<string>,
 ): Area[] {
-  return AREAS.filter(
-    (area) =>
-      area.group === group &&
-      area.sidebar !== false &&
-      // No module named means the kernel — not something a business switched on, so not something it can switch off.
-      (!area.module || !enabled || enabled.has(area.module)) &&
-      areaVisibleTo(area, capabilities),
-  );
+  return visibleAreas(enabled, capabilities, featureAvailability).filter((area) => area.group === group);
 }
 
 export function areaHref(organizationId: string, segment: string): string {
