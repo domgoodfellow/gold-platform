@@ -13,7 +13,7 @@ import { listLocations } from '@/lib/domain/locations/locations';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listPricedLines, priceWorkItem } from '@/lib/domain/pricing/prices';
 import { listResources } from '@/lib/domain/resources/resources';
-import { listUsableModules } from '@/lib/domain/tenancy/modules';
+import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 import { listWorkItemTimeline } from '@/lib/domain/timeline/timeline';
 import { listChecklistItems } from '@/lib/domain/work-items/checklists';
@@ -60,7 +60,7 @@ export default async function WorkItemPage({
     locations,
     assets,
     invoice,
-    enabledModules,
+    resolvedFeatures,
     statuses,
     transitions,
     documents,
@@ -77,7 +77,7 @@ export default async function WorkItemPage({
     listLocations(db, { organizationId }),
     listAssets(db, { organizationId }),
     getInvoiceForWorkItem(db, { organizationId, workItemId }),
-    listUsableModules(db, { organizationId }),
+    organizationResolvedFeatureStates(db, { organizationId }),
     listWorkItemStatuses(db, { organizationId, typeId: workItem.type.id }),
     listWorkItemTransitions(db, { organizationId, typeId: workItem.type.id }),
     listDocuments(db, { organizationId, attachedTo: { entity: 'work_item', id: workItemId } }),
@@ -89,6 +89,7 @@ export default async function WorkItemPage({
   const standing = invoice ? invoiceStanding(invoice) : null;
   const can = (capability: Capability) => organization.capabilities.includes(capability);
   const mayAttach = can('document.create');
+  const enabledModules = activeModuleKeys(resolvedFeatures);
   const billingEnabled = enabledModules.has('billing');
   const assetsEnabled = enabledModules.has('assets');
   const cardsAccepted = (await paymentProvider()) !== null && enabledModules.has('card_payments');

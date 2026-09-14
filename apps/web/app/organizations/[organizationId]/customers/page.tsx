@@ -11,7 +11,7 @@ import { CustomerTable } from '@/features/crm/customers/customer-table';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
-import { listUsableModules } from '@/lib/domain/tenancy/modules';
+import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -23,11 +23,12 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
   const stage = Array.isArray(query.stage) ? query.stage[0] ?? '' : query.stage ?? '';
   const { db } = await requireOrganization(organizationId);
 
-  const [definitions, modules, stages] = await Promise.all([
+  const [definitions, resolvedFeatures, stages] = await Promise.all([
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
-    listUsableModules(db, { organizationId }),
+    organizationResolvedFeatureStates(db, { organizationId }),
     listCustomerStages(db, { organizationId }),
   ]);
+  const modules = activeModuleKeys(resolvedFeatures);
   const salesEnabled = modules.has('reception');
   const visibleStages = salesEnabled ? stages : [];
   const customers = await listCustomers(db, {

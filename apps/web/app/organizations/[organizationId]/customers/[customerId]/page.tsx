@@ -8,7 +8,7 @@ import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listPortalInvites } from '@/lib/domain/portal/portal';
 import { listCustomerCalls } from '@/lib/domain/reception/calls';
-import { listUsableModules } from '@/lib/domain/tenancy/modules';
+import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
@@ -23,17 +23,18 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
   if (!customer) notFound();
 
   const origin = await requestOrigin();
-  const [documents, definitions, timeline, invites, modules, stages, calls, invoices, work] = await Promise.all([
+  const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work] = await Promise.all([
     listDocuments(db, { organizationId, attachedTo: { entity: 'customer', id: customerId } }),
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
     listCustomerTimeline(db, { organizationId, customerId }),
     listPortalInvites(db, { organizationId, customerId }),
-    listUsableModules(db, { organizationId }),
+    organizationResolvedFeatureStates(db, { organizationId }),
     listCustomerStages(db, { organizationId }),
     listCustomerCalls(db, { organizationId, customerId }),
     listCustomerInvoices(db, { organizationId, customerId }),
     listWorkItems(db, { organizationId, customerId }),
   ]);
+  const modules = activeModuleKeys(resolvedFeatures);
   const voice = modules.has('reception');
 
   return (

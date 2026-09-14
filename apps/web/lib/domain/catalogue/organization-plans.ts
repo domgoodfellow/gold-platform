@@ -512,3 +512,22 @@ export async function disableOrganizationFeature(
     throw new DomainError(error.message, 'organization_plans.disable_feature_failed');
   }
 }
+
+/**
+ * Legacy `MODULES` keys this organization can currently act on, through the canonical
+ * resolver — entitled *and* not deliberately disabled. A drop-in, stricter replacement for
+ * `listUsableModules`'s raw wanted∩paid set at a presentation call site: everything
+ * `listUsableModules` would say is on, minus anything this business has since switched off
+ * through Settings > Features. Several canonical Features can share one legacy module key
+ * (D46's many-to-many seam); a key counts as active here if any of them does, matching how
+ * `usable_modules` already treats the module axis as one fact per key.
+ */
+export function activeModuleKeys(states: readonly ResolvedFeatureState[]): Set<ModuleKey> {
+  const keys = new Set<ModuleKey>();
+  for (const state of states) {
+    if (state.moduleKey && state.entitled && state.activation === 'active') {
+      keys.add(state.moduleKey);
+    }
+  }
+  return keys;
+}
