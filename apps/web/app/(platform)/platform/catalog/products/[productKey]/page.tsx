@@ -29,7 +29,8 @@ export default async function ProductPage({
       <RecordHeader
         title={product.label}
         crumbs={[
-          { label: 'Products', href: '/platform/catalog/products' },
+          { label: 'Catalog', href: '/platform/catalog' },
+          { label: 'Line items', href: '/platform/catalog/products' },
           { label: product.label },
         ]}
       />

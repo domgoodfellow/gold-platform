@@ -30,6 +30,14 @@ const workspacePageChrome = readFileSync(
   'utf8',
 );
 const recordHeader = readFileSync(`${WEB}/components/containers/record-header.tsx`, 'utf8');
+const platformNavigation = readFileSync(`${WEB}/features/platform/platform-navigation.tsx`, 'utf8');
+const tenantWorkspace = readFileSync(`${WEB}/features/platform/tenant-workspace.tsx`, 'utf8');
+const platformOrganizationOverview = readFileSync(
+  `${WEB}/app/(platform)/platform/organizations/[organizationId]/page.tsx`,
+  'utf8',
+);
+const platformCatalogPage = readFileSync(`${WEB}/app/(platform)/platform/catalog/page.tsx`, 'utf8');
+const platformOverview = readFileSync(`${WEB}/features/platform/platform-overview.tsx`, 'utf8');
 
 describe('WorkspaceHeader is geometry only', () => {
   it('carries no organization id, platform route, AreaTrail or authorization knowledge', () => {
@@ -111,9 +119,12 @@ describe('the Business phone header — compact controls wired to the right slot
 });
 
 describe('the Platform header adapter', () => {
-  it('owns pathname → title resolution and no longer lives beside generic header markup', () => {
+  it('no longer lives beside generic header markup, and delegates title/breadcrumb entirely to page chrome', () => {
     expect(existsSync(`${WEB}/components/site-header.tsx`)).toBe(false);
-    expect(platformHeader).toContain('usePlatformHeaderOverride');
+    expect(existsSync(`${WEB}/features/platform/platform-header-title.tsx`)).toBe(false);
+    expect(platformHeader).not.toContain('usePlatformHeaderOverride');
+    // No pathname → title table — every Platform page registers its own via workspace-page-chrome.
+    expect(platformHeader).not.toContain('usePathname');
     expect(platformHeader).toContain('WorkspaceHeader');
   });
 
@@ -229,6 +240,53 @@ describe('the page-chrome contract — the header, not the body, owns page locat
     expect(recordHeader).toContain('return null');
     expect(recordHeader).not.toContain('<h1');
     expect(recordHeader).not.toContain('Breadcrumb');
+  });
+});
+
+describe('Platform pages register chrome instead of duplicating their own heading', () => {
+  it('the Catalog and Overview pages no longer render PageHeading — chrome owns the title', () => {
+    expect(platformCatalogPage).not.toContain('PageHeading');
+    expect(platformCatalogPage).toContain('PageChromeRegistrar');
+    expect(platformOverview).not.toContain('PageHeading');
+    expect(platformOverview).toContain('PageChromeRegistrar');
+  });
+
+  it('the legacy flat SKU list reads as "Line items" under Catalog, never a second "Products"', () => {
+    const productsPage = readFileSync(
+      `${WEB}/app/(platform)/platform/catalog/products/page.tsx`,
+      'utf8',
+    );
+    expect(productsPage).toContain("title=\"Line items\"");
+    expect(platformNavigation).not.toMatch(/label:\s*'Products'/);
+  });
+});
+
+describe('Platform navigation highlights the most specific matching item, never two at once', () => {
+  it('renamed the Catalog root away from "Products" — Products is the legacy line-item list one level in', () => {
+    expect(platformNavigation).toContain("label: 'Catalog', href: '/platform/catalog'");
+  });
+
+  it('picks the longest matching href so a Plan or Product detail route activates its own section', () => {
+    expect(platformNavigation).toContain('function activeHref');
+    expect(platformNavigation).toContain('item.href.length > best.href.length');
+  });
+});
+
+describe('the tenant workspace header — Platform administering an organization, not operating it', () => {
+  it('registers chrome instead of an sr-only heading plus the retired override store', () => {
+    expect(tenantWorkspace).toContain('PageChromeRegistrar');
+    expect(tenantWorkspace).not.toContain('sr-only');
+    expect(tenantWorkspace).not.toContain('PlatformHeaderTitle');
+  });
+
+  it('"Open business" only ever appears for a caller with real membership in that organization', () => {
+    expect(tenantWorkspace).toContain('canOpenBusiness');
+    // Never a fabricated tenant capability inside /platform (constraints.md) — the gate is the
+    // caller's own listMyOrganizations() result, resolved server-side, not staff authority.
+    expect(platformOrganizationOverview).toContain('listMyOrganizations');
+    expect(platformOrganizationOverview).toMatch(
+      /myOrganizations\.some\(\(organization\) => organization\.id === organizationId\)/,
+    );
   });
 });
 

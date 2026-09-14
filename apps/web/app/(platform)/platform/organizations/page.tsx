@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { AppPage } from '@/components/containers/app-page';
-import { PageHeading } from '@/components/containers/section';
-import { Hint, TextInput } from '@/components/controls/inputs';
+import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
+import { TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { ProvisionOrganizationDialog } from '@/features/platform/organizations/provision-organization-dialog';
@@ -16,11 +16,12 @@ export default async function PlatformOrganizationsPage({ searchParams }: { sear
 
   return (
     <AppPage width="full">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div><PageHeading>Organizations</PageHeading><Hint className="mt-1 block">{total === 1 ? '1 organization' : `${total} organizations`} on GOLD.</Hint></div>
-        <ProvisionOrganizationDialog />
-      </div>
-      <form method="get" role="search" className="relative mt-6 max-w-md">
+      <PageChromeRegistrar
+        title="Organizations"
+        status={`${total === 1 ? '1 organization' : `${total} organizations`} on GOLD`}
+        actions={<ProvisionOrganizationDialog />}
+      />
+      <form method="get" role="search" className="relative max-w-md">
         <Search aria-hidden size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <TextInput name="q" defaultValue={query} placeholder="Search organizations or tenant IDs" aria-label="Search organizations" className="pl-9" />
       </form>

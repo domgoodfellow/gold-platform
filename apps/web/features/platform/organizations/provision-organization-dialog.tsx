@@ -15,7 +15,7 @@ export function ProvisionOrganizationDialog() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button">Provision organization</Button>
+        <Button type="button" size="small">Provision organization</Button>
       </DialogTrigger>
       <DialogContent className="w-[min(48rem,calc(100%-2rem))] max-w-none">
         <DialogHeader>

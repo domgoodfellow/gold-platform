@@ -38,7 +38,7 @@ export function CreatePlanSheet() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button type="button">Create Plan</Button>
+        <Button type="button" size="small">Create Plan</Button>
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>

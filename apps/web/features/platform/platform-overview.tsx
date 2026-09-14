@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { PageHeading, SectionHeading } from '@/components/containers/section';
+import { SectionHeading } from '@/components/containers/section';
+import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
 import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
@@ -20,8 +21,8 @@ export function PlatformOverview({ organizations, failures, catalogue, rates }: 
 
   return (
     <AppPage width="full">
-      <PageHeading>Overview</PageHeading>
-      <Hint className="mt-1 block">The state of every business running on GOLD.</Hint>
+      <PageChromeRegistrar title="Overview" />
+      <Hint className="block">The state of every business running on GOLD.</Hint>
 
       <WidgetGrid className="mt-6">
         <Widget

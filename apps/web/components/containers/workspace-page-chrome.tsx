@@ -115,15 +115,18 @@ export function PageChromeIdentity({ chrome }: { chrome: PageChrome }) {
             <Fragment key={index}>
               {index > 0 ? <BreadcrumbSeparator /> : null}
               <BreadcrumbItem className={cx(current ? 'min-w-0' : 'shrink-0')}>
-                {current || !segment.href ? (
+                {current ? (
                   <BreadcrumbPage className="truncate">{segment.label}</BreadcrumbPage>
-                ) : (
+                ) : segment.href ? (
                   <Link
                     href={segment.href}
                     className="truncate rounded underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                   >
                     {segment.label}
                   </Link>
+                ) : (
+                  // An ancestor label with no route of its own — a group name, not a page.
+                  <span className="truncate">{segment.label}</span>
                 )}
               </BreadcrumbItem>
             </Fragment>

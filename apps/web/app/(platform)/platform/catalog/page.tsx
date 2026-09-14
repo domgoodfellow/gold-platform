@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { PageHeading } from '@/components/containers/section';
+import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { Badge } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';
@@ -48,8 +48,8 @@ export default async function CatalogPage() {
 
   return (
     <AppPage width="full">
-      <PageHeading>Catalog</PageHeading>
-      <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+      <PageChromeRegistrar title="Catalog" />
+      <p className="max-w-3xl text-sm text-muted-foreground">
         What GOLD sells, as a customer would recognize it: seven Products, each a coherent set of
         Modules and Features. Internal keys and legacy runtime mappings live one click deeper.
       </p>

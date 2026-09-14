@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { PageHeading, SectionHeading } from '@/components/containers/section';
+import { SectionHeading } from '@/components/containers/section';
+import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { Badge } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';
@@ -31,11 +32,8 @@ export default async function PlansPage() {
 
   return (
     <AppPage width="full">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <PageHeading>Plans &amp; Add-ons</PageHeading>
-        <CreatePlanSheet />
-      </div>
-      <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+      <PageChromeRegistrar title="Plans & Add-ons" actions={<CreatePlanSheet />} />
+      <p className="max-w-3xl text-sm text-muted-foreground">
         Reusable packaging over the canonical catalogue. A Plan is one organization&rsquo;s base
         package; an Add-on stacks alongside it.
       </p>

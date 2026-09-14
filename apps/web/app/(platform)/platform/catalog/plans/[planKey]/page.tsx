@@ -78,7 +78,7 @@ export default async function PlanDetailPage({ params }: PageProps<'/platform/ca
         actions={<EditPlanSheet plan={plan} />}
       />
 
-      <div className="mt-4 flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         <Badge tone="accent">{plan.kind === 'plan' ? 'Plan' : 'Add-on'}</Badge>
         {!plan.billable ? <Badge>Non-billable</Badge> : null}
         {plan.saleStatus !== 'active' ? <Badge>{plan.saleStatus}</Badge> : null}
