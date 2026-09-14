@@ -38,12 +38,21 @@ const NAME_MAX = 200;
  */
 export async function listCustomers(
   db: Db,
-  input: { organizationId: string; limit?: number },
+  input: { organizationId: string; limit?: number; search?: string; stageId?: string | null },
 ): Promise<Counted<Customer>> {
-  const { data, error, count } = await db
+  let query = db
     .from('customers')
     .select('id, name, email, phone, custom, stage_id, created_at', { count: 'exact' })
-    .eq('organization_id', input.organizationId)
+    .eq('organization_id', input.organizationId);
+
+  const search = input.search?.trim().replace(/[%_,()]/g, ' ');
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+  }
+  if (input.stageId === null) query = query.is('stage_id', null);
+  else if (input.stageId !== undefined) query = query.eq('stage_id', input.stageId);
+
+  const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .limit(input.limit ?? LIST_LIMIT);
 

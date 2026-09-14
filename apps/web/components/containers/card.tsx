@@ -1,56 +1,64 @@
+'use client';
+
 import type { ComponentProps, ElementType, ReactNode } from 'react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@gold/ui/components/accordion';
+import { Card as ShadcnCard } from '@gold/ui/components/card';
 import { cx, FOCUS_RING } from '../class-names';
 
-/** `as` because callers aren't all divs — a bookable service is a `<section>`, a rule an `<article>`. */
+/** A semantic application card over the source-owned shadcn primitive. */
 export function Card<T extends ElementType = 'div'>({
   as,
   className,
   ...props
 }: { as?: T } & Omit<ComponentProps<'div'>, 'ref'>) {
   const Element = (as ?? 'div') as ElementType;
-  return <Element {...props} className={cx('rounded border border-border p-4', className)} />;
+  return (
+    <ShadcnCard asChild className={cx('gap-0 p-4 py-4', className)}>
+      <Element {...props} />
+    </ShadcnCard>
+  );
 }
 
-/**
- * A form or detail that's collapsible rather than always on screen. `<details>` gives open/close,
- * focus, and keyboard handling for free.
- *
- * `defaultOpen`, not `open`: the browser owns the state once a reader has touched it.
- */
+/** A compact disclosure over shadcn Accordion, with the established GOLD API. */
 export function Disclosure({
   summary,
   tone = 'default',
   defaultOpen,
   className,
   children,
-  ...props
-}: Omit<ComponentProps<'details'>, 'title' | 'open'> & {
+  id,
+}: Omit<ComponentProps<'div'>, 'title'> & {
   summary: ReactNode;
-  /** Primary is for the screen's one leading disclosure action, never a section-local form. */
   tone?: 'default' | 'primary';
   defaultOpen?: boolean;
 }) {
   return (
-    <details
-      {...props}
-      open={defaultOpen}
-      className={cx('group rounded border border-border', className)}
+    <Accordion
+      id={id}
+      type="single"
+      collapsible
+      defaultValue={defaultOpen ? 'content' : undefined}
+      className={cx('rounded-lg border border-border', className)}
     >
-      <summary
-        className={cx(
-          'cursor-pointer list-none px-4 py-3 text-sm font-medium marker:content-none',
-          tone === 'primary' && 'bg-accent text-on-accent',
-          FOCUS_RING,
-        )}
-      >
-        <span className="flex items-center gap-2">
-          <span aria-hidden className="text-subtle transition-transform group-open:rotate-90">
-            ›
-          </span>
+      <AccordionItem value="content" className="border-0">
+        <AccordionTrigger
+          className={cx(
+            FOCUS_RING,
+            'rounded-lg px-4 py-3 hover:no-underline',
+            tone === 'primary' && 'bg-accent text-on-accent',
+          )}
+        >
           {summary}
-        </span>
-      </summary>
-      <div className="border-t border-border px-4 py-3">{children}</div>
-    </details>
+        </AccordionTrigger>
+        <AccordionContent className="border-t border-border px-4 py-3">
+          {children}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }

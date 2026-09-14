@@ -69,6 +69,7 @@ export async function listWorkItems(
     assetId?: string;
     locationId?: string;
     resourceId?: string;
+    customerId?: string;
     limit?: number;
   },
 ): Promise<Counted<WorkItem>> {
@@ -88,6 +89,9 @@ export async function listWorkItems(
   }
   if (input.locationId) {
     query = query.eq('location_id', input.locationId);
+  }
+  if (input.customerId) {
+    query = query.eq('customer_id', input.customerId);
   }
 
   const { data, error, count } = await query

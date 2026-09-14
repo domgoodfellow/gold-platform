@@ -1,10 +1,47 @@
 # Product Surface Audit
 
-> Audit date: 2026-09-13. Repository HEAD at the time of this audit: `77761d2` ("Establish the
-> CRM + Communications/Voice reference architecture"). This is a one-time slice output, not a
-> governing document under D8's budget — it is not listed in `CLAUDE.md`'s document table and
-> should be treated as disposable once its recommended slices are either done or superseded by a
-> fresher audit. Where it disagrees with the code by the time it is read, the code is right.
+This is the maintained human reading of `apps/web/lib/catalogue-surface-coverage.ts`, the
+machine-checked map of every canonical Feature marked `available` or `partial`. Catalogue state
+describes the commercial/runtime claim; Domain, UI, Interaction and Test describe what a person
+can actually use. Neither silently changes the other.
+
+## Catalogue implementation matrix
+
+The table groups Features only to keep it readable; every non-planned qualified key is named.
+The exact per-Feature coverage levels, evidence paths and gaps live in the typed registry above
+and are checked against the seeded catalogue by `catalogue-plans.test.ts`.
+
+| Product / Module | Available and partial Features | Domain / web owner | Primary route | Interaction / test |
+|---|---|---|---|---|
+| CRM / Customers & Contacts | `customer_profile`, `ownership_assignment`*, `tags_segmentation`*, `activity_timeline` | `customers`, `timeline` / `features/crm/customers` | `/customers`, `/customers/[id]` | operational / E2E |
+| CRM / Sales | `pipeline`, `configurable_stages`, `qualification_state`* | `customers/stages` / `features/crm/sales` | `/customers/pipeline` | configurable / E2E |
+| CRM / Data | `custom_fields`, `configurable_views`*, `csv_import` | `fields`, `integrations` / shared feature packages | `/customers`, `/integrations/imports` | operational / integration |
+| Communications / Voice | `inbound_calling`, `outbound_calling`, `call_controls`*, `call_history`, `number_inventory`*, `caller_id`, `recording`*, `call_dispositions` | `reception` / `features/communications/voice` | `/calls`, customer Communications tab | operational / E2E |
+| Communications / Email | `sending`, `sender_identity` | `automation`, provider bindings / Automations and Connections | `/automations`, `/settings/connections` | partial operational / integration |
+| Operations / Work Management | `work_items`, `work_types_statuses`, `assignment`, `checklists`, `time_cost_capture`, `work_timeline` | `work-items` / `features/work` | `/work` | operational / integration |
+| Operations / Scheduling | `calendar`, `availability`, `rescheduling`, `scheduling_rules` | `scheduling` / route composition | `/schedule`, Settings | operational / integration |
+| Operations / Resources | `resource_records`, `capacity_allocation`* | `resources` / route composition | `/resources` | partial operational / integration |
+| Operations / Assets & Locations | `locations`, `assets`, `asset_history` | `locations`, `assets`, `timeline` / shared record features | `/locations`, `/assets` | operational / integration |
+| Operations / Dispatch | `weather_aware_dispatch`* | `automation` / `features/automations` | `/automations` | configurable / integration |
+| Financial Operations | `price_book`, `service_rates`, `quote_creation`, `quote_to_invoice`, `invoices`, `invoice_history`, `connected_processor`, `card_payments`, `revenue_costs`, `gross_margin`, `estimated_vs_actual`* | `pricing`, `billing` / Work and CRM projections | `/pricing`, `/work/[id]`, customer Financial tab | operational / integration |
+| Automation | `rule_authoring`, `domain_event_trigger`, `counter_trigger`, `external_condition_trigger`, `conditions`, `branching`*, `email_action`, `update_customer_action`, `update_work_action`, `create_work_action`, `voice_action`*, `run_history`, `rule_review` | `automation` / `features/automations` | `/automations` | operational / integration |
+| Insights | `saved_dashboards`, `saved_reports`, `financial_reports`, `utilization`, `profitability`, `ask_gold` | `reporting`, `assistant` / Reporting and Ask | `/reports`, `/ask` | operational / integration |
+| Customer Experience / Website | `pages_sections`, `draft_review_publish`, `seo_metadata`* | `public-site` / `features/public-site` | `/settings/website` | configurable / integration |
+| Customer Experience / Public Booking | `service_selection`, `availability_display`, `booking` | `booking`, `scheduling` / public booking route | `/book/[slug]` | operational / E2E |
+| Customer Experience / Customer Portal | `portal_auth`, `portal_history` | `portal`, `billing` / `features/portal-access` | `/portal/[token]` | operational / E2E |
+| Customer Experience / Forms | `booking_intake` | `booking` / public booking form | `/book/[slug]` | operational / E2E |
+| Customer Experience / Brand | `brand_theme`, `domain_binding`* | `branding`, provider bindings / Branding and Connections | `/settings`, `/settings/connections` | configurable / integration |
+
+`*` marks a partial implementation or a catalogue claim with a material UI gap. In particular,
+customer ownership has no stored owner, Voice number inventory has no tenant inventory UI,
+recording has no playback/configuration surface, and qualification is not an independent state.
+
+## Prior audit snapshot (historical)
+
+The remainder of this document is the repository-wide audit that preceded the CRM + Voice
+reference implementation. It is retained for the deferred-product findings and original
+evidence, but statements about customer financial visibility, route-local CRM/Voice UI, and
+Voice setup have been superseded by the maintained matrix and typed registry above.
 
 ## Executive summary
 

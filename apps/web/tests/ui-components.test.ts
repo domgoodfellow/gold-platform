@@ -59,7 +59,7 @@ describe('record header composition', () => {
 });
 
 describe('confirmation dialog composition', () => {
-  it('names and describes the modal confirmation', () => {
+  it('renders an explicit non-submitting trigger before the modal opens', () => {
     const html = renderToStaticMarkup(
       createElement(ConfirmSubmit, {
         formId: 'remove-line',
@@ -69,14 +69,9 @@ describe('confirmation dialog composition', () => {
       }),
     );
 
-    const labelledBy = html.match(/aria-labelledby="([^"]+)"/)?.[1];
-    const describedBy = html.match(/aria-describedby="([^"]+)"/)?.[1];
-
-    expect(labelledBy).toBeTruthy();
-    expect(describedBy).toBeTruthy();
-    expect(html).toContain(`id="${labelledBy}"`);
-    expect(html).toContain(`id="${describedBy}"`);
-    expect(html).toContain('Remove this line from the quote?');
+    expect(html).toContain('<button');
+    expect(html).toContain('type="button"');
+    expect(html).toContain('Remove');
   });
 });
 

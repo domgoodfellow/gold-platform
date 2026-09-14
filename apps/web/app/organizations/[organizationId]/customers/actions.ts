@@ -6,7 +6,7 @@ import { createCustomer } from '@/lib/domain/customers/customers';
 import { DomainError } from '@/lib/domain/errors';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 
-export type CreateCustomerState = { error: string | null };
+export type CreateCustomerState = { error: string | null; created: boolean };
 
 export async function createCustomerAction(
   _previous: CreateCustomerState,
@@ -25,7 +25,7 @@ export async function createCustomerAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message };
+      return { error: error.message, created: false };
     }
     throw error;
   }
@@ -34,5 +34,5 @@ export async function createCustomerAction(
   // fine and deliberately not re-validated here: RLS refuses an insert into an organization
   // the caller does not belong to, so tampering produces a refusal rather than a leak.
   revalidatePath(`/organizations/${organizationId}/customers`);
-  return { error: null };
+  return { error: null, created: true };
 }

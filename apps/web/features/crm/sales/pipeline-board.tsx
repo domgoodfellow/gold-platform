@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { Badge } from '@/components/display/data';
+import { Card, CardContent, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { EmptyState, GroupHeading } from '@/components/containers/section';
 
 export type PipelinePerson = { id: string; name: string };
@@ -64,14 +66,13 @@ export function PipelineBoard({
   return (
     <div className="flex gap-4 overflow-x-auto pb-2">
       {columns.map((column) => (
-        <section
-          key={column.key || 'unstaged'}
-          className="flex w-60 shrink-0 flex-col rounded border border-border"
-        >
-          <div className="flex items-baseline justify-between gap-2 border-b border-border px-3 py-2">
-            <GroupHeading>{column.name}</GroupHeading>
-            <span className="text-sm tabular-nums text-muted">{column.people.length}</span>
-          </div>
+        <Card key={column.key || 'unstaged'} asChild className="w-64 shrink-0 gap-0 py-0">
+          <section>
+          <CardHeader className="grid-cols-[1fr_auto] border-b py-3">
+            <CardTitle><GroupHeading>{column.name}</GroupHeading></CardTitle>
+            <Badge>{column.people.length}</Badge>
+          </CardHeader>
+          <CardContent className="px-0">
           {column.people.length === 0 ? (
             <EmptyState weight="subtle" className="px-3 py-2">
               Nobody here.
@@ -91,7 +92,9 @@ export function PipelineBoard({
               ))}
             </ul>
           )}
-        </section>
+          </CardContent>
+          </section>
+        </Card>
       ))}
     </div>
   );

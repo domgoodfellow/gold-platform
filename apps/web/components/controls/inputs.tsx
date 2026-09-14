@@ -1,29 +1,19 @@
 import type { ComponentProps } from 'react';
+import { Input } from '@gold/ui/components/input';
+import { Label } from '@gold/ui/components/label';
+import { NativeSelect } from '@gold/ui/components/native-select';
+import { Textarea } from '@gold/ui/components/textarea';
 import { cx, FOCUS_RING } from '../class-names';
 
 /** Shadows the native `size` attribute (visible width in characters), unused here and repurposed. */
 export type ControlSize = 'default' | 'small';
-
-const CONTROL_BASE = cx(
-  'rounded border border-border focus-visible:border-accent-text aria-invalid:border-danger',
-  FOCUS_RING,
-);
-
-const CONTROL_SIZE: Record<ControlSize, string> = {
-  default: 'px-3 py-2',
-  small: 'px-2 py-1 text-sm',
-};
-
-function control(size: ControlSize, className: string | undefined): string {
-  return cx(CONTROL_BASE, CONTROL_SIZE[size], className);
-}
 
 export function TextInput({
   size = 'default',
   className,
   ...props
 }: Omit<ComponentProps<'input'>, 'size'> & { size?: ControlSize }) {
-  return <input {...props} className={control(size, className)} />;
+  return <Input {...props} className={cx(FOCUS_RING, size === 'small' && 'h-7 px-2 text-sm', className)} />;
 }
 
 export function SelectInput({
@@ -31,7 +21,7 @@ export function SelectInput({
   className,
   ...props
 }: Omit<ComponentProps<'select'>, 'size'> & { size?: ControlSize }) {
-  return <select {...props} className={control(size, className)} />;
+  return <NativeSelect {...props} wrapperClassName={className} className={cx(FOCUS_RING, size === 'small' && 'h-7 px-2 pr-7 text-sm')} />;
 }
 
 export function TextArea({
@@ -39,12 +29,12 @@ export function TextArea({
   className,
   ...props
 }: ComponentProps<'textarea'> & { size?: ControlSize }) {
-  return <textarea {...props} className={control(size, className)} />;
+  return <Textarea {...props} className={cx(FOCUS_RING, size === 'small' && 'min-h-16 px-2 py-1 text-sm', className)} />;
 }
 
 /** Names the input; `Hint` explains it. */
 export function FieldLabel({ className, ...props }: ComponentProps<'label'>) {
-  return <label {...props} className={cx('text-sm font-medium', className)} />;
+  return <Label {...props} className={className} />;
 }
 
 export function Hint({

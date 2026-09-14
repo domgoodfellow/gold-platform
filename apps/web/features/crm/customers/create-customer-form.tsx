@@ -1,10 +1,9 @@
 'use client';
 
-import { SectionHeading } from '@/components/containers/section';
 import { Button } from '@/components/controls/button';
 import { FormActions, FormError, FormField } from '@/components/controls/form';
 import { TextInput } from '@/components/controls/inputs';
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import {
@@ -12,24 +11,28 @@ import {
   type CreateCustomerState,
 } from '@/app/organizations/[organizationId]/customers/actions';
 
-const INITIAL: CreateCustomerState = { error: null };
+const INITIAL: CreateCustomerState = { error: null, created: false };
 
 export function CreateCustomerForm({
   organizationId,
   definitions,
+  onCreated,
 }: {
   organizationId: string;
   definitions: FieldDefinition[];
+  onCreated?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createCustomerAction, INITIAL);
 
+  useEffect(() => {
+    if (state.created) onCreated?.();
+  }, [state.created, onCreated]);
+
   return (
-    <form action={formAction} className="mt-8 flex flex-col gap-3">
+    <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <SectionHeading>New customer</SectionHeading>
-
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-3">
         <FormField id="new-customer-name" label="Name" className="flex-1">
           {(field) => <TextInput {...field} name="name" type="text" required maxLength={200} />}
         </FormField>

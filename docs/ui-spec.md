@@ -299,31 +299,23 @@ Not every interaction is a dialog.
 | Use | For | Built as |
 |---|---|---|
 | Cards | lists of jobs, customers, resources, invoices | `Card` |
-| Sheets (organization shell) | filters, quick actions, status changes, small forms | `Disclosure` |
-| Sheets (platform admin surfaces) | inspecting and editing one catalogue/Plan record from a browse list — Product, Module, Feature, Plan metadata, quotas, prices | `@gold/ui`'s `Sheet` |
+| Sheets | filters, quick actions, status changes, small forms, and inspecting one record from a browse list | `@gold/ui`'s Radix-backed `Sheet` |
 | Full screens | complex forms, configuration, job and customer detail | the route |
 | Dialogs | confirmation, and destructive actions only | `Dialog` · `ConfirmSubmit` |
 
-**Two sheet implementations, deliberately, not one competing pair.** The organization shell's
-create-forms (a customer, a work item) are the shape `<details>`/`<summary>` already covers:
-open by default when the list behind it is empty, no animation, no focus trap needed beyond what
-the browser gives for free. The platform catalogue/Plan editors (`20260918000001`) are a
-different kind of surface — inspecting one record's several axes at once, opened from a dense
-browse list rather than sitting at the bottom of one — where a proper slide-over panel with a
-backdrop and an explicit close affordance earns its complexity. Both stay `Sheet`-labelled in
-product language; only the platform admin implementation uses `@gold/ui`'s Radix-backed
-component, its first real callers. Do not introduce a third pattern for either use.
+**One sheet implementation.** Organization quick-create forms and platform catalogue editors use
+the Radix-backed `Sheet` exported by `@gold/ui`. It owns focus trapping, escape-key handling,
+labelling, and responsive placement. Use `Disclosure` for inline progressive disclosure, not as
+a drawer substitute. Do not introduce another sheet pattern.
 
-**A sheet is `<details>` and `<summary>`, which is the whole implementation, in the organization
-shell.** The browser opens it, closes it, focuses it, labels it and reaches it by keyboard.
 `OrgNav` refused a drawer on the
 grounds that one "needs state, a toggle, a focus trap and an escape key to be correct", and the
-same argument settles this the other way round: the element that does all four already ships.
+same argument supports a single accessible sheet primitive for drawer interactions.
 
 **What this replaced was every create form rendering permanently at the bottom of its screen.** A
 business with forty customers ended its customer list with a create form, so the answer to *what
 is on this page* was whatever fitted above a thing used once a week. A form is now available and
-opens by default only when the list behind it is empty — because then the form *is* the screen.
+opens in a focused sheet when requested, leaving the list as the stable page context.
 
 **The outermost container declares its width and not only its margins.** `mx-auto max-w-2xl`
 centres a block and does nothing useful in a flex parent, where an automatic side margin absorbs

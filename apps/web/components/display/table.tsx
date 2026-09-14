@@ -1,4 +1,13 @@
 import type { ComponentProps, ReactNode } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell as ShadcnTableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@gold/ui/components/table';
 import { cx } from '../class-names';
 import { Hint } from '../controls/inputs';
 import { EmptyState } from '../containers/section';
@@ -49,30 +58,30 @@ export function DataTable<T>({
   return (
     <div className="@container">
       <div className="hidden @min-[38rem]:block">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
+        <Table>
+          <TableHeader>
+            <TableRow>
               {wide.map((column) => (
-                <th
+                <TableHead
                   key={column.key}
                   scope="col"
                   className={cx('py-2 pr-4 font-medium', column.numeric && 'text-right')}
                 >
                   {column.header}
-                </th>
+                </TableHead>
               ))}
               {actions ? (
-                <th scope="col" className="py-2 text-right font-medium">
+                <TableHead scope="col" className="text-right">
                   <span className="sr-only">Actions</span>
-                </th>
+                </TableHead>
               ) : null}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((row) => (
-              <tr key={rowKey(row)} className="border-b border-border/50">
+              <TableRow key={rowKey(row)}>
                 {wide.map((column) => (
-                  <td
+                  <ShadcnTableCell
                     key={column.key}
                     className={cx(
                       'py-2 pr-4 align-top',
@@ -80,20 +89,20 @@ export function DataTable<T>({
                     )}
                   >
                     {column.cell(row)}
-                  </td>
+                  </ShadcnTableCell>
                 ))}
                 {actions ? (
-                  <td className="py-2 align-top">
+                  <ShadcnTableCell className="align-top">
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       {actions(row)}
                     </div>
-                  </td>
+                  </ShadcnTableCell>
                 ) : null}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-          {footer ? <tfoot>{footer}</tfoot> : null}
-        </table>
+          </TableBody>
+          {footer ? <TableFooter>{footer}</TableFooter> : null}
+        </Table>
       </div>
 
       <ul className="flex flex-col gap-3 @min-[38rem]:hidden">
@@ -151,7 +160,7 @@ export function TableHeaderCell({
   ...props
 }: ComponentProps<'th'> & { numeric?: boolean }) {
   return (
-    <th
+    <TableHead
       scope="col"
       {...props}
       className={cx('py-2 pr-4 font-medium', numeric && 'text-right', className)}
@@ -165,7 +174,7 @@ export function TableCell({
   ...props
 }: ComponentProps<'td'> & { numeric?: boolean }) {
   return (
-    <td
+    <ShadcnTableCell
       {...props}
       className={cx('py-2 pr-4 align-top', numeric && 'text-right tabular-nums', className)}
     />

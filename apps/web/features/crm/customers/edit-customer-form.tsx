@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, SelectInput, TextInput } from '@/components/controls/inputs';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
@@ -12,7 +12,7 @@ import {
   type EditCustomerState,
 } from '@/app/organizations/[organizationId]/customers/[customerId]/actions';
 
-const EDIT_INITIAL: EditCustomerState = { error: null };
+const EDIT_INITIAL: EditCustomerState = { error: null, updated: false };
 
 /**
  * Correcting a customer, and moving them along.
@@ -35,13 +35,18 @@ export function EditCustomerForm({
   customer,
   definitions,
   stages,
+  onUpdated,
 }: {
   organizationId: string;
   customer: Customer;
   definitions: FieldDefinition[];
   stages: CustomerStage[];
+  onUpdated?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(editCustomerAction, EDIT_INITIAL);
+  useEffect(() => {
+    if (state.updated) onUpdated?.();
+  }, [state.updated, onUpdated]);
 
   return (
     <form action={formAction} className="mt-3 flex flex-col gap-3">

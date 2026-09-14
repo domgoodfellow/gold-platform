@@ -5,6 +5,7 @@ import {
   getCatalogProduct,
   listCatalogFeatures,
   listCatalogModules,
+  listCatalogProducts,
   listFeaturesByRuntimeMapping,
   updateCatalogProduct,
 } from '@/lib/domain/catalogue/catalogue';
@@ -32,6 +33,7 @@ import {
 } from '@/lib/domain/catalogue/organization-plans';
 import { moduleCommercialState } from '@/lib/domain/commercial/terms';
 import { asPlatformStaff, foundBusiness } from './helpers/founding';
+import { CATALOGUE_SURFACE_COVERAGE } from '@/lib/catalogue-surface-coverage';
 
 /**
  * The canonical Product -> Module -> Feature catalogue, and Plans/Add-ons above it
@@ -82,6 +84,23 @@ describe('the canonical catalogue', () => {
     }
     staff = await asPlatformStaff();
     stranger = await newTenant('catalogue-tenant');
+  });
+
+  it('has implementation evidence for every available or partial catalogue Feature', async () => {
+    const [products, modules, features] = await Promise.all([
+      listCatalogProducts(stranger.db),
+      listCatalogModules(stranger.db),
+      listCatalogFeatures(stranger.db),
+    ]);
+    const productById = new Map(products.map((product) => [product.id, product.key]));
+    const moduleById = new Map(modules.map((module) => [module.id, module]));
+    const expected = features.flatMap((feature) => {
+      if (feature.implementationState === 'planned') return [];
+      const catalogModule = moduleById.get(feature.moduleId);
+      const product = catalogModule ? productById.get(catalogModule.productId) : undefined;
+      return product && catalogModule ? [`${product}.${catalogModule.key}.${feature.key}`] : [];
+    }).sort();
+    expect(CATALOGUE_SURFACE_COVERAGE.map((entry) => entry.key).sort()).toEqual(expected);
   });
 
   it('has exactly the seven locked Products, readable by anyone signed in', async () => {

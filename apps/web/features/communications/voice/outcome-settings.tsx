@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, TextInput } from '@/components/controls/inputs';
+import { Checkbox } from '@gold/ui/components/checkbox';
 import {
   createOutcomeAction,
   type FormState,
@@ -49,7 +50,7 @@ export function CreateOutcomeForm({ organizationId }: { organizationId: string }
       {/* The one platform fact on an outcome, asked as the one question the platform needs
           answered: a business's own word cannot say whether a conversation happened. */}
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="reached" />
+        <Checkbox name="reached" value="on" />
         Counts as having spoken to somebody
       </label>
 

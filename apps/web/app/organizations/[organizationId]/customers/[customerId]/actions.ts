@@ -96,7 +96,7 @@ export async function revokePortalInviteAction(
   return { error: null };
 }
 
-export type EditCustomerState = { error: string | null };
+export type EditCustomerState = { error: string | null; updated: boolean };
 
 /**
  * Correct a customer, and move them along their pipeline.
@@ -135,11 +135,11 @@ export async function editCustomerAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message };
+      return { error: error.message, updated: false };
     }
     throw error;
   }
 
   revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
-  return { error: null };
+  return { error: null, updated: true };
 }

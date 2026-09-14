@@ -2,6 +2,20 @@
 
 Presentation and interaction for recognizable GOLD product capabilities.
 
+Four related names are deliberately not interchangeable:
+
+- A **Catalogue Feature** is a commercial capability, such as `communications.voice.call_history`.
+- A **web feature package** is a coherent workflow boundary, such as `communications/voice/`.
+- A **domain capability** is runtime behavior, such as `lib/domain/reception/`.
+- A **route** authenticates, loads and composes, such as `/organizations/[organizationId]/calls`.
+
+The legacy runtime module `reception` backs both CRM Sales and Communications Voice. That is why
+the web has separate `crm/sales` and `communications/voice` packages rather than mirroring one
+runtime folder or creating one folder for every Catalogue Feature.
+
+Generic controls in these packages come from `apps/web/components`, whose implementations
+compose source-owned shadcn primitives from `packages/ui`.
+
 A feature boundary answers which product workflow owns the UI, not how many routes currently call
 it. Route files load data and compose screens; features render and operate the capability; generic
 interface vocabulary stays in `components/`; business rules stay in `lib/domain/`.

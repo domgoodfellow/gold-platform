@@ -7,6 +7,7 @@ import { BUSINESSES, DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { createAsset, listAssets } from '../lib/domain/assets/assets';
 import { recordAssetReading, listAssetReadings } from '../lib/domain/assets/readings';
 import { listCustomers } from '../lib/domain/customers/customers';
+import { createCustomerStage, listCustomerStages } from '../lib/domain/customers/stages';
 import { listDocuments, uploadDocument } from '../lib/domain/documents/documents';
 import { listLocations } from '../lib/domain/locations/locations';
 import { getOrganization, listMyOrganizations, updateOrganization } from '../lib/domain/tenancy/organizations';
@@ -15,6 +16,8 @@ import { listBookableTypes } from '../lib/domain/booking/booking';
 import { setTypeBookable } from '../lib/domain/work-items/types';
 import { listUsableModules, setModuleEnabled } from '../lib/domain/tenancy/modules';
 import { recordCommercialTerm } from '../lib/domain/commercial/terms';
+import { listCalls, recordCall } from '../lib/domain/reception/calls';
+import { createCallOutcome, listCallOutcomes } from '../lib/domain/reception/outcomes';
 
 /**
  * Sets up exactly what the smoke suite needs on top of `pnpm demo`, and nothing else.
@@ -95,6 +98,56 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   const workItemId = workItems[0]?.id;
   if (!customerId || !locationId || !workItemId) {
     throw new Error('e2e/global-setup: demo data is missing a customer, location or work item.');
+  }
+
+  // CRM + Voice is the reference product-feature vertical. Give its browser specs one honest,
+  // reusable setup: the commercial module is usable, the business has named its own pipeline
+  // and outcome vocabulary, and one completed call is waiting for wrap-up. These records are
+  // idempotent and go through the same domain APIs as the operator UI.
+  const voiceModules = await listUsableModules(db, { organizationId });
+  if (!voiceModules.has('reception')) {
+    await setModuleEnabled(db, { organizationId, key: 'reception', enabled: true });
+    const voiceStaffDb = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const voiceStaffSignIn = await voiceStaffDb.auth.signInWithPassword({
+      email: 'staff@gold.test',
+      password: DEMO_PASSWORD,
+    });
+    if (voiceStaffSignIn.error) {
+      throw new Error(
+        `e2e/global-setup: could not sign in as platform staff to record a commercial term for reception (${voiceStaffSignIn.error.message})`,
+      );
+    }
+    await recordCommercialTerm(voiceStaffDb, {
+      organizationId,
+      productKey: 'module:reception',
+      periodStart: new Date().toISOString().slice(0, 10),
+      periodEnd: '9999-12-31',
+      priceMinor: 0,
+      note: 'E2E fixture: CRM and Voice interactions are switched on and paid for.',
+    });
+  }
+
+  const stages = await listCustomerStages(db, { organizationId });
+  if (stages.length === 0) {
+    await createCustomerStage(db, { organizationId, name: 'New enquiry', position: 0 });
+    await createCustomerStage(db, { organizationId, name: 'In progress', position: 1 });
+  }
+  const outcomes = await listCallOutcomes(db, { organizationId });
+  if (outcomes.length === 0) {
+    await createCallOutcome(db, { organizationId, name: 'Spoke', reached: true, position: 0 });
+    await createCallOutcome(db, { organizationId, name: 'No answer', reached: false, position: 1 });
+  }
+  const calls = await listCalls(db, { organizationId });
+  if (calls.length === 0) {
+    await recordCall(db, {
+      organizationId,
+      customerId,
+      direction: 'outbound',
+      fromNumber: '+31205550100',
+      toNumber: '+31205550142',
+    });
   }
 
   // The demo shapes (`scripts/demo/businesses.ts`) don't enable `portal` — this stack's own

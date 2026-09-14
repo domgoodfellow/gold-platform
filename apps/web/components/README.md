@@ -11,7 +11,7 @@ customer, work item, automation, report, call or organization means.
 | `controls/` | Buttons, inputs and accessible form composition |
 | `containers/` | Cards, dialogs, shells, sections and headings |
 | `display/` | Tables, definitions, badges, toolbars and widgets |
-| `ui/` | Source-owned shadcn primitives, adapted to GOLD tokens before semantic use |
+| `packages/ui` | Source-owned shadcn primitives, adapted to GOLD tokens before semantic use |
 | `class-names.ts` | Shared class composition and the visible focus ring |
 
 Caller count is evidence that an abstraction may be useful, not the ownership rule. A generic

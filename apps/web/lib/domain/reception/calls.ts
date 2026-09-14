@@ -308,7 +308,10 @@ export async function recordCall(
       status: 'completed',
       from_number: input.fromNumber.trim(),
       to_number: input.toNumber.trim(),
-      started_at: input.startedAt ?? new Date().toISOString(),
+      // Let Postgres own "now" when the caller did not provide a historical instant. The
+      // wrap-up RPC also uses database time; mixing the app and database clocks can otherwise
+      // make an immediately wrapped call appear to end milliseconds before it started.
+      ...(input.startedAt ? { started_at: input.startedAt } : {}),
       created_by: actor.id,
     })
     .select('id')

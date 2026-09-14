@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
+import { Badge as ShadcnBadge } from '@gold/ui/components/badge';
 import { cx } from '../class-names';
 
 /**
@@ -12,14 +13,15 @@ export function Badge({
   ...props
 }: ComponentProps<'span'> & { tone?: 'neutral' | 'accent' | 'success' }) {
   return (
-    <span
+    <ShadcnBadge
+      variant={tone === 'accent' ? 'default' : 'outline'}
       {...props}
       className={cx(
         'inline-flex items-center rounded px-2 py-0.5 text-xs',
         tone === 'accent'
           ? 'bg-accent text-on-accent'
           : tone === 'success'
-            ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
           : 'border border-border text-muted',
         className,
       )}

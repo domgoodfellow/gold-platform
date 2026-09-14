@@ -3,6 +3,7 @@ import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import type { Customer } from '@/lib/domain/customers/customers';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
+import type { CustomerStage } from '@/lib/domain/customers/stages';
 
 /**
  * Who this business serves, and how to reach each one. The customer list's own canonical
@@ -13,16 +14,21 @@ export function CustomerTable({
   organizationId,
   customers,
   definitions,
+  stages = [],
+  empty = 'No customers yet.',
 }: {
   organizationId: string;
   customers: Customer[];
   definitions: FieldDefinition[];
+  stages?: CustomerStage[];
+  empty?: string;
 }) {
+  const stageNames = new Map(stages.map((stage) => [stage.id, stage.name]));
   return (
     <DataTable
       rows={customers}
       rowKey={(customer) => customer.id}
-      empty="No customers yet."
+      empty={empty}
       columns={[
         {
           key: 'name',
@@ -53,6 +59,15 @@ export function CustomerTable({
               <span className="text-subtle">—</span>
             ),
         },
+        ...(stages.length > 0
+          ? [{
+              key: 'stage',
+              header: 'Stage',
+              cell: (customer: Customer) => customer.stageId
+                ? stageNames.get(customer.stageId) ?? 'Unknown stage'
+                : <span className="text-subtle">No stage</span>,
+            }]
+          : []),
         // This business's own fields, in its own order. Secondary because a business with
         // six custom fields would otherwise have a six-column table nobody can read — they
         // stay in full on the card rendering, which is where there is room for them.
