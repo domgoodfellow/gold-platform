@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
+import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
 import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
+import { AssetConfiguration } from '@/features/assets/configuration/asset-configuration';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listAssetReadings } from '@/lib/domain/assets/readings';
 import { listCustomers } from '@/lib/domain/customers/customers';
@@ -30,6 +32,7 @@ export default async function AssetsPage({
   ]);
 
   const mayAdd = organization.capabilities.includes('asset.create');
+  const mayConfigure = organization.capabilities.includes('field.manage');
 
   // The latest reading per asset, which is what somebody looking at the list wants — the rest of
   // the log lives under the asset. One query per asset is honest at this size; a list that grows
@@ -64,6 +67,19 @@ export default async function AssetsPage({
           authorization).
         */}
         <PageChromeRegistrar title="Assets" actions={mayAdd ? <CreateAssetTrigger /> : null} />
+        {mayConfigure ? (
+          <ConfigureRegistrar
+            title="Assets configuration"
+            settingsHref={`/organizations/${organizationId}/settings/data-automation`}
+          >
+            <AssetConfiguration
+              organizationId={organizationId}
+              role={organization.role}
+              mayConfigure={mayConfigure}
+              definitions={definitions}
+            />
+          </ConfigureRegistrar>
+        ) : null}
         <Hint>What work is about — machines, vehicles, properties, customer-owned equipment.</Hint>
 
         <div className="mt-6">

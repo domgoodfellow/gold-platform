@@ -1,13 +1,11 @@
 import { Hint } from '@/components/controls/inputs';
-import { Disclosure } from '@/components/containers/card';
-import { DividedList, EmptyState, PageHeading, SectionHeading } from '@/components/containers/section';
+import { EmptyState, PageHeading, SectionHeading } from '@/components/containers/section';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { requireOrganization } from '@/lib/route/organization';
 import {
   CUSTOM_FIELD_ENTITIES,
   CUSTOM_FIELD_ENTITY_LABELS,
-  FIELD_KIND_LABELS,
   listFieldDefinitions,
   type CustomFieldEntity,
   type FieldDefinition,
@@ -17,7 +15,7 @@ import { reviewAutomationRules } from '@/lib/domain/automation/review';
 import { listMessageDeliveries, listMessageTemplates } from '@/lib/domain/automation/templates';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
-import { CreateFieldForm, EditFieldForm } from '../../fields/create-field-form';
+import { EntityFieldsConfiguration } from '@/features/fields/entity-fields-configuration';
 import { AutomationRuleCard } from '@/features/automations/rules/rule-card';
 import { CreateAutomationRuleForm } from '@/features/automations/rules/create-rule-form';
 import { MessageTemplateSection } from '@/features/automations/templates/template-section';
@@ -45,7 +43,6 @@ export default async function DataAndAutomationSettingsPage({
     ]),
   );
   const mayManageFields = organization.capabilities.includes('field.manage');
-  const totalFields = byEntity.reduce((sum, [, definitions]) => sum + definitions.length, 0);
 
   const [rules, types, workFieldDefinitions, runs, templates, deliveries] = await Promise.all([
     listAutomationRules(db, { organizationId }),
@@ -89,52 +86,20 @@ export default async function DataAndAutomationSettingsPage({
         </TabsList>
 
         <TabsContent value="fields" className="mt-4">
-          {totalFields === 0 ? (
-            <EmptyState>
-              No custom fields yet. Anything you define here appears on that entity&apos;s form.
-            </EmptyState>
-          ) : (
-            byEntity
-              .filter(([, definitions]) => definitions.length > 0)
-              .map(([entityType, definitions]) => (
-                <section key={entityType} className="mt-6 first:mt-0">
-                  <SectionHeading>{CUSTOM_FIELD_ENTITY_LABELS[entityType]}</SectionHeading>
-                  <DividedList className="mt-2">
-                    {definitions.map((definition) => (
-                      <li key={definition.id}>
-                        {mayManageFields ? (
-                          <EditFieldForm organizationId={organizationId} definition={definition} />
-                        ) : (
-                          <div className="py-3">
-                            <div className="font-medium">{definition.label}</div>
-                            <div className="text-sm text-muted">
-                              {[
-                                definition.key,
-                                FIELD_KIND_LABELS[definition.kind],
-                                definition.required ? 'Required' : null,
-                              ]
-                                .filter(Boolean)
-                                .join(' · ')}
-                            </div>
-                            {definition.options.length > 0 ? (
-                              <div className="text-sm text-subtle">{definition.options.join(' · ')}</div>
-                            ) : null}
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </DividedList>
-                </section>
-              ))
-          )}
-
-          {mayManageFields ? (
-            <Disclosure summary="Define a field" defaultOpen={totalFields === 0} className="mt-8">
-              <CreateFieldForm organizationId={organizationId} />
-            </Disclosure>
-          ) : (
-            <Hint className="mt-8">Your role, {organization.role}, cannot define fields here.</Hint>
-          )}
+          {byEntity.map(([entityType, definitions]) => (
+            <section key={entityType} className="mt-6 first:mt-0">
+              <SectionHeading>{CUSTOM_FIELD_ENTITY_LABELS[entityType]}</SectionHeading>
+              <div className="mt-2">
+                <EntityFieldsConfiguration
+                  organizationId={organizationId}
+                  entityType={entityType}
+                  role={organization.role}
+                  mayConfigure={mayManageFields}
+                  definitions={definitions}
+                />
+              </div>
+            </section>
+          ))}
         </TabsContent>
 
         <TabsContent value="automations" className="mt-4">

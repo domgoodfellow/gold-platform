@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { Disclosure } from '@/components/containers/card';
 import { AppPage } from '@/components/containers/app-page';
+import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
 import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
+import { LocationConfiguration } from '@/features/locations/configuration/location-configuration';
 import { geocodingProvider } from '@/lib/adapters/geocoding';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
@@ -29,6 +31,7 @@ export default async function LocationsPage({
   ]);
 
   const mayAdd = organization.capabilities.includes('location.create');
+  const mayConfigure = organization.capabilities.includes('field.manage');
 
   return (
     <AppPage width="wide">
@@ -39,6 +42,19 @@ export default async function LocationsPage({
           refused there.
         */}
         <PageChromeRegistrar title="Locations" actions={mayAdd ? <CreateLocationTrigger /> : null} />
+        {mayConfigure ? (
+          <ConfigureRegistrar
+            title="Locations configuration"
+            settingsHref={`/organizations/${organizationId}/settings/data-automation`}
+          >
+            <LocationConfiguration
+              organizationId={organizationId}
+              role={organization.role}
+              mayConfigure={mayConfigure}
+              definitions={definitions}
+            />
+          </ConfigureRegistrar>
+        ) : null}
         <Hint>Places where this organization works, and the customers they serve.</Hint>
 
         {/*

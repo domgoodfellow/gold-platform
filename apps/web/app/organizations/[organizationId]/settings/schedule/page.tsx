@@ -1,10 +1,10 @@
-import { DividedList, PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { PageHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import Link from 'next/link';
+import { ScheduleConfiguration } from '@/features/scheduling/configuration/schedule-configuration';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { requireOrganization } from '@/lib/route/organization';
-import { AddOperatingHoursForm, OperatingHoursRow } from '../settings-forms';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,34 +40,15 @@ export default async function ScheduleConfigurationPage({
         to work out what is free.
       </Hint>
 
-      <Section className="mt-6">
-        <SectionHeading>Opening hours</SectionHeading>
-        <Hint className="mt-1">
-          {hours.length === 0
-            ? 'No opening hours set, so the schedule treats every hour as available. Nothing here is assumed — which days this business works, and when, are yours to say.'
-            : `Times are read in ${organization.timezone}.`}
-        </Hint>
-
-        {hours.length > 0 ? (
-          <DividedList as="div" className="mt-2">
-            {hours.map((entry) =>
-              mayConfigure ? (
-                <OperatingHoursRow key={entry.id} organizationId={organizationId} hours={entry} />
-              ) : (
-                <Hint key={entry.id} className="py-2">
-                  {entry.opensAt.slice(0, 5)}–{entry.closesAt.slice(0, 5)}
-                </Hint>
-              ),
-            )}
-          </DividedList>
-        ) : null}
-
-        {mayConfigure ? (
-          <AddOperatingHoursForm organizationId={organizationId} />
-        ) : (
-          <Hint className="mt-2">Your role, {organization.role}, cannot set opening hours.</Hint>
-        )}
-      </Section>
+      <div className="mt-6">
+        <ScheduleConfiguration
+          organizationId={organizationId}
+          role={organization.role}
+          mayConfigure={mayConfigure}
+          hours={hours}
+          timezone={organization.timezone}
+        />
+      </div>
     </SettingsPageFrame>
   );
 }

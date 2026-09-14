@@ -1,11 +1,15 @@
-import { Button, ButtonLink } from '@/components/controls/button';
+import { ButtonLink } from '@/components/controls/button';
 import { AppPage } from '@/components/containers/app-page';
 import { Card } from '@/components/containers/card';
+import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
+import { DatePicker } from '@/components/controls/date-picker';
 import { Toolbar } from '@/components/display/data';
 import { Hint } from '@/components/controls/inputs';
 import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
+import { ScheduleConfiguration } from '@/features/scheduling/configuration/schedule-configuration';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
+import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { formatWindow, todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -37,28 +41,45 @@ export default async function SchedulePage({
   const date = requested ?? todayInZone(organization.timezone);
   const within = zonedDayRange(date, organization.timezone);
 
+  const mayConfigure = organization.capabilities.includes('field.manage');
+
   // `on` is what lets the calculation subtract this business's opening hours. Given together
   // because an hours rule is a recurring local reading and needs both to become instants.
-  const schedule = await listSchedule(db, {
-    organizationId,
-    within,
-    on: { date, timeZone: organization.timezone },
-  });
+  const [schedule, hours] = await Promise.all([
+    listSchedule(db, { organizationId, within, on: { date, timeZone: organization.timezone } }),
+    mayConfigure ? listOperatingHours(db, { organizationId }) : Promise.resolve([]),
+  ]);
 
   const shift = (days: number) => {
     const moved = new Date(`${date}T00:00:00Z`);
     moved.setUTCDate(moved.getUTCDate() + days);
     return moved.toISOString().slice(0, 10);
   };
+  const dayHref = (isoValue: string) => `/organizations/${organizationId}/schedule?on=${isoValue}`;
 
   return (
     <AppPage width="full">
+      {mayConfigure ? (
+        <ConfigureRegistrar
+          title="Schedule configuration"
+          settingsHref={`/organizations/${organizationId}/settings/schedule`}
+        >
+          <ScheduleConfiguration
+            organizationId={organizationId}
+            role={organization.role}
+            mayConfigure={mayConfigure}
+            hours={hours}
+            timezone={organization.timezone}
+          />
+        </ConfigureRegistrar>
+      ) : null}
+
       {/* I9: every window below is an absolute instant rendered in this business's own
           zone, so naming the zone is part of reading the day rather than decoration. */}
       <Hint>
         Times shown in {organization.timezone} ·{' '}
         <Link
-          href={`/organizations/${organizationId}/settings`}
+          href={`/organizations/${organizationId}/settings/schedule`}
           className="underline underline-offset-4"
         >
           Opening hours
@@ -66,34 +87,19 @@ export default async function SchedulePage({
       </Hint>
 
       {/* **A day is picked, not scrolled to.** Previous and Next were the whole of it, so
-          getting to next Tuesday was six clicks and getting back to today was counting. The
-          date input is the browser's own picker, and *Today* is the one destination that is
-          always worth a single control on a screen about days. */}
+          getting to next Tuesday was six clicks and getting back to today was counting.
+          *Today* is the one destination that is always worth a single control on a screen
+          about days. */}
       <Toolbar className="mt-4" aria-label="Day">
-        <form className="flex flex-wrap items-center gap-2">
-          <ButtonLink
-            href={`/organizations/${organizationId}/schedule?on=${shift(-1)}`}
-            size="small"
-          >
+        <div className="flex flex-wrap items-center gap-2">
+          <ButtonLink href={dayHref(shift(-1))} size="small">
             ← Previous
           </ButtonLink>
-          <input
-            type="date"
-            name="on"
-            defaultValue={date}
-            aria-label="Show this day"
-            className="rounded border border-border px-3 py-1 text-sm"
-          />
-          <Button type="submit" tone="secondary" size="small">
-            Show
-          </Button>
-          <ButtonLink
-            href={`/organizations/${organizationId}/schedule?on=${shift(1)}`}
-            size="small"
-          >
+          <DatePicker value={date} href={dayHref} label="Show this day" />
+          <ButtonLink href={dayHref(shift(1))} size="small">
             Next →
           </ButtonLink>
-        </form>
+        </div>
 
         {date === todayInZone(organization.timezone) ? null : (
           <Link

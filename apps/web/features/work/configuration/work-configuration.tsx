@@ -3,8 +3,8 @@ import { DividedList, EmptyState } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { FieldSet, FieldLegend, FieldGroup } from '@gold/ui/components/field';
-import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@gold/ui/components/item';
-import { CreateFieldForm, EditFieldForm } from '@/app/organizations/[organizationId]/fields/create-field-form';
+import { Item, ItemContent, ItemGroup, ItemTitle } from '@gold/ui/components/item';
+import { EntityFieldsConfiguration } from '@/features/fields/entity-fields-configuration';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
@@ -233,29 +233,13 @@ export function WorkConfiguration({
           <FieldSet>
             <FieldLegend>Custom fields on a work item</FieldLegend>
             <FieldGroup>
-              {fieldDefinitions.length === 0 ? (
-                <EmptyState>No custom fields yet. Anything you define here appears on a work item&rsquo;s form.</EmptyState>
-              ) : (
-                <DividedList>
-                  {fieldDefinitions.map((definition) => (
-                    <li key={definition.id}>
-                      {mayConfigure ? (
-                        <EditFieldForm organizationId={organizationId} definition={definition} />
-                      ) : (
-                        <div className="py-3">
-                          <div className="text-sm font-medium">{definition.label}</div>
-                          <ItemDescription>{definition.key}</ItemDescription>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </DividedList>
-              )}
-              {mayConfigure ? (
-                <CreateFieldForm organizationId={organizationId} entityType="work_item" />
-              ) : (
-                <Hint>Your role, {role}, cannot define fields here.</Hint>
-              )}
+              <EntityFieldsConfiguration
+                organizationId={organizationId}
+                entityType="work_item"
+                role={role}
+                mayConfigure={mayConfigure}
+                definitions={fieldDefinitions}
+              />
             </FieldGroup>
           </FieldSet>
         </TabsContent>

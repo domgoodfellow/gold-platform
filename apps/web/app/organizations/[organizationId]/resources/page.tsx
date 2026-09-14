@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
+import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
 import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
+import { ResourceConfiguration } from '@/features/resources/configuration/resource-configuration';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listResources } from '@/lib/domain/resources/resources';
 import { requireOrganization } from '@/lib/route/organization';
@@ -23,6 +25,7 @@ export default async function ResourcesPage({
   ]);
 
   const mayAdd = organization.capabilities.includes('resource.create');
+  const mayConfigure = organization.capabilities.includes('field.manage');
 
   return (
     <AppPage width="wide">
@@ -33,6 +36,19 @@ export default async function ResourcesPage({
           refused there (constraints.md: hiding a UI element is not authorization).
         */}
         <PageChromeRegistrar title="Resources" actions={mayAdd ? <CreateResourceTrigger /> : null} />
+        {mayConfigure ? (
+          <ConfigureRegistrar
+            title="Resources configuration"
+            settingsHref={`/organizations/${organizationId}/settings/data-automation`}
+          >
+            <ResourceConfiguration
+              organizationId={organizationId}
+              role={organization.role}
+              mayConfigure={mayConfigure}
+              definitions={definitions}
+            />
+          </ConfigureRegistrar>
+        ) : null}
         <Hint>People, vehicles and equipment that work is scheduled against.</Hint>
 
         <div className="mt-6">

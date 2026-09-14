@@ -100,8 +100,16 @@ describe('Settings, as the Configuration Center (source scan)', () => {
     );
   });
 
-  it('reaches Custom fields, under Data & automation', () => {
-    expect(readFileSync(`${ROUTES}/settings/data-automation/page.tsx`, 'utf8')).toContain('CreateFieldForm');
+  it('reaches Custom fields, under Data & automation, via the shared entity-fields component', () => {
+    expect(readFileSync(`${ROUTES}/settings/data-automation/page.tsx`, 'utf8')).toContain(
+      'EntityFieldsConfiguration',
+    );
+    expect(
+      readFileSync(
+        fileURLToPath(new URL('../features/fields/entity-fields-configuration.tsx', import.meta.url)),
+        'utf8',
+      ),
+    ).toContain('CreateFieldForm');
   });
 
   it('reaches People & access', () => {
@@ -119,6 +127,79 @@ describe('Settings, as the Configuration Center (source scan)', () => {
       const page = readFileSync(`${ROUTES}/${segment}/page.tsx`, 'utf8');
       expect(page, `${segment} no longer redirects to ${destination}`).toContain(destination);
     }
+  });
+});
+
+describe('contextual Configure, generalized from Work — the same component, every host', () => {
+  const registrants: Record<string, { page: string; component: string; import: string }> = {
+    resources: {
+      page: 'resources/page.tsx',
+      component: 'features/resources/configuration/resource-configuration.tsx',
+      import: 'ResourceConfiguration',
+    },
+    locations: {
+      page: 'locations/page.tsx',
+      component: 'features/locations/configuration/location-configuration.tsx',
+      import: 'LocationConfiguration',
+    },
+    assets: {
+      page: 'assets/page.tsx',
+      component: 'features/assets/configuration/asset-configuration.tsx',
+      import: 'AssetConfiguration',
+    },
+    customers: {
+      page: 'customers/page.tsx',
+      component: 'features/customers/configuration/customer-configuration.tsx',
+      import: 'CustomerConfiguration',
+    },
+    schedule: {
+      page: 'schedule/page.tsx',
+      component: 'features/scheduling/configuration/schedule-configuration.tsx',
+      import: 'ScheduleConfiguration',
+    },
+  };
+
+  it('registers a Configure panel from the operational page, via the shared ConfigureRegistrar', () => {
+    for (const [area, spec] of Object.entries(registrants)) {
+      const source = readFileSync(`${ROUTES}/${spec.page}`, 'utf8');
+      expect(source, `${area}/page.tsx should register Configure`).toContain('ConfigureRegistrar');
+      expect(source, `${area}/page.tsx should render its own ${spec.import}`).toContain(spec.import);
+      expect(
+        readFileSync(fileURLToPath(new URL(`../${spec.component}`, import.meta.url)), 'utf8'),
+        `${spec.component} should exist`,
+      ).toContain(`export function ${spec.import}`);
+    }
+  });
+
+  it('ConfigureRegistrar itself is shared infrastructure, not owned by Work', () => {
+    expect(
+      readFileSync(
+        fileURLToPath(new URL('../components/containers/configure-registrar.tsx', import.meta.url)),
+        'utf8',
+      ),
+    ).toContain('export function ConfigureRegistrar');
+  });
+
+  it('every entity-scoped Configure component reuses the one EntityFieldsConfiguration, never a second fields implementation', () => {
+    for (const spec of [
+      registrants.resources,
+      registrants.locations,
+      registrants.assets,
+      registrants.customers,
+    ]) {
+      const source = readFileSync(
+        fileURLToPath(new URL(`../${spec.component}`, import.meta.url)),
+        'utf8',
+      );
+      expect(source).toContain('EntityFieldsConfiguration');
+      expect(source).not.toContain('CreateFieldForm');
+    }
+  });
+
+  it('Schedule swapped the raw date input for the shared Calendar/Popover DatePicker', () => {
+    const schedulePage = readFileSync(`${ROUTES}/schedule/page.tsx`, 'utf8');
+    expect(schedulePage).not.toContain('type="date"');
+    expect(schedulePage).toContain('DatePicker');
   });
 });
 

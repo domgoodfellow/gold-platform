@@ -15,7 +15,7 @@ import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
 import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
-import { ConfigureRegistrar } from '@/features/work/configuration/configure-registrar';
+import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 
 export const dynamic = 'force-dynamic';
