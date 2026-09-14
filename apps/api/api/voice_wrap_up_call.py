@@ -15,6 +15,7 @@ import json
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler
 
+from app.auth import AuthError, require_caller
 from app.core.config import load_domain_settings
 from app.domains.communications.voice.wrap_up import WrapUpCallCommand, wrap_up_call
 from app.domains.errors import DomainError
@@ -27,9 +28,14 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             self._reply(404, {"error": "not found"})
             return
 
-        presented = self.headers.get("authorization") or ""
-        if not presented.startswith("Bearer "):
-            self._reply(401, {"error": "rejected"})
+        try:
+            caller = require_caller(
+                self.headers,
+                supabase_url=settings.supabase_url,
+                supabase_publishable_key=settings.supabase_publishable_key,
+            )
+        except AuthError as failure:
+            self._reply(failure.status, {"error": failure.message})
             return
 
         length = int(self.headers.get("content-length") or 0)
@@ -59,7 +65,7 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
         try:
             result = wrap_up_call(
                 settings,
-                token=presented.removeprefix("Bearer "),
+                token=caller.token,
                 command=WrapUpCallCommand(
                     organization_id=organization_id,
                     call_id=call_id,

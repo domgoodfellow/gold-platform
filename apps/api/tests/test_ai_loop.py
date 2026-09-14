@@ -31,7 +31,7 @@ from app.core import caller  # noqa: E402
 from app.core.caller import ToolFailed  # noqa: E402
 from app.core.config import AssistantSettings  # noqa: E402
 
-SETTINGS = AssistantSettings(supabase_url="http://db.test", supabase_anon_key="anon")
+SETTINGS = AssistantSettings(supabase_url="http://db.test", supabase_publishable_key="anon")
 ORG = "11111111-1111-4111-8111-111111111111"
 
 

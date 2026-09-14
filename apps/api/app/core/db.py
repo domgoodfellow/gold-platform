@@ -1,5 +1,13 @@
 """Reaching Postgres as a writer with no human caller.
 
+**TEMPORARY LEGACY COMPATIBILITY.** `machine_token` signs with `SUPABASE_JWT_SECRET`, Supabase's
+legacy shared HS256 secret — never used for a human caller (see `app/auth`, which verifies
+people's tokens through JWKS and holds no signing key at all). This module is scoped to exactly
+two machine Postgres roles, each with a handful of `execute` grants and no table grant, which is
+the property worth keeping through the migration named in `SETUP.md`'s "SUPABASE_JWT_SECRET
+pre-flight" and the docstring of `machine_token` below. Do not extend this module's reach while
+that migration is open — narrow the machine identity further, never generalise it.
+
 **This is the half of the Stripe slice that was never about which language.**
 `docs/constraints.md` D26: what is distinctive about a webhook is that it arrives with no
 human session, which is an authorization problem, and the answer is the same either way — its
@@ -96,7 +104,7 @@ def record_provider_payment(
     response = httpx.post(
         f"{settings.supabase_url}/rest/v1/rpc/record_provider_payment",
         headers={
-            "apikey": settings.supabase_anon_key,
+            "apikey": settings.supabase_publishable_key,
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },
@@ -157,7 +165,7 @@ def record_call_event(
     response = httpx.post(
         f"{settings.supabase_url}/rest/v1/rpc/record_call_event",
         headers={
-            "apikey": settings.supabase_anon_key,
+            "apikey": settings.supabase_publishable_key,
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },

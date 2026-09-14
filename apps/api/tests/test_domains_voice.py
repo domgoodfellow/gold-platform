@@ -22,7 +22,7 @@ from app.domains.communications.voice.wrap_up import (  # noqa: E402
 )
 from app.domains.errors import DomainError, NotFoundError, ValidationError  # noqa: E402
 
-SETTINGS = DomainSettings(supabase_url="http://db.test", supabase_anon_key="anon")
+SETTINGS = DomainSettings(supabase_url="http://db.test", supabase_publishable_key="anon")
 ORG = "11111111-1111-4111-8111-111111111111"
 CALL = "44444444-4444-4444-8444-444444444444"
 OUTCOME = "55555555-5555-4555-8555-555555555555"

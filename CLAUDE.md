@@ -292,6 +292,17 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | A tenant selecting another organization's bound resource as its own | A number or a domain typed by hand must not let GOLD use somebody else's scope (D39) | `app.phone_number_owner`, `security definer`, checked inside `set_calling_number`; a number bound to a different organization is refused, one bound to nobody is unaffected |
 | A subaccount's own credential used to place a call | GOLD's master account can already address any subaccount by naming it in the request path (D39); a second credential per business is a second thing to rotate for no isolation gained | `telephonyProvider(actingAccountSid)` authenticates with GOLD's master token throughout; only the acting account in the URL path changes |
 
+### Human authentication
+
+| Never | Because | Held by |
+|---|---|---|
+| A second `Authorization: Bearer ...` parser in a handler | A rule a second caller extracts rather than copies; three handlers had already copied it | `apps/api/app/auth/bearer.py`; `ai_ask.py`, `crm_change_customer_stage.py`, `voice_wrap_up_call.py` all call `require_caller` |
+| `SUPABASE_JWT_SECRET` read on a human-auth path | It is a signing secret for three narrow machine roles, and holding it for people would mean this runtime could mint a human's identity, not merely verify it (D26, D52) | `app.auth.supabase` verifies locally against the project's JWKS, or by asking Supabase's own Auth server — never that secret; `test_auth.py` proves `require_caller`'s signature carries nothing secret-shaped |
+| An unverified JWT claim used to build an authenticated `CallerContext` | A claim this runtime did not check is a claim a forged token can set to anything; a later PostgREST refusal does not undo a provider call already made on the strength of it | `verify_access_token` never returns without either a local signature check or a 200 from Supabase's own Auth server (D52); `test_auth.py`'s ordering test proves a rejected token never reaches a domain/provider call |
+| "Checked and fine" and "could not check" treated alike | An unreachable JWKS endpoint or Supabase Auth server is not evidence about the token | Both raise `AuthError(503, ...)`, never an authenticated context (D52) |
+| An authorization decision inside `apps/api/app/auth/` | It answers *who*, never *what they may do* — folding permission in here is D25's mistake on a new axis | RLS, `app/domains/**`'s own commands, and `app.is_platform_staff()` remain the only deciders (D52) |
+| Platform authority read from a JWT `role` claim | The design D45 retired once already, on the Postgres-role axis; a claim a caller's own token asserts is not a fact GOLD checked | `CallerContext.role` is exposed read-only for inspection; nothing branches on it |
+
 ### The AI axis
 
 | Never | Because | Held by |
@@ -387,6 +398,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | The commercial catalogue, entitlement's build, provider cost and margin | D43 |
 | Provider bindings, provisioning and where a generated secret lives | D44 |
 | The canonical Product/Module/Feature catalogue, Plans/Add-ons, and how they coexist with the legacy commercial layer | D46, D50 |
+| The API's human-auth boundary, JWKS verification, and the Supabase key rename | D52 |
 
 ## When you finish a change
 

@@ -1383,6 +1383,64 @@ path was deliberately left alone because it remains a different act (see that fu
 comment for why moving a card from a board and correcting a customer's details in one sitting are
 not the same operation, even though both touch `customers.stage_id`).
 
+### D52 — `apps/api/app/auth/` is the one place a human caller's Supabase token is checked
+
+**Decision.** Before this record, `api/ai_ask.py`, `api/crm_change_customer_stage.py` and
+`api/voice_wrap_up_call.py` each wrote their own `presented.startswith("Bearer ")` and forwarded
+whatever followed unexamined — a rule a second caller should have extracted rather than copied
+(CLAUDE.md's own line on this), copied a third time by the time this was noticed.
+`apps/api/app/auth/` is now that one place: `bearer.py` parses the header, `supabase.py` verifies
+the token, `context.py` defines the immutable `CallerContext` a handler receives, and
+`guards.py::require_caller` composes the three. All three domain-command handlers call it now.
+
+**What it answers, and what it deliberately does not.** *Is this token well-formed, unexpired,
+for this project, and — when the project's keys allow it — genuinely signed by Supabase* is the
+whole of it. It resolves a user id and exposes Supabase's own claims (including the JWT `role`,
+read-only, never branched on) but authorizes nothing: RLS, `app/domains/**`'s own commands, and
+`app.is_platform_staff()` remain the only things that decide what a caller may do, exactly as
+D17's "identity arrives as a JWT; Postgres decides" already held. Folding a permission decision
+into this package would be the mistake D25 already named once on a different axis — the answer
+here is the same one D34 gives the AI loop: authenticate once, forward the same token, let
+Postgres re-decide.
+
+**Two verification mechanisms, never a third.** `supabase.py` reads the token's own JOSE header
+only to choose which one — that field is untrusted input and grants nothing by itself. An
+asymmetric-algorithm token (`RS256`/`ES256`/`EdDSA`, the current signing-key architecture) is
+verified locally: `PyJWT`'s `PyJWKClient` fetches the target project's public keys from its JWKS
+discovery endpoint (`{SUPABASE_URL}/auth/v1/.well-known/jwks.json`, cached, re-fetched on an
+unrecognised key id), and the signature, issuer, audience and expiry are all checked against it.
+An `HS256` token (the legacy shared-secret generation) is verified by asking Supabase's own Auth
+server — `GET /auth/v1/user` with the caller's bearer token and this deployment's publishable
+key — because this decision refuses to hold `SUPABASE_JWT_SECRET` for a human path, and a 200
+from that endpoint is Supabase itself vouching for the token exactly as a local signature check
+would. **Both finish in the same place: an identity this process did not assume, but that
+something authoritative actually checked.** There is no mode where an unverified claim is read
+and treated as good enough to build a `CallerContext` from, and none where a project's tokens go
+unverified merely because it has not migrated signing generations yet — item 8's own rule against
+calling the legacy path "reduced assurance": it differs from the JWKS path only in being a
+networked check rather than a local one, never in what it establishes.
+
+**Fails closed on infrastructure trouble, always.** A JWKS endpoint or Supabase Auth that cannot
+be reached, times out, or answers 5xx raises `AuthError(503, ...)` — never treated as "checked and
+fine." Only Supabase's own explicit refusal (a non-2xx that is not a server error) becomes the
+ordinary `401`. `test_auth.py` proves this for both mechanisms: unreachable JWKS, an unrecognised
+key id, an unreachable Auth server, and a Supabase Auth `5xx` are each distinct from an outright
+`401`, and none of the four authenticates anybody.
+
+`SUPABASE_JWT_SECRET` — Supabase's legacy shared HS256 secret, and the same one `app.core.db` and
+`app.core.runner` mint short-lived machine tokens with (D26) — is never read on this path, by
+either mechanism; `verify_access_token`'s own signature carries no such parameter.
+`SETUP.md`'s "Human-auth pre-flight" records which state the hosted project is actually in, and
+that a project need not migrate before this code is safe to run.
+
+**Load-bearing.** `SUPABASE_ANON_KEY` becomes `SUPABASE_PUBLISHABLE_KEY` throughout
+`apps/api/app/core/config.py`, matching `apps/web`'s `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; the
+legacy name is read only as a fallback (`_publishable_key()`), and nowhere does anything prefer it
+over the current name. `SUPABASE_JWT_SECRET` remains exactly as narrowly scoped as D26 already
+made it — three machine Postgres roles, no table grant, no human path — and this decision does
+not widen or replace it; migrating it away is tracked separately (`SETUP.md`, "SUPABASE_JWT_SECRET
+pre-flight (machine roles only)") and stays open.
+
 ---
 
 ## Known defects in this document

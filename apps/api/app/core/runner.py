@@ -1,5 +1,9 @@
 """Reaching Postgres as the thing that turns the clock.
 
+**TEMPORARY LEGACY COMPATIBILITY**, exactly as `app.core.db` is — see that module's docstring.
+`machine_token` here signs with the same `SUPABASE_JWT_SECRET`; no human request ever reaches
+this file or reads that secret (`app/auth` handles people, with no signing key of its own).
+
 **The second writer with no human caller**, and it is deliberately built the same way as the
 first (D26): its own Postgres role, its own three `execute` grants, and emphatically not
 service-role. `automation_runner` holds no grant on any table at all, so nothing here can read a
@@ -59,7 +63,7 @@ def _post(settings: RunnerSettings, function: str, payload: dict) -> httpx.Respo
     return httpx.post(
         f"{settings.supabase_url}/rest/v1/rpc/{function}",
         headers={
-            "apikey": settings.supabase_anon_key,
+            "apikey": settings.supabase_publishable_key,
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },

@@ -7,14 +7,15 @@ that person's own access token.
 
 **That token is the whole authorization story.** There is no role for this endpoint, no grant to
 check and no organization to trust: what a tool can see is what the caller's session can see,
-decided by RLS in the ordinary way (D17, D34). So this handler authenticates nothing itself --
-there is nothing it could usefully check that Postgres does not check better a moment later, and
-a check here would be a second, weaker copy of one that already exists. A stranger presenting a
-made-up token gets an empty answer because every tool returns no rows, not because this file
-turned them away.
+decided by RLS in the ordinary way (D17, D34). `app.auth.require_caller` establishes *who* is
+calling, authoritatively, before anything below it runs -- there is nothing it could usefully
+decide about *what* that caller may see that Postgres does not decide better a moment later, and
+a second copy of that decision here would be a weaker one. A stranger holding no genuine token
+never reaches a tool at all; one who does still gets only what their own session can see, because
+every tool is scoped by RLS, not by this file.
 
-**What it will not do is answer for free.** A missing token is refused before a provider is
-called, because a question with nobody behind it is a bill with nobody behind it.
+**What it will not do is answer for free.** A missing or malformed token is refused before a
+provider is called, because a question with nobody behind it is a bill with nobody behind it.
 
 Vercel's Python runtime routes a file under `api/` to a path (D24). One file, one route.
 """
@@ -27,6 +28,7 @@ from http.server import BaseHTTPRequestHandler
 
 from app.ai.loop import answer
 from app.ai.registry import answering_provider, unconfigured_reason
+from app.auth import AuthError, require_caller
 from app.core.config import load_assistant_settings
 
 
@@ -44,9 +46,14 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             self._reply(503, {"error": unconfigured_reason()})
             return
 
-        presented = self.headers.get("authorization") or ""
-        if not presented.startswith("Bearer "):
-            self._reply(401, {"error": "rejected"})
+        try:
+            caller = require_caller(
+                self.headers,
+                supabase_url=settings.supabase_url,
+                supabase_publishable_key=settings.supabase_publishable_key,
+            )
+        except AuthError as failure:
+            self._reply(failure.status, {"error": failure.message})
             return
 
         length = int(self.headers.get("content-length") or 0)
@@ -66,7 +73,7 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             settings,
             provider,
             question=question,
-            token=presented.removeprefix("Bearer "),
+            token=caller.token,
             # Trusted only as far as RLS allows, which is the whole point: a caller naming a
             # business they are not in gets empty answers rather than somebody else's rows.
             organization_id=organization_id,

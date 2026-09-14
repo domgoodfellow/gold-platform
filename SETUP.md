@@ -69,7 +69,38 @@ contracts are `apps/web/.env.example` and `apps/api/.env.example`.
 
 There is also an ignored local typo file, `apps/web/.env..example`; do not use it.
 
-## SUPABASE_JWT_SECRET pre-flight
+## Human-auth pre-flight
+
+`apps/api/app/auth/` is the API's one boundary for a human caller's Supabase access token
+(`api/ai_ask.py`, `api/crm_change_customer_stage.py`, `api/voice_wrap_up_call.py`). It reads only
+`SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` and needs no separate variable and no shared secret.
+Every request is authoritatively verified — by one of two mechanisms — before any of those
+handlers calls a domain function, a model, or a provider. There is no unverified-token fallback.
+
+Which mechanism runs is chosen by the caller's own token (its declared signing algorithm), not by
+anything configured in this repository, so the same deployment handles both generations correctly
+without needing to know which one issued a given token:
+
+| Token's signing generation | What `app/auth` does | `SUPABASE_JWT_SECRET` needed? |
+|---|---|---|
+| Asymmetric signing key (`RS256`/`ES256`/`EdDSA` — current Supabase default for new projects) | Fetches the project's JWKS and verifies the signature, issuer, audience and expiry locally | NO |
+| Legacy shared HS256 secret | Calls Supabase's own Auth server (`GET /auth/v1/user` with the bearer token and the publishable key) — a 200 is Supabase itself vouching for the token | NO — this path is never given that secret |
+
+Both rows are a finished, authoritative verification, not "reduced assurance" for the legacy row —
+the difference is a local check versus a networked one, not a weaker guarantee. The networked
+check does add a latency/availability dependency on Supabase Auth: if it cannot be reached or
+answers with a server error, `app/auth` refuses the request (503) rather than letting it through.
+
+Confirm which state the target Supabase project is in under Dashboard > Authentication > Sign In
+/ Providers > JWT Keys if you want to know which row applies today; this repository does not need
+that answer to run securely on either one. `supabase/config.toml` does not set it either way, and
+a locally-run `supabase start` currently issues legacy HS256 tokens by default — which is exactly
+the case this pre-flight exists to make safe without asking you to migrate first.
+
+## SUPABASE_JWT_SECRET pre-flight (machine roles only)
+
+This section is unrelated to the human-auth path above — `SUPABASE_JWT_SECRET` is read only by
+the three machine-role writers below and never by `app/auth`.
 
 Current consumers:
 
@@ -188,9 +219,9 @@ Support sessions are an audit record and do not widen access to tenant operation
 | Web | `TWILIO_API_KEY_SECRET` | Production | READY TO CONFIGURE | YES | YES | Twilio Console | OPTIONAL | Browser Voice SDK. |
 | Web | `TWILIO_TWIML_APP_SID` | Production | READY TO CONFIGURE | NO | NO | Twilio Console | OPTIONAL | Browser Voice SDK. |
 | Web | `TELEPHONY_CALLBACK_URL` | Production | READY TO CONFIGURE | NO | NO | API production URL | OPTIONAL | Needed for Twilio callbacks. |
-| API | `SUPABASE_URL` | Preview + Production | READY TO CONFIGURE | NO | NO | Supabase project URL | YES | Same project as Web unless staging is split. |
-| API | `SUPABASE_ANON_KEY` | Preview + Production | READY TO CONFIGURE | NO | NO | Supabase anon/public key | YES | Current source reads this exact name. |
-| API | `SUPABASE_JWT_SECRET` | Production | TEMPORARY LEGACY REQUIREMENT | YES | YES | Supabase Dashboard JWT settings | ONLY AFTER APPROVAL | Required by current payment/automation/voice machine-role flows. |
+| API | `SUPABASE_URL` | Preview + Production | READY TO CONFIGURE | NO | NO | Supabase project URL | YES | Same project as Web unless staging is split. Also where `app/auth` derives the JWKS discovery URL for verifying human callers — no separate variable needed. |
+| API | `SUPABASE_PUBLISHABLE_KEY` | Preview + Production | READY TO CONFIGURE | NO | NO | Supabase publishable key | YES | Current source name; `SUPABASE_ANON_KEY` remains a temporary fallback name only — do not configure both to different values. |
+| API | `SUPABASE_JWT_SECRET` | Production | TEMPORARY LEGACY REQUIREMENT | YES | YES | Supabase Dashboard JWT settings | ONLY AFTER APPROVAL | Required ONLY by the payment/automation/voice machine-role flows (`app/core/db.py`, `app/core/runner.py`). Not read anywhere on the human-auth path (`app/auth`), which verifies people's tokens through the project's JWKS instead. |
 | API | `SUPABASE_JWT_SECRET` | Preview | DO NOT CONFIGURE YET | YES | YES if configured | Supabase Dashboard JWT settings | NO | Do not give Preview machine write powers against shared production data casually. |
 | API | `STRIPE_WEBHOOK_SECRET` | Preview | READY TO CONFIGURE - TEST/NON-PRODUCTION ONLY | YES | YES | Stripe test webhook endpoint, `whsec_...` | YES, after endpoint exists | Separate from API key; webhook still will not process until the `SUPABASE_JWT_SECRET` decision is made. |
 | API | `STRIPE_WEBHOOK_SECRET` | Production | READY TO CONFIGURE | YES | YES | Stripe live webhook endpoint, `whsec_...` | YES, when going live | Separate endpoint/secret from Preview. |

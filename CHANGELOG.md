@@ -5,6 +5,33 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### The API's human-auth boundary, `apps/api/app/auth/`
+
+Three handlers (`ai_ask.py`, `crm_change_customer_stage.py`, `voice_wrap_up_call.py`) each parsed
+`Authorization: Bearer ...` inline and forwarded whatever followed unverified; `require_caller`
+is now the one place that happens, and it authoritatively verifies the token before any of those
+handlers calls a domain function, a model, or a provider.
+
+- Verifies a caller's Supabase access token one of two ways, chosen by the token's own (untrusted)
+  declared algorithm, never trusted beyond that choice: an asymmetric-signing-key token
+  (`RS256`/`ES256`/`EdDSA`) is verified locally against the project's JWKS (`PyJWT`'s
+  `PyJWKClient`, cached and rotation-aware); a legacy `HS256` token is verified by asking
+  Supabase's own Auth server (`GET /auth/v1/user`) — never by holding `SUPABASE_JWT_SECRET`, which
+  this path reads on neither branch. Both mechanisms produce an equally authoritative, finished
+  verification; there is no unverified-claims fallback and no mode where infrastructure trouble
+  (an unreachable JWKS endpoint or Auth server, a 5xx) is treated as anything but a `503` refusal.
+  See D52.
+- Answers *who*, never *what they may do*: hands handlers an immutable `CallerContext` (user id,
+  the same token to forward, Supabase's own claims read-only), and authorization stays exactly
+  where it was — RLS, `app/domains/**`, `app.is_platform_staff()`.
+- `SUPABASE_ANON_KEY` becomes `SUPABASE_PUBLISHABLE_KEY` across `apps/api`, matching
+  `apps/web`'s existing name; the legacy name is read only as a temporary fallback.
+- `apps/api/tests/test_auth.py` proves both verification mechanisms reject a
+  missing/malformed/expired/wrong-issuer/wrong-audience/forged/network-unreachable/5xx token
+  (fails closed rather than authenticating on infrastructure trouble), that a JWT `role` claim is
+  exposed but decides nothing, that an invalid token never reaches a downstream domain/provider
+  call, and that the bearer token never appears in `repr(CallerContext)`.
+
 ### A customer sees what they're billed, and can pay it themselves
 
 Closes the P1 gap `docs/product-surface-audit.md` named: a customer's own record showed no

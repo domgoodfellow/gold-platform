@@ -7,13 +7,17 @@ public REST API.
 ## Layout and routes
 
 Physical Vercel entrypoints live in `apps/api/api/`. Application/runtime code lives under
-`apps/api/app/`.
+`apps/api/app/`. `app/auth/` is the one authentication boundary: it parses and verifies the
+caller's Supabase access token and hands handlers an immutable `CallerContext`, rather than each
+handler re-checking `Authorization: Bearer ...` for itself. It answers *is this token valid* and
+*who is it*, never *what may this person do* — that stays with RLS, `app/domains/**`, and the
+platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and access").
 
 | Logical route | Entrypoint | Purpose / trust path |
 |---|---|---|
 | `POST /webhooks/stripe` | `api/stripe_webhook.py` | Verify Stripe signature and record settlement through the narrow payment machine role. |
 | `POST /tasks/automation-tick` | `api/automation_tick.py` | Verify `CRON_SECRET`, run due automations and drain configured message/reading work. |
-| `POST /ai/ask` | `api/ai_ask.py` | Forward the signed-in person's token; the API holds no database role for this path. |
+| `POST /ai/ask` | `api/ai_ask.py` | Verify the signed-in person's token through `app/auth`, then forward it; the API holds no database role for this path. |
 | `POST /voice/inbound` | `api/voice_inbound.py` | Verify/configure inbound carrier callback and record through the Voice machine path. |
 | `POST /voice/outbound` | `api/voice_outbound.py` | Produce outbound call instructions and record provider events. |
 | `POST /voice/status` | `api/voice_status.py` | Receive call/conference status callbacks. |
@@ -33,9 +37,9 @@ names in the API Vercel project for hosted environments; do not upload the file.
 
 | Variable | Used by | Notes |
 |---|---|---|
-| `SUPABASE_URL` | all database-backed handlers | Required with the current low-privilege API key. |
-| `SUPABASE_ANON_KEY` | PostgREST calls | Current API source name; user operations still carry the user's JWT. |
-| `SUPABASE_JWT_SECRET` | payment, automation and Voice machine roles | Temporary legacy, very high-risk server secret. Without it those handlers remain unconfigured. Never substitute a service-role or `sb_secret_` key. |
+| `SUPABASE_URL` | all database-backed handlers; `app/auth` derives the JWKS discovery URL from it | Required with the current low-privilege API key. |
+| `SUPABASE_PUBLISHABLE_KEY` | PostgREST calls | Target name, matching `apps/web`'s `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. User operations still carry the user's JWT; this is only the low-privilege `apikey` header. `SUPABASE_ANON_KEY` is read as a temporary fallback name — do not configure both to different values. |
+| `SUPABASE_JWT_SECRET` | payment, automation and Voice machine roles ONLY | Temporary legacy, very high-risk server secret. Used exclusively by `app/core/db.py` and `app/core/runner.py` to mint short-lived machine tokens — never by `app/auth`, which authoritatively verifies a human token either locally against Supabase's JWKS (asymmetric-signing-key tokens) or by asking Supabase's own Auth server (legacy HS256 tokens), and needs no shared secret for either. Without it the machine-role handlers remain unconfigured. Never substitute a service-role or `sb_secret_` key. |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook | Endpoint- and environment-specific signing secret. |
 | `CRON_SECRET` | automation tick | Random shared secret; Vercel Cron normally invokes Production. |
 | `RESEND_API_KEY`, `MESSAGE_FROM_ADDRESS` | tenant-channel email | Separate operational concern from Web's platform invitation email configuration. |

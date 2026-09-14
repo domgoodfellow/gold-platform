@@ -36,7 +36,7 @@ class SupabaseCallerSettings(Protocol):
     """
 
     supabase_url: str
-    supabase_anon_key: str
+    supabase_publishable_key: str
 
 
 class ToolFailed(RuntimeError):
@@ -81,7 +81,7 @@ def call_tool(
     response = httpx.post(
         f"{settings.supabase_url}/rest/v1/rpc/{function}",
         headers={
-            "apikey": settings.supabase_anon_key,
+            "apikey": settings.supabase_publishable_key,
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },
@@ -130,7 +130,7 @@ def call_command(
     response = httpx.post(
         f"{settings.supabase_url}/rest/v1/rpc/{function}",
         headers={
-            "apikey": settings.supabase_anon_key,
+            "apikey": settings.supabase_publishable_key,
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },

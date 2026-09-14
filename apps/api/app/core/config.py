@@ -10,6 +10,19 @@ import os
 from dataclasses import dataclass
 
 
+def _publishable_key() -> str | None:
+    """The low-privilege PostgREST `apikey`, under its current and its legacy name.
+
+    `SUPABASE_PUBLISHABLE_KEY` is the target name (matches `apps/web`'s
+    `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). `SUPABASE_ANON_KEY` is read only as a **temporary**
+    fallback for a deployment not yet migrated — never the other way round, so a deployment that
+    sets both is already on the target name. Neither key is privileged; the safety property this
+    project depends on (D14, D26) is that this is never a service-role/secret key, not which of
+    these two names it arrives under.
+    """
+    return os.environ.get("SUPABASE_PUBLISHABLE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
+
+
 @dataclass(frozen=True)
 class Settings:
     """Everything the Stripe handler needs, or nothing.
@@ -20,7 +33,7 @@ class Settings:
     """
 
     supabase_url: str
-    supabase_anon_key: str
+    supabase_publishable_key: str
     supabase_jwt_secret: str
     stripe_signing_secret: str
 
@@ -28,7 +41,7 @@ class Settings:
 def load_settings() -> Settings | None:
     values = {
         "supabase_url": os.environ.get("SUPABASE_URL"),
-        "supabase_anon_key": os.environ.get("SUPABASE_ANON_KEY"),
+        "supabase_publishable_key": _publishable_key(),
         # NOT the service-role key, and the distinction is the whole of D26. This signs a
         # short-lived token for the `payment_webhook` Postgres role, which holds no grant on
         # any table and exactly one execute. A service-role key would discard RLS entirely.
@@ -57,7 +70,7 @@ class RunnerSettings:
     """
 
     supabase_url: str
-    supabase_anon_key: str
+    supabase_publishable_key: str
     supabase_jwt_secret: str
     # What Vercel's scheduler presents. Without it the tick is reachable by anybody who knows
     # the path, which is a stranger able to make this platform send a business's messages.
@@ -79,13 +92,13 @@ class AssistantSettings:
     """
 
     supabase_url: str
-    supabase_anon_key: str
+    supabase_publishable_key: str
 
 
 def load_assistant_settings() -> AssistantSettings | None:
     values = {
         "supabase_url": os.environ.get("SUPABASE_URL"),
-        "supabase_anon_key": os.environ.get("SUPABASE_ANON_KEY"),
+        "supabase_publishable_key": _publishable_key(),
     }
 
     if not all(values.values()):
@@ -97,7 +110,7 @@ def load_assistant_settings() -> AssistantSettings | None:
 def load_runner_settings() -> RunnerSettings | None:
     values = {
         "supabase_url": os.environ.get("SUPABASE_URL"),
-        "supabase_anon_key": os.environ.get("SUPABASE_ANON_KEY"),
+        "supabase_publishable_key": _publishable_key(),
         # Signs a 60-second token for `automation_runner`, which holds no grant on any table and
         # three executes. Not the service-role key, which D14 refuses.
         "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
@@ -125,13 +138,13 @@ class DomainSettings:
     """
 
     supabase_url: str
-    supabase_anon_key: str
+    supabase_publishable_key: str
 
 
 def load_domain_settings() -> DomainSettings | None:
     values = {
         "supabase_url": os.environ.get("SUPABASE_URL"),
-        "supabase_anon_key": os.environ.get("SUPABASE_ANON_KEY"),
+        "supabase_publishable_key": _publishable_key(),
     }
 
     if not all(values.values()):
@@ -156,7 +169,7 @@ class VoiceSettings:
     """
 
     supabase_url: str
-    supabase_anon_key: str
+    supabase_publishable_key: str
     # Signs a 60-second token for `voice_webhook`, which holds no grant on any table and one
     # execute. Not the service-role key, which D14 refuses.
     supabase_jwt_secret: str
@@ -168,7 +181,7 @@ class VoiceSettings:
 def load_voice_settings() -> VoiceSettings | None:
     values = {
         "supabase_url": os.environ.get("SUPABASE_URL"),
-        "supabase_anon_key": os.environ.get("SUPABASE_ANON_KEY"),
+        "supabase_publishable_key": _publishable_key(),
         "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
         "twilio_auth_token": os.environ.get("TWILIO_AUTH_TOKEN"),
     }

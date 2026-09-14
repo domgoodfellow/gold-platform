@@ -3,6 +3,12 @@
 # vendor SDK is used here either.
 httpx==0.28.1
 
+# app/auth verifies a human caller's Supabase access token against the project's JWKS rather
+# than hand-rolling asymmetric-signature verification. PyJWT's PyJWKClient already caches fetched
+# keys and re-fetches on an unrecognised key id, which is what key rotation needs -- see
+# app/auth/supabase.py. The [crypto] extra pulls in cryptography for RS256/ES256 verification.
+PyJWT[crypto]==2.13.0
+
 # The one vendor SDK in this runtime, and the exception is deliberate. Stripe is hand-rolled
 # above because that integration is an HMAC and one POST; this one is content blocks, tool calls,
 # thinking and typed errors, which is what an SDK is actually for. The chat-completions provider

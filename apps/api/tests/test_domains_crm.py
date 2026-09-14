@@ -24,7 +24,7 @@ from app.domains.crm.stages import (  # noqa: E402
 )
 from app.domains.errors import DomainError, NotFoundError, ValidationError  # noqa: E402
 
-SETTINGS = DomainSettings(supabase_url="http://db.test", supabase_anon_key="anon")
+SETTINGS = DomainSettings(supabase_url="http://db.test", supabase_publishable_key="anon")
 ORG = "11111111-1111-4111-8111-111111111111"
 CUSTOMER = "22222222-2222-4222-8222-222222222222"
 STAGE = "33333333-3333-4333-8333-333333333333"
