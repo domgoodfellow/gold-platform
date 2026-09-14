@@ -1,33 +1,26 @@
 import { redirect } from 'next/navigation';
-import { PageHeading, Section, SectionHeading } from '@/components/containers/section';
-import { Hint } from '@/components/controls/inputs';
-import { Button } from '@/components/controls/button';
-import { CredentialsForm } from '@/app/(auth)/credentials-form';
+import { AppPage } from '@/components/containers/app-page';
+import { WorkspaceHeader } from '@/components/containers/workspace-header';
+import { WorkspaceShell } from '@/components/containers/workspace-shell';
+import { AccountAgentRail } from '@/features/account/account-agent-rail';
+import { AccountSettings } from '@/features/account/account-settings';
+import { AccountSidebar } from '@/features/account/account-sidebar';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
+import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { changePasswordAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-async function signOutAction() {
-  'use server';
-  const db = await getDb();
-  await signOut(db);
-  redirect('/login');
-}
-
 /**
  * Personal Settings: identity and security for the signed-in person, independent of which
  * business or Platform context they are currently operating in (D45) — this page belongs to
- * neither. Cross-context navigation (switching business, entering Platform Administration)
- * belongs to `ContextSwitcher` alone, rendered in both shells' sidebar headers; this page no
- * longer duplicates that list.
- *
- * Deliberately narrow: only facts GOLD can truthfully own. There is no display name, avatar or
- * preferences section here because none is persisted anywhere authoritative — inventing one on
- * this screen would be the platform answering a question nobody was asked (constraints.md).
+ * neither. It shares the one authenticated shell every context uses (`WorkspaceShell`) instead of
+ * rendering as a standalone island outside it; `ContextSwitcher`, in its own sidebar, remains the
+ * one way to move from here into a business or Platform Administration.
  */
 export default async function AccountPage() {
   const db = await getDb();
@@ -49,38 +42,36 @@ export default async function AccountPage() {
     throw error;
   }
 
+  const [myOrganizations, staff] = await Promise.all([listMyOrganizations(db), isPlatformStaff(db)]);
+
+  async function signOutAction() {
+    'use server';
+    const db = await getDb();
+    await signOut(db);
+    redirect('/login');
+  }
+
+  const sidebar = (
+    <AccountSidebar
+      email={email}
+      signOutAction={signOutAction}
+      businesses={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
+      platformStaff={staff}
+    />
+  );
+
+  const header = (
+    <WorkspaceHeader
+      navigationTrigger="always"
+      primary={<span className="min-w-0 flex-1 truncate text-sm font-semibold sm:text-base">Account</span>}
+    />
+  );
+
   return (
-    <main className="mx-auto w-full max-w-2xl p-8">
-      <div className="flex items-baseline justify-between">
-        <PageHeading>Account</PageHeading>
-        <form action={signOutAction}>
-          <Button type="submit" tone="text" size="small">
-            Log out
-          </Button>
-        </form>
-      </div>
-
-      <Section className="mt-6">
-        <SectionHeading>Profile &amp; identity</SectionHeading>
-        <Hint className="mt-2">{email}</Hint>
-      </Section>
-
-      <Section className="mt-10">
-        <SectionHeading>Security &amp; sign-in</SectionHeading>
-        {hasPassword ? (
-          <CredentialsForm
-            action={changePasswordAction}
-            fields="password"
-            confirmPassword
-            submitLabel="Change password"
-            pendingLabel="Changing…"
-            passwordAutoComplete="new-password"
-            successMessage="Password changed."
-          />
-        ) : (
-          <Hint className="mt-2">Signed in with Google. There is no password here to change.</Hint>
-        )}
-      </Section>
-    </main>
+    <WorkspaceShell sidebar={sidebar} header={header} agent={<AccountAgentRail />}>
+      <AppPage width="reading">
+        <AccountSettings email={email} hasPassword={hasPassword} changePasswordAction={changePasswordAction} />
+      </AppPage>
+    </WorkspaceShell>
   );
 }

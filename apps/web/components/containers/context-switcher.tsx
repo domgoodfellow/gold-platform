@@ -15,6 +15,13 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@gold/ui/compon
 import { Building2, ChevronsUpDown, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 
+/** GOLD's own mark — the `mark` a shell passes when there is no tenant brand to show instead (Platform, Account). */
+export const GOLD_MARK = (
+  <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-foreground text-sm font-bold text-background">
+    G
+  </span>
+);
+
 /** One business the caller can switch into — never more than `listMyOrganizations` itself would return under the caller's own RLS. */
 export type SwitchableOrganization = {
   id: string;
@@ -24,7 +31,9 @@ export type SwitchableOrganization = {
 
 export type SwitcherContext =
   | { kind: 'business'; organizationId: string; name: string; role: string }
-  | { kind: 'platform' };
+  | { kind: 'platform' }
+  /** Personal Account (`/account`) — context-independent, neither a business nor Platform. */
+  | { kind: 'account' };
 
 type SwitcherProps = {
   mark: ReactNode;
@@ -39,9 +48,11 @@ type SwitcherProps = {
  * destination, so it is gone rather than making this a miscellaneous business menu.
  */
 function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[]) {
-  const triggerName = current.kind === 'business' ? current.name : 'Platform Administration';
-  const triggerRole = current.kind === 'business' ? current.role : 'GOLD staff';
-  const avatarInitial = current.kind === 'business' ? triggerName.charAt(0).toUpperCase() : 'G';
+  const triggerName =
+    current.kind === 'business' ? current.name : current.kind === 'platform' ? 'Platform Administration' : 'Your account';
+  const triggerRole = current.kind === 'business' ? current.role : current.kind === 'platform' ? 'GOLD staff' : 'Personal';
+  const avatarInitial =
+    current.kind === 'business' ? triggerName.charAt(0).toUpperCase() : current.kind === 'platform' ? 'G' : 'A';
 
   // Never the current business itself — a row that navigates to where you already are is not a
   // switch. Platform Administration has no such filtering to do: there is only one of it.

@@ -325,6 +325,32 @@ describe('the tenant workspace header — Platform administering an organization
   });
 });
 
+describe('Account shares the authenticated shell — no standalone island', () => {
+  const accountPage = readFileSync(`${WEB}/app/account/page.tsx`, 'utf8');
+  const contextSwitcherSource = readFileSync(`${WEB}/components/containers/context-switcher.tsx`, 'utf8');
+  const accountSidebar = readFileSync(`${WEB}/features/account/account-sidebar.tsx`, 'utf8');
+
+  it('mounts WorkspaceShell rather than a bare <main>', () => {
+    expect(accountPage).toContain('<WorkspaceShell');
+    expect(accountPage).not.toMatch(/<main\b/);
+  });
+
+  it('registers an Agent rail — every workspace keeps Agent as a furthest-right control', () => {
+    expect(accountPage).toContain('AccountAgentRail');
+  });
+
+  it('has its own SwitcherContext kind, rather than borrowing "business" or "platform"', () => {
+    expect(contextSwitcherSource).toMatch(/\{\s*kind:\s*'account'\s*\}/);
+    expect(accountSidebar).toContain("kind: 'account'");
+  });
+
+  it('keeps ContextSwitcher as the only cross-context navigation — no second business list here', () => {
+    expect(accountSidebar).toContain('ContextSwitcher');
+    expect(accountSidebar).not.toContain('PlatformNavigation');
+    expect(accountSidebar).not.toMatch(/AREAS|areasIn\(/);
+  });
+});
+
 describe('Drawer is a shared primitive, not a duplicate', () => {
   it('lives in packages/ui, never re-created under apps/web/components/ui', () => {
     const uiRoot = fileURLToPath(new URL('../../../packages/ui/src/components', import.meta.url));

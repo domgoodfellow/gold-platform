@@ -1,7 +1,7 @@
 'use client';
 
 import { AccountMenu } from '@/components/containers/account-menu';
-import { ContextSwitcher, type SwitchableOrganization } from '@/components/containers/context-switcher';
+import { ContextSwitcher, GOLD_MARK, type SwitchableOrganization } from '@/components/containers/context-switcher';
 import { PlatformNavigation } from '@/features/platform/platform-navigation';
 import {
   Sidebar,
@@ -10,12 +10,6 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@gold/ui/components/sidebar';
-
-const GOLD_MARK = (
-  <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-foreground text-sm font-bold text-background">
-    G
-  </span>
-);
 
 export function AppSidebar({
   email,
