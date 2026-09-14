@@ -89,7 +89,7 @@ export default async function ProductFamilyPage({ params }: PageProps<'/platform
         actions={<EditProductSheet product={product} />}
       />
 
-      <div className="mt-4 flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         <Badge tone={product.lifecycle === 'stable' ? 'success' : 'neutral'}>{product.lifecycle}</Badge>
         <Badge>{product.saleStatus}</Badge>
       </div>

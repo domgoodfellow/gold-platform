@@ -34,7 +34,7 @@ export default async function ProductPage({
         ]}
       />
 
-      <DefinitionList className="mt-3">
+      <DefinitionList>
         <Detail label="Key">{product.key}</Detail>
         <Detail label="Kind">{product.kind}</Detail>
         <Detail label="Linked module">

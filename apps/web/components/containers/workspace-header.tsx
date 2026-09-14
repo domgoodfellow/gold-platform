@@ -5,6 +5,7 @@ import { Separator } from '@gold/ui/components/separator';
 import { SidebarTrigger } from '@gold/ui/components/sidebar';
 import { cx } from '../class-names';
 import { WorkspaceHeaderActions } from './workspace-right-rail';
+import { PageChromeIdentity, usePageChrome } from './workspace-page-chrome';
 
 /**
  * Header GEOMETRY only, shared by Organization Context and Platform Context — the fix for two
@@ -17,6 +18,13 @@ import { WorkspaceHeaderActions } from './workspace-right-rail';
  * LEFT reads identity/navigation — where am I, which business, which area. RIGHT is personal and
  * secondary controls, ending in Configure then Agent — `WorkspaceHeaderActions`' own order, never
  * reimplemented here. Agent is always the furthest-right workspace control.
+ *
+ * A page that has registered chrome (`useWorkspacePageChrome`/`PageChromeRegistrar`, e.g. a
+ * detail route's former `RecordHeader`, or a Platform page's breadcrumb) takes over `primary`,
+ * `status` and gets a page-actions slot ahead of everything else on the right — this is what
+ * makes the header authoritative for page location instead of a second heading in the body.
+ * Absent that registration, `primary`/`status` fall back to whatever the caller passed in (a
+ * business area's own breadcrumb, a Platform static title).
  */
 export function WorkspaceHeader({
   navigationTrigger,
@@ -44,6 +52,8 @@ export function WorkspaceHeader({
    * sidebar-footer `AccountMenu` is not reachable at this width. */
   beforeActions?: ReactNode;
 }) {
+  const chrome = usePageChrome();
+
   return (
     <header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center gap-3 border-b border-border bg-background px-4 sm:px-6">
       {navigationTrigger ? (
@@ -61,9 +71,18 @@ export function WorkspaceHeader({
         </>
       ) : null}
       {context}
-      {primary}
-      {status}
+      {chrome ? <PageChromeIdentity chrome={chrome} /> : primary}
+      {chrome?.status ? (
+        <div className="hidden max-w-[16rem] shrink truncate text-sm text-muted sm:block">
+          {chrome.status}
+        </div>
+      ) : (
+        status
+      )}
       <span className="flex-1" />
+      {chrome?.actions ? (
+        <div className="flex shrink-0 items-center gap-2">{chrome.actions}</div>
+      ) : null}
       {beforeActions}
       <WorkspaceHeaderActions />
     </header>

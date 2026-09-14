@@ -24,6 +24,12 @@ const organizationLayout = readFileSync(
 );
 const platformHeader = readFileSync(`${WEB}/features/platform/platform-header.tsx`, 'utf8');
 const platformShell = readFileSync(`${WEB}/features/platform/platform-shell.tsx`, 'utf8');
+const workspaceShell = readFileSync(`${WEB}/components/containers/workspace-shell.tsx`, 'utf8');
+const workspacePageChrome = readFileSync(
+  `${WEB}/components/containers/workspace-page-chrome.tsx`,
+  'utf8',
+);
+const recordHeader = readFileSync(`${WEB}/components/containers/record-header.tsx`, 'utf8');
 
 describe('WorkspaceHeader is geometry only', () => {
   it('carries no organization id, platform route, AreaTrail or authorization knowledge', () => {
@@ -33,13 +39,14 @@ describe('WorkspaceHeader is geometry only', () => {
     expect(workspaceHeader).not.toMatch(/requireOrganization|requireActor|isPlatformStaff/);
   });
 
-  it('renders its slots in one fixed order: trigger, context, primary, status, spacer, beforeActions, actions', () => {
+  it('renders its slots in one fixed order: trigger, context, primary, status, spacer, page actions, beforeActions, actions', () => {
     const order = [
       'SidebarTrigger',
       '{context}',
-      '{primary}',
-      '{status}',
+      'chrome ? <PageChromeIdentity',
+      'chrome?.status ? (',
       "className=\"flex-1\"",
+      'chrome?.actions ? (',
       '{beforeActions}',
       '<WorkspaceHeaderActions',
     ];
@@ -187,6 +194,41 @@ describe('the right rail — three responsive layouts, not two', () => {
     expect(overlayBlock).toContain('{main}');
     expect(overlayBlock).toContain('<Sheet');
     expect(overlayBlock).not.toContain('ResizablePanelGroup');
+  });
+});
+
+describe('the page-chrome contract — the header, not the body, owns page location', () => {
+  it('WorkspaceShell gives page chrome the same lifetime as the rail — one provider tree', () => {
+    expect(workspaceShell).toContain('WorkspacePageChromeProvider');
+    const railAt = workspaceShell.indexOf('WorkspaceRailProvider');
+    const chromeAt = workspaceShell.indexOf('WorkspacePageChromeProvider');
+    expect(railAt).toBeGreaterThan(-1);
+    expect(chromeAt).toBeGreaterThan(railAt);
+  });
+
+  it('WorkspaceHeader consumes registered chrome, never a route or organization id, to decide what wins', () => {
+    expect(workspaceHeader).toContain('usePageChrome');
+    expect(workspaceHeader).toContain('PageChromeIdentity');
+  });
+
+  it('a registered page action renders ahead of the mobile account control and WorkspaceHeaderActions', () => {
+    const actionsAt = workspaceHeader.indexOf('chrome?.actions');
+    const beforeActionsAt = workspaceHeader.indexOf('{beforeActions}');
+    const railActionsAt = workspaceHeader.indexOf('<WorkspaceHeaderActions');
+    expect(actionsAt).toBeGreaterThan(-1);
+    expect(beforeActionsAt).toBeGreaterThan(actionsAt);
+    expect(railActionsAt).toBeGreaterThan(beforeActionsAt);
+  });
+
+  it('chrome is presentation metadata only — no domain/auth logic in the registrar or its context', () => {
+    expect(workspacePageChrome).not.toMatch(/organizationId|requireOrganization|requireActor|isPlatformStaff/);
+  });
+
+  it('RecordHeader registers chrome and renders nothing of its own — the body no longer duplicates the header’s identity', () => {
+    expect(recordHeader).toContain('useWorkspacePageChrome');
+    expect(recordHeader).toContain('return null');
+    expect(recordHeader).not.toContain('<h1');
+    expect(recordHeader).not.toContain('Breadcrumb');
   });
 });
 

@@ -252,7 +252,7 @@ export function WorkItemTabs({
   activity: ReactNode;
 }) {
   return (
-    <Tabs defaultValue="overview" className="mt-8">
+    <Tabs defaultValue="overview">
       <TabsList>
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="execution">Execution</TabsTrigger>

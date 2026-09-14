@@ -1,17 +1,17 @@
-import Link from 'next/link';
-import { Fragment, type ReactNode } from 'react';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@gold/ui/components/breadcrumb';
-import { PageHeading } from './section';
+'use client';
+
+import { useMemo, type ReactNode } from 'react';
+import { useWorkspacePageChrome } from './workspace-page-chrome';
 
 export type RecordCrumb = { label: ReactNode; href?: string };
 
-/** A detail screen's identity and route context. Product metadata remains feature-owned. */
+/**
+ * A detail screen's identity and route context — registered with the shell header rather than
+ * rendered in the body, so the header stays the one place a route's location is shown (see
+ * `workspace-page-chrome.tsx`). Kept under its historical name and prop shape so every existing
+ * call site needed no prop changes to stop rendering a second heading; `summary` maps onto the
+ * header's status slot. Product metadata remains feature-owned.
+ */
 export function RecordHeader({
   title,
   crumbs,
@@ -23,39 +23,10 @@ export function RecordHeader({
   summary?: ReactNode;
   actions?: ReactNode;
 }) {
-  return (
-    <header>
-      <Breadcrumb>
-        <BreadcrumbList>
-          {crumbs.map((crumb, index) => {
-            const current = index === crumbs.length - 1;
-            return (
-              <Fragment key={index}>
-                {index > 0 ? <BreadcrumbSeparator /> : null}
-                <BreadcrumbItem>
-                {current || !crumb.href ? (
-                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                ) : (
-                  <Link
-                    href={crumb.href}
-                    className="rounded underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                  >
-                    {crumb.label}
-                  </Link>
-                )}
-                </BreadcrumbItem>
-              </Fragment>
-            );
-          })}
-        </BreadcrumbList>
-      </Breadcrumb>
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <PageHeading>{title}</PageHeading>
-          {summary ? <div className="mt-2 text-sm text-muted">{summary}</div> : null}
-        </div>
-        {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
-      </div>
-    </header>
+  const chrome = useMemo(
+    () => ({ title, crumbs, status: summary, actions }),
+    [title, crumbs, summary, actions],
   );
+  useWorkspacePageChrome(chrome);
+  return null;
 }

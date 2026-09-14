@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { AppShell } from './app-shell';
 import { WorkspaceRailProvider, WorkspaceRightRail } from './workspace-right-rail';
+import { WorkspacePageChromeProvider } from './workspace-page-chrome';
 
 /**
  * The one authenticated shell, shared by Organization Context and Platform Context (the
@@ -35,14 +36,16 @@ export function WorkspaceShell({
 }) {
   return (
     <WorkspaceRailProvider>
-      <WorkspaceRightRail
-        main={
-          <AppShell sidebar={sidebar} header={header} bottomBar={bottomBar}>
-            {children}
-          </AppShell>
-        }
-      />
-      {agent}
+      <WorkspacePageChromeProvider>
+        <WorkspaceRightRail
+          main={
+            <AppShell sidebar={sidebar} header={header} bottomBar={bottomBar}>
+              {children}
+            </AppShell>
+          }
+        />
+        {agent}
+      </WorkspacePageChromeProvider>
     </WorkspaceRailProvider>
   );
 }
