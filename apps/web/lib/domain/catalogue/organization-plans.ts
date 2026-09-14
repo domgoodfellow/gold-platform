@@ -371,7 +371,7 @@ export async function organizationResolvedFeatureStates(
   db: Db,
   input: { organizationId: string },
 ): Promise<ResolvedFeatureState[]> {
-  const [features, modules, products, mappingsResult, planEntitlements, usable, overridesResult] =
+  const [features, modules, products, mappingsResult, planEntitlements, usable, overridesResult, planAssignment] =
     await Promise.all([
       listCatalogFeatures(db),
       listCatalogModules(db),
@@ -386,6 +386,7 @@ export async function organizationResolvedFeatureStates(
         .from('organization_feature_activation_overrides')
         .select('feature_id')
         .eq('organization_id', input.organizationId),
+      currentPlanAssignment(db, { organizationId: input.organizationId }),
     ]);
   if (mappingsResult.error) {
     throw new DomainError(mappingsResult.error.message, 'organization_plans.resolved_features_failed');
@@ -399,7 +400,13 @@ export async function organizationResolvedFeatureStates(
     if (isModuleKey(row.mapping_value)) moduleKeyByFeature.set(row.feature_id, row.mapping_value);
   }
   const planEntitledIds = new Set(planEntitlements.map((e) => e.featureId));
-  const hasPlanAssignment = planEntitlements.length > 0;
+  // Whether a Plan is authoritative for this organization is a fact about
+  // `organization_plan_assignments`, never about how many rows the entitlement RPC happened to
+  // return. A real base-Plan assignment that currently grants zero Features (a minimal or
+  // placeholder Plan) must still be authoritative — inferring "no Plan" from an empty
+  // entitlement list would silently fall an assigned business back to legacy wanted∩paid,
+  // exactly the state the Plan replaced it with.
+  const hasPlanAssignment = planAssignment !== null;
   const disabledFeatureIds = new Set((overridesResult.data ?? []).map((row) => row.feature_id));
 
   const moduleById = new Map(modules.map((m) => [m.id, m]));
@@ -527,6 +534,25 @@ export function activeModuleKeys(states: readonly ResolvedFeatureState[]): Set<M
   for (const state of states) {
     if (state.moduleKey && state.entitled && state.activation === 'active') {
       keys.add(state.moduleKey);
+    }
+  }
+  return keys;
+}
+
+/**
+ * Canonical Feature keys this organization can currently act on — implemented, entitled and not
+ * deliberately disabled. The feature-level counterpart to `activeModuleKeys`, and the one
+ * `lib/navigation.ts`'s `Area.featureKeys` resolve against: two Features can share one legacy
+ * `ModuleKey` (D46), so a caller that only asked "is this module active" cannot tell them apart —
+ * this can. Readiness is deliberately not a filter here: an available, entitled, active feature
+ * that merely has nothing configured yet (`readiness: 'setup_required'`) still counts, since
+ * setup-required is a reason to show the area with a "Set up" prompt, not to hide it.
+ */
+export function availableFeatureKeys(states: readonly ResolvedFeatureState[]): Set<string> {
+  const keys = new Set<string>();
+  for (const state of states) {
+    if (state.implementationState === 'available' && state.entitled && state.activation === 'active') {
+      keys.add(state.featureKey);
     }
   }
   return keys;

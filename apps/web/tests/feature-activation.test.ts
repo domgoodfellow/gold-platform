@@ -5,11 +5,13 @@ import {
   disableOrganizationFeature,
   enableOrganizationFeature,
   organizationResolvedFeatureStates,
+  recordPlanAssignment,
   type ResolvedFeatureState,
 } from '@/lib/domain/catalogue/organization-plans';
+import { createPlan } from '@/lib/domain/catalogue/plans';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { assignRole, createRole, listRoles } from '@/lib/domain/tenancy/roles';
-import { foundBusiness } from './helpers/founding';
+import { asPlatformStaff, foundBusiness } from './helpers/founding';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -151,5 +153,59 @@ describe('feature entitlement, activation and readiness', () => {
     const roles = await listRoles(db, { organizationId });
     const admin = roles.find((r) => r.name === 'Admin')!;
     await assignRole(db, { membershipId: ownerMembershipId, roleId: admin.id });
+  });
+});
+
+/**
+ * Plan-assignment authority (M17 closure slice). Whether a Plan is authoritative for an
+ * organization must be a fact about `organization_plan_assignments`, never inferred from how
+ * many rows the entitlement RPC happened to return — a real base-Plan assignment that currently
+ * grants zero Features (a minimal or placeholder Plan) must still block the legacy wanted∩paid
+ * fallback, exactly as a Plan granting fifty Features would.
+ */
+describe('Plan-assignment authority over legacy fallback', () => {
+  it('never falls back to legacy wanted∩paid once a real Plan assignment exists, even one granting nothing', async () => {
+    const staff = await asPlatformStaff();
+    const owner = await signUp('plan-authority');
+    const org = await foundBusiness({
+      ownerEmail: owner.email,
+      name: `Plan Authority ${randomUUID().slice(0, 6)}`,
+      displayName: 'Founder',
+      currency: 'EUR',
+    });
+
+    const billingFeatures = await listFeaturesByRuntimeMapping(owner.db, {
+      mappingKind: 'module_key',
+      mappingValue: 'billing',
+    });
+    const billingFeature = billingFeatures[0];
+
+    // Before any Plan assignment: legacy fallback, exactly as `feature-activation.test.ts`'s own
+    // first test already proves for a fresh founding — the billing-mapped feature reads
+    // entitled through `legacy_module`, because a founded business wants and has paid for it.
+    const beforeAssignment = await organizationResolvedFeatureStates(owner.db, { organizationId: org });
+    const beforeState = beforeAssignment.find((s) => s.featureId === billingFeature.id)!;
+    expect(beforeState.entitled).toBe(true);
+    expect(beforeState.entitlementSource).toBe('legacy_module');
+
+    // A real base-Plan assignment that grants nothing at all — no `grantPlanProduct`, no
+    // Feature override. `organization_effective_entitlements` for this org now resolves to an
+    // empty list, exactly the count-based trap `planEntitlements.length > 0` used to fall into.
+    const planKey = `empty_${randomUUID().slice(0, 8)}`;
+    const planId = await createPlan(staff, {
+      key: planKey,
+      kind: 'plan',
+      label: 'Empty Plan (authority test)',
+      description: 'Grants nothing on purpose — proves assignment existence, not entitlement count, is authoritative.',
+      billable: true,
+    });
+    await recordPlanAssignment(staff, { organizationId: org, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+
+    // The legacy module is still wanted and paid underneath — untouched by the Plan assignment —
+    // so a count-based check would still see "no entitlements" and wrongly fall back to it.
+    const afterAssignment = await organizationResolvedFeatureStates(owner.db, { organizationId: org });
+    const afterState = afterAssignment.find((s) => s.featureId === billingFeature.id)!;
+    expect(afterState.entitled).toBe(false);
+    expect(afterState.entitlementSource).toBe('none');
   });
 });
