@@ -55,8 +55,13 @@ Products, Modules, Meters, Pricing, Providers and Failures are a separate IA bec
 GOLD itself, not one business. Both models render through the shared `AppShell` and shadcn
 Sidebar primitives — and, since the shell/context correction, through the shared
 `WorkspaceShell`/`WorkspaceRightRail` too (`apps/web/components/containers/workspace-shell.tsx`):
-one Agent/Configure rail mechanism, docked and resizable on desktop, a Sheet below the dock
-breakpoint. Agent itself is scope-bound rather than shared data: `TenantAgentRail` answers with
+one Agent/Configure rail mechanism, three widths rather than two — docked and resizable from
+1280px, an overlay Sheet from the right between that and 768px (so a tablet does not shrink the
+workspace behind it, and does not behave like a phone either), a bottom Drawer below 768px. Both
+shells also share `WorkspaceHeader` (`apps/web/components/containers/workspace-header.tsx`) for
+the sticky header's geometry — Platform's own title logic and Business's own `AreaTrail` sit
+inside it as content, never the geometry itself. Agent itself is scope-bound rather than shared
+data: `TenantAgentRail` answers with
 one business's own rows under the caller's RLS; `PlatformAgentRail` takes no organization id at
 all and never runs "inside" a tenant, GOLD's own included — a selected organization may appear as
 Platform Agent's *context*, never as a switch of its scope. What's shared is presentation only
@@ -135,13 +140,15 @@ long list of jobs is exactly when that stops being obvious, so it does not scrol
 carries its own background: the page moves underneath it, and a transparent bar shows rows
 sliding through the text.
 
-Three things, in the order they are read:
+Four things, in the order they are read — `WorkspaceHeader` owns the row itself; each shell
+supplies its own content for a slot:
 
 | | What | Which widths |
 |---|---|---|
-| Left | the business's mark and name, which opens the business chooser | below `md` only — the sidebar says it above that |
+| Left | the compact context switcher — the business's mark and name, opening the same chooser the sidebar's own switcher does | below `md` only, Business Context — the sidebar says it above that; Platform Context reaches the switcher through its `Sidebar`'s own header at every width instead |
 | Middle | where you are: the area's name, or a link back to it from a detail route | all |
-| Right | account menu | below `md`; desktop account controls live in the sidebar footer |
+| Right, before Configure/Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
+| Right, furthest | Configure (when the page registered one), then Agent | all — Agent is always the last control in the row |
 
 **The area's `<h1>` lives here now, and it is still one string.** `navigation.ts` supplies the
 navigation entry and the heading both, exactly as before — `AreaTrail` renders it, and what
