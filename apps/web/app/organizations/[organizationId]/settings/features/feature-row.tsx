@@ -152,7 +152,12 @@ export function FeatureRow({
                     tone="danger"
                     size="small"
                     disabled={pending}
-                    onClick={() => setConfirmOpen(false)}
+                    // Deferred: closing this dialog is what unmounts this very button, and a
+                    // same-tick state update can remove it from the DOM before the browser gets
+                    // to run the click's native default action — the `type="submit"`/`form=`
+                    // cross-boundary submission this button exists for. A macrotask lets that
+                    // default action run first; the dialog still closes immediately to the eye.
+                    onClick={() => setTimeout(() => setConfirmOpen(false), 0)}
                   >
                     {pending ? '…' : 'Disable feature'}
                   </Button>
