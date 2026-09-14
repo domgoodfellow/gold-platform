@@ -13,11 +13,17 @@ import { foundBusiness } from './helpers/founding';
 
 /**
  * D45's routing claim end to end: platform authority and organization membership are two
- * independent facts about one identity, and `/organizations` reads both before deciding where a
- * caller lands. `landing.test.ts` proves `resolveOrganizationsLanding` itself against every
- * combination, pure; this suite proves the two facts it is fed — `isPlatformStaff` and
- * `listMyOrganizations` — actually combine that way against real RLS, for identities built the
- * way the product builds them (`provisionOrganization`, `addMember`), not by hand.
+ * independent facts about one identity, read together rather than either being hidden by the
+ * other. `landing.test.ts` proves `resolveOrganizationsLanding` itself against every combination,
+ * pure; this suite proves the two facts it is fed — `isPlatformStaff` and `listMyOrganizations` —
+ * actually combine that way against real RLS, for identities built the way the product builds
+ * them (`provisionOrganization`, `addMember`), not by hand.
+ *
+ * The locked product decision: platform staff default into Platform Administration regardless of
+ * how many businesses they also belong to. Membership itself is untouched by this — `mixed one`
+ * and `mixed multi` below both prove their real membership rows still exist and are still read —
+ * only the *default landing* changed. `?all=1` (not exercised against real identities here;
+ * `landing.test.ts` covers it purely) is the explicit override that shows the chooser instead.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -167,23 +173,34 @@ describe('who lands where, once platform authority and organization membership a
     });
   });
 
-  it('mixed platform + tenant, one organization → enters it rather than /platform', async () => {
+  it('mixed platform + tenant, one organization → /platform by default, membership untouched', async () => {
     expect(await isPlatformStaff(mixedOne.db)).toBe(true);
     const organizations = await listMyOrganizations(mixedOne.db);
+    // The membership itself is real and still read — this identity is not blocked from the
+    // business, only no longer auto-entered into it by default.
     expect(organizations).toHaveLength(1);
     expect(organizations[0].id).toBe(mixedOneOrgId);
 
-    const landing = resolveOrganizationsLanding({ organizations, staff: true, showAll: false });
-    expect(landing).toEqual({ kind: 'enter', organizationId: mixedOneOrgId });
+    expect(resolveOrganizationsLanding({ organizations, staff: true, showAll: false })).toEqual({
+      kind: 'platform',
+    });
+    // The explicit override still reaches the same real membership.
+    expect(resolveOrganizationsLanding({ organizations, staff: true, showAll: true })).toEqual({
+      kind: 'chooser',
+    });
   });
 
-  it('mixed, multiple organizations → the chooser, never forced into /platform', async () => {
+  it('mixed, multiple organizations → /platform by default, chooser on explicit request', async () => {
     expect(await isPlatformStaff(mixedMulti.db)).toBe(true);
     const organizations = await listMyOrganizations(mixedMulti.db);
     expect(organizations).toHaveLength(2);
 
-    const landing = resolveOrganizationsLanding({ organizations, staff: true, showAll: false });
-    expect(landing).toEqual({ kind: 'chooser' });
+    expect(resolveOrganizationsLanding({ organizations, staff: true, showAll: false })).toEqual({
+      kind: 'platform',
+    });
+    expect(resolveOrganizationsLanding({ organizations, staff: true, showAll: true })).toEqual({
+      kind: 'chooser',
+    });
   });
 
   it('a tenant-only identity is refused platform authority, live', async () => {

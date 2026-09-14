@@ -38,21 +38,27 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
   }
 
   // Platform authority and organization membership are two independent facts about one
-  // identity (D45), read together rather than one gating the other — a caller who holds both
-  // is not routed as though only one were true. `resolveOrganizationsLanding` is the decision
-  // itself, pulled out pure so `landing.test.ts` can exercise every combination with no session
-  // and no database.
+  // identity (D45) — a staff member's memberships are never taken away, held elsewhere, or
+  // hidden by this read. What this page decides is only which of an identity's true contexts it
+  // lands in *by default*: staff default into Platform Administration regardless of how many
+  // businesses they belong to (the amendment to this file's own earlier rule — see
+  // `lib/route/landing.ts`'s doc comment for the full history). `resolveOrganizationsLanding` is
+  // the decision itself, pulled out pure so `landing.test.ts` can exercise every combination with
+  // no session and no database.
   const [staff, organizations] = await Promise.all([isPlatformStaff(db), listMyOrganizations(db)]);
 
   /*
     **One business is not a choice, and a whole page to make it is a page in the way.** Most
-    operators belong to exactly one, and this screen asked every one of them to read a list of
-    length one and click it before anything could happen.
+    tenant-only operators belong to exactly one, and this screen asked every one of them to read
+    a list of length one and click it before anything could happen. Staff are auto-routed too,
+    to Platform Administration rather than into a business, for the same reason: the console is
+    their one default, not a list to choose from every time.
 
-    `?all=1` is what the shell's *Switch business* link sends. Without it that link and this
-    redirect would bounce a single-business operator straight back where they came from, which
-    is worse than the page it replaces — so the list stays reachable deliberately rather than
-    becoming unreachable by accident.
+    `?all=1` is what the shell's own *All businesses* link sends — the explicit request to see
+    every option, including Platform Administration itself. Without it, that link and this
+    redirect would bounce a caller straight back where they came from, which is worse than the
+    page it replaces — so the chooser stays reachable deliberately rather than becoming
+    unreachable by accident.
   */
   const { all } = await searchParams;
   const landing = resolveOrganizationsLanding({ organizations, staff, showAll: Boolean(all) });
@@ -110,6 +116,19 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
             Spoken to us about being set up already? Yours will appear here as soon as it exists
             — there is no need to make a second one.
           </Hint>
+
+          {/* Staff who explicitly asked for the chooser (`?all=1`) and belong to no business yet
+              would otherwise land on this form with no way back to their one true default —
+              browser back is not a route. */}
+          {staff ? (
+            <Hint weight="subtle" className="mt-4">
+              Not looking to found a business right now?{' '}
+              <Link href="/platform" className="font-medium underline underline-offset-4">
+                Return to Platform Administration
+              </Link>
+              .
+            </Hint>
+          ) : null}
         </div>
       ) : (
         <DividedList className="mt-6">
@@ -125,10 +144,10 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
               <span className="shrink-0 text-sm text-muted">{organization.role}</span>
             </li>
           ))}
-          {/* Platform authority is a context this identity can also choose, alongside every
-              organization above rather than in place of any of them (D45). The switcher inside
-              an organization already offers this same link; this list is the other place a
-              staff member with organizations lands, so it offers it too. */}
+          {/* Reached only via the explicit chooser (`?all=1`) now that staff default straight to
+              `/platform` — so a staff member who asked to see every option gets Platform
+              Administration listed alongside every business, never in place of any of them
+              (D45). The switcher inside an organization offers this same link. */}
           {staff ? (
             <li className="flex items-baseline justify-between gap-4 py-3">
               <Link href="/platform" className="font-medium underline underline-offset-4">

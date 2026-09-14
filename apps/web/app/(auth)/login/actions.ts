@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signInWithPassword } from '@/lib/domain/identity/credentials';
-import { consumePendingInviteDestination } from '@/lib/route/pending-invite';
+import { resolvePostAuthDestination } from '@/lib/route/landing';
 import type { CredentialsState } from '../credentials-form';
 
 export async function logInAction(
@@ -26,6 +26,7 @@ export async function logInAction(
   }
 
   // Outside the try: redirect() signals by throwing, and catching it here would swallow
-  // the navigation.
-  redirect((await consumePendingInviteDestination()) ?? '/organizations');
+  // the navigation. One centralized rule (`resolvePostAuthDestination`) decides where every
+  // successful sign-in lands, password and OAuth alike — see lib/route/landing.ts.
+  redirect(await resolvePostAuthDestination(db));
 }

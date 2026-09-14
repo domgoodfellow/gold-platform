@@ -2,56 +2,79 @@ import { describe, expect, it } from 'vitest';
 import { resolveOrganizationsLanding } from '@/lib/route/landing';
 
 /**
- * The regression: `/organizations` used to redirect a caller with platform authority straight
- * to `/platform`, before their own organization memberships were even read — so a person who
- * both ran GOLD and belonged to a business could never land in that business. D45 made platform
- * authority and organization membership two independent facts about one identity; neither
- * overrides the other, and this is the pure decision that proves it for every combination, with
- * no session and no database (`session-identity.test.ts`'s `decideRedirect` is the same shape of
- * test for the same reason: no harness here mounts a server component).
+ * The locked product decision: platform staff default into Platform Administration, regardless
+ * of how many businesses they also belong to. Organization membership is never taken away by
+ * this — a staff member can still open, work inside, and hold real capabilities in any business
+ * they are a member of — only no longer auto-entered into one by default. `?all=1` (the
+ * switcher's own "All businesses" link) is the one explicit override, and it always shows the
+ * chooser rather than guessing which context was meant.
+ *
+ * This is itself an amendment of an earlier version of this rule, which read "platform authority
+ * never overrides organization context" and auto-entered a staff member's one business exactly
+ * as it would a tenant-only caller's. See `lib/route/landing.ts`'s own doc comment for why that
+ * turned out to be the wrong default. This file replaces the test matrix that encoded the old
+ * decision — it no longer proves the old behavior anywhere.
  */
-describe('resolveOrganizationsLanding', () => {
-  it('sends a caller with no organizations and no platform authority to onboarding', () => {
-    expect(resolveOrganizationsLanding({ organizations: [], staff: false, showAll: false })).toEqual({
-      kind: 'onboarding',
-    });
-  });
-
-  it('sends a caller with no organizations and platform authority to /platform', () => {
+describe('resolveOrganizationsLanding — platform staff', () => {
+  it('sends staff with zero organizations to /platform', () => {
     expect(resolveOrganizationsLanding({ organizations: [], staff: true, showAll: false })).toEqual({
       kind: 'platform',
     });
   });
 
-  it('enters the one organization a tenant-only caller belongs to', () => {
+  it('sends staff with exactly one organization to /platform, not into that organization', () => {
+    expect(
+      resolveOrganizationsLanding({ organizations: [{ id: 'org-1' }], staff: true, showAll: false }),
+    ).toEqual({ kind: 'platform' });
+  });
+
+  it('sends staff with several organizations to /platform', () => {
+    const organizations = [{ id: 'org-1' }, { id: 'org-2' }];
+    expect(resolveOrganizationsLanding({ organizations, staff: true, showAll: false })).toEqual({
+      kind: 'platform',
+    });
+  });
+
+  it('shows the chooser when staff explicitly ask for it via ?all=1, whatever their membership count', () => {
+    expect(resolveOrganizationsLanding({ organizations: [], staff: true, showAll: true })).toEqual({
+      kind: 'onboarding',
+    });
+    expect(
+      resolveOrganizationsLanding({ organizations: [{ id: 'org-1' }], staff: true, showAll: true }),
+    ).toEqual({ kind: 'chooser' });
+    expect(
+      resolveOrganizationsLanding({
+        organizations: [{ id: 'org-1' }, { id: 'org-2' }],
+        staff: true,
+        showAll: true,
+      }),
+    ).toEqual({ kind: 'chooser' });
+  });
+});
+
+describe('resolveOrganizationsLanding — non-staff', () => {
+  it('sends a caller with no organizations to onboarding', () => {
+    expect(resolveOrganizationsLanding({ organizations: [], staff: false, showAll: false })).toEqual({
+      kind: 'onboarding',
+    });
+  });
+
+  it('enters the one organization a caller belongs to', () => {
     expect(
       resolveOrganizationsLanding({ organizations: [{ id: 'org-1' }], staff: false, showAll: false }),
     ).toEqual({ kind: 'enter', organizationId: 'org-1' });
   });
 
-  it('enters that same one organization for a caller who also holds platform authority', () => {
-    // The exact case the regression broke: platform authority must not pre-empt this.
-    expect(
-      resolveOrganizationsLanding({ organizations: [{ id: 'org-1' }], staff: true, showAll: false }),
-    ).toEqual({ kind: 'enter', organizationId: 'org-1' });
-  });
-
-  it('shows the chooser for a single organization when ?all=1 asked for it, staff or not', () => {
-    expect(
-      resolveOrganizationsLanding({ organizations: [{ id: 'org-1' }], staff: false, showAll: true }),
-    ).toEqual({ kind: 'chooser' });
-    expect(
-      resolveOrganizationsLanding({ organizations: [{ id: 'org-1' }], staff: true, showAll: true }),
-    ).toEqual({ kind: 'chooser' });
-  });
-
-  it('shows the chooser for multiple organizations, regardless of platform authority', () => {
+  it('shows the chooser for several organizations', () => {
     const organizations = [{ id: 'org-1' }, { id: 'org-2' }];
     expect(resolveOrganizationsLanding({ organizations, staff: false, showAll: false })).toEqual({
       kind: 'chooser',
     });
-    expect(resolveOrganizationsLanding({ organizations, staff: true, showAll: false })).toEqual({
-      kind: 'chooser',
-    });
+  });
+
+  it('shows the chooser for one organization when ?all=1 asked for it explicitly', () => {
+    expect(
+      resolveOrganizationsLanding({ organizations: [{ id: 'org-1' }], staff: false, showAll: true }),
+    ).toEqual({ kind: 'chooser' });
   });
 });
