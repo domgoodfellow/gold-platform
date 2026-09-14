@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { WorkspaceShell } from '@/components/containers/workspace-shell';
 import { AppSidebar } from '@/components/app-sidebar';
-import { SiteHeader } from '@/components/site-header';
+import { PlatformHeader } from '@/features/platform/platform-header';
 import type { SwitchableOrganization } from '@/components/containers/context-switcher';
 import { PlatformAgentRail } from '@/features/agent/platform-agent-rail';
 
@@ -23,7 +23,7 @@ export function PlatformShell({
   return (
     <WorkspaceShell
       sidebar={<AppSidebar email={email} signOutAction={signOutAction} businesses={businesses} />}
-      header={<SiteHeader />}
+      header={<PlatformHeader />}
       agent={<PlatformAgentRail canAnswer={canAnswerAgent} />}
     >
       {children}

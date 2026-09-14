@@ -12,10 +12,9 @@ import {
   organizationResolvedFeatureStates,
 } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganization } from '@/lib/route/organization';
-import { AccountMenu } from '@/components/containers/account-menu';
-import { Separator } from '@gold/ui/components/separator';
-import { SidebarTrigger } from '@gold/ui/components/sidebar';
-import { WorkspaceHeaderActions } from '@/components/containers/workspace-right-rail';
+import { CompactAccountMenu } from '@/components/containers/account-menu';
+import { CompactContextSwitcher } from '@/components/containers/context-switcher';
+import { WorkspaceHeader } from '@/components/containers/workspace-header';
 import { WorkspaceShell } from '@/components/containers/workspace-shell';
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
 import { canAnswerQuestions, listAgentRuns } from '@/lib/domain/assistant/questions';
@@ -111,28 +110,34 @@ export default async function OrganizationLayout({
   );
 
   /*
-    The header. Three things, in the order somebody reads them: the sidebar's own trigger (from
-    `md` up, where the sidebar exists at all), where in it you are, and the two actions that
-    belong to the shell rather than to any screen.
-
-    Switch business and Sign out live in the sidebar footer's account menu, not the header list
-    of areas — they are not navigation. On a phone, where the sidebar itself renders nothing
-    (`OrgNavBar` carries navigation instead), the same account menu appears here so the actions
-    are not lost at that width.
+    The header, composed from the shared `WorkspaceHeader` geometry. Left to right: the sidebar's
+    own trigger (from `md` up, where the sidebar exists at all), where in the business you are,
+    and — on a phone, where the sidebar itself renders nothing and `OrgNavBar` carries navigation
+    instead — the two identity controls the sidebar would otherwise have held: a compact context
+    switcher first, and the account menu immediately before Configure/Agent, so Agent stays the
+    furthest-right control at every width.
   */
   const header = (
-    <header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center gap-3 border-b border-border bg-background px-4 sm:px-6">
-      <SidebarTrigger className="hidden -ml-2 md:flex" />
-      <Separator orientation="vertical" className="hidden data-[orientation=vertical]:h-4 md:block" />
-
-      <AreaTrail organizationId={organizationId} />
-
-      {inSetup ? <SetupBadge organizationId={organizationId} /> : null}
-
-      <span className="flex-1" />
-      <WorkspaceHeaderActions />
-      <div className="md:hidden"><AccountMenu email={email} signOutAction={signOutAction} compact /></div>
-    </header>
+    <WorkspaceHeader
+      navigationTrigger="md"
+      context={
+        <div className="md:hidden">
+          <CompactContextSwitcher
+            mark={mark}
+            current={{ kind: 'business', organizationId, name: organization.name, role: organization.role }}
+            organizations={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
+            platformStaff={staff}
+          />
+        </div>
+      }
+      primary={<AreaTrail organizationId={organizationId} />}
+      status={inSetup ? <SetupBadge organizationId={organizationId} /> : null}
+      beforeActions={
+        <div className="md:hidden">
+          <CompactAccountMenu email={email} signOutAction={signOutAction} />
+        </div>
+      }
+    />
   );
 
   return (

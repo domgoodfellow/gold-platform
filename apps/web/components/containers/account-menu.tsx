@@ -12,32 +12,34 @@ import {
   DropdownMenuTrigger,
 } from '@gold/ui/components/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@gold/ui/components/sidebar';
+import { Button } from '@/components/controls/button';
 
 /**
- * The truthful, shared person/session menu, one implementation for every shell's sidebar
- * footer. It used to exist twice — this version, hand-rolled around `useSidebarCollapsed`, and
- * `PlatformAccountMenu` in `app-sidebar.tsx`, built the same afternoon against the platform
- * console's own `Sidebar` and already tooltip-aware for free. Now that both shells sit inside
- * the same `SidebarProvider`, there is one menu rather than two only ever a few lines apart.
- *
+ * The truthful, shared person/session menu, one implementation for every shell's sidebar footer.
  * Represents the PERSON, not where they are operating — cross-context navigation (switching
- * business, entering Platform Administration) is `ContextSwitcher`'s job alone, rendered above
- * this menu in both shells' sidebar headers. This menu used to also list every business the
- * caller belonged to, which duplicated that switcher one click away; it no longer does.
+ * business, entering Platform Administration) is `ContextSwitcher`'s job alone.
  */
-export function AccountMenu({
-  email,
-  signOutAction,
-  compact = false,
-}: {
+
+type AccountMenuProps = {
   /** The signed-in Supabase Auth email. Every caller resolves it the same way: `db.auth.getUser()`. */
   email: string;
   signOutAction: () => Promise<void>;
-  /** Avatar only, no name/status text or chevron — the phone header's own copy of this menu
-   * (`layout.tsx`, `md:hidden`) sits beside the page title and now two more controls (Configure,
-   * Agent); the full `lg` sidebar-footer treatment left almost nothing for the title itself. */
-  compact?: boolean;
-}) {
+};
+
+function AccountMenuContent({ email, signOutAction }: AccountMenuProps) {
+  return (
+    <>
+      <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem asChild><Link href="/account"><UserRound />Account</Link></DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Log out</DropdownMenuItem>
+    </>
+  );
+}
+
+/** The `Sidebar`-footer trigger, for use inside a desktop/tablet sidebar (`OrgSidebar`, `AppSidebar`). */
+export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
   const { isMobile } = useSidebar();
 
   return (
@@ -46,7 +48,7 @@ export function AccountMenu({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
-              size={compact ? 'default' : 'lg'}
+              size="lg"
               tooltip={email}
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
@@ -55,31 +57,50 @@ export function AccountMenu({
                   {email.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              {compact ? null : (
-                <>
-                  <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{email}</span>
-                    <span className="truncate text-xs text-sidebar-foreground/70">Signed in</span>
-                  </div>
-                  <ChevronUp aria-hidden className="ml-auto size-4" />
-                </>
-              )}
+              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">{email}</span>
+                <span className="truncate text-xs text-sidebar-foreground/70">Signed in</span>
+              </div>
+              <ChevronUp aria-hidden className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side={isMobile ? 'bottom' : 'right'}
-            align="end"
-            sideOffset={8}
-            className="min-w-56"
-          >
-            <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild><Link href="/account"><UserRound />Account</Link></DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Log out</DropdownMenuItem>
+          <DropdownMenuContent side={isMobile ? 'bottom' : 'right'} align="end" sideOffset={8} className="min-w-56">
+            <AccountMenuContent email={email} signOutAction={signOutAction} />
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
+  );
+}
+
+/**
+ * The same menu, behind a trigger sized for a phone header rather than a `Sidebar` row.
+ * Deliberately not built from `SidebarMenuButton` — that control is `w-full` by design (correct
+ * inside a `Sidebar`'s own fixed-width column), and stretching it into a header's flex row would
+ * fight the other controls in it for space rather than sizing to its own content, exactly the
+ * geometry `WorkspaceHeader`'s row depends on getting right around it.
+ */
+export function CompactAccountMenu({ email, signOutAction }: AccountMenuProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          tone="secondary"
+          size="small"
+          aria-label={`Account — signed in as ${email}`}
+          className="px-2"
+        >
+          <Avatar className="size-5 rounded-full">
+            <AvatarFallback className="rounded-full text-[10px]">
+              {email.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="bottom" align="end" sideOffset={8} className="min-w-56">
+        <AccountMenuContent email={email} signOutAction={signOutAction} />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
