@@ -2,7 +2,6 @@
 
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { FormField } from '@/components/controls/form';
-import { Badge } from '@/components/display/data';
 import { Button } from '@/components/controls/button';
 import { ConfirmSubmit } from '@/components/containers/dialog';
 import { useActionState } from 'react';
@@ -13,7 +12,6 @@ import {
   removeOperatingHoursAction,
   updateOrganizationAction,
   type SettingsActionState,
-  setModuleEnabledAction,
   disconnectPaymentAccountAction,
 } from './actions';
 
@@ -183,87 +181,6 @@ export function OperatingHoursRow({
         </span>
       ) : null}
     </form>
-  );
-}
-
-/**
- * One module's switch.
- *
- * A form per row rather than one form with checkboxes, because each is a separate decision
- * with its own failure — turning the portal on can fail while turning booking off succeeds,
- * and a single submit would have to invent an order and a partial-success message.
- *
- * **Every row here has a switch now.** This component used to take a `required` prop and render
- * "Always on" for the four keys that were the kernel misfiled as modules; the kernel is no
- * longer in this list at all, so there is nothing left that a business is offered and cannot
- * decline. See `navigation.ts`.
- */
-export function ModuleSwitch({
-  organizationId,
-  moduleKey,
-  label,
-  description,
-  enabled,
-  mayConfigure,
-  configureHref,
-  configureLabel,
-  outstanding,
-}: {
-  organizationId: string;
-  moduleKey: string;
-  label: string;
-  description: string;
-  enabled: boolean;
-  mayConfigure: boolean;
-  /** Where this module is set up. Rendered only once it is on — see `navigation.ts` (D31). */
-  configureHref: string;
-  /** The area's own name, so the link says where it goes rather than "configure". */
-  configureLabel: string;
-  /** What is still missing before this module does anything, or null when nothing is. */
-  outstanding: string | null;
-}) {
-  const [state, formAction, pending] = useActionState(setModuleEnabledAction, { error: null });
-
-  return (
-    <div className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-      <div className="min-w-0">
-        <p className="text-sm font-medium">
-          {label}
-          {/* A state marker, and neutral: whether a module being off is good is this
-              business's business, not the platform's (ui-spec §7). */}
-          {enabled ? null : <Badge className="ml-2 font-normal">off</Badge>}
-        </p>
-        <Hint>{description}</Hint>
-
-        {/* **Only once it is on**, and that is the whole rule: a business reading the list of
-            what it could buy is being offered something, and a business that has switched one
-            on is being shown where to finish. Rendering the link for a module that is off
-            would be an invitation into a screen that is not part of this business yet. */}
-        {enabled ? (
-          <p className="mt-1 text-sm">
-            {outstanding ? (
-              <span className="text-muted">{outstanding} </span>
-            ) : null}
-            <a href={configureHref} className="underline underline-offset-2">
-              {outstanding ? 'Finish' : 'Set up'} in {configureLabel}
-            </a>
-          </p>
-        ) : null}
-
-        <ErrorText role="alert" className="mt-1">{state.error}</ErrorText>
-      </div>
-
-      {mayConfigure ? (
-        <form action={formAction} className="shrink-0">
-          <input type="hidden" name="organizationId" value={organizationId} />
-          <input type="hidden" name="moduleKey" value={moduleKey} />
-          <input type="hidden" name="enabled" value={enabled ? '0' : '1'} />
-          <Button type="submit" disabled={pending} tone="secondary" size="small">
-            {pending ? '…' : enabled ? 'Switch off' : 'Switch on'}
-          </Button>
-        </form>
-      ) : null}
-    </div>
   );
 }
 

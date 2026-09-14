@@ -8,7 +8,6 @@ import {
   disableOrganizationFeature,
   enableOrganizationFeature,
 } from '@/lib/domain/catalogue/organization-plans';
-import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import {
   addOperatingHours,
   removeOperatingHours,
@@ -120,35 +119,6 @@ export async function updateProfileAction(
 
   revalidatePath(`/organizations/${organizationId}/settings`);
   await invalidateGoldHomepageIfReferenced(db, organizationId);
-  return { error: null };
-}
-
-/**
- * Switch a module on or off.
- *
- * `revalidatePath` on the layout rather than the page, because what changes is the navigation
- * — the areas this business sees are read in `layout.tsx`, and revalidating only this screen
- * would leave the sidebar showing a module the business has just turned off.
- */
-export async function setModuleEnabledAction(
-  _previous: { error: string | null },
-  formData: FormData,
-): Promise<{ error: string | null }> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-
-  try {
-    await setModuleEnabled(db, {
-      organizationId,
-      key: String(formData.get('moduleKey') ?? ''),
-      enabled: formData.get('enabled') === '1',
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
-    throw error;
-  }
-
-  revalidatePath(`/organizations/${organizationId}`, 'layout');
   return { error: null };
 }
 
