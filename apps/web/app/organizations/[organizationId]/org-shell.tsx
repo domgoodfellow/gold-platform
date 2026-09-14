@@ -47,9 +47,11 @@ import {
   areaHref,
   areaRootSegment,
   areasIn,
+  areaVisibleTo,
   currentSegment,
   type Area,
 } from '@/lib/navigation';
+import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
 /**
  * The two pieces of the shell that need to know which area is on screen. Client components
@@ -96,17 +98,21 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
 export function OrgNav({
   organizationId,
   enabledModules,
+  capabilities,
 }: {
   organizationId: string;
   enabledModules: string[];
+  /** Which areas this role's capabilities make relevant — layered on top of the module gate (I12). */
+  capabilities: Capability[];
 }) {
   const segment = currentSegment(usePathname());
   const enabled = new Set(enabledModules);
+  const capabilitySet = new Set(capabilities);
 
   return (
     <nav aria-label="This business">
       {AREA_GROUPS.map((group) => {
-        const areas = areasIn(group.key, enabled);
+        const areas = areasIn(group.key, enabled, capabilitySet);
         // A business with every module in a section switched off has no section. Rendering the
         // heading anyway would name a part of the application that is not there for them.
         if (areas.length === 0) return null;
@@ -185,12 +191,15 @@ function PhoneNavLink({
 export function OrgNavBar({
   organizationId,
   enabledModules,
+  capabilities,
 }: {
   organizationId: string;
   enabledModules: string[];
+  capabilities: Capability[];
 }) {
   const segment = currentSegment(usePathname());
   const enabled = new Set(enabledModules);
+  const capabilitySet = new Set(capabilities);
 
   return (
     <nav
@@ -199,7 +208,10 @@ export function OrgNavBar({
     >
       <ul className="flex gap-1 overflow-x-auto p-2">
         {AREAS.filter(
-          (area) => area.sidebar !== false && (!area.module || enabled.has(area.module)),
+          (area) =>
+            area.sidebar !== false &&
+            (!area.module || enabled.has(area.module)) &&
+            areaVisibleTo(area, capabilitySet),
         ).map((area) => (
           <li key={area.segment} className="shrink-0">
             <PhoneNavLink
@@ -258,6 +270,7 @@ export function OrgSidebar({
   organizations,
   platformStaff,
   enabledModules,
+  capabilities,
   setupEntry,
   email,
   signOutAction,
@@ -270,6 +283,7 @@ export function OrgSidebar({
   organizations: SwitchableOrganization[];
   platformStaff: boolean;
   enabledModules: string[];
+  capabilities: Capability[];
   /** `<SetupEntry />`, or nothing — the layout decides, from `operationalState`, the same place `SetupBadge` is decided. */
   setupEntry?: ReactNode;
   email: string;
@@ -287,7 +301,7 @@ export function OrgSidebar({
       </SidebarHeader>
       <SidebarContent>
         {setupEntry}
-        <OrgNav organizationId={organizationId} enabledModules={enabledModules} />
+        <OrgNav organizationId={organizationId} enabledModules={enabledModules} capabilities={capabilities} />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
       <SidebarRail />

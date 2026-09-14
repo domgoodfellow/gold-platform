@@ -1,10 +1,19 @@
+import type { Capability } from '@/lib/domain/tenancy/capabilities';
+
 /**
  * The areas of one business, and the only place the platform's own nouns are written down.
  * Concentrated here so a future per-tenant terminology override is a lookup on `label`, not an
  * excavation across nine page headings (M3). These are the platform's words, not a tenant's —
- * a business's own vocabulary is rows, read from the database wherever it appears. Nothing here
- * is capability-gated: every screen shows itself to any member and explains what their role
- * can't do, because the guard is the RLS policy and the sentence is the courtesy (I12).
+ * a business's own vocabulary is rows, read from the database wherever it appears.
+ *
+ * **Most of this list is still not capability-gated, and that stays deliberate (I12):** a kernel
+ * or general-purpose area shows itself to any member and explains what their role can't do,
+ * because the guard is the RLS policy and the sentence is the courtesy. `Area.relevantCapabilities`
+ * is the narrow exception, added for a genuinely feature-specific area whose entire content is
+ * behind one capability a role can lack (Reports, Automations' own settings, Integrations) — the
+ * sidebar hides a link nobody assigned this role could do anything behind, but direct navigation
+ * to the route is still refused server-side by RLS regardless of what the sidebar shows, exactly
+ * as before this field existed.
  */
 
 /**
@@ -215,6 +224,14 @@ export type Area = {
    * label registry: the parent's own `label` is read straight off its `Area` entry.
    */
   parent?: string;
+  /**
+   * A role must hold at least one of these to see this area in navigation — never a substitute
+   * for the module gate above, layered on top of it. Absent (the default) means every member
+   * sees the area regardless of capability, which stays true for every kernel and general
+   * operational area (Today, Work, Customers, Schedule, Locations, Resources, Assets, Settings).
+   * Direct navigation to the route underneath is unaffected either way; RLS decides that.
+   */
+  relevantCapabilities?: readonly Capability[];
 };
 
 /** Operational areas first, configuration last — a claim about what an operator does all day, not an alphabetisation. */
@@ -225,13 +242,13 @@ export const AREAS: readonly Area[] = [
   { segment: 'schedule', label: 'Schedule', group: 'operations' },
   { segment: 'resources', label: 'Resources', group: 'operations' },
   // Operational, not configuration — asking what's at risk of being late happens mid-shift, and nothing here is configured at all.
-  { segment: 'ask', label: 'Ask', group: 'operations', module: 'assistant' },
+  { segment: 'ask', label: 'Ask', group: 'operations', module: 'assistant', relevantCapabilities: ['assistant.ask'] },
   // Last in operations, on purpose — reading what a month came to is periodic, not part of the loop that gets work done.
-  { segment: 'reports', label: 'Reports', group: 'operations', module: 'reporting' },
+  { segment: 'reports', label: 'Reports', group: 'operations', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'] },
 
   { segment: 'customers', label: 'Customers', group: 'records' },
   // Beside Customers — the same loop from the other end: who to ring is a question about the customer list.
-  { segment: 'calls', label: 'Calls', group: 'records', module: 'reception' },
+  { segment: 'calls', label: 'Calls', group: 'records', module: 'reception', relevantCapabilities: ['call.place'] },
   { segment: 'locations', label: 'Locations', group: 'records' },
   { segment: 'assets', label: 'Assets', group: 'records', module: 'assets' },
 
@@ -239,10 +256,10 @@ export const AREAS: readonly Area[] = [
   // `sidebar: false` below: Settings is the primary door to each of these now (Slice 3). The
   // route, the module gate and the capability underneath are all exactly what they were —
   // bookmarks, deep links and `moduleConfiguration`'s own hrefs keep working unchanged.
-  { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing', sidebar: false, parent: 'settings' },
-  { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations', sidebar: false, parent: 'settings' },
-  { segment: 'fields', label: 'Custom fields', group: 'configuration', sidebar: false, parent: 'settings' },
-  { segment: 'roles', label: 'People and roles', group: 'configuration', sidebar: false, parent: 'settings' },
+  { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing', sidebar: false, parent: 'settings', relevantCapabilities: ['price.manage'] },
+  { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations', sidebar: false, parent: 'settings', relevantCapabilities: ['automation.manage'] },
+  { segment: 'fields', label: 'Custom fields', group: 'configuration', sidebar: false, parent: 'settings', relevantCapabilities: ['field.manage'] },
+  { segment: 'roles', label: 'People and roles', group: 'configuration', sidebar: false, parent: 'settings', relevantCapabilities: ['role.manage'] },
   // `sidebar: false`: Business Setup is implementation infrastructure, not a permanent tenant
   // area (Product Contract, Slice 1/3). While a business is in SETUP it already has its own
   // elevated shell treatment (`SetupEntry`/`SetupBadge` in `layout.tsx`) — a second, equal-weight
@@ -250,23 +267,42 @@ export const AREAS: readonly Area[] = [
   // avoid. While LIVE, the route recedes to a Settings hub card instead of the sidebar. The
   // route, its module gate and `/setup` itself are all unchanged — only where it is *found*
   // moved, exactly as Pricing/Automations/Custom fields/People and roles already did.
-  { segment: 'setup', label: 'Guided setup', group: 'configuration', module: 'drafting', sidebar: false },
+  { segment: 'setup', label: 'Guided setup', group: 'configuration', module: 'drafting', sidebar: false, relevantCapabilities: ['configuration.propose'] },
   // Its own area, not folded into Settings — a business returns here often enough (checking a
   // run, adding a source) that it isn't a set-once switch the way pricing or automations config
   // is, the same reasoning that keeps Automations and Guided setup each their own area.
-  { segment: 'integrations', label: 'Integrations', group: 'configuration', module: 'integrations' },
+  { segment: 'integrations', label: 'Integrations', group: 'configuration', module: 'integrations', relevantCapabilities: ['integration.manage'] },
   // Names no module — it's where the switches are, so a module able to hide it would lock a business out of its own account.
   { segment: 'settings', label: 'Settings', group: 'configuration' },
 ] as const;
 
-/** `enabled` is module keys, not capabilities (D25). Passing nothing shows everything. */
-export function areasIn(group: AreaGroup, enabled?: ReadonlySet<string>): Area[] {
+/** Whether `area` should appear in navigation for a caller with `capabilities` — the layer `areasIn`/`OrgNavBar` both apply on top of the module gate. Absent `relevantCapabilities` always passes; absent `capabilities` always passes (no gate to apply). */
+export function areaVisibleTo(area: Area, capabilities?: ReadonlySet<Capability>): boolean {
+  return (
+    !area.relevantCapabilities ||
+    !capabilities ||
+    area.relevantCapabilities.some((capability) => capabilities.has(capability))
+  );
+}
+
+/**
+ * `enabled` is module keys, not capabilities (D25) — entitlement/activation, layered under this.
+ * `capabilities` is the new, narrower layer on top (I12, evolved): a role lacking every
+ * capability an area names does not see it, in addition to the existing module gate. Passing
+ * neither shows everything a business has switched on, exactly as before this parameter existed.
+ */
+export function areasIn(
+  group: AreaGroup,
+  enabled?: ReadonlySet<string>,
+  capabilities?: ReadonlySet<Capability>,
+): Area[] {
   return AREAS.filter(
     (area) =>
       area.group === group &&
       area.sidebar !== false &&
       // No module named means the kernel — not something a business switched on, so not something it can switch off.
-      (!area.module || !enabled || enabled.has(area.module)),
+      (!area.module || !enabled || enabled.has(area.module)) &&
+      areaVisibleTo(area, capabilities),
   );
 }
 

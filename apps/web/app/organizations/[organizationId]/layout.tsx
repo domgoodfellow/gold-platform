@@ -83,6 +83,7 @@ export default async function OrganizationLayout({
       organizations={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
       platformStaff={staff}
       enabledModules={[...enabledModules]}
+      capabilities={organization.capabilities}
       setupEntry={inSetup ? <SetupEntry organizationId={organizationId} /> : null}
       email={email}
       signOutAction={signOutAction}
@@ -121,7 +122,11 @@ export default async function OrganizationLayout({
         sidebar={sidebar}
         header={header}
         bottomBar={
-          <OrgNavBar organizationId={organizationId} enabledModules={[...enabledModules]} />
+          <OrgNavBar
+            organizationId={organizationId}
+            enabledModules={[...enabledModules]}
+            capabilities={organization.capabilities}
+          />
         }
       >
         {children}

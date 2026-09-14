@@ -13,17 +13,20 @@ import {
   type Module,
 } from '@/lib/navigation';
 import { AREA_ICONS } from '@/app/organizations/[organizationId]/org-shell';
+import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
 /**
  * The shell's navigation is the only place the platform's own nouns are written down, and
  * this file is what makes that a fact rather than an intention.
  *
- * Unlike every other suite here it touches no database, because there is no policy to
- * prove — `lib/navigation.ts` deliberately gates nothing, and the reason is written there.
- * What it proves instead is completeness in both directions: a route with no navigation
- * entry is unreachable except by typing its URL, and an entry with no route is a dead link.
- * Both were live risks the moment nine pages stopped linking to each other and started
- * linking to a list.
+ * Unlike every other suite here it touches no database, because there is no policy to prove
+ * for most of this file — `lib/navigation.ts` deliberately gates almost nothing on capability,
+ * and the reason is written there. `relevantCapabilities` (Slice E) is the narrow exception,
+ * and even it changes only what the sidebar renders; a direct navigation is still refused
+ * server-side by RLS regardless. What the rest of this file proves is completeness in both
+ * directions: a route with no navigation entry is unreachable except by typing its URL, and an
+ * entry with no route is a dead link. Both were live risks the moment nine pages stopped
+ * linking to each other and started linking to a list.
  */
 
 const ROUTES = fileURLToPath(new URL('../app/organizations/[organizationId]', import.meta.url));
@@ -194,9 +197,11 @@ describe('modules', () => {
     for (const segment of ['today', 'work', 'schedule', 'customers', 'settings']) {
       expect(shown.map((area) => area.segment)).toContain(segment);
     }
-    // And the two that are modules are gone. This is *not* the capability gating I12 forbids:
-    // a role that cannot configure fields still sees Custom fields and is told why, whereas a
-    // module the business never bought is not part of that business at all.
+    // And the two that are modules are gone. This is a module gate, not the capability-relevance
+    // layer Slice E added: a role that cannot manage locations still sees Locations and is told
+    // why (I12, evolved — most areas stay ungated on capability), whereas a module the business
+    // never bought is not part of that business at all. `pricing`/`assets` are still absent here
+    // purely because their module is off, independent of any capability.
     expect(shown.map((area) => area.segment)).not.toContain('pricing');
     expect(shown.map((area) => area.segment)).not.toContain('assets');
   });
@@ -215,6 +220,48 @@ describe('modules', () => {
     expect(AREA_GROUPS.reduce((sum, group) => sum + areasIn(group.key).length, 0)).toBe(
       sidebarAreas,
     );
+  });
+});
+
+describe('capability-relevance filtering (Slice E)', () => {
+  it('leaves every kernel and general operational area visible to any role', () => {
+    // Today, Work, Schedule, Customers and the rest of the areas nobody assigned no
+    // `relevantCapabilities` — a role with zero capabilities still sees them, exactly as before
+    // this field existed (I12).
+    const noCapabilities = new Set<Capability>();
+    const shown = AREA_GROUPS.flatMap((group) => areasIn(group.key, undefined, noCapabilities));
+    for (const segment of ['today', 'work', 'schedule', 'customers', 'locations', 'settings']) {
+      expect(shown.map((area) => area.segment)).toContain(segment);
+    }
+  });
+
+  it('hides a feature-specific area from a role with none of its relevant capabilities', () => {
+    const reports = AREAS.find((area) => area.segment === 'reports')!;
+    expect(reports.relevantCapabilities).toBeDefined();
+
+    const shown = areasIn('operations', undefined, new Set());
+    expect(shown.map((area) => area.segment)).not.toContain('reports');
+  });
+
+  it('shows a feature-specific area to a role holding at least one of its relevant capabilities', () => {
+    const shown = areasIn('operations', undefined, new Set(['report.read']));
+    expect(shown.map((area) => area.segment)).toContain('reports');
+  });
+
+  it('layers on top of the module gate rather than replacing it', () => {
+    // Entitled to reporting (module on) but the role itself lacks both report capabilities:
+    // still hidden. Neither gate alone decides this — both must pass.
+    const moduleOnCapabilityOff = areasIn('operations', new Set(['reporting']), new Set());
+    expect(moduleOnCapabilityOff.map((area) => area.segment)).not.toContain('reports');
+
+    // The reverse: the role could read reports, but the business never bought reporting.
+    const moduleOffCapabilityOn = areasIn('operations', new Set(), new Set(['report.read']));
+    expect(moduleOffCapabilityOn.map((area) => area.segment)).not.toContain('reports');
+  });
+
+  it('passing no capabilities at all shows every area the module gate allows, same as before Slice E', () => {
+    const withModuleOnly = areasIn('operations', new Set(['reporting']));
+    expect(withModuleOnly.map((area) => area.segment)).toContain('reports');
   });
 });
 
