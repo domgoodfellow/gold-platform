@@ -1,9 +1,8 @@
 'use client';
 
-import { SectionHeading } from '@/components/containers/section';
-import { ErrorText, TextInput } from '@/components/controls/inputs';
-import { Button } from '@/components/controls/button';
-import { useActionState, useEffect } from 'react';
+import { TextInput } from '@/components/controls/inputs';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@gold/ui/components/field';
+import { useActionState, useEffect, useId } from 'react';
 import { toast } from 'sonner';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
@@ -11,16 +10,26 @@ import { createResourceAction, type CreateResourceState } from './actions';
 
 const INITIAL: CreateResourceState = { error: null, created: false };
 
+/**
+ * Fields only — no submit button. The Sheet owns the footer and submits this form by id
+ * (`form={formId}` on its own button), so the same form can be hosted without a second,
+ * differently-styled action floating inside the scrollable body.
+ */
 export function CreateResourceForm({
   organizationId,
   definitions,
   onCreated,
+  formId,
+  onPendingChange,
 }: {
   organizationId: string;
   definitions: FieldDefinition[];
   onCreated?: () => void;
+  formId: string;
+  onPendingChange?: (pending: boolean) => void;
 }) {
   const [state, formAction, pending] = useActionState(createResourceAction, INITIAL);
+  const nameFieldId = useId();
 
   useEffect(() => {
     if (state.created) {
@@ -29,28 +38,31 @@ export function CreateResourceForm({
     }
   }, [state.created, onCreated]);
 
+  useEffect(() => {
+    onPendingChange?.(pending);
+  }, [pending, onPendingChange]);
+
   return (
-    <form action={formAction} className="mt-8 flex flex-col gap-3">
-      <input type="hidden" name="organizationId" value={organizationId} />
+    <form id={formId} action={formAction}>
+      <FieldGroup>
+        <input type="hidden" name="organizationId" value={organizationId} />
 
-      <SectionHeading>New resource</SectionHeading>
+        <Field>
+          <FieldLabel htmlFor={nameFieldId}>Name</FieldLabel>
+          <TextInput
+            id={nameFieldId}
+            name="name"
+            type="text"
+            required
+            maxLength={200}
+            placeholder="Sam Okafor, or Van 3"
+          />
+        </Field>
 
-      <TextInput
-        name="name"
-        type="text"
-        required
-        maxLength={200}
-        placeholder="Name, e.g. Sam Okafor, or Van 3"
-        aria-label="Name"
-      />
+        <CustomFieldInputs definitions={definitions} />
 
-      <CustomFieldInputs definitions={definitions} />
-
-      <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? 'Adding…' : 'Add resource'}
-      </Button>
-
-      <ErrorText role="alert">{state.error}</ErrorText>
+        <FieldError>{state.error}</FieldError>
+      </FieldGroup>
     </form>
   );
 }

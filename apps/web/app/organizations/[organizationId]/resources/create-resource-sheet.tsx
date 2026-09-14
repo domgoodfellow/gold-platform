@@ -1,12 +1,13 @@
 'use client';
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useId, useState, type ReactNode } from 'react';
 import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from '@gold/ui/components/sheet';
@@ -31,26 +32,41 @@ export function CreateResourceSheetProvider({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
   const mobile = useIsMobile();
+  const formId = useId();
 
   return (
     <CreateResourceSheetContext.Provider value={() => setOpen(true)}>
       {children}
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side={mobile ? 'bottom' : 'right'} className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
+        <SheetContent
+          side={mobile ? 'bottom' : 'right'}
+          className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-lg"
+        >
+          <SheetHeader className="border-b border-border">
             <SheetTitle>New resource</SheetTitle>
             <SheetDescription>
               People, vehicles and equipment that work is scheduled against.
             </SheetDescription>
           </SheetHeader>
-          <div className="px-4 pb-4">
+          <div className="flex-1 overflow-y-auto p-4">
             <CreateResourceForm
               organizationId={organizationId}
               definitions={definitions}
               onCreated={() => setOpen(false)}
+              formId={formId}
+              onPendingChange={setPending}
             />
           </div>
+          <SheetFooter className="flex-row justify-end border-t border-border">
+            <Button type="button" tone="secondary" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form={formId} disabled={pending}>
+              {pending ? 'Adding…' : 'Add resource'}
+            </Button>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
     </CreateResourceSheetContext.Provider>
