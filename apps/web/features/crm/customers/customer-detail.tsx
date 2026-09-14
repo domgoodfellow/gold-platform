@@ -70,9 +70,9 @@ export function CustomerDetail({
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="work">Work</TabsTrigger>
-          {features.voice ? <TabsTrigger value="communications">Communications</TabsTrigger> : null}
+          {features.voice ? <TabsTrigger value="calls">Calls</TabsTrigger> : null}
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          {features.billing ? <TabsTrigger value="financial">Financial</TabsTrigger> : null}
+          {features.billing ? <TabsTrigger value="invoices">Invoices</TabsTrigger> : null}
           {features.portal ? <TabsTrigger value="portal">Portal</TabsTrigger> : null}
         </TabsList>
 
@@ -91,9 +91,9 @@ export function CustomerDetail({
 
         <TabsContent value="activity" className="mt-6"><ActivityList timeline={timeline} timezone={timezone} /></TabsContent>
         <TabsContent value="work" className="mt-6"><CustomerRelatedWork organizationId={organizationId} work={work} /></TabsContent>
-        {features.voice ? <TabsContent value="communications" className="mt-6"><CallHistory calls={calls} empty="No calls with this customer." />{permissions.call ? null : <Hint className="mt-4">Your role, {role}, cannot call customers.</Hint>}</TabsContent> : null}
+        {features.voice ? <TabsContent value="calls" className="mt-6"><CallHistory calls={calls} empty="No calls with this customer." />{permissions.call ? null : <Hint className="mt-4">Your role, {role}, cannot call customers.</Hint>}</TabsContent> : null}
         <TabsContent value="documents" className="mt-6"><DocumentsSection organizationId={organizationId} documents={documents} mayAttach={permissions.attach} roleLabel={role} uploadAction={uploadCustomerDocumentAction} hiddenFields={{ organizationId, customerId: customer.id }} className="mt-0" /></TabsContent>
-        {features.billing ? <TabsContent value="financial" className="mt-6"><CustomerFinancialSummary organizationId={organizationId} invoices={invoices} timezone={timezone} /></TabsContent> : null}
+        {features.billing ? <TabsContent value="invoices" className="mt-6"><CustomerFinancialSummary organizationId={organizationId} invoices={invoices} timezone={timezone} /></TabsContent> : null}
         {features.portal ? (
           <TabsContent value="portal" className="mt-6">
             <Hint>A link this customer can open to see their own work and invoices. Anyone holding it is them.</Hint>
