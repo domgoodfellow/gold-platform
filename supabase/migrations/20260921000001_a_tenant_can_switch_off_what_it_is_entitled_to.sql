@@ -135,8 +135,8 @@ begin
   for v_row in
     select
       case
-        when w.module_key is not null and p.module_key is not null then 'wanted_paid'
-        when w.module_key is null     and p.module_key is not null then 'unwanted_paid'
+        when w.module_key is not null and p.product_key is not null then 'wanted_paid'
+        when w.module_key is null     and p.product_key is not null then 'unwanted_paid'
         else 'other'
       end as state
     from public.platform_catalog_runtime_mappings rm
