@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { PageHeading } from '@/components/containers/section';
+import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
 import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
@@ -27,20 +27,13 @@ export default async function ResourcesPage({
   return (
     <AppPage width="wide">
       <CreateResourceSheetProvider organizationId={organizationId} definitions={definitions}>
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <PageHeading>Resources</PageHeading>
-            <Hint className="mt-1">
-              People, vehicles and equipment that work is scheduled against.
-            </Hint>
-          </div>
-          {/*
-            Hiding the trigger is a courtesy, not the guard. `resources_insert` requires
-            resource.create in the database, so a caller who reaches the action anyway is
-            refused there (constraints.md: hiding a UI element is not authorization).
-          */}
-          {mayAdd ? <CreateResourceTrigger /> : null}
-        </header>
+        {/*
+          Hiding the trigger is a courtesy, not the guard. `resources_insert` requires
+          resource.create in the database, so a caller who reaches the action anyway is
+          refused there (constraints.md: hiding a UI element is not authorization).
+        */}
+        <PageChromeRegistrar title="Resources" actions={mayAdd ? <CreateResourceTrigger /> : null} />
+        <Hint>People, vehicles and equipment that work is scheduled against.</Hint>
 
         <div className="mt-6">
           <DataTable

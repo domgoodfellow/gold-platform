@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Disclosure } from '@/components/containers/card';
 import { AppPage } from '@/components/containers/app-page';
-import { PageHeading } from '@/components/containers/section';
+import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
 import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
@@ -33,18 +33,13 @@ export default async function LocationsPage({
   return (
     <AppPage width="wide">
       <CreateLocationSheetProvider organizationId={organizationId} definitions={definitions}>
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <PageHeading>Locations</PageHeading>
-            <Hint className="mt-1">Places where this organization works, and the customers they serve.</Hint>
-          </div>
-          {/*
-            Hiding the trigger is a courtesy, not the guard. `locations_insert` requires
-            location.create in the database, so a caller who reaches the action anyway is
-            refused there.
-          */}
-          {mayAdd ? <CreateLocationTrigger /> : null}
-        </header>
+        {/*
+          Hiding the trigger is a courtesy, not the guard. `locations_insert` requires
+          location.create in the database, so a caller who reaches the action anyway is
+          refused there.
+        */}
+        <PageChromeRegistrar title="Locations" actions={mayAdd ? <CreateLocationTrigger /> : null} />
+        <Hint>Places where this organization works, and the customers they serve.</Hint>
 
         {/*
           Linking an existing customer to an existing place is a different act from creating

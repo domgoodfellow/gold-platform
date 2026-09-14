@@ -243,6 +243,41 @@ describe('the page-chrome contract — the header, not the body, owns page locat
   });
 });
 
+describe('Business area roots register chrome actions but no longer duplicate AreaTrail’s heading', () => {
+  it('Resources, Locations, Customers and Assets stop rendering their own PageHeading', () => {
+    for (const area of ['resources', 'locations', 'customers', 'assets']) {
+      const source = readFileSync(
+        `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
+        'utf8',
+      );
+      expect(source, `${area}/page.tsx should not import PageHeading`).not.toContain('PageHeading');
+      expect(source, `${area}/page.tsx should register chrome`).toContain('PageChromeRegistrar');
+    }
+  });
+
+  it('each area’s primary "Add" action moves into the registered chrome, not a body header row', () => {
+    const triggers: Record<string, string> = {
+      resources: 'CreateResourceTrigger',
+      locations: 'CreateLocationTrigger',
+      customers: 'CreateCustomerTrigger',
+      assets: 'CreateAssetTrigger',
+    };
+    for (const [area, trigger] of Object.entries(triggers)) {
+      const source = readFileSync(
+        `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
+        'utf8',
+      );
+      const registrarBlock = source.slice(
+        source.indexOf('<PageChromeRegistrar'),
+        source.indexOf('/>', source.indexOf('<PageChromeRegistrar')) + 2,
+      );
+      expect(registrarBlock, `${area}/page.tsx should place ${trigger} in chrome actions`).toContain(
+        trigger,
+      );
+    }
+  });
+});
+
 describe('Platform pages register chrome instead of duplicating their own heading', () => {
   it('the Catalog and Overview pages no longer render PageHeading — chrome owns the title', () => {
     expect(platformCatalogPage).not.toContain('PageHeading');

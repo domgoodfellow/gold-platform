@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { PageHeading } from '@/components/containers/section';
+import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
 import { Hint } from '@/components/controls/inputs';
 import {
   CreateCustomerSheetProvider,
@@ -40,16 +40,23 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
   return (
     <AppPage width="wide">
       <CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions}>
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <PageHeading>Customers</PageHeading>
-            <Hint className="mt-1">People and businesses this organization works for.</Hint>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {salesEnabled ? <Link href={`/organizations/${organizationId}/customers/pipeline`} className="text-sm underline underline-offset-4">Pipeline</Link> : null}
-            <CreateCustomerTrigger />
-          </div>
-        </header>
+        <PageChromeRegistrar
+          title="Customers"
+          actions={
+            <>
+              {salesEnabled ? (
+                <Link
+                  href={`/organizations/${organizationId}/customers/pipeline`}
+                  className="text-sm underline underline-offset-4"
+                >
+                  Pipeline
+                </Link>
+              ) : null}
+              <CreateCustomerTrigger />
+            </>
+          }
+        />
+        <Hint>People and businesses this organization works for.</Hint>
 
         <div className="mt-6">
           <CustomerListToolbar organizationId={organizationId} stages={visibleStages} search={search} stage={stage} mayImport={modules.has('integrations')} />

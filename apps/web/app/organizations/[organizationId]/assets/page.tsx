@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { PageHeading } from '@/components/containers/section';
+import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
 import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
@@ -58,20 +58,13 @@ export default async function AssetsPage({
         locations={locationOptions}
         definitions={definitions}
       >
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <PageHeading>Assets</PageHeading>
-            <Hint className="mt-1">
-              What work is about — machines, vehicles, properties, customer-owned equipment.
-            </Hint>
-          </div>
-          {/*
-            Hiding the trigger is a courtesy, not the guard. `assets_insert` requires
-            asset.create in the database (constraints.md: hiding a UI element is not
-            authorization).
-          */}
-          {mayAdd ? <CreateAssetTrigger /> : null}
-        </header>
+        {/*
+          Hiding the trigger is a courtesy, not the guard. `assets_insert` requires
+          asset.create in the database (constraints.md: hiding a UI element is not
+          authorization).
+        */}
+        <PageChromeRegistrar title="Assets" actions={mayAdd ? <CreateAssetTrigger /> : null} />
+        <Hint>What work is about — machines, vehicles, properties, customer-owned equipment.</Hint>
 
         <div className="mt-6">
           <DataTable
