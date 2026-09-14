@@ -13,6 +13,7 @@
     "./components/card": "./src/components/card.tsx",
     "./components/checkbox": "./src/components/checkbox.tsx",
     "./components/dialog": "./src/components/dialog.tsx",
+    "./components/drawer": "./src/components/drawer.tsx",
     "./components/dropdown-menu": "./src/components/dropdown-menu.tsx",
     "./components/empty": "./src/components/empty.tsx",
     "./components/field": "./src/components/field.tsx",
@@ -38,7 +39,8 @@
     "lucide-react": "^1.41.0",
     "radix-ui": "^1.6.7",
     "react-resizable-panels": "^4.12.4",
-    "sonner": "^2.0.8"
+    "sonner": "^2.0.8",
+    "vaul": "^1.1.2"
   },
   "peerDependencies": {
     "react": "^19",

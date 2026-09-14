@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { ArrowRight, Bot, Settings, X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { Sheet, SheetContent } from '@gold/ui/components/sheet';
+import { Drawer, DrawerContent } from '@gold/ui/components/drawer';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -74,21 +75,36 @@ function readStoredWidth(): number {
   return DEFAULT_WIDTH;
 }
 
-/** lg and up docks the rail inline; below that it is an overlay Sheet. */
-const DOCK_BREAKPOINT = 1024;
+/**
+ * Three widths, not two. A docked rail beside an expanded left sidebar can leave the workspace
+ * itself unusably narrow well before 1024px, so docking waits for real desktop width; a tablet
+ * between that and phone gets an overlay Sheet from the right rather than either shrinking the
+ * workspace or behaving like a 390px phone; below that, a bottom Drawer.
+ */
+const DOCK_BREAKPOINT = 1280;
+const TABLET_BREAKPOINT = 768;
 
-function subscribeToDock(onChange: () => void) {
-  const mql = window.matchMedia(`(min-width: ${DOCK_BREAKPOINT}px)`);
-  mql.addEventListener('change', onChange);
-  return () => mql.removeEventListener('change', onChange);
+type RailLayout = 'docked' | 'overlay' | 'drawer';
+
+function computeLayout(): RailLayout {
+  if (window.innerWidth >= DOCK_BREAKPOINT) return 'docked';
+  if (window.innerWidth >= TABLET_BREAKPOINT) return 'overlay';
+  return 'drawer';
 }
 
-function useIsDocked() {
-  return useSyncExternalStore(
-    subscribeToDock,
-    () => window.innerWidth >= DOCK_BREAKPOINT,
-    () => false,
-  );
+function subscribeToLayout(onChange: () => void) {
+  const dock = window.matchMedia(`(min-width: ${DOCK_BREAKPOINT}px)`);
+  const tablet = window.matchMedia(`(min-width: ${TABLET_BREAKPOINT}px)`);
+  dock.addEventListener('change', onChange);
+  tablet.addEventListener('change', onChange);
+  return () => {
+    dock.removeEventListener('change', onChange);
+    tablet.removeEventListener('change', onChange);
+  };
+}
+
+function useRailLayout(): RailLayout {
+  return useSyncExternalStore(subscribeToLayout, computeLayout, () => 'drawer');
 }
 
 export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
@@ -273,19 +289,25 @@ function RailBody({ mode, configure, agent }: { mode: RailMode; configure: Confi
 
 /**
  * The single rail host, shared by every shell that mounts a `WorkspaceRailProvider` (Organization
- * and Platform alike — see `WorkspaceShell`): docked beside `main` from `lg` up, an overlay Sheet
- * below it. Content (Agent, Configure) is supplied by whoever registered it; this component owns
- * only the mode switch, the dock/overlay choice, and — docked — the resizable split itself,
- * `react-resizable-panels` rather than a hand-rolled `mousemove` listener, so the divider is a
- * real, keyboard-operable ARIA `separator` rather than a mouse-only affordance.
+ * and Platform alike — see `WorkspaceShell`). Content (Agent, Configure) is supplied by whoever
+ * registered it; this component owns only the mode switch and the responsive layout choice:
+ *
+ * - `docked` (>=1280px) — beside `main`, resizable via `react-resizable-panels` rather than a
+ *   hand-rolled `mousemove` listener, so the divider is a real, keyboard-operable ARIA
+ *   `separator`. `main` keeps its width; the rail takes its own.
+ * - `overlay` (768–1279px) — a right-side Sheet over `main`, which never shrinks. A tablet at
+ *   ~1000px behaves like a small desktop here, not like a phone.
+ * - `drawer` (<768px) — a bottom Drawer, sized to leave room to see the workspace behind it
+ *   without colliding with `OrgNavBar`'s permanent bottom bar while closed.
  */
 export function WorkspaceRightRail({ main }: { main: ReactNode }) {
   const { mode, close, configure, agent, width, setWidth } = useWorkspaceRail();
-  const isDocked = useIsDocked();
+  const layout = useRailLayout();
   const open = mode !== 'closed';
   const title = mode === 'agent' ? 'Agent' : (configure?.title ?? 'Configure');
+  const settingsHref = mode === 'configure' ? configure?.settingsHref : undefined;
 
-  if (isDocked) {
+  if (layout === 'docked') {
     if (!open) return <>{main}</>;
     return (
       <ResizablePanelGroup orientation="horizontal" className="min-h-svh w-full">
@@ -303,7 +325,7 @@ export function WorkspaceRightRail({ main }: { main: ReactNode }) {
           className="flex flex-col border-l border-border bg-background"
         >
           <aside aria-label={title} className="flex h-full min-h-0 flex-1 flex-col">
-            <RailHeader title={title} onClose={close} settingsHref={mode === 'configure' ? configure?.settingsHref : undefined} />
+            <RailHeader title={title} onClose={close} settingsHref={settingsHref} />
             <RailBody mode={mode} configure={configure} agent={agent} />
           </aside>
         </ResizablePanel>
@@ -311,15 +333,29 @@ export function WorkspaceRightRail({ main }: { main: ReactNode }) {
     );
   }
 
+  if (layout === 'overlay') {
+    return (
+      <>
+        {main}
+        <Sheet open={open} onOpenChange={(next) => !next && close()}>
+          <SheetContent side="right" showCloseButton={false} className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+            <RailHeader title={title} onClose={close} settingsHref={settingsHref} />
+            <RailBody mode={mode} configure={configure} agent={agent} />
+          </SheetContent>
+        </Sheet>
+      </>
+    );
+  }
+
   return (
     <>
       {main}
-      <Sheet open={open} onOpenChange={(next) => !next && close()}>
-        <SheetContent side="bottom" showCloseButton={false} className="flex h-[85vh] flex-col gap-0 p-0">
-          <RailHeader title={title} onClose={close} settingsHref={mode === 'configure' ? configure?.settingsHref : undefined} />
+      <Drawer open={open} onOpenChange={(next) => !next && close()}>
+        <DrawerContent className="gap-0 p-0" style={{ height: '85dvh' }}>
+          <RailHeader title={title} onClose={close} settingsHref={settingsHref} />
           <RailBody mode={mode} configure={configure} agent={agent} />
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }
