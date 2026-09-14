@@ -3135,6 +3135,161 @@ export type Database = {
           },
         ]
       }
+      phone_number_assignments: {
+        Row: {
+          assigned_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          member_id: string | null
+          organization_id: string
+          outbound_allowed: boolean
+          phone_number_id: string
+          released_at: string | null
+          resource_id: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          member_id?: string | null
+          organization_id: string
+          outbound_allowed?: boolean
+          phone_number_id: string
+          released_at?: string | null
+          resource_id?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          member_id?: string | null
+          organization_id?: string
+          outbound_allowed?: boolean
+          phone_number_id?: string
+          released_at?: string | null
+          resource_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_number_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_number_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_number_assignments_organization_id_member_id_fkey"
+            columns: ["organization_id", "member_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "phone_number_assignments_organization_id_phone_number_id_fkey"
+            columns: ["organization_id", "phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_numbers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "phone_number_assignments_organization_id_resource_id_fkey"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "bookable_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "phone_number_assignments_organization_id_resource_id_fkey"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      phone_numbers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          e164: string
+          health: string
+          health_checked_at: string | null
+          id: string
+          inbound_enabled: boolean
+          label: string | null
+          lifecycle: string
+          organization_id: string
+          outbound_enabled: boolean
+          provider_resource_id: string
+          purpose: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          e164: string
+          health?: string
+          health_checked_at?: string | null
+          id?: string
+          inbound_enabled?: boolean
+          label?: string | null
+          lifecycle?: string
+          organization_id: string
+          outbound_enabled?: boolean
+          provider_resource_id: string
+          purpose?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          e164?: string
+          health?: string
+          health_checked_at?: string | null
+          id?: string
+          inbound_enabled?: boolean
+          label?: string | null
+          lifecycle?: string
+          organization_id?: string
+          outbound_enabled?: boolean
+          provider_resource_id?: string
+          purpose?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_numbers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_numbers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_numbers_organization_id_provider_resource_id_fkey"
+            columns: ["organization_id", "provider_resource_id"]
+            isOneToOne: true
+            referencedRelation: "organization_provider_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       platform_catalog_feature_dependencies: {
         Row: {
           feature_id: string
@@ -5376,6 +5531,16 @@ export type Database = {
         Args: { p_organization_id: string; p_run_id: string }
         Returns: undefined
       }
+      assign_phone_number: {
+        Args: {
+          p_default?: boolean
+          p_member_id?: string
+          p_organization_id: string
+          p_phone_number_id: string
+          p_resource_id?: string
+        }
+        Returns: string
+      }
       assign_role: {
         Args: { p_membership_id: string; p_role_id: string }
         Returns: undefined
@@ -6048,6 +6213,10 @@ export type Database = {
         }
         Returns: string
       }
+      release_phone_number_assignment: {
+        Args: { p_assignment_id: string; p_organization_id: string }
+        Returns: undefined
+      }
       remove_operating_hours: { Args: { p_id: string }; Returns: undefined }
       remove_plan_quota: {
         Args: { p_allowance_key: string; p_plan_id: string }
@@ -6223,6 +6392,16 @@ export type Database = {
       submit_public_homepage_revision: {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: undefined
+      }
+      sync_phone_number: {
+        Args: {
+          p_e164: string
+          p_label?: string
+          p_organization_id: string
+          p_provider_resource_id: string
+          p_status?: string
+        }
+        Returns: string
       }
       time_committed: {
         Args: {
