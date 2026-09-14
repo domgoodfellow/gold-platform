@@ -53,7 +53,15 @@ the structural form of the sentence rule the rest of that suite enforces.
 **Platform pages never enter tenant `navigation.ts`.** Platform Overview, Organizations,
 Products, Modules, Meters, Pricing, Providers and Failures are a separate IA because they govern
 GOLD itself, not one business. Both models render through the shared `AppShell` and shadcn
-Sidebar primitives.
+Sidebar primitives — and, since the shell/context correction, through the shared
+`WorkspaceShell`/`WorkspaceRightRail` too (`apps/web/components/containers/workspace-shell.tsx`):
+one Agent/Configure rail mechanism, docked and resizable on desktop, a Sheet below the dock
+breakpoint. Agent itself is scope-bound rather than shared data: `TenantAgentRail` answers with
+one business's own rows under the caller's RLS; `PlatformAgentRail` takes no organization id at
+all and never runs "inside" a tenant, GOLD's own included — a selected organization may appear as
+Platform Agent's *context*, never as a switch of its scope. What's shared is presentation only
+(`features/agent/agent-shared.tsx`): the tabs, the message bubbles, and the unavailable-vs-empty
+distinction described at `lib/domain/assistant/platform-questions.ts`.
 
 ---
 
