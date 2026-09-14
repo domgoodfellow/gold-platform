@@ -57,11 +57,11 @@ export type OrganizationFeatureState =
   | { kind: 'included_off' } // granted, but not switched on (no runtime mapping is "wanted")
   | { kind: 'included_on' }; // granted and switched on
 
-/** Combines catalogue implementation with the resolved entitlement/desired facts — never authorization logic of its own, only presentation of what was already resolved (section 21). */
+/** Combines catalogue implementation with the resolved entitlement/activation facts — never authorization logic of its own, only presentation of what was already resolved (section 21). */
 export function deriveOrganizationFeatureState(resolved: ResolvedFeatureState): OrganizationFeatureState {
   if (resolved.implementationState !== 'available') return { kind: 'planned' };
   if (!resolved.entitled) return { kind: 'not_included' };
-  return resolved.desired ? { kind: 'included_on' } : { kind: 'included_off' };
+  return resolved.activation === 'active' ? { kind: 'included_on' } : { kind: 'included_off' };
 }
 
 export function EntitlementStatus({ state }: { state: OrganizationFeatureState }) {

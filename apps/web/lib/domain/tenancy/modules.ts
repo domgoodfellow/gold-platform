@@ -4,6 +4,7 @@ import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
 import { DomainError } from '@/lib/domain/errors';
 import { draftingProvider } from '@/lib/adapters/drafting';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
+import { callingNumber } from '@/lib/domain/reception/telephony';
 import { MODULES, isModuleKey, type ModuleKey } from '@/lib/navigation';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
@@ -235,6 +236,16 @@ export async function outstandingModuleSetup(
       outstanding.set(
         'drafting',
         'This deployment cannot draft a setup, so nothing can be proposed here. Every part of it can still be filled in on the screens above.',
+      );
+    }
+  }
+
+  if (input.enabled.has('reception') && !outstanding.has('reception')) {
+    const number = await callingNumber(db, { organizationId: input.organizationId });
+    if (!number) {
+      outstanding.set(
+        'reception',
+        'No calling number is configured yet, so nothing can ring through.',
       );
     }
   }

@@ -1,9 +1,10 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
-import { listCatalogFeatures } from './catalogue';
+import { requireActor } from '@/lib/domain/tenancy/actor';
+import { listCatalogFeatures, listCatalogModules, listCatalogProducts } from './catalogue';
 import type { PlanKind } from './plans';
-import { isModuleKey, type ModuleKey } from '@/lib/navigation';
-import { listEnabledModules, listUsableModules } from '@/lib/domain/tenancy/modules';
+import { isModuleKey, moduleConfiguration, MODULES, type ModuleKey } from '@/lib/navigation';
+import { listUsableModules, outstandingModuleSetup } from '@/lib/domain/tenancy/modules';
 
 /**
  * What one organization has, in the new Plan/Add-on model — entirely separate provenance from
@@ -328,34 +329,70 @@ export async function organizationEffectiveQuotas(
 
 export type ResolvedFeatureState = {
   featureId: string;
+  featureKey: string;
+  productKey: string;
   implementationState: 'planned' | 'partial' | 'available';
   /** Whether this organization's Plan(s), or (absent a Plan assignment) its legacy wanted∩paid module state, currently grant this Feature. */
   entitled: boolean;
   entitlementSource: 'plan' | 'legacy_module' | 'none';
-  /** Whether the organization has actually switched on the legacy module backing this Feature. `null` when the Feature has no `module_key` runtime mapping to ask that question of. */
-  desired: boolean | null;
+  /**
+   * The opt-out axis (domain-model.md): 'disabled' iff the organization has deliberately
+   * switched an entitled feature off (`organization_feature_activation_overrides`). An
+   * unentitled feature is always reported 'active' here — activation has nothing to say about a
+   * feature this business was never granted, and the absence of an override must never be read
+   * as "on" for something never entitled. Callers gate visible behaviour on `entitled` first.
+   */
+  activation: 'active' | 'disabled';
+  /**
+   * Readiness is a separate question from availability (domain-model.md): an available,
+   * entitled, active feature can still have nothing configured yet. 'unavailable' covers
+   * not-implemented or not-entitled; zero rows/zero connections is 'ready', never
+   * 'setup_required' — only genuinely missing required configuration is.
+   */
+  readiness: 'ready' | 'setup_required' | 'unavailable';
+  reason?: string;
+  primaryHref?: string;
+  setupHref?: string;
   /** The legacy `MODULES` key backing this Feature, if any — for a caller that wants a real "Configure" link via `moduleConfiguration()` rather than guessing one from catalogue labels. */
   moduleKey: ModuleKey | null;
 };
 
 /**
- * The one place implementation, entitlement and desired state are combined for presentation —
- * never collapsed into a single flag (section 11/21). A legacy organization with no Plan
- * assignment falls back to its existing wanted∩paid module resolution (`usable_modules`), so it
- * keeps seeing meaningful entitlement information rather than "not included" for everything.
+ * The authoritative feature-availability resolver (domain-model.md, D25/D41 evolved): combines
+ * catalogue implementation, entitlement, this organization's deliberate activation override, and
+ * per-feature readiness. Role authorization is never an input here and never an output — it
+ * stays `app.has_capability`'s question alone.
+ *
+ * A legacy organization with no Plan assignment falls back to its existing wanted∩paid module
+ * resolution (`usable_modules`), so it keeps seeing meaningful entitlement information rather
+ * than "not included" for everything.
  */
 export async function organizationResolvedFeatureStates(
   db: Db,
   input: { organizationId: string },
 ): Promise<ResolvedFeatureState[]> {
-  const [features, mappingsResult, planEntitlements, usable, enabled] = await Promise.all([
-    listCatalogFeatures(db),
-    db.from('platform_catalog_runtime_mappings').select('feature_id, mapping_value').eq('mapping_kind', 'module_key'),
-    organizationEffectiveEntitlements(db, { organizationId: input.organizationId }),
-    listUsableModules(db, { organizationId: input.organizationId }),
-    listEnabledModules(db, { organizationId: input.organizationId }),
-  ]);
-  if (mappingsResult.error) throw new DomainError(mappingsResult.error.message, 'organization_plans.resolved_features_failed');
+  const [features, modules, products, mappingsResult, planEntitlements, usable, overridesResult] =
+    await Promise.all([
+      listCatalogFeatures(db),
+      listCatalogModules(db),
+      listCatalogProducts(db),
+      db
+        .from('platform_catalog_runtime_mappings')
+        .select('feature_id, mapping_value')
+        .eq('mapping_kind', 'module_key'),
+      organizationEffectiveEntitlements(db, { organizationId: input.organizationId }),
+      listUsableModules(db, { organizationId: input.organizationId }),
+      db
+        .from('organization_feature_activation_overrides')
+        .select('feature_id')
+        .eq('organization_id', input.organizationId),
+    ]);
+  if (mappingsResult.error) {
+    throw new DomainError(mappingsResult.error.message, 'organization_plans.resolved_features_failed');
+  }
+  if (overridesResult.error) {
+    throw new DomainError(overridesResult.error.message, 'organization_plans.resolved_features_failed');
+  }
 
   const moduleKeyByFeature = new Map<string, ModuleKey>();
   for (const row of mappingsResult.data ?? []) {
@@ -363,9 +400,21 @@ export async function organizationResolvedFeatureStates(
   }
   const planEntitledIds = new Set(planEntitlements.map((e) => e.featureId));
   const hasPlanAssignment = planEntitlements.length > 0;
+  const disabledFeatureIds = new Set((overridesResult.data ?? []).map((row) => row.feature_id));
+
+  const moduleById = new Map(modules.map((m) => [m.id, m]));
+  const productById = new Map(products.map((p) => [p.id, p]));
+
+  // Readiness re-uses the one place per-module setup checks already live, restricted to the
+  // modules this resolver is about to report entitled — a module never wanted/paid is never
+  // "setup_required", it is simply not entitled.
+  const outstanding = await outstandingModuleSetup(db, {
+    organizationId: input.organizationId,
+    enabled: usable,
+  });
 
   return features.map((feature) => {
-    const moduleKey = moduleKeyByFeature.get(feature.id);
+    const moduleKey = moduleKeyByFeature.get(feature.id) ?? null;
     let entitled = false;
     let entitlementSource: ResolvedFeatureState['entitlementSource'] = 'none';
 
@@ -377,13 +426,89 @@ export async function organizationResolvedFeatureStates(
       entitlementSource = 'legacy_module';
     }
 
+    const catalogModule = moduleById.get(feature.moduleId);
+    const product = catalogModule ? productById.get(catalogModule.productId) : undefined;
+
+    // Activation has no meaning for something never entitled — always reported 'active' so a
+    // caller cannot mistake "never entitled" for "deliberately switched off".
+    const activation: ResolvedFeatureState['activation'] =
+      entitled && disabledFeatureIds.has(feature.id) ? 'disabled' : 'active';
+
+    let readiness: ResolvedFeatureState['readiness'] = 'unavailable';
+    let reason: string | undefined;
+    if (feature.implementationState === 'available' && entitled && activation === 'active') {
+      const outstandingReason = moduleKey ? outstanding.get(moduleKey) : undefined;
+      readiness = outstandingReason ? 'setup_required' : 'ready';
+      reason = outstandingReason;
+    }
+
+    const moduleEntry = moduleKey ? MODULES.find((m) => m.key === moduleKey) : undefined;
+    const primaryHref = moduleEntry ? moduleConfiguration(input.organizationId, moduleEntry).href : undefined;
+
     return {
       featureId: feature.id,
+      featureKey: feature.key,
+      productKey: product?.key ?? '',
       implementationState: feature.implementationState,
       entitled,
       entitlementSource,
-      desired: moduleKey ? enabled.has(moduleKey) : null,
-      moduleKey: moduleKey ?? null,
+      activation,
+      readiness,
+      reason,
+      primaryHref,
+      setupHref: readiness === 'setup_required' ? primaryHref : undefined,
+      moduleKey,
     };
   });
+}
+
+/**
+ * Enable (delete the override, idempotent if absent) an entitled feature this organization had
+ * disabled. RLS (`organization_feature_activation_overrides_delete`) is the real enforcement —
+ * this only maps its refusal to a clear error.
+ */
+export async function enableOrganizationFeature(
+  db: Db,
+  input: { organizationId: string; featureId: string },
+): Promise<void> {
+  await requireActor(db);
+
+  const { error } = await db
+    .from('organization_feature_activation_overrides')
+    .delete()
+    .eq('organization_id', input.organizationId)
+    .eq('feature_id', input.featureId);
+
+  if (error) {
+    if (error.code === '42501') {
+      throw new DomainError('You cannot manage features here.', 'organization_plans.feature_forbidden');
+    }
+    throw new DomainError(error.message, 'organization_plans.enable_feature_failed');
+  }
+}
+
+/**
+ * Disable an entitled feature (insert the override, idempotent if already present — the same
+ * `23505`-swallowing shape `setModuleEnabled` uses one axis over).
+ */
+export async function disableOrganizationFeature(
+  db: Db,
+  input: { organizationId: string; featureId: string },
+): Promise<void> {
+  const actor = await requireActor(db);
+
+  const { error } = await db.from('organization_feature_activation_overrides').insert({
+    organization_id: input.organizationId,
+    feature_id: input.featureId,
+    disabled_by: actor.id,
+  });
+
+  if (error?.code === '23505') return;
+
+  if (error) {
+    if (error.code === '42501') {
+      throw new DomainError('You cannot manage features here.', 'organization_plans.feature_forbidden');
+    }
+    throw new DomainError(error.message, 'organization_plans.disable_feature_failed');
+  }
 }
