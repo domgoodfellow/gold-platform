@@ -12,6 +12,7 @@ import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireOrganization } from '@/lib/route/organization';
 import { AddMemberForm } from '../../roles/add-member-form';
 import { CreateRoleForm } from '../../roles/create-role-form';
+import { EditRoleSheet } from '../../roles/edit-role-sheet';
 import { InviteMemberForm } from '../../roles/invite-member-form';
 import { PendingInvitations } from '../../roles/pending-invitations';
 import { RoleAssignmentControl } from '../../roles/role-assignment-control';
@@ -142,6 +143,17 @@ export default async function PeopleSettingsPage({
                       </div>
                     ),
                 },
+                ...(mayManage
+                  ? [
+                      {
+                        key: 'edit',
+                        header: '',
+                        cell: (role: (typeof roles)[number]) => (
+                          <EditRoleSheet organizationId={organizationId} role={role} />
+                        ),
+                      },
+                    ]
+                  : []),
               ]}
             />
           </div>

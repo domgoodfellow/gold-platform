@@ -4,7 +4,7 @@ import { SectionHeading } from '@/components/containers/section';
 import { ErrorText, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
-import { CAPABILITIES, CAPABILITY_LABELS } from '@/lib/domain/tenancy/capabilities';
+import { CapabilitySelector } from '@/features/tenancy/capability-selector';
 import { createRoleAction, type CreateRoleState } from './actions';
 
 const INITIAL: CreateRoleState = { error: null };
@@ -27,15 +27,7 @@ export function CreateRoleForm({ organizationId }: { organizationId: string }) {
         aria-label="Role name"
       />
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm text-muted">Can</legend>
-        {CAPABILITIES.map((capability) => (
-          <label key={capability} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="capabilities" value={capability} />
-            {CAPABILITY_LABELS[capability]}
-          </label>
-        ))}
-      </fieldset>
+      <CapabilitySelector idPrefix="create-role" />
 
       <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Creating…' : 'Create role'}

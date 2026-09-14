@@ -7,7 +7,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { inviteMember, revokeInvitation } from '@/lib/domain/tenancy/invitations';
-import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
+import { assignRole, createRole, updateRoleCapabilities } from '@/lib/domain/tenancy/roles';
 import { requestOrigin } from '@/lib/route/origin';
 
 export type CreateRoleState = { error: string | null };
@@ -24,6 +24,32 @@ export async function createRoleAction(
       organizationId,
       name: String(formData.get('name') ?? ''),
       // getAll, because capabilities are checkboxes and an unchecked box sends nothing.
+      capabilities: formData.getAll('capabilities').map(String),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/settings/people`);
+  return { error: null };
+}
+
+export type UpdateRoleState = { error: string | null };
+
+export async function updateRoleAction(
+  _previous: UpdateRoleState,
+  formData: FormData,
+): Promise<UpdateRoleState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+
+  try {
+    await updateRoleCapabilities(db, {
+      roleId: String(formData.get('roleId') ?? ''),
+      name: String(formData.get('name') ?? ''),
       capabilities: formData.getAll('capabilities').map(String),
     });
   } catch (error) {

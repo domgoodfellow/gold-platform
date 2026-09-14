@@ -6354,6 +6354,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_role: {
+        Args: { p_capabilities: string[]; p_name: string; p_role_id: string }
+        Returns: undefined
+      }
       update_work_item: {
         Args: {
           p_asset_id: string

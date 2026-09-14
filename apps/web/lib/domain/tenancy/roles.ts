@@ -91,6 +91,65 @@ export async function createRole(
 }
 
 /**
+ * Rename a role and/or change what it may do.
+ *
+ * Whether the caller is *allowed* to is not decided here — `roles_update` requires
+ * `role.manage`, the same as creating one. Whether this edit would leave the organization with
+ * nobody who can manage roles is not decided here either — `roles_capabilities_update_guard`, a
+ * trigger, asks the same question `assign_role` already asks at assignment time, now asked at
+ * edit time too, atomically with the write.
+ */
+export async function updateRoleCapabilities(
+  db: Db,
+  input: { roleId: string; name: string; capabilities: string[] },
+): Promise<void> {
+  await requireActor(db);
+
+  const name = input.name.trim();
+  if (name.length === 0) {
+    throw new DomainError('A role needs a name.', 'roles.name_required');
+  }
+  if (name.length > NAME_MAX) {
+    throw new DomainError(
+      `That name is longer than ${NAME_MAX} characters.`,
+      'roles.name_too_long',
+    );
+  }
+
+  const unknown = input.capabilities.filter((capability) => !isCapability(capability));
+  if (unknown.length > 0) {
+    throw new DomainError(
+      `Not a capability: ${unknown.join(', ')}.`,
+      'roles.capability_unknown',
+    );
+  }
+
+  const capabilities = [...new Set(input.capabilities)];
+
+  const { error } = await db.rpc('update_role', {
+    p_role_id: input.roleId,
+    p_name: name,
+    p_capabilities: capabilities,
+  });
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new DomainError('A role with that name already exists here.', 'roles.name_taken');
+    }
+    if (error.code === '23514') {
+      throw new DomainError(
+        'That would leave nobody able to manage roles here.',
+        'roles.last_manager',
+      );
+    }
+    if (error.code === '42501') {
+      throw new DomainError('You cannot manage roles here.', 'roles.forbidden');
+    }
+    throw new DomainError(error.message, 'roles.update_failed');
+  }
+}
+
+/**
  * Point a membership at a different role.
  *
  * The rule that an organization must keep someone who can manage roles is enforced in
