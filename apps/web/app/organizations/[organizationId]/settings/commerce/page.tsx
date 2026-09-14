@@ -3,24 +3,26 @@ import { Hint } from '@/components/controls/inputs';
 import { Disclosure } from '@/components/containers/card';
 import { DataTable } from '@/components/display/table';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { paymentProvider } from '@/lib/adapters/payments';
+import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
+import { listModuleSettings } from '@/lib/domain/tenancy/modules';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { requireOrganization } from '@/lib/route/organization';
 import { ChooseCurrencyForm, CreatePriceItemForm, EditPriceItemForm } from '../../pricing/price-forms';
+import { PaymentAccountRow } from '../settings-forms';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * "What do we sell, what do we charge, and how do our customers pay us?" — the
  * BUSINESS → CUSTOMER commercial plane, deliberately separate from Plan & usage (the GOLD →
- * ORGANIZATION plane, under the GOLD Account group in the Settings navigation).
+ * ORGANIZATION plane, under the Product group in the Settings navigation).
  *
  * Services & pricing reuses `/pricing`'s own components unchanged (that route now redirects
- * here). Payment collection — connecting a processor account — remains for this slice on the
- * Settings root page's "Getting paid" section, reachable from the link below: moving it
- * requires `MODULES`'s `card_payments.configuredAt` to point at a segment `navigation.ts`'s
- * `AREAS` recognises, which duplicating here without also updating that registry and its test
- * would leave two competing sections claiming to be where the module is configured (D31).
+ * here). Getting paid moved here from the Settings root page — `MODULES`'s
+ * `card_payments.configuredAt` now names this route directly (`segment: 'settings', path:
+ * 'commerce'`), so the switch and its input stay one link, not two.
  */
 export default async function CommerceSettingsPage({
   params,
@@ -28,8 +30,17 @@ export default async function CommerceSettingsPage({
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const items = await listPriceBookItems(db, { organizationId });
+  const provider = await paymentProvider();
+  const [items, modules, paymentAccount] = await Promise.all([
+    listPriceBookItems(db, { organizationId }),
+    listModuleSettings(db, { organizationId }),
+    provider ? getPaymentAccount(db, { organizationId, provider: provider.name }) : null,
+  ]);
+  const enabled = new Set(
+    modules.filter((entry) => entry.enabledAt !== null).map((entry) => entry.module.key),
+  );
   const mayManage = organization.capabilities.includes('price.manage');
+  const mayManagePayments = organization.capabilities.includes('organization.manage');
   const currency = organization.currency;
   const stale = items.filter((item) => item.currency !== organization.currency);
 
@@ -107,16 +118,32 @@ export default async function CommerceSettingsPage({
         )}
       </Section>
 
-      <Section className="mt-10">
-        <SectionHeading>Payment collection</SectionHeading>
-        <Hint className="mt-1">
-          Connecting a payment processor is configured on the{' '}
-          <a href={`/organizations/${organizationId}/settings#getting-paid`} className="underline underline-offset-4">
-            Settings
-          </a>{' '}
-          page for now, alongside this business&rsquo;s public page.
-        </Hint>
-      </Section>
+      {enabled.has('card_payments') ? (
+        <Section id="getting-paid" className="mt-10 scroll-mt-6">
+          <SectionHeading>Getting paid</SectionHeading>
+          <Hint className="mt-1">
+            Card payments go directly to this business. GOLD never holds the money, and this
+            business keeps its own account with the payment provider.
+          </Hint>
+          {provider ? (
+            <div className="mt-2 border-t border-border">
+              <PaymentAccountRow
+                organizationId={organizationId}
+                provider={provider.name}
+                accountId={paymentAccount?.account.accountId ?? null}
+                connectedAt={paymentAccount?.connectedAt ?? null}
+                mayManage={mayManagePayments}
+              />
+            </div>
+          ) : (
+            <Hint className="mt-2">
+              This deployment has no payment processor yet, so there is no account to connect.
+              Nothing is wrong with this business&rsquo;s settings and there is nothing to do
+              here until one is configured. Invoices still record cash and bank payments.
+            </Hint>
+          )}
+        </Section>
+      ) : null}
     </SettingsPageFrame>
   );
 }

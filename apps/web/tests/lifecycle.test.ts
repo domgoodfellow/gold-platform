@@ -111,7 +111,7 @@ describe('a business starts in setup and someone launches it', () => {
     const withBooking = await computeReadiness(db, { organizationId });
     expect(withBooking.blockers.map((item) => item.key)).toEqual(['booking']);
     expect(withBooking.blockers[0].area).toEqual({
-      href: `/organizations/${organizationId}/settings#public-page`,
+      href: `/organizations/${organizationId}/settings/branding#public-page`,
       label: 'Settings',
     });
 

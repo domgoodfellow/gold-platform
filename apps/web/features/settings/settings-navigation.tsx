@@ -5,38 +5,33 @@ import { usePathname } from 'next/navigation';
 import { cx, FOCUS_RING } from '@/components/class-names';
 
 /**
- * Three scopes, never flattened into one list (product architecture decision, 2026):
+ * Scopes, never flattened into one list (product architecture decision, 2026; regrouped in the
+ * UI architecture correction that split Branding from Payments and Work from Schedule):
  *
  * - PERSONAL belongs to the signed-in identity, not this organization — Account leaves this
  *   route tree entirely (`/account`), the same way `ContextSwitcher` owns cross-business
  *   navigation rather than this component or `AccountMenu`.
- * - BUSINESS is how this organization operates — durable configuration an organization
- *   administrator sets.
- * - GOLD ACCOUNT is GOLD's own commercial relationship with this organization — the opposite
- *   money direction from Business Commerce, and never presented as an unlabeled sibling of it
+ * - BUSINESS is this organization's durable identity — who it is, what it looks like, who's in it.
+ * - OPERATIONS is how work and time are shaped, apart from doing either.
+ * - DATA & AUTOMATION is what this organization has added to the kernel, and what it has taught
+ *   the platform to do by itself.
+ * - CHANNELS & CONNECTIONS is how this organization is reached, and what it has wired up.
+ * - COMMERCE is the BUSINESS → CUSTOMER plane — what this organization sells and how it collects.
+ * - PRODUCT is the GOLD → ORGANIZATION plane — what this organization has switched on and bought
+ *   from GOLD, the opposite money direction from Commerce and never presented as its sibling
  *   (`domain-model.md`'s two-planes table, made literal here).
  *
- * Every entry is a route. None is an anchor into a page listed elsewhere — the one page that
- * still holds more than one concern (`/settings` itself, Public presence and Getting paid) is
- * linked here as the single route it is; its own two internal ids exist only for `MODULES`'s
- * `configuredAt` links, not as a second navigation system layered under this one.
+ * Every entry is a route of its own — no anchor into a page listed elsewhere under a second
+ * label. Integrations stays out of this list entirely: it is a main-sidebar workspace (real
+ * connections, imports, import runs to operate), not a settings destination, the same line
+ * `lib/navigation.ts` already draws by leaving it in `AREAS` with a permanent sidebar row.
  */
-type Entry = { label: string; segment: string | null };
+type Entry = { label: string; segment: string };
 
 function groups(organizationId: string): { heading: string; entries: { label: string; href: string }[] }[] {
   const root = `/organizations/${organizationId}/settings`;
-
-  const business: Entry[] = [
-    { label: 'General', segment: 'general' },
-    { label: 'People & access', segment: 'people' },
-    { label: 'Work & scheduling', segment: 'work' },
-    { label: 'Public presence & payments', segment: null },
-    { label: 'Website', segment: 'website' },
-    { label: 'Data & automation', segment: 'data-automation' },
-    { label: 'Business commerce', segment: 'commerce' },
-    { label: 'Features', segment: 'features' },
-    { label: 'Connections', segment: 'connections' },
-  ];
+  const at = (entries: Entry[]) =>
+    entries.map((entry) => ({ label: entry.label, href: `${root}/${entry.segment}` }));
 
   return [
     {
@@ -45,14 +40,40 @@ function groups(organizationId: string): { heading: string; entries: { label: st
     },
     {
       heading: 'Business',
-      entries: business.map((entry) => ({
-        label: entry.label,
-        href: entry.segment ? `${root}/${entry.segment}` : root,
-      })),
+      entries: at([
+        { label: 'General', segment: 'general' },
+        { label: 'Branding & public presence', segment: 'branding' },
+        { label: 'People & access', segment: 'people' },
+      ]),
     },
     {
-      heading: 'GOLD Account',
-      entries: [{ label: 'Plan & usage', href: `${root}/plan` }],
+      heading: 'Operations',
+      entries: at([
+        { label: 'Work', segment: 'work' },
+        { label: 'Schedule', segment: 'schedule' },
+      ]),
+    },
+    {
+      heading: 'Data & automation',
+      entries: at([{ label: 'Custom fields & automation', segment: 'data-automation' }]),
+    },
+    {
+      heading: 'Channels & connections',
+      entries: at([
+        { label: 'Website', segment: 'website' },
+        { label: 'Connections', segment: 'connections' },
+      ]),
+    },
+    {
+      heading: 'Commerce',
+      entries: at([{ label: 'Business commerce', segment: 'commerce' }]),
+    },
+    {
+      heading: 'Product',
+      entries: at([
+        { label: 'Features', segment: 'features' },
+        { label: 'Plan & usage', segment: 'plan' },
+      ]),
     },
   ];
 }

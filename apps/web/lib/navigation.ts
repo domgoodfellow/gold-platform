@@ -57,7 +57,13 @@ export const AREA_GROUPS = [
 export type ModuleConfiguration = {
   /** An area segment, which must exist in `AREAS`. */
   segment: string;
-  /** An `id` on that area's page, when the area is not itself the whole of the configuration. */
+  /**
+   * A route nested under that area, for a module configured on one of Settings' own sub-pages
+   * rather than the area's own root — Settings is the one area whose "page" is genuinely several
+   * routes (`settings-navigation.tsx`), so a module configured there needs to say which.
+   */
+  path?: string;
+  /** An `id` on the resolved page, when that page is not itself the whole of the configuration. */
   section?: string;
 };
 
@@ -108,7 +114,7 @@ export const MODULES = [
     description:
       'A page the public can reach, where somebody with no account takes a free slot.',
     outside: 'the public page at /book/{slug}',
-    configuredAt: { segment: 'settings', section: 'public-page' },
+    configuredAt: { segment: 'settings', path: 'branding', section: 'public-page' },
   },
   {
     key: 'portal',
@@ -174,7 +180,7 @@ export const MODULES = [
     label: 'Card payments',
     description: 'Ask a processor to collect what is outstanding, rather than only cash.',
     outside: 'the card control on an invoice',
-    configuredAt: { segment: 'settings', section: 'getting-paid' },
+    configuredAt: { segment: 'settings', path: 'commerce', section: 'getting-paid' },
   },
   {
     key: 'reception',
@@ -369,10 +375,11 @@ export function moduleConfiguration(
   module: Module,
 ): { href: string; label: string } {
   const area = AREAS.find((entry) => entry.segment === module.configuredAt.segment);
+  const path = module.configuredAt.path ? `/${module.configuredAt.path}` : '';
   const anchor = module.configuredAt.section ? `#${module.configuredAt.section}` : '';
 
   return {
-    href: `${areaHref(organizationId, module.configuredAt.segment)}${anchor}`,
+    href: `${areaHref(organizationId, module.configuredAt.segment)}${path}${anchor}`,
     // Unreachable in a build that passes `navigation.test.ts` — here so a mistake renders as a plain word rather than throwing.
     label: area?.label ?? module.configuredAt.segment,
   };

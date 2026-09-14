@@ -452,11 +452,11 @@ describe('a switch leads to its inputs', () => {
     // Widened to `Module`, because `as const satisfies` narrows each entry to its own literal
     // shape and only some of them carry a section at all.
     for (const sold of MODULES as readonly Module[]) {
-      const { segment, section } = sold.configuredAt;
+      const { segment, path, section } = sold.configuredAt;
       if (!section) continue;
 
-      const source = readFileSync(`${ROUTES}/${segment}/page.tsx`, 'utf8');
-      expect(source, `"${segment}" has no section id="${section}" for module "${sold.key}"`).toContain(
+      const source = readFileSync(`${ROUTES}/${segment}${path ? `/${path}` : ''}/page.tsx`, 'utf8');
+      expect(source, `"${segment}${path ? `/${path}` : ''}" has no section id="${section}" for module "${sold.key}"`).toContain(
         `id="${section}"`,
       );
     }
@@ -534,10 +534,16 @@ describe('a switch leads to its inputs', () => {
     const payments = MODULES.find((sold) => sold.key === 'card_payments')!;
     const where = moduleConfiguration('org-1', payments);
 
-    expect(where.href).toBe('/organizations/org-1/settings#getting-paid');
+    // A nested Settings sub-route (`path`) — Getting paid lives on Settings → Business commerce.
+    expect(where.href).toBe('/organizations/org-1/settings/commerce#getting-paid');
     // The area's own word, which is the platform noun this file owns. A link labelled
     // "configure" would be the one place in the shell where a screen invents a name.
     expect(where.label).toBe('Settings');
+
+    const booking = MODULES.find((sold) => sold.key === 'booking')!;
+    expect(moduleConfiguration('org-1', booking).href).toBe(
+      '/organizations/org-1/settings/branding#public-page',
+    );
 
     const billing = MODULES.find((sold) => sold.key === 'billing')!;
     expect(moduleConfiguration('org-1', billing).href).toBe('/organizations/org-1/pricing');

@@ -41,10 +41,46 @@ describe('Settings, as the Configuration Center (source scan)', () => {
     'utf8',
   );
 
-  it('groups Personal, Business and GOLD Account separately, never flattened into one list', () => {
-    expect(navigation).toContain("heading: 'Personal'");
-    expect(navigation).toContain("heading: 'Business'");
-    expect(navigation).toContain("heading: 'GOLD Account'");
+  it('groups Personal, Business, Operations, Data & automation, Channels & connections, Commerce and Product separately, never flattened into one list', () => {
+    for (const heading of [
+      'Personal',
+      'Business',
+      'Operations',
+      'Data & automation',
+      'Channels & connections',
+      'Commerce',
+      'Product',
+    ]) {
+      expect(navigation).toContain(`heading: '${heading}'`);
+    }
+  });
+
+  it('carries none of the retired mixed-concept labels', () => {
+    for (const retired of ['Work & scheduling', 'Public presence & payments', 'Data & automation']) {
+      // "Data & automation" survives as a group heading (one coherent question, two tabs on one
+      // route) — the retired thing is a *nav entry* by that name mixing unrelated concerns, not
+      // the heading itself.
+      if (retired === 'Data & automation') {
+        expect(navigation).not.toContain(`label: '${retired}'`);
+        continue;
+      }
+      expect(navigation).not.toContain(retired);
+    }
+  });
+
+  it('splits Work from Schedule, and Branding from Payments, into their own routes', () => {
+    expect(navigation).toContain("segment: 'schedule'");
+    expect(navigation).toContain("segment: 'branding'");
+    expect(readFileSync(`${ROUTES}/settings/schedule/page.tsx`, 'utf8')).toContain(
+      'ScheduleConfigurationPage',
+    );
+    expect(readFileSync(`${ROUTES}/settings/branding/page.tsx`, 'utf8')).toContain(
+      'BrandingSettingsPage',
+    );
+    // Opening hours moved out of Settings → Work entirely.
+    expect(readFileSync(`${ROUTES}/settings/work/page.tsx`, 'utf8')).not.toContain(
+      'listOperatingHours',
+    );
   });
 
   it('reaches Work configuration', () => {

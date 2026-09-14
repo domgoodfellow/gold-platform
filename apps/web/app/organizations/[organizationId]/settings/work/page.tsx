@@ -1,9 +1,8 @@
-import { DividedList, PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { PageHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import Link from 'next/link';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
-import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { listTypeChecklistItems } from '@/lib/domain/work-items/checklists';
@@ -12,7 +11,6 @@ import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
 import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { requireOrganization } from '@/lib/route/organization';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
-import { AddOperatingHoursForm, OperatingHoursRow } from '../settings-forms';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +22,10 @@ export const dynamic = 'force-dynamic';
  * kind of work is closer to Settings than to today's shift. Nothing here is a new calculation or
  * a new write path — every form is the one that always wrote these rows, just reached from where
  * defining a business now lives.
+ *
+ * Opening hours describe Schedule, not Work, and live at Settings → Schedule instead (product
+ * architecture correction) — a business asking "when are we open" was never asking about a job's
+ * type, workflow, checklist or fields, the four things this page is actually about.
  *
  * A detail route under Settings rather than an area of its own: `AreaTrail` already renders the
  * "‹ Settings" link for anything this deep, so this page writes its own heading the same way a
@@ -40,7 +42,7 @@ export default async function WorkConfigurationPage({
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
 
-  const [statuses, transitions, templateSteps, fieldDefinitions, prices, booking, enabledModules, hours] = await Promise.all([
+  const [statuses, transitions, templateSteps, fieldDefinitions, prices, booking, enabledModules] = await Promise.all([
     selectedType
       ? listWorkItemStatuses(db, { organizationId, typeId: selectedType.id })
       : Promise.resolve([]),
@@ -56,7 +58,6 @@ export default async function WorkConfigurationPage({
       ? getTypeBooking(db, { organizationId, typeId: selectedType.id })
       : Promise.resolve(null),
     listUsableModules(db, { organizationId }),
-    listOperatingHours(db, { organizationId }),
   ]);
 
   const mayConfigure = organization.capabilities.includes('field.manage');
@@ -95,35 +96,6 @@ export default async function WorkConfigurationPage({
           typeHref={(typeId) => `/organizations/${organizationId}/settings/work?type=${typeId}`}
         />
       </div>
-
-      <Section className="mt-10">
-        <SectionHeading>Scheduling</SectionHeading>
-        <Hint className="mt-1">
-          {hours.length === 0
-            ? 'No opening hours set, so the schedule treats every hour as available. Nothing here is assumed — which days this business works, and when, are yours to say.'
-            : `Used by the schedule to work out what is free. Times are read in ${organization.timezone}.`}
-        </Hint>
-
-        {hours.length > 0 ? (
-          <DividedList as="div" className="mt-2">
-            {hours.map((entry) =>
-              mayConfigure ? (
-                <OperatingHoursRow key={entry.id} organizationId={organizationId} hours={entry} />
-              ) : (
-                <Hint key={entry.id} className="py-2">
-                  {entry.opensAt.slice(0, 5)}–{entry.closesAt.slice(0, 5)}
-                </Hint>
-              ),
-            )}
-          </DividedList>
-        ) : null}
-
-        {mayConfigure ? (
-          <AddOperatingHoursForm organizationId={organizationId} />
-        ) : (
-          <Hint className="mt-2">Your role, {organization.role}, cannot set opening hours.</Hint>
-        )}
-      </Section>
     </SettingsPageFrame>
   );
 }
