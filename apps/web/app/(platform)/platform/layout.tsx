@@ -4,6 +4,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
+import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 export default async function PlatformLayout({ children }: LayoutProps<'/platform'>) {
@@ -21,6 +22,11 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
   }
   if (!(await isPlatformStaff(db))) redirect('/organizations');
 
+  // The same read the organization shell already makes for its own switcher (D45: one identity,
+  // both facts, at once) — so a staff member who also belongs to one or more businesses can move
+  // to any of them from here without a detour through /account or /organizations.
+  const businesses = await listMyOrganizations(db);
+
   async function signOutAction() {
     'use server';
     const actionDb = await getDb();
@@ -29,7 +35,15 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
   }
 
   return (
-    <PlatformShell email={email} signOutAction={signOutAction}>
+    <PlatformShell
+      email={email}
+      signOutAction={signOutAction}
+      businesses={businesses.map((organization) => ({
+        id: organization.id,
+        name: organization.name,
+        role: organization.role,
+      }))}
+    >
       {children}
     </PlatformShell>
   );

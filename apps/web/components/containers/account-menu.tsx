@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2, ChevronUp, LogOut, UserRound } from 'lucide-react';
+import { ChevronUp, LogOut, UserRound } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import {
   DropdownMenu,
@@ -19,6 +19,11 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@go
  * `PlatformAccountMenu` in `app-sidebar.tsx`, built the same afternoon against the platform
  * console's own `Sidebar` and already tooltip-aware for free. Now that both shells sit inside
  * the same `SidebarProvider`, there is one menu rather than two only ever a few lines apart.
+ *
+ * Represents the PERSON, not where they are operating — cross-context navigation (switching
+ * business, entering Platform Administration) is `ContextSwitcher`'s job alone, rendered above
+ * this menu in both shells' sidebar headers. This menu used to also list every business the
+ * caller belonged to, which duplicated that switcher one click away; it no longer does.
  */
 export function AccountMenu({
   email,
@@ -61,7 +66,6 @@ export function AccountMenu({
             <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild><Link href="/account"><UserRound />Account</Link></DropdownMenuItem>
-            <DropdownMenuItem asChild><Link href="/organizations?all=1"><Building2 />Your businesses</Link></DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Log out</DropdownMenuItem>
           </DropdownMenuContent>

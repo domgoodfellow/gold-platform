@@ -2,8 +2,7 @@
 
 import { AccountMenu } from '@/components/containers/account-menu';
 import { Badge } from '@/components/display/data';
-import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@gold/ui/components/dropdown-menu';
+import { ContextSwitcher, type SwitchableOrganization } from '@/components/containers/context-switcher';
 import {
   Sidebar,
   SidebarContent,
@@ -24,10 +23,8 @@ import type { ReactNode } from 'react';
 import {
   BarChart3,
   Bot,
-  Building2,
   CalendarDays,
   ChevronLeft,
-  ChevronsUpDown,
   ClipboardList,
   Layers,
   LayoutDashboard,
@@ -36,7 +33,6 @@ import {
   Phone,
   Plug,
   Settings,
-  ShieldCheck,
   Sparkles,
   SlidersHorizontal,
   Tag,
@@ -143,97 +139,7 @@ export function OrgNav({
   );
 }
 
-/** One organization the caller can switch into — never more than `listMyOrganizations` itself would return under the caller's own RLS. */
-export type SwitchableOrganization = {
-  id: string;
-  name: string;
-  role: string;
-};
-
-/**
- * Organization identity is the organization control, and — since platform authority stopped
- * being a Postgres role a session had to choose between wearing and being a member
- * (20260915000001) — the one place a caller who holds both sees them side by side in one menu.
- * `organizations` is never a static or guessed list: it is exactly what `listMyOrganizations`
- * returned for this caller, under their own RLS, and `platformStaff` is `isPlatformStaff`'s own
- * answer — nothing here decides who may see what.
- */
-export function OrganizationSwitcher({
-  mark,
-  organizationId,
-  name,
-  role,
-  organizations,
-  platformStaff,
-}: {
-  mark: ReactNode;
-  organizationId: string;
-  name: string;
-  role: string;
-  organizations: SwitchableOrganization[];
-  platformStaff: boolean;
-}) {
-  const others = organizations.filter((organization) => organization.id !== organizationId);
-
-  return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              tooltip={name}
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              {mark}
-              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                <span className="flex items-center gap-1">
-                  <span className="truncate font-semibold">{name}</span>
-                  <ChevronsUpDown aria-hidden className="size-3.5 shrink-0" />
-                </span>
-                <span className="truncate text-xs text-sidebar-foreground/70">{role}</span>
-              </div>
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="bottom" align="start" className="w-64 min-w-64">
-            <DropdownMenuLabel className="flex items-center gap-3 px-2 py-2"><Avatar><AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback></Avatar><span className="min-w-0"><span className="block truncate text-sm font-medium">{name}</span><span className="block truncate text-xs font-normal text-muted">{role}</span></span></DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild><Link href={areaHref(organizationId, 'settings')}><Settings /> Organization settings</Link></DropdownMenuItem>
-
-            {others.length > 0 ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">Organizations</DropdownMenuLabel>
-                {others.map((organization) => (
-                  <DropdownMenuItem key={organization.id} asChild>
-                    <Link href={`/organizations/${organization.id}`}>
-                      <Building2 /> {organization.name}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
-              </>
-            ) : null}
-
-            {platformStaff ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">Platform</DropdownMenuLabel>
-                <DropdownMenuItem asChild>
-                  <Link href="/platform">
-                    <ShieldCheck /> Platform Administration
-                  </Link>
-                </DropdownMenuItem>
-              </>
-            ) : null}
-
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild><Link href="/organizations?all=1">All businesses</Link></DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
-  );
-}
+export type { SwitchableOrganization };
 
 /** A single row in the phone bar — plain Tailwind, not `Sidebar`'s vocabulary, since this list never collapses and never sits inside a `Sidebar` at all (see `OrgNavBar`). */
 function PhoneNavLink({
@@ -372,11 +278,9 @@ export function OrgSidebar({
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
-        <OrganizationSwitcher
+        <ContextSwitcher
           mark={mark}
-          organizationId={organizationId}
-          name={name}
-          role={role}
+          current={{ kind: 'business', organizationId, name, role }}
           organizations={organizations}
           platformStaff={platformStaff}
         />
