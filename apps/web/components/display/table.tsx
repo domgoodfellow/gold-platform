@@ -36,6 +36,8 @@ export type DataTableProps<T> = {
   /** Render prop, not button descriptors — actions are forms with a hidden id. */
   actions?: (row: T) => ReactNode;
   empty: ReactNode;
+  /** Offered only at zero rows — the same create trigger the page's header already shows. */
+  emptyAction?: ReactNode;
   footer?: ReactNode;
 };
 
@@ -45,9 +47,10 @@ export function DataTable<T>({
   rowKey,
   actions,
   empty,
+  emptyAction,
   footer,
 }: DataTableProps<T>) {
-  if (rows.length === 0) return <EmptyState>{empty}</EmptyState>;
+  if (rows.length === 0) return <EmptyState action={emptyAction}>{empty}</EmptyState>;
 
   const wide = columns.filter((column) => column.emphasis !== 'secondary');
 

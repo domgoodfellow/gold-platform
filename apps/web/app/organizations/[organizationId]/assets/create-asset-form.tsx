@@ -3,26 +3,36 @@
 import { SectionHeading } from '@/components/containers/section';
 import { ErrorText, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { createAssetAction, type CreateAssetState } from './actions';
 
-const INITIAL: CreateAssetState = { error: null };
+const INITIAL: CreateAssetState = { error: null, created: false };
 
 export function CreateAssetForm({
   organizationId,
   customers,
   locations,
   definitions,
+  onCreated,
 }: {
   organizationId: string;
   customers: SelectOption[];
   locations: SelectOption[];
   definitions: FieldDefinition[];
+  onCreated?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createAssetAction, INITIAL);
+
+  useEffect(() => {
+    if (state.created) {
+      toast.success('Asset added');
+      onCreated?.();
+    }
+  }, [state.created, onCreated]);
 
   return (
     <form action={formAction} className="mt-8 flex flex-col gap-3">
@@ -83,7 +93,10 @@ export function RecordReadingForm({
   assetId: string;
   assetName: string;
   lastUnit: string;
-  action: (previous: CreateAssetState, formData: FormData) => Promise<CreateAssetState>;
+  action: (
+    previous: { error: string | null },
+    formData: FormData,
+  ) => Promise<{ error: string | null }>;
 }) {
   const [state, formAction, pending] = useActionState(action, { error: null });
 

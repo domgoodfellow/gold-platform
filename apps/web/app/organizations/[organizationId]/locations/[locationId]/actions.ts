@@ -6,7 +6,9 @@ import { DomainError } from '@/lib/domain/errors';
 import { linkCustomerLocation, locateAddress, setLocationCoordinates } from '@/lib/domain/locations/locations';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import type { UploadDocumentState } from '@/features/documents/upload-form';
-import type { CoordinatesActionState, LocationActionState } from '../actions';
+import type { CoordinatesActionState } from '../actions';
+
+export type LinkCustomerActionState = { error: string | null };
 
 function revalidate(organizationId: string, locationId: string) {
   revalidatePath(`/organizations/${organizationId}/locations/${locationId}`);
@@ -52,9 +54,9 @@ export async function locationCoordinatesAction(
 }
 
 export async function linkCustomerAction(
-  _previous: LocationActionState,
+  _previous: LinkCustomerActionState,
   formData: FormData,
-): Promise<LocationActionState> {
+): Promise<LinkCustomerActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
   const locationId = String(formData.get('locationId') ?? '');

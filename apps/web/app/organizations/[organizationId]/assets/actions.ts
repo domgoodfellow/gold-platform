@@ -7,7 +7,8 @@ import { createAsset } from '@/lib/domain/assets/assets';
 import { recordAssetReading } from '@/lib/domain/assets/readings';
 import { DomainError } from '@/lib/domain/errors';
 
-export type CreateAssetState = { error: string | null };
+export type CreateAssetState = { error: string | null; created: boolean };
+export type RecordReadingState = { error: string | null };
 
 export async function createAssetAction(
   _previous: CreateAssetState,
@@ -28,13 +29,13 @@ export async function createAssetAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message };
+      return { error: error.message, created: false };
     }
     throw error;
   }
 
   revalidatePath(`/organizations/${organizationId}/assets`);
-  return { error: null };
+  return { error: null, created: true };
 }
 
 /**
@@ -45,9 +46,9 @@ export async function createAssetAction(
  * screen. What a person did stands; what a rule made of it is recorded separately.
  */
 export async function recordReadingAction(
-  _previous: CreateAssetState,
+  _previous: RecordReadingState,
   formData: FormData,
-): Promise<CreateAssetState> {
+): Promise<RecordReadingState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
 

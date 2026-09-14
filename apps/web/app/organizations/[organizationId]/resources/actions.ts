@@ -6,7 +6,7 @@ import { customValuesFromFormData } from '@/lib/custom-fields';
 import { DomainError } from '@/lib/domain/errors';
 import { createResource } from '@/lib/domain/resources/resources';
 
-export type CreateResourceState = { error: string | null };
+export type CreateResourceState = { error: string | null; created: boolean };
 
 export async function createResourceAction(
   _previous: CreateResourceState,
@@ -23,7 +23,7 @@ export async function createResourceAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message };
+      return { error: error.message, created: false };
     }
     throw error;
   }
@@ -32,5 +32,5 @@ export async function createResourceAction(
   // `resources_insert` requires both membership and resource.create, so tampering produces
   // a refusal rather than a leak.
   revalidatePath(`/organizations/${organizationId}/resources`);
-  return { error: null };
+  return { error: null, created: true };
 }

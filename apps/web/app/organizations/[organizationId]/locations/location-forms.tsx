@@ -3,7 +3,8 @@
 import { SectionHeading } from '@/components/containers/section';
 import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { Location } from '@/lib/domain/locations/locations';
@@ -15,16 +16,25 @@ import {
   type LocationActionState,
 } from './actions';
 
-const INITIAL: LocationActionState = { error: null };
+const INITIAL: LocationActionState = { error: null, created: false };
 
 export function CreateLocationForm({
   organizationId,
   definitions,
+  onCreated,
 }: {
   organizationId: string;
   definitions: FieldDefinition[];
+  onCreated?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createLocationAction, INITIAL);
+
+  useEffect(() => {
+    if (state.created) {
+      toast.success('Location added');
+      onCreated?.();
+    }
+  }, [state.created, onCreated]);
 
   return (
     <form action={formAction} className="mt-8 flex flex-col gap-3">

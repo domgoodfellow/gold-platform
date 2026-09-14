@@ -2,7 +2,10 @@ import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
-import { CreateCustomerSheet } from '@/features/crm/customers/create-customer-sheet';
+import {
+  CreateCustomerSheetProvider,
+  CreateCustomerTrigger,
+} from '@/features/crm/customers/create-customer-sheet';
 import { CustomerListToolbar } from '@/features/crm/customers/customer-list-toolbar';
 import { CustomerTable } from '@/features/crm/customers/customer-table';
 import { listCustomers } from '@/lib/domain/customers/customers';
@@ -35,30 +38,33 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
 
   return (
     <AppPage width="wide">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <PageHeading>Customers</PageHeading>
-          <Hint className="mt-1">People and businesses this organization works for.</Hint>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {salesEnabled ? <Link href={`/organizations/${organizationId}/customers/pipeline`} className="text-sm underline underline-offset-4">Pipeline</Link> : null}
-          <CreateCustomerSheet organizationId={organizationId} definitions={definitions} defaultOpen={customers.total === 0 && !search && !stage} />
-        </div>
-      </header>
+      <CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions}>
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <PageHeading>Customers</PageHeading>
+            <Hint className="mt-1">People and businesses this organization works for.</Hint>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {salesEnabled ? <Link href={`/organizations/${organizationId}/customers/pipeline`} className="text-sm underline underline-offset-4">Pipeline</Link> : null}
+            <CreateCustomerTrigger />
+          </div>
+        </header>
 
-      <div className="mt-6">
-        <CustomerListToolbar organizationId={organizationId} stages={visibleStages} search={search} stage={stage} mayImport={modules.has('integrations')} />
-      </div>
+        <div className="mt-6">
+          <CustomerListToolbar organizationId={organizationId} stages={visibleStages} search={search} stage={stage} mayImport={modules.has('integrations')} />
+        </div>
 
-      <div className="mt-4">
-        <CustomerTable
-          organizationId={organizationId}
-          customers={customers}
-          definitions={definitions}
-          stages={visibleStages}
-          empty={search || stage ? 'No customers match these filters.' : 'No customers yet.'}
-        />
-      </div>
+        <div className="mt-4">
+          <CustomerTable
+            organizationId={organizationId}
+            customers={customers}
+            definitions={definitions}
+            stages={visibleStages}
+            empty={search || stage ? 'No customers match these filters.' : 'No customers yet.'}
+            emptyAction={search || stage ? undefined : <CreateCustomerTrigger />}
+          />
+        </div>
+      </CreateCustomerSheetProvider>
     </AppPage>
   );
 }

@@ -11,7 +11,7 @@ import {
   setLocationCoordinates,
 } from '@/lib/domain/locations/locations';
 
-export type LocationActionState = { error: string | null };
+export type LocationActionState = { error: string | null; created: boolean };
 
 export async function createLocationAction(
   _previous: LocationActionState,
@@ -30,13 +30,13 @@ export async function createLocationAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message };
+      return { error: error.message, created: false };
     }
     throw error;
   }
 
   revalidatePath(`/organizations/${organizationId}/locations`);
-  return { error: null };
+  return { error: null, created: true };
 }
 
 export async function linkCustomerAction(
@@ -57,13 +57,13 @@ export async function linkCustomerAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message };
+      return { error: error.message, created: false };
     }
     throw error;
   }
 
   revalidatePath(`/organizations/${organizationId}/locations`);
-  return { error: null };
+  return { error: null, created: true };
 }
 
 /**
