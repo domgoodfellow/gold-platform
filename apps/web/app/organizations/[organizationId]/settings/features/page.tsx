@@ -1,21 +1,25 @@
-import { DividedList, PageHeading } from '@/components/containers/section';
+import { DividedList, PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
-import { listModuleSettings, outstandingModuleSetup } from '@/lib/domain/tenancy/modules';
-import { moduleConfiguration } from '@/lib/navigation';
+import {
+  listCatalogFeatures,
+  listCatalogModules,
+  listCatalogProducts,
+} from '@/lib/domain/catalogue/catalogue';
+import { organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganization } from '@/lib/route/organization';
-import { ModuleSwitch } from '../settings-forms';
+import { FeatureRow } from './feature-row';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * What this business has switched on. Moved off the former `settings` god-page, unchanged in
- * substance — still the legacy `MODULES`/`organization_modules` axis (D25), still a binary
- * switch per row. The canonical Product → Module → Feature → Plan/Add-on/Entitlement model
- * (`domain-model.md`) is not rebuilt onto this screen in this slice; that is real, separate
- * work (a six-state AVAILABLE/ENTITLED/ENABLED/CONFIGURED/READY/UNAVAILABLE presentation,
- * composing `organizationResolvedFeatureStates` with this same `outstandingModuleSetup` read) and
- * is deliberately deferred rather than half-built here.
+ * What this business is entitled to, and what it has deliberately switched off — the canonical
+ * Product → Module → Feature model (`domain-model.md`), replacing the flat legacy `MODULES` list
+ * this screen showed before. Entitled ordinary capabilities are active by default (opt-out, not
+ * opt-in): a row with nothing said about it here is on.
+ *
+ * `feature.manage`, not `organization.manage`, gates disabling/enabling — a distinct capability
+ * now that one exists, the same split `role.manage` already draws from `organization.manage`.
  */
 export default async function FeaturesSettingsPage({
   params,
@@ -23,45 +27,74 @@ export default async function FeaturesSettingsPage({
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const modules = await listModuleSettings(db, { organizationId });
-  const enabled = new Set(
-    modules.filter((entry) => entry.enabledAt !== null).map((entry) => entry.module.key),
-  );
-  const outstanding = await outstandingModuleSetup(db, { organizationId, enabled });
-  const mayManage = organization.capabilities.includes('organization.manage');
+  const [features, modules, products, resolved] = await Promise.all([
+    listCatalogFeatures(db),
+    listCatalogModules(db),
+    listCatalogProducts(db),
+    organizationResolvedFeatureStates(db, { organizationId }),
+  ]);
+
+  const mayManage = organization.capabilities.includes('feature.manage');
+  const resolvedByFeatureId = new Map(resolved.map((r) => [r.featureId, r]));
+
+  // Grouped by canonical Product then Module, in catalogue display order — never by the legacy
+  // module list, which has no Product axis at all.
+  const featuresByModuleId = new Map<string, typeof features>();
+  for (const feature of features) {
+    const list = featuresByModuleId.get(feature.moduleId) ?? [];
+    list.push(feature);
+    featuresByModuleId.set(feature.moduleId, list);
+  }
 
   return (
     <SettingsPageFrame organizationId={organizationId}>
       <PageHeading>Features</PageHeading>
       <Hint className="mt-1">
-        Turning something off hides it from this business. Nothing it has already recorded is
-        removed. What every business gets — work, the schedule, customers, people and these
-        settings — is not listed here, because it was never sold separately.
+        What this business is entitled to, and what it has switched off. An entitled feature is
+        on by default — disabling one hides it from this business without removing anything it
+        has already recorded, and re-enabling restores access.
       </Hint>
 
-      <DividedList as="div" className="mt-4">
-        {modules.map(({ module, enabledAt }) => {
-          const where = moduleConfiguration(organizationId, module);
-          return (
-            <ModuleSwitch
-              key={module.key}
-              organizationId={organizationId}
-              moduleKey={module.key}
-              label={module.label}
-              description={module.description}
-              enabled={enabledAt !== null}
-              mayConfigure={mayManage}
-              configureHref={where.href}
-              configureLabel={where.label}
-              outstanding={outstanding.get(module.key) ?? null}
-            />
-          );
-        })}
-      </DividedList>
+      {products.map((product) => {
+        const productModules = modules
+          .filter((m) => m.productId === product.id)
+          .filter((m) => (featuresByModuleId.get(m.id) ?? []).length > 0);
+        if (productModules.length === 0) return null;
+
+        return (
+          <Section key={product.id} className="mt-8">
+            <SectionHeading>{product.label}</SectionHeading>
+            {productModules.map((module) => {
+              const moduleFeatures = featuresByModuleId.get(module.id) ?? [];
+              return (
+                <div key={module.id} className="mt-4">
+                  <p className="text-sm font-medium text-subtle">{module.label}</p>
+                  <DividedList as="div" className="mt-1">
+                    {moduleFeatures.map((feature) => {
+                      const state = resolvedByFeatureId.get(feature.id);
+                      if (!state) return null;
+                      return (
+                        <FeatureRow
+                          key={feature.id}
+                          organizationId={organizationId}
+                          label={feature.label}
+                          description={feature.description}
+                          state={state}
+                          mayManage={mayManage}
+                        />
+                      );
+                    })}
+                  </DividedList>
+                </div>
+              );
+            })}
+          </Section>
+        );
+      })}
 
       {mayManage ? null : (
         <Hint className="mt-4">
-          Your role, {organization.role}, cannot change what this business uses.
+          Your role, {organization.role}, cannot switch features on or off for this business.
         </Hint>
       )}
     </SettingsPageFrame>

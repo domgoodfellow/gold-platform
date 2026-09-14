@@ -4,6 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { disconnectPaymentAccount } from '@/lib/domain/billing/payment-accounts';
+import {
+  disableOrganizationFeature,
+  enableOrganizationFeature,
+} from '@/lib/domain/catalogue/organization-plans';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import {
   addOperatingHours,
@@ -139,6 +143,35 @@ export async function setModuleEnabledAction(
       key: String(formData.get('moduleKey') ?? ''),
       enabled: formData.get('enabled') === '1',
     });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
+  return { error: null };
+}
+
+/**
+ * Switch a canonical Feature's activation override — the opt-out axis (domain-model.md), never
+ * entitlement itself. Revalidates the layout for the same reason `setModuleEnabledAction` does:
+ * a disabled feature can remove an area from the sidebar.
+ */
+export async function setFeatureActivationAction(
+  _previous: { error: string | null },
+  formData: FormData,
+): Promise<{ error: string | null }> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const featureId = String(formData.get('featureId') ?? '');
+  const enabled = formData.get('enabled') === '1';
+
+  try {
+    if (enabled) {
+      await enableOrganizationFeature(db, { organizationId, featureId });
+    } else {
+      await disableOrganizationFeature(db, { organizationId, featureId });
+    }
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;

@@ -1,21 +1,18 @@
+import Link from 'next/link';
 import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { communicationsAccount } from '@/lib/domain/communications/credits';
 import { listProducts } from '@/lib/domain/commercial/catalogue';
-import { listOrganizationTerms, moduleCommercialState } from '@/lib/domain/commercial/terms';
+import { listOrganizationTerms } from '@/lib/domain/commercial/terms';
 import { listUsageEvents } from '@/lib/domain/commercial/usage';
 import { requireOrganization } from '@/lib/route/organization';
 import { getPlanById } from '@/lib/domain/catalogue/plans';
-import { listCatalogFeatures, listCatalogModules, listCatalogProducts } from '@/lib/domain/catalogue/catalogue';
 import {
   currentAddonAssignments,
   currentPlanAssignment,
   organizationEffectiveQuotas,
-  organizationResolvedFeatureStates,
 } from '@/lib/domain/catalogue/organization-plans';
-import { deriveOrganizationFeatureState, EntitlementStatus } from '@/features/catalogue/feature-badges';
-import { moduleConfiguration, MODULES } from '@/lib/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,17 +23,6 @@ function formatMinor(amountMinor: number, currency: string | null): string {
   } catch {
     return `${amountMinor} ${currency}`;
   }
-}
-
-function stateSentence(state: { wanted: boolean; paid: boolean; periodEnd: string | null }): string {
-  if (state.wanted && state.paid) return 'On.';
-  if (state.wanted && !state.paid) {
-    return 'Switched on, but nothing is currently paying for it. Nothing recorded has been removed — GOLD can record a term to restore it.';
-  }
-  if (!state.wanted && state.paid) {
-    return `Paid for through ${state.periodEnd ?? 'an open period'}, but switched off in this business's own settings.`;
-  }
-  return 'Not part of this business.';
 }
 
 /**
@@ -51,37 +37,32 @@ export default async function PlanAndUsagePage({
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const [states, terms, products, usage, account, basePlanAssignment, addonAssignments, resolvedFeatures, quotas] = await Promise.all([
-    moduleCommercialState(db, { organizationId }),
+  const [terms, products, usage, account, basePlanAssignment, addonAssignments, quotas] = await Promise.all([
     listOrganizationTerms(db, { organizationId }),
     listProducts(db),
     listUsageEvents(db, { organizationId, limit: 50 }),
     communicationsAccount(db, { organizationId, currency: organization.currency }),
     currentPlanAssignment(db, { organizationId }),
     currentAddonAssignments(db, { organizationId }),
-    organizationResolvedFeatureStates(db, { organizationId }),
     organizationEffectiveQuotas(db, { organizationId }),
   ]);
 
   const productLabel = new Map(products.map((product) => [product.key, product.label]));
 
-  const [basePlan, addonPlans, catalogModules, catalogFeatures] = await Promise.all([
+  const [basePlan, addonPlans] = await Promise.all([
     basePlanAssignment ? getPlanById(db, basePlanAssignment.planId) : Promise.resolve(null),
     Promise.all(addonAssignments.map((a) => getPlanById(db, a.planId))),
-    listCatalogModules(db),
-    listCatalogFeatures(db),
   ]);
-  const catalogProducts = await listCatalogProducts(db);
-  const productByModuleId = new Map(catalogModules.map((m) => [m.id, catalogProducts.find((p) => p.id === m.productId)]));
-  const moduleByFeatureId = new Map(catalogFeatures.map((f) => [f.id, catalogModules.find((m) => m.id === f.moduleId)]));
-  const resolvedByFeatureId = new Map(resolvedFeatures.map((r) => [r.featureId, r]));
 
   return (
     <SettingsPageFrame organizationId={organizationId}>
       <PageHeading>Plan &amp; usage</PageHeading>
       <Hint className="mt-1">
         What this business is entitled to use right now, what GOLD has recorded selling it, and
-        what it has used. Nothing here is what any of it cost GOLD to provide.
+        what it has used. Nothing here is what any of it cost GOLD to provide.{' '}
+        <Link href={`/organizations/${organizationId}/settings/features`} className="underline underline-offset-4">
+          Manage features →
+        </Link>
       </Hint>
 
       <Section className="mt-8">
@@ -118,55 +99,6 @@ export default async function PlanAndUsagePage({
           </DividedList>
         </Section>
       ) : null}
-
-      <Section className="mt-8">
-        <SectionHeading>Available Features</SectionHeading>
-        <Hint className="mt-1">Grouped by Product. Planned Features are shown for visibility only — nothing here claims they run today.</Hint>
-        <DividedList as="div" className="mt-2">
-          {catalogFeatures.map((feature) => {
-            const resolved = resolvedByFeatureId.get(feature.id);
-            if (!resolved) return null;
-            const catalogModule = moduleByFeatureId.get(feature.id);
-            const product = catalogModule ? productByModuleId.get(catalogModule.id) : undefined;
-            const runtimeModule = resolved.moduleKey ? MODULES.find((m) => m.key === resolved.moduleKey) : undefined;
-            const configureHref = runtimeModule ? moduleConfiguration(organizationId, runtimeModule).href : null;
-            return (
-              <div key={feature.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                <div>
-                  <span className="font-medium">{feature.label}</span>
-                  <span className="ml-2 text-xs text-subtle">
-                    {product?.label} · {catalogModule?.label}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <EntitlementStatus state={deriveOrganizationFeatureState(resolved)} />
-                  {configureHref && resolved.entitled ? (
-                    <a href={configureHref} className="text-xs underline underline-offset-4">
-                      Configure
-                    </a>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
-        </DividedList>
-      </Section>
-
-      <Section className="mt-8">
-        <SectionHeading>What this business uses</SectionHeading>
-        {states.length === 0 ? (
-          <EmptyState className="mt-2">Nothing switched on beyond what every business gets.</EmptyState>
-        ) : (
-          <DividedList as="div" className="mt-2">
-            {states.map((state) => (
-              <div key={state.moduleKey} className="flex flex-wrap items-baseline gap-x-3 py-2">
-                <span className="font-medium">{productLabel.get(`module:${state.moduleKey}`) ?? state.moduleKey}</span>
-                <span className="text-sm text-muted">{stateSentence(state)}</span>
-              </div>
-            ))}
-          </DividedList>
-        )}
-      </Section>
 
       <Section className="mt-8">
         <SectionHeading>What&rsquo;s been bought</SectionHeading>
