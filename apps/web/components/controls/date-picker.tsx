@@ -16,16 +16,23 @@ function isoDate(date: Date): string {
  * A day, picked rather than typed or scrolled to — the shared calendar/popover primitives
  * (`packages/ui`), composed once. Navigates on pick rather than needing a separate submit, so a
  * page whose day lives in the URL (`?on=`) stays a plain server-rendered read on every choice.
+ *
+ * `basePath` rather than an `href` callback: this is a Client Component, and a function defined
+ * in the server-rendered caller cannot cross that boundary as a prop — only serializable values
+ * can. Appending the query string here is the one thing that would otherwise need one.
  */
 export function DatePicker({
   value,
-  href,
+  basePath,
+  param = 'on',
   label = 'Choose a day',
 }: {
   /** ISO `yyyy-mm-dd`, read in the caller's own timezone — this control only ever displays it. */
   value: string;
-  /** Where picking a day navigates. */
-  href: (isoValue: string) => string;
+  /** Where picking a day navigates, without the query string. */
+  basePath: string;
+  /** The query parameter the picked day is written to. */
+  param?: string;
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -43,7 +50,9 @@ export function DatePicker({
           className={cx(FOCUS_RING, 'gap-1.5')}
         >
           <CalendarIcon aria-hidden size={14} />
-          {selected.toLocaleDateString(undefined, {
+          {/* A fixed locale, not the runtime's own — the server and the browser rarely agree on
+              one, and an implicit locale here is a hydration mismatch waiting to happen. */}
+          {selected.toLocaleDateString('en-GB', {
             weekday: 'short',
             year: 'numeric',
             month: 'short',
@@ -59,7 +68,7 @@ export function DatePicker({
           onSelect={(next) => {
             if (!next) return;
             setOpen(false);
-            router.push(href(isoDate(next)));
+            router.push(`${basePath}?${param}=${isoDate(next)}`);
           }}
         />
       </PopoverContent>

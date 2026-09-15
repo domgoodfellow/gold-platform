@@ -241,6 +241,10 @@ describe('the page-chrome contract — the header, not the body, owns page locat
     expect(recordHeader).not.toContain('<h1');
     expect(recordHeader).not.toContain('Breadcrumb');
   });
+
+  it('RecordHeader drops its own last crumb before registering — its historical crumbs shape already ends with the current page, and title would otherwise repeat it', () => {
+    expect(recordHeader).toContain('crumbs.slice(0, -1)');
+  });
 });
 
 describe('Business area roots register chrome actions but no longer duplicate AreaTrail’s heading', () => {

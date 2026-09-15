@@ -95,7 +95,12 @@ export default async function SchedulePage({
           <ButtonLink href={dayHref(shift(-1))} size="small">
             ← Previous
           </ButtonLink>
-          <DatePicker value={date} href={dayHref} label="Show this day" />
+          <DatePicker
+            value={date}
+            basePath={`/organizations/${organizationId}/schedule`}
+            param="on"
+            label="Show this day"
+          />
           <ButtonLink href={dayHref(shift(1))} size="small">
             Next →
           </ButtonLink>
