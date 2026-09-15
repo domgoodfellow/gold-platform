@@ -62,6 +62,26 @@ RESCHEDULE_WORK_ITEM = Tool(
 
 ACTIONS: tuple[Tool, ...] = (RESCHEDULE_WORK_ITEM,)
 
+# A public visitor may ask for a person, but must never be handed an operational action or a
+# private-data tool.  This is still an *action proposal*, not a magic phrase interpreted by a
+# web route: the deployment decides whether it is available and Communications records it.
+ESCALATE_TO_HUMAN = Tool(
+    name="escalate_to_human",
+    description=(
+        "Request a human follow-up when the visitor asks for one, needs account-specific help, "
+        "or the public information cannot answer safely. Do not promise a response time."
+    ),
+    schema={
+        "type": "object",
+        "properties": {"because": {"type": "string", "description": "Brief reason for the handoff."}},
+        "required": ["because"],
+        "additionalProperties": False,
+    },
+    function="",
+)
+
+PUBLIC_ACTIONS: tuple[Tool, ...] = (ESCALATE_TO_HUMAN,)
+
 
 def action_named(name: str) -> Tool | None:
     for action in ACTIONS:

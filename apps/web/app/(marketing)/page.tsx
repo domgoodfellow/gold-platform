@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { HomepageRenderer } from '@/features/public-site/homepage-renderer';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { canonicalUrl } from '@/lib/seo/site';
+import { getPublicDb } from '@/lib/db/public';
+import { PublicCommunicationWidget } from '@/features/communications/public-widget';
 
 /**
  * Every other database-backed route in this app declares this for the same reason: prerendering
@@ -19,6 +21,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Home() {
   const site = await getPublishedGoldHomepage();
+  const db = getPublicDb();
+  const publicProfile = await (db.rpc.bind(db) as unknown as (name: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)('public_assistant_deployment', { p_site_id: site.siteId });
+  const communication = publicProfile.data as { displayName?: string; greeting?: string } | null;
   const home = canonicalUrl('/').toString();
   const structuredData = {
     '@context': 'https://schema.org',
@@ -33,6 +38,7 @@ export default async function Home() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }} />
       <HomepageRenderer sections={site.sections} />
+      {communication?.displayName && communication.greeting ? <PublicCommunicationWidget siteId={site.siteId} name={communication.displayName} greeting={communication.greeting} /> : null}
     </>
   );
 }

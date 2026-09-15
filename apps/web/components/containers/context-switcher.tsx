@@ -99,7 +99,7 @@ function ContextSwitcherMenuContent({
           </DropdownMenuLabel>
           {businesses.map((organization) => (
             <DropdownMenuItem key={organization.id} asChild>
-              <Link href={`/organizations/${organization.id}`} className="flex items-center gap-2">
+              <Link href={`/organizations/${organization.id}/today`} className="flex items-center gap-2">
                 <Building2 className="shrink-0" />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate">{organization.name}</span>

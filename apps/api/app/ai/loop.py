@@ -146,6 +146,8 @@ def answer(
     token: str,
     organization_id: str,
     context: str = "",
+    tools: tuple[Tool, ...] = TOOLS,
+    actions: tuple[Tool, ...] = ACTIONS,
 ) -> Answer:
     """Run the loop until the provider stops asking for tools, or the cap is reached.
 
@@ -166,7 +168,7 @@ def answer(
                 # a name in `TOOLS` resolves to a function and runs; a name in `ACTIONS`
                 # resolves to nothing and stops the loop.
                 question=question,
-                tools=TOOLS + ACTIONS,
+                tools=tools + actions,
                 history=tuple(history),
                 context=context,
             )
@@ -178,7 +180,7 @@ def answer(
         # without having read; stopping first means the proposal is always made on what it
         # already knows.
         proposal = next(
-            (call for call in turn.calls if action_named(call.name) is not None), None
+            (call for call in turn.calls if any(action.name == call.name for action in actions)), None
         )
         if proposal is not None:
             because = str(proposal.arguments.get("because") or "")

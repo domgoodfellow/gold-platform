@@ -100,6 +100,159 @@ export type Database = {
           },
         ]
       }
+      ai_assistant_deployments: {
+        Row: {
+          assistant_id: string
+          created_at: string
+          display_name: string
+          enabled: boolean
+          greeting: string
+          handoff_destination: string | null
+          handoff_message: string
+          id: string
+          organization_id: string
+          public_site_id: string | null
+          surface: string
+          updated_at: string
+        }
+        Insert: {
+          assistant_id: string
+          created_at?: string
+          display_name?: string
+          enabled?: boolean
+          greeting?: string
+          handoff_destination?: string | null
+          handoff_message?: string
+          id?: string
+          organization_id: string
+          public_site_id?: string | null
+          surface: string
+          updated_at?: string
+        }
+        Update: {
+          assistant_id?: string
+          created_at?: string
+          display_name?: string
+          enabled?: boolean
+          greeting?: string
+          handoff_destination?: string | null
+          handoff_message?: string
+          id?: string
+          organization_id?: string
+          public_site_id?: string | null
+          surface?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_assistant_deployments_organization_id_assistant_id_fkey"
+            columns: ["organization_id", "assistant_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistants"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_assistant_deployments_organization_id_public_site_id_fkey"
+            columns: ["organization_id", "public_site_id"]
+            isOneToOne: false
+            referencedRelation: "public_sites"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      ai_assistant_knowledge_sources: {
+        Row: {
+          assistant_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          public_site_id: string
+          source_kind: string
+        }
+        Insert: {
+          assistant_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          public_site_id: string
+          source_kind: string
+        }
+        Update: {
+          assistant_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          public_site_id?: string
+          source_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_assistant_knowledge_source_organization_id_assistant_id_fkey"
+            columns: ["organization_id", "assistant_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistants"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_assistant_knowledge_source_organization_id_public_site__fkey"
+            columns: ["organization_id", "public_site_id"]
+            isOneToOne: false
+            referencedRelation: "public_sites"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      ai_assistants: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          instructions: string
+          name: string
+          organization_id: string
+          status: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          instructions?: string
+          name: string
+          organization_id: string
+          status?: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          instructions?: string
+          name?: string
+          organization_id?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_assistants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_assistants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_readings: {
         Row: {
           asset_id: string
@@ -902,6 +1055,47 @@ export type Database = {
           },
         ]
       }
+      communication_entries: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string
+          delivery_state: string
+          direction: string
+          id: string
+          organization_id: string
+          thread_id: string
+        }
+        Insert: {
+          body?: string
+          channel: string
+          created_at?: string
+          delivery_state?: string
+          direction: string
+          id?: string
+          organization_id: string
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string
+          delivery_state?: string
+          direction?: string
+          id?: string
+          organization_id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_entries_organization_id_thread_id_fkey"
+            columns: ["organization_id", "thread_id"]
+            isOneToOne: false
+            referencedRelation: "communication_threads"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       communication_rates: {
         Row: {
           channel: Database["public"]["Enums"]["communication_channel"]
@@ -925,6 +1119,81 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      communication_threads: {
+        Row: {
+          channel: string
+          created_at: string
+          customer_id: string | null
+          external_actor_id: string | null
+          id: string
+          organization_id: string
+          public_site_id: string | null
+          state: string
+          updated_at: string
+          visitor_key: string | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          customer_id?: string | null
+          external_actor_id?: string | null
+          id?: string
+          organization_id: string
+          public_site_id?: string | null
+          state?: string
+          updated_at?: string
+          visitor_key?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          customer_id?: string | null
+          external_actor_id?: string | null
+          id?: string
+          organization_id?: string
+          public_site_id?: string | null
+          state?: string
+          updated_at?: string
+          visitor_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_threads_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "communication_threads_organization_id_external_actor_id_fkey"
+            columns: ["organization_id", "external_actor_id"]
+            isOneToOne: false
+            referencedRelation: "external_actors"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "communication_threads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_threads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_threads_organization_id_public_site_id_fkey"
+            columns: ["organization_id", "public_site_id"]
+            isOneToOne: false
+            referencedRelation: "public_sites"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
       }
       configuration_proposals: {
         Row: {
@@ -2169,6 +2438,63 @@ export type Database = {
           },
           {
             foreignKeyName: "locations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_assets: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          created_by: string
+          file_name: string
+          id: string
+          mime_type: string
+          organization_id: string
+          size_bytes: number
+          storage_path: string
+          title: string | null
+          visibility: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          created_by: string
+          file_name: string
+          id?: string
+          mime_type: string
+          organization_id: string
+          size_bytes: number
+          storage_path: string
+          title?: string | null
+          visibility?: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          created_by?: string
+          file_name?: string
+          id?: string
+          mime_type?: string
+          organization_id?: string
+          size_bytes?: number
+          storage_path?: string
+          title?: string | null
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "platform_tenants"
@@ -4186,6 +4512,27 @@ export type Database = {
           },
         ]
       }
+      public_communication_rate_limits: {
+        Row: {
+          count: number
+          expires_at: string
+          key: string
+          window_started_at: string
+        }
+        Insert: {
+          count: number
+          expires_at: string
+          key: string
+          window_started_at: string
+        }
+        Update: {
+          count?: number
+          expires_at?: string
+          key?: string
+          window_started_at?: string
+        }
+        Relationships: []
+      }
       public_page_revisions: {
         Row: {
           archived_at: string | null
@@ -4728,6 +5075,56 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_providers"
             referencedColumns: ["key"]
+          },
+        ]
+      }
+      user_phone_number_preferences: {
+        Row: {
+          member_id: string
+          organization_id: string
+          phone_number_id: string
+          updated_at: string
+        }
+        Insert: {
+          member_id: string
+          organization_id: string
+          phone_number_id: string
+          updated_at?: string
+        }
+        Update: {
+          member_id?: string
+          organization_id?: string
+          phone_number_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_phone_number_preferences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_phone_number_preferences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_phone_number_preferences_organization_id_member_id_fkey"
+            columns: ["organization_id", "member_id"]
+            isOneToOne: true
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "user_phone_number_preferences_organization_id_phone_number_fkey"
+            columns: ["organization_id", "phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_numbers"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -5600,6 +5997,13 @@ export type Database = {
         Args: { p_provider_reference: string; p_request_id: string }
         Returns: undefined
       }
+      consume_public_communication_rate_limit: {
+        Args: { p_site_id: string; p_visitor_key: string }
+        Returns: {
+          allowed: boolean
+          retry_after: number
+        }[]
+      }
       create_asset: {
         Args: {
           p_custom: Json
@@ -5942,6 +6346,10 @@ export type Database = {
         }
         Returns: string
       }
+      public_assistant_deployment: {
+        Args: { p_site_id: string }
+        Returns: Json
+      }
       public_homepage_editor_state: {
         Args: { p_organization_id: string }
         Returns: Json
@@ -6171,6 +6579,19 @@ export type Database = {
         }
         Returns: string
       }
+      record_public_communication: {
+        Args: { p_body: string; p_site_id: string; p_visitor_key: string }
+        Returns: string
+      }
+      record_public_communication_reply: {
+        Args: {
+          p_body: string
+          p_handoff?: boolean
+          p_site_id: string
+          p_visitor_key: string
+        }
+        Returns: undefined
+      }
       record_retail_rate: {
         Args: {
           p_approval_state?: string
@@ -6246,6 +6667,10 @@ export type Database = {
           p_team_size: string
         }
         Returns: undefined
+      }
+      resolve_effective_outbound_identity: {
+        Args: { p_organization_id: string }
+        Returns: string
       }
       retail_rate_at: {
         Args: { p_at?: string; p_currency: string; p_meter_id: string }
@@ -6363,6 +6788,10 @@ export type Database = {
           p_price_item_id: string
           p_status_id: string
         }
+        Returns: undefined
+      }
+      set_user_phone_number_preference: {
+        Args: { p_organization_id: string; p_phone_number_id: string }
         Returns: undefined
       }
       stage_import_rows: {
