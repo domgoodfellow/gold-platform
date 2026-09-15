@@ -107,6 +107,7 @@ Current consumers:
 | Runtime feature | Exact code path |
 |---|---|
 | Stripe payment webhook | `apps/api/app/core/config.py::load_settings` reads `SUPABASE_JWT_SECRET`; `apps/api/api/stripe_webhook.py::handler.do_POST` calls `load_settings`; `apps/api/app/core/db.py::record_provider_payment` calls `machine_token` for role `payment_webhook`; SQL grant: `record_provider_payment(...)` to `payment_webhook`. |
+| GOLD platform billing webhook | `apps/api/app/core/config.py::load_platform_billing_settings` reads `SUPABASE_JWT_SECRET`; `apps/api/api/stripe_platform_billing_webhook.py::handler.do_POST` calls `load_platform_billing_settings`; `apps/api/app/core/db.py::apply_platform_subscription_event`/`record_platform_billing_notice` call `machine_token` for role `platform_billing_webhook`; SQL grants: both functions to `platform_billing_webhook` only. **Not the row above** — a different Stripe destination (GOLD's own account, not the tenant-Connect one), a different signing secret (`STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET`), a different Postgres role, holding no grant the payment webhook holds and vice versa. |
 | Automation runner | `apps/api/app/core/config.py::load_runner_settings` reads `SUPABASE_JWT_SECRET`; `apps/api/api/automation_tick.py::handler._tick` calls `load_runner_settings`; `apps/api/app/core/runner.py::_post` calls `machine_token` for role `automation_runner`; runtime calls `run_due_automations`, `queued_messages`, `record_message_delivery`, `places_to_watch`, and `record_external_readings`. |
 | Voice webhook/callback handling | `apps/api/app/core/config.py::load_voice_settings` reads `SUPABASE_JWT_SECRET`; `apps/api/api/voice_inbound.py`, `voice_outbound.py`, `voice_status.py`, and `voice_recording.py` call `load_voice_settings`; `apps/api/app/core/db.py::record_call_event` calls `machine_token` for role `voice_webhook`; SQL grant: `record_call_event(...)` to `voice_webhook`. |
 
@@ -115,7 +116,7 @@ Answers:
 | Question | Answer |
 |---|---|
 | A. Does current GOLD Production require `SUPABASE_JWT_SECRET` to operate the implemented machine-role flows? | Yes, for the current implemented machine-role flows listed above. |
-| B. Exactly which features become unavailable without it? | Stripe settlement recording, scheduled automation execution/message draining/external readings, and voice callback handling for inbound/outbound/status/recording. The API handlers return 404 when their required env group is incomplete. |
+| B. Exactly which features become unavailable without it? | Stripe settlement recording, GOLD platform-billing subscription reconciliation (customer.subscription.*/invoice.* processing), scheduled automation execution/message draining/external readings, and voice callback handling for inbound/outbound/status/recording. The API handlers return 404 when their required env group is incomplete. |
 | C. Is the value the legacy JWT secret? | Yes. This is Supabase's legacy extractable JWT secret architecture, not the newer signing-keys architecture. |
 | D. How privileged is this credential if compromised? | VERY HIGH. A holder can mint JWTs trusted by the Supabase project; that can impersonate roles/users depending on grants and can defeat the intended RLS boundary. |
 | E. Is using it acceptable as a temporary current-state deployment decision? | Yes, only as `TEMPORARY LEGACY COMPATIBILITY REQUIREMENT`, stored as a sensitive server-side Production/Preview secret, while the migration is opened and tracked. |
@@ -168,6 +169,156 @@ https://<web-host>/organizations/<organizationId>/settings/payments/callback
 
 For Preview, use a stable preview alias if possible; otherwise Stripe must allow the exact
 preview host you are testing.
+
+## GOLD platform billing setup (sandbox)
+
+**Not the section above.** "Stripe setup" configures GOLD as a payments *facilitator* for
+tenants (Stripe Connect — a customer pays a tenant through the tenant's own connected account,
+D27). This section configures the opposite money direction: **an organization paying GOLD**, on
+GOLD's own Stripe account, using Stripe Billing/Checkout/Customer Portal. It reuses the same
+`STRIPE_SECRET_KEY` (both are GOLD's own account credential — Connect's calls carry a
+`Stripe-Account` header, this plane's calls do not) but needs its **own** webhook destination and
+its own signing secret, because a leaked platform-billing secret must never authenticate as the
+tenant-payment webhook or the other way round.
+
+Everything below is sandbox/test-mode only. Do not repeat any of it in live mode without
+explicitly deciding GOLD's real commercial pricing first (this code deliberately invents no final
+prices — see `apps/web/app/(platform)/platform/catalog/plans`).
+
+### 1. Create a sandbox Product and a recurring Price
+
+1. In the Stripe Dashboard, switch to **Test mode** (top-right toggle).
+2. Open **Product catalog** (left navigation) → **Add product**.
+3. Name it after a GOLD Plan you have already created at `/platform/catalog/plans` in this app
+   (e.g. "Starter") — the name is cosmetic on Stripe's side; what actually links the two is the
+   Price reference GOLD stores, not the Product name.
+4. Under **Pricing**, choose **Recurring**, pick **Monthly** or **Yearly**, enter the amount and
+   currency, and save. Stripe shows the created Price's id, `price_...` — you do not need to copy
+   it by hand: the next step does that for you.
+5. **Do this from inside GOLD's own admin, not by copying the id manually where avoidable.** Open
+   `/platform/catalog/plans/<planKey>` → **Pricing** tab → **Provision in Stripe (sandbox)**
+   next to the recorded price. This calls the Stripe API itself (idempotently, keyed to that
+   Plan/price) and records the resulting Product/Price references in
+   `platform_plan_provider_prices`. If you created the Product/Price by hand in the Dashboard
+   first, provisioning here still creates its own Product/Price (Phase 4's chosen approach: GOLD
+   provisions via the API, matching this admin action) — the Dashboard walkthrough above is for
+   understanding what "Provision in Stripe" is doing under the hood, not a step you also have to
+   copy an id back from.
+
+### 2. Configure the Customer Portal
+
+1. Go to **Settings → Billing → Customer portal** (still in Test mode).
+2. Turn the portal **on** for test mode if it is not already.
+3. Under **Functionality**, enable at least: update payment method, view invoice history, and
+   cancel subscription. Plan-switching within the portal is optional for this slice — GOLD does
+   not yet offer a self-service Plan picker (checkout subscribes to whichever Plan is already
+   assigned to the organization).
+4. Save.
+
+### 3. Create the platform-billing webhook destination
+
+**This must be a separate destination from the tenant-Connect one** ("Stripe setup" above), which
+listens for `checkout.session.completed` scoped to **Connected accounts**. This one listens on
+**your account**.
+
+1. Open **Workbench → Webhooks** (or **Developers → Webhooks** in older Dashboard layouts) →
+   **Add destination**.
+2. Under **Events from**, choose **Your account** (not "Connected accounts" — that scope is the
+   existing tenant-payment destination and must not be reused here).
+3. Select events. Only these, matching exactly what
+   `apps/api/app/integrations/stripe/platform_billing_webhook.py` reads (checked against current
+   Stripe guidance at docs.stripe.com/billing/subscriptions/webhooks rather than assumed):
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+   - `invoice.paid`
+   - `invoice.payment_failed`
+
+   Do **not** also select `checkout.session.completed` here — this handler does not subscribe to
+   it (subscription lifecycle is fully covered by the events above, resolved by Stripe's customer
+   reference rather than a session id; see that file's module docstring for the reasoning).
+4. Under **Destination type**, choose **Webhook endpoint** and enter:
+   `https://<api-preview-or-production-host>/webhooks/stripe-platform-billing` (or whatever path
+   `apps/api/api/stripe_platform_billing_webhook.py` is deployed at — Vercel's Python runtime
+   routes a file under `api/` to a path matching its name, D24).
+5. Create the destination, then open it and **Reveal** the signing secret, `whsec_...`.
+
+### 4. Where each value goes
+
+| Value | Vercel project | Variable |
+|---|---|---|
+| GOLD's own Stripe secret key (same one "Stripe setup" already configured) | Web | `STRIPE_SECRET_KEY` — no new variable; this plane reuses it |
+| The signing secret from step 3 | API | `STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET` |
+
+`STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET` follows the exact same classification as
+`STRIPE_WEBHOOK_SECRET` above (a per-endpoint `whsec_...`, Secret + Vercel Sensitive, one value
+per environment) — see the Final Vercel table.
+
+### 5. Run a complete sandbox subscription checkout
+
+1. Sign in to this app as an organization's billing manager (a role holding `billing.manage` —
+   the founding owner role has it by default) and make sure that organization's currency is set
+   (Settings → General) and matches a price you provisioned in step 1.
+2. Make sure platform staff has assigned that organization the Plan whose price you provisioned
+   (`/platform/organizations/<organizationId>/commercial` → Plan tab, or
+   `/platform/catalog/plans/<planKey>` → Organizations tab).
+3. Go to `Settings → Plan & usage` for that organization → **Subscribe to \<Plan>**.
+4. You land on Stripe-hosted Checkout. Use the test card below.
+5. On success you return to `Settings → Plan & usage?checkout=success`. **The screen does not
+   claim anything happened yet** — it reads GOLD's own database, which the webhook, not the
+   redirect, updates. Within a few seconds `customer.subscription.created` should arrive and the
+   page (on refresh) shows a status of `active` or `trialing`.
+
+Test card for a successful payment: `4242 4242 4242 4242`, any future expiry, any 3-digit CVC,
+any postal code.
+
+### 6. Verify the organization became active
+
+- In this app: `Settings → Plan & usage` shows a `Billing` section with status `active` and a
+  renewal date, or staff can check `/platform/billing` (lists every organization's status) or
+  `/platform/organizations/<organizationId>/commercial`.
+- In Stripe: **Customers** (test mode) shows the new Customer with an active Subscription.
+
+### 7. Test a payment failure
+
+1. In Stripe test mode, use a card that always fails, e.g. `4000 0000 0000 0002` (generic
+   decline), for a *new* subscription attempt, or use the Dashboard's **Subscriptions** → open
+   the test subscription → simulate a failed renewal invoice (Stripe test mode exposes a "advance
+   test clock" / manual invoice action for this on subscription objects created with a test
+   clock; consult Stripe's current Billing testing docs — docs.stripe.com/billing/testing — for
+   the exact current control, since Dashboard test tooling changes independently of this codebase).
+2. Confirm `invoice.payment_failed` arrives at the webhook (step 8 shows you how to check), and
+   that the subsequent `customer.subscription.updated` moves `organization_platform_subscriptions
+   .status` to `past_due` — visible at `/platform/billing`'s "Organizations requiring attention"
+   list.
+3. This app does **not** lock the organization out of its data on a single failed payment (Phase
+   11's explicit rule) — `past_due`/`unpaid` are visible to staff for follow-up, not an
+   automatic access cut. Building that policy is deliberately deferred; see the final report.
+
+### 8. Test cancellation
+
+1. From the Stripe test Customer's Subscription, **Cancel subscription** (immediately or at
+   period end — try both once).
+2. Canceling at period end: `customer.subscription.updated` arrives with
+   `cancel_at_period_end: true`; GOLD's cache shows "canceling" until the period actually ends.
+3. Immediate cancellation, or the scheduled cancellation taking effect: `customer.subscription.
+   deleted` arrives, and GOLD deletes its `organization_platform_subscriptions` row for that
+   organization/environment — the organization shows no subscription (a return to "not yet
+   subscribed"), not a `canceled` status left lingering.
+
+### 9. Inspect invoices
+
+Stripe test mode → **Customers** → the test Customer → **Invoices** tab. GOLD does not currently
+mirror invoice line items into its own database (Phase 12/Phase 20's "deferred" list) — Stripe's
+own dashboard is authoritative for invoice detail in this slice.
+
+### 10. Inspect webhook deliveries and retries
+
+- Stripe test mode → **Workbench → Webhooks** → the platform-billing destination → its delivery
+  log shows every attempt, response code, and retry.
+- Inside GOLD: `/platform/billing` shows the most recent 20 events this deployment actually
+  applied, read from `platform_billing_webhook_events` — useful for confirming GOLD *received and
+  accepted* an event Stripe shows as delivered, without needing direct database access.
 
 ## Platform staff account
 
@@ -225,6 +376,8 @@ Support sessions are an audit record and do not widen access to tenant operation
 | API | `SUPABASE_JWT_SECRET` | Preview | DO NOT CONFIGURE YET | YES | YES if configured | Supabase Dashboard JWT settings | NO | Do not give Preview machine write powers against shared production data casually. |
 | API | `STRIPE_WEBHOOK_SECRET` | Preview | READY TO CONFIGURE - TEST/NON-PRODUCTION ONLY | YES | YES | Stripe test webhook endpoint, `whsec_...` | YES, after endpoint exists | Separate from API key; webhook still will not process until the `SUPABASE_JWT_SECRET` decision is made. |
 | API | `STRIPE_WEBHOOK_SECRET` | Production | READY TO CONFIGURE | YES | YES | Stripe live webhook endpoint, `whsec_...` | YES, when going live | Separate endpoint/secret from Preview. |
+| API | `STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET` | Preview | READY TO CONFIGURE - TEST/NON-PRODUCTION ONLY | YES | YES | Stripe test webhook destination scoped to **Your account** (not Connected accounts), `whsec_...` | YES, after the destination exists | GOLD's own subscription billing — see "GOLD platform billing setup" above. Never the same value as `STRIPE_WEBHOOK_SECRET`; still gated behind the `SUPABASE_JWT_SECRET` decision, same as that row. |
+| API | `STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET` | Production | READY TO CONFIGURE | YES | YES | Stripe live webhook destination scoped to **Your account**, `whsec_...` | YES, when going live | Separate endpoint/secret from Preview, and from `STRIPE_WEBHOOK_SECRET`. |
 | API | `CRON_SECRET` | Production | READY TO CONFIGURE | YES | YES | Generate 32+ random bytes | YES, when automations go live | Vercel Cron normally targets Production. |
 | API | `CRON_SECRET` | Preview | NOT REQUIRED | YES | N/A | None | NO | No scheduled Preview cron by default. |
 | API | `RESEND_API_KEY` | Production | READY TO CONFIGURE | YES | YES | Resend Dashboard | OPTIONAL | Email sending. |

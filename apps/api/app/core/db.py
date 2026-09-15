@@ -2,11 +2,14 @@
 
 **TEMPORARY LEGACY COMPATIBILITY.** `machine_token` signs with `SUPABASE_JWT_SECRET`, Supabase's
 legacy shared HS256 secret — never used for a human caller (see `app/auth`, which verifies
-people's tokens through JWKS and holds no signing key at all). This module is scoped to exactly
-two machine Postgres roles, each with a handful of `execute` grants and no table grant, which is
-the property worth keeping through the migration named in `SETUP.md`'s "SUPABASE_JWT_SECRET
-pre-flight" and the docstring of `machine_token` below. Do not extend this module's reach while
-that migration is open — narrow the machine identity further, never generalise it.
+people's tokens through JWKS and holds no signing key at all). This module is scoped to a
+handful of machine Postgres roles, each with a small set of `execute` grants and no table grant,
+which is the property worth keeping through the migration named in `SETUP.md`'s
+"SUPABASE_JWT_SECRET pre-flight" and the docstring of `machine_token` below. Do not extend this
+module's reach while that migration is open — narrow the machine identity further, never
+generalise it. `platform_billing_webhook` is the third such role, added alongside
+`payment_webhook` and `voice_webhook` rather than folding into either — its own Stripe account,
+its own signing secret, its own actor.
 
 **This is the half of the Stripe slice that was never about which language.**
 `docs/constraints.md` D26: what is distinctive about a webhook is that it arrives with no
@@ -26,10 +29,14 @@ import hashlib
 import hmac
 import json
 import time
+from typing import TYPE_CHECKING
 
 import httpx
 
-from app.core.config import Settings, VoiceSettings
+from app.core.config import PlatformBillingSettings, Settings, VoiceSettings
+
+if TYPE_CHECKING:
+    from app.integrations.stripe.platform_billing_webhook import NoticeEvent, SubscriptionEvent
 
 ROLE = "payment_webhook"
 
@@ -125,6 +132,90 @@ def record_provider_payment(
         if body.get("code") == "GD003" or "no payment was requested" in str(body):
             return None
         raise RuntimeError(f"record_provider_payment failed: {response.status_code}")
+
+    return response.json()
+
+
+PLATFORM_BILLING_ROLE = "platform_billing_webhook"
+
+# GOLD's own billing integration's `auth.users` row, fixed in
+# 20260922000004_gold_bills_the_organization_its_own_subscription.sql. Like the payment and
+# voice integrations: no email, no password, and the only way to act as it is to hold the JWT
+# secret.
+PLATFORM_BILLING_ACTOR = "00000000-0000-4000-8000-0000000000a3"
+
+
+def apply_platform_subscription_event(
+    settings: PlatformBillingSettings,
+    *,
+    event: SubscriptionEvent,
+) -> str | None:
+    """Apply one `customer.subscription.*` event. The only thing this role may do besides
+    `record_platform_billing_notice` below -- every value deciding *where* it lands is derived
+    inside the function from `platform_billing_customers`, never trusted from the event itself.
+
+    Returns the organization id acted on, or `None` for an event about a customer this platform
+    never provisioned, or one already applied (idempotent by the processor's own event
+    reference) -- both a 200 to the processor, since retrying changes neither answer.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=PLATFORM_BILLING_ROLE, sub=PLATFORM_BILLING_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/apply_platform_subscription_event",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "p_event_reference": event.event_reference,
+            "p_event_type": event.event_type,
+            "p_customer_reference": event.customer_reference,
+            "p_subscription_reference": event.subscription_reference,
+            "p_price_reference": event.price_reference,
+            "p_status": event.status,
+            "p_currency": event.currency,
+            "p_current_period_start": event.current_period_start,
+            "p_current_period_end": event.current_period_end,
+            "p_cancel_at_period_end": event.cancel_at_period_end,
+            "p_canceled_at": event.canceled_at,
+        },
+        timeout=10.0,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"apply_platform_subscription_event failed: {response.status_code}")
+
+    return response.json()
+
+
+def record_platform_billing_notice(
+    settings: PlatformBillingSettings,
+    *,
+    event: NoticeEvent,
+) -> str | None:
+    """Log an `invoice.paid`/`invoice.payment_failed` event to the idempotency ledger. Never a
+    subscription-status writer -- see `platform_billing_webhook.py`'s module docstring for why.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=PLATFORM_BILLING_ROLE, sub=PLATFORM_BILLING_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/record_platform_billing_notice",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "p_event_reference": event.event_reference,
+            "p_event_type": event.event_type,
+            "p_customer_reference": event.customer_reference,
+        },
+        timeout=10.0,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"record_platform_billing_notice failed: {response.status_code}")
 
     return response.json()
 

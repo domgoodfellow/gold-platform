@@ -19,6 +19,13 @@ export const StartSupportSessionSchema = z.object({
 });
 export type StartSupportSessionInput = z.infer<typeof StartSupportSessionSchema>;
 
+/** A Plan key, never a price or customer id — the domain layer resolves the rest server-side (Phase 7). */
+export const PlatformBillingCheckoutSchema = z.object({
+  organizationId: z.string().uuid(),
+  planKey: z.string().trim().regex(/^[a-z][a-z0-9_]{1,60}$/),
+});
+export type PlatformBillingCheckoutInput = z.infer<typeof PlatformBillingCheckoutSchema>;
+
 const PublicLinkSchema = z.object({
   label: z.string().trim().min(1).max(80),
   // Content editors may link only within this website. External redirects and executable URL

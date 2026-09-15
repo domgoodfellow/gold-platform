@@ -56,6 +56,40 @@ def load_settings() -> Settings | None:
 
 
 @dataclass(frozen=True)
+class PlatformBillingSettings:
+    """What hearing from GOLD's own billing account about a subscription needs.
+
+    **A separate dataclass from `Settings` above, deliberately, even though both mint a token for
+    a narrow machine role and read a signing secret.** The vendor may be the same; the account and
+    the money direction are not (constraints.md, "Commercial" — GOLD Plans & Billing is the
+    opposite plane from Financial Operations). Folding the two together would make one
+    destination's signing secret readable by the other's handler, and a leaked
+    `STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET` would then also authenticate as `payment_webhook`.
+    """
+
+    supabase_url: str
+    supabase_publishable_key: str
+    supabase_jwt_secret: str
+    signing_secret: str
+
+
+def load_platform_billing_settings() -> PlatformBillingSettings | None:
+    values = {
+        "supabase_url": os.environ.get("SUPABASE_URL"),
+        "supabase_publishable_key": _publishable_key(),
+        # Signs a 60-second token for `platform_billing_webhook`, which holds no grant on any
+        # table and exactly two executes. Not the service-role key, which D14 refuses.
+        "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
+        "signing_secret": os.environ.get("STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET"),
+    }
+
+    if not all(values.values()):
+        return None
+
+    return PlatformBillingSettings(**values)  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
 class RunnerSettings:
     """What the automation tick needs.
 

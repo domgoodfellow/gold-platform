@@ -3091,6 +3091,82 @@ export type Database = {
           },
         ]
       }
+      organization_platform_subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean
+          canceled_at: string | null
+          created_at: string
+          currency: string
+          current_period_end: string | null
+          current_period_start: string | null
+          environment: string
+          id: string
+          organization_id: string
+          plan_id: string | null
+          price_reference: string
+          provider: string
+          status: string
+          subscription_reference: string
+          updated_at: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          created_at?: string
+          currency: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment: string
+          id?: string
+          organization_id: string
+          plan_id?: string | null
+          price_reference: string
+          provider?: string
+          status: string
+          subscription_reference: string
+          updated_at?: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          created_at?: string
+          currency?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          organization_id?: string
+          plan_id?: string | null
+          price_reference?: string
+          provider?: string
+          status?: string
+          subscription_reference?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_platform_subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_platform_subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_platform_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_profiles: {
         Row: {
           address: string | null
@@ -3616,6 +3692,148 @@ export type Database = {
           },
         ]
       }
+      platform_billing_checkout_sessions: {
+        Row: {
+          environment: string
+          id: string
+          organization_id: string
+          plan_price_id: string
+          provider_reference: string | null
+          requested_at: string
+          requested_by: string
+        }
+        Insert: {
+          environment: string
+          id?: string
+          organization_id: string
+          plan_price_id: string
+          provider_reference?: string | null
+          requested_at?: string
+          requested_by: string
+        }
+        Update: {
+          environment?: string
+          id?: string
+          organization_id?: string
+          plan_price_id?: string
+          provider_reference?: string | null
+          requested_at?: string
+          requested_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_billing_checkout_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_billing_checkout_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_billing_checkout_sessions_plan_price_id_fkey"
+            columns: ["plan_price_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plan_prices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_billing_customers: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_reference: string
+          environment: string
+          id: string
+          organization_id: string
+          provider: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_reference: string
+          environment: string
+          id?: string
+          organization_id: string
+          provider?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_reference?: string
+          environment?: string
+          id?: string
+          organization_id?: string
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_billing_customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_billing_customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_billing_webhook_events: {
+        Row: {
+          environment: string
+          event_reference: string
+          event_type: string
+          id: string
+          organization_id: string | null
+          provider: string
+          received_at: string
+        }
+        Insert: {
+          environment: string
+          event_reference: string
+          event_type: string
+          id?: string
+          organization_id?: string | null
+          provider?: string
+          received_at?: string
+        }
+        Update: {
+          environment?: string
+          event_reference?: string
+          event_type?: string
+          id?: string
+          organization_id?: string | null
+          provider?: string
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_billing_webhook_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_billing_webhook_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_catalog_feature_dependencies: {
         Row: {
           feature_id: string
@@ -3992,6 +4210,47 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "platform_catalog_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_plan_provider_prices: {
+        Row: {
+          environment: string
+          id: string
+          plan_price_id: string
+          price_reference: string
+          product_reference: string
+          provider: string
+          provisioned_at: string
+          provisioned_by: string
+        }
+        Insert: {
+          environment: string
+          id?: string
+          plan_price_id: string
+          price_reference: string
+          product_reference: string
+          provider?: string
+          provisioned_at?: string
+          provisioned_by: string
+        }
+        Update: {
+          environment?: string
+          id?: string
+          plan_price_id?: string
+          price_reference?: string
+          product_reference?: string
+          provider?: string
+          provisioned_at?: string
+          provisioned_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_provider_prices_plan_price_id_fkey"
+            columns: ["plan_price_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plan_prices"
             referencedColumns: ["id"]
           },
         ]
@@ -5928,6 +6187,23 @@ export type Database = {
         Args: { p_organization_id: string; p_run_id: string }
         Returns: undefined
       }
+      apply_platform_subscription_event: {
+        Args: {
+          p_cancel_at_period_end: boolean
+          p_canceled_at: number
+          p_currency: string
+          p_current_period_end: number
+          p_current_period_start: number
+          p_customer_reference: string
+          p_event_reference: string
+          p_event_type: string
+          p_price_reference: string
+          p_provider?: string
+          p_status: string
+          p_subscription_reference: string
+        }
+        Returns: string
+      }
       assign_phone_number: {
         Args: {
           p_default?: boolean
@@ -5953,6 +6229,10 @@ export type Database = {
       }
       begin_import_run: {
         Args: { p_mapping_id: string; p_organization_id: string }
+        Returns: string
+      }
+      begin_platform_billing_portal_session: {
+        Args: { p_organization_id: string }
         Returns: string
       }
       begin_provider_binding: {
@@ -6521,6 +6801,16 @@ export type Database = {
         }
         Returns: string
       }
+      record_plan_provider_price: {
+        Args: {
+          p_environment: string
+          p_plan_price_id: string
+          p_price_reference: string
+          p_product_reference: string
+          p_provider?: string
+        }
+        Returns: string
+      }
       record_plan_quota_override: {
         Args: {
           p_allowance_key: string
@@ -6530,6 +6820,15 @@ export type Database = {
           p_note?: string
           p_organization_id: string
           p_plan_id: string
+        }
+        Returns: string
+      }
+      record_platform_billing_notice: {
+        Args: {
+          p_customer_reference: string
+          p_event_reference: string
+          p_event_type: string
+          p_provider?: string
         }
         Returns: string
       }

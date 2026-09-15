@@ -117,6 +117,8 @@ revoke all on function public.record_public_communication(uuid,uuid,text),public
 grant execute on function public.record_public_communication(uuid,uuid,text),public.record_public_communication_reply(uuid,uuid,text,boolean) to anon,authenticated;
 
 create table public.public_communication_rate_limits (key text primary key, count integer not null, window_started_at timestamptz not null, expires_at timestamptz not null);
+alter table public.public_communication_rate_limits enable row level security; alter table public.public_communication_rate_limits force row level security;
+-- No policy and no grant to anon/authenticated: reached only through consume_public_communication_rate_limit (security definer), never through PostgREST directly (I1).
 create function public.consume_public_communication_rate_limit(p_site_id uuid,p_visitor_key uuid) returns table(allowed boolean,retry_after integer) language plpgsql volatile security definer set search_path='' as $fn$
 declare v_key text:=p_site_id::text||':'||p_visitor_key::text; v_row public.public_communication_rate_limits%rowtype; v_now timestamptz:=now(); begin
  delete from public.public_communication_rate_limits where expires_at<=v_now; select * into v_row from public.public_communication_rate_limits where key=v_key for update;

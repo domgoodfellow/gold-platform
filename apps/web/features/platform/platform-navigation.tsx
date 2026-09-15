@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, CircleDollarSign, Gauge, LayoutDashboard, Landmark, Package, Plug, TriangleAlert } from 'lucide-react';
+import { Building2, CircleDollarSign, CreditCard, Gauge, LayoutDashboard, Landmark, Package, Plug, TriangleAlert } from 'lucide-react';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -19,6 +19,7 @@ export const PLATFORM_NAV = [
   { label: 'Plans & Add-ons', href: '/platform/catalog/plans', icon: Landmark, group: 'Catalog' },
   { label: 'Meters', href: '/platform/catalog/meters', icon: Gauge, group: 'Catalog' },
   { label: 'Pricing', href: '/platform/pricing', icon: CircleDollarSign, group: 'Revenue' },
+  { label: 'Billing', href: '/platform/billing', icon: CreditCard, group: 'Revenue' },
   { label: 'Providers', href: '/platform/providers', icon: Plug, group: 'Infrastructure' },
   { label: 'Failures', href: '/platform/failures', icon: TriangleAlert, group: 'Infrastructure' },
 ] as const;

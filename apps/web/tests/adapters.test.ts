@@ -55,7 +55,7 @@ const VENDORS = [
  * this repository refuses to say in the wrong place, and it is allowed to run ahead of what has
  * been built.
  */
-const CONTRACTS = ['payments', 'geocoding', 'drafting', 'answering', 'telephony', 'email'];
+const CONTRACTS = ['payments', 'platform-billing', 'geocoding', 'drafting', 'answering', 'telephony', 'email'];
 
 describe('the adapter boundary (I15)', () => {
   it('has no domain file importing a provider implementation', () => {

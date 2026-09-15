@@ -34,7 +34,11 @@ const GROUPS: readonly { label: string; capabilities: readonly Capability[] }[] 
   { label: 'People & access', capabilities: ['role.manage'] },
   {
     label: 'Business administration',
-    capabilities: ['organization.manage', 'integration.manage', 'feature.manage'],
+    // billing.manage sits here, not in Finance — it is the GOLD → business plane (starting or
+    // managing this business's own subscription with GOLD), the opposite money direction from
+    // price.manage/invoice.issue/payment.record above, and never presented as their sibling
+    // (the same separation settings-navigation.tsx draws between Commerce and Product).
+    capabilities: ['organization.manage', 'integration.manage', 'feature.manage', 'billing.manage'],
   },
 ];
 

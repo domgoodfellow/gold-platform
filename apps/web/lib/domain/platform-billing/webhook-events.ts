@@ -1,0 +1,36 @@
+import type { Db } from '@/lib/db/types';
+import { DomainError } from '@/lib/domain/errors';
+
+/**
+ * The platform-billing webhook's own idempotency ledger, read-only here — a staff diagnostic
+ * (Phase 19: "how to inspect webhook deliveries") alongside Stripe's own dashboard, never a
+ * second source of truth for subscription state.
+ */
+export type PlatformBillingWebhookEvent = {
+  id: string;
+  provider: string;
+  eventType: string;
+  environment: 'sandbox' | 'live';
+  organizationId: string | null;
+  receivedAt: string;
+};
+
+export async function listRecentPlatformBillingEvents(
+  db: Db,
+  input: { limit?: number } = {},
+): Promise<PlatformBillingWebhookEvent[]> {
+  const { data, error } = await db
+    .from('platform_billing_webhook_events')
+    .select('id, provider, event_type, environment, organization_id, received_at')
+    .order('received_at', { ascending: false })
+    .limit(input.limit ?? 20);
+  if (error) throw new DomainError(error.message, 'platform_billing.events_list_failed');
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    provider: row.provider,
+    eventType: row.event_type,
+    environment: row.environment as 'sandbox' | 'live',
+    organizationId: row.organization_id,
+    receivedAt: row.received_at,
+  }));
+}

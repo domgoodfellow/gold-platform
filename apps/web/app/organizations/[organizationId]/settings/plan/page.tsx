@@ -7,12 +7,15 @@ import { listProducts } from '@/lib/domain/commercial/catalogue';
 import { listOrganizationTerms } from '@/lib/domain/commercial/terms';
 import { listUsageEvents } from '@/lib/domain/commercial/usage';
 import { requireOrganization } from '@/lib/route/organization';
-import { getPlanById } from '@/lib/domain/catalogue/plans';
+import { getPlanById, listPlanPrices } from '@/lib/domain/catalogue/plans';
 import {
   currentAddonAssignments,
   currentPlanAssignment,
   organizationEffectiveQuotas,
 } from '@/lib/domain/catalogue/organization-plans';
+import { platformBillingProvider } from '@/lib/adapters/platform-billing';
+import { getOrganizationSubscription } from '@/lib/domain/platform-billing/subscriptions';
+import { ManageBillingButton, SubscribeButton } from '@/features/settings/platform-billing-forms';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +57,16 @@ export default async function PlanAndUsagePage({
     Promise.all(addonAssignments.map((a) => getPlanById(db, a.planId))),
   ]);
 
+  const billingProvider = await platformBillingProvider();
+  const [subscription, basePlanPrices] = await Promise.all([
+    billingProvider ? getOrganizationSubscription(db, { organizationId }) : Promise.resolve(null),
+    basePlan ? listPlanPrices(db, basePlan.id) : Promise.resolve([]),
+  ]);
+  const subscribablePrice = organization.currency
+    ? basePlanPrices.find((p) => p.approvalState === 'approved' && p.currency === organization.currency)
+    : undefined;
+  const canManageBilling = organization.capabilities.includes('billing.manage');
+
   return (
     <SettingsPageFrame organizationId={organizationId}>
       <PageHeading>Plan &amp; usage</PageHeading>
@@ -81,6 +94,47 @@ export default async function PlanAndUsagePage({
           </EmptyState>
         )}
       </Section>
+
+      {billingProvider ? (
+        <Section className="mt-8">
+          <SectionHeading>Billing</SectionHeading>
+          {subscription ? (
+            <div className="mt-2 text-sm">
+              <p>
+                Status: <span className="font-medium">{subscription.status.replace('_', ' ')}</span>
+                {subscription.currentPeriodEnd
+                  ? ` · renews ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
+                  : ''}
+                {subscription.cancelAtPeriodEnd ? ' · canceling at period end' : ''}
+              </p>
+              {canManageBilling ? (
+                <div className="mt-3">
+                  <ManageBillingButton organizationId={organizationId} />
+                </div>
+              ) : (
+                <Hint className="mt-2">Only this business’s billing manager can manage billing.</Hint>
+              )}
+            </div>
+          ) : basePlan && subscribablePrice ? (
+            <div className="mt-2 text-sm">
+              <p className="text-muted">Not yet subscribed.</p>
+              {canManageBilling ? (
+                <div className="mt-3">
+                  <SubscribeButton organizationId={organizationId} planKey={basePlan.key} planLabel={basePlan.label} />
+                </div>
+              ) : (
+                <Hint className="mt-2">Only this business’s billing manager can start a subscription.</Hint>
+              )}
+            </div>
+          ) : (
+            <EmptyState className="mt-2">
+              {basePlan
+                ? `GOLD has not priced ${basePlan.label} in ${organization.currency ?? 'this business’s currency'} yet.`
+                : 'No Plan is assigned to subscribe to yet.'}
+            </EmptyState>
+          )}
+        </Section>
+      ) : null}
 
       {quotas.length > 0 ? (
         <Section className="mt-8">

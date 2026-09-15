@@ -6,7 +6,9 @@ import { Badge } from '@/components/display/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@gold/ui/components/accordion';
 import { getDb } from '@/lib/db/server';
+import { platformBillingProvider } from '@/lib/adapters/platform-billing';
 import { getTenant } from '@/lib/domain/platform/tenants';
+import { getProvisionedPlanPrice } from '@/lib/domain/platform-billing/provisioning';
 import { listCatalogFeatures, listCatalogModules, listCatalogProducts } from '@/lib/domain/catalogue/catalogue';
 import {
   getPlan,
@@ -29,6 +31,7 @@ import {
   RecordPlanPriceSheet,
   RemoveQuotaButton,
 } from '@/features/platform/catalog/plan-forms';
+import { ProvisionPriceControl } from '@/features/platform/catalog/plan-billing';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,6 +68,19 @@ export default async function PlanDetailPage({ params }: PageProps<'/platform/ca
   }
 
   const currentPrice = prices.find((p) => p.approvalState === 'approved');
+
+  const billingProvider = await platformBillingProvider();
+  const provisionedByPriceId = billingProvider
+    ? new Map(
+        await Promise.all(
+          prices.map(async (p) => [
+            p.id,
+            await getProvisionedPlanPrice(db, { planPriceId: p.id, environment: billingProvider.environment }),
+          ] as const),
+        ),
+      )
+    : new Map<string, null>();
+
   const assignedOrganizations = await Promise.all(
     assignments.map(async (a) => ({ assignment: a, tenant: await getTenant(db, a.organizationId) })),
   );
@@ -213,6 +229,13 @@ export default async function PlanDetailPage({ params }: PageProps<'/platform/ca
                   </span>
                   <span className="text-muted-foreground">Effective {new Date(price.effectiveFrom).toLocaleDateString()}</span>
                   <Badge tone={price.approvalState === 'approved' ? 'success' : 'neutral'}>{price.approvalState}</Badge>
+                  <ProvisionPriceControl
+                    planId={plan.id}
+                    planKey={plan.key}
+                    planPriceId={price.id}
+                    provisioned={provisionedByPriceId.get(price.id) ?? null}
+                    environment={billingProvider?.environment ?? null}
+                  />
                 </li>
               ))}
             </ul>
