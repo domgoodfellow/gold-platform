@@ -23,6 +23,7 @@
     "./components/label": "./src/components/label.tsx",
     "./components/native-select": "./src/components/native-select.tsx",
     "./components/popover": "./src/components/popover.tsx",
+    "./components/progress": "./src/components/progress.tsx",
     "./components/resizable": "./src/components/resizable.tsx",
     "./components/separator": "./src/components/separator.tsx",
     "./components/sheet": "./src/components/sheet.tsx",

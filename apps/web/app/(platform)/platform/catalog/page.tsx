@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
+import { Progress } from '@gold/ui/components/progress';
 import { Badge } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';
 import { listCatalogFeatures, listCatalogModules, listCatalogProducts } from '@/lib/domain/catalogue/catalogue';
@@ -110,9 +111,7 @@ export default async function CatalogPage() {
                       <span>Implementation</span>
                       <span>{coverage}%</span>
                     </div>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-accent" style={{ width: `${coverage}%` }} />
-                    </div>
+                    <Progress value={coverage} className="mt-1" />
                   </div>
                 ) : null}
 

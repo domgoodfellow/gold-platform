@@ -351,6 +351,15 @@ describe('Account shares the authenticated shell — no standalone island', () =
   });
 });
 
+describe('the Catalog family grid uses the shared Progress primitive, not a hand-built bar', () => {
+  it('imports Progress from packages/ui rather than a styled div pair', () => {
+    const catalogPage = readFileSync(`${WEB}/app/(platform)/platform/catalog/page.tsx`, 'utf8');
+    expect(catalogPage).toContain("from '@gold/ui/components/progress'");
+    expect(catalogPage).toContain('<Progress value={coverage}');
+    expect(catalogPage).not.toContain('h-1.5 w-full overflow-hidden rounded-full bg-muted');
+  });
+});
+
 describe('Drawer is a shared primitive, not a duplicate', () => {
   it('lives in packages/ui, never re-created under apps/web/components/ui', () => {
     const uiRoot = fileURLToPath(new URL('../../../packages/ui/src/components', import.meta.url));
