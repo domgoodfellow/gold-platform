@@ -1,6 +1,6 @@
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import { AREAS, areaHref } from '@/lib/navigation';
+import { organizationHomeHref } from '@/lib/navigation';
 import { consumePendingInviteDestination } from '@/lib/route/pending-invite';
 import type { Db } from '@/lib/db/types';
 
@@ -68,7 +68,7 @@ function destinationFor(landing: OrganizationsLanding): string {
     case 'platform':
       return '/platform';
     case 'enter':
-      return areaHref(landing.organizationId, AREAS[0].segment);
+      return organizationHomeHref(landing.organizationId);
     case 'onboarding':
     case 'chooser':
       return '/organizations';

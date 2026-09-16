@@ -9,7 +9,7 @@ import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import { AREAS, areaHref } from '@/lib/navigation';
+import { organizationHomeHref } from '@/lib/navigation';
 import { resolveOrganizationsLanding } from '@/lib/route/landing';
 import { CreateBusinessForm } from './create-business-form';
 
@@ -70,7 +70,7 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
     redirect('/platform');
   }
   if (landing.kind === 'enter') {
-    redirect(areaHref(landing.organizationId, AREAS[0].segment));
+    redirect(organizationHomeHref(landing.organizationId));
   }
 
   return (
@@ -135,7 +135,7 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
           {organizations.map((organization) => (
             <li key={organization.id} className="flex items-baseline justify-between gap-4 py-3">
               <Link
-                href={areaHref(organization.id, AREAS[0].segment)}
+                href={organizationHomeHref(organization.id)}
                 className="font-medium underline underline-offset-4"
               >
                 {organization.name}

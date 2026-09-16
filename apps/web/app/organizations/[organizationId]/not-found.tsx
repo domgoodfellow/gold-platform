@@ -1,26 +1,12 @@
-import Link from 'next/link';
-import { Hint } from '@/components/controls/inputs';
-import { SectionHeading } from '@/components/containers/section';
+import { OrganizationNotFound } from '@/components/containers/organization-not-found';
 
 /**
- * `requireOrganization` calls `notFound()` for both "doesn't exist" and "not yours" — RLS gives
- * one answer to both, and this page must not tell them apart either, or it would confirm a
- * tenant's existence to someone outside it.
+ * Catches a `notFound()` thrown *beneath* an already-proven membership — a page under this
+ * organization calling it for its own reason (a work item, asset, customer or similar id that
+ * doesn't exist). The far more common case — a non-member, caught by `[organizationId]/layout.tsx`
+ * itself — cannot be caught here; see `app/organizations/not-found.tsx` and the comment on
+ * `OrganizationNotFound`.
  */
-export default function OrganizationNotFound() {
-  return (
-    <main className="mx-auto w-full max-w-prose p-6 sm:p-8">
-      <SectionHeading>This business is not available to you</SectionHeading>
-
-      <Hint className="mt-2">
-        The address may be out of date, or this business may not be one you belong to.
-      </Hint>
-
-      <Hint className="mt-4">
-        <Link href="/organizations" className="underline underline-offset-4">
-          Your businesses
-        </Link>
-      </Hint>
-    </main>
-  );
+export default function OrganizationScopedNotFound() {
+  return <OrganizationNotFound />;
 }

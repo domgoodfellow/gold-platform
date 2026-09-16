@@ -10,6 +10,7 @@ import {
   areasIn,
   currentSegment,
   moduleConfiguration,
+  organizationHomeHref,
   visibleAreas,
   type Module,
 } from '@/lib/navigation';
@@ -138,6 +139,18 @@ describe('the operator shell navigation', () => {
       0,
     );
     expect(total).toBe(AREAS.length);
+  });
+});
+
+/**
+ * "Enter this business" — one canonical destination, not `AREAS[0].segment` re-derived at every
+ * call site that means "switch into this organization" (`ContextSwitcher`, `/organizations`,
+ * post-auth landing, the doorway at `/organizations/[organizationId]`).
+ */
+describe('organizationHomeHref', () => {
+  it('resolves to the first area, through areaHref', () => {
+    expect(organizationHomeHref('org-1')).toBe(areaHref('org-1', AREAS[0].segment));
+    expect(organizationHomeHref('org-1')).toBe('/organizations/org-1/today');
   });
 });
 

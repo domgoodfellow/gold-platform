@@ -14,6 +14,7 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@gold/ui/components/sidebar';
 import { Building2, ChevronsUpDown, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/controls/button';
+import { organizationHomeHref } from '@/lib/navigation';
 
 /** GOLD's own mark — the `mark` a shell passes when there is no tenant brand to show instead (Platform, Account). */
 export const GOLD_MARK = (
@@ -67,9 +68,9 @@ function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableO
 /**
  * The one shared menu body — WHERE the signed-in identity is currently operating, rendered
  * identically regardless of which trigger opened it. It holds no authorization logic and grants
- * nothing on its own: every row links to an existing route (`/organizations/{id}`, `/platform`),
- * and `organizations`/`platformStaff` are exactly what `listMyOrganizations`/`isPlatformStaff`
- * returned under the caller's own RLS.
+ * nothing on its own: every row links to an existing route (`organizationHomeHref(id)`,
+ * `/platform`), and `organizations`/`platformStaff` are exactly what
+ * `listMyOrganizations`/`isPlatformStaff` returned under the caller's own RLS.
  */
 function ContextSwitcherMenuContent({
   current,
@@ -99,7 +100,7 @@ function ContextSwitcherMenuContent({
           </DropdownMenuLabel>
           {businesses.map((organization) => (
             <DropdownMenuItem key={organization.id} asChild>
-              <Link href={`/organizations/${organization.id}/today`} className="flex items-center gap-2">
+              <Link href={organizationHomeHref(organization.id)} className="flex items-center gap-2">
                 <Building2 className="shrink-0" />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate">{organization.name}</span>

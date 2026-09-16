@@ -242,3 +242,79 @@ describe('the routing decision stays where it can be tested', () => {
     expect(platformLayout).toMatch(/if\s*\(!\(await isPlatformStaff\(db\)\)\)\s*redirect\('\/organizations'\)/);
   });
 });
+
+/**
+ * The routing defect this suite exists to prevent from coming back: a business-entry link built
+ * by hand (`/organizations/${id}`, or `/organizations/${id}/today` with the first Area's segment
+ * spelled out again) rather than through `organizationHomeHref`, the one place that fact lives
+ * (`lib/navigation.ts`). A hand-built link agrees with the real first Area today and silently
+ * stops agreeing the day `AREAS[0]` changes — which is exactly the shape of bug that sent a
+ * member into a route with no page behind it.
+ */
+describe('business-entry links go through organizationHomeHref, not a hand-built URL', () => {
+  const contextSwitcher = readFileSync(
+    fileURLToPath(new URL('../components/containers/context-switcher.tsx', import.meta.url)),
+    'utf8',
+  );
+  const organizationsPage = readFileSync(
+    fileURLToPath(new URL('../app/organizations/page.tsx', import.meta.url)),
+    'utf8',
+  );
+  const organizationRootPage = readFileSync(
+    fileURLToPath(new URL('../app/organizations/[organizationId]/page.tsx', import.meta.url)),
+    'utf8',
+  );
+
+  it('ContextSwitcher builds its business-entry link through organizationHomeHref', () => {
+    expect(contextSwitcher).toContain('organizationHomeHref(');
+    expect(contextSwitcher).not.toMatch(/href=\{`\/organizations\/\$\{organization\.id\}/);
+  });
+
+  it('/organizations enters a business through organizationHomeHref', () => {
+    expect(organizationsPage).toContain('organizationHomeHref(');
+  });
+
+  it('/organizations/[organizationId] is a real doorway — guarded, then redirected to organizationHomeHref', () => {
+    // The same guard every area page calls, not a layout trusted for authorization (I12) and not
+    // a second permission model: a non-member reaches this route's own `not-found.tsx`, exactly
+    // as any other page under `[organizationId]` does.
+    expect(organizationRootPage).toContain('requireOrganization(');
+    expect(organizationRootPage).toContain('organizationHomeHref(');
+  });
+});
+
+/**
+ * The refusal a non-member actually reaches — proven live by browser QA (a `not-found.tsx`
+ * colocated with a layout cannot catch that same layout's own `notFound()`; only an ancestor
+ * segment's `not-found.tsx` can, per Next's component hierarchy), and pinned here as a source
+ * guard so the boundary that makes it true cannot go missing silently. `[organizationId]/layout.tsx`
+ * calls `requireOrganization` itself (to render the shell), so a non-member's `notFound()` is
+ * thrown by the layout before any page beneath it runs — `app/organizations/not-found.tsx` is
+ * the file that actually renders for that, not `[organizationId]/not-found.tsx`.
+ */
+describe('the tenant-safe refusal survives being thrown by the layout, not a page', () => {
+  const organizationsNotFound = readFileSync(
+    fileURLToPath(new URL('../app/organizations/not-found.tsx', import.meta.url)),
+    'utf8',
+  );
+  const organizationIdNotFound = readFileSync(
+    fileURLToPath(new URL('../app/organizations/[organizationId]/not-found.tsx', import.meta.url)),
+    'utf8',
+  );
+  const layout = readFileSync(
+    fileURLToPath(new URL('../app/organizations/[organizationId]/layout.tsx', import.meta.url)),
+    'utf8',
+  );
+
+  it('app/organizations/not-found.tsx exists and renders the shared tenant-safe copy', () => {
+    expect(organizationsNotFound).toContain('OrganizationNotFound');
+  });
+
+  it('[organizationId]/not-found.tsx renders the same shared copy, for a page-level notFound()', () => {
+    expect(organizationIdNotFound).toContain('OrganizationNotFound');
+  });
+
+  it('the layout still calls requireOrganization itself, which is exactly what makes the ancestor boundary necessary', () => {
+    expect(layout).toContain('requireOrganization(');
+  });
+});

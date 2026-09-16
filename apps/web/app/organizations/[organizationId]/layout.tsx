@@ -24,6 +24,11 @@ import { canAnswerQuestions, listAgentRuns } from '@/lib/domain/assistant/questi
  * boundary — every page still calls `requireOrganization` itself, since Next can reuse this
  * layout across client navigations without re-rendering it. This call exists so the shell can
  * render the business's name, sharing the same request-scoped read.
+ *
+ * Because this call runs here too, a non-member's `notFound()` is thrown by this layout itself,
+ * not by whichever page they reached — and the file that actually renders for that is
+ * `app/organizations/not-found.tsx`, an ancestor segment, not this segment's own
+ * `not-found.tsx`. See that file's comment for why.
  */
 export default async function OrganizationLayout({
   params,

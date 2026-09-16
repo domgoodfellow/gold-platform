@@ -369,6 +369,16 @@ export function areaHref(organizationId: string, segment: string): string {
   return `/organizations/${organizationId}/${segment}`;
 }
 
+/**
+ * "Enter this business" — the one canonical destination, for every caller whose job is switching
+ * into an organization rather than linking to a specific area inside one. Today that is
+ * `AREAS[0]` (Today), but callers ask for "home", not for what the first Area happens to be, so
+ * that fact lives here once rather than being re-derived (`AREAS[0].segment`) at each call site.
+ */
+export function organizationHomeHref(organizationId: string): string {
+  return areaHref(organizationId, AREAS[0].segment);
+}
+
 /** One function rather than a separate href and label lookup — a link with the wrong word on it is the same dead end as a link to the wrong place. */
 export function moduleConfiguration(
   organizationId: string,

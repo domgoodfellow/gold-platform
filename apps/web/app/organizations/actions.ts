@@ -5,7 +5,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { canDraftConfiguration } from '@/lib/domain/configuration/proposals';
 import { createOrganization } from '@/lib/domain/tenancy/organizations';
-import { AREAS, areaHref } from '@/lib/navigation';
+import { areaHref, organizationHomeHref } from '@/lib/navigation';
 
 export type CreateBusinessState = { error: string | null };
 
@@ -36,6 +36,6 @@ export async function createBusinessAction(
 
   // Outside the try — `redirect` works by throwing, so catching around it would turn success into an error.
   redirect(
-    areaHref(organizationId, (await canDraftConfiguration()) ? 'setup' : AREAS[0].segment),
+    (await canDraftConfiguration()) ? areaHref(organizationId, 'setup') : organizationHomeHref(organizationId),
   );
 }
