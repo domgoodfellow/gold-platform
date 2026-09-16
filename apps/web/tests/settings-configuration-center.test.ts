@@ -104,13 +104,21 @@ describe('Pricing, Automations, Custom fields and People and roles are canonical
     expect(page).not.toContain('redirect(');
   });
 
-  it('/automations is canonical and renders the automation workspace', () => {
+  it('/automations is canonical and renders the automation workspace — Rules, Messages and Activity as URL-backed sibling views, and a rule as its own detail route', () => {
     const page = readFileSync(`${ROUTES}/automations/page.tsx`, 'utf8');
-    expect(page).toContain('AutomationRuleCard');
-    expect(page).toContain('CreateAutomationRuleForm');
-    expect(page).toContain('MessageTemplateSection');
-    expect(page).toContain('RunLog');
+    expect(page).toContain('AutomationsViewTabs');
+    expect(page).toContain('RulesTable');
+    expect(page).toContain('NewAutomationSheet');
+    expect(page).toContain('MessagesView');
+    expect(page).toContain('ActivityView');
     expect(page).not.toContain('redirect(');
+    expect(page).not.toContain('AutomationRuleCard');
+
+    const detail = readFileSync(`${ROUTES}/automations/[ruleId]/page.tsx`, 'utf8');
+    expect(detail).toContain('RuleHeading');
+    expect(detail).toContain('ConditionList');
+    expect(detail).toContain('ActionList');
+    expect(detail).toContain('RuleActivity');
   });
 
   it('/fields is canonical and renders the shared cross-entity fields component', () => {

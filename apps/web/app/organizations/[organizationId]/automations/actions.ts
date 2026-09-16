@@ -1,5 +1,6 @@
 'use server';
 
+import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import {
   addAutomationAction,
@@ -20,18 +21,21 @@ import { DomainError } from '@/lib/domain/errors';
 
 export type AutomationActionState = { error: string | null };
 
+function rootPath(organizationId: string): string {
+  return `/organizations/${organizationId}/automations`;
+}
+
+function rulePath(organizationId: string, ruleId: string): string {
+  return `${rootPath(organizationId)}/${ruleId}`;
+}
+
 /**
- * Eleven writes and one shape, because each is a separate decision with its own failure.
- *
- * The alternative was one action taking an intent, which is what the locations screen does for
- * two operations that share a form. These do not share a form: a rule's name, its conditions and
- * its actions are three lists on one card, and folding them together would mean inventing an
- * order and a partial-success message.
+ * Every write here follows the same shape: try the domain call, surface a `DomainError` as form
+ * state, revalidate whichever pages this write could change. A rule-scoped write revalidates both
+ * the root collection (its trigger/state/health cell) and the rule's own detail route; a
+ * template-scoped write revalidates only the root, since Messages has no detail route of its own.
  */
-async function run(
-  organizationId: string,
-  write: () => Promise<unknown>,
-): Promise<AutomationActionState> {
+async function run(paths: string[], write: () => Promise<unknown>): Promise<AutomationActionState> {
   try {
     await write();
   } catch (error) {
@@ -39,7 +43,7 @@ async function run(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/automations`);
+  for (const path of paths) revalidatePath(path);
   return { error: null };
 }
 
@@ -50,8 +54,9 @@ export async function createRuleAction(
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
 
-  return run(organizationId, () =>
-    createAutomationRule(db, {
+  let ruleId: string;
+  try {
+    ruleId = await createAutomationRule(db, {
       organizationId,
       name: String(formData.get('name') ?? ''),
       triggerKind: String(formData.get('triggerKind') ?? ''),
@@ -62,8 +67,16 @@ export async function createRuleAction(
       triggerThreshold: Number(formData.get('triggerThreshold') ?? Number.NaN),
       triggerUnit: String(formData.get('triggerUnit') ?? ''),
       triggerCounterStep: Number(formData.get('triggerCounterStep') ?? Number.NaN),
-    }),
-  );
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(rootPath(organizationId));
+  // A rule is created with no conditions and no actions — the new detail route is where the
+  // caller adds them, not back on the list requiring a second click to get there.
+  redirect(rulePath(organizationId, ruleId));
 }
 
 export async function renameRuleAction(
@@ -72,12 +85,10 @@ export async function renameRuleAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  const ruleId = String(formData.get('ruleId') ?? '');
 
-  return run(organizationId, () =>
-    updateAutomationRule(db, {
-      id: String(formData.get('ruleId') ?? ''),
-      name: String(formData.get('name') ?? ''),
-    }),
+  return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
+    updateAutomationRule(db, { id: ruleId, name: String(formData.get('name') ?? '') }),
   );
 }
 
@@ -87,12 +98,10 @@ export async function setRuleEnabledAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  const ruleId = String(formData.get('ruleId') ?? '');
 
-  return run(organizationId, () =>
-    updateAutomationRule(db, {
-      id: String(formData.get('ruleId') ?? ''),
-      enabled: String(formData.get('enabled') ?? '') === '1',
-    }),
+  return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
+    updateAutomationRule(db, { id: ruleId, enabled: String(formData.get('enabled') ?? '') === '1' }),
   );
 }
 
@@ -102,10 +111,19 @@ export async function deleteRuleAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  const ruleId = String(formData.get('ruleId') ?? '');
 
-  return run(organizationId, () =>
-    deleteAutomationRule(db, { id: String(formData.get('ruleId') ?? '') }),
-  );
+  try {
+    await deleteAutomationRule(db, { id: ruleId });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(rootPath(organizationId));
+  // The route this caller was on no longer resolves to anything — leaving them on it would be a
+  // dead end, so this sends them back to the collection rather than returning success state.
+  redirect(rootPath(organizationId));
 }
 
 export async function addConditionAction(
@@ -114,11 +132,12 @@ export async function addConditionAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  const ruleId = String(formData.get('ruleId') ?? '');
 
-  return run(organizationId, () =>
+  return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
     addAutomationCondition(db, {
       organizationId,
-      ruleId: String(formData.get('ruleId') ?? ''),
+      ruleId,
       subjectField: String(formData.get('subjectField') ?? ''),
       operator: String(formData.get('operator') ?? ''),
       value: String(formData.get('value') ?? ''),
@@ -132,8 +151,9 @@ export async function removeConditionAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  const ruleId = String(formData.get('ruleId') ?? '');
 
-  return run(organizationId, () =>
+  return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
     removeAutomationCondition(db, { id: String(formData.get('conditionId') ?? '') }),
   );
 }
@@ -144,11 +164,12 @@ export async function addActionAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  const ruleId = String(formData.get('ruleId') ?? '');
 
-  return run(organizationId, () =>
+  return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
     addAutomationAction(db, {
       organizationId,
-      ruleId: String(formData.get('ruleId') ?? ''),
+      ruleId,
       kind: String(formData.get('kind') ?? ''),
       statusId: String(formData.get('statusId') ?? '') || null,
       templateId: String(formData.get('templateId') ?? '') || null,
@@ -165,8 +186,9 @@ export async function removeActionAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  const ruleId = String(formData.get('ruleId') ?? '');
 
-  return run(organizationId, () =>
+  return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
     removeAutomationAction(db, { id: String(formData.get('actionId') ?? '') }),
   );
 }
@@ -178,7 +200,7 @@ export async function createTemplateAction(
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
 
-  return run(organizationId, () =>
+  return run([rootPath(organizationId)], () =>
     createMessageTemplate(db, {
       organizationId,
       name: String(formData.get('name') ?? ''),
@@ -195,7 +217,7 @@ export async function updateTemplateAction(
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
 
-  return run(organizationId, () =>
+  return run([rootPath(organizationId)], () =>
     updateMessageTemplate(db, {
       id: String(formData.get('templateId') ?? ''),
       name: String(formData.get('name') ?? ''),
@@ -212,7 +234,7 @@ export async function deleteTemplateAction(
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
 
-  return run(organizationId, () =>
+  return run([rootPath(organizationId)], () =>
     deleteMessageTemplate(db, { id: String(formData.get('templateId') ?? '') }),
   );
 }

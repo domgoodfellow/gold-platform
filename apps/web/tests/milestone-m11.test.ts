@@ -97,15 +97,23 @@ describe('M11 — a destructive action with nothing between it and the write', (
   const PAIRS: { actions: string; forms: string }[] = [
     {
       // Split from one `automation-forms.tsx` into per-responsibility files (rules/templates/
-      // activity/review) once that file passed 900 lines — each destructive action from this
-      // one `actions.ts` still needs its `ConfirmSubmit`, just checked against whichever new
-      // file actually calls it now.
+      // activity/review), then again into the Rules/Messages/Activity workspace recomposition —
+      // each destructive action from this one `actions.ts` still needs its `ConfirmSubmit`, just
+      // checked against whichever new file actually calls it now.
       actions: `${APP_ROOT}/organizations/[organizationId]/automations/actions.ts`,
-      forms: `${FEATURES_ROOT}/automations/rules/rule-card.tsx`,
+      forms: `${FEATURES_ROOT}/automations/rules/rule-heading.tsx`,
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/automations/actions.ts`,
-      forms: `${FEATURES_ROOT}/automations/templates/template-section.tsx`,
+      forms: `${FEATURES_ROOT}/automations/rules/condition-list.tsx`,
+    },
+    {
+      actions: `${APP_ROOT}/organizations/[organizationId]/automations/actions.ts`,
+      forms: `${FEATURES_ROOT}/automations/rules/action-list.tsx`,
+    },
+    {
+      actions: `${APP_ROOT}/organizations/[organizationId]/automations/actions.ts`,
+      forms: `${FEATURES_ROOT}/automations/templates/delete-message-dialog.tsx`,
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/reports/actions.ts`,

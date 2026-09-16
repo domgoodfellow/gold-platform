@@ -119,6 +119,16 @@ Automations, Custom fields and People and roles each own their own row in this t
 or a section under Settings. Settings holds what has no other home: identity, branding, opening
 hours, connections, and the platform-billing plane (`features/settings/settings-navigation.tsx`).
 
+**Automations is a collection with a detail route, not a page of open editors.** `/automations`
+holds three URL-backed sibling views — Rules, Messages, Activity (`?view=`, Tabs presentation,
+Rules the default) — because a workspace that rendered every rule as a complete WHEN/IF/THEN
+editor at once could not scale past a handful. A rule is a complex entity and gets its own route,
+`/automations/[ruleId]`, read top to bottom as the sentence it is: WHEN (its trigger, read-only —
+the domain layer refuses to change it after creation), IF (its conditions), THEN (its actions),
+then its own recent activity. Creating a rule, adding a condition or action, and writing or
+editing a message are each bounded enough for a Sheet; deleting a rule goes through the shared
+confirmation dialog and says plainly that its runs stay recorded after it is gone.
+
 **The phone bar does not collapse into a drawer or a "More" menu.** A drawer needs state, a
 toggle, a focus trap and an escape key to be correct; a "More" menu would be a second place an
 area could live.

@@ -5,6 +5,36 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Automations is recomposed as a collection with a detail route
+
+`/automations` used to render every rule as one complete, always-open `AutomationRuleCard` —
+correct at a handful of rules, but a page that grows linearly with the count rather than staying
+a collection. It is now three URL-backed sibling views (`?view=rules|messages|activity`, Rules
+the default) presented with shadcn Tabs, and a rule — a complex entity — has its own detail route.
+
+- Rules is a compact table (name, trigger, state, health) rather than an open editor per row; a
+  rule's name links to `/automations/[ruleId]`. Health comes only from the existing
+  `reviewAutomationRules` advice, worded as Ready/Needs attention — no new persisted status.
+- `/automations/[ruleId]` reads top to bottom as the sentence a rule is: WHEN (its trigger,
+  read-only — the domain layer refuses to change it after creation), IF (its conditions), THEN
+  (its actions), then its own recent activity, scoped to that rule alone.
+- Creating a rule, adding a condition or action, and writing or editing a message are each a
+  Sheet — bounded tasks the domain layer already treats as add/remove, never update. The new-rule
+  Sheet asks which trigger kind applies before showing that kind's own fields, replacing a form
+  that rendered every trigger kind's fields at once. Creating a rule now redirects straight to its
+  detail route instead of leaving the caller back on the list.
+- Messages is a compact collection (name, subject) with New/Edit Sheets, replacing a section that
+  opened every template as a form and mixed delivery history into the same list. Delivery history
+  moved to Activity, which now merges `AutomationRun` and `MessageDelivery` into one
+  presentation-only, newest-first list — no new persisted entity.
+- Deleting a rule redirects to the workspace root rather than leaving the caller on a route that
+  no longer resolves to anything; its confirmation states that conditions and actions go with it
+  while its recorded runs do not.
+- `AutomationRuleCard`, `CreateAutomationRuleForm`, `MessageTemplateSection` and `RunLog` are
+  retired; the trigger-description and rule-state-toggle logic they held is extracted
+  (`features/automations/rules/trigger.ts`, `rule-enabled-toggle.tsx`) rather than duplicated
+  across the new Rules table and rule detail page.
+
 ### Pricing, Automations, Custom fields and People and roles are canonical workspaces again
 
 A Settings migration had made Settings the primary door to these four first-class product
