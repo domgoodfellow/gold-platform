@@ -460,6 +460,9 @@ means; two words in two languages are the same shape of row.
 **Ownership.** `app/` owns routes and server composition; `features/` owns product-capability UI;
 `components/` owns domain-agnostic UI; reusable client interaction moves to `hooks/` only after
 the repeated behavior exists. Caller count is an extraction signal, not the primary boundary.
+**Settings is one organization Area, not a second application shell.** A first-class product
+workspace has one canonical owner and is not repeated as a Settings destination — see
+`docs/ui-spec.md` §2's Configuration section table and `lib/navigation.ts`'s `AREAS`.
 
 ### D24 — Web and API both deploy to Vercel, and that forbids a daemon
 

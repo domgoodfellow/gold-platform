@@ -62,7 +62,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
         {mayConfigure ? (
           <ConfigureRegistrar
             title="Customers configuration"
-            settingsHref={`/organizations/${organizationId}/settings/data-automation`}
+            settingsHref={`/organizations/${organizationId}/fields`}
           >
             <CustomerConfiguration
               organizationId={organizationId}

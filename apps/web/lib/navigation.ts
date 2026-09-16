@@ -180,7 +180,11 @@ export const MODULES = [
     label: 'Card payments',
     description: 'Ask a processor to collect what is outstanding, rather than only cash.',
     outside: 'the card control on an invoice',
-    configuredAt: { segment: 'settings', path: 'commerce', section: 'getting-paid' },
+    // Configured inside Pricing's own "Getting paid" section — a card collects against an
+    // invoice Billing produced, so this declares the dependency rather than leaving a link
+    // pointing at an area a second switch could hide without saying so.
+    configuredAt: { segment: 'pricing', section: 'getting-paid' },
+    requires: 'billing',
   },
   {
     key: 'reception',
@@ -215,19 +219,21 @@ export type Area = {
   /** The module this area belongs to, or absent for the kernel. A business without a named module doesn't see its entry — not capability gating (I12), just a fact that it isn't part of that business. */
   module?: ModuleKey;
   /**
-   * Route metadata, kept apart from sidebar visibility on purpose (product reality audit,
-   * Slice 3). `false` means this area's route, href, capability and module gating are all
-   * unchanged — it is still a real, directly addressable page — it simply is not one of the
-   * permanent rows a business scans every day. Settings became the primary door to it instead.
-   * Absent (the default) means shown, same as before this field existed.
+   * Route metadata, kept apart from sidebar visibility on purpose. `false` means this area's
+   * route, href, capability and module gating are all unchanged — it is still a real, directly
+   * addressable page — it simply is not one of the permanent rows a business scans every day
+   * (Guided setup alone, while `operationalState === 'setup'` gives it its own elevated
+   * treatment instead). A product capability with its own canonical workspace — Pricing,
+   * Automations, Custom fields, People and roles — belongs in the sidebar; Settings is one
+   * organization Area among these, never a second door to one of them (`CLAUDE.md`). Absent
+   * (the default) means shown, same as before this field existed.
    */
   sidebar?: boolean;
   /**
    * The area this one reads as nested under, for `AreaTrail` alone — never a second grouping
-   * axis and never consulted by `areasIn`. An area with `sidebar: false` still needs to say
-   * where it belongs when somebody arrives at it directly (a bookmark, a module's own
-   * `configuredAt` link), and "Settings → Pricing" is that answer without inventing a second
-   * label registry: the parent's own `label` is read straight off its `Area` entry.
+   * axis and never consulted by `areasIn`. Only relevant to an area with `sidebar: false`, which
+   * still needs to say where it belongs when somebody arrives at it directly — the parent's own
+   * `label` is read straight off its `Area` entry rather than inventing a second label registry.
    */
   parent?: string;
   /**
@@ -275,20 +281,17 @@ export const AREAS: readonly Area[] = [
   { segment: 'assets', label: 'Assets', group: 'records', module: 'assets', featureKeys: ['assets'] },
 
   // Turning this off also takes priced lines and the invoice off a job screen — see the work item route.
-  // `sidebar: false` below: Settings is the primary door to each of these now (Slice 3). The
-  // route, the module gate and the capability underneath are all exactly what they were —
-  // bookmarks, deep links and `moduleConfiguration`'s own hrefs keep working unchanged.
-  { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing', sidebar: false, parent: 'settings', relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
-  { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations', sidebar: false, parent: 'settings', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
-  { segment: 'fields', label: 'Custom fields', group: 'configuration', sidebar: false, parent: 'settings', relevantCapabilities: ['field.manage'] },
-  { segment: 'roles', label: 'People and roles', group: 'configuration', sidebar: false, parent: 'settings', relevantCapabilities: ['role.manage'] },
+  { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing', relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
+  { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  { segment: 'fields', label: 'Custom fields', group: 'configuration', relevantCapabilities: ['field.manage'] },
+  { segment: 'roles', label: 'People and roles', group: 'configuration', relevantCapabilities: ['role.manage'] },
   // `sidebar: false`: Business Setup is implementation infrastructure, not a permanent tenant
   // area (Product Contract, Slice 1/3). While a business is in SETUP it already has its own
   // elevated shell treatment (`SetupEntry`/`SetupBadge` in `layout.tsx`) — a second, equal-weight
   // row in the ordinary Configuration group would be the very thing that treatment exists to
   // avoid. While LIVE, the route recedes to a Settings hub card instead of the sidebar. The
   // route, its module gate and `/setup` itself are all unchanged — only where it is *found*
-  // moved, exactly as Pricing/Automations/Custom fields/People and roles already did.
+  // moved.
   // No `featureKeys`: no canonical Feature currently maps to `module_key = 'drafting'`
   // (`20260918000001`'s seed has no such runtime mapping) — a real gap, not an oversight, kept
   // on the legacy module-only gate rather than inventing a catalogue identifier that doesn't

@@ -33,7 +33,7 @@ export async function createRoleAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/people`);
+  revalidatePath(`/organizations/${organizationId}/roles`);
   return { error: null };
 }
 
@@ -59,7 +59,7 @@ export async function updateRoleAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/people`);
+  revalidatePath(`/organizations/${organizationId}/roles`);
   return { error: null };
 }
 
@@ -89,7 +89,7 @@ export async function addMemberAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/people`);
+  revalidatePath(`/organizations/${organizationId}/roles`);
   return { error: null };
 }
 
@@ -144,7 +144,7 @@ export async function inviteMemberAction(
     }
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/people`);
+  revalidatePath(`/organizations/${organizationId}/roles`);
   return { error: null, link };
 }
 
@@ -177,7 +177,7 @@ export async function assignRoleAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/people`);
+  revalidatePath(`/organizations/${organizationId}/roles`);
   return { error: null };
 }
 
@@ -199,6 +199,6 @@ export async function revokeInvitationAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/people`);
+  revalidatePath(`/organizations/${organizationId}/roles`);
   return { error: null };
 }

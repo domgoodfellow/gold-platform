@@ -221,15 +221,16 @@ describe('modules', () => {
   });
 
   it('shows an area once its module is on', () => {
-    // Not `pricing` — Slice 3 gave it `sidebar: false`, so it never appears in `areasIn`
-    // regardless of module state, on purpose. `assets` stays a sidebar area, so it is still the
-    // right example of the underlying rule this test is about.
     const shown = areasIn('records', new Set(['assets']));
     expect(shown.map((area) => area.segment)).toContain('assets');
 
+    const withBilling = areasIn('configuration', new Set(['billing']));
+    expect(withBilling.map((area) => area.segment)).toContain('pricing');
+
     // And with nothing passed, every area still in the sidebar: a caller with no business in
-    // hand means all of it, on the module axis. `sidebar: false` areas (Slice 3) stay absent
-    // regardless — that filter is orthogonal to which modules are enabled, not a relaxation of it.
+    // hand means all of it, on the module axis. `sidebar: false` areas (only Guided setup today)
+    // stay absent regardless — that filter is orthogonal to which modules are enabled, not a
+    // relaxation of it.
     const sidebarAreas = AREAS.filter((area) => area.sidebar !== false).length;
     expect(AREA_GROUPS.reduce((sum, group) => sum + areasIn(group.key).length, 0)).toBe(
       sidebarAreas,
@@ -547,11 +548,11 @@ describe('a switch leads to its inputs', () => {
     const payments = MODULES.find((sold) => sold.key === 'card_payments')!;
     const where = moduleConfiguration('org-1', payments);
 
-    // A nested Settings sub-route (`path`) — Getting paid lives on Settings → Business commerce.
-    expect(where.href).toBe('/organizations/org-1/settings/commerce#getting-paid');
+    // Getting paid lives on Pricing, the same workspace as the price book it charges through.
+    expect(where.href).toBe('/organizations/org-1/pricing#getting-paid');
     // The area's own word, which is the platform noun this file owns. A link labelled
     // "configure" would be the one place in the shell where a screen invents a name.
-    expect(where.label).toBe('Settings');
+    expect(where.label).toBe('Pricing');
 
     const booking = MODULES.find((sold) => sold.key === 'booking')!;
     expect(moduleConfiguration('org-1', booking).href).toBe(
@@ -563,10 +564,8 @@ describe('a switch leads to its inputs', () => {
     expect(moduleConfiguration('org-1', billing).label).toBe('Pricing');
   });
 
-  it('keeps every module’s configuration link valid after Slice 3 hid four areas from the sidebar', () => {
-    // Billing and Automations both configure at a segment `sidebar: false` now hides — the
-    // exact case D31's own link would break if hiding an area from the sidebar were confused
-    // with removing it. Neither href nor label moved, because the route didn't.
+  it('keeps every module’s configuration link valid', () => {
+    // Billing and Automations both configure at their own canonical workspace's segment.
     const billing = MODULES.find((sold) => sold.key === 'billing')!;
     expect(moduleConfiguration('org-1', billing)).toEqual({
       href: '/organizations/org-1/pricing',
@@ -582,31 +581,52 @@ describe('a switch leads to its inputs', () => {
 });
 
 /**
- * Route metadata versus sidebar visibility (Slice 3) — the two must stay separable without a
- * second registry of labels or hrefs anywhere else in the codebase.
+ * Pricing, Automations, Custom fields and People and roles are first-class organization
+ * workspaces, each with one canonical sidebar Area — the information-architecture correction
+ * that reversed a Settings migration which had made Settings the primary door to all four
+ * (`CLAUDE.md`: "Settings must not become a second application shell containing first-class
+ * organization workspaces").
  */
-describe('an area hidden from the sidebar', () => {
-  const HIDDEN = ['pricing', 'automations', 'fields', 'roles'] as const;
+describe('Pricing, Automations, Custom fields and People and roles are canonical sidebar areas', () => {
+  const RESTORED = ['pricing', 'automations', 'fields', 'roles'] as const;
 
-  it('stays a real, directly addressable area with its href and capability gating unchanged', () => {
-    for (const segment of HIDDEN) {
+  it('is a real, directly addressable area with its href and capability gating unchanged, and no longer hidden behind Settings', () => {
+    for (const segment of RESTORED) {
       const area = AREAS.find((entry) => entry.segment === segment);
       expect(area, `${segment} was removed from AREAS entirely`).toBeDefined();
-      expect(area?.sidebar).toBe(false);
+      expect(area?.sidebar).not.toBe(false);
+      expect(area?.parent).toBeUndefined();
       // Still resolves through the one href function — no second path was added for it.
       expect(areaHref('org-1', segment)).toBe(`/organizations/org-1/${segment}`);
     }
   });
 
-  it('names Settings as its parent for AreaTrail, reading the parent’s own label rather than a second one', () => {
-    for (const segment of HIDDEN) {
-      const area = AREAS.find((entry) => entry.segment === segment)!;
-      expect(area.parent).toBe('settings');
-      const parent = AREAS.find((entry) => entry.segment === area.parent);
-      expect(parent?.label).toBe('Settings');
-    }
+  it('appears in the sidebar once its module/entitlement and capability conditions permit it', () => {
+    expect(areasIn('configuration', new Set(['billing']), new Set(['price.manage']))
+      .map((area) => area.segment)).toContain('pricing');
+    expect(areasIn('configuration', new Set(['automations']), new Set(['automation.manage']))
+      .map((area) => area.segment)).toContain('automations');
+    // Custom fields and People and roles name no module — the kernel gate, not a switch.
+    expect(areasIn('configuration', new Set(), new Set(['field.manage']))
+      .map((area) => area.segment)).toContain('fields');
+    expect(areasIn('configuration', new Set(), new Set(['role.manage']))
+      .map((area) => area.segment)).toContain('roles');
   });
 
+  it('stays hidden from a role none of whose capabilities make it relevant', () => {
+    expect(areasIn('configuration', new Set(), new Set())
+      .map((area) => area.segment)).not.toContain('fields');
+    expect(areasIn('configuration', new Set(), new Set())
+      .map((area) => area.segment)).not.toContain('roles');
+  });
+});
+
+/**
+ * Route metadata versus sidebar visibility — the two must stay separable without a second
+ * registry of labels or hrefs anywhere else in the codebase. Only Guided setup uses
+ * `sidebar: false` now.
+ */
+describe('an area hidden from the sidebar', () => {
   it('is absent from the sidebar, the tablet rail and the phone bar alike — one shared predicate, not two', () => {
     // `OrgNav` (desktop and tablet, via `areasIn`) and `OrgNavBar` (phone) are two renderings of
     // the one `visibleAreas` predicate in `lib/navigation.ts`, per `ui-spec.md` §2 — never a

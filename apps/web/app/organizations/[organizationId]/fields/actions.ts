@@ -20,7 +20,7 @@ export type CreateFieldState = { error: string | null };
 
 /** Fields also rendered on the Work workspace's own Configure rail need that route revalidated too, or an edit made there would show stale until the next unrelated navigation. */
 function revalidateFieldSurfaces(organizationId: string, entityType: string) {
-  revalidatePath(`/organizations/${organizationId}/settings/data-automation`);
+  revalidatePath(`/organizations/${organizationId}/fields`);
   if (entityType === 'work_item') {
     revalidatePath(`/organizations/${organizationId}/work`);
     revalidatePath(`/organizations/${organizationId}/settings/work`);

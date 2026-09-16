@@ -89,7 +89,7 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
 
   test("grants report.read to the colleague's role, then removes it again", async ({ page }) => {
     const context = loadDemoContext();
-    await page.goto(`/organizations/${context.organizationId}/settings/people`);
+    await page.goto(`/organizations/${context.organizationId}/roles`);
     await page.getByRole('tab', { name: 'Roles & permissions' }).click();
 
     await page.getByRole('button', { name: 'Edit Werfmedewerker' }).click();
@@ -121,7 +121,7 @@ test.describe('the owner revokes report.read again', () => {
 
   test('removes report.read from Werfmedewerker', async ({ page }) => {
     const context = loadDemoContext();
-    await page.goto(`/organizations/${context.organizationId}/settings/people`);
+    await page.goto(`/organizations/${context.organizationId}/roles`);
     await page.getByRole('tab', { name: 'Roles & permissions' }).click();
 
     await page.getByRole('button', { name: 'Edit Werfmedewerker' }).click();

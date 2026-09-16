@@ -39,7 +39,7 @@ export default async function ResourcesPage({
         {mayConfigure ? (
           <ConfigureRegistrar
             title="Resources configuration"
-            settingsHref={`/organizations/${organizationId}/settings/data-automation`}
+            settingsHref={`/organizations/${organizationId}/fields`}
           >
             <ResourceConfiguration
               organizationId={organizationId}

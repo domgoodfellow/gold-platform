@@ -5,6 +5,28 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Pricing, Automations, Custom fields and People and roles are canonical workspaces again
+
+A Settings migration had made Settings the primary door to these four first-class product
+workspaces, demoting each to a Settings sub-route (`sidebar: false`, `parent: 'settings'`) —
+a second application shell forming inside Settings, one first-class workspace at a time. Each is
+back on its own canonical sidebar route, using the current functionality that had accreted under
+Settings while it stood in for them.
+
+- `/pricing`, `/automations`, `/fields` and `/roles` render their own workspaces directly, rather
+  than redirecting into Settings. `/settings/commerce`, `/settings/data-automation` and
+  `/settings/people` are now compatibility redirects to `/pricing`, `/fields` and `/roles`
+  respectively, so an old bookmark or link still lands somewhere real.
+- `lib/navigation.ts`'s `AREAS` entries for `pricing`, `automations`, `fields` and `roles` lost
+  their `sidebar: false`/`parent: 'settings'` hiding — each reappears in the sidebar under its
+  existing module/Feature/capability gating, unchanged.
+- `MODULES.card_payments.configuredAt` now points at Pricing's own `#getting-paid` section
+  instead of Settings → Business commerce.
+- `SettingsNavigation` no longer lists People & access, Data & automation or Business commerce.
+- Settings is one organization Area, not a second application shell containing a first-class
+  workspace — stated as an invariant in `CLAUDE.md`, `docs/ui-spec.md` §2 and `docs/constraints.md`
+  D23.
+
 ### The API's human-auth boundary, `apps/api/app/auth/`
 
 Three handlers (`ai_ask.py`, `crm_change_customer_stage.py`, `voice_wrap_up_call.py`) each parsed

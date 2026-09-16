@@ -347,12 +347,12 @@ export function SetupBadge({ organizationId }: { organizationId: string }) {
  * apart — a job is *in* Work but not *at* it — and there the page writes its own `<h1>`, because
  * a job's title is a tenant's words and not a platform noun.
  *
- * **An area with `parent` set gets a small link above its heading, reading whose it is.**
- * Pricing, Automations, Custom fields and People and roles all left the sidebar for Settings in
- * Slice 3 without moving anywhere — the same route, the same href, still directly bookmarkable
- * — so somebody arriving at one straight from a bookmark or a module's own configuration link
- * still needs to be told where they've landed. The parent's own `label` is read off its `Area`
- * entry rather than written again here, which is what keeps this a single registry.
+ * **An area with `parent` set gets a small link above its heading, reading whose it is** — for
+ * an area that stays a real, directly addressable route (`sidebar: false`) without being a
+ * permanent row in the ordinary sidebar, so somebody arriving straight from a bookmark or
+ * another area's own configuration link still needs to be told where they've landed. No area
+ * currently sets `parent`; the parent's own `label` would be read off its `Area` entry rather
+ * than written again here, which is what keeps this a single registry if one does.
  */
 export function AreaTrail({ organizationId }: { organizationId: string }) {
   const pathname = usePathname();

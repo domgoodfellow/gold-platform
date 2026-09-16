@@ -6,25 +6,22 @@ import { cx, FOCUS_RING } from '@/components/class-names';
 
 /**
  * Scopes, never flattened into one list (product architecture decision, 2026; regrouped in the
- * UI architecture correction that split Branding from Payments and Work from Schedule):
+ * UI architecture correction that split Branding from Payments and Work from Schedule).
  *
  * - PERSONAL belongs to the signed-in identity, not this organization — Account leaves this
  *   route tree entirely (`/account`), the same way `ContextSwitcher` owns cross-business
  *   navigation rather than this component or `AccountMenu`.
- * - BUSINESS is this organization's durable identity — who it is, what it looks like, who's in it.
+ * - BUSINESS is this organization's durable identity — who it is, what it looks like.
  * - OPERATIONS is how work and time are shaped, apart from doing either.
- * - DATA & AUTOMATION is what this organization has added to the kernel, and what it has taught
- *   the platform to do by itself.
- * - CHANNELS & CONNECTIONS is how this organization is reached, and what it has wired up.
- * - COMMERCE is the BUSINESS → CUSTOMER plane — what this organization sells and how it collects.
  * - PRODUCT is the GOLD → ORGANIZATION plane — what this organization has switched on and bought
- *   from GOLD, the opposite money direction from Commerce and never presented as its sibling
- *   (`domain-model.md`'s two-planes table, made literal here).
+ *   from GOLD (`domain-model.md`'s two-planes table, made literal here).
  *
  * Every entry is a route of its own — no anchor into a page listed elsewhere under a second
- * label. Integrations stays out of this list entirely: it is a main-sidebar workspace (real
- * connections, imports, import runs to operate), not a settings destination, the same line
- * `lib/navigation.ts` already draws by leaving it in `AREAS` with a permanent sidebar row.
+ * label. Pricing, Automations, Custom fields and People and roles are deliberately absent: each
+ * is a first-class product workspace with its own canonical sidebar Area (`lib/navigation.ts`),
+ * and Settings must not become a second door to one (`CLAUDE.md`). Integrations stays out of
+ * this list for the same reason: it is a main-sidebar workspace (real connections, imports,
+ * import runs to operate), not a settings destination.
  */
 type Entry = { label: string; segment: string };
 
@@ -43,7 +40,6 @@ function groups(organizationId: string): { heading: string; entries: { label: st
       entries: at([
         { label: 'General', segment: 'general' },
         { label: 'Branding & public presence', segment: 'branding' },
-        { label: 'People & access', segment: 'people' },
       ]),
     },
     {
@@ -54,19 +50,11 @@ function groups(organizationId: string): { heading: string; entries: { label: st
       ]),
     },
     {
-      heading: 'Data & automation',
-      entries: at([{ label: 'Custom fields & automation', segment: 'data-automation' }]),
-    },
-    {
       heading: 'Channels & connections',
       entries: at([
         { label: 'Website', segment: 'website' },
         { label: 'Connections', segment: 'connections' },
       ]),
-    },
-    {
-      heading: 'Commerce',
-      entries: at([{ label: 'Business commerce', segment: 'commerce' }]),
     },
     {
       heading: 'Product',

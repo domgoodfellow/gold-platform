@@ -32,8 +32,15 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
  * `settings/page.tsx` was itself the god-page symptom a later architecture pass named and
  * removed — a hub of "View →" cards sitting above the very sections it linked to, three
  * competing tables of contents for one set of things (grid, anchors, persistent rail). The
- * persistent Settings rail (`features/settings/settings-navigation.tsx`) is now the one index,
- * and every destination below is a real route rather than an anchor a grid pointed at.
+ * persistent Settings rail (`features/settings/settings-navigation.tsx`) is now the one index
+ * for what remains a genuine Settings destination.
+ *
+ * **Superseded again (information-architecture correction):** that Settings migration had gone
+ * on to make Settings the *primary door* to Pricing, Automations, Custom fields and People and
+ * roles — four first-class product workspaces, each demoted to a Settings sub-route. That was
+ * itself the defect this file's tests below now prove corrected: each is back on its own
+ * canonical sidebar route, and Settings is one organization Area among them, never a second
+ * application shell containing a first-class workspace (`CLAUDE.md`).
  */
 describe('Settings, as the Configuration Center (source scan)', () => {
   const navigation = readFileSync(
@@ -41,30 +48,24 @@ describe('Settings, as the Configuration Center (source scan)', () => {
     'utf8',
   );
 
-  it('groups Personal, Business, Operations, Data & automation, Channels & connections, Commerce and Product separately, never flattened into one list', () => {
-    for (const heading of [
-      'Personal',
-      'Business',
-      'Operations',
-      'Data & automation',
-      'Channels & connections',
-      'Commerce',
-      'Product',
-    ]) {
+  it('groups Personal, Business, Operations, Channels & connections and Product separately, never flattened into one list', () => {
+    for (const heading of ['Personal', 'Business', 'Operations', 'Channels & connections', 'Product']) {
       expect(navigation).toContain(`heading: '${heading}'`);
     }
   });
 
   it('carries none of the retired mixed-concept labels', () => {
-    for (const retired of ['Work & scheduling', 'Public presence & payments', 'Data & automation']) {
-      // "Data & automation" survives as a group heading (one coherent question, two tabs on one
-      // route) — the retired thing is a *nav entry* by that name mixing unrelated concerns, not
-      // the heading itself.
-      if (retired === 'Data & automation') {
-        expect(navigation).not.toContain(`label: '${retired}'`);
-        continue;
-      }
+    for (const retired of ['Work & scheduling', 'Public presence & payments']) {
       expect(navigation).not.toContain(retired);
+    }
+  });
+
+  it('does not list Pricing, Automations, Custom fields or People and roles — each is a canonical sidebar workspace, not a Settings destination', () => {
+    for (const label of ['People & access', 'Data & automation', 'Business commerce']) {
+      expect(navigation, `${label} should no longer be a Settings destination`).not.toContain(`label: '${label}'`);
+    }
+    for (const heading of ['Data & automation', 'Commerce']) {
+      expect(navigation, `${heading} should no longer be a Settings group`).not.toContain(`heading: '${heading}'`);
     }
   });
 
@@ -87,23 +88,35 @@ describe('Settings, as the Configuration Center (source scan)', () => {
     expect(navigation).toContain("segment: 'work'");
     expect(readFileSync(`${ROUTES}/settings/work/page.tsx`, 'utf8')).toContain('WorkConfigurationPage');
   });
+});
 
-  it('reaches Business commerce, which reuses Pricing’s own content', () => {
-    expect(navigation).toContain("segment: 'commerce'");
-    expect(readFileSync(`${ROUTES}/settings/commerce/page.tsx`, 'utf8')).toContain('CreatePriceItemForm');
+/**
+ * The four canonical workspaces this slice restored — each a real top-level Area again, with
+ * the content that had accreted under Settings while it was one, and each old Settings route now
+ * only a compatibility redirect.
+ */
+describe('Pricing, Automations, Custom fields and People and roles are canonical, not Settings sub-routes', () => {
+  it('/pricing is canonical and renders both the price book and, when connected, Getting paid', () => {
+    const page = readFileSync(`${ROUTES}/pricing/page.tsx`, 'utf8');
+    expect(page).toContain('CreatePriceItemForm');
+    expect(page).toContain('EditPriceItemForm');
+    expect(page).toContain('PaymentAccountRow');
+    expect(page).not.toContain('redirect(');
   });
 
-  it('reaches Data & automation, which reuses the Automations screen’s own content', () => {
-    expect(navigation).toContain("segment: 'data-automation'");
-    expect(readFileSync(`${ROUTES}/settings/data-automation/page.tsx`, 'utf8')).toContain(
-      'CreateAutomationRuleForm',
-    );
+  it('/automations is canonical and renders the automation workspace', () => {
+    const page = readFileSync(`${ROUTES}/automations/page.tsx`, 'utf8');
+    expect(page).toContain('AutomationRuleCard');
+    expect(page).toContain('CreateAutomationRuleForm');
+    expect(page).toContain('MessageTemplateSection');
+    expect(page).toContain('RunLog');
+    expect(page).not.toContain('redirect(');
   });
 
-  it('reaches Custom fields, under Data & automation, via the shared entity-fields component', () => {
-    expect(readFileSync(`${ROUTES}/settings/data-automation/page.tsx`, 'utf8')).toContain(
-      'EntityFieldsConfiguration',
-    );
+  it('/fields is canonical and renders the shared cross-entity fields component', () => {
+    const page = readFileSync(`${ROUTES}/fields/page.tsx`, 'utf8');
+    expect(page).toContain('EntityFieldsConfiguration');
+    expect(page).not.toContain('redirect(');
     expect(
       readFileSync(
         fileURLToPath(new URL('../features/fields/entity-fields-configuration.tsx', import.meta.url)),
@@ -112,20 +125,26 @@ describe('Settings, as the Configuration Center (source scan)', () => {
     ).toContain('CreateFieldForm');
   });
 
-  it('reaches People & access', () => {
-    expect(navigation).toContain("segment: 'people'");
-    expect(readFileSync(`${ROUTES}/settings/people/page.tsx`, 'utf8')).toContain('AddMemberForm');
+  it('/roles is canonical and renders the current People UI — Members, Invitations, Roles & permissions', () => {
+    const page = readFileSync(`${ROUTES}/roles/page.tsx`, 'utf8');
+    expect(page).toContain('AddMemberForm');
+    expect(page).toContain('InviteMemberForm');
+    expect(page).toContain('PendingInvitations');
+    expect(page).toContain('RoleAssignmentControl');
+    expect(page).toContain('CreateRoleForm');
+    expect(page).toContain('EditRoleSheet');
+    expect(page).not.toContain('redirect(');
   });
 
-  it('sends every retired top-level route to its new home rather than a dead end', () => {
+  it('sends every retired Settings sub-route to its new canonical home, never a dead end', () => {
     for (const [segment, destination] of [
-      ['roles', 'settings/people'],
-      ['fields', 'settings/data-automation'],
-      ['automations', 'settings/data-automation'],
-      ['pricing', 'settings/commerce'],
+      ['settings/people', 'roles'],
+      ['settings/data-automation', 'fields'],
+      ['settings/commerce', 'pricing'],
     ] as const) {
       const page = readFileSync(`${ROUTES}/${segment}/page.tsx`, 'utf8');
-      expect(page, `${segment} no longer redirects to ${destination}`).toContain(destination);
+      expect(page, `${segment} no longer redirects to ${destination}`).toContain(`/${destination}`);
+      expect(page).toContain('redirect(');
     }
   });
 });

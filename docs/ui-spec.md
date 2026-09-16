@@ -113,6 +113,12 @@ A section whose every area belongs to a switched-off module renders as nothing a
 included — naming a part of the application that is not there for that business would be worse
 than the gap.
 
+**Settings is one organization Area, not a second application shell.** A first-class product
+workspace has one canonical owner and is not repeated as a Settings destination — Pricing,
+Automations, Custom fields and People and roles each own their own row in this table, not a tab
+or a section under Settings. Settings holds what has no other home: identity, branding, opening
+hours, connections, and the platform-billing plane (`features/settings/settings-navigation.tsx`).
+
 **The phone bar does not collapse into a drawer or a "More" menu.** A drawer needs state, a
 toggle, a focus trap and an escape key to be correct; a "More" menu would be a second place an
 area could live.

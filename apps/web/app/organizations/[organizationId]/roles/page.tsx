@@ -1,15 +1,154 @@
-import { redirect } from 'next/navigation';
+import { Badge } from '@/components/display/data';
+import { Disclosure } from '@/components/containers/card';
+import { Hint } from '@/components/controls/inputs';
+import { DataTable } from '@/components/display/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
+import { CAPABILITY_LABELS } from '@/lib/domain/tenancy/capabilities';
+import { listPendingInvitations } from '@/lib/domain/tenancy/invitations';
+import { listMembers } from '@/lib/domain/tenancy/members';
+import { listRoles } from '@/lib/domain/tenancy/roles';
+import { requireOrganization } from '@/lib/route/organization';
+import { AddMemberForm } from './add-member-form';
+import { CreateRoleForm } from './create-role-form';
+import { EditRoleSheet } from './edit-role-sheet';
+import { InviteMemberForm } from './invite-member-form';
+import { PendingInvitations } from './pending-invitations';
+import { RoleAssignmentControl } from './role-assignment-control';
 
-/**
- * Moved to Settings → People & access, one page with three tabs (Members, Invitations, Roles &
- * permissions) instead of three things stacked on this one. Kept as a redirect rather than
- * deleted outright — this segment stays in `navigation.ts`'s `AREAS` (`sidebar: false`, unchanged)
- * so a bookmark, an old link in an invitation email, or `moduleConfiguration`'s own href
- * resolution still lands somewhere real rather than a 404.
- */
-export default async function RolesRedirect({
+export const dynamic = 'force-dynamic';
+
+/** "Who can access this business and what can they do?" — Members, Invitations and Roles & permissions, as three tabs of the one question. */
+export default async function RolesPage({
   params,
 }: PageProps<'/organizations/[organizationId]/roles'>) {
   const { organizationId } = await params;
-  redirect(`/organizations/${organizationId}/settings/people`);
+  const { db, organization } = await requireOrganization(organizationId);
+
+  const [roles, members, invitations] = await Promise.all([
+    listRoles(db, { organizationId }),
+    listMembers(db, { organizationId }),
+    listPendingInvitations(db, { organizationId }),
+  ]);
+  const mayManage = organization.capabilities.includes('role.manage');
+
+  return (
+    <>
+      <Hint>Who works here, and what each role may do.</Hint>
+
+      <Tabs defaultValue="members" className="mt-6">
+        <TabsList>
+          <TabsTrigger value="members">Members</TabsTrigger>
+          <TabsTrigger value="invitations">
+            Invitations{invitations.length > 0 ? ` (${invitations.length})` : ''}
+          </TabsTrigger>
+          <TabsTrigger value="roles">Roles &amp; permissions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="members" className="mt-4">
+          {mayManage ? (
+            <Disclosure summary="Add somebody" defaultOpen={members.length <= 1}>
+              <AddMemberForm organizationId={organizationId} roles={roles} />
+            </Disclosure>
+          ) : (
+            <Hint className="mt-2">Your role, {organization.role}, cannot add people here.</Hint>
+          )}
+
+          <div className="mt-4">
+            <DataTable
+              rows={members}
+              rowKey={(member) => member.id}
+              empty="Nobody here yet."
+              columns={[
+                {
+                  key: 'name',
+                  header: 'Name',
+                  emphasis: 'primary',
+                  cell: (member) => member.displayName,
+                },
+                {
+                  key: 'role',
+                  header: 'Role',
+                  cell: (member) =>
+                    mayManage ? (
+                      <RoleAssignmentControl
+                        organizationId={organizationId}
+                        membershipId={member.id}
+                        currentRoleId={member.role.id}
+                        roles={roles}
+                      />
+                    ) : (
+                      <Badge>{member.role.name}</Badge>
+                    ),
+                },
+              ]}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="invitations" className="mt-4">
+          {mayManage ? (
+            <Disclosure summary="Invite by email" defaultOpen={invitations.length === 0}>
+              <InviteMemberForm organizationId={organizationId} roles={roles} />
+            </Disclosure>
+          ) : (
+            <Hint className="mt-2">Your role, {organization.role}, cannot invite people here.</Hint>
+          )}
+
+          <div className="mt-4">
+            {invitations.length > 0 ? (
+              <PendingInvitations organizationId={organizationId} invitations={invitations} />
+            ) : (
+              <Hint>No pending invitations.</Hint>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="roles" className="mt-4">
+          {mayManage ? (
+            <Disclosure summary="Add a role">
+              <CreateRoleForm organizationId={organizationId} />
+            </Disclosure>
+          ) : (
+            <Hint className="mt-2">Your role, {organization.role}, cannot manage roles here.</Hint>
+          )}
+
+          <div className="mt-4">
+            <DataTable
+              rows={roles}
+              rowKey={(role) => role.id}
+              empty="No roles yet."
+              columns={[
+                { key: 'name', header: 'Role', emphasis: 'primary', cell: (role) => role.name },
+                {
+                  key: 'capabilities',
+                  header: 'May do',
+                  cell: (role) =>
+                    role.capabilities.length === 0 ? (
+                      <span className="text-subtle">Nothing yet</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {role.capabilities.map((capability) => (
+                          <Badge key={capability}>{CAPABILITY_LABELS[capability]}</Badge>
+                        ))}
+                      </div>
+                    ),
+                },
+                ...(mayManage
+                  ? [
+                      {
+                        key: 'edit',
+                        header: '',
+                        cell: (role: (typeof roles)[number]) => (
+                          <EditRoleSheet organizationId={organizationId} role={role} />
+                        ),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
+    </>
+  );
 }

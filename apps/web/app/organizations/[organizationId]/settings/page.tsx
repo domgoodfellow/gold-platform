@@ -8,9 +8,11 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Settings' own landing page — a hub, not a settings destination in its own right. Business
- * identity/regional settings, branding and public presence, opening hours, custom fields, people
- * and roles, automations, pricing, payments, modules and plan & usage all have their own place
- * under the Settings navigation now; see `features/settings/settings-navigation.tsx`.
+ * identity/regional settings, branding and public presence, opening hours, modules and plan &
+ * usage all have their own place under the Settings navigation; see
+ * `features/settings/settings-navigation.tsx`. Pricing, Automations, Custom fields and People
+ * and roles are not among them — each is a first-class product workspace with its own canonical
+ * sidebar Area, and Settings is one organization Area, never a second door to one (`CLAUDE.md`).
  */
 export default async function SettingsPage({
   params,
