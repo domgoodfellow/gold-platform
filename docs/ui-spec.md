@@ -197,6 +197,12 @@ read behind it. **Sign out belongs to the account menu**, in the sidebar footer 
 the compact header menu on a phone. Neither is an operating action or permanent page-header
 command.
 
+**GOLD staff operate GOLD through its ordinary organization workspace when they are real members
+of it.** The current `gold_internal` base Plan identifies that workspace, never its name. Platform
+Administration remains a separate control-plane context; it is available in the switcher, and a
+desktop GOLD Internal sidebar may compose shortcuts to it for platform staff. Neither authority
+substitutes for the other, and the phone bar remains organization-only.
+
 **The application canvas has named modes.** `AppPage` owns `reading`, `form`, `standard`, `wide`
 and `full`, so an operations surface can use its workspace without every route inventing width
 classes. Forms may remain focused inside a wide configuration canvas; `AppShell` itself never

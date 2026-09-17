@@ -56,8 +56,8 @@ export function AssignPlanSheet({ organizationId, plans }: { organizationId: str
         <SheetHeader>
           <SheetTitle>Assign a Plan</SheetTitle>
           <SheetDescription>
-            Pays for nothing on its own and switches nothing on — this records which package the
-            organization has. The organization still enables its own modules.
+            The Plan determines entitlement. Available entitled features are active by default;
+            the organization can switch them off. Provider-backed features may still need setup.
           </SheetDescription>
         </SheetHeader>
         <form action={action} className="flex flex-col gap-3 px-4">

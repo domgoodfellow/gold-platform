@@ -22,10 +22,13 @@ import {
   updatePlan,
 } from '@/lib/domain/catalogue/plans';
 import {
+  activeModuleKeys,
+  availableFeatureKeys,
   currentPlanAssignment,
   listOrganizationPlanAgreements,
   organizationEffectiveEntitlements,
   organizationEffectiveQuotas,
+  organizationResolvedFeatureStates,
   organizationPlanPrice,
   recordPlanAgreement,
   recordPlanAssignment,
@@ -336,6 +339,43 @@ describe('Plans and Add-ons', () => {
     // GOLD Internal grants every Product's currently-available Features — this organization now sees a real, non-empty resolved set through the identical RPC any tenant's Plan uses.
     expect(entitlements.length).toBeGreaterThan(50);
     expect(entitlements.every((e) => e.planKey === 'gold_internal')).toBe(true);
+  });
+
+  it('resolves GOLD Internal available Features through the canonical Plan resolver', async () => {
+    const org = await newTenant('gold-internal-resolver');
+    const goldInternal = await getPlan(staff, 'gold_internal');
+    await recordPlanAssignment(staff, {
+      organizationId: org.organizationId,
+      planId: goldInternal!.id,
+      periodStart: '2020-01-01',
+      periodEnd: '9999-12-31',
+    });
+
+    const { error: clearModulesError } = await org.db
+      .from('organization_modules')
+      .delete()
+      .eq('organization_id', org.organizationId);
+    expect(clearModulesError).toBeNull();
+    const { data: legacyModules, error: legacyModulesError } = await org.db
+      .from('organization_modules')
+      .select('module_key')
+      .eq('organization_id', org.organizationId);
+    expect(legacyModulesError).toBeNull();
+    expect(legacyModules).toEqual([]);
+
+    const [features, states] = await Promise.all([
+      listCatalogFeatures(org.db),
+      organizationResolvedFeatureStates(org.db, { organizationId: org.organizationId }),
+    ]);
+    const entitledAvailable = states.filter(
+      (state) => state.implementationState === 'available' && state.entitled,
+    );
+
+    expect(entitledAvailable.length).toBeGreaterThan(0);
+    expect(entitledAvailable.every((state) => state.activation === 'active')).toBe(true);
+    expect(availableFeatureKeys(states)).toEqual(new Set(entitledAvailable.map((state) => state.featureKey)));
+    expect(activeModuleKeys(states).size).toBeGreaterThan(0);
+    expect(entitledAvailable).toHaveLength(features.filter((feature) => feature.implementationState === 'available').length);
   });
 
   it('leaves a legacy organization with no Plan assignment resolving exactly as before', async () => {

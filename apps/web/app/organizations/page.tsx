@@ -9,6 +9,7 @@ import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
+import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import { organizationHomeHref } from '@/lib/navigation';
 import { resolveOrganizationsLanding } from '@/lib/route/landing';
 import { CreateBusinessForm } from './create-business-form';
@@ -40,19 +41,17 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
   // Platform authority and organization membership are two independent facts about one
   // identity (D45) — a staff member's memberships are never taken away, held elsewhere, or
   // hidden by this read. What this page decides is only which of an identity's true contexts it
-  // lands in *by default*: staff default into Platform Administration regardless of how many
-  // businesses they belong to (the amendment to this file's own earlier rule — see
-  // `lib/route/landing.ts`'s doc comment for the full history). `resolveOrganizationsLanding` is
-  // the decision itself, pulled out pure so `landing.test.ts` can exercise every combination with
-  // no session and no database.
+  // lands in *by default*: a real GOLD Internal membership outranks Platform Administration;
+  // staff without it still default to Platform. `resolveOrganizationsLanding` remains pure so
+  // `landing.test.ts` can exercise every combination with no session and no database.
   const [staff, organizations] = await Promise.all([isPlatformStaff(db), listMyOrganizations(db)]);
+  const preferredOrganization = await findGoldInternalOrganization(db, organizations);
 
   /*
     **One business is not a choice, and a whole page to make it is a page in the way.** Most
     tenant-only operators belong to exactly one, and this screen asked every one of them to read
-    a list of length one and click it before anything could happen. Staff are auto-routed too,
-    to Platform Administration rather than into a business, for the same reason: the console is
-    their one default, not a list to choose from every time.
+    a list of length one and click it before anything could happen. GOLD staff who are actual
+    GOLD Internal members enter that operating workspace; staff without it enter Platform.
 
     `?all=1` is what the shell's own *All businesses* link sends — the explicit request to see
     every option, including Platform Administration itself. Without it, that link and this
@@ -61,7 +60,12 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
     unreachable by accident.
   */
   const { all } = await searchParams;
-  const landing = resolveOrganizationsLanding({ organizations, staff, showAll: Boolean(all) });
+  const landing = resolveOrganizationsLanding({
+    organizations,
+    staff,
+    preferredOrganizationId: preferredOrganization?.id,
+    showAll: Boolean(all),
+  });
 
   // It cannot loop with the redirect on `/platform`, which sends a non-staff caller here: that
   // redirect fires on `!staff`, this one only on zero organizations, and one answer cannot

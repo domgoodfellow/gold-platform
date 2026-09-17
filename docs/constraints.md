@@ -863,6 +863,11 @@ may simultaneously hold Platform Context authority and ordinary memberships, inc
 membership in GOLD's own organization. The two contexts remain separate choices in the product,
 but D45 removed the historical two-account and re-login mechanism.
 
+**Operating context.** GOLD's own organization is the canonical dogfood/operating workspace for
+GOLD staff who are actual members of it. Platform Administration is the control plane. An
+identity may hold both organization membership and platform authority; neither substitutes for
+the other.
+
 **Why a tenant at all.** This file's own *Known defects* section already says GOLD dogfoods its
 own Organization Context exactly as any other business does, and that what GOLD's own use needs
 counts as evidence. Reception's first real user is GOLD's own sales calls, which is the module it

@@ -52,6 +52,7 @@ import {
   type Area,
 } from '@/lib/navigation';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
+import { PLATFORM_NAV } from '@/features/platform/platform-navigation';
 
 /**
  * The two pieces of the shell that need to know which area is on screen. Client components
@@ -262,6 +263,37 @@ export function SetupEntry({ organizationId }: { organizationId: string }) {
   );
 }
 
+/** Desktop shortcut group only: the shared registry still owns every platform destination. */
+function GoldPlatformNav() {
+  const pathname = usePathname();
+
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>Platform</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {PLATFORM_NAV.map((item) => {
+            const Icon = item.icon;
+            const active = item.href === '/platform'
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+            return (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+                  <Link href={item.href} aria-current={active ? 'page' : undefined}>
+                    <Icon aria-hidden />
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+}
+
 /**
  * The whole operator sidebar: identity and business switching in the header, Business Setup
  * (while it applies) and the grouped area list in the content, the account menu in the footer.
@@ -275,6 +307,7 @@ export function OrgSidebar({
   role,
   organizations,
   platformStaff,
+  isGoldInternal,
   enabledModules,
   capabilities,
   featureAvailability,
@@ -289,6 +322,8 @@ export function OrgSidebar({
   role: string;
   organizations: SwitchableOrganization[];
   platformStaff: boolean;
+  /** Server-resolved from a real membership plus the current `gold_internal` base Plan. */
+  isGoldInternal: boolean;
   enabledModules: string[];
   capabilities: Capability[];
   featureAvailability: string[];
@@ -315,6 +350,7 @@ export function OrgSidebar({
           capabilities={capabilities}
           featureAvailability={featureAvailability}
         />
+        {platformStaff && isGoldInternal ? <GoldPlatformNav /> : null}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
       <SidebarRail />

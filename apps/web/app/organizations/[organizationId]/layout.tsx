@@ -6,6 +6,7 @@ import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
+import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import {
   activeModuleKeys,
   availableFeatureKeys,
@@ -54,6 +55,8 @@ export default async function OrganizationLayout({
   // resolve against.
   const enabledModules = activeModuleKeys(featureStates);
   const featureAvailability = availableFeatureKeys(featureStates);
+  const goldInternal = await findGoldInternalOrganization(db, myOrganizations);
+  const isGoldInternal = goldInternal?.id === organizationId;
   // `requireOrganization` already proved a session exists; this is a second, deliberately
   // separate read of the same session for the one extra fact the shell shows (I11's minimal
   // `Actor` shape carries only an id).
@@ -105,6 +108,7 @@ export default async function OrganizationLayout({
       role={organization.role}
       organizations={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
       platformStaff={staff}
+      isGoldInternal={isGoldInternal}
       enabledModules={[...enabledModules]}
       featureAvailability={[...featureAvailability]}
       capabilities={organization.capabilities}

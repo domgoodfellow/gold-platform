@@ -5,6 +5,13 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### GOLD Internal becomes the staff operating workspace
+
+GOLD staff who are real members of an organization with the current `gold_internal` base Plan now
+land in that ordinary tenant workspace after authentication. Platform Administration remains the
+independent control plane and is composed as a desktop sidebar shortcut group only in that
+workspace; it never grants organization access or appears in customer organizations.
+
 ### Custom fields becomes an entity-scoped workspace
 
 `/organizations/[organizationId]/fields` now uses URL-backed entity tabs (Customers, Locations,
