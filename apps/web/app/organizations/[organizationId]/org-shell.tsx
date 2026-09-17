@@ -185,6 +185,27 @@ function PhoneNavLink({
   );
 }
 
+function PlatformPhoneNavLink({ item, current }: { item: (typeof PLATFORM_NAV)[number]; current: boolean }) {
+  const Icon = item.icon;
+
+  return (
+    <Link
+      href={item.href}
+      aria-current={current ? 'page' : undefined}
+      aria-label={item.label}
+      title={item.label}
+      className={cx(
+        FOCUS_RING,
+        'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm',
+        current ? 'bg-foreground font-medium text-background' : 'hover:bg-black/5 dark:hover:bg-white/10',
+      )}
+    >
+      <Icon aria-hidden size={18} className="shrink-0" />
+      <span className="min-w-0">{item.label}</span>
+    </Link>
+  );
+}
+
 /**
  * The phone rendering of the same `AREAS` list — a fixed bar along the bottom that scrolls
  * sideways rather than collapsing into a drawer (`ui-spec.md` §2 says why: a drawer needs
@@ -201,14 +222,19 @@ export function OrgNavBar({
   enabledModules,
   capabilities,
   featureAvailability,
+  platformStaff = false,
+  isGoldInternal = false,
 }: {
   organizationId: string;
   enabledModules: string[];
   capabilities: Capability[];
   /** Same resolved set `OrgNav` receives — one shared predicate (`visibleAreas`), so the two can't drift. */
   featureAvailability: string[];
+  platformStaff?: boolean;
+  isGoldInternal?: boolean;
 }) {
-  const segment = currentSegment(usePathname());
+  const pathname = usePathname();
+  const segment = currentSegment(pathname);
   const enabled = new Set(enabledModules);
   const capabilitySet = new Set(capabilities);
   const featureSet = new Set(featureAvailability);
@@ -228,6 +254,18 @@ export function OrgNavBar({
             />
           </li>
         ))}
+        {platformStaff && isGoldInternal
+          ? PLATFORM_NAV.map((item) => {
+              const current = item.href === '/platform'
+                ? pathname === item.href
+                : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <li key={item.href} className="shrink-0">
+                  <PlatformPhoneNavLink item={item} current={current} />
+                </li>
+              );
+            })
+          : null}
       </ul>
     </nav>
   );
@@ -430,4 +468,13 @@ export function AreaTrail({ organizationId }: { organizationId: string }) {
       </Link>
     </nav>
   );
+}
+
+export function PlatformTrail() {
+  const pathname = usePathname();
+  const active = [...PLATFORM_NAV]
+    .sort((a, b) => b.href.length - a.href.length)
+    .find((item) => (item.href === '/platform' ? pathname === item.href : pathname.startsWith(item.href)));
+
+  return <h1 className="min-w-0 truncate text-lg font-semibold leading-tight">{active?.label ?? 'Platform'}</h1>;
 }

@@ -12,18 +12,16 @@ import {
   DropdownMenuTrigger,
 } from '@gold/ui/components/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@gold/ui/components/sidebar';
-import { Building2, ChevronsUpDown, ShieldCheck } from 'lucide-react';
+import { Building2, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { organizationHomeHref } from '@/lib/navigation';
 
-/** GOLD's own mark — the `mark` a shell passes when there is no tenant brand to show instead (Platform, Account). */
 export const GOLD_MARK = (
   <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-foreground text-sm font-bold text-background">
     G
   </span>
 );
 
-/** One business the caller can switch into — never more than `listMyOrganizations` itself would return under the caller's own RLS. */
 export type SwitchableOrganization = {
   id: string;
   name: string;
@@ -32,8 +30,6 @@ export type SwitchableOrganization = {
 
 export type SwitcherContext =
   | { kind: 'business'; organizationId: string; name: string; role: string }
-  | { kind: 'platform' }
-  /** Personal Account (`/account`) — context-independent, neither a business nor Platform. */
   | { kind: 'account' };
 
 type SwitcherProps = {
@@ -43,20 +39,10 @@ type SwitcherProps = {
   platformStaff: boolean;
 };
 
-/**
- * "Where am I operating?" — never anything else. A link into a business's settings used to live
- * here too; it had no context-switching purpose and Settings already has a proper product
- * destination, so it is gone rather than making this a miscellaneous business menu.
- */
 function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[]) {
-  const triggerName =
-    current.kind === 'business' ? current.name : current.kind === 'platform' ? 'Platform Administration' : 'Your account';
-  const triggerRole = current.kind === 'business' ? current.role : current.kind === 'platform' ? 'GOLD staff' : 'Personal';
-  const avatarInitial =
-    current.kind === 'business' ? triggerName.charAt(0).toUpperCase() : current.kind === 'platform' ? 'G' : 'A';
-
-  // Never the current business itself — a row that navigates to where you already are is not a
-  // switch. Platform Administration has no such filtering to do: there is only one of it.
+  const triggerName = current.kind === 'business' ? current.name : 'Your account';
+  const triggerRole = current.kind === 'business' ? current.role : 'Personal';
+  const avatarInitial = current.kind === 'business' ? triggerName.charAt(0).toUpperCase() : 'A';
   const businesses =
     current.kind === 'business'
       ? organizations.filter((organization) => organization.id !== current.organizationId)
@@ -65,16 +51,7 @@ function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableO
   return { triggerName, triggerRole, avatarInitial, businesses };
 }
 
-/**
- * The one shared menu body — WHERE the signed-in identity is currently operating, rendered
- * identically regardless of which trigger opened it. It holds no authorization logic and grants
- * nothing on its own: every row links to an existing route (`organizationHomeHref(id)`,
- * `/platform`), and `organizations`/`platformStaff` are exactly what
- * `listMyOrganizations`/`isPlatformStaff` returned under the caller's own RLS.
- */
 function ContextSwitcherMenuContent({
-  current,
-  platformStaff,
   triggerName,
   triggerRole,
   avatarInitial,
@@ -112,23 +89,6 @@ function ContextSwitcherMenuContent({
         </>
       ) : null}
 
-      {/* The current context is never repeated inside its own group — Platform Administration is
-          already the trigger's own label, so there is nothing left to offer here besides the fact
-          that this identity also holds it (shown above). */}
-      {platformStaff && current.kind !== 'platform' ? (
-        <>
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">
-            Platform
-          </DropdownMenuLabel>
-          <DropdownMenuItem asChild>
-            <Link href="/platform">
-              <ShieldCheck /> Platform Administration
-            </Link>
-          </DropdownMenuItem>
-        </>
-      ) : null}
-
       <DropdownMenuSeparator />
       <DropdownMenuItem asChild>
         <Link href="/organizations?all=1">All businesses</Link>
@@ -137,17 +97,6 @@ function ContextSwitcherMenuContent({
   );
 }
 
-/**
- * WHERE the signed-in identity is currently operating — Business Context or Platform
- * Administration — rendered identically in both shells so that a caller holding both facts (D45)
- * never has to leave the header to move between them. Business Context and Platform
- * Administration remain two different navigation models (`ui-spec.md` §1, D23) — this component
- * is the one thing both render, not a merger of the two into one.
- *
- * The `Sidebar` trigger, for use inside a desktop/tablet sidebar header (`OrgSidebar`,
- * `AppSidebar`). `CompactContextSwitcher` below is the same menu content behind a trigger that
- * fits a phone header, where no sidebar is reachable at all.
- */
 export function ContextSwitcher({ mark, current, organizations, platformStaff }: SwitcherProps) {
   const view = deriveSwitcherView(current, organizations);
 
@@ -184,11 +133,6 @@ export function ContextSwitcher({ mark, current, organizations, platformStaff }:
   );
 }
 
-/**
- * The same menu, behind a trigger sized for a phone header rather than a `Sidebar` row — Business
- * Context's phone width, where `OrgNavBar` carries navigation instead of the permanent sidebar
- * and its switcher would otherwise be unreachable without typing a URL.
- */
 export function CompactContextSwitcher({ mark, current, organizations, platformStaff }: SwitcherProps) {
   const view = deriveSwitcherView(current, organizations);
 
@@ -199,7 +143,7 @@ export function CompactContextSwitcher({ mark, current, organizations, platformS
           type="button"
           tone="secondary"
           size="small"
-          aria-label={`Switch business — currently ${view.triggerName}`}
+          aria-label={`Switch business - currently ${view.triggerName}`}
           className="gap-1 px-2"
         >
           <span aria-hidden className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded">

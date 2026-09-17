@@ -41,8 +41,8 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
   // Platform authority and organization membership are two independent facts about one
   // identity (D45) — a staff member's memberships are never taken away, held elsewhere, or
   // hidden by this read. What this page decides is only which of an identity's true contexts it
-  // lands in *by default*: a real GOLD Internal membership outranks Platform Administration;
-  // staff without it still default to Platform. `resolveOrganizationsLanding` remains pure so
+  // lands in *by default*: a real GOLD Internal membership becomes the operating workspace;
+  // staff without it still default to the bootstrap-required Platform route. `resolveOrganizationsLanding` remains pure so
   // `landing.test.ts` can exercise every combination with no session and no database.
   const [staff, organizations] = await Promise.all([isPlatformStaff(db), listMyOrganizations(db)]);
   const preferredOrganization = await findGoldInternalOrganization(db, organizations);
@@ -54,7 +54,7 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
     GOLD Internal members enter that operating workspace; staff without it enter Platform.
 
     `?all=1` is what the shell's own *All businesses* link sends — the explicit request to see
-    every option, including Platform Administration itself. Without it, that link and this
+    every business option. Without it, that link and this
     redirect would bounce a caller straight back where they came from, which is worse than the
     page it replaces — so the chooser stays reachable deliberately rather than becoming
     unreachable by accident.
@@ -128,7 +128,7 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
             <Hint weight="subtle" className="mt-4">
               Not looking to found a business right now?{' '}
               <Link href="/platform" className="font-medium underline underline-offset-4">
-                Return to Platform Administration
+                Open Platform
               </Link>
               .
             </Hint>
@@ -155,9 +155,9 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
           {staff ? (
             <li className="flex items-baseline justify-between gap-4 py-3">
               <Link href="/platform" className="font-medium underline underline-offset-4">
-                Platform Administration
+                Platform
               </Link>
-              <span className="shrink-0 text-sm text-muted">GOLD staff</span>
+              <span className="shrink-0 text-sm text-muted">Global tools</span>
             </li>
           ) : null}
         </DividedList>

@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
  * business or Platform context they are currently operating in (D45) — this page belongs to
  * neither. It shares the one authenticated shell every context uses (`WorkspaceShell`) instead of
  * rendering as a standalone island outside it; `ContextSwitcher`, in its own sidebar, remains the
- * one way to move from here into a business or Platform Administration.
+ * one way to move from here into a business workspace.
  */
 export default async function AccountPage() {
   const db = await getDb();

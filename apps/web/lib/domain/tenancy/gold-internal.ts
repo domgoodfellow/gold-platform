@@ -29,3 +29,42 @@ export async function findGoldInternalOrganization(
   }
   return matches[0] ?? null;
 }
+
+export async function bootstrapGoldInternalWorkspace(
+  db: Db,
+  input: { organizationId: string },
+): Promise<string> {
+  const { data, error } = await db.rpc('bootstrap_gold_internal_workspace', {
+    p_organization_id: input.organizationId,
+  });
+
+  if (error) {
+    if (error.code === '42501') {
+      throw new DomainError(
+        'Only platform staff may initialize the GOLD operating workspace.',
+        'gold_internal.bootstrap_forbidden',
+      );
+    }
+    if (error.code === '23505') {
+      throw new DomainError(
+        'Another organization already has the current GOLD Internal Plan.',
+        'gold_internal.bootstrap_duplicate',
+      );
+    }
+    if (error.code === '23P01') {
+      throw new DomainError(
+        'That organization already has a conflicting current base Plan.',
+        'gold_internal.bootstrap_plan_conflict',
+      );
+    }
+    if (error.code === '23503') {
+      throw new DomainError(
+        'No such organization or GOLD Internal Plan.',
+        'gold_internal.bootstrap_not_found',
+      );
+    }
+    throw new DomainError(error.message, 'gold_internal.bootstrap_failed');
+  }
+
+  return data as string;
+}

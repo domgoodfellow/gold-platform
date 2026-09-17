@@ -2,11 +2,8 @@
 
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
-import { getPlan } from '@/lib/domain/catalogue/plans';
-import { currentPlanAssignment, recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
-import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
-import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import { isPlatformStaff } from '@/lib/domain/platform/tenants';
+import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { bootstrapGoldInternalWorkspace } from '@/lib/domain/tenancy/gold-internal';
 import { revalidatePath } from 'next/cache';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { recordProviderResource, setProviderResourceStatus } from '@/lib/domain/providers/bindings';
@@ -28,15 +25,6 @@ export async function recordPlanAssignmentAction(_: RecordPlanAssignmentState, f
 /** Explicit operator bootstrap: membership + no current plan + no existing GOLD workspace. */
 export async function initializeGoldWorkspaceAction(organizationId: string) {
   const db = await getDb();
-  const [staff, organizations, current] = await Promise.all([
-    isPlatformStaff(db), listMyOrganizations(db), currentPlanAssignment(db, { organizationId }),
-  ]);
-  if (!staff || !organizations.some((organization) => organization.id === organizationId)) throw new Error('Only a platform staff member who belongs to this organization may initialize GOLD.');
-  if (current) throw new Error('This organization already has a current base Plan and cannot be replaced automatically.');
-  if (await findGoldInternalOrganization(db, organizations)) throw new Error('A GOLD internal workspace already exists.');
-  const plan = await getPlan(db, 'gold_internal');
-  if (!plan || plan.billable || plan.kind !== 'plan') throw new Error('The required GOLD Internal Plan is unavailable.');
-  const today = new Date().toISOString().slice(0, 10);
-  await recordPlanAssignment(db, { organizationId, planId: plan.id, periodStart: today, periodEnd: '9999-12-31', note: 'GOLD internal operating workspace' });
+  await bootstrapGoldInternalWorkspace(db, { organizationId });
   redirect(`/organizations/${organizationId}`);
 }

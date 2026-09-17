@@ -19,7 +19,7 @@ function currentPlatformWorkspace(pathname: string): string {
   const match = [...PLATFORM_NAV]
     .sort((a, b) => b.href.length - a.href.length)
     .find((item) => item.href !== '/platform' && pathname.startsWith(item.href));
-  return match?.label ?? 'Platform Administration';
+  return match?.label ?? 'Platform';
 }
 
 /**
@@ -44,7 +44,7 @@ export function PlatformAgentRail({ canAnswer }: { canAnswer: boolean }) {
 
   const content = useMemo(() => {
     const contextItems = [
-      { title: 'Current scope', description: 'Platform Administration' },
+      { title: 'Current scope', description: 'GOLD' },
       { title: 'Current workspace', description: workspace },
       // A selected organization is additional context for a support/inspection workflow, never a
       // switch of scope — Platform Agent does not become that organization's Agent by this (rule

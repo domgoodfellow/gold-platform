@@ -859,14 +859,13 @@ opening line, not a defect in this one — see D43.
 ### D42 — GOLD dogfoods as an ordinary tenant (account split superseded by D45)
 
 **Current decision.** GOLD-the-business is a tenant with no exemption of any kind. One identity
-may simultaneously hold Platform Context authority and ordinary memberships, including
-membership in GOLD's own organization. The two contexts remain separate choices in the product,
-but D45 removed the historical two-account and re-login mechanism.
+may simultaneously hold platform authority and ordinary memberships, including membership in
+GOLD's own organization. Platform authority and organization membership are separate security
+facts, not separate visual applications.
 
 **Operating context.** GOLD's own organization is the canonical dogfood/operating workspace for
-GOLD staff who are actual members of it. Platform Administration is the control plane. An
-identity may hold both organization membership and platform authority; neither substitutes for
-the other.
+GOLD staff who are actual members of it. Global Platform tools are reached from that GOLD
+workspace when the actor also has platform authority. Neither fact substitutes for the other.
 
 **Why a tenant at all.** This file's own *Known defects* section already says GOLD dogfoods its
 own Organization Context exactly as any other business does, and that what GOLD's own use needs
@@ -1250,10 +1249,9 @@ this repository needs an indirection layer in front of its own domain calls, and
 with no real caller is exactly the "empty package" shape this file already refuses.
 
 **Subsequent UI convergence.** Teams remain deferred for the reason in `domain-model.md`.
-Both Organization Context and Platform Context now use `AppShell` over `@gold/ui`'s shadcn
-`SidebarProvider`/`Sidebar`. They deliberately supply separate navigation models, and the
-organization shell retains its phone bottom bar. `OrganizationSwitcher` lists the caller's
-organizations and Platform Administration when both contexts are available.
+Organization routes and `/platform/*` now use the same operator shell. GOLD staff operating in
+the canonical GOLD Internal organization see ordinary GOLD navigation plus a Platform section;
+customer organizations never receive that section.
 
 ---
 

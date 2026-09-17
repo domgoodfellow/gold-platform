@@ -162,6 +162,8 @@ export default async function OrganizationLayout({
             enabledModules={[...enabledModules]}
             featureAvailability={[...featureAvailability]}
             capabilities={organization.capabilities}
+            platformStaff={staff}
+            isGoldInternal={isGoldInternal}
           />
         }
         agent={

@@ -40,7 +40,7 @@ export function AccountSidebar({
         />
       </SidebarHeader>
       <SidebarContent className="p-3 group-data-[collapsible=icon]:hidden">
-        <Hint>Personal — not owned by any business or Platform Administration.</Hint>
+        <Hint>Personal — not owned by any business workspace.</Hint>
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
         <AccountMenu email={email} signOutAction={signOutAction} />

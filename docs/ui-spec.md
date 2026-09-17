@@ -33,15 +33,16 @@ paragraph in D23.
 | Operator shell | a business's own staff | full IA, three renderings (§2) | `app/organizations/[organizationId]/` |
 | Public booking | a stranger with no account | none — one linear flow | `app/(public)/book/[slug]/` |
 | Customer portal | one customer of one business | none — a single page of their own things | `app/(public)/portal/[token]/` |
-| Platform console | GOLD staff, who may also hold tenant memberships | platform administration IA in the shared Sidebar | `app/(platform)/platform/` |
+| Platform tools | GOLD staff operating from the GOLD Internal workspace | Platform section inside the ordinary GOLD sidebar | `app/(platform)/platform/` |
 | Auth | anybody | GOLD's own header and footer (`SiteShell`) | `app/(auth)/` |
 
 Three consequences that are easy to undo.
 
-**The operator and platform shells each have an information architecture.** The tenant model
-comes from `lib/navigation.ts`; the platform model comes from
-`features/platform/platform-navigation.tsx`. Public, portal and auth surfaces remain flows or
-single-purpose pages. A customer must never meet a business-configuration concept.
+**The operator shell has one workspace frame.** The tenant model comes from
+`lib/navigation.ts`; the global Platform section comes from
+`features/platform/platform-navigation.tsx` and appears only for platform staff inside GOLD
+Internal. Public, portal and auth surfaces remain flows or single-purpose pages. A customer must
+never meet a business-configuration concept or a Platform section.
 
 **`SiteShell` is GOLD's chrome and belongs on GOLD's pages only** — the front page and the four
 credential screens, which is why those two rows share a description above. It is a header saying

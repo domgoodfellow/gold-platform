@@ -19,7 +19,7 @@ import { foundBusiness } from './helpers/founding';
  * actually combine that way against real RLS, for identities built the way the product builds
  * them (`provisionOrganization`, `addMember`), not by hand.
  *
- * The locked product decision: platform staff default into Platform Administration regardless of
+ * The locked product decision: platform staff default into the GOLD operating workspace when initialized, regardless of
  * how many businesses they also belong to. Membership itself is untouched by this — `mixed one`
  * and `mixed multi` below both prove their real membership rows still exist and are still read —
  * only the *default landing* changed. `?all=1` (not exercised against real identities here;
@@ -239,7 +239,8 @@ describe('the routing decision stays where it can be tested', () => {
   });
 
   it('/platform still refuses a caller with no platform authority', () => {
-    expect(platformLayout).toMatch(/if\s*\(!\(await isPlatformStaff\(db\)\)\)\s*redirect\('\/organizations'\)/);
+    expect(platformLayout).toContain('const platformStaff = await isPlatformStaff(db)');
+    expect(platformLayout).toContain("if (!platformStaff) redirect('/organizations')");
   });
 });
 

@@ -22,8 +22,7 @@ const organizationLayout = readFileSync(
   `${WEB}/app/organizations/[organizationId]/layout.tsx`,
   'utf8',
 );
-const platformHeader = readFileSync(`${WEB}/features/platform/platform-header.tsx`, 'utf8');
-const platformShell = readFileSync(`${WEB}/features/platform/platform-shell.tsx`, 'utf8');
+const platformLayout = readFileSync(`${WEB}/app/(platform)/platform/layout.tsx`, 'utf8');
 const workspaceShell = readFileSync(`${WEB}/components/containers/workspace-shell.tsx`, 'utf8');
 const workspacePageChrome = readFileSync(
   `${WEB}/components/containers/workspace-page-chrome.tsx`,
@@ -118,31 +117,32 @@ describe('the Business phone header — compact controls wired to the right slot
   });
 });
 
-describe('the Platform header adapter', () => {
+describe('the Platform route uses the unified workspace shell', () => {
   it('no longer lives beside generic header markup, and delegates title/breadcrumb entirely to page chrome', () => {
     expect(existsSync(`${WEB}/components/site-header.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-header-title.tsx`)).toBe(false);
-    expect(platformHeader).not.toContain('usePlatformHeaderOverride');
+    expect(existsSync(`${WEB}/features/platform/platform-header.tsx`)).toBe(false);
+    expect(existsSync(`${WEB}/features/platform/platform-shell.tsx`)).toBe(false);
     // No pathname → title table — every Platform page registers its own via workspace-page-chrome.
-    expect(platformHeader).not.toContain('usePathname');
-    expect(platformHeader).toContain('WorkspaceHeader');
+    expect(platformLayout).toContain('WorkspaceHeader');
+    expect(platformLayout).toContain('OrgSidebar');
   });
 
   it('shows its trigger at every width — Platform has no phone bottom bar to hand navigation to instead', () => {
-    expect(platformHeader).toContain('navigationTrigger="always"');
+    expect(platformLayout).toContain('navigationTrigger="md"');
   });
 
   it('renders no compact context switcher of its own — Platform reaches it through the Sidebar header at every width', () => {
-    expect(platformHeader).not.toContain('ContextSwitcher');
+    expect(platformLayout).toContain('CompactContextSwitcher');
   });
 
-  it('is the header PlatformShell actually mounts', () => {
-    expect(platformShell).toContain('PlatformHeader');
-    expect(platformShell).not.toContain('SiteHeader');
+  it('uses the shared workspace header for platform routes', () => {
+    expect(platformLayout).toContain('PlatformTrail');
+    expect(platformLayout).not.toContain('SiteHeader');
   });
 
   it('mounts no bottom bar — Platform keeps its Sidebar Sheet rather than a copy of the Business bottom bar', () => {
-    expect(platformShell).not.toMatch(/bottomBar=/);
+    expect(platformLayout).toMatch(/bottomBar=\{/);
   });
 });
 

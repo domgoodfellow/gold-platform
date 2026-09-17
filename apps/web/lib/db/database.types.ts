@@ -6154,6 +6154,10 @@ export type Database = {
         }
         Returns: string
       }
+      bootstrap_gold_internal_workspace: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
       add_operating_hours: {
         Args: {
           p_closes_at: string

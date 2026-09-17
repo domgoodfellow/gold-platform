@@ -17,7 +17,7 @@ import { Button } from '@/components/controls/button';
 /**
  * The truthful, shared person/session menu, one implementation for every shell's sidebar footer.
  * Represents the PERSON, not where they are operating — cross-context navigation (switching
- * business, entering Platform Administration) is `ContextSwitcher`'s job alone.
+ * business) is `ContextSwitcher`'s job alone.
  */
 
 type AccountMenuProps = {
@@ -38,7 +38,7 @@ function AccountMenuContent({ email, signOutAction }: AccountMenuProps) {
   );
 }
 
-/** The `Sidebar`-footer trigger, for use inside a desktop/tablet sidebar (`OrgSidebar`, `AppSidebar`). */
+/** The `Sidebar`-footer trigger, for use inside a desktop/tablet sidebar. */
 export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
   const { isMobile } = useSidebar();
 
