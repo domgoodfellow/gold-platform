@@ -17,6 +17,13 @@ describe('GOLD Internal operating context composition', () => {
     expect(helper).toContain('multiple_organizations');
   });
 
+  it('resolves GOLD only from the caller membership list and the gold_internal plan key', () => {
+    expect(helper).toContain('findGoldInternalOrganization');
+    expect(helper).toContain('for (const organization of organizations)');
+    expect(helper).toContain("plan?.key === 'gold_internal'");
+    expect(helper).not.toContain("organization.name === 'GOLD'");
+  });
+
   it('passes a server-resolved internal-workspace fact into the organization sidebar', () => {
     expect(layout).toContain('findGoldInternalOrganization');
     expect(layout).toContain('isGoldInternal={isGoldInternal}');

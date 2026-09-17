@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import { Card } from '@/components/containers/card';
 import { CompactAccountMenu } from '@/components/containers/account-menu';
 import { CompactContextSwitcher } from '@/components/containers/context-switcher';
 import { WorkspaceHeader } from '@/components/containers/workspace-header';
@@ -18,7 +17,7 @@ import {
   organizationResolvedFeatureStates,
 } from '@/lib/domain/catalogue/organization-plans';
 import { requireActor } from '@/lib/domain/tenancy/actor';
-import { bootstrapGoldInternalWorkspace, findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
+import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import {
   OrgNavBar,
@@ -27,7 +26,6 @@ import {
   SetupBadge,
   SetupEntry,
 } from '@/app/organizations/[organizationId]/org-shell';
-import { GoldBootstrapForm, type BootstrapState } from './gold-bootstrap-form';
 
 export default async function PlatformLayout({ children }: LayoutProps<'/platform'>) {
   const db = await getDb();
@@ -54,33 +52,14 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
     redirect('/login');
   }
 
-  async function bootstrapAction(_state: BootstrapState, formData: FormData): Promise<BootstrapState> {
-    'use server';
-    const actionDb = await getDb();
-    const organizationId = String(formData.get('organizationId') ?? '').trim();
-    try {
-      await bootstrapGoldInternalWorkspace(actionDb, { organizationId });
-    } catch (error) {
-      if (error instanceof DomainError) return { error: error.message };
-      throw error;
-    }
-    redirect('/platform');
-  }
-
   if (!goldInternal) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-background p-6">
-        <Card className="w-full max-w-lg space-y-4">
-          <div className="space-y-2">
-            <h1 className="text-lg font-semibold">GOLD operating workspace must be initialized.</h1>
-            <p className="text-sm text-muted">
-              Platform authority is present, but this account does not yet have a real membership
-              in the canonical GOLD Internal organization.
-            </p>
-          </div>
-          <GoldBootstrapForm action={bootstrapAction} />
-        </Card>
-      </main>
+    console.error('GOLD Internal workspace invariant is not satisfied for platform route.', {
+      platformStaff,
+      membershipOrganizationIds: myOrganizations.map((organization) => organization.id),
+    });
+    throw new DomainError(
+      'GOLD Internal workspace is not configured for this platform operator.',
+      'gold_internal.configuration_required',
     );
   }
 

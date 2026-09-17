@@ -3,7 +3,7 @@
 -- must hold both. This function targets an explicit organization id and never identifies GOLD
 -- by name.
 
-create function public.bootstrap_gold_internal_workspace(
+create or replace function public.bootstrap_gold_internal_workspace(
   p_organization_id uuid
 )
 returns uuid
@@ -20,35 +20,6 @@ declare
   v_role uuid;
   v_membership uuid;
   v_display_name text;
-  v_all_capabilities text[] := array[
-    'customer.create',
-    'customer.update',
-    'role.manage',
-    'field.manage',
-    'location.create',
-    'resource.create',
-    'work_item.create',
-    'asset.create',
-    'document.create',
-    'work_item.transition',
-    'work_item.schedule',
-    'work_item.record',
-    'organization.manage',
-    'price.manage',
-    'work_item.price',
-    'work_item.update',
-    'invoice.issue',
-    'payment.record',
-    'automation.manage',
-    'configuration.propose',
-    'assistant.ask',
-    'report.read',
-    'report.manage',
-    'call.place',
-    'integration.manage',
-    'feature.manage',
-    'billing.manage'
-  ];
 begin
   perform app.require_platform_staff();
 
@@ -117,12 +88,8 @@ begin
 
   if v_role is null then
     insert into public.roles (organization_id, name, capabilities, created_by)
-    values (p_organization_id, 'Admin', v_all_capabilities, v_actor)
+    values (p_organization_id, 'Admin', '{}'::text[], v_actor)
     returning id into v_role;
-  else
-    update public.roles
-       set capabilities = v_all_capabilities
-     where id = v_role;
   end if;
 
   select coalesce(nullif(btrim(u.email), ''), 'GOLD staff') into v_display_name

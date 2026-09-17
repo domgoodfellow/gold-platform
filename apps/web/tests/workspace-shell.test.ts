@@ -123,9 +123,25 @@ describe('the Platform route uses the unified workspace shell', () => {
     expect(existsSync(`${WEB}/features/platform/platform-header-title.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-header.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-shell.tsx`)).toBe(false);
+    expect(existsSync(`${WEB}/app/(platform)/platform/gold-bootstrap-form.tsx`)).toBe(false);
     // No pathname → title table — every Platform page registers its own via workspace-page-chrome.
     expect(platformLayout).toContain('WorkspaceHeader');
     expect(platformLayout).toContain('OrgSidebar');
+  });
+
+  it('does not expose GOLD bootstrap as product UI', () => {
+    expect(platformLayout).not.toContain('GoldBootstrapForm');
+    expect(platformLayout).not.toContain('bootstrapAction');
+    expect(platformLayout).not.toContain('GOLD operating workspace must be initialized');
+    expect(platformLayout).not.toContain('GOLD organization ID');
+    expect(platformLayout).not.toContain('Initialize GOLD workspace');
+  });
+
+  it('fails a missing GOLD invariant as server configuration, without a UUID form', () => {
+    expect(platformLayout).toContain('gold_internal.configuration_required');
+    expect(platformLayout).toContain('console.error');
+    expect(platformLayout).toContain('membershipOrganizationIds');
+    expect(platformLayout).not.toContain('<form');
   });
 
   it('shows its trigger at every width — Platform has no phone bottom bar to hand navigation to instead', () => {
