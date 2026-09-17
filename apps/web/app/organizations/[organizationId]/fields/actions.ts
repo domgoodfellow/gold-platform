@@ -16,7 +16,7 @@ function optionsFromFormData(formData: FormData): string[] {
   return raw.split(/\r?\n/);
 }
 
-export type CreateFieldState = { error: string | null };
+export type CreateFieldState = { error: string | null; created: boolean };
 
 /** Fields also rendered on the Work workspace's own Configure rail need that route revalidated too, or an edit made there would show stale until the next unrelated navigation. */
 function revalidateFieldSurfaces(organizationId: string, entityType: string) {
@@ -47,7 +47,7 @@ export async function createFieldAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message };
+      return { error: error.message, created: false };
     }
     throw error;
   }
@@ -56,10 +56,10 @@ export async function createFieldAction(
   // re-checked here — `field_definitions_insert` requires membership and `field.manage`, so
   // tampering produces a refusal rather than a leak.
   revalidateFieldSurfaces(organizationId, entityType);
-  return { error: null };
+  return { error: null, created: true };
 }
 
-export type UpdateFieldState = { error: string | null };
+export type UpdateFieldState = { error: string | null; updated: boolean };
 
 /** No writable `kind` or `key` — the column grant refuses both to every caller. `kind` is still read, so a value naming no kind fails with a sentence rather than a type assertion. */
 export async function updateFieldAction(
@@ -71,7 +71,7 @@ export async function updateFieldAction(
   const kind = String(formData.get('kind') ?? '');
 
   if (!isKind(kind)) {
-    return { error: `Not a field type: ${kind}.` };
+    return { error: `Not a field type: ${kind}.`, updated: false };
   }
 
   try {
@@ -85,11 +85,11 @@ export async function updateFieldAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message };
+      return { error: error.message, updated: false };
     }
     throw error;
   }
 
   revalidateFieldSurfaces(organizationId, String(formData.get('entityType') ?? ''));
-  return { error: null };
+  return { error: null, updated: true };
 }

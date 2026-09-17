@@ -121,7 +121,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     expect(detail).toContain('RuleActivity');
   });
 
-  it('/fields is canonical and renders the shared cross-entity fields component', () => {
+  it('/fields is canonical and renders the shared, entity-scoped fields component', () => {
     const page = readFileSync(`${ROUTES}/fields/page.tsx`, 'utf8');
     expect(page).toContain('EntityFieldsConfiguration');
     expect(page).not.toContain('redirect(');
@@ -130,7 +130,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
         fileURLToPath(new URL('../features/fields/entity-fields-configuration.tsx', import.meta.url)),
         'utf8',
       ),
-    ).toContain('CreateFieldForm');
+    ).toContain('CreateFieldSheet');
   });
 
   it('/roles is canonical and renders the Team workspace — Members, Invitations and Roles as URL-backed sibling views', () => {

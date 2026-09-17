@@ -1,12 +1,9 @@
 'use client';
 
-import { SectionHeading } from '@/components/containers/section';
 import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import {
-  CUSTOM_FIELD_ENTITIES,
-  CUSTOM_FIELD_ENTITY_LABELS,
   FIELD_KINDS,
   FIELD_KIND_LABELS,
   offersOptions,
@@ -21,8 +18,8 @@ import {
   type UpdateFieldState,
 } from './actions';
 
-const INITIAL: CreateFieldState = { error: null };
-const EDIT_INITIAL: UpdateFieldState = { error: null };
+const INITIAL: CreateFieldState = { error: null, created: false };
+const EDIT_INITIAL: UpdateFieldState = { error: null, updated: false };
 
 /**
  * The choices, one per line.
@@ -35,7 +32,7 @@ const EDIT_INITIAL: UpdateFieldState = { error: null };
  * The order somebody types is the order the dropdown offers, because `options` is an array and
  * arrays keep their order. That is the same promise `position` makes about the form itself.
  */
-function OptionsInput({ name, defaultValue }: { name: string; defaultValue?: string[] }) {
+export function OptionsInput({ name, defaultValue }: { name: string; defaultValue?: string[] }) {
   return (
     <div className="flex flex-col gap-1">
       <TextArea
@@ -56,12 +53,14 @@ function OptionsInput({ name, defaultValue }: { name: string; defaultValue?: str
 export function CreateFieldForm({
   organizationId,
   entityType,
+  onCreated,
 }: {
   organizationId: string;
   /** Locks the field to one entity — used where a scoped configuration surface (e.g. Work's
    * Fields tab) must not let someone define a field on a different entity from inside it. Left
    * undefined for the general, cross-entity Settings surface, which still offers the choice. */
-  entityType?: CustomFieldEntity;
+  entityType: CustomFieldEntity;
+  onCreated?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createFieldAction, INITIAL);
   // The one piece of state on this screen, and it buys one thing: the choices box appears when
@@ -69,30 +68,16 @@ export function CreateFieldForm({
   // think about choices while defining a number.
   const [kind, setKind] = useState<FieldKind>('text');
 
+  useEffect(() => {
+    if (state.created) onCreated?.();
+  }, [state.created, onCreated]);
+
   return (
-    <form action={formAction} className="mt-8 flex flex-col gap-3">
+    <form action={formAction} className="flex flex-col gap-4 px-4 pb-4">
       <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="entityType" value={entityType} />
 
-      <SectionHeading>New field</SectionHeading>
-
-      {entityType ? (
-        <input type="hidden" name="entityType" value={entityType} />
-      ) : (
-        <SelectInput
-          name="entityType"
-          defaultValue="customer"
-          aria-label="Applies to"
-          className="w-fit"
-        >
-          {CUSTOM_FIELD_ENTITIES.map((entity) => (
-            <option key={entity} value={entity}>
-              {CUSTOM_FIELD_ENTITY_LABELS[entity]}
-            </option>
-          ))}
-        </SelectInput>
-      )}
-
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-3">
         <TextInput
           name="label"
           type="text"
@@ -169,11 +154,17 @@ export function CreateFieldForm({
 export function EditFieldForm({
   organizationId,
   definition,
+  onUpdated,
 }: {
   organizationId: string;
   definition: FieldDefinition;
+  onUpdated?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(updateFieldAction, EDIT_INITIAL);
+
+  useEffect(() => {
+    if (state.updated) onUpdated?.();
+  }, [state.updated, onUpdated]);
 
   return (
     <form action={formAction} className="flex flex-wrap items-center gap-2 py-2">

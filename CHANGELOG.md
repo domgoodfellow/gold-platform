@@ -5,6 +5,14 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Custom fields becomes an entity-scoped workspace
+
+`/organizations/[organizationId]/fields` now uses URL-backed entity tabs (Customers, Locations,
+Resources, Work items, Assets) and loads only the active registry. Each tab shows a compact field
+collection; creating and editing happen in responsive Sheets, with immutable field identity shown
+as metadata rather than editable inputs. Existing field actions, validation, authorization and
+revalidation behavior remain unchanged.
+
 ### Team workspace gains URL-backed views and Sheets
 
 `/organizations/[organizationId]/roles` is unchanged as a route; its user-facing label is now

@@ -142,6 +142,13 @@ invitation goes through the shared destructive confirmation dialog. A role's cap
 edited in `CreateRoleSheet`/`EditRoleSheet`, both sharing one `CapabilitySelector`; the Roles
 collection itself shows only a permission count, never every capability expanded as a badge.
 
+**Custom fields is one URL-backed workspace, not five stacked configuration forms.**
+`/organizations/[organizationId]/fields` shows one entity at a time — Customers, Locations,
+Resources, Work items, or Assets — selected by `?entity=` with Customers as the fallback. The
+active entity's compact registry shows each field's label/key, type and required state. New and
+Edit field flows use responsive Sheets; the edit Sheet presents key, type and entity as immutable
+metadata while only label, required state, position and choices (where applicable) are editable.
+
 **The phone bar does not collapse into a drawer or a "More" menu.** A drawer needs state, a
 toggle, a focus trap and an escape key to be correct; a "More" menu would be a second place an
 area could live.

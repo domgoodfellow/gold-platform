@@ -1,8 +1,13 @@
-import { DividedList, EmptyState } from '@/components/containers/section';
+import { DataTable } from '@/components/display/table';
 import { Hint } from '@/components/controls/inputs';
-import { ItemDescription } from '@gold/ui/components/item';
-import { CreateFieldForm, EditFieldForm } from '@/app/organizations/[organizationId]/fields/create-field-form';
-import type { CustomFieldEntity, FieldDefinition } from '@/lib/domain/fields/field-definitions';
+import {
+  CUSTOM_FIELD_ENTITY_LABELS,
+  FIELD_KIND_LABELS,
+  type CustomFieldEntity,
+  type FieldDefinition,
+} from '@/lib/domain/fields/field-definitions';
+import { CreateFieldSheet } from '@/app/organizations/[organizationId]/fields/create-field-sheet';
+import { EditFieldSheet } from '@/app/organizations/[organizationId]/fields/edit-field-sheet';
 
 export type EntityFieldsConfigurationData = {
   organizationId: string;
@@ -26,33 +31,49 @@ export function EntityFieldsConfiguration({
   mayConfigure,
   definitions,
 }: EntityFieldsConfigurationData) {
+  const create = mayConfigure ? (
+    <CreateFieldSheet organizationId={organizationId} entityType={entityType} />
+  ) : undefined;
+
   return (
     <div>
-      {definitions.length === 0 ? (
-        <EmptyState>
-          No custom fields yet. Anything you define here appears on this entity&rsquo;s form.
-        </EmptyState>
-      ) : (
-        <DividedList>
-          {definitions.map((definition) => (
-            <li key={definition.id}>
-              {mayConfigure ? (
-                <EditFieldForm organizationId={organizationId} definition={definition} />
-              ) : (
-                <div className="py-3">
-                  <div className="text-sm font-medium">{definition.label}</div>
-                  <ItemDescription>{definition.key}</ItemDescription>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Hint weight="subtle">
+          {definitions.length} {definitions.length === 1 ? 'field' : 'fields'} configured.
+        </Hint>
+        {create}
+      </div>
+      <div className="mt-4">
+        <DataTable
+          rows={definitions}
+          rowKey={(definition) => definition.id}
+          empty={`No custom fields for ${CUSTOM_FIELD_ENTITY_LABELS[entityType]} yet.`}
+          emptyAction={create}
+          columns={[
+            {
+              key: 'field',
+              header: 'Field',
+              emphasis: 'primary',
+              cell: (definition) => (
+                <div>
+                  <div>{definition.label}</div>
+                  <code className="text-xs text-subtle">{definition.key}</code>
                 </div>
-              )}
-            </li>
-          ))}
-        </DividedList>
-      )}
-      {mayConfigure ? (
-        <CreateFieldForm organizationId={organizationId} entityType={entityType} />
-      ) : (
+              ),
+            },
+            { key: 'type', header: 'Type', cell: (definition) => FIELD_KIND_LABELS[definition.kind] },
+            { key: 'required', header: 'Required', cell: (definition) => (definition.required ? 'Yes' : 'No') },
+          ]}
+          actions={
+            mayConfigure
+              ? (definition) => <EditFieldSheet organizationId={organizationId} definition={definition} />
+              : undefined
+          }
+        />
+      </div>
+      {!mayConfigure ? (
         <Hint className="mt-4">Your role, {role}, cannot define fields here.</Hint>
-      )}
+      ) : null}
     </div>
   );
 }
