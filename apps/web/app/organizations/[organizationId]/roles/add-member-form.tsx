@@ -2,20 +2,27 @@
 
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { addMemberAction, type AddMemberState } from './actions';
 
-const INITIAL: AddMemberState = { error: null };
+const INITIAL: AddMemberState = { error: null, created: false };
 
 export function AddMemberForm({
   organizationId,
   roles,
+  onAdded,
 }: {
   organizationId: string;
   roles: Role[];
+  /** Called once the write succeeds — the Add Member Sheet uses this to close itself. */
+  onAdded?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(addMemberAction, INITIAL);
+
+  useEffect(() => {
+    if (state.created) onAdded?.();
+  }, [state.created, onAdded]);
 
   if (roles.length === 0) {
     return <Hint className="mt-4">Create a role before adding people.</Hint>;

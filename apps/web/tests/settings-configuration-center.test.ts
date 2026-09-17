@@ -60,7 +60,7 @@ describe('Settings, as the Configuration Center (source scan)', () => {
     }
   });
 
-  it('does not list Pricing, Automations, Custom fields or People and roles — each is a canonical sidebar workspace, not a Settings destination', () => {
+  it('does not list Pricing, Automations, Custom fields or Team — each is a canonical sidebar workspace, not a Settings destination', () => {
     for (const label of ['People & access', 'Data & automation', 'Business commerce']) {
       expect(navigation, `${label} should no longer be a Settings destination`).not.toContain(`label: '${label}'`);
     }
@@ -95,7 +95,7 @@ describe('Settings, as the Configuration Center (source scan)', () => {
  * the content that had accreted under Settings while it was one, and each old Settings route now
  * only a compatibility redirect.
  */
-describe('Pricing, Automations, Custom fields and People and roles are canonical, not Settings sub-routes', () => {
+describe('Pricing, Automations, Custom fields and Team are canonical, not Settings sub-routes', () => {
   it('/pricing is canonical and renders both the price book and, when connected, Getting paid', () => {
     const page = readFileSync(`${ROUTES}/pricing/page.tsx`, 'utf8');
     expect(page).toContain('CreatePriceItemForm');
@@ -133,15 +133,28 @@ describe('Pricing, Automations, Custom fields and People and roles are canonical
     ).toContain('CreateFieldForm');
   });
 
-  it('/roles is canonical and renders the current People UI — Members, Invitations, Roles & permissions', () => {
+  it('/roles is canonical and renders the Team workspace — Members, Invitations and Roles as URL-backed sibling views', () => {
     const page = readFileSync(`${ROUTES}/roles/page.tsx`, 'utf8');
-    expect(page).toContain('AddMemberForm');
-    expect(page).toContain('InviteMemberForm');
-    expect(page).toContain('PendingInvitations');
-    expect(page).toContain('RoleAssignmentControl');
-    expect(page).toContain('CreateRoleForm');
-    expect(page).toContain('EditRoleSheet');
+    expect(page).toContain('TeamViewTabs');
+    expect(page).toContain('AddMemberSheetProvider');
+    expect(page).toContain('MembersTable');
+    expect(page).toContain('InvitationsTable');
+    expect(page).toContain('RolesTable');
+    expect(page).toContain('CreateRoleSheet');
     expect(page).not.toContain('redirect(');
+    expect(page).not.toContain('CreateRoleForm');
+    expect(page).not.toContain('./pending-invitations');
+    expect(page).not.toContain('<PendingInvitations');
+
+    const membersTable = readFileSync(`${ROUTES}/roles/members-table.tsx`, 'utf8');
+    expect(membersTable).toContain('RoleAssignmentControl');
+
+    const addMemberSheet = readFileSync(`${ROUTES}/roles/add-member-sheet.tsx`, 'utf8');
+    expect(addMemberSheet).toContain('AddMemberForm');
+    expect(addMemberSheet).toContain('InviteMemberForm');
+
+    const rolesTable = readFileSync(`${ROUTES}/roles/roles-table.tsx`, 'utf8');
+    expect(rolesTable).toContain('EditRoleSheet');
   });
 
   it('sends every retired Settings sub-route to its new canonical home, never a dead end', () => {

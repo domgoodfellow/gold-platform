@@ -581,13 +581,13 @@ describe('a switch leads to its inputs', () => {
 });
 
 /**
- * Pricing, Automations, Custom fields and People and roles are first-class organization
+ * Pricing, Automations, Custom fields and Team are first-class organization
  * workspaces, each with one canonical sidebar Area — the information-architecture correction
  * that reversed a Settings migration which had made Settings the primary door to all four
  * (`CLAUDE.md`: "Settings must not become a second application shell containing first-class
  * organization workspaces").
  */
-describe('Pricing, Automations, Custom fields and People and roles are canonical sidebar areas', () => {
+describe('Pricing, Automations, Custom fields and Team are canonical sidebar areas', () => {
   const RESTORED = ['pricing', 'automations', 'fields', 'roles'] as const;
 
   it('is a real, directly addressable area with its href and capability gating unchanged, and no longer hidden behind Settings', () => {
@@ -606,7 +606,7 @@ describe('Pricing, Automations, Custom fields and People and roles are canonical
       .map((area) => area.segment)).toContain('pricing');
     expect(areasIn('configuration', new Set(['automations']), new Set(['automation.manage']))
       .map((area) => area.segment)).toContain('automations');
-    // Custom fields and People and roles name no module — the kernel gate, not a switch.
+    // Custom fields and Team name no module — the kernel gate, not a switch.
     expect(areasIn('configuration', new Set(), new Set(['field.manage']))
       .map((area) => area.segment)).toContain('fields');
     expect(areasIn('configuration', new Set(), new Set(['role.manage']))
@@ -618,6 +618,23 @@ describe('Pricing, Automations, Custom fields and People and roles are canonical
       .map((area) => area.segment)).not.toContain('fields');
     expect(areasIn('configuration', new Set(), new Set())
       .map((area) => area.segment)).not.toContain('roles');
+  });
+});
+
+/**
+ * The Team workspace recomposition renamed only the user-facing noun — "People and roles" reads
+ * as three separate nouns for one workspace; `roles` was already this Area's canonical route and
+ * stays it (`CLAUDE.md`: the route is not renamed in this slice). Everything else about the Area
+ * — segment, group, capability gating — is untouched.
+ */
+describe('the roles Area reads as Team', () => {
+  it('keeps its segment, route and capability gating, and only the label changes', () => {
+    const area = AREAS.find((entry) => entry.segment === 'roles');
+    expect(area?.label).toBe('Team');
+    expect(area?.segment).toBe('roles');
+    expect(area?.group).toBe('configuration');
+    expect(area?.relevantCapabilities).toEqual(['role.manage']);
+    expect(areaHref('org-1', 'roles')).toBe('/organizations/org-1/roles');
   });
 });
 

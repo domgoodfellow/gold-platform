@@ -224,7 +224,7 @@ export type Area = {
    * addressable page — it simply is not one of the permanent rows a business scans every day
    * (Guided setup alone, while `operationalState === 'setup'` gives it its own elevated
    * treatment instead). A product capability with its own canonical workspace — Pricing,
-   * Automations, Custom fields, People and roles — belongs in the sidebar; Settings is one
+   * Automations, Custom fields, Team — belongs in the sidebar; Settings is one
    * organization Area among these, never a second door to one of them (`CLAUDE.md`). Absent
    * (the default) means shown, same as before this field existed.
    */
@@ -284,7 +284,7 @@ export const AREAS: readonly Area[] = [
   { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing', relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
   { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
   { segment: 'fields', label: 'Custom fields', group: 'configuration', relevantCapabilities: ['field.manage'] },
-  { segment: 'roles', label: 'People and roles', group: 'configuration', relevantCapabilities: ['role.manage'] },
+  { segment: 'roles', label: 'Team', group: 'configuration', relevantCapabilities: ['role.manage'] },
   // `sidebar: false`: Business Setup is implementation infrastructure, not a permanent tenant
   // area (Product Contract, Slice 1/3). While a business is in SETUP it already has its own
   // elevated shell treatment (`SetupEntry`/`SetupBadge` in `layout.tsx`) — a second, equal-weight

@@ -10,9 +10,8 @@ import { inviteMemberAction, type InviteMemberState } from './actions';
 const INITIAL: InviteMemberState = { error: null, link: null };
 
 /**
- * `ui-spec.md` §5 reserves `Dialog` for confirmation and destructive actions only — a small
- * form belongs in a `Disclosure` instead, the same as `AddMemberForm` right beside it. `page.tsx`
- * owns that wrapping, so this renders only the form itself.
+ * The shared Add Member Sheet owns the bounded creation surface; this component owns only the
+ * invite-by-email operation, including its post-success copyable-link state.
  */
 export function InviteMemberForm({
   organizationId,

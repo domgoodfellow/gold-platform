@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, TextInput } from '@/components/controls/inputs';
+import { ErrorText } from '@/components/controls/inputs';
 import {
   Sheet,
   SheetContent,
@@ -13,9 +13,9 @@ import {
   SheetTrigger,
 } from '@gold/ui/components/sheet';
 import { useIsMobile } from '@gold/ui/hooks/use-mobile';
-import { CapabilitySelector } from '@/features/tenancy/capability-selector';
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { updateRoleAction, type UpdateRoleState } from './actions';
+import { RoleEditorFields } from './role-editor-fields';
 
 const INITIAL: UpdateRoleState = { error: null };
 
@@ -47,16 +47,8 @@ export function EditRoleSheet({ organizationId, role }: { organizationId: string
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="roleId" value={role.id} />
 
-          <TextInput
-            name="name"
-            type="text"
-            required
-            maxLength={64}
-            defaultValue={role.name}
-            aria-label="Role name"
-          />
-
-          <CapabilitySelector
+          <RoleEditorFields
+            defaultName={role.name}
             selected={new Set(role.capabilities)}
             idPrefix={`edit-role-${role.id}`}
           />

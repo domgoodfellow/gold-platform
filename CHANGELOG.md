@@ -5,6 +5,32 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Team workspace gains URL-backed views and Sheets
+
+`/organizations/[organizationId]/roles` is unchanged as a route; its user-facing label is now
+"Team" rather than "People and roles". The page itself is recomposed the way Automations was:
+three URL-backed sibling views (`?view=members|invitations|roles`, Members the default) instead
+of two inline Disclosure forms ("Add somebody", "Invite by email") and a full capability
+checklist ("Add a role") all expanding above the collection they belonged to.
+
+- Members and Invitations both reach one `AddMemberSheetProvider`/`AddMemberTrigger` — a single
+  responsive Sheet holding both existing operations (invite by email, add an existing account) as
+  a segmented choice, defaulting to invite-by-email every time it opens. Both operations still go
+  through their existing domain writes (`inviteMember`, `addMember`) and existing forms
+  (`InviteMemberForm`, `AddMemberForm`) unchanged; the invite path still shows the generated,
+  copyable invitation link before the caller closes the Sheet.
+- Members and Roles are now compact `DataTable` collections rather than an always-expanded form
+  per row. Role assignment stays inline (`RoleAssignmentControl`, unchanged). The Roles table
+  shows a neutral permission count ("18 permissions", "No permissions") instead of every
+  capability rendered as a badge; the detail moves into `CreateRoleSheet`/`EditRoleSheet`, which
+  now share `RoleEditorFields` rather than duplicating the name field and `CapabilitySelector`
+  wiring.
+- Invitations revokes through the shared `ConfirmSubmit` destructive-confirmation dialog instead
+  of a bare submit button, reusing the existing `revokeInvitationAction`/`revokeInvitation`.
+- `create-role-form.tsx` and `pending-invitations.tsx` are retired in favor of `CreateRoleSheet`
+  and `InvitationsTable`/`RevokeInvitationDialog`. No domain, RLS, or capability change; `role.manage`
+  remains the sole authority, checked in the database exactly as before.
+
 ### Automations is recomposed as a collection with a detail route
 
 `/automations` used to render every rule as one complete, always-open `AutomationRuleCard` —

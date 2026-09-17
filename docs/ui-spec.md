@@ -107,7 +107,7 @@ operator does.
 |---|---|---|
 | Operations | Today, Work, Schedule, Resources, Ask, Reports | The loop that gets work done, and what it came to |
 | Records | Customers, Calls, Locations, Assets | Who the work is for and what it is done to — entities rather than activities |
-| Configuration | Pricing, Automations, Custom fields, People and roles, Guided setup, Settings | What a business sets up once and adjusts rarely |
+| Configuration | Pricing, Automations, Custom fields, Team, Guided setup, Settings | What a business sets up once and adjusts rarely |
 
 A section whose every area belongs to a switched-off module renders as nothing at all, heading
 included — naming a part of the application that is not there for that business would be worse
@@ -115,7 +115,7 @@ than the gap.
 
 **Settings is one organization Area, not a second application shell.** A first-class product
 workspace has one canonical owner and is not repeated as a Settings destination — Pricing,
-Automations, Custom fields and People and roles each own their own row in this table, not a tab
+Automations, Custom fields and Team each own their own row in this table, not a tab
 or a section under Settings. Settings holds what has no other home: identity, branding, opening
 hours, connections, and the platform-billing plane (`features/settings/settings-navigation.tsx`).
 
@@ -128,6 +128,19 @@ the domain layer refuses to change it after creation), IF (its conditions), THEN
 then its own recent activity. Creating a rule, adding a condition or action, and writing or
 editing a message are each bounded enough for a Sheet; deleting a rule goes through the shared
 confirmation dialog and says plainly that its runs stay recorded after it is gone.
+
+**Team is the user-facing noun for the `roles` Area — the route and the domain nouns stay what
+they are.** `/organizations/[organizationId]/roles` is unchanged; the label a caller reads in the
+sidebar and the page heading is "Team" rather than "People and roles". Its own workspace holds
+three URL-backed sibling views — Members, Invitations, Roles (`?view=`, Tabs presentation, Members
+the default). Members and Roles are the two collections a Sheet full of inline forms used to sit
+above; adding a member, whether by inviting an email address or adding an existing account, is one
+Add Member Sheet reused from both Members and Invitations, defaulting to invite-by-email because
+that works whether or not the person already has a GOLD account — the two remain the domain
+layer's two distinct writes, chosen with a segmented control, never merged. Revoking a pending
+invitation goes through the shared destructive confirmation dialog. A role's capabilities are
+edited in `CreateRoleSheet`/`EditRoleSheet`, both sharing one `CapabilitySelector`; the Roles
+collection itself shows only a permission count, never every capability expanded as a badge.
 
 **The phone bar does not collapse into a drawer or a "More" menu.** A drawer needs state, a
 toggle, a focus trap and an escape key to be correct; a "More" menu would be a second place an

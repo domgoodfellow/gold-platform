@@ -10,7 +10,7 @@ import { inviteMember, revokeInvitation } from '@/lib/domain/tenancy/invitations
 import { assignRole, createRole, updateRoleCapabilities } from '@/lib/domain/tenancy/roles';
 import { requestOrigin } from '@/lib/route/origin';
 
-export type CreateRoleState = { error: string | null };
+export type CreateRoleState = { error: string | null; created: boolean };
 
 export async function createRoleAction(
   _previous: CreateRoleState,
@@ -28,13 +28,13 @@ export async function createRoleAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message };
+      return { error: error.message, created: false };
     }
     throw error;
   }
 
   revalidatePath(`/organizations/${organizationId}/roles`);
-  return { error: null };
+  return { error: null, created: true };
 }
 
 export type UpdateRoleState = { error: string | null };
@@ -63,7 +63,7 @@ export async function updateRoleAction(
   return { error: null };
 }
 
-export type AddMemberState = { error: string | null };
+export type AddMemberState = { error: string | null; created: boolean };
 
 export async function addMemberAction(
   _previous: AddMemberState,
@@ -84,13 +84,13 @@ export async function addMemberAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message };
+      return { error: error.message, created: false };
     }
     throw error;
   }
 
   revalidatePath(`/organizations/${organizationId}/roles`);
-  return { error: null };
+  return { error: null, created: true };
 }
 
 export type InviteMemberState = { error: string | null; link: string | null };
