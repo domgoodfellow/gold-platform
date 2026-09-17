@@ -13,19 +13,8 @@ import { recordProviderResource, setProviderResourceStatus } from '@/lib/domain/
 import { provisionTelephonySubaccount } from '@/lib/domain/providers/twilio-provisioning';
 import { endSupportSession, startSupportSession } from '@/lib/domain/platform/support';
 import { TELEPHONY_RESOURCE_TYPES, telephonyProviderKey } from '@/lib/adapters/telephony';
+import type { ProvisionTwilioState, RegisterResourceState, SetResourceStatusState, SupportSessionState, RecordTermState, RecordPlanAssignmentState } from './action-states';
 
-export type ProvisionTwilioState = { error: string | null; provisioned: boolean };
-export const PROVISION_TWILIO_INITIAL: ProvisionTwilioState = { error: null, provisioned: false };
-export type RegisterResourceState = { error: string | null; recorded: boolean };
-export const REGISTER_RESOURCE_INITIAL: RegisterResourceState = { error: null, recorded: false };
-export type SetResourceStatusState = RegisterResourceState;
-export const SET_RESOURCE_STATUS_INITIAL: SetResourceStatusState = { error: null, recorded: false };
-export type SupportSessionState = { error: string | null };
-export const SUPPORT_SESSION_INITIAL: SupportSessionState = { error: null };
-export type RecordTermState = RegisterResourceState;
-export const TERM_INITIAL: RecordTermState = { error: null, recorded: false };
-export type RecordPlanAssignmentState = RegisterResourceState;
-export const PLAN_ASSIGNMENT_INITIAL: RecordPlanAssignmentState = { error: null, recorded: false };
 
 async function attempt<T extends { error: string | null }>(operation: () => Promise<void>, success: Omit<T, 'error'>, path: string): Promise<T> { try { await operation(); revalidatePath(path); return { ...success, error: null } as T; } catch (error) { return { ...success, error: error instanceof Error ? error.message : 'Unable to record change.' } as T; } }
 export async function provisionTwilioAction(_: ProvisionTwilioState, f: FormData): Promise<ProvisionTwilioState> { const id = String(f.get('organizationId') ?? ''); return attempt<ProvisionTwilioState>(async () => { const db = await getDb(); await provisionTelephonySubaccount(db, { organizationId: id }); }, { provisioned: true }, `/platform/organizations/${id}`); }

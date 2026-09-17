@@ -4,6 +4,13 @@ import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import {
+  provisionTwilioAction,
+  recordCommercialTermAction,
+  recordPlanAssignmentAction,
+  registerPhoneNumberAction,
+  setResourceStatusAction,
+} from './actions';
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -17,12 +24,7 @@ import {
   REGISTER_RESOURCE_INITIAL,
   SET_RESOURCE_STATUS_INITIAL,
   TERM_INITIAL,
-  provisionTwilioAction,
-  recordCommercialTermAction,
-  recordPlanAssignmentAction,
-  registerPhoneNumberAction,
-  setResourceStatusAction,
-} from './actions';
+} from './action-states';
 
 type Option = { value: string; label: string };
 
