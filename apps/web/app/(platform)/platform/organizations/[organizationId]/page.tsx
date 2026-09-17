@@ -7,6 +7,9 @@ import { activeSupportSession, listMembersForSupport } from '@/lib/domain/platfo
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { TenantWorkspaceHeader } from '@/features/platform/tenant-workspace';
 import { SupportSessionBanner, SupportSessionOpener } from './support-view';
+import { currentPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
+import { initializeGoldWorkspaceAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +24,12 @@ export default async function PlatformOrganizationOverview({ params }: PageProps
   // Real membership only, never staff authority standing in for one (see tenant-workspace.tsx).
   const myOrganizations = await listMyOrganizations(db);
   const canOpenBusiness = myOrganizations.some((organization) => organization.id === organizationId);
+  const [currentPlan, goldInternal] = await Promise.all([
+    currentPlanAssignment(db, { organizationId }), findGoldInternalOrganization(db, myOrganizations),
+  ]);
+  const canInitializeGold = canOpenBusiness && !currentPlan && !goldInternal;
 
-  return <AppPage width="full"><TenantWorkspaceHeader id={tenant.id} name={tenant.name} currency={tenant.currency} canOpenBusiness={canOpenBusiness} /><div className="mt-6 grid gap-4 md:grid-cols-3"><Card><CardHeader><CardDescription>Tenant lifecycle</CardDescription><CardTitle className="text-xl">Active workspace</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Created {new Date(tenant.createdAt).toLocaleDateString()}.</CardContent></Card><Card><CardHeader><CardDescription>Optional modules</CardDescription><CardTitle className="text-xl">{tenant.moduleKeys.length}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">{tenant.moduleKeys.length ? tenant.moduleKeys.join(', ') : 'No optional modules recorded.'}</CardContent></Card><Card><CardHeader><CardDescription>Last activity</CardDescription><CardTitle className="text-xl">{tenant.lastActivityAt ? new Date(tenant.lastActivityAt).toLocaleDateString() : 'No activity'}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Timezone: {tenant.timezone}</CardContent></Card></div><div className="mt-6">{session ? <SupportSessionBanner organizationId={organizationId} session={session} members={members} /> : <SupportSessionOpener organizationId={organizationId} />}</div></AppPage>;
+  return <AppPage width="full"><TenantWorkspaceHeader id={tenant.id} name={tenant.name} currency={tenant.currency} canOpenBusiness={canOpenBusiness} />
+    {canInitializeGold ? <Card className="mt-6 border-primary/30"><CardHeader><CardDescription>Staff-only bootstrap</CardDescription><CardTitle>Use as GOLD workspace</CardTitle></CardHeader><CardContent className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground"><span>Assigns the non-billable GOLD Internal Plan without matching this organization&apos;s name.</span><form action={initializeGoldWorkspaceAction.bind(null, organizationId)}><button className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Use as GOLD workspace</button></form></CardContent></Card> : currentPlan ? <p className="mt-6 text-sm text-muted-foreground">Current base Plan is already assigned; GOLD initialization will not replace it.</p> : goldInternal ? <p className="mt-6 text-sm text-muted-foreground">A GOLD internal workspace is already initialized.</p> : null}
+    <div className="mt-6 grid gap-4 md:grid-cols-3"><Card><CardHeader><CardDescription>Tenant lifecycle</CardDescription><CardTitle className="text-xl">Active workspace</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Created {new Date(tenant.createdAt).toLocaleDateString()}.</CardContent></Card><Card><CardHeader><CardDescription>Optional modules</CardDescription><CardTitle className="text-xl">{tenant.moduleKeys.length}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">{tenant.moduleKeys.length ? tenant.moduleKeys.join(', ') : 'No optional modules recorded.'}</CardContent></Card><Card><CardHeader><CardDescription>Last activity</CardDescription><CardTitle className="text-xl">{tenant.lastActivityAt ? new Date(tenant.lastActivityAt).toLocaleDateString() : 'No activity'}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Timezone: {tenant.timezone}</CardContent></Card></div><div className="mt-6">{session ? <SupportSessionBanner organizationId={organizationId} session={session} members={members} /> : <SupportSessionOpener organizationId={organizationId} />}</div></AppPage>;
 }

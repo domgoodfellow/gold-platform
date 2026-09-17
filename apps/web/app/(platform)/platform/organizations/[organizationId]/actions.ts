@@ -1,191 +1,53 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
-import { DomainError } from '@/lib/domain/errors';
+import { getPlan } from '@/lib/domain/catalogue/plans';
+import { currentPlanAssignment, recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
+import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
+import { isPlatformStaff } from '@/lib/domain/platform/tenants';
+import { revalidatePath } from 'next/cache';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { recordProviderResource, setProviderResourceStatus } from '@/lib/domain/providers/bindings';
 import { provisionTelephonySubaccount } from '@/lib/domain/providers/twilio-provisioning';
 import { endSupportSession, startSupportSession } from '@/lib/domain/platform/support';
 import { TELEPHONY_RESOURCE_TYPES, telephonyProviderKey } from '@/lib/adapters/telephony';
 
 export type ProvisionTwilioState = { error: string | null; provisioned: boolean };
-
 export const PROVISION_TWILIO_INITIAL: ProvisionTwilioState = { error: null, provisioned: false };
-
-export async function provisionTwilioAction(
-  _previous: ProvisionTwilioState,
-  formData: FormData,
-): Promise<ProvisionTwilioState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-
-  try {
-    await provisionTelephonySubaccount(db, { organizationId });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message, provisioned: false };
-    throw error;
-  }
-
-  revalidatePath(`/platform/organizations/${organizationId}`);
-  return { error: null, provisioned: true };
-}
-
 export type RegisterResourceState = { error: string | null; recorded: boolean };
-
 export const REGISTER_RESOURCE_INITIAL: RegisterResourceState = { error: null, recorded: false };
-
-export async function registerPhoneNumberAction(
-  _previous: RegisterResourceState,
-  formData: FormData,
-): Promise<RegisterResourceState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-
-  try {
-    await recordProviderResource(db, {
-      organizationId,
-      providerKey: telephonyProviderKey(),
-      resourceType: TELEPHONY_RESOURCE_TYPES.phoneNumber,
-      externalId: String(formData.get('number') ?? '').trim(),
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message, recorded: false };
-    throw error;
-  }
-
-  revalidatePath(`/platform/organizations/${organizationId}`);
-  return { error: null, recorded: true };
-}
-
-export type SetResourceStatusState = { error: string | null; recorded: boolean };
-
+export type SetResourceStatusState = RegisterResourceState;
 export const SET_RESOURCE_STATUS_INITIAL: SetResourceStatusState = { error: null, recorded: false };
-
-export async function setResourceStatusAction(
-  _previous: SetResourceStatusState,
-  formData: FormData,
-): Promise<SetResourceStatusState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-  const status = String(formData.get('status') ?? '');
-
-  try {
-    if (status !== 'pending' && status !== 'active' && status !== 'failed' && status !== 'disabled') {
-      throw new DomainError('Unknown resource status.', 'providers.status_invalid');
-    }
-    await setProviderResourceStatus(db, {
-      organizationId,
-      resourceId: String(formData.get('resourceId') ?? ''),
-      status,
-      error: String(formData.get('errorDetail') ?? '') || null,
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message, recorded: false };
-    throw error;
-  }
-
-  revalidatePath(`/platform/organizations/${organizationId}`);
-  return { error: null, recorded: true };
-}
-
 export type SupportSessionState = { error: string | null };
-
 export const SUPPORT_SESSION_INITIAL: SupportSessionState = { error: null };
-
-export async function startSupportSessionAction(
-  _previous: SupportSessionState,
-  formData: FormData,
-): Promise<SupportSessionState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-  const reason = String(formData.get('reason') ?? '').trim();
-
-  try {
-    await startSupportSession(db, { organizationId, reason: reason || undefined });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
-    throw error;
-  }
-
-  revalidatePath(`/platform/organizations/${organizationId}`);
-  return { error: null };
-}
-
-export async function endSupportSessionAction(
-  _previous: SupportSessionState,
-  formData: FormData,
-): Promise<SupportSessionState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-
-  try {
-    await endSupportSession(db, { id: String(formData.get('sessionId') ?? '') });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
-    throw error;
-  }
-
-  revalidatePath(`/platform/organizations/${organizationId}`);
-  return { error: null };
-}
-
-export type RecordTermState = { error: string | null; recorded: boolean };
-
+export type RecordTermState = RegisterResourceState;
 export const TERM_INITIAL: RecordTermState = { error: null, recorded: false };
-
-export async function recordCommercialTermAction(
-  _previous: RecordTermState,
-  formData: FormData,
-): Promise<RecordTermState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-  const priceMinor = Number(formData.get('priceMinor') ?? 0);
-  const currency = String(formData.get('currency') ?? '').trim();
-
-  try {
-    await recordCommercialTerm(db, {
-      organizationId,
-      productKey: String(formData.get('productKey') ?? ''),
-      periodStart: String(formData.get('periodStart') ?? ''),
-      periodEnd: String(formData.get('periodEnd') ?? ''),
-      priceMinor,
-      currency: priceMinor === 0 && currency === '' ? undefined : currency,
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message, recorded: false };
-    throw error;
-  }
-
-  revalidatePath(`/platform/organizations/${organizationId}`);
-  return { error: null, recorded: true };
-}
-
-export type RecordPlanAssignmentState = { error: string | null; recorded: boolean };
-
+export type RecordPlanAssignmentState = RegisterResourceState;
 export const PLAN_ASSIGNMENT_INITIAL: RecordPlanAssignmentState = { error: null, recorded: false };
 
-export async function recordPlanAssignmentAction(
-  _previous: RecordPlanAssignmentState,
-  formData: FormData,
-): Promise<RecordPlanAssignmentState> {
+async function attempt<T extends { error: string | null }>(operation: () => Promise<void>, success: Omit<T, 'error'>, path: string): Promise<T> { try { await operation(); revalidatePath(path); return { ...success, error: null } as T; } catch (error) { return { ...success, error: error instanceof Error ? error.message : 'Unable to record change.' } as T; } }
+export async function provisionTwilioAction(_: ProvisionTwilioState, f: FormData): Promise<ProvisionTwilioState> { const id = String(f.get('organizationId') ?? ''); return attempt<ProvisionTwilioState>(async () => { const db = await getDb(); await provisionTelephonySubaccount(db, { organizationId: id }); }, { provisioned: true }, `/platform/organizations/${id}`); }
+export async function registerPhoneNumberAction(_: RegisterResourceState, f: FormData): Promise<RegisterResourceState> { const id = String(f.get('organizationId') ?? ''); return attempt<RegisterResourceState>(async () => { const db = await getDb(); await recordProviderResource(db, { organizationId: id, providerKey: telephonyProviderKey(), resourceType: TELEPHONY_RESOURCE_TYPES.phoneNumber, externalId: String(f.get('number') ?? '').trim() }); }, { recorded: true }, `/platform/organizations/${id}`); }
+export async function setResourceStatusAction(_: SetResourceStatusState, f: FormData): Promise<SetResourceStatusState> { const id = String(f.get('organizationId') ?? ''); return attempt<SetResourceStatusState>(async () => { const db = await getDb(); await setProviderResourceStatus(db, { organizationId: id, resourceId: String(f.get('resourceId') ?? ''), status: String(f.get('status') ?? '') as 'pending', error: String(f.get('errorDetail') ?? '') || null }); }, { recorded: true }, `/platform/organizations/${id}`); }
+export async function startSupportSessionAction(_: SupportSessionState, f: FormData) { const id = String(f.get('organizationId') ?? ''); return attempt(async () => { const db = await getDb(); await startSupportSession(db, { organizationId: id, reason: String(f.get('reason') ?? '') || undefined }); }, {}, `/platform/organizations/${id}`); }
+export async function endSupportSessionAction(_: SupportSessionState, f: FormData) { const id = String(f.get('organizationId') ?? ''); return attempt(async () => { const db = await getDb(); await endSupportSession(db, { id: String(f.get('sessionId') ?? '') }); }, {}, `/platform/organizations/${id}`); }
+export async function recordCommercialTermAction(_: RecordTermState, f: FormData): Promise<RecordTermState> { const id = String(f.get('organizationId') ?? ''); return attempt<RecordTermState>(async () => { const db = await getDb(); await recordCommercialTerm(db, { organizationId: id, productKey: String(f.get('productKey') ?? ''), periodStart: String(f.get('periodStart') ?? ''), periodEnd: String(f.get('periodEnd') ?? ''), priceMinor: Number(f.get('priceMinor') ?? 0), currency: String(f.get('currency') ?? '') || undefined }); }, { recorded: true }, `/platform/organizations/${id}`); }
+export async function recordPlanAssignmentAction(_: RecordPlanAssignmentState, f: FormData): Promise<RecordPlanAssignmentState> { const id = String(f.get('organizationId') ?? ''); return attempt<RecordPlanAssignmentState>(async () => { const db = await getDb(); await recordPlanAssignment(db, { organizationId: id, planId: String(f.get('planId') ?? ''), periodStart: String(f.get('periodStart') ?? ''), periodEnd: String(f.get('periodEnd') ?? ''), note: String(f.get('note') ?? '') }); }, { recorded: true }, `/platform/organizations/${id}/commercial`); }
+
+/** Explicit operator bootstrap: membership + no current plan + no existing GOLD workspace. */
+export async function initializeGoldWorkspaceAction(organizationId: string) {
   const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-
-  try {
-    await recordPlanAssignment(db, {
-      organizationId,
-      planId: String(formData.get('planId') ?? ''),
-      periodStart: String(formData.get('periodStart') ?? ''),
-      periodEnd: String(formData.get('periodEnd') ?? ''),
-      note: String(formData.get('note') ?? ''),
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message, recorded: false };
-    throw error;
-  }
-
-  revalidatePath(`/platform/organizations/${organizationId}/commercial`);
-  return { error: null, recorded: true };
+  const [staff, organizations, current] = await Promise.all([
+    isPlatformStaff(db), listMyOrganizations(db), currentPlanAssignment(db, { organizationId }),
+  ]);
+  if (!staff || !organizations.some((organization) => organization.id === organizationId)) throw new Error('Only a platform staff member who belongs to this organization may initialize GOLD.');
+  if (current) throw new Error('This organization already has a current base Plan and cannot be replaced automatically.');
+  if (await findGoldInternalOrganization(db, organizations)) throw new Error('A GOLD internal workspace already exists.');
+  const plan = await getPlan(db, 'gold_internal');
+  if (!plan || plan.billable || plan.kind !== 'plan') throw new Error('The required GOLD Internal Plan is unavailable.');
+  const today = new Date().toISOString().slice(0, 10);
+  await recordPlanAssignment(db, { organizationId, planId: plan.id, periodStart: today, periodEnd: '9999-12-31', note: 'GOLD internal operating workspace' });
+  redirect(`/organizations/${organizationId}`);
 }

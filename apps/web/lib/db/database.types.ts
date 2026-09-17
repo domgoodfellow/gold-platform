@@ -4318,11 +4318,17 @@ export type Database = {
           },
         ]
       }
+      platform_plan_cost_assumptions: {
+        Row: { captured_at: string; currency: string; id: string; labour_cost_minor: number; note: string; plan_id: string; provider_cost_minor: number; source: string; source_url: string | null }
+        Insert: { captured_at?: string; currency: string; id?: string; labour_cost_minor: number; note?: string; plan_id: string; provider_cost_minor: number; source?: string; source_url?: string | null }
+        Update: { captured_at?: string; currency?: string; id?: string; labour_cost_minor?: number; note?: string; plan_id?: string; provider_cost_minor?: number; source?: string; source_url?: string | null }
+        Relationships: [{ foreignKeyName: "platform_plan_cost_assumptions_plan_id_fkey"; columns: ["plan_id"]; isOneToOne: false; referencedRelation: "platform_plans"; referencedColumns: ["id"] }]
+      }
       platform_plans: {
         Row: {
           billable: boolean
           created_at: string
-          created_by: string
+          created_by: string | null
           description: string
           display_order: number
           id: string
@@ -4334,7 +4340,7 @@ export type Database = {
         Insert: {
           billable?: boolean
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description?: string
           display_order?: number
           id?: string
@@ -7456,4 +7462,3 @@ export const Constants = {
     },
   },
 } as const
-
