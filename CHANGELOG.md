@@ -5,6 +5,18 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### GOLD's marketing site gets a complete shell
+
+Every marketing page now shares `MarketingShell`: a floating header (Products menu with the three
+products, How it works, Integrations, Pricing, Contact, Log in, Request a demo, and a mobile
+drawer), a four-column footer (Products, Company, Account, Legal) that shows GOLD's configured
+public email and phone only when set, and the phone demo bar. `/contact`, `/privacy` and `/terms`
+are new; the legal pages are initial text marked pending legal review. The demo and contact forms
+enter GOLD through one public intake, `submit_public_inquiry`, which records `source` as `demo` or
+`contact` on the customer's `customer.created` event; it replaces `request_workflow_review`. A
+migration publishes the three-product homepage as a new revision over the previously published one
+(archived, not edited) when that one was written by a migration and not by a person in GOLD.
+
 ### GOLD Internal becomes the staff operating workspace
 
 GOLD staff who are real members of an organization with the current `gold_internal` base Plan now

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, ClipboardList, MessageSquare, Users } from 'lucide-react';
+import { ArrowRight, CalendarDays, ClipboardList, Headset, Layers, MessageSquare, TrendingUp, Users, Workflow, type LucideIcon } from 'lucide-react';
 import type { PublicHomepageSection, PublicHomepageSections } from '@gold/schemas';
 import { ButtonLink } from '@/components/controls/button';
 import { FOCUS_RING, cx } from '@/components/class-names';
@@ -14,6 +14,12 @@ const PRODUCT_HREF_BY_TITLE: Record<string, string> = {
   Sales: '/sales',
   Operations: '/operations',
   'Customer Service': '/customer-service',
+};
+
+const PRODUCT_ICON_BY_TITLE: Record<string, LucideIcon> = {
+  Sales: TrendingUp,
+  Operations: Workflow,
+  'Customer Service': Headset,
 };
 
 function ProductPreview() {
@@ -71,7 +77,7 @@ function renderSection(section: PublicHomepageSection) {
       </section>
     );
     case 'problem': return (
-      <section key={section.kind} className="grid gap-10 border-y border-border py-12 lg:grid-cols-[0.7fr_1fr] lg:gap-20">
+      <section key={section.kind} className="-mx-2 grid gap-10 rounded-2xl bg-secondary px-6 py-12 sm:px-12 sm:py-16 lg:grid-cols-[0.7fr_1fr] lg:gap-20">
         <h2 className="max-w-md text-2xl font-semibold tracking-tight sm:text-3xl">{section.heading}</h2>
         <div className="grid gap-5 text-sm leading-relaxed text-muted sm:grid-cols-2">{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
       </section>
@@ -79,12 +85,16 @@ function renderSection(section: PublicHomepageSection) {
     case 'capabilities': return (
       <section key={section.kind} id="products" className="scroll-mt-24">
         <div className="flex max-w-2xl flex-col gap-3"><p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">{section.eyebrow}</p><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{section.heading}</h2><p className="text-muted">{section.body}</p></div>
-        <div className="mt-10 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {section.items.map((item) => {
             const href = PRODUCT_HREF_BY_TITLE[item.title];
+            const Icon = PRODUCT_ICON_BY_TITLE[item.title] ?? Layers;
             const body = (
               <>
-                <h3 className="flex items-center gap-1.5 font-semibold">
+                <span className="mb-5 flex size-10 items-center justify-center rounded-lg bg-foreground text-background">
+                  <Icon aria-hidden size={18} />
+                </span>
+                <h3 className="flex items-center gap-1.5 text-lg font-semibold">
                   {item.title}
                   {href ? <ArrowRight aria-hidden size={14} className="text-muted transition-transform group-hover:translate-x-0.5" /> : null}
                 </h3>
@@ -92,11 +102,11 @@ function renderSection(section: PublicHomepageSection) {
               </>
             );
             return href ? (
-              <Link key={item.title} href={href} className={cx('group block border-t-2 border-foreground pt-4 transition-colors hover:border-foreground/60', FOCUS_RING)}>
+              <Link key={item.title} href={href} className={cx('group block rounded-xl border border-border bg-surface p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-foreground/40 hover:shadow-md', FOCUS_RING)}>
                 {body}
               </Link>
             ) : (
-              <article key={item.title} className="border-t-2 border-foreground pt-4">{body}</article>
+              <article key={item.title} className="rounded-xl border border-border bg-surface p-6 shadow-sm">{body}</article>
             );
           })}
         </div>
@@ -105,7 +115,7 @@ function renderSection(section: PublicHomepageSection) {
     case 'process': return (
       <section key={section.kind} id="how-it-works" className="scroll-mt-24"><div className="grid gap-10 lg:grid-cols-[0.7fr_1fr] lg:gap-20">
         <div><p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">{section.eyebrow}</p><h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{section.heading}</h2></div>
-        <ol className="divide-y divide-border border-y border-border">{section.items.map((item) => <li key={item.step} className="grid gap-2 py-5 sm:grid-cols-[3rem_12rem_1fr] sm:gap-4"><span className="font-mono text-xs text-subtle">{item.step}</span><h3 className="text-sm font-semibold">{item.title}</h3><p className="text-sm leading-relaxed text-muted">{item.body}</p></li>)}</ol>
+        <ol className="flex flex-col gap-3">{section.items.map((item) => <li key={item.step} className="grid gap-2 rounded-xl border border-border bg-surface p-5 shadow-sm sm:grid-cols-[3rem_12rem_1fr] sm:gap-4"><span className="font-mono text-xs text-subtle">{item.step}</span><h3 className="text-sm font-semibold">{item.title}</h3><p className="text-sm leading-relaxed text-muted">{item.body}</p></li>)}</ol>
       </div></section>
     );
     case 'trust': return (

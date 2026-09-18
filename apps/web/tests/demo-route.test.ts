@@ -64,10 +64,10 @@ describe('the success experience', () => {
 });
 
 describe('the action calls the one domain function for this axis', () => {
-  it('calls requestWorkflowReview rather than the ordinary customer-creation path', () => {
-    // The reused domain function's internal name — see lib/domain/workflow-review/workflow-review.ts.
-    // Renaming it would mean a second RPC/migration doing exactly what this one already does.
-    expect(actions).toContain('requestWorkflowReview');
+  it('calls submitPublicInquiry, as a demo, rather than the ordinary customer-creation path', () => {
+    // The intake shared with /contact — see lib/domain/public-intake/public-intake.ts.
+    expect(actions).toContain('submitPublicInquiry');
+    expect(actions).toMatch(/kind: 'demo'/);
     expect(actions).not.toContain('createCustomer');
   });
 });

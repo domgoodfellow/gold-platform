@@ -2,12 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { requestWorkflowReview } from '@/lib/domain/workflow-review/workflow-review';
+import { submitPublicInquiry } from '@/lib/domain/public-intake/public-intake';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { foundBusiness } from './helpers/founding';
 
 /**
- * The public homepage's "Request a workflow review" form, and the one write it may perform
+ * The marketing site's demo and contact forms, and the one write it may perform
  * (product reality audit, Slice 5).
  *
  * **Narrower than booking on purpose.** `booking.test.ts` proves a stranger can read back their
@@ -51,7 +51,7 @@ type Target = { db: SupabaseClient; organizationId: string };
 
 let target: Target;
 
-describe('the workflow-review intake, by somebody who is a member of nothing', () => {
+describe('the public intake, by somebody who is a member of nothing', () => {
   beforeAll(async () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
@@ -90,7 +90,9 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
 
   it('requires an authenticated caller', async () => {
     const stranger = anonClient();
-    const { error } = await stranger.rpc('request_workflow_review', {
+    const { error } = await stranger.rpc('submit_public_inquiry', {
+      p_kind: 'demo',
+      p_topic: '',
       p_name: 'No Session',
       p_business_name: 'No Session Ltd',
       p_email: '',
@@ -106,7 +108,8 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
 
   it('writes one ordinary customer into the configured organization', async () => {
     const visitor = anonClient();
-    await requestWorkflowReview(visitor, {
+    await submitPublicInquiry(visitor, {
+      kind: 'demo',
       name: 'Priya Shah',
       businessName: 'Shah Landscaping',
       email: 'priya@example.test',
@@ -129,7 +132,8 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
 
   it('records an attributable event using the existing customer.created vocabulary', async () => {
     const visitor = anonClient();
-    await requestWorkflowReview(visitor, {
+    await submitPublicInquiry(visitor, {
+      kind: 'demo',
       name: 'Contact Person',
       businessName: 'Event Vocabulary Co',
       email: '',
@@ -151,7 +155,7 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
     expect(rows[0].action).toBe('customer.created');
     expect(typeof rows[0].actor_id).toBe('string');
     expect(rows[0].payload).toMatchObject({
-      source: 'workflow_review',
+      source: 'demo',
       contact_name: 'Contact Person',
       context: 'Everything is on paper right now.',
     });
@@ -162,7 +166,9 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
     const { error: signInError } = await visitor.auth.signInAnonymously();
     if (signInError) throw signInError;
 
-    const { error } = await visitor.rpc('request_workflow_review', {
+    const { error } = await visitor.rpc('submit_public_inquiry', {
+      p_kind: 'demo',
+      p_topic: '',
       p_name: 'Reads Nothing',
       p_business_name: 'Reads Nothing Ltd',
       p_email: '',
@@ -173,7 +179,7 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
     });
     expect(error).toBeNull();
 
-    // Called the RPC directly rather than through `requestWorkflowReview`, so the session is
+    // Called the RPC directly rather than through `submitPublicInquiry`, so the session is
     // still live here — this is the database's own guarantee, not the domain layer's manners.
     const { data: customers } = await visitor.from('customers').select('id');
     expect(customers ?? []).toEqual([]);
@@ -190,7 +196,8 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
 
   it('creates no external_actors binding for the visitor', async () => {
     const visitor = anonClient();
-    await requestWorkflowReview(visitor, {
+    await submitPublicInquiry(visitor, {
+      kind: 'demo',
       name: 'No Binding',
       businessName: 'No Binding Ltd',
       email: '',
@@ -211,7 +218,8 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
 
   it('signs the visitor out once the request completes, successfully or not', async () => {
     const visitor = anonClient();
-    await requestWorkflowReview(visitor, {
+    await submitPublicInquiry(visitor, {
+      kind: 'demo',
       name: 'Signs Out',
       businessName: 'Signs Out Ltd',
       email: '',
@@ -234,7 +242,7 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
         `select unnest(p.proargnames) as argument_name
            from pg_proc p
            join pg_namespace n on n.oid = p.pronamespace
-          where n.nspname = 'public' and p.proname = 'request_workflow_review'`,
+          where n.nspname = 'public' and p.proname = 'submit_public_inquiry'`,
       ),
     );
     expect(rows.map((row) => row.argument_name)).not.toContain('p_organization_id');
@@ -245,7 +253,8 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
 
     const visitor = anonClient();
     await expect(
-      requestWorkflowReview(visitor, {
+      submitPublicInquiry(visitor, {
+      kind: 'demo',
         name: 'Unconfigured',
         businessName: 'Unconfigured Ltd',
         email: '',
@@ -254,13 +263,42 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
         teamSize: '',
         businessType: '',
       }),
-    ).rejects.toMatchObject({ code: 'workflow_review.not_configured' });
+    ).rejects.toMatchObject({ code: 'public_intake.not_configured' });
+  });
+
+  it('files a general contact inquiry under the sender own name, marked as contact', async () => {
+    const visitor = anonClient();
+    await submitPublicInquiry(visitor, {
+      kind: 'contact',
+      name: 'Sam Ortiz',
+      email: 'sam@example.test',
+      topic: 'Billing',
+      context: 'A question about an invoice.',
+    });
+
+    const customers = await listCustomers(target.db, { organizationId: target.organizationId });
+    expect(customers.some((customer) => customer.name === 'Sam Ortiz')).toBe(true);
+
+    const { rows } = await withConnection((pg) =>
+      pg.query(
+        `select payload from public.events where organization_id = $1 and payload->>'contact_name' = 'Sam Ortiz'`,
+        [target.organizationId],
+      ),
+    );
+    expect(rows[0].payload).toMatchObject({ source: 'contact', topic: 'Billing', context: 'A question about an invoice.' });
+  });
+
+  it('requires a contact inquiry to have an email and a message', async () => {
+    const visitor = anonClient();
+    await expect(submitPublicInquiry(visitor, { kind: 'contact', name: 'Sam', email: '', context: 'Hi' })).rejects.toMatchObject({ code: 'public_intake.email_required' });
+    await expect(submitPublicInquiry(visitor, { kind: 'contact', name: 'Sam', email: 'sam@example.test', context: '  ' })).rejects.toMatchObject({ code: 'public_intake.message_required' });
   });
 
   it('requires a business name', async () => {
     const visitor = anonClient();
     await expect(
-      requestWorkflowReview(visitor, {
+      submitPublicInquiry(visitor, {
+      kind: 'demo',
         name: 'No Business Name',
         businessName: '   ',
         email: '',
@@ -269,13 +307,14 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
         teamSize: '',
         businessType: '',
       }),
-    ).rejects.toMatchObject({ code: 'workflow_review.name_required' });
+    ).rejects.toMatchObject({ code: 'public_intake.name_required' });
   });
 
   it('rejects oversized and malformed public input before opening an anonymous session', async () => {
     const visitor = anonClient();
     await expect(
-      requestWorkflowReview(visitor, {
+      submitPublicInquiry(visitor, {
+      kind: 'demo',
         name: 'A'.repeat(201),
         businessName: 'Bounded Ltd',
         email: 'person@example.test',
@@ -284,10 +323,11 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
         teamSize: '',
         businessType: '',
       }),
-    ).rejects.toMatchObject({ code: 'workflow_review.field_too_long' });
+    ).rejects.toMatchObject({ code: 'public_intake.field_too_long' });
 
     await expect(
-      requestWorkflowReview(visitor, {
+      submitPublicInquiry(visitor, {
+      kind: 'demo',
         name: 'A Person',
         businessName: 'Validated Ltd',
         email: 'not-an-address',
@@ -296,7 +336,7 @@ describe('the workflow-review intake, by somebody who is a member of nothing', (
         teamSize: '',
         businessType: '',
       }),
-    ).rejects.toMatchObject({ code: 'workflow_review.email_invalid' });
+    ).rejects.toMatchObject({ code: 'public_intake.email_invalid' });
 
     expect((await visitor.auth.getUser()).data.user).toBeNull();
   });

@@ -1,8 +1,6 @@
-import { SiteShell } from '@/components/containers/site-shell';
 import type { Metadata } from 'next';
 import { BrandStyle } from '@/features/branding/brand-style';
-import { MarketingActions, MarketingNav } from '@/components/marketing/marketing-nav';
-import { MobileDemoCta } from '@/components/marketing/mobile-demo-cta';
+import { MarketingShell } from '@/components/marketing/marketing-shell';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { getPublicDb } from '@/lib/db/public';
 
@@ -23,8 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * GOLD's own front door, in GOLD's own chrome — the same header and footer the credential
- * screens wear, so moving between them does not feel like moving between two applications.
+ * GOLD's own front door, in GOLD's own chrome: `MarketingShell` for every page in this group.
  *
  * Not the tenant marketing surface D20 defers: the business making claims on these pages is
  * GOLD, which is why `public-profile.test.ts` scans `app/(public)/` and not this group.
@@ -38,16 +35,15 @@ export default async function MarketingLayout({ children }: LayoutProps<'/'>) {
   return (
     <div data-brand>
       <BrandStyle brand={site.brand} />
-      <SiteShell
-      name={site.profile.displayName}
-      logoUrl={site.brand.logoPath ? getPublicDb().storage.from('brand').getPublicUrl(site.brand.logoPath).data.publicUrl : null}
-      footerLine={site.profile.tagline ?? 'One system that runs your business.'}
-      nav={<MarketingNav />}
-      action={<MarketingActions />}
-    >
-      <div className="pb-16 sm:pb-0">{children}</div>
-      <MobileDemoCta />
-      </SiteShell>
+      <MarketingShell
+        name={site.profile.displayName}
+        logoUrl={site.brand.logoPath ? getPublicDb().storage.from('brand').getPublicUrl(site.brand.logoPath).data.publicUrl : null}
+        tagline={site.profile.tagline ?? 'Sales, operations and customer service in one connected system.'}
+        contactEmail={site.profile.contactEmail}
+        contactPhone={site.profile.contactPhone}
+      >
+        {children}
+      </MarketingShell>
     </div>
   );
 }

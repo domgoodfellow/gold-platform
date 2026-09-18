@@ -4,7 +4,7 @@
 -- `add-platform-staff.sql` is a snippet and not a screen. D42 is explicit about why this can
 -- never be a migration: "a migration cannot name an organization id that only exists in one
 -- deployment." A fresh local database, and any deployment before GOLD's own organization has
--- been created in it, has nothing to point at, and `request_workflow_review` says so honestly
+-- been created in it, has nothing to point at, and `submit_public_inquiry` says so honestly
 -- (D31) rather than filing a submission nobody would ever see.
 --
 -- **Edit the slug on the next line and run the block.** Raises rather than silently affecting

@@ -37,7 +37,7 @@ describe('crawl surface', () => {
     const urls = sitemap().map((entry) => new URL(entry.url).pathname);
     expect(urls).toEqual([
       '/', '/sales', '/operations', '/customer-service', '/how-it-works', '/integrations',
-      '/pricing', '/demo',
+      '/pricing', '/contact', '/demo', '/privacy', '/terms',
     ]);
     expect(urls).not.toContain('/login');
     expect(urls).not.toContain('/portal');

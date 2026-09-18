@@ -5,7 +5,7 @@ import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { FOCUS_RING, cx } from '@/components/class-names';
-import { WORKFLOW_REVIEW_LIMITS } from '@/lib/domain/workflow-review/limits';
+import { PUBLIC_INTAKE_LIMITS } from '@/lib/domain/public-intake/limits';
 
 export type DemoRequestState = { error: string | null; done: boolean };
 
@@ -16,7 +16,7 @@ const HELP_OPTIONS = ['Sales', 'Operations', 'Customer service', 'Multiple areas
 /**
  * The one form this route has. A single page rather than a wizard: this is a request to talk,
  * not the start of Business Setup — nothing here creates an account, a membership, or an
- * organization (`lib/domain/workflow-review/workflow-review.ts`, reused as-is for this axis).
+ * organization (`lib/domain/public-intake/public-intake.ts`, shared with /contact).
  */
 export function DemoForm({
   action,
@@ -48,22 +48,22 @@ export function DemoForm({
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="name">Your name</FieldLabel>
-        <TextInput id="name" name="name" type="text" required maxLength={WORKFLOW_REVIEW_LIMITS.name} autoComplete="name" />
+        <TextInput id="name" name="name" type="text" required maxLength={PUBLIC_INTAKE_LIMITS.name} autoComplete="name" />
       </div>
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="email">Work email</FieldLabel>
-        <TextInput id="email" name="email" type="email" required maxLength={WORKFLOW_REVIEW_LIMITS.email} autoComplete="email" />
+        <TextInput id="email" name="email" type="email" required maxLength={PUBLIC_INTAKE_LIMITS.email} autoComplete="email" />
       </div>
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="businessName">Business name</FieldLabel>
-        <TextInput id="businessName" name="businessName" type="text" required maxLength={WORKFLOW_REVIEW_LIMITS.businessName} autoComplete="organization" />
+        <TextInput id="businessName" name="businessName" type="text" required maxLength={PUBLIC_INTAKE_LIMITS.businessName} autoComplete="organization" />
       </div>
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="phone">Phone (optional)</FieldLabel>
-        <TextInput id="phone" name="phone" type="tel" maxLength={WORKFLOW_REVIEW_LIMITS.phone} autoComplete="tel" />
+        <TextInput id="phone" name="phone" type="tel" maxLength={PUBLIC_INTAKE_LIMITS.phone} autoComplete="tel" />
       </div>
 
       <div className="flex flex-col gap-1">
@@ -76,13 +76,13 @@ export function DemoForm({
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="teamSize">Team size (optional)</FieldLabel>
-        <TextInput id="teamSize" name="teamSize" type="text" maxLength={WORKFLOW_REVIEW_LIMITS.teamSize} />
+        <TextInput id="teamSize" name="teamSize" type="text" maxLength={PUBLIC_INTAKE_LIMITS.teamSize} />
       </div>
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="context">Current tools / short context (optional)</FieldLabel>
         <Hint id="context-hint">The tools you use now, and where they fall short.</Hint>
-        <TextArea id="context" name="context" rows={4} maxLength={WORKFLOW_REVIEW_LIMITS.context} aria-describedby="context-hint" />
+        <TextArea id="context" name="context" rows={4} maxLength={PUBLIC_INTAKE_LIMITS.context} aria-describedby="context-hint" />
       </div>
 
       <Hint weight="subtle">

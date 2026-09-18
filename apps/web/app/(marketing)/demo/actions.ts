@@ -2,7 +2,7 @@
 
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
-import { requestWorkflowReview } from '@/lib/domain/workflow-review/workflow-review';
+import { submitPublicInquiry } from '@/lib/domain/public-intake/public-intake';
 import type { DemoRequestState } from './demo-form';
 
 export async function requestDemoAction(
@@ -12,7 +12,8 @@ export async function requestDemoAction(
   const db = await getDb();
 
   try {
-    await requestWorkflowReview(db, {
+    await submitPublicInquiry(db, {
+      kind: 'demo',
       name: String(formData.get('name') ?? ''),
       businessName: String(formData.get('businessName') ?? ''),
       email: String(formData.get('email') ?? ''),

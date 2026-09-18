@@ -87,7 +87,7 @@ parallel research passes, each reading full source files (not excerpts) for one 
 Automations; CRM + Communications/Voice + Reception; Public Presence + Branding + Locale;
 Scheduling + Resources + Locations + Assets + Work Items; Platform Context vs Organization
 Context + Catalogue/Commercial/Providers; and a sweep of Custom Fields, Integrations, Documents,
-Timeline, Reporting, Assistant, Portal, Workflow-review and Guided Setup — each instructed to
+Timeline, Reporting, Assistant, Portal, public intake (then named workflow-review) and Guided Setup — each instructed to
 report only verifiable facts with file:line citations, never priorities or recommendations. This
 document performs all synthesis, classification and prioritization itself against those facts,
 with two claims spot-checked directly against source (the automation-condition custom-field
@@ -116,7 +116,7 @@ turned out to fit, where that differs from what the folder structure implies.
 | Platform Context | Overview; Organizations (tenant list, provisioning, support sessions, per-tenant commercial/providers/usage detail); Catalog (canonical Product→Module→Feature, legacy `platform_products` SKUs, Plans & Add-ons, runtime-module cross-reference, meters); Pricing (GOLD's own recurring/retail/provider rate cards); Providers (global vendor vocabulary, binding counts, no credentials); Failures | Clean separation confirmed; canonical and legacy catalogues coexist deliberately, cross-linked, never merged (D50) |
 | Organization Context | Today, Work, Schedule, Resources, Ask, Reports, Customers, Calls, Locations, Assets, Pricing (tenant's own Price Book — Financial Operations, not GOLD's catalogue), Automations, Custom fields, People and roles, Guided setup, Integrations, Settings (public page, brand, website, this business, connections, plan & usage) | `settings/plan` reads only tenant-safe usage functions (`listUsageEvents`, never `organizationCommercialSummary`/`organizationUsageDetail`) — I29/I31 confirmed held in the UI code, not only in the database grant |
 | Customer Portal | `/portal/[token]` — own work items, own invoices, own public-header identity | Read-only; no messaging, no work request, no online payment |
-| Public / Anonymous | `/book/[slug]`, `/(marketing)/`, `/workflow-review`, `/(auth)/` | `workflow-review` confirmed as pure lead capture (D22); no account, membership or organization is created by it |
+| Public / Anonymous | `/book/[slug]`, `/(marketing)/` (including `/demo` and `/contact`), `/(auth)/` | public intake (`submit_public_inquiry`; audited as `workflow-review`) confirmed as pure lead capture (D22); no account, membership or organization is created by it |
 | Shared presentation | `settings/connections` (organization-facing, read-mostly view of D44 provider-binding state) | See *Cross-domain inconsistencies* — this is a deliberate, correctly-scoped crossover, not a leak |
 
 One flagged crossover, resolved as healthy rather than a mistake: `organizations/[organizationId]/settings/connections/page.tsx`
@@ -160,7 +160,7 @@ the index into them.
 | Locale | Trade in a currency, operate in a timezone | `features/locale/**` | Settings → This business | same | — | — | Complete for what it claims (tz + currency); **not general regional i18n**, and correctly does not claim to be | Healthy — narrow and honestly named | P3 |
 | Booking (public) | Let a stranger take a slot | route-owned (`app/(public)/book/[slug]/**`) | `/book/[slug]` | Settings → Public page → publish booking module | take a slot | confirmation page | Complete | Healthy | P3 |
 | Customer Portal | Let one customer see their own things | route-owned (`app/(public)/portal/[token]/**`) | `/portal/[token]` | Customer record → send link | view work, view invoices | — | Partial — **no online payment, no messaging** | Route-owned, correctly minimal for what's built, but the Product it's supposed to complete (paying) isn't reachable from it | **P1** |
-| Workflow-review | Capture a qualified lead on GOLD's own site | route-owned | `/(marketing)/workflow-review` | — | submit | — | Complete, correctly narrow (D22) | Healthy | P3 |
+| Public intake | Capture a demo request or contact inquiry on GOLD's own site | route-owned | `/(marketing)/demo`, `/(marketing)/contact` | — | submit | — | Complete, correctly narrow (D22) | Healthy | P3 |
 | Platform Catalogue / Plans / Entitlements | Let GOLD staff define and sell what GOLD sells | `features/platform/catalog/**` | `/platform/catalog/**` | same | assign to organizations | organization commercial/usage detail | Complete for resolution; enforcement is the separately-tracked I28 gap (not a UI gap) | Healthy | P3 |
 | Provider control plane (Twilio/Resend, D44) | Give an organization a working phone number / sending domain | `features/platform/organizations/**` (staff), `settings/connections` (tenant read) | `/platform/organizations/[id]/providers`, `/settings/connections` | staff provisions; tenant reads | staff: provision/status; tenant: record own domain | tenant reads binding/resource status | Complete for what's built (Twilio, partial Resend) | Healthy, deliberate two-surface split | P3 |
 | Platform administration (tenants, support, failures) | Run GOLD without a database console | `features/platform/**` | `/platform/**` | — | provision, support session, inspect | failures feed | Complete | Healthy reference for Platform Context IA | P3 |
@@ -347,7 +347,7 @@ Confirmed correctly absent, per this audit's own "system primitive" category:
   no UI attempts to.
 - Weather and Maintenance as distinct entities — correctly expressed only as automation rules,
   per D11/D25, with no separate screen, table or engine.
-- `workflow-review` — correctly a narrow, unauthenticated lead-capture write with no read-back
+- Public intake (audited as `workflow-review`, now `submit_public_inquiry`) — correctly a narrow, unauthenticated lead-capture write with no read-back
   path for its own caller, matching D22 exactly.
 
 ## Cross-domain inconsistencies

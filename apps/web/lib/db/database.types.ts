@@ -6969,18 +6969,6 @@ export type Database = {
         Args: { p_id: string; p_name: string }
         Returns: undefined
       }
-      request_workflow_review: {
-        Args: {
-          p_business_name: string
-          p_business_type: string
-          p_context: string
-          p_email: string
-          p_name: string
-          p_phone: string
-          p_team_size: string
-        }
-        Returns: undefined
-      }
       resolve_effective_outbound_identity: {
         Args: { p_organization_id: string }
         Returns: string
@@ -7133,6 +7121,20 @@ export type Database = {
       }
       submit_public_homepage_revision: {
         Args: { p_organization_id: string; p_revision_id: string }
+        Returns: undefined
+      }
+      submit_public_inquiry: {
+        Args: {
+          p_business_name: string
+          p_business_type: string
+          p_context: string
+          p_email: string
+          p_kind: string
+          p_name: string
+          p_phone: string
+          p_team_size: string
+          p_topic: string
+        }
         Returns: undefined
       }
       sync_phone_number: {

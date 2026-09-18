@@ -7,11 +7,15 @@ import { publishedGoldHomepage } from './public-site';
 
 export const GOLD_HOMEPAGE_CACHE_TAG = 'public-site:gold:home';
 
-/** Public output changes only when the publish action expires this tagged projection. */
+/**
+ * Public output changes when the publish action expires this tagged projection. The hour is the
+ * backstop for a publish that never went through that action — a migration publishing a revision
+ * cannot call `updateTag`, and would otherwise leave the previous one served indefinitely.
+ */
 export const getPublishedGoldHomepage = unstable_cache(
   async () => publishedGoldHomepage(getPublicDb()),
   ['published-gold-homepage'],
-  { tags: [GOLD_HOMEPAGE_CACHE_TAG] },
+  { tags: [GOLD_HOMEPAGE_CACHE_TAG], revalidate: 3600 },
 );
 
 /**

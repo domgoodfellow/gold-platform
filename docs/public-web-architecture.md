@@ -15,8 +15,9 @@ layout boundaries, not URL or security boundaries.
 
 | Route | Current purpose and truth | Required follow-through |
 |---|---|---|
-| `/` | GOLD's homepage renders the one immutable revision selected by the publishing model. Canonical/social metadata, `robots.txt`, a deliberate two-route sitemap and JSON-LD are built; drafts, review and history are not anonymous. | Expand the sitemap only as approved public routes gain substantive content; keep structured claims tied to published facts. |
-| `/workflow-review` | Working conversion form with route metadata; a narrow RPC attributes a Customer and Event to the platform-configured GOLD organization. | Add displayed privacy purpose/retention and abuse controls. |
+| `/` | GOLD's homepage renders the one immutable revision selected by the publishing model. Canonical/social metadata, `robots.txt`, a deliberate marketing-route sitemap and JSON-LD are built; drafts, review and history are not anonymous. | Expand the sitemap only as approved public routes gain substantive content; keep structured claims tied to published facts. |
+| `/demo`, `/contact` | Two forms, one narrow RPC (`submit_public_inquiry`): a demo request and a general inquiry each attribute a Customer and an Event (`source` = `demo` or `contact`) to the platform-configured GOLD organization. The old `/workflow-review` route and RPC are gone. | Add rate limiting/bot mitigation and a confirmed retention period. |
+| `/privacy`, `/terms` | Routed initial text with metadata, in the sitemap and footer; marked pending legal review, each unconfirmed clause carries a `LEGAL-REVIEW` comment. | Counsel-approved text; the versioned `/legal/[type]` model below remains the target. |
 | `/login`, `/sign-up`, password routes | One identity serves Organization and Platform Context. Auth layout is noindex; invitation/recovery callbacks work without a second account or re-login. | Preserve safe intended route and hostname context. |
 | `/book/[slug]` | Tenant-branded transaction flow over the real Scheduling and Pricing domain. | Connect it to the tenant's primary public site and canonical host rather than treating the slug as distribution. |
 | `/book/[slug]/[workItemId]` | Caller-scoped booking confirmation under the noindex public layout. | Preserve referrer/search leakage controls. |
@@ -47,10 +48,10 @@ search coverage.
 
 | Page | Visitor problem and search intent | Marketing objective / CTA | Section order | Proof and source | Links / structured data |
 |---|---|---|---|---|---|
-| `/` | “What is GOLD, and is it for an operations business like mine?” | Qualify quickly; **Request a workflow review**; secondary See how it works | Outcome hero → fragmented-work problem → shared operating model → real capabilities → configurable examples → implementation → security/trust → FAQ → CTA | Product screenshots and only verified capability claims; published GOLD site revision | Platform, Solutions, Review; `Organization`, `WebSite`, `WebPage` |
+| `/` | “What is GOLD, and is it for an operations business like mine?” | Qualify quickly; **Request a demo**; secondary See how it works | Outcome hero → fragmented-work problem → shared operating model → real capabilities → configurable examples → implementation → security/trust → FAQ → CTA | Product screenshots and only verified capability claims; published GOLD site revision | Platform, Solutions, Review; `Organization`, `WebSite`, `WebPage` |
 | `/platform` | “Business operating platform / operations management software” | Explain the whole system; **See how GOLD works** | Product thesis → shared customer/work/timeline → modules → configuration → automation/AI boundaries → security → implementation → CTA | Real UI and domain concepts; published structured sections | Solutions, Review, Sign in; `Product` only once a visible, purchasable product description is accurate |
 | `/solutions` | “Connect sales, operations, service, automation” | Route visitors by problem; **Choose a workflow** | Problem chooser → Sales → Operations → Customer service → Automation/AI → partial adoption → CTA | Capability-backed examples; no invented vertical claims | Platform and focused solution anchors/pages when each has enough unique evidence; `Service` where visible |
-| `/workflow-review` | “Help me map/fix this workflow” | Capture a qualified request; **Submit request** | Expectations → compact form → privacy-purpose notice → what happens next | Existing customer/event write; published form definition | Platform/Solutions; `WebPage` (not `FAQPage`) |
+| `/demo` | “Show me GOLD on my business” | Capture a qualified request; **Request a demo** | Expectations → compact form → privacy-purpose notice → what happens next | Existing customer/event write; published form definition | Platform/Solutions; `WebPage` (not `FAQPage`) |
 | `/about` | “Who operates GOLD and can I trust them?” | Establish accountability; **Contact GOLD** | Company identity → approach → responsible operator/contact → trust → CTA | Canonical GOLD organization profile and verified team/company facts | Legal, Platform; `AboutPage`, `Organization` |
 | `/contact` | General or support contact | Route enquiry; **Send enquiry** | Contact choices → narrow form → existing-customer sign-in | Organization contact records and purpose-specific form | Review, Sign in, Legal; `ContactPage` |
 | `/legal/[type]` | Understand governing terms/privacy | Read current policy; acceptance only when required | Document title/effective date → counsel-approved body → version/supersession → contact | Published platform legal-document version | Footer and forms; `WebPage` |
@@ -158,7 +159,7 @@ registration so the customer owns the account; a reseller integration becomes ju
 
 ## Public forms, analytics, and attribution
 
-The workflow-review path is already correctly narrow: it accepts no organization id, creates one
+The public intake path (`submit_public_inquiry`, serving `/demo` and `/contact`) is already correctly narrow: it accepts no organization id, creates one
 ordinary customer plus an event in the deployment-configured GOLD organization, leaves no external
 binding, and signs out. Extend it with server-enforced size validation, rate limiting/bot mitigation,
 purpose/retention notice, and attribution fields. Contact, demo, and consultation remain distinct
@@ -234,10 +235,10 @@ publish.
 
 | Classification | Requirements |
 |---|---|
-| **ALREADY GOOD** | One identity; independent platform/membership facts; RLS tenant boundary; profile/brand projection; narrow workflow-review write; booking/portal domain reuse; typed immutable homepage revisions; preview/publish; narrow anonymous projection; responsive shared controls |
+| **ALREADY GOOD** | One identity; independent platform/membership facts; RLS tenant boundary; profile/brand projection; narrow public-intake write; booking/portal domain reuse; typed immutable homepage revisions; preview/publish; narrow anonymous projection; responsive shared controls |
 | **REFACTOR** | Auth intended-context routing and public header/footer information architecture |
 | **CONNECT EXISTING** | Work types as service capability; price book as offer input; locations/hours; documents; customer events and stages; commercial catalogue where public terms are explicitly approved |
-| **CONFIGURE** | Production canonical origin; workflow-review target; deployment domain; analytics/consent provider; support/privacy contacts |
+| **CONFIGURE** | Production canonical origin; public-intake target (`platform_settings`); deployment domain; analytics/consent provider; support/privacy contacts |
 | **BUILD** | Media library; hostname mapping; legal versions/acceptance; attribution; abuse controls; French routing/content |
 | **RESEARCH** | Counsel-reviewed Quebec/Canada/US scope; accessibility obligations by market; subprocessors/transfers; registrar/reseller economics and `.ca` requirements; analytics consent choice |
 | **DEFER** | Arbitrary drag-and-drop builder; domain registration/reselling; full external SDK; articles/industry directory without content owners; multi-template marketplace; translation automation |
