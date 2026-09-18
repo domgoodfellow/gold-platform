@@ -113,7 +113,8 @@ describe('the Business phone header — compact controls wired to the right slot
     );
     expect(contextBlock).toContain('mark={mark}');
     expect(contextBlock).toMatch(/kind:\s*'business'/);
-    expect(contextBlock).toContain('platformStaff={staff}');
+    expect(contextBlock).toContain('organizations={myOrganizations.map');
+    expect(contextBlock).not.toContain('platformStaff=');
   });
 });
 
@@ -170,7 +171,7 @@ describe('ContextSwitcher — content is about context only', () => {
   it('shows each business row’s role as secondary text', () => {
     const businessesBlock = contextSwitcher.slice(
       contextSwitcher.indexOf('businesses.map'),
-      contextSwitcher.indexOf('platformStaff && current.kind'),
+      contextSwitcher.indexOf('<DropdownMenuSeparator />', contextSwitcher.indexOf('businesses.map')),
     );
     expect(businessesBlock).toContain('organization.role');
   });

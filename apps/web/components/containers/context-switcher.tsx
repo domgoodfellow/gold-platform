@@ -36,7 +36,6 @@ type SwitcherProps = {
   mark: ReactNode;
   current: SwitcherContext;
   organizations: SwitchableOrganization[];
-  platformStaff: boolean;
 };
 
 function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[]) {
@@ -97,7 +96,7 @@ function ContextSwitcherMenuContent({
   );
 }
 
-export function ContextSwitcher({ mark, current, organizations, platformStaff }: SwitcherProps) {
+export function ContextSwitcher({ mark, current, organizations }: SwitcherProps) {
   const view = deriveSwitcherView(current, organizations);
 
   return (
@@ -124,7 +123,6 @@ export function ContextSwitcher({ mark, current, organizations, platformStaff }:
             mark={mark}
             current={current}
             organizations={organizations}
-            platformStaff={platformStaff}
             {...view}
           />
         </DropdownMenu>
@@ -133,7 +131,7 @@ export function ContextSwitcher({ mark, current, organizations, platformStaff }:
   );
 }
 
-export function CompactContextSwitcher({ mark, current, organizations, platformStaff }: SwitcherProps) {
+export function CompactContextSwitcher({ mark, current, organizations }: SwitcherProps) {
   const view = deriveSwitcherView(current, organizations);
 
   return (
@@ -156,7 +154,6 @@ export function CompactContextSwitcher({ mark, current, organizations, platformS
         mark={mark}
         current={current}
         organizations={organizations}
-        platformStaff={platformStaff}
         {...view}
       />
     </DropdownMenu>

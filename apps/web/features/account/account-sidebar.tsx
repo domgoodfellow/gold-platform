@@ -21,13 +21,11 @@ export function AccountSidebar({
   email,
   signOutAction,
   businesses,
-  platformStaff,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   email: string;
   signOutAction: () => Promise<void>;
   businesses: SwitchableOrganization[];
-  platformStaff: boolean;
 }) {
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -36,7 +34,6 @@ export function AccountSidebar({
           mark={GOLD_MARK}
           current={{ kind: 'account' }}
           organizations={businesses}
-          platformStaff={platformStaff}
         />
       </SidebarHeader>
       <SidebarContent className="p-3 group-data-[collapsible=icon]:hidden">

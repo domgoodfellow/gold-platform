@@ -8,7 +8,6 @@ import { AccountSidebar } from '@/features/account/account-sidebar';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
-import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { changePasswordAction } from './actions';
@@ -42,7 +41,7 @@ export default async function AccountPage() {
     throw error;
   }
 
-  const [myOrganizations, staff] = await Promise.all([listMyOrganizations(db), isPlatformStaff(db)]);
+  const myOrganizations = await listMyOrganizations(db);
 
   async function signOutAction() {
     'use server';
@@ -56,7 +55,6 @@ export default async function AccountPage() {
       email={email}
       signOutAction={signOutAction}
       businesses={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
-      platformStaff={staff}
     />
   );
 

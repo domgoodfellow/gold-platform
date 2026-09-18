@@ -140,6 +140,16 @@ describe('the operator shell navigation', () => {
     );
     expect(total).toBe(AREAS.length);
   });
+  it('keeps Platform as one compact phone doorway instead of appending every platform destination', () => {
+    const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
+    const phone = shell.slice(shell.indexOf('export function OrgNavBar('), shell.indexOf('export function SetupEntry'));
+
+    expect(phone).toContain('PlatformPhoneNavMenu');
+    expect(phone).not.toContain('PLATFORM_NAV.map');
+    expect(shell).toContain('function PlatformPhoneNavMenu');
+    expect(shell).toContain('DropdownMenuContent');
+    expect(shell).toContain('PLATFORM_NAV.map');
+  });
 });
 
 /**

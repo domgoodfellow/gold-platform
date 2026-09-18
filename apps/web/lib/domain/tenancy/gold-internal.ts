@@ -2,6 +2,8 @@ import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { currentPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { getPlanById } from '@/lib/domain/catalogue/plans';
+import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
+import { FOUNDING_ROLE } from '@/lib/domain/tenancy/organizations';
 
 /**
  * Finds the caller's real GOLD operating workspace from its current base Plan, never its name.
@@ -36,6 +38,8 @@ export async function bootstrapGoldInternalWorkspace(
 ): Promise<string> {
   const { data, error } = await db.rpc('bootstrap_gold_internal_workspace', {
     p_organization_id: input.organizationId,
+    p_role: FOUNDING_ROLE,
+    p_capabilities: ALL_CAPABILITIES,
   });
 
   if (error) {

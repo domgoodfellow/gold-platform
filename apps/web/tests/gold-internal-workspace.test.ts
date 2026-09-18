@@ -31,10 +31,12 @@ describe('GOLD Internal operating context composition', () => {
     expect(shell).toContain('platformStaff && isGoldInternal');
   });
 
-  it('keeps platform destinations in the same mobile navigation when GOLD is current', () => {
+  it('keeps platform destinations behind one compact mobile Platform doorway when GOLD is current', () => {
     const phoneStart = shell.indexOf('export function OrgNavBar');
     const phone = shell.slice(phoneStart, shell.indexOf('export function SetupEntry'));
     expect(phone).toContain('platformStaff && isGoldInternal');
-    expect(phone).toContain('PLATFORM_NAV.map');
+    expect(phone).toContain('PlatformPhoneNavMenu');
+    expect(phone).not.toContain('PLATFORM_NAV.map');
+    expect(shell).toContain('function PlatformPhoneNavMenu');
   });
 });

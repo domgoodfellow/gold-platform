@@ -6155,7 +6155,11 @@ export type Database = {
         Returns: string
       }
       bootstrap_gold_internal_workspace: {
-        Args: { p_organization_id: string }
+        Args: {
+          p_capabilities: string[]
+          p_organization_id: string
+          p_role: string
+        }
         Returns: string
       }
       add_operating_hours: {

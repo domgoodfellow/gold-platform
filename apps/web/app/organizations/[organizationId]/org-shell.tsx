@@ -1,6 +1,7 @@
 'use client';
 
 import { AccountMenu } from '@/components/containers/account-menu';
+import { Button } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { ContextSwitcher, type SwitchableOrganization } from '@/components/containers/context-switcher';
 import {
@@ -21,12 +22,20 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@gold/ui/components/dropdown-menu';
+import {
   BarChart3,
   Bot,
   CalendarDays,
   ChevronLeft,
   ClipboardList,
   Layers,
+  Landmark,
   LayoutDashboard,
   MapPin,
   Package,
@@ -185,24 +194,49 @@ function PhoneNavLink({
   );
 }
 
-function PlatformPhoneNavLink({ item, current }: { item: (typeof PLATFORM_NAV)[number]; current: boolean }) {
-  const Icon = item.icon;
+function PlatformPhoneNavMenu({ pathname }: { pathname: string }) {
+  const active = PLATFORM_NAV.some((item) =>
+    item.href === '/platform'
+      ? pathname === item.href
+      : pathname === item.href || pathname.startsWith(`${item.href}/`),
+  );
 
   return (
-    <Link
-      href={item.href}
-      aria-current={current ? 'page' : undefined}
-      aria-label={item.label}
-      title={item.label}
-      className={cx(
-        FOCUS_RING,
-        'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm',
-        current ? 'bg-foreground font-medium text-background' : 'hover:bg-black/5 dark:hover:bg-white/10',
-      )}
-    >
-      <Icon aria-hidden size={18} className="shrink-0" />
-      <span className="min-w-0">{item.label}</span>
-    </Link>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          aria-label="Platform"
+          tone="secondary"
+          size="small"
+          className={cx(
+            FOCUS_RING,
+            'gap-2 rounded px-3 py-1.5 text-sm',
+            active ? 'bg-foreground font-medium text-background hover:bg-foreground' : '',
+          )}
+        >
+          <Landmark aria-hidden size={18} className="shrink-0" />
+          <span className="min-w-0">Platform</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="end" className="w-64">
+        <DropdownMenuLabel>Platform</DropdownMenuLabel>
+        {PLATFORM_NAV.map((item) => {
+          const Icon = item.icon;
+          const current = item.href === '/platform'
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <DropdownMenuItem key={item.href} asChild>
+              <Link href={item.href} aria-current={current ? 'page' : undefined} className="flex items-center gap-2">
+                <Icon aria-hidden className="shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -254,18 +288,11 @@ export function OrgNavBar({
             />
           </li>
         ))}
-        {platformStaff && isGoldInternal
-          ? PLATFORM_NAV.map((item) => {
-              const current = item.href === '/platform'
-                ? pathname === item.href
-                : pathname === item.href || pathname.startsWith(`${item.href}/`);
-              return (
-                <li key={item.href} className="shrink-0">
-                  <PlatformPhoneNavLink item={item} current={current} />
-                </li>
-              );
-            })
-          : null}
+        {platformStaff && isGoldInternal ? (
+          <li className="shrink-0">
+            <PlatformPhoneNavMenu pathname={pathname} />
+          </li>
+        ) : null}
       </ul>
     </nav>
   );
@@ -377,7 +404,6 @@ export function OrgSidebar({
           mark={mark}
           current={{ kind: 'business', organizationId, name, role }}
           organizations={organizations}
-          platformStaff={platformStaff}
         />
       </SidebarHeader>
       <SidebarContent>

@@ -135,7 +135,6 @@ export default async function OrganizationLayout({
             mark={mark}
             current={{ kind: 'business', organizationId, name: organization.name, role: organization.role }}
             organizations={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
-            platformStaff={staff}
           />
         </div>
       }

@@ -126,7 +126,6 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
                     role: organization.role,
                   }}
                   organizations={organizations}
-                  platformStaff
                 />
               </div>
             }
