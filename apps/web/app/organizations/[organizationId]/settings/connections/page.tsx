@@ -53,7 +53,7 @@ export default async function ConnectionsPage({
   );
 
   return (
-    <SettingsPageFrame organizationId={organizationId}>
+    <SettingsPageFrame>
       <PageHeading>Connections</PageHeading>
       <Hint className="mt-1">
         What this business is connected to, and what it can choose from. Never what any of it

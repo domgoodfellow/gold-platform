@@ -62,7 +62,7 @@ export default async function SchedulePage({
       {mayConfigure ? (
         <ConfigureRegistrar
           title="Schedule configuration"
-          settingsHref={`/organizations/${organizationId}/settings/schedule`}
+          settingsHref={`/organizations/${organizationId}/schedule/configuration`}
         >
           <ScheduleConfiguration
             organizationId={organizationId}
@@ -79,7 +79,7 @@ export default async function SchedulePage({
       <Hint>
         Times shown in {organization.timezone} ·{' '}
         <Link
-          href={`/organizations/${organizationId}/settings/schedule`}
+          href={`/organizations/${organizationId}/schedule/configuration`}
           className="underline underline-offset-4"
         >
           Opening hours

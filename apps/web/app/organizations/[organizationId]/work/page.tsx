@@ -51,7 +51,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
       {mayConfigure ? (
         <ConfigureRegistrar
           title="Work configuration"
-          settingsHref={`/organizations/${organizationId}/settings/work${selectedType ? `?type=${selectedType.id}` : ''}`}
+          settingsHref={`/organizations/${organizationId}/work/configuration${selectedType ? `?type=${selectedType.id}` : ''}`}
         >
           <WorkConfiguration
             organizationId={organizationId}

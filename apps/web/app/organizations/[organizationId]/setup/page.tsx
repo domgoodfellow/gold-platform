@@ -72,7 +72,7 @@ export default async function SetupPage({
     // actually lives, reusing the same area's own label rather than inventing a second one.
     const href =
       segment === 'work'
-        ? `${areaHref(organizationId, 'settings')}/work`
+        ? `${areaHref(organizationId, 'work')}/configuration`
         : areaHref(organizationId, segment);
 
     return [{ segment, label: area.label, href }];

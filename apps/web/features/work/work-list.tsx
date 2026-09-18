@@ -35,7 +35,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
   mayMove: boolean;
   maySchedule: boolean;
 }) {
-  const configHref = `/organizations/${organizationId}/settings/work`;
+  const configHref = `/organizations/${organizationId}/work/configuration`;
   const statusName = new Map(statuses.map((status) => [status.id, status.name]));
 
   return (
@@ -65,7 +65,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
           No kinds of work are configured.{' '}
           {mayConfigure ? (
             <Link href={configHref} className="underline underline-offset-4">
-              Configure Work in Settings
+              Configure Work
             </Link>
           ) : null}
         </EmptyState>
@@ -194,7 +194,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
         <Hint className="mt-10">
           Kinds of work, statuses, allowed moves and checklists are configured in{' '}
           <Link href={configHref} className="underline underline-offset-4">
-            Settings → Work
+            Work configuration
           </Link>
           .
         </Hint>

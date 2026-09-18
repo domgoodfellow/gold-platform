@@ -26,7 +26,7 @@ export type WorkConfigActionState = { error: string | null };
  * leaving the board showing a status that was just renamed.
  */
 function revalidateWork(organizationId: string): void {
-  revalidatePath(`/organizations/${organizationId}/settings/work`);
+  revalidatePath(`/organizations/${organizationId}/work/configuration`);
   revalidatePath(`/organizations/${organizationId}/work`);
 }
 

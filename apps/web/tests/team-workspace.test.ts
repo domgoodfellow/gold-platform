@@ -120,10 +120,10 @@ describe('Settings compatibility is preserved', () => {
     expect(page).toContain('redirect(');
     expect(page).toContain('/roles');
 
-    const settingsNav = readFileSync(
-      fileURLToPath(new URL('../features/settings/settings-navigation.tsx', import.meta.url)),
+    const settings = readFileSync(
+      fileURLToPath(new URL('../app/organizations/[organizationId]/settings/page.tsx', import.meta.url)),
       'utf8',
     );
-    expect(settingsNav).not.toContain("label: 'Team'");
+    expect(settings).not.toContain('/roles');
   });
 });

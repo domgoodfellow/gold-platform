@@ -31,7 +31,7 @@ function formatMinor(amountMinor: number, currency: string | null): string {
 /**
  * What this business is entitled to use, what GOLD has recorded selling it, what it used, and
  * what that cost it — never what it cost GOLD, and never a margin (`constraints.md` D43). A
- * detail route under Settings, like `settings/work`, so it writes its own heading rather than
+ * detail route under Settings, so it writes its own heading rather than
  * one `navigation.ts` also owns.
  */
 export default async function PlanAndUsagePage({
@@ -68,7 +68,7 @@ export default async function PlanAndUsagePage({
   const canManageBilling = organization.capabilities.includes('billing.manage');
 
   return (
-    <SettingsPageFrame organizationId={organizationId}>
+    <SettingsPageFrame>
       <PageHeading>Plan &amp; usage</PageHeading>
       <Hint className="mt-1">
         What this business is entitled to use right now, what GOLD has recorded selling it, and

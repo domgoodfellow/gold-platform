@@ -66,7 +66,8 @@ export async function addOperatingHoursAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/work`);
+  revalidatePath(`/organizations/${organizationId}/schedule/configuration`);
+  revalidatePath(`/organizations/${organizationId}/schedule`);
   return { error: null };
 }
 
@@ -84,7 +85,8 @@ export async function removeOperatingHoursAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/work`);
+  revalidatePath(`/organizations/${organizationId}/schedule/configuration`);
+  revalidatePath(`/organizations/${organizationId}/schedule`);
   return { error: null };
 }
 

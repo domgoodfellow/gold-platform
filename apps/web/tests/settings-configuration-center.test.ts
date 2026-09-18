@@ -16,7 +16,7 @@ import { createWorkItemType } from '@/lib/domain/work-items/types';
  * **Structural claims are a source scan**, for the reason `layout.test.ts` and `navigation.test.ts`
  * already give for the same choice: these are facts about which JSX a server component renders,
  * and this repository runs no harness that mounts one. **The one authorization claim is real
- * Postgres**, because a hub that merely links to an existing page cannot itself grant anything —
+ * Postgres**, because a hub that merely links to an existing page cannot itself grant anything â€”
  * proving that requires actually trying the write as a member who shouldn't be able to.
  */
 
@@ -27,71 +27,52 @@ const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
-/**
- * Superseded (2026 Settings migration): the ConfigCard tile grid this block used to assert on
- * `settings/page.tsx` was itself the god-page symptom a later architecture pass named and
- * removed — a hub of "View →" cards sitting above the very sections it linked to, three
- * competing tables of contents for one set of things (grid, anchors, persistent rail). The
- * persistent Settings rail (`features/settings/settings-navigation.tsx`) is now the one index
- * for what remains a genuine Settings destination.
- *
- * **Superseded again (information-architecture correction):** that Settings migration had gone
- * on to make Settings the *primary door* to Pricing, Automations, Custom fields and People and
- * roles — four first-class product workspaces, each demoted to a Settings sub-route. That was
- * itself the defect this file's tests below now prove corrected: each is back on its own
- * canonical sidebar route, and Settings is one organization Area among them, never a second
- * application shell containing a first-class workspace (`CLAUDE.md`).
- */
 describe('Settings, as the Configuration Center (source scan)', () => {
-  const navigation = readFileSync(
-    fileURLToPath(new URL('../features/settings/settings-navigation.tsx', import.meta.url)),
+  const settings = readFileSync(`${ROUTES}/settings/page.tsx`, 'utf8');
+  const frame = readFileSync(
+    fileURLToPath(new URL('../features/settings/settings-page-frame.tsx', import.meta.url)),
     'utf8',
   );
 
-  it('groups Personal, Business, Operations, Channels & connections and Product separately, never flattened into one list', () => {
-    for (const heading of ['Personal', 'Business', 'Operations', 'Channels & connections', 'Product']) {
-      expect(navigation).toContain(`heading: '${heading}'`);
+  it('uses the existing app page frame, not a permanent second Settings sidebar', () => {
+    expect(frame).not.toContain('SettingsNavigation');
+    expect(frame).not.toContain('grid-cols-[13rem_minmax(0,1fr)]');
+  });
+
+  it('links the remaining Settings-owned destinations from the hub', () => {
+    for (const path of [
+      '/settings/general',
+      '/settings/branding',
+      '/settings/website',
+      '/settings/connections',
+      '/settings/features',
+      '/settings/plan',
+    ]) {
+      expect(settings).toContain(path);
     }
   });
 
-  it('carries none of the retired mixed-concept labels', () => {
-    for (const retired of ['Work & scheduling', 'Public presence & payments']) {
-      expect(navigation).not.toContain(retired);
-    }
+  it('does not claim Account, Work configuration, or Schedule configuration as Settings destinations', () => {
+    expect(settings).not.toContain('/account');
+    expect(settings).not.toContain('/settings/work');
+    expect(settings).not.toContain('/settings/schedule');
   });
 
-  it('does not list Pricing, Automations, Custom fields or Team — each is a canonical sidebar workspace, not a Settings destination', () => {
-    for (const label of ['People & access', 'Data & automation', 'Business commerce']) {
-      expect(navigation, `${label} should no longer be a Settings destination`).not.toContain(`label: '${label}'`);
-    }
-    for (const heading of ['Data & automation', 'Commerce']) {
-      expect(navigation, `${heading} should no longer be a Settings group`).not.toContain(`heading: '${heading}'`);
-    }
-  });
-
-  it('splits Work from Schedule, and Branding from Payments, into their own routes', () => {
-    expect(navigation).toContain("segment: 'schedule'");
-    expect(navigation).toContain("segment: 'branding'");
-    expect(readFileSync(`${ROUTES}/settings/schedule/page.tsx`, 'utf8')).toContain(
-      'ScheduleConfigurationPage',
-    );
+  it('keeps Branding as Settings-owned while moving Work and Schedule configuration to their owners', () => {
     expect(readFileSync(`${ROUTES}/settings/branding/page.tsx`, 'utf8')).toContain(
       'BrandingSettingsPage',
     );
-    // Opening hours moved out of Settings → Work entirely.
-    expect(readFileSync(`${ROUTES}/settings/work/page.tsx`, 'utf8')).not.toContain(
-      'listOperatingHours',
+    expect(readFileSync(`${ROUTES}/work/configuration/page.tsx`, 'utf8')).toContain(
+      'WorkConfigurationPage',
     );
-  });
-
-  it('reaches Work configuration', () => {
-    expect(navigation).toContain("segment: 'work'");
-    expect(readFileSync(`${ROUTES}/settings/work/page.tsx`, 'utf8')).toContain('WorkConfigurationPage');
+    expect(readFileSync(`${ROUTES}/schedule/configuration/page.tsx`, 'utf8')).toContain(
+      'ScheduleConfigurationPage',
+    );
   });
 });
 
 /**
- * The four canonical workspaces this slice restored — each a real top-level Area again, with
+ * The four canonical workspaces this slice restored â€” each a real top-level Area again, with
  * the content that had accreted under Settings while it was one, and each old Settings route now
  * only a compatibility redirect.
  */
@@ -104,7 +85,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     expect(page).not.toContain('redirect(');
   });
 
-  it('/automations is canonical and renders the automation workspace — Rules, Messages and Activity as URL-backed sibling views, and a rule as its own detail route', () => {
+  it('/automations is canonical and renders the automation workspace â€” Rules, Messages and Activity as URL-backed sibling views, and a rule as its own detail route', () => {
     const page = readFileSync(`${ROUTES}/automations/page.tsx`, 'utf8');
     expect(page).toContain('AutomationsViewTabs');
     expect(page).toContain('RulesTable');
@@ -133,7 +114,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     ).toContain('CreateFieldSheet');
   });
 
-  it('/roles is canonical and renders the Team workspace — Members, Invitations and Roles as URL-backed sibling views', () => {
+  it('/roles is canonical and renders the Team workspace â€” Members, Invitations and Roles as URL-backed sibling views', () => {
     const page = readFileSync(`${ROUTES}/roles/page.tsx`, 'utf8');
     expect(page).toContain('TeamViewTabs');
     expect(page).toContain('AddMemberSheetProvider');
@@ -170,7 +151,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
   });
 });
 
-describe('contextual Configure, generalized from Work — the same component, every host', () => {
+describe('contextual Configure, generalized from Work â€” the same component, every host', () => {
   const registrants: Record<string, { page: string; component: string; import: string }> = {
     resources: {
       page: 'resources/page.tsx',
@@ -243,12 +224,12 @@ describe('contextual Configure, generalized from Work — the same component, ev
   });
 });
 
-describe('Settings → Work exists as a real, directly addressable route', () => {
+describe('Work configuration exists as a real, directly addressable owner route', () => {
   it('has its own page, distinct from the operational Work screen', () => {
-    // Existing merely by not throwing — `readFileSync` fails loudly if the route was never
+    // Existing merely by not throwing â€” `readFileSync` fails loudly if the route was never
     // created, which is the actual claim "directly addressable" reduces to for a file-based
     // router: there is a real `page.tsx` at this path, not only a link that points at one.
-    const page = readFileSync(`${ROUTES}/settings/work/page.tsx`, 'utf8');
+    const page = readFileSync(`${ROUTES}/work/configuration/page.tsx`, 'utf8');
     expect(page).toContain('WorkConfigurationPage');
   });
 });
@@ -267,7 +248,7 @@ describe('Work, as an operational surface (source scan)', () => {
       'TypeChecklistItemRow',
       'PublishTypeForm',
     ]) {
-      expect(work, `${moved} should have moved to Settings → Work`).not.toContain(moved);
+      expect(work, `${moved} should have moved to Work configuration`).not.toContain(moved);
     }
   });
 
@@ -279,18 +260,18 @@ describe('Work, as an operational surface (source scan)', () => {
 
   it('shows a configuration-link empty state, not a mysteriously empty board, when nothing is configured', () => {
     expect(work).toContain('No kinds of work are configured.');
-    expect(work).toMatch(/settings\/work/);
-    // The link is offered only to somebody who could act on it — a member who cannot configure
+    expect(work).toMatch(/work\/configuration/);
+    // The link is offered only to somebody who could act on it â€” a member who cannot configure
     // work is not shown a control dressed up as one (I12, applied to navigation rather than a
     // write).
-    expect(work).toMatch(/mayConfigure\s*\?[\s\S]{0,120}Configure Work in Settings/);
+    expect(work).toMatch(/mayConfigure\s*\?[\s\S]{0,120}Configure Work/);
   });
 });
 
-describe('Business Setup’s manual links (source scan)', () => {
-  it('points its Work step at Settings → Work, not the operational board', () => {
+describe('Business Setupâ€™s manual links (source scan)', () => {
+  it('points its Work step at Work configuration, not the operational board', () => {
     const setup = readFileSync(`${ROUTES}/setup/page.tsx`, 'utf8');
-    expect(setup).toMatch(/segment === 'work'[\s\S]{0,120}'settings'[\s\S]{0,40}\/work/);
+    expect(setup).toMatch(/segment === 'work'[\s\S]{0,160}'work'[\s\S]{0,60}configuration/);
   });
 });
 
@@ -326,7 +307,7 @@ describe('a capability-limited member gains no configuration authority through t
       currency: 'EUR',
     });
 
-    // A role that can do nothing but exist — reused from the exact pattern `roles.test.ts`
+    // A role that can do nothing but exist â€” reused from the exact pattern `roles.test.ts`
     // already relies on for "nothing yet" being a legitimate role.
     const roleId = await createRole(owner, { organizationId, name: 'Onlooker', capabilities: [] });
     await addMember(owner, {
@@ -338,7 +319,7 @@ describe('a capability-limited member gains no configuration authority through t
 
     const limited = await signIn(memberEmail);
 
-    // The hub is a link, not a grant. Reaching Settings → Work is a navigation change; the
+    // The hub is a link, not a grant. Reaching Work configuration is a navigation change; the
     // write underneath it is still `field.manage`, checked by the same RLS as before this
     // slice touched a single line of navigation.
     await expect(

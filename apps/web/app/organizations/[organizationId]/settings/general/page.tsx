@@ -20,7 +20,7 @@ export default async function GeneralSettingsPage({
   const mayManage = organization.capabilities.includes('organization.manage');
 
   return (
-    <SettingsPageFrame organizationId={organizationId}>
+    <SettingsPageFrame>
       <PageHeading>General</PageHeading>
       <Hint className="mt-1">
         This business&rsquo;s name, where it operates and what it trades in. Changing the

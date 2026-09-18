@@ -32,7 +32,7 @@ export default async function BrandingSettingsPage({
   const mayManage = organization.capabilities.includes('organization.manage');
 
   return (
-    <SettingsPageFrame organizationId={organizationId}>
+    <SettingsPageFrame>
       <Hint className="mt-1">What customers see before they book, and how this business looks.</Hint>
 
       <Section id="public-page" className="mt-6 scroll-mt-6">

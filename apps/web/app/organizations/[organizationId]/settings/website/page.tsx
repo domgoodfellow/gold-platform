@@ -16,7 +16,7 @@ export default async function WebsiteSettingsPage({ params }: PageProps<'/organi
   const profile = state ? await (db.rpc.bind(db) as unknown as (name:string,args?:Record<string,unknown>)=>Promise<{data:unknown;error:unknown}>)('public_communication_profile', { p_site_id: state.siteId }) : null;
   const profileValue = profile?.data as { displayName?:string; greeting?:string; instructions?:string; handoffMessage?:string } | null;
 
-  return <SettingsPageFrame organizationId={organizationId}>
+  return <SettingsPageFrame>
     <PageHeading>Website</PageHeading>
     <Hint className="mt-1">Edit a private draft, review the exact rendered page, then publish deliberately. Profile and brand remain in Public presence.</Hint>
     {mayManage && state ? <>

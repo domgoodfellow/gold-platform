@@ -23,7 +23,7 @@ function revalidateFieldSurfaces(organizationId: string, entityType: string) {
   revalidatePath(`/organizations/${organizationId}/fields`);
   if (entityType === 'work_item') {
     revalidatePath(`/organizations/${organizationId}/work`);
-    revalidatePath(`/organizations/${organizationId}/settings/work`);
+    revalidatePath(`/organizations/${organizationId}/work/configuration`);
   }
 }
 

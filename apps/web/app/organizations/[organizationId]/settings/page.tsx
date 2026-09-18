@@ -1,43 +1,85 @@
 import Link from 'next/link';
+import { Card } from '@/components/containers/card';
 import { Hint } from '@/components/controls/inputs';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { SectionHeading } from '@/components/containers/section';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Settings' own landing page — a hub, not a settings destination in its own right. Business
- * identity/regional settings, branding and public presence, opening hours, modules and plan &
- * usage all have their own place under the Settings navigation; see
- * `features/settings/settings-navigation.tsx`. Pricing, Automations, Custom fields and People
- * and roles are not among them — each is a first-class product workspace with its own canonical
- * sidebar Area, and Settings is one organization Area, never a second door to one (`CLAUDE.md`).
- */
+/** Settings is an organization hub, not a second navigation rail. */
 export default async function SettingsPage({
   params,
 }: PageProps<'/organizations/[organizationId]/settings'>) {
   const { organizationId } = await params;
   const { organization } = await requireOrganization(organizationId);
+  const root = `/organizations/${organizationId}`;
+  const destinations = [
+    {
+      title: 'General',
+      description: 'Business name, public slug, timezone, currency, and scheduling buffer.',
+      href: `${root}/settings/general`,
+    },
+    {
+      title: 'Branding & public presence',
+      description: 'Logo, colors, and the way this business introduces itself publicly.',
+      href: `${root}/settings/branding`,
+    },
+    {
+      title: 'Website',
+      description: 'Homepage publishing and the public communication profile.',
+      href: `${root}/settings/website`,
+    },
+    {
+      title: 'Connections',
+      description: 'Provider connections used by this business.',
+      href: `${root}/settings/connections`,
+    },
+    {
+      title: 'Features',
+      description: 'Enabled GOLD capabilities for this organization.',
+      href: `${root}/settings/features`,
+    },
+    {
+      title: 'Plan & usage',
+      description: 'Current plan, feature entitlements, usage, and commercial status.',
+      href: `${root}/settings/plan`,
+    },
+  ];
 
   return (
-    <SettingsPageFrame organizationId={organizationId}>
+    <SettingsPageFrame>
       <Hint className="mt-1">Durable configuration for how this business runs.</Hint>
 
-      <Section className="mt-6">
-        <SectionHeading>Business setup</SectionHeading>
-        <Hint className="mt-1">
-          {organization.operationalState === 'setup'
-            ? 'Describe this business, review readiness, and launch when ready.'
-            : "Review or revise this business's configuration."}
-        </Hint>
-        <Link
-          href={`/organizations/${organizationId}/setup`}
-          className="mt-2 inline-block text-sm underline underline-offset-4"
-        >
-          Guided setup
-        </Link>
-      </Section>
+      <div className="mt-6 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
+        <Card as="section" className="border-accent">
+          <SectionHeading>Guided setup</SectionHeading>
+          <Hint className="mt-1">
+            {organization.operationalState === 'setup'
+              ? 'Readiness checks and launch controls for this business.'
+              : 'Review the setup path this business launched through.'}
+          </Hint>
+          <Link
+            href={`${root}/setup`}
+            className="mt-4 inline-block text-sm font-medium underline underline-offset-4"
+          >
+            Open guided setup
+          </Link>
+        </Card>
+
+        {destinations.map((destination) => (
+          <Card key={destination.href} as="section">
+            <SectionHeading>{destination.title}</SectionHeading>
+            <Hint className="mt-1">{destination.description}</Hint>
+            <Link
+              href={destination.href}
+              className="mt-4 inline-block text-sm font-medium underline underline-offset-4"
+            >
+              Open
+            </Link>
+          </Card>
+        ))}
+      </div>
     </SettingsPageFrame>
   );
 }

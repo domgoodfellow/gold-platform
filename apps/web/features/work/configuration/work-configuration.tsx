@@ -20,7 +20,7 @@ import {
   PublishTypeForm,
   RenameTypeForm,
   TypeChecklistItemRow,
-} from '@/app/organizations/[organizationId]/settings/work/work-config-forms';
+} from './work-config-forms';
 
 export type WorkConfigurationData = {
   organizationId: string;
@@ -42,10 +42,10 @@ export type WorkConfigurationData = {
 /**
  * Kinds of work, workflow, checklists and fields — the shape of Work, apart from doing it. One
  * component so a business configuring from the Work page's Configure rail and one editing from
- * Settings → Work see, and change, the exact same thing (contract §13).
+ * Work configuration sees, and changes, the exact same thing as the Work Configure rail.
  *
  * Deliberately excludes operating hours: those describe Schedule, not Work, and stay on the
- * Settings → Work page directly rather than in this shared, rail-hosted component.
+ * owner route directly rather than in this shared, rail-hosted component.
  */
 export function WorkConfiguration({
   organizationId,

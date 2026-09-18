@@ -506,13 +506,13 @@ describe('a switch leads to its inputs', () => {
       fileURLToPath(new URL('../features/work/configuration/work-configuration.tsx', import.meta.url)),
       'utf8',
     );
-    const settingsWorkPage = readFileSync(`${ROUTES}/settings/work/page.tsx`, 'utf8');
+    const workConfigurationPage = readFileSync(`${ROUTES}/work/configuration/page.tsx`, 'utf8');
 
     expect(workConfig).toContain('PublishTypeForm');
     expect(workConfig, 'the publish section is not gated on the booking module').toMatch(
       /bookingEnabled\s*\?[\s\S]{0,400}PublishTypeForm/,
     );
-    expect(settingsWorkPage).toContain("enabledModules.has('booking')");
+    expect(workConfigurationPage).toContain("enabledModules.has('booking')");
   });
 
   it('gates the asset reference on a job on the assets module, on both the board and the job page', () => {
@@ -725,12 +725,12 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
 
   it('gives Settings a path back to it, worded so Launch never sounds available again', () => {
     const settings = readFileSync(`${ROUTES}/settings/page.tsx`, 'utf8');
-    expect(settings, 'no card links Settings to /setup').toMatch(/organizationId\}\/setup/);
-    expect(settings, 'Business setup card is missing').toContain('Business setup');
+    expect(settings, 'no card links Settings to /setup').toContain('href={`${root}/setup`}');
+    expect(settings, 'Guided setup card is missing').toContain('Guided setup');
     expect(
       settings,
       'post-launch wording must not imply Launch can happen again',
-    ).toMatch(/Review or revise this business.s configuration/);
+    ).toContain('Review the setup path this business launched through.');
   });
 
   it('never renders Launch again on /setup once the business is LIVE', () => {

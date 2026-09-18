@@ -60,7 +60,7 @@ export type ModuleConfiguration = {
   /**
    * A route nested under that area, for a module configured on one of Settings' own sub-pages
    * rather than the area's own root — Settings is the one area whose "page" is genuinely several
-   * routes (`settings-navigation.tsx`), so a module configured there needs to say which.
+   * routes, so a module configured there needs to say which.
    */
   path?: string;
   /** An `id` on the resolved page, when that page is not itself the whole of the configuration. */

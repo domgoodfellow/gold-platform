@@ -47,7 +47,7 @@ export default async function FeaturesSettingsPage({
   }
 
   return (
-    <SettingsPageFrame organizationId={organizationId}>
+    <SettingsPageFrame>
       <PageHeading>Features</PageHeading>
       <Hint className="mt-1">
         What this business is entitled to, and what it has switched off. An entitled feature is
