@@ -4053,6 +4053,50 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_plan_cost_assumptions: {
+        Row: {
+          captured_at: string
+          currency: string
+          id: string
+          labour_cost_minor: number
+          note: string
+          plan_id: string
+          provider_cost_minor: number
+          source: string
+          source_url: string | null
+        }
+        Insert: {
+          captured_at?: string
+          currency: string
+          id?: string
+          labour_cost_minor: number
+          note?: string
+          plan_id: string
+          provider_cost_minor: number
+          source?: string
+          source_url?: string | null
+        }
+        Update: {
+          captured_at?: string
+          currency?: string
+          id?: string
+          labour_cost_minor?: number
+          note?: string
+          plan_id?: string
+          provider_cost_minor?: number
+          source?: string
+          source_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_cost_assumptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_plan_feature_grants: {
         Row: {
           created_at: string
@@ -4136,7 +4180,7 @@ export type Database = {
           id: string
           note: string
           plan_id: string
-          recorded_by: string
+          recorded_by: string | null
           source: string
           source_url: string | null
         }
@@ -4150,7 +4194,7 @@ export type Database = {
           id?: string
           note?: string
           plan_id: string
-          recorded_by: string
+          recorded_by?: string | null
           source?: string
           source_url?: string | null
         }
@@ -4164,7 +4208,7 @@ export type Database = {
           id?: string
           note?: string
           plan_id?: string
-          recorded_by?: string
+          recorded_by?: string | null
           source?: string
           source_url?: string | null
         }
@@ -4318,12 +4362,6 @@ export type Database = {
           },
         ]
       }
-      platform_plan_cost_assumptions: {
-        Row: { captured_at: string; currency: string; id: string; labour_cost_minor: number; note: string; plan_id: string; provider_cost_minor: number; source: string; source_url: string | null }
-        Insert: { captured_at?: string; currency: string; id?: string; labour_cost_minor: number; note?: string; plan_id: string; provider_cost_minor: number; source?: string; source_url?: string | null }
-        Update: { captured_at?: string; currency?: string; id?: string; labour_cost_minor?: number; note?: string; plan_id?: string; provider_cost_minor?: number; source?: string; source_url?: string | null }
-        Relationships: [{ foreignKeyName: "platform_plan_cost_assumptions_plan_id_fkey"; columns: ["plan_id"]; isOneToOne: false; referencedRelation: "platform_plans"; referencedColumns: ["id"] }]
-      }
       platform_plans: {
         Row: {
           billable: boolean
@@ -4352,7 +4390,7 @@ export type Database = {
         Update: {
           billable?: boolean
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description?: string
           display_order?: number
           id?: string
@@ -4456,7 +4494,7 @@ export type Database = {
           meter_id: string
           note: string
           provider_key: string
-          recorded_by: string
+          recorded_by: string | null
           source: string
           source_url: string | null
           unit_amount_micros: number
@@ -4470,7 +4508,7 @@ export type Database = {
           meter_id: string
           note?: string
           provider_key: string
-          recorded_by: string
+          recorded_by?: string | null
           source: string
           source_url?: string | null
           unit_amount_micros: number
@@ -4484,7 +4522,7 @@ export type Database = {
           meter_id?: string
           note?: string
           provider_key?: string
-          recorded_by?: string
+          recorded_by?: string | null
           source?: string
           source_url?: string | null
           unit_amount_micros?: number
@@ -4582,7 +4620,7 @@ export type Database = {
           id: string
           meter_id: string
           note: string
-          recorded_by: string
+          recorded_by: string | null
           source: string
           source_url: string | null
           unit_amount_micros: number
@@ -4595,7 +4633,7 @@ export type Database = {
           id?: string
           meter_id: string
           note?: string
-          recorded_by: string
+          recorded_by?: string | null
           source: string
           source_url?: string | null
           unit_amount_micros: number
@@ -4608,7 +4646,7 @@ export type Database = {
           id?: string
           meter_id?: string
           note?: string
-          recorded_by?: string
+          recorded_by?: string | null
           source?: string
           source_url?: string | null
           unit_amount_micros?: number
@@ -6154,14 +6192,6 @@ export type Database = {
         }
         Returns: string
       }
-      bootstrap_gold_internal_workspace: {
-        Args: {
-          p_capabilities: string[]
-          p_organization_id: string
-          p_role: string
-        }
-        Returns: string
-      }
       add_operating_hours: {
         Args: {
           p_closes_at: string
@@ -6254,6 +6284,14 @@ export type Database = {
         Returns: string
       }
       booking_organization: { Args: { p_slug: string }; Returns: string }
+      bootstrap_gold_internal_workspace: {
+        Args: {
+          p_capabilities: string[]
+          p_organization_id: string
+          p_role: string
+        }
+        Returns: string
+      }
       change_customer_stage: {
         Args: {
           p_customer_id: string
@@ -6580,14 +6618,32 @@ export type Database = {
         Args: { p_id: string }
         Returns: string[]
       }
-      organization_plan_price: {
-        Args: { p_at?: string; p_organization_id: string; p_plan_id: string }
-        Returns: {
-          amount_minor: number
-          currency: string
-          source: string
-        }[]
-      }
+      organization_plan_price:
+        | {
+            Args: {
+              p_at?: string
+              p_organization_id: string
+              p_plan_id: string
+            }
+            Returns: {
+              amount_minor: number
+              currency: string
+              source: string
+            }[]
+          }
+        | {
+            Args: {
+              p_at: string
+              p_billing_interval: string
+              p_organization_id: string
+              p_plan_id: string
+            }
+            Returns: {
+              amount_minor: number
+              currency: string
+              source: string
+            }[]
+          }
       organization_usage_detail: {
         Args: { p_organization_id: string }
         Returns: {
@@ -7472,3 +7528,4 @@ export const Constants = {
     },
   },
 } as const
+

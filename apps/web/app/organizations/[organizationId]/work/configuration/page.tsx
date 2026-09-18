@@ -53,7 +53,7 @@ export default async function WorkConfigurationPage({
         The kinds of work this business does, the stages a job moves through, and the steps every
         job of a kind involves.{' '}
         <Link href={`/organizations/${organizationId}/work`} className="underline underline-offset-4">
-          Doing today's work
+          Doing today&rsquo;s work
         </Link>{' '}
         stays on the Work screen.
       </Hint>

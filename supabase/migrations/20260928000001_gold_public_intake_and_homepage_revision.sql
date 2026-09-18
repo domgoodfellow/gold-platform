@@ -113,7 +113,9 @@ declare
   v_number   integer;
   v_revision uuid;
 begin
-  select ps.workflow_review_organization_id into v_org
+  -- The organization that owns GOLD's root site, which is not necessarily the intake target
+  -- (`20260916000002`).
+  select ps.gold_public_organization_id into v_org
   from public.platform_settings ps where ps.singleton;
   if v_org is null then return; end if;
 
