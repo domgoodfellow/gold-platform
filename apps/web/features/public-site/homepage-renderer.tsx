@@ -4,6 +4,18 @@ import type { PublicHomepageSection, PublicHomepageSections } from '@gold/schema
 import { ButtonLink } from '@/components/controls/button';
 import { FOCUS_RING, cx } from '@/components/class-names';
 
+/**
+ * The three commercial doors, in the order the `capabilities` section's items are seeded
+ * (`app.default_gold_homepage_sections()`). A title this map does not recognise renders as plain
+ * text rather than a link — an editor changing the wording in the public-site editor degrades to
+ * an unlinked card instead of a broken route.
+ */
+const PRODUCT_HREF_BY_TITLE: Record<string, string> = {
+  Sales: '/sales',
+  Operations: '/operations',
+  'Customer Service': '/customer-service',
+};
+
 function ProductPreview() {
   const rows = [
     ['09:00', 'Install · Reyes', 'Van 2'],
@@ -65,9 +77,29 @@ function renderSection(section: PublicHomepageSection) {
       </section>
     );
     case 'capabilities': return (
-      <section key={section.kind} id="capabilities" className="scroll-mt-24">
+      <section key={section.kind} id="products" className="scroll-mt-24">
         <div className="flex max-w-2xl flex-col gap-3"><p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">{section.eyebrow}</p><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{section.heading}</h2><p className="text-muted">{section.body}</p></div>
-        <div className="mt-10 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">{section.items.map((item) => <article key={item.title} className="border-t-2 border-foreground pt-4"><h3 className="font-semibold">{item.title}</h3><p className="mt-2 text-sm leading-relaxed text-muted">{item.body}</p></article>)}</div>
+        <div className="mt-10 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+          {section.items.map((item) => {
+            const href = PRODUCT_HREF_BY_TITLE[item.title];
+            const body = (
+              <>
+                <h3 className="flex items-center gap-1.5 font-semibold">
+                  {item.title}
+                  {href ? <ArrowRight aria-hidden size={14} className="text-muted transition-transform group-hover:translate-x-0.5" /> : null}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">{item.body}</p>
+              </>
+            );
+            return href ? (
+              <Link key={item.title} href={href} className={cx('group block border-t-2 border-foreground pt-4 transition-colors hover:border-foreground/60', FOCUS_RING)}>
+                {body}
+              </Link>
+            ) : (
+              <article key={item.title} className="border-t-2 border-foreground pt-4">{body}</article>
+            );
+          })}
+        </div>
       </section>
     );
     case 'process': return (

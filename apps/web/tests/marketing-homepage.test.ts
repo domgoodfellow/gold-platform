@@ -6,18 +6,27 @@ const MARKETING = fileURLToPath(new URL('../app/(marketing)', import.meta.url));
 const page = readFileSync(`${MARKETING}/page.tsx`, 'utf8');
 const layout = readFileSync(`${MARKETING}/layout.tsx`, 'utf8');
 const renderer = readFileSync(fileURLToPath(new URL('../features/public-site/homepage-renderer.tsx', import.meta.url)), 'utf8');
-const publishing = readFileSync(fileURLToPath(new URL('../../../supabase/migrations/20260916000001_a_public_site_publishes_one_reviewed_revision.sql', import.meta.url)), 'utf8');
+const nav = readFileSync(fileURLToPath(new URL('../components/marketing/marketing-nav.tsx', import.meta.url)), 'utf8');
+// The seed the current section content actually comes from — the base migration's own copy of
+// `app.default_gold_homepage_sections()` is superseded by `create or replace` here, the same way
+// the running database is.
+const publishing = readFileSync(fileURLToPath(new URL('../../../supabase/migrations/20260927000001_gold_homepage_sells_three_products.sql', import.meta.url)), 'utf8');
 
 describe('the homepage has one conversion priority', () => {
-  it('uses the real workflow-review intake for every primary marketing action', () => {
-    expect(layout).toMatch(/ButtonLink href="\/workflow-review"/);
-    expect(publishing).toContain('"href":"/workflow-review"');
+  it('uses the real demo intake for every primary marketing action', () => {
+    expect(nav).toMatch(/ButtonLink href="\/demo"/);
+    expect(publishing).toContain('"href":"/demo"');
   });
 
   it('keeps self-service signup subordinate and login in the persistent header', () => {
-    expect(layout).toMatch(/href="\/login"/);
+    expect(nav).toMatch(/href="\/login"/);
     expect(publishing).toMatch(/Prefer to explore independently/);
     expect(publishing).toContain('"href":"/sign-up"');
+  });
+
+  it('does not surface the old workflow-review route anywhere in primary marketing chrome', () => {
+    expect(layout + nav + page).not.toMatch(/workflow-review/i);
+    expect(layout + nav + page).not.toMatch(/Request a workflow review/i);
   });
 });
 
@@ -31,9 +40,18 @@ describe('the editorial page ships without page-wide client JavaScript', () => {
   it('uses semantic sections, a single h1, and ordered implementation steps', () => {
     expect(renderer.match(/<h1\b/g)).toHaveLength(1);
     expect(renderer).toContain('<ol');
-    for (const text of ['Understand the workflow', 'Configure the business', 'Review and launch', 'Improve over time']) {
+    for (const text of ['See how you work today', 'Configure your workspace', 'Review and launch', 'Improve over time']) {
       expect(publishing).toContain(text);
     }
+  });
+
+  it('names the three commercial products, each linking to its own page', () => {
+    for (const [title, href] of [['Sales', '/sales'], ['Operations', '/operations'], ['Customer Service', '/customer-service']] as const) {
+      expect(publishing).toContain(title);
+      expect(renderer).toContain(href);
+    }
+    // "Capabilities" is gone from the public vocabulary — this is a products door, not a feature dump.
+    expect(renderer).not.toMatch(/>\s*Capabilities\s*</);
   });
 });
 
@@ -41,6 +59,12 @@ describe('the page sells outcomes and only demonstrated behavior', () => {
   it('does not lead with providers or internal architecture vocabulary', () => {
     for (const forbidden of [/\bStripe\b/i, /\bTwilio\b/i, /\bSupabase\b/i, /\bPostgres\b/i, /\bAnthropic\b/i, /\bkernel\b/i, /\bmilestone\b/i]) {
       expect(page + renderer).not.toMatch(forbidden);
+    }
+  });
+
+  it('does not read like internal architecture documentation', () => {
+    for (const forbidden of [/control stays explicit/i, /one foundation/i, /tenant boundary/i, /configure the operation/i, /automate deliberately/i]) {
+      expect(publishing).not.toMatch(forbidden);
     }
   });
 

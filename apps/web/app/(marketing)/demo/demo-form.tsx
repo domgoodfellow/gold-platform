@@ -3,33 +3,34 @@
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, Hint, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { FOCUS_RING, cx } from '@/components/class-names';
 import { WORKFLOW_REVIEW_LIMITS } from '@/lib/domain/workflow-review/limits';
 
-export type WorkflowReviewState = { error: string | null; done: boolean };
+export type DemoRequestState = { error: string | null; done: boolean };
 
-const INITIAL: WorkflowReviewState = { error: null, done: false };
+const INITIAL: DemoRequestState = { error: null, done: false };
+
+const HELP_OPTIONS = ['Sales', 'Operations', 'Customer service', 'Multiple areas'];
 
 /**
- * The one form this route has. A single page rather than a wizard, because a workflow review is
- * a request to talk, not the start of Business Setup — nothing here creates an account, a
- * membership, or an organization (`lib/domain/workflow-review/workflow-review.ts`).
+ * The one form this route has. A single page rather than a wizard: this is a request to talk,
+ * not the start of Business Setup — nothing here creates an account, a membership, or an
+ * organization (`lib/domain/workflow-review/workflow-review.ts`, reused as-is for this axis).
  */
-export function WorkflowReviewForm({
+export function DemoForm({
   action,
 }: {
-  action: (state: WorkflowReviewState, formData: FormData) => Promise<WorkflowReviewState>;
+  action: (state: DemoRequestState, formData: FormData) => Promise<DemoRequestState>;
 }) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
 
   if (state.done) {
     return (
       <div className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold tracking-tight">Request received</h2>
+        <h2 className="text-xl font-semibold tracking-tight">Thanks</h2>
         <p className="max-w-md text-muted">
-          Someone from GOLD will follow up by email to set up a time to talk through how your
-          business runs today.
+          We&rsquo;ll review what you shared and contact you about a demo.
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
           <Link href="/" className="text-sm font-medium underline underline-offset-4">
@@ -51,13 +52,13 @@ export function WorkflowReviewForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <FieldLabel htmlFor="businessName">Business name</FieldLabel>
-        <TextInput id="businessName" name="businessName" type="text" required maxLength={WORKFLOW_REVIEW_LIMITS.businessName} autoComplete="organization" />
+        <FieldLabel htmlFor="email">Work email</FieldLabel>
+        <TextInput id="email" name="email" type="email" required maxLength={WORKFLOW_REVIEW_LIMITS.email} autoComplete="email" />
       </div>
 
       <div className="flex flex-col gap-1">
-        <FieldLabel htmlFor="email">Email</FieldLabel>
-        <TextInput id="email" name="email" type="email" required maxLength={WORKFLOW_REVIEW_LIMITS.email} autoComplete="email" />
+        <FieldLabel htmlFor="businessName">Business name</FieldLabel>
+        <TextInput id="businessName" name="businessName" type="text" required maxLength={WORKFLOW_REVIEW_LIMITS.businessName} autoComplete="organization" />
       </div>
 
       <div className="flex flex-col gap-1">
@@ -66,9 +67,11 @@ export function WorkflowReviewForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <FieldLabel htmlFor="context">How does your business run today?</FieldLabel>
-        <Hint id="context-hint">The tools you use now, and where they fall short.</Hint>
-        <TextArea id="context" name="context" rows={4} maxLength={WORKFLOW_REVIEW_LIMITS.context} aria-describedby="context-hint" />
+        <FieldLabel htmlFor="businessType">What do you want help with?</FieldLabel>
+        <SelectInput id="businessType" name="businessType" defaultValue="">
+          <option value="" disabled>Choose one</option>
+          {HELP_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+        </SelectInput>
       </div>
 
       <div className="flex flex-col gap-1">
@@ -77,8 +80,9 @@ export function WorkflowReviewForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <FieldLabel htmlFor="businessType">What kind of business is this? (optional)</FieldLabel>
-        <TextInput id="businessType" name="businessType" type="text" maxLength={WORKFLOW_REVIEW_LIMITS.businessType} />
+        <FieldLabel htmlFor="context">Current tools / short context (optional)</FieldLabel>
+        <Hint id="context-hint">The tools you use now, and where they fall short.</Hint>
+        <TextArea id="context" name="context" rows={4} maxLength={WORKFLOW_REVIEW_LIMITS.context} aria-describedby="context-hint" />
       </div>
 
       <Hint weight="subtle">
@@ -87,7 +91,7 @@ export function WorkflowReviewForm({
       </Hint>
 
       <Button type="submit" disabled={pending}>
-        {pending ? 'Sending…' : 'Request a workflow review'}
+        {pending ? 'Sending…' : 'Request a demo'}
       </Button>
 
       <ErrorText role="alert">{state.error}</ErrorText>

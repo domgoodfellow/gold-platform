@@ -11,8 +11,8 @@ describe('canonical deployment identity', () => {
     process.env.SITE_URL = 'https://gold.example/path?wrong=1';
     try {
       expect(siteUrl().toString()).toBe('https://gold.example/');
-      expect(canonicalUrl('/workflow-review').toString()).toBe(
-        'https://gold.example/workflow-review',
+      expect(canonicalUrl('/demo').toString()).toBe(
+        'https://gold.example/demo',
       );
     } finally {
       if (previous === undefined) delete process.env.SITE_URL;
@@ -35,7 +35,10 @@ describe('canonical deployment identity', () => {
 describe('crawl surface', () => {
   it('lists only deliberate marketing routes in the sitemap', () => {
     const urls = sitemap().map((entry) => new URL(entry.url).pathname);
-    expect(urls).toEqual(['/', '/workflow-review']);
+    expect(urls).toEqual([
+      '/', '/sales', '/operations', '/customer-service', '/how-it-works', '/integrations',
+      '/pricing', '/demo',
+    ]);
     expect(urls).not.toContain('/login');
     expect(urls).not.toContain('/portal');
   });

@@ -3,12 +3,12 @@
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { requestWorkflowReview } from '@/lib/domain/workflow-review/workflow-review';
-import type { WorkflowReviewState } from './workflow-review-form';
+import type { DemoRequestState } from './demo-form';
 
-export async function requestWorkflowReviewAction(
-  _previous: WorkflowReviewState,
+export async function requestDemoAction(
+  _previous: DemoRequestState,
   formData: FormData,
-): Promise<WorkflowReviewState> {
+): Promise<DemoRequestState> {
   const db = await getDb();
 
   try {

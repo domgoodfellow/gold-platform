@@ -18,10 +18,17 @@ const PUBLIC_PATHS = [
   '/login',
   '/sign-up',
   '/forgot-password',
-  // GOLD's own front door for a prospect, same public standing as the four screens above —
-  // a visitor arrives with no session, and `requestWorkflowReview` gives them a one-shot
+  // GOLD's own marketing site: the three product pages, how it works, integrations, pricing,
+  // and the demo request itself — same public standing as the four screens above. A visitor
+  // arrives with no session, and `/demo`'s `requestWorkflowReview` gives them a one-shot
   // anonymous one for exactly as long as the single privileged write takes.
-  '/workflow-review',
+  '/sales',
+  '/operations',
+  '/customer-service',
+  '/how-it-works',
+  '/integrations',
+  '/pricing',
+  '/demo',
   // Where a recovery link lands, and the screen it lands on. Both have to be reachable without a
   // session: that is the state somebody who has forgotten their password is in. `/auth/recover`
   // is a route handler that exchanges the code for one, and `/reset-password` turns an arriving

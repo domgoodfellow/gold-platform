@@ -119,7 +119,7 @@ describe("the proxy's redirect rules", () => {
 });
 
 describe('the accept-invite page, by source', () => {
-  // No harness here mounts a server component (see workflow-review-route.test.ts), so this
+  // No harness here mounts a server component (see demo-route.test.ts), so this
   // guards the specific bug the review named: checking `data.user` truthiness — true for an
   // anonymous session exactly as for a permanent one — instead of the session's actual kind.
   const page = readFileSync(

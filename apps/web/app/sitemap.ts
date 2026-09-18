@@ -5,10 +5,16 @@ import { canonicalUrl } from '@/lib/seo/site';
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: canonicalUrl('/').toString(), changeFrequency: 'weekly', priority: 1 },
-    {
-      url: canonicalUrl('/workflow-review').toString(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
+    ...(['/sales', '/operations', '/customer-service'] as const).map((path) => ({
+      url: canonicalUrl(path).toString(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.9,
+    })),
+    ...(['/how-it-works', '/integrations', '/pricing'] as const).map((path) => ({
+      url: canonicalUrl(path).toString(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
+    { url: canonicalUrl('/demo').toString(), changeFrequency: 'monthly', priority: 0.8 },
   ];
 }

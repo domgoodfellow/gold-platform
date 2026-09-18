@@ -1,0 +1,65 @@
+import type { Metadata } from 'next';
+import { CtaBand } from '@/components/marketing/cta-band';
+import { PRICING_PACKAGES, PRICING_FACTORS } from '@/lib/marketing/content';
+
+export const metadata: Metadata = {
+  title: 'Pricing · GOLD',
+  description: 'What each GOLD product includes, and what changes the cost of implementation.',
+  alternates: { canonical: '/pricing' },
+  openGraph: {
+    title: 'Pricing · GOLD',
+    description: 'What each GOLD product includes, and what changes the cost of implementation.',
+    url: '/pricing',
+  },
+};
+
+export default function PricingPage() {
+  return (
+    <div className="flex flex-col gap-16 py-6 sm:gap-24 sm:py-10">
+      <div className="flex flex-col gap-4">
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">Pricing</p>
+        <h1 className="max-w-2xl text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl">
+          Priced by product, not by guesswork.
+        </h1>
+        <p className="max-w-xl text-lg leading-relaxed text-muted">
+          GOLD is not one flat price. Sales, Operations and Customer Service are each switched on
+          independently, and what a business pays depends on which of them it uses. A demo is
+          where you get a real number for your business — this page is what shapes it.
+        </p>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-3">
+        {PRICING_PACKAGES.map((pkg) => (
+          <div key={pkg.slug} className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-6">
+            <h2 className="text-lg font-semibold">{pkg.name}</h2>
+            <ul className="flex flex-col gap-2 text-sm leading-relaxed text-muted">
+              {pkg.includes.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span aria-hidden>—</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <section>
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">What changes the price</h2>
+        <div className="mt-8 grid gap-x-8 gap-y-8 sm:grid-cols-2">
+          {PRICING_FACTORS.map((factor) => (
+            <div key={factor.title} className="border-t-2 border-foreground pt-3">
+              <h3 className="font-semibold">{factor.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{factor.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <CtaBand
+        heading="Get a number for your own business."
+        body="Request a demo — we'll walk through which products fit and what implementation looks like for you."
+      />
+    </div>
+  );
+}

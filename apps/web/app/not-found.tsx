@@ -14,8 +14,8 @@ export default function NotFound() {
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <ButtonLink href="/">Return home</ButtonLink>
-          <Link href="/workflow-review" className="text-sm underline underline-offset-4">
-            Request a workflow review
+          <Link href="/demo" className="text-sm underline underline-offset-4">
+            Request a demo
           </Link>
         </div>
       </div>
