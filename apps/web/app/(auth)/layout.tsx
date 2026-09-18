@@ -1,3 +1,4 @@
+import { AuthBackground } from '@/components/auth/auth-background';
 import { SiteShell } from '@/components/containers/site-shell';
 import type { Metadata } from 'next';
 
@@ -21,8 +22,9 @@ export default function AuthLayout({ children }: LayoutProps<'/'>) {
     <SiteShell>
       {/* Centred in what is left after the header and footer, and never wider than a form wants
           to be read at. */}
-      <div className="flex flex-1 items-center justify-center">
-        <div className="w-full max-w-sm">{children}</div>
+      <div className="relative flex flex-1 items-center justify-center">
+        <AuthBackground />
+        <div className="relative w-full max-w-sm">{children}</div>
       </div>
     </SiteShell>
   );
