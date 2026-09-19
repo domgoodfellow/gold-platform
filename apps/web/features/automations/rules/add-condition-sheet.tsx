@@ -5,21 +5,20 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { SelectInput, TextInput } from '@/components/controls/inputs';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@gold/ui/components/sheet';
-import { useIsMobile } from '@gold/ui/hooks/use-mobile';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerHeader,
+  PageDrawerTitle,
+  PageDrawerTrigger,
+} from '@/components/containers/page-drawer';
 import { CONDITION_FIELDS, OPERATORS, type AutomationRule } from '@/lib/domain/automation/rules';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { StatusChoice } from './rule-detail-types';
 import { addConditionAction } from '@/app/organizations/[organizationId]/automations/actions';
 import { ActionError, INITIAL_AUTOMATION_ACTION_STATE as INITIAL } from '../shared';
 
-/** Adding one condition — bounded enough for a Sheet, and the domain layer allows only add/remove. */
+/** Adding one condition — bounded enough for a PageDrawer, and the domain layer allows only add/remove. */
 export function AddConditionSheet({
   organizationId,
   rule,
@@ -31,25 +30,24 @@ export function AddConditionSheet({
   statuses: StatusChoice[];
   definitions: FieldDefinition[];
 }) {
-  const mobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(addConditionAction, INITIAL);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         <Button type="button" tone="secondary" size="small">
           <Plus aria-hidden className="size-4" /> Add condition
         </Button>
-      </SheetTrigger>
-      <SheetContent side={mobile ? 'bottom' : 'right'} className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Add a condition</SheetTitle>
-          <SheetDescription>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>Add a condition</PageDrawerTitle>
+          <PageDrawerDescription>
             Every condition on this rule has to hold for it to act — add a second rule if what you
             mean is &ldquo;or&rdquo;.
-          </SheetDescription>
-        </SheetHeader>
+          </PageDrawerDescription>
+        </PageDrawerHeader>
 
         <form action={formAction} className="flex flex-col gap-4 px-4 pb-4">
           <input type="hidden" name="organizationId" value={organizationId} />
@@ -96,7 +94,7 @@ export function AddConditionSheet({
           </Button>
           <ActionError state={state} />
         </form>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }

@@ -4,14 +4,14 @@ import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@gold/ui/components/sheet';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerFooter,
+  PageDrawerHeader,
+  PageDrawerTitle,
+  PageDrawerTrigger,
+} from '@/components/containers/page-drawer';
 import { createPlanAction, type CreatePlanState } from '@/app/(platform)/platform/catalog/plans/actions';
 import {
   grantPlanFeatureOverrideAction,
@@ -36,15 +36,15 @@ export function CreatePlanSheet() {
   const [state, action, pending] = useActionState(createPlanAction, CREATE_INITIAL);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         <Button type="button" size="small">Create Plan</Button>
-      </SheetTrigger>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>Create a Plan or Add-on</SheetTitle>
-          <SheetDescription>The key is permanent once created.</SheetDescription>
-        </SheetHeader>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>Create a Plan or Add-on</PageDrawerTitle>
+          <PageDrawerDescription>The key is permanent once created.</PageDrawerDescription>
+        </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="key">Key</FieldLabel>
@@ -70,14 +70,14 @@ export function CreatePlanSheet() {
             <input type="checkbox" name="billable" defaultChecked /> Billable
           </label>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <SheetFooter className="px-0">
+          <PageDrawerFooter className="px-0">
             <Button type="submit" disabled={pending}>
               {pending ? 'Creating…' : 'Create'}
             </Button>
-          </SheetFooter>
+          </PageDrawerFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }
 
@@ -86,17 +86,17 @@ export function EditPlanSheet({ plan }: { plan: Plan }) {
   const [state, action, pending] = useActionState(updatePlanAction, ACTION_INITIAL);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         <Button type="button" tone="secondary" size="small">
           Edit
         </Button>
-      </SheetTrigger>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>Edit {plan.label}</SheetTitle>
-          <SheetDescription>Key and kind are permanent.</SheetDescription>
-        </SheetHeader>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>Edit {plan.label}</PageDrawerTitle>
+          <PageDrawerDescription>Key and kind are permanent.</PageDrawerDescription>
+        </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">
           <input type="hidden" name="planId" value={plan.id} />
           <input type="hidden" name="planKey" value={plan.key} />
@@ -124,15 +124,15 @@ export function EditPlanSheet({ plan }: { plan: Plan }) {
             <TextInput id="displayOrder" name="displayOrder" type="number" min={0} defaultValue={plan.displayOrder} className="w-28" />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <SheetFooter className="px-0">
+          <PageDrawerFooter className="px-0">
             <Button type="submit" disabled={pending}>
               {pending ? 'Saving…' : 'Save'}
             </Button>
             {state.updated ? <Hint role="status">Saved.</Hint> : null}
-          </SheetFooter>
+          </PageDrawerFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }
 
@@ -214,17 +214,17 @@ export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey
   const [state, action, pending] = useActionState(setPlanQuotaAction, ACTION_INITIAL);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         <Button type="button" tone="secondary" size="small">
           {quota ? 'Edit' : 'Add quota'}
         </Button>
-      </SheetTrigger>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>{quota ? `Edit ${quota.label}` : 'Add a structured quota'}</SheetTitle>
-          <SheetDescription>Structured fields only — no free-text allowance.</SheetDescription>
-        </SheetHeader>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>{quota ? `Edit ${quota.label}` : 'Add a structured quota'}</PageDrawerTitle>
+          <PageDrawerDescription>Structured fields only — no free-text allowance.</PageDrawerDescription>
+        </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">
           <input type="hidden" name="planId" value={planId} />
           <input type="hidden" name="planKey" value={planKey} />
@@ -271,15 +271,15 @@ export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey
             </SelectInput>
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <SheetFooter className="px-0">
+          <PageDrawerFooter className="px-0">
             <Button type="submit" disabled={pending}>
               {pending ? 'Saving…' : 'Save'}
             </Button>
             {state.updated ? <Hint role="status">Saved.</Hint> : null}
-          </SheetFooter>
+          </PageDrawerFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }
 
@@ -301,15 +301,15 @@ export function RecordPlanPriceSheet({ planId, planKey }: { planId: string; plan
   const [state, action, pending] = useActionState(recordPlanPriceAction, ACTION_INITIAL);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         <Button type="button">Record new price</Button>
-      </SheetTrigger>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>Record a standard price</SheetTitle>
-          <SheetDescription>Appends a new effective-dated price. Past prices are never rewritten.</SheetDescription>
-        </SheetHeader>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>Record a standard price</PageDrawerTitle>
+          <PageDrawerDescription>Appends a new effective-dated price. Past prices are never rewritten.</PageDrawerDescription>
+        </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">
           <input type="hidden" name="planId" value={planId} />
           <input type="hidden" name="planKey" value={planKey} />
@@ -340,14 +340,14 @@ export function RecordPlanPriceSheet({ planId, planKey }: { planId: string; plan
             <TextInput id="source" name="source" placeholder="Decided with the owner, 2026-09" />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <SheetFooter className="px-0">
+          <PageDrawerFooter className="px-0">
             <Button type="submit" disabled={pending}>
               {pending ? 'Saving…' : 'Record price'}
             </Button>
             {state.updated ? <Hint role="status">Recorded.</Hint> : null}
-          </SheetFooter>
+          </PageDrawerFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }

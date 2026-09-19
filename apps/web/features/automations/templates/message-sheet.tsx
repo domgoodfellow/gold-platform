@@ -5,14 +5,13 @@ import { Pencil, Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@gold/ui/components/sheet';
-import { useIsMobile } from '@gold/ui/hooks/use-mobile';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerHeader,
+  PageDrawerTitle,
+  PageDrawerTrigger,
+} from '@/components/containers/page-drawer';
 import { PLACEHOLDERS, type MessageTemplate } from '@/lib/domain/automation/templates';
 import {
   createTemplateAction,
@@ -21,8 +20,8 @@ import {
 import { ActionError, INITIAL_AUTOMATION_ACTION_STATE as INITIAL } from '../shared';
 
 /**
- * New and Edit share one Sheet, the same shape `EditRoleSheet` uses for roles — a template is
- * small enough that a Sheet is the whole editor, never a detail route.
+ * New and Edit share one PageDrawer, the same shape `EditRoleSheet` uses for roles — a template is
+ * small enough that a PageDrawer is the whole editor, never a detail route.
  *
  * **Every word here belongs to the business.** The placeholders are the platform's whole
  * contribution — five names for things it already has — and an unknown one is left exactly as
@@ -36,14 +35,13 @@ export function MessageSheet({
   /** Absent for New; present for Edit. */
   template?: MessageTemplate;
 }) {
-  const mobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const action = template ? updateTemplateAction : createTemplateAction;
   const [state, formAction, pending] = useActionState(action, INITIAL);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         {template ? (
           <Button type="button" tone="secondary" size="small" aria-label={`Edit ${template.name}`}>
             <Pencil aria-hidden className="size-4" /> Edit
@@ -53,18 +51,18 @@ export function MessageSheet({
             <Plus aria-hidden className="size-4" /> New message
           </Button>
         )}
-      </SheetTrigger>
-      <SheetContent side={mobile ? 'bottom' : 'right'} className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>{template ? `Edit ${template.name}` : 'New message'}</SheetTitle>
-          <SheetDescription>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>{template ? `Edit ${template.name}` : 'New message'}</PageDrawerTitle>
+          <PageDrawerDescription>
             The platform adds nothing — no greeting, no signature, no footer. Write values with{' '}
             {PLACEHOLDERS.map((entry) => entry.token).join(', ')}.
             {template
               ? ' A message already sent keeps the words it was sent with, so this changes only what happens next.'
               : ''}
-          </SheetDescription>
-        </SheetHeader>
+          </PageDrawerDescription>
+        </PageDrawerHeader>
 
         <form action={formAction} className="flex flex-col gap-4 px-4 pb-4">
           <input type="hidden" name="organizationId" value={organizationId} />
@@ -107,7 +105,7 @@ export function MessageSheet({
           </Button>
           <ActionError state={state} />
         </form>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }

@@ -5,14 +5,13 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { SelectInput, TextInput } from '@/components/controls/inputs';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@gold/ui/components/sheet';
-import { useIsMobile } from '@gold/ui/hooks/use-mobile';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerHeader,
+  PageDrawerTitle,
+  PageDrawerTrigger,
+} from '@/components/containers/page-drawer';
 import { ACTION_KINDS, type AutomationRule } from '@/lib/domain/automation/rules';
 import { CHANNELS, type MessageTemplate } from '@/lib/domain/automation/templates';
 import type { StatusChoice } from './rule-detail-types';
@@ -38,22 +37,21 @@ export function AddActionSheet({
   templates: MessageTemplate[];
   types: { id: string; name: string }[];
 }) {
-  const mobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(addActionAction, INITIAL);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         <Button type="button" tone="secondary" size="small">
           <Plus aria-hidden className="size-4" /> Add action
         </Button>
-      </SheetTrigger>
-      <SheetContent side={mobile ? 'bottom' : 'right'} className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Add an action</SheetTitle>
-          <SheetDescription>Fill in whichever fields belong to what you choose below.</SheetDescription>
-        </SheetHeader>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>Add an action</PageDrawerTitle>
+          <PageDrawerDescription>Fill in whichever fields belong to what you choose below.</PageDrawerDescription>
+        </PageDrawerHeader>
 
         <form action={formAction} className="flex flex-col gap-4 px-4 pb-4">
           <input type="hidden" name="organizationId" value={organizationId} />
@@ -125,7 +123,7 @@ export function AddActionSheet({
           </Button>
           <ActionError state={state} />
         </form>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }

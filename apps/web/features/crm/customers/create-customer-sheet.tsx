@@ -4,20 +4,19 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@gold/ui/components/sheet';
-import { useIsMobile } from '@gold/ui/hooks/use-mobile';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerHeader,
+  PageDrawerTitle,
+} from '@/components/containers/page-drawer';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { CreateCustomerForm } from './create-customer-form';
 
 const CreateCustomerSheetContext = createContext<(() => void) | null>(null);
 
 /**
- * Hosts the one Sheet instance for this collection. The header trigger and the empty-state
+ * Hosts the one PageDrawer instance for this collection. The header trigger and the empty-state
  * trigger both open it through the same function, so a business sees the same form — never a
  * second, auto-opened one — whichever button it presses.
  */
@@ -31,17 +30,16 @@ export function CreateCustomerSheetProvider({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const mobile = useIsMobile();
 
   return (
     <CreateCustomerSheetContext.Provider value={() => setOpen(true)}>
       {children}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side={mobile ? 'bottom' : 'right'} className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>New customer</SheetTitle>
-            <SheetDescription>Add the identity and contact details this business knows today.</SheetDescription>
-          </SheetHeader>
+      <PageDrawer open={open} onOpenChange={setOpen}>
+        <PageDrawerContent>
+          <PageDrawerHeader>
+            <PageDrawerTitle>New customer</PageDrawerTitle>
+            <PageDrawerDescription>Add the identity and contact details this business knows today.</PageDrawerDescription>
+          </PageDrawerHeader>
           <div className="px-4 pb-4">
             <CreateCustomerForm
               organizationId={organizationId}
@@ -49,8 +47,8 @@ export function CreateCustomerSheetProvider({
               onCreated={() => setOpen(false)}
             />
           </div>
-        </SheetContent>
-      </Sheet>
+        </PageDrawerContent>
+      </PageDrawer>
     </CreateCustomerSheetContext.Provider>
   );
 }

@@ -56,9 +56,10 @@ Products, Modules, Meters, Pricing, Providers and Failures are a separate IA bec
 GOLD itself, not one business. Both models render through the shared `AppShell` and shadcn
 Sidebar primitives — and, since the shell/context correction, through the shared
 `WorkspaceShell`/`WorkspaceRightRail` too (`apps/web/components/containers/workspace-shell.tsx`):
-one Agent/Configure rail mechanism, three widths rather than two — docked and resizable from
-1280px, an overlay Sheet from the right between that and 768px (so a tablet does not shrink the
-workspace behind it, and does not behave like a phone either), a bottom Drawer below 768px. Both
+two independent panels — Agent, and the page drawer that Configure and every create/edit form
+open into — neither modal. Both dock beside the page from 1720px; from 1280px one docks, the one
+opened last; between that and 768px one floats over the page from the right; below 768px one
+floats from the bottom. Nothing dims or blurs the page behind them. Both
 shells also share `WorkspaceHeader` (`apps/web/components/containers/workspace-header.tsx`), the
 sticky *global* bar, and `PageHeader` (`components/containers/page-header.tsx`), the page's own
 identity and actions — §2a says which owns what. Agent itself is scope-bound rather than shared
@@ -199,8 +200,8 @@ whatever actions it offers. **One primary action per page**, then secondary ones
 that is the same operation in an otherwise empty body, not a second action.
 
 **Configure belongs to the page.** A page places `ConfigureTrigger` in its `PageHeader` actions
-and registers the panel it opens with `ConfigureRegistrar`; `WorkspaceRightRail` hosts that panel
-(docked, Sheet or Drawer, per §2). Whether to offer it is presentation — the panel's writes are
+and registers the drawer it opens with `ConfigureRegistrar`, a `PageDrawer`; `WorkspaceRightRail`
+hosts it beside the page and beside Agent, and either can be open without the other. Whether to offer it is presentation — the panel's writes are
 still refused by the database.
 
 **The area's `<h1>` is still one string.** `navigation.ts` supplies the navigation entry and the
@@ -375,14 +376,17 @@ Not every interaction is a dialog.
 | Use | For | Built as |
 |---|---|---|
 | Cards | lists of jobs, customers, resources, invoices | `Card` |
-| Sheets | filters, quick actions, status changes, small forms, and inspecting one record from a browse list | `@gold/ui`'s Radix-backed `Sheet` |
+| Page drawers | filters, quick actions, status changes, small forms, and inspecting one record from a browse list | `PageDrawer` (`components/containers/page-drawer.tsx`) |
 | Full screens | complex forms, configuration, job and customer detail | the route |
 | Dialogs | confirmation, and destructive actions only | `Dialog` · `ConfirmSubmit` |
 
-**One sheet implementation.** Organization quick-create forms and platform catalogue editors use
-the Radix-backed `Sheet` exported by `@gold/ui`. It owns focus trapping, escape-key handling,
-labelling, and responsive placement. Use `Disclosure` for inline progressive disclosure, not as
-a drawer substitute. Do not introduce another sheet pattern.
+**One drawer implementation.** Organization quick-create forms, platform catalogue editors and
+every Configure panel use `PageDrawer`. It is not modal: it takes no overlay, no blur and no focus
+trap, docks full height beside the page, and takes its width from the host, never from the form
+that opened it. It moves focus in on open, returns it on close, and closes on Escape. Drawers
+stack, the newest showing. Use `Disclosure` for inline progressive disclosure, not as a drawer
+substitute. Do not reintroduce the modal `Sheet` for page work, and do not introduce another
+drawer pattern.
 
 `OrgNav` refused a drawer on the
 grounds that one "needs state, a toggle, a focus trap and an escape key to be correct", and the

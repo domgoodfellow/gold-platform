@@ -51,12 +51,12 @@ describe('WorkspaceHeader is the global bar, not a page header', () => {
     expect(workspaceHeader).not.toMatch(/requireOrganization|requireActor|isPlatformStaff/);
   });
 
-  it('renders no page title, status, breadcrumb or page actions — it accepts no slot for them', () => {
+  it('renders no page title, status or page actions — it accepts no slot for them, only the breadcrumb slot', () => {
     const source = code(workspaceHeader);
     expect(source).not.toMatch(/usePageChrome|PageChrome|PageHeader/);
     expect(source).not.toMatch(/\bprimary\b|\bstatus\b/);
     expect(source).not.toContain('<h1');
-    expect(source).not.toContain('Breadcrumb');
+    expect(source).toContain('<WorkspaceCrumbSlot />');
   });
 
   it('renders its slots in one fixed order: trigger, context, breadcrumbs, spacer, beforeActions, Agent', () => {
@@ -87,12 +87,12 @@ describe('Agent is workspace-global and Configure is page-level', () => {
   it('AgentTrigger is the rail\'s global Agent control, labelled and pressed-state aware', () => {
     expect(workspaceRightRail).toContain('export function AgentTrigger');
     expect(workspaceRightRail).toContain('aria-label="Agent"');
-    expect(workspaceRightRail).toContain("aria-pressed={mode === 'agent'}");
+    expect(workspaceRightRail).toContain('aria-pressed={agentOpen}');
   });
 
   it('ConfigureTrigger is a separate export a page places itself, with pressed state', () => {
     expect(workspaceRightRail).toContain('export function ConfigureTrigger');
-    expect(workspaceRightRail).toContain("aria-pressed={mode === 'configure'}");
+    expect(workspaceRightRail).toContain('aria-pressed={configureOpen}');
     const agentBody = workspaceRightRail.slice(
       workspaceRightRail.indexOf('export function AgentTrigger'),
       workspaceRightRail.indexOf('export function ConfigureTrigger'),
@@ -248,27 +248,54 @@ describe('AccountMenu — the compact trigger is not built from Sidebar-only geo
   });
 });
 
-describe('the right rail — three responsive layouts, not two', () => {
-  it('docks only from 1280px — 1024px left the workspace too narrow beside an expanded sidebar', () => {
+describe('the right rail — Agent and the page drawer are two independent, non-modal panels', () => {
+  const pageDrawer = readFileSync(`${WEB}/components/containers/page-drawer.tsx`, 'utf8');
+  const configureRegistrar = readFileSync(`${WEB}/components/containers/configure-registrar.tsx`, 'utf8');
+
+  it('keeps Agent and the page drawer open independently, both docked only where the screen has room', () => {
+    expect(workspaceRightRail).toContain('const WIDE_BREAKPOINT = 1720');
     expect(workspaceRightRail).toContain('const DOCK_BREAKPOINT = 1280');
     expect(workspaceRightRail).toContain('const TABLET_BREAKPOINT = 768');
+    expect(workspaceRightRail).toContain("const roomForBoth = layout === 'wide'");
+    expect(workspaceRightRail).toMatch(/const \[agentOpen, setAgentOpen\]/);
+    expect(workspaceRightRail).toMatch(/const \[configureOpen, setConfigureOpen\]/);
   });
 
-  it('gives tablet width its own overlay Sheet from the right, distinct from the phone Drawer', () => {
-    expect(workspaceRightRail).toMatch(/layout === 'overlay'[\s\S]{0,200}side="right"/);
-    expect(workspaceRightRail).toMatch(/layout === 'docked'/);
-    expect(workspaceRightRail).toContain('<Drawer ');
+  it('is never modal: no overlay, blur or focus trap, and the same two elements serve every layout', () => {
+    const source = code(workspaceRightRail);
+    expect(source).not.toMatch(/<Sheet|<Drawer|backdrop|Overlay/);
+    expect(source).toContain('<PagePanel />');
+    expect(source).toContain('<AgentPanel />');
+    expect(source).toContain('<div className="min-w-0 flex-1">{main}</div>');
   });
 
-  it('keeps main un-shrunk in the overlay layout — main renders as a sibling, not inside the resizable split', () => {
-    const start = workspaceRightRail.indexOf("layout === 'overlay'");
-    const end = workspaceRightRail.indexOf('return (\n    <>\n      {main}\n      <Drawer');
-    const overlayBlock = workspaceRightRail.slice(start, end);
-    expect(overlayBlock).toContain('{main}');
-    expect(overlayBlock).toContain('<Sheet');
-    expect(overlayBlock).not.toContain('ResizablePanelGroup');
+  it('every page drawer is a PageDrawer — no modal Sheet is left in a page or feature', () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) walk(`${dir}/${entry.name}`);
+        else if (/\.tsx$/.test(entry.name) && readFileSync(`${dir}/${entry.name}`, 'utf8').includes('@gold/ui/components/sheet')) {
+          offenders.push(`${dir}/${entry.name}`.slice(WEB.length));
+        }
+      }
+    };
+    walk(`${WEB}/app`);
+    walk(`${WEB}/features`);
+    expect(offenders.filter((path) => !path.includes('marketing'))).toEqual([]);
+  });
+
+  it('PageDrawer portals into the host slot, sizes nothing itself and accepts no side or width', () => {
+    expect(pageDrawer).toContain('createPortal');
+    expect(pageDrawer).toContain('aria-modal="false"');
+    expect(code(pageDrawer)).not.toMatch(/max-w-|max-h-|side=/);
+  });
+
+  it('Configure is a PageDrawer opened by ConfigureTrigger, closed when its page unmounts', () => {
+    expect(configureRegistrar).toContain('<PageDrawer open={configureOpen}');
+    expect(configureRegistrar).toContain('setConfigureOpen(false)');
   });
 });
+
 
 describe('the page-header contract — the page, not the workspace header, owns page identity', () => {
   it('the page-chrome registration mechanism is gone — nothing registers identity upward', () => {

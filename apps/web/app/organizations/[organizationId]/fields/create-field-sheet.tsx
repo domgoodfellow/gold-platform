@@ -4,14 +4,13 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@gold/ui/components/sheet';
-import { useIsMobile } from '@gold/ui/hooks/use-mobile';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerHeader,
+  PageDrawerTitle,
+  PageDrawerTrigger,
+} from '@/components/containers/page-drawer';
 import {
   CUSTOM_FIELD_ENTITY_LABELS,
   type CustomFieldEntity,
@@ -26,28 +25,27 @@ export function CreateFieldSheet({
   organizationId: string;
   entityType: CustomFieldEntity;
 }) {
-  const mobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const label = CUSTOM_FIELD_ENTITY_LABELS[entityType];
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         <Button type="button" size="small">
           <Plus aria-hidden className="size-4" /> New field
         </Button>
-      </SheetTrigger>
-      <SheetContent side={mobile ? 'bottom' : 'right'} className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>New field</SheetTitle>
-          <SheetDescription>Add information recorded on {label}.</SheetDescription>
-        </SheetHeader>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>New field</PageDrawerTitle>
+          <PageDrawerDescription>Add information recorded on {label}.</PageDrawerDescription>
+        </PageDrawerHeader>
         <CreateFieldForm
           organizationId={organizationId}
           entityType={entityType}
           onCreated={() => setOpen(false)}
         />
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }

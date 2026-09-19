@@ -8,160 +8,186 @@ import {
   useMemo,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import Link from 'next/link';
-import { ArrowRight, Bot, Settings, X } from 'lucide-react';
+import { Bot, Settings, X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { Sheet, SheetContent } from '@gold/ui/components/sheet';
-import { Drawer, DrawerContent } from '@gold/ui/components/drawer';
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-  type PanelSize,
-} from '@gold/ui/components/resizable';
 import { cx, FOCUS_RING } from '@/components/class-names';
 
 /**
- * One right-side host, one mode at a time (never stacked). "Agent" and "Configure" share it;
- * switching modes never unmounts the other's subtree, so an in-progress conversation survives a
- * trip through Configure and back.
+ * Two independent panels beside the workspace, each with its own open state:
+ *
+ * - **Agent** is workspace-scoped and always the outermost right panel.
+ * - **The page drawer** is page-scoped: Configure, and every create/edit form a page opens. It
+ *   sits between the page and Agent. Its content is written by whoever opened it (`PageDrawer`)
+ *   and portalled into the slot this host exposes, so it keeps its owner's state and context.
+ *
+ * Neither is modal: nothing dims, blurs or blocks the page behind them.
  */
-type RailMode = 'closed' | 'agent' | 'configure';
 
-type ConfigurePanel = {
-  title: string;
-  /** Where "Open full settings" lands — the exact Settings route/tab this panel mirrors. */
-  settingsHref: string;
-  content: ReactNode;
-};
-
-type RailContextValue = {
-  mode: RailMode;
-  openAgent: () => void;
-  openConfigure: () => void;
-  close: () => void;
-  toggleAgent: () => void;
-  toggleConfigure: () => void;
-  configure: ConfigurePanel | null;
-  registerConfigure: (panel: ConfigurePanel | null) => void;
-  agent: ReactNode | null;
-  registerAgent: (content: ReactNode | null) => void;
-  width: number;
-  setWidth: (width: number) => void;
-};
-
-const RailContext = createContext<RailContextValue | null>(null);
-
-// Pixels — `react-resizable-panels`' `Panel` treats a bare number as pixels (a string is what it
-// reads as a percentage), so this keeps the same units the rail already persisted under
-// `WIDTH_STORAGE_KEY` while gaining the library's accessible drag/keyboard-resize handling in
-// place of the hand-rolled `mousemove` listener this replaces.
-const MIN_WIDTH = 320;
-const MAX_WIDTH = 600;
-const DEFAULT_WIDTH = 380;
-const WIDTH_STORAGE_KEY = 'gold.workspace-rail.width';
-
-function readStoredWidth(): number {
-  if (typeof window === 'undefined') return DEFAULT_WIDTH;
-  try {
-    const raw = window.localStorage.getItem(WIDTH_STORAGE_KEY);
-    const parsed = raw ? Number(raw) : NaN;
-    if (Number.isFinite(parsed)) return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parsed));
-  } catch {
-    // Convenience-only persistence — a blocked or private store just falls back to the default.
-  }
-  return DEFAULT_WIDTH;
-}
+const AGENT_MIN_WIDTH = 320;
+const AGENT_MAX_WIDTH = 600;
+const AGENT_DEFAULT_WIDTH = 380;
+const AGENT_WIDTH_STORAGE_KEY = 'gold.workspace-rail.width';
+const PAGE_DRAWER_WIDTH = 448;
+const RESIZE_STEP = 24;
 
 /**
- * Three widths, not two. A docked rail beside an expanded left sidebar can leave the workspace
- * itself unusably narrow well before 1024px, so docking waits for real desktop width; a tablet
- * between that and phone gets an overlay Sheet from the right rather than either shrinking the
- * workspace or behaving like a 390px phone; below that, a bottom Drawer.
+ * Four layouts by viewport width. `wide` docks both panels beside the page; `docked` docks one
+ * (the one opened last, when both are open); `overlay` floats one over the page from the right;
+ * `phone` floats one from the bottom.
  */
+const WIDE_BREAKPOINT = 1720;
 const DOCK_BREAKPOINT = 1280;
 const TABLET_BREAKPOINT = 768;
 
-type RailLayout = 'docked' | 'overlay' | 'drawer';
+type RailLayout = 'wide' | 'docked' | 'overlay' | 'phone';
 
 function computeLayout(): RailLayout {
+  if (window.innerWidth >= WIDE_BREAKPOINT) return 'wide';
   if (window.innerWidth >= DOCK_BREAKPOINT) return 'docked';
   if (window.innerWidth >= TABLET_BREAKPOINT) return 'overlay';
-  return 'drawer';
+  return 'phone';
 }
 
 function subscribeToLayout(onChange: () => void) {
-  const dock = window.matchMedia(`(min-width: ${DOCK_BREAKPOINT}px)`);
-  const tablet = window.matchMedia(`(min-width: ${TABLET_BREAKPOINT}px)`);
-  dock.addEventListener('change', onChange);
-  tablet.addEventListener('change', onChange);
+  const queries = [WIDE_BREAKPOINT, DOCK_BREAKPOINT, TABLET_BREAKPOINT].map((width) =>
+    window.matchMedia(`(min-width: ${width}px)`),
+  );
+  for (const query of queries) query.addEventListener('change', onChange);
   return () => {
-    dock.removeEventListener('change', onChange);
-    tablet.removeEventListener('change', onChange);
+    for (const query of queries) query.removeEventListener('change', onChange);
   };
 }
 
 function useRailLayout(): RailLayout {
-  return useSyncExternalStore(subscribeToLayout, computeLayout, () => 'drawer');
+  return useSyncExternalStore(subscribeToLayout, computeLayout, () => 'phone');
 }
 
-export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<RailMode>('closed');
-  const [configure, setConfigure] = useState<ConfigurePanel | null>(null);
-  const [agent, setAgent] = useState<ReactNode | null>(null);
-  const [width, setWidthState] = useState(readStoredWidth);
+function readStoredWidth(): number {
+  if (typeof window === 'undefined') return AGENT_DEFAULT_WIDTH;
+  try {
+    const raw = window.localStorage.getItem(AGENT_WIDTH_STORAGE_KEY);
+    const parsed = raw ? Number(raw) : NaN;
+    if (Number.isFinite(parsed)) return Math.min(AGENT_MAX_WIDTH, Math.max(AGENT_MIN_WIDTH, parsed));
+  } catch {
+    // Convenience-only persistence — a blocked or private store just falls back to the default.
+  }
+  return AGENT_DEFAULT_WIDTH;
+}
 
-  const setWidth = useCallback((next: number) => {
-    const clamped = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, next));
-    setWidthState(clamped);
+type Panel = 'agent' | 'page';
+
+type RailContextValue = {
+  layout: RailLayout;
+  agentOpen: boolean;
+  toggleAgent: () => void;
+  closeAgent: () => void;
+  configureOpen: boolean;
+  setConfigureOpen: (open: boolean) => void;
+  toggleConfigure: () => void;
+  agent: ReactNode | null;
+  registerAgent: (content: ReactNode | null) => void;
+  agentWidth: number;
+  setAgentWidth: (width: number) => void;
+  pageSlot: HTMLElement | null;
+  setPageSlot: (element: HTMLElement | null) => void;
+  pageStack: string[];
+  openPage: (id: string) => void;
+  closePage: (id: string) => void;
+  showAgent: boolean;
+  showPage: boolean;
+};
+
+const RailContext = createContext<RailContextValue | null>(null);
+
+export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
+  const layout = useRailLayout();
+  const [agentOpen, setAgentOpen] = useState(false);
+  const [configureOpen, setConfigureOpen] = useState(false);
+  const [agent, setAgent] = useState<ReactNode | null>(null);
+  const [agentWidth, setAgentWidthState] = useState(readStoredWidth);
+  const [pageSlot, setPageSlot] = useState<HTMLElement | null>(null);
+  const [pageStack, setPageStack] = useState<string[]>([]);
+  const [latest, setLatest] = useState<Panel>('page');
+
+  const setAgentWidth = useCallback((next: number) => {
+    const clamped = Math.min(AGENT_MAX_WIDTH, Math.max(AGENT_MIN_WIDTH, next));
+    setAgentWidthState(clamped);
     try {
-      window.localStorage.setItem(WIDTH_STORAGE_KEY, String(clamped));
+      window.localStorage.setItem(AGENT_WIDTH_STORAGE_KEY, String(clamped));
     } catch {
       // Convenience only.
     }
   }, []);
 
-  const registerConfigure = useCallback((panel: ConfigurePanel | null) => {
-    setConfigure(panel);
+  const registerAgent = useCallback((content: ReactNode | null) => setAgent(content), []);
+
+  const toggleAgent = useCallback(() => {
+    setAgentOpen((open) => !open);
+    setLatest('agent');
+  }, []);
+  const closeAgent = useCallback(() => setAgentOpen(false), []);
+  const toggleConfigure = useCallback(() => setConfigureOpen((open) => !open), []);
+
+  const openPage = useCallback((id: string) => {
+    setPageStack((stack) => (stack.includes(id) ? stack : [...stack, id]));
+    setLatest('page');
+  }, []);
+  const closePage = useCallback((id: string) => {
+    setPageStack((stack) => stack.filter((entry) => entry !== id));
   }, []);
 
-  const registerAgent = useCallback((content: ReactNode | null) => {
-    setAgent(content);
-  }, []);
-
-  const openAgent = useCallback(() => setMode('agent'), []);
-  const openConfigure = useCallback(() => setMode('configure'), []);
-  const close = useCallback(() => setMode('closed'), []);
-  const toggleAgent = useCallback(() => setMode((m) => (m === 'agent' ? 'closed' : 'agent')), []);
-  const toggleConfigure = useCallback(
-    () => setMode((m) => (m === 'configure' ? 'closed' : 'configure')),
-    [],
-  );
-
-  // A page that unmounts its Configure registration while Configure is the open mode (navigating
-  // away from the workspace that owned it) reads as closed rather than showing a stale panel —
-  // derived here rather than synchronized back into `mode` with an effect, so there is nothing to
-  // cascade.
-  const effectiveMode = mode === 'configure' && configure === null ? 'closed' : mode;
+  const pageOpen = pageStack.length > 0;
+  // Where both cannot sit beside the page, the one opened last is the one shown; closing it
+  // brings the other back.
+  const both = agentOpen && pageOpen;
+  const roomForBoth = layout === 'wide';
+  const showAgent = agentOpen && (!both || roomForBoth || latest === 'agent');
+  const showPage = pageOpen && (!both || roomForBoth || latest === 'page');
 
   const value = useMemo<RailContextValue>(
     () => ({
-      mode: effectiveMode,
-      openAgent,
-      openConfigure,
-      close,
+      layout,
+      agentOpen,
       toggleAgent,
+      closeAgent,
+      configureOpen,
+      setConfigureOpen,
       toggleConfigure,
-      configure,
-      registerConfigure,
       agent,
       registerAgent,
-      width,
-      setWidth,
+      agentWidth,
+      setAgentWidth,
+      pageSlot,
+      setPageSlot,
+      pageStack,
+      openPage,
+      closePage,
+      showAgent,
+      showPage,
     }),
-    [effectiveMode, openAgent, openConfigure, close, toggleAgent, toggleConfigure, configure, registerConfigure, agent, registerAgent, width, setWidth],
+    [
+      layout,
+      agentOpen,
+      toggleAgent,
+      closeAgent,
+      configureOpen,
+      toggleConfigure,
+      agent,
+      registerAgent,
+      agentWidth,
+      setAgentWidth,
+      pageSlot,
+      pageStack,
+      openPage,
+      closePage,
+      showAgent,
+      showPage,
+    ],
   );
 
   return <RailContext.Provider value={value}>{children}</RailContext.Provider>;
@@ -173,26 +199,7 @@ export function useWorkspaceRail() {
   return context;
 }
 
-/**
- * A page registers what its Configure button opens. The effect's cleanup un-registers on
- * navigation away, which is what stops the rail showing a panel for a page that has none.
- *
- * **Callers must pass a `panel` that is referentially stable across re-renders that carry no new
- * data** (`useMemo`d on `title`/`settingsHref`/`content` — see `ConfigureRegistrar`). This
- * component re-renders on every rail-context change (it reads the context to register at all),
- * so an unmemoized object literal here would re-run the effect, and therefore `setState` in the
- * provider, on every one of those — an infinite loop. A stable reference both avoids that and
- * still picks up a genuine change (e.g. the page's own data revalidating with new content).
- */
-export function useConfigurePanel(panel: ConfigurePanel | null) {
-  const { registerConfigure } = useWorkspaceRail();
-  useEffect(() => {
-    registerConfigure(panel);
-    return () => registerConfigure(null);
-  }, [panel, registerConfigure]);
-}
-
-/** Registers what the Agent rail shows. Set once, near the shell root — see `AgentRailContent`. */
+/** Registers what the Agent panel shows. Set once, near the shell root — see `AgentRailContent`. */
 export function useAgentContent(content: ReactNode | null) {
   const { registerAgent } = useWorkspaceRail();
   useEffect(() => {
@@ -207,17 +214,17 @@ export function useAgentContent(content: ReactNode | null) {
  * the workspace, never to a page, so it is never rendered by a `PageHeader`.
  */
 export function AgentTrigger() {
-  const { mode, toggleAgent } = useWorkspaceRail();
+  const { agentOpen, toggleAgent } = useWorkspaceRail();
 
   return (
     <Button
       type="button"
       tone="secondary"
       size="small"
-      aria-pressed={mode === 'agent'}
+      aria-pressed={agentOpen}
       aria-label="Agent"
       onClick={toggleAgent}
-      className={cx('gap-1.5 px-2 sm:px-3', mode === 'agent' && 'bg-muted')}
+      className={cx('gap-1.5 px-2 sm:px-3', agentOpen && 'bg-muted')}
     >
       <Bot aria-hidden size={16} />
       <span className="hidden sm:inline">Agent</span>
@@ -227,21 +234,20 @@ export function AgentTrigger() {
 
 /**
  * Configure is contextual to a page, so the page places this in its own `PageHeader` actions,
- * beside the `ConfigureRegistrar` that supplies the panel it opens. The page decides whether to
- * offer it (`mayConfigure`); that is presentation, never the guard — the panel's own writes are
- * refused by RLS regardless. With no registered panel the rail reads as closed, so a stray
- * trigger opens nothing rather than a stale panel.
+ * beside the `ConfigureRegistrar` whose drawer it opens. The page decides whether to offer it
+ * (`mayConfigure`); that is presentation, never the guard — the panel's own writes are refused by
+ * RLS regardless.
  */
 export function ConfigureTrigger() {
-  const { mode, toggleConfigure } = useWorkspaceRail();
+  const { configureOpen, toggleConfigure } = useWorkspaceRail();
 
   return (
     <Button
       type="button"
       tone="secondary"
-      aria-pressed={mode === 'configure'}
+      aria-pressed={configureOpen}
       onClick={toggleConfigure}
-      className={cx('gap-1.5', mode === 'configure' && 'bg-muted')}
+      className={cx('gap-1.5', configureOpen && 'bg-muted')}
     >
       <Settings aria-hidden size={16} />
       Configure
@@ -249,123 +255,112 @@ export function ConfigureTrigger() {
   );
 }
 
-function RailHeader({
-  title,
-  onClose,
-  settingsHref,
-}: {
-  title: string;
-  onClose: () => void;
-  settingsHref?: string;
-}) {
+function panelClass(layout: RailLayout, shown: boolean): string {
+  if (!shown) return 'hidden';
+  const base = 'flex flex-col overflow-hidden bg-background';
+  if (layout === 'wide' || layout === 'docked') {
+    return cx(base, 'sticky top-0 h-svh shrink-0 self-start border-l border-border');
+  }
+  if (layout === 'overlay') {
+    return cx(base, 'fixed inset-y-0 right-0 z-40 w-full max-w-md border-l border-border shadow-lg');
+  }
+  return cx(base, 'fixed inset-x-0 bottom-0 z-40 h-[85dvh] rounded-t-xl border-t border-border shadow-lg');
+}
+
+function docked(layout: RailLayout) {
+  return layout === 'wide' || layout === 'docked';
+}
+
+function AgentResizeHandle() {
+  const { agentWidth, setAgentWidth } = useWorkspaceRail();
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const move = (next: PointerEvent) => setAgentWidth(window.innerWidth - next.clientX);
+    const stop = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+  };
+
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'ArrowLeft') setAgentWidth(agentWidth + RESIZE_STEP);
+    if (event.key === 'ArrowRight') setAgentWidth(agentWidth - RESIZE_STEP);
+  };
+
   return (
-    <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-      <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{title}</h2>
-      {settingsHref ? (
-        <Link
-          href={settingsHref}
-          className={cx('flex items-center gap-1 text-xs text-muted underline-offset-4 hover:underline', FOCUS_RING)}
-        >
-          Open full settings
-          <ArrowRight aria-hidden size={12} />
-        </Link>
-      ) : null}
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close"
-        className={cx('rounded p-1 text-muted hover:bg-muted hover:text-foreground', FOCUS_RING)}
-      >
-        <X aria-hidden size={16} />
-      </button>
-    </div>
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize Agent"
+      aria-valuenow={agentWidth}
+      aria-valuemin={AGENT_MIN_WIDTH}
+      aria-valuemax={AGENT_MAX_WIDTH}
+      tabIndex={0}
+      onPointerDown={onPointerDown}
+      onKeyDown={onKeyDown}
+      className={cx(
+        'absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize touch-none hover:bg-border',
+        FOCUS_RING,
+      )}
+    />
   );
 }
 
-function RailBody({ mode, configure, agent }: { mode: RailMode; configure: ConfigurePanel | null; agent: ReactNode | null }) {
+function AgentPanel() {
+  const { layout, agent, agentOpen, showAgent, closeAgent, agentWidth } = useWorkspaceRail();
+  // Mounted from first open and kept, so a conversation survives closing the panel.
+  const [everOpened, setEverOpened] = useState(false);
+  if (agentOpen && !everOpened) setEverOpened(true);
+
+  const style: CSSProperties | undefined = docked(layout) ? { width: agentWidth } : undefined;
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      {/* Both subtrees stay mounted; only visibility toggles, so Agent's conversation state
-          (and any in-progress Configure edits) survive switching modes. */}
-      <div hidden={mode !== 'agent'} className="flex min-h-0 flex-1 flex-col">
-        {agent}
+    <aside aria-label="Agent" className={cx('relative', panelClass(layout, showAgent))} style={style}>
+      {docked(layout) ? <AgentResizeHandle /> : null}
+      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">Agent</h2>
+        <button
+          type="button"
+          onClick={closeAgent}
+          aria-label="Close Agent"
+          className={cx('rounded p-1 text-muted hover:bg-muted hover:text-foreground', FOCUS_RING)}
+        >
+          <X aria-hidden size={16} />
+        </button>
       </div>
-      <div hidden={mode !== 'configure'} className="flex min-h-0 flex-1 flex-col p-4">
-        {configure?.content}
-      </div>
-    </div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{everOpened ? agent : null}</div>
+    </aside>
+  );
+}
+
+function PagePanel() {
+  const { layout, showPage, setPageSlot } = useWorkspaceRail();
+  const style: CSSProperties | undefined = docked(layout) ? { width: PAGE_DRAWER_WIDTH } : undefined;
+
+  return (
+    <aside
+      ref={setPageSlot}
+      aria-label="Page panel"
+      className={panelClass(layout, showPage)}
+      style={style}
+    />
   );
 }
 
 /**
- * The single rail host, shared by every shell that mounts a `WorkspaceRailProvider` (Organization
- * and Platform alike — see `WorkspaceShell`). Content (Agent, Configure) is supplied by whoever
- * registered it; this component owns only the mode switch and the responsive layout choice:
- *
- * - `docked` (>=1280px) — beside `main`, resizable via `react-resizable-panels` rather than a
- *   hand-rolled `mousemove` listener, so the divider is a real, keyboard-operable ARIA
- *   `separator`. `main` keeps its width; the rail takes its own.
- * - `overlay` (768–1279px) — a right-side Sheet over `main`, which never shrinks. A tablet at
- *   ~1000px behaves like a small desktop here, not like a phone.
- * - `drawer` (<768px) — a bottom Drawer, sized to leave room to see the workspace behind it
- *   without colliding with `OrgNavBar`'s permanent bottom bar while closed.
+ * The single host for both panels. `main` never moves in the tree, so opening or closing a panel
+ * never remounts the page. The same two elements serve every layout — only their classes change —
+ * so resizing the window never remounts the drawer content either.
  */
 export function WorkspaceRightRail({ main }: { main: ReactNode }) {
-  const { mode, close, configure, agent, width, setWidth } = useWorkspaceRail();
-  const layout = useRailLayout();
-  const open = mode !== 'closed';
-  const title = mode === 'agent' ? 'Agent' : (configure?.title ?? 'Configure');
-  const settingsHref = mode === 'configure' ? configure?.settingsHref : undefined;
-
-  if (layout === 'docked') {
-    if (!open) return <>{main}</>;
-    return (
-      <ResizablePanelGroup orientation="horizontal" className="min-h-svh w-full">
-        <ResizablePanel id="workspace-main" groupResizeBehavior="preserve-relative-size">
-          {main}
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel
-          id="workspace-rail"
-          defaultSize={width}
-          minSize={MIN_WIDTH}
-          maxSize={MAX_WIDTH}
-          groupResizeBehavior="preserve-pixel-size"
-          onResize={(size: PanelSize) => setWidth(size.inPixels)}
-          className="flex flex-col border-l border-border bg-background"
-        >
-          <aside aria-label={title} className="flex h-full min-h-0 flex-1 flex-col">
-            <RailHeader title={title} onClose={close} settingsHref={settingsHref} />
-            <RailBody mode={mode} configure={configure} agent={agent} />
-          </aside>
-        </ResizablePanel>
-      </ResizablePanelGroup>
-    );
-  }
-
-  if (layout === 'overlay') {
-    return (
-      <>
-        {main}
-        <Sheet open={open} onOpenChange={(next) => !next && close()}>
-          <SheetContent side="right" showCloseButton={false} className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
-            <RailHeader title={title} onClose={close} settingsHref={settingsHref} />
-            <RailBody mode={mode} configure={configure} agent={agent} />
-          </SheetContent>
-        </Sheet>
-      </>
-    );
-  }
-
   return (
-    <>
-      {main}
-      <Drawer open={open} onOpenChange={(next) => !next && close()}>
-        <DrawerContent className="gap-0 p-0" style={{ height: '85dvh' }}>
-          <RailHeader title={title} onClose={close} settingsHref={settingsHref} />
-          <RailBody mode={mode} configure={configure} agent={agent} />
-        </DrawerContent>
-      </Drawer>
-    </>
+    <div className="flex min-h-svh w-full">
+      <div className="min-w-0 flex-1">{main}</div>
+      <PagePanel />
+      <AgentPanel />
+    </div>
   );
 }

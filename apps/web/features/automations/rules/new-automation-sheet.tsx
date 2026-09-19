@@ -5,14 +5,13 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@gold/ui/components/sheet';
-import { useIsMobile } from '@gold/ui/hooks/use-mobile';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerHeader,
+  PageDrawerTitle,
+  PageDrawerTrigger,
+} from '@/components/containers/page-drawer';
 import {
   COMPARISONS,
   METRICS,
@@ -31,26 +30,25 @@ import { ActionError, INITIAL_AUTOMATION_ACTION_STATE as INITIAL } from '../shar
  * route rather than leaving the caller back on the list.
  */
 export function NewAutomationSheet({ organizationId }: { organizationId: string }) {
-  const mobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<TriggerKind | ''>('');
   const [state, formAction, pending] = useActionState(createRuleAction, INITIAL);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         <Button type="button" size="small">
           <Plus aria-hidden className="size-4" /> New automation
         </Button>
-      </SheetTrigger>
-      <SheetContent side={mobile ? 'bottom' : 'right'} className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>New automation</SheetTitle>
-          <SheetDescription>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>New automation</PageDrawerTitle>
+          <PageDrawerDescription>
             Name it and say what sets it off. It starts with no conditions and nothing to do —
             add those from the rule&rsquo;s own page once it exists.
-          </SheetDescription>
-        </SheetHeader>
+          </PageDrawerDescription>
+        </PageDrawerHeader>
 
         <form action={formAction} className="flex flex-col gap-4 px-4 pb-4">
           <input type="hidden" name="organizationId" value={organizationId} />
@@ -164,7 +162,7 @@ export function NewAutomationSheet({ organizationId }: { organizationId: string 
           </Button>
           <ActionError state={state} />
         </form>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }

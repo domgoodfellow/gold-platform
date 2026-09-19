@@ -4,14 +4,14 @@ import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@gold/ui/components/sheet';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerFooter,
+  PageDrawerHeader,
+  PageDrawerTitle,
+  PageDrawerTrigger,
+} from '@/components/containers/page-drawer';
 import type { CatalogFeature, CatalogModule, CatalogProduct } from '@/lib/domain/catalogue/catalogue';
 import {
   updateCatalogFeatureAction,
@@ -29,19 +29,19 @@ export function EditProductSheet({ product }: { product: CatalogProduct }) {
   const [state, action, pending] = useActionState(updateCatalogProductAction, INITIAL);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         <Button type="button" tone="secondary" size="small">
           Edit Product
         </Button>
-      </SheetTrigger>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>Edit {product.label}</SheetTitle>
-          <SheetDescription>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>Edit {product.label}</PageDrawerTitle>
+          <PageDrawerDescription>
             Presentation only. The key ({product.key}) is locked — the seven Products are fixed.
-          </SheetDescription>
-        </SheetHeader>
+          </PageDrawerDescription>
+        </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">
           <input type="hidden" name="familyKey" value={product.key} />
           <div className="flex flex-col gap-1">
@@ -76,15 +76,15 @@ export function EditProductSheet({ product }: { product: CatalogProduct }) {
             <TextInput id="displayOrder" name="displayOrder" type="number" min={0} defaultValue={product.displayOrder} className="w-28" />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <SheetFooter className="px-0">
+          <PageDrawerFooter className="px-0">
             <Button type="submit" disabled={pending}>
               {pending ? 'Saving…' : 'Save'}
             </Button>
             {state.updated ? <Hint role="status">Saved.</Hint> : null}
-          </SheetFooter>
+          </PageDrawerFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }
 
@@ -93,17 +93,17 @@ export function EditModuleSheet({ module, familyKey }: { module: CatalogModule; 
   const [state, action, pending] = useActionState(updateCatalogModuleAction, INITIAL);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         <Button type="button" tone="secondary" size="small">
           Configure module metadata
         </Button>
-      </SheetTrigger>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>Edit {module.label}</SheetTitle>
-          <SheetDescription>Presentation metadata for this Module.</SheetDescription>
-        </SheetHeader>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>Edit {module.label}</PageDrawerTitle>
+          <PageDrawerDescription>Presentation metadata for this Module.</PageDrawerDescription>
+        </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">
           <input type="hidden" name="familyKey" value={familyKey} />
           <input type="hidden" name="moduleId" value={module.id} />
@@ -120,15 +120,15 @@ export function EditModuleSheet({ module, familyKey }: { module: CatalogModule; 
             <TextInput id={`module-order-${module.id}`} name="displayOrder" type="number" min={0} defaultValue={module.displayOrder} className="w-28" />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <SheetFooter className="px-0">
+          <PageDrawerFooter className="px-0">
             <Button type="submit" disabled={pending}>
               {pending ? 'Saving…' : 'Save'}
             </Button>
             {state.updated ? <Hint role="status">Saved.</Hint> : null}
-          </SheetFooter>
+          </PageDrawerFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }
 
@@ -156,13 +156,13 @@ export function FeatureSheet({
   const [state, action, pending] = useActionState(updateCatalogFeatureAction, INITIAL);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>{trigger}</SheetTrigger>
-      <SheetContent className="overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>{feature.label}</SheetTitle>
-          <SheetDescription>{feature.description || 'No description yet.'}</SheetDescription>
-        </SheetHeader>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>{trigger}</PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>{feature.label}</PageDrawerTitle>
+          <PageDrawerDescription>{feature.description || 'No description yet.'}</PageDrawerDescription>
+        </PageDrawerHeader>
 
         <div className="flex flex-col gap-6 px-4 pb-4">
           <form action={action} className="flex flex-col gap-3">
@@ -329,7 +329,7 @@ export function FeatureSheet({
             </div>
           </details>
         </div>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }

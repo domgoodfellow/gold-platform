@@ -4,8 +4,7 @@ import { Settings2 } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { DividedList, EmptyState, GroupHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@gold/ui/components/sheet';
-import { useIsMobile } from '@gold/ui/hooks/use-mobile';
+import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/containers/page-drawer';
 import type { CallOutcome } from '@/lib/domain/reception/outcomes';
 import { OutboundIdentity } from './outbound-identity';
 import { CreateOutcomeForm } from './outcome-settings';
@@ -18,12 +17,11 @@ export function VoiceSettingsSheet({ organizationId, number, outcomes, mayManage
   mayConfigureOutcomes: boolean;
   role: string;
 }) {
-  const mobile = useIsMobile();
   return (
-    <Sheet>
-      <SheetTrigger asChild><Button type="button" tone="secondary"><Settings2 aria-hidden /> Voice settings</Button></SheetTrigger>
-      <SheetContent side={mobile ? 'bottom' : 'right'} className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
-        <SheetHeader><SheetTitle>Voice settings</SheetTitle><SheetDescription>Outbound identity and the words this business uses after a call.</SheetDescription></SheetHeader>
+    <PageDrawer>
+      <PageDrawerTrigger asChild><Button type="button" tone="secondary"><Settings2 aria-hidden /> Voice settings</Button></PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader><PageDrawerTitle>Voice settings</PageDrawerTitle><PageDrawerDescription>Outbound identity and the words this business uses after a call.</PageDrawerDescription></PageDrawerHeader>
         <div className="space-y-8 px-4 pb-4">
           <section>
             <GroupHeading>Outbound identity</GroupHeading>
@@ -37,7 +35,7 @@ export function VoiceSettingsSheet({ organizationId, number, outcomes, mayManage
             {mayConfigureOutcomes ? <div className="mt-4"><CreateOutcomeForm organizationId={organizationId} /></div> : <Hint className="mt-3">Your role, {role}, cannot change these words.</Hint>}
           </section>
         </div>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }

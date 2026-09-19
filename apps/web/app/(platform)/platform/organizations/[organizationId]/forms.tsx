@@ -11,13 +11,13 @@ import {
   setResourceStatusAction,
 } from './actions';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@gold/ui/components/sheet';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerHeader,
+  PageDrawerTitle,
+  PageDrawerTrigger,
+} from '@/components/containers/page-drawer';
 import {
   PLAN_ASSIGNMENT_INITIAL,
   PROVISION_TWILIO_INITIAL,
@@ -48,20 +48,20 @@ export function AssignPlanSheet({ organizationId, plans }: { organizationId: str
   const [open, setOpen] = useState(false);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
         <Button type="button" size="small">
           Change Plan
         </Button>
-      </SheetTrigger>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>Assign a Plan</SheetTitle>
-          <SheetDescription>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>Assign a Plan</PageDrawerTitle>
+          <PageDrawerDescription>
             The Plan determines entitlement. Available entitled features are active by default;
             the organization can switch them off. Provider-backed features may still need setup.
-          </SheetDescription>
-        </SheetHeader>
+          </PageDrawerDescription>
+        </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">
           <input type="hidden" name="organizationId" value={organizationId} />
           <SelectInput name="planId" required aria-label="Plan">
@@ -83,8 +83,8 @@ export function AssignPlanSheet({ organizationId, plans }: { organizationId: str
             {pending ? 'Assigning…' : 'Assign'}
           </Button>
         </form>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }
 

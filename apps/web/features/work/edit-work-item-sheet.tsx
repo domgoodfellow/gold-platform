@@ -4,13 +4,12 @@ import { useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@gold/ui/components/sheet';
-import { useIsMobile } from '@gold/ui/hooks/use-mobile';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerHeader,
+  PageDrawerTitle,
+} from '@/components/containers/page-drawer';
 import type { SelectOption } from '@/components/controls/optional-select';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
@@ -34,18 +33,17 @@ export function EditWorkItemSheet({
   definitions: FieldDefinition[];
 }) {
   const [open, setOpen] = useState(false);
-  const mobile = useIsMobile();
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <PageDrawer open={open} onOpenChange={setOpen}>
       <Button type="button" tone="secondary" onClick={() => setOpen(true)} className="mt-3">
         <Pencil aria-hidden /> Correct job details
       </Button>
-      <SheetContent side={mobile ? 'bottom' : 'right'} className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Correct job details</SheetTitle>
-          <SheetDescription>Title, customer, location and asset.</SheetDescription>
-        </SheetHeader>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>Correct job details</PageDrawerTitle>
+          <PageDrawerDescription>Title, customer, location and asset.</PageDrawerDescription>
+        </PageDrawerHeader>
         <div className="px-4 pb-4">
           <EditWorkItemForm
             organizationId={organizationId}
@@ -58,7 +56,7 @@ export function EditWorkItemSheet({
             onUpdated={() => setOpen(false)}
           />
         </div>
-      </SheetContent>
-    </Sheet>
+      </PageDrawerContent>
+    </PageDrawer>
   );
 }

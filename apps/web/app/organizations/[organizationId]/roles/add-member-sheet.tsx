@@ -4,14 +4,13 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@gold/ui/components/sheet';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerHeader,
+  PageDrawerTitle,
+} from '@/components/containers/page-drawer';
 import { Tabs, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
-import { useIsMobile } from '@gold/ui/hooks/use-mobile';
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { AddMemberForm } from './add-member-form';
 import { InviteMemberForm } from './invite-member-form';
@@ -21,13 +20,13 @@ type Mode = 'invite' | 'existing';
 const AddMemberSheetContext = createContext<(() => void) | null>(null);
 
 /**
- * Hosts the one Add Member Sheet for the whole Team workspace, reachable from both Members and
+ * Hosts the one Add Member PageDrawer for the whole Team workspace, reachable from both Members and
  * Invitations. It replaces two inline Disclosure forms ("Add somebody", "Invite by email") with
  * one bounded creation surface holding both existing operations — invite by email and add an
- * existing account remain two explicit writes, chosen with a segmented control inside the Sheet,
+ * existing account remain two explicit writes, chosen with a segmented control inside the PageDrawer,
  * never merged into one ambiguous action and never auto-detected on the client.
  *
- * Invite by email is the default every time the Sheet opens, because it works whether or not the
+ * Invite by email is the default every time the PageDrawer opens, because it works whether or not the
  * person already has a GOLD account — the same default whichever trigger opened it.
  */
 export function AddMemberSheetProvider({
@@ -40,32 +39,31 @@ export function AddMemberSheetProvider({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const mobile = useIsMobile();
 
   return (
     <AddMemberSheetContext.Provider value={() => setOpen(true)}>
       {children}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side={mobile ? 'bottom' : 'right'} className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>Add member</SheetTitle>
-            <SheetDescription>
+      <PageDrawer open={open} onOpenChange={setOpen}>
+        <PageDrawerContent>
+          <PageDrawerHeader>
+            <PageDrawerTitle>Add member</PageDrawerTitle>
+            <PageDrawerDescription>
               Invite somebody by email, or add somebody who already has a GOLD account.
-            </SheetDescription>
-          </SheetHeader>
+            </PageDrawerDescription>
+          </PageDrawerHeader>
           <div className="flex flex-col gap-4 px-4 pb-4">
             <AddMemberSheetBody organizationId={organizationId} roles={roles} onDone={() => setOpen(false)} />
           </div>
-        </SheetContent>
-      </Sheet>
+        </PageDrawerContent>
+      </PageDrawer>
     </AddMemberSheetContext.Provider>
   );
 }
 
 /**
- * Its own component, mounted fresh each time the Sheet opens (Radix unmounts closed Sheet
+ * Its own component, mounted fresh each time the PageDrawer opens (Radix unmounts closed PageDrawer
  * content), so the mode always starts back at Invite and a finished invite's copyable link is
- * never left stale behind a reopened Sheet.
+ * never left stale behind a reopened PageDrawer.
  */
 function AddMemberSheetBody({
   organizationId,

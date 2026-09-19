@@ -4,13 +4,12 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 import { PackagePlus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@gold/ui/components/sheet';
-import { useIsMobile } from '@gold/ui/hooks/use-mobile';
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerDescription,
+  PageDrawerHeader,
+  PageDrawerTitle,
+} from '@/components/containers/page-drawer';
 import type { SelectOption } from '@/components/controls/optional-select';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { CreateAssetForm } from './create-asset-form';
@@ -18,7 +17,7 @@ import { CreateAssetForm } from './create-asset-form';
 const CreateAssetSheetContext = createContext<(() => void) | null>(null);
 
 /**
- * Hosts the one Sheet instance for this collection. The header trigger and the empty-state
+ * Hosts the one PageDrawer instance for this collection. The header trigger and the empty-state
  * trigger both open it through the same function, so a business sees the same form — never a
  * second, auto-opened one — whichever button it presses.
  */
@@ -36,19 +35,18 @@ export function CreateAssetSheetProvider({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const mobile = useIsMobile();
 
   return (
     <CreateAssetSheetContext.Provider value={() => setOpen(true)}>
       {children}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side={mobile ? 'bottom' : 'right'} className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>New asset</SheetTitle>
-            <SheetDescription>
+      <PageDrawer open={open} onOpenChange={setOpen}>
+        <PageDrawerContent>
+          <PageDrawerHeader>
+            <PageDrawerTitle>New asset</PageDrawerTitle>
+            <PageDrawerDescription>
               What work is about — machines, vehicles, properties, customer-owned equipment.
-            </SheetDescription>
-          </SheetHeader>
+            </PageDrawerDescription>
+          </PageDrawerHeader>
           <div className="px-4 pb-4">
             <CreateAssetForm
               organizationId={organizationId}
@@ -58,8 +56,8 @@ export function CreateAssetSheetProvider({
               onCreated={() => setOpen(false)}
             />
           </div>
-        </SheetContent>
-      </Sheet>
+        </PageDrawerContent>
+      </PageDrawer>
     </CreateAssetSheetContext.Provider>
   );
 }
