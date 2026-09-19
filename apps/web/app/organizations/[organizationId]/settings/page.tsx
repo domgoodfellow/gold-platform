@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { areaLabel } from '@/lib/navigation';
+import { PageHeader } from '@/components/containers/page-header';
 import { Card } from '@/components/containers/card';
 import { Hint } from '@/components/controls/inputs';
 import { SectionHeading } from '@/components/containers/section';
@@ -49,9 +51,8 @@ export default async function SettingsPage({
 
   return (
     <SettingsPageFrame>
-      <Hint className="mt-1">Durable configuration for how this business runs.</Hint>
-
-      <div className="mt-6 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
+      <PageHeader title={areaLabel('settings')} description="Durable configuration for how this business runs." />
+      <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
         <Card as="section" className="border-accent">
           <SectionHeading>Guided setup</SectionHeading>
           <Hint className="mt-1">

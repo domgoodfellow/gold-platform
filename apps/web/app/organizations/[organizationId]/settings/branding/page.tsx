@@ -1,4 +1,6 @@
 import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
 import { Section, SectionHeading } from '@/components/containers/section';
 import { ProfileForm } from '@/features/public-profile/profile-form';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
@@ -33,9 +35,13 @@ export default async function BrandingSettingsPage({
 
   return (
     <SettingsPageFrame>
-      <Hint className="mt-1">What customers see before they book, and how this business looks.</Hint>
+      <PageHeader
+        title="Branding"
+        crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]}
+        description="What customers see before they book, and how this business looks."
+      />
 
-      <Section id="public-page" className="mt-6 scroll-mt-6">
+      <Section id="public-page" className="scroll-mt-6">
         <SectionHeading>Public page</SectionHeading>
         <Hint className="mt-1">
           What customers see before they book. Everything here is this business&rsquo;s own

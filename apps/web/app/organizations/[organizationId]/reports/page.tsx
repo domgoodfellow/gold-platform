@@ -1,6 +1,6 @@
 import { Lock } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@gold/ui/components/alert';
-import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
 import {
   DashboardView,
   ReportFilters,
@@ -32,6 +32,7 @@ import {
 import { listResources } from '@/lib/domain/resources/resources';
 import { todayInZone } from '@/lib/domain/scheduling/window';
 import { listRoles } from '@/lib/domain/tenancy/roles';
+import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -51,7 +52,7 @@ export default async function ReportsPage({
   if (!organization.capabilities.includes('report.read')) {
     return (
       <>
-        <Hint className="mt-1">What this business has invoiced, and what its work has consumed.</Hint>
+        <PageHeader title={areaLabel('reports')} description="What this business has invoiced, and what its work has consumed." />
         <Alert className="mt-8">
           <Lock aria-hidden />
           <AlertTitle>Your role, {organization.role}, cannot see this business&apos;s figures</AlertTitle>
@@ -155,9 +156,10 @@ export default async function ReportsPage({
   if (openDashboard) {
     return (
       <>
-        <Hint className="mt-1">
-          {openDashboard.name} · figures worked out now, in {organization.timezone}.
-        </Hint>
+        <PageHeader
+          title={areaLabel('reports')}
+          description={<>{openDashboard.name} · figures worked out now, in {organization.timezone}.</>}
+        />
         {navigation}
         <DashboardView tiles={tiles} />
       </>
@@ -166,11 +168,16 @@ export default async function ReportsPage({
 
   return (
     <>
-      <Hint className="mt-1">
-        What this business has invoiced, and what its work has consumed. Dated by the day on the
-        invoice and the day the cost was incurred — not the day either was typed in. Times read
-        in {organization.timezone}.
-      </Hint>
+      <PageHeader
+        title={areaLabel('reports')}
+        description={
+          <>
+            What this business has invoiced, and what its work has consumed. Dated by the day on the
+            invoice and the day the cost was incurred — not the day either was typed in. Times read
+            in {organization.timezone}.
+          </>
+        }
+      />
       {navigation}
       <ReportFilters
         grouping={grouping}

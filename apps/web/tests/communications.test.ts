@@ -30,10 +30,16 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const CONNECTION =
   process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
-// A currency nobody else's test trades in, so pricing it cannot change what another suite sees.
+// Currencies nobody else's test trades in, so pricing one cannot change what another suite sees.
 // `communication_rates` has no tenant to scope it by — that is the point of the table — so
 // isolation here is by currency rather than by organization.
+//
+// **The unpriced one must be a code no migration prices.** It was CAD until the launch commercial
+// snapshot deliberately seeded CAD voice and SMS rates; a real currency is only "unpriced" until
+// somebody prices it, so a test that leans on that is one migration from being wrong. XUN is
+// ISO-4217-shaped and, like XTS, is in the range reserved for testing.
 const PRICED = 'XTS';
+const UNPRICED = 'XUN';
 
 type Tenant = { db: SupabaseClient; organizationId: string };
 
@@ -80,7 +86,7 @@ beforeAll(async () => {
 
   [priced, unpriced] = await Promise.all([
     newTenant('priced', PRICED),
-    newTenant('unpriced', 'CAD'),
+    newTenant('unpriced', UNPRICED),
   ]);
 }, 60_000);
 
@@ -138,7 +144,7 @@ describe('what a deployment charges', () => {
     // prices charges nothing, draws nothing down, and refuses nothing.
     const account = await communicationsAccount(unpriced.db, {
       organizationId: unpriced.organizationId,
-      currency: 'CAD',
+      currency: UNPRICED,
     });
     expect(account.priced).toBe(false);
     expect(account.rates).toEqual([]);

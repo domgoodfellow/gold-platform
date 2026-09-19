@@ -1,4 +1,5 @@
-import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
 import { ButtonLink } from '@/components/controls/button';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
@@ -34,14 +35,18 @@ export default async function ImportRunsPage({
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Hint>Every import this business has run, newest first.</Hint>
-        <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">
-          Import file
-        </ButtonLink>
-      </div>
+      <PageHeader
+        title="Imports"
+        crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]}
+        description="Every import this business has run, newest first."
+        actions={
+          <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">
+            Import file
+          </ButtonLink>
+        }
+      />
 
-      <div className="mt-6">
+      <div>
         <DataTable
           rows={runs}
           rowKey={(run) => run.id}

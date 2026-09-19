@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { SectionHeading } from '@/components/containers/section';
-import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
+import { PageHeader } from '@/components/containers/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { Badge } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';
@@ -32,13 +32,9 @@ export default async function PlansPage() {
 
   return (
     <AppPage width="full">
-      <PageChromeRegistrar title="Plans & Add-ons" actions={<CreatePlanSheet />} />
-      <p className="max-w-3xl text-sm text-muted-foreground">
-        Reusable packaging over the canonical catalogue. A Plan is one organization&rsquo;s base
-        package; an Add-on stacks alongside it.
-      </p>
+      <PageHeader title="Plans & Add-ons" actions={<CreatePlanSheet />} description="Reusable packaging over the canonical catalogue. A Plan is one organization&rsquo;s base package; an Add-on stacks alongside it." />
 
-      <SectionHeading className="mt-8">Plans</SectionHeading>
+      <SectionHeading>Plans</SectionHeading>
       {basePlans.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">No Plans have been created yet.</p>
       ) : (

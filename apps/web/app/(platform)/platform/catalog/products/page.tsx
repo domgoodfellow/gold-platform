@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
+import { PageHeader } from '@/components/containers/page-header';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';
@@ -20,14 +20,9 @@ export default async function ProductsPage() {
 
   return (
     <AppPage width="full">
-      <PageChromeRegistrar title="Line items" crumbs={[{ label: 'Catalog', href: '/platform/catalog' }]} />
-      <p className="max-w-3xl text-sm text-muted-foreground">
-        The legacy flat SKUs this platform still sells by, one level under the seven Products.
-        Presentation and sale state are staff-managed; identifiers and module mappings remain
-        deployment-owned.
-      </p>
+      <PageHeader title="Line items" crumbs={[{ label: 'Catalog', href: '/platform/catalog' }]} description="The legacy flat SKUs this platform still sells by, one level under the seven Products. Presentation and sale state are staff-managed; identifiers and module mappings remain deployment-owned." />
 
-      <div className="mt-6">
+      <div>
         <DataTable
           rows={products}
           rowKey={(product) => product.key}

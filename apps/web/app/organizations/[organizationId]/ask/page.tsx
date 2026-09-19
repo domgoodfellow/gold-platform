@@ -1,6 +1,8 @@
 import { ErrorText, Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
 import { EmptyState, SectionHeading } from '@/components/containers/section';
 import { canAnswerQuestions, listAgentRuns } from '@/lib/domain/assistant/questions';
+import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { AskForm, ProposedAction } from './ask-form';
 
@@ -38,10 +40,10 @@ export default async function AskPage({
 
   return (
     <>
-      <Hint className="mt-6 max-w-2xl">
-        Answers are built from what you can already see on the other screens. Nothing here changes
-        anything.
-      </Hint>
+      <PageHeader
+        title={areaLabel('ask')}
+        description="Answers are built from what you can already see on the other screens. Nothing here changes anything."
+      />
 
       {/* **Where the data goes, said on the screen that sends it.**
           This is the only feature in the platform that sends a business's rows anywhere, so it is

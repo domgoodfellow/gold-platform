@@ -1,10 +1,11 @@
-import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
 import { listAutomationRules, listAutomationRuns } from '@/lib/domain/automation/rules';
 import { reviewAutomationRules } from '@/lib/domain/automation/review';
 import { listMessageDeliveries, listMessageTemplates } from '@/lib/domain/automation/templates';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
+import { areaLabel } from '@/lib/navigation';
 import { AutomationsViewTabs } from '@/features/automations/workspace/view-tabs';
 import { resolveAutomationsView } from '@/features/automations/workspace/views';
 import { RulesTable } from '@/features/automations/rules/rules-table';
@@ -38,12 +39,16 @@ export default async function AutomationsPage({
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <AutomationsViewTabs view={view} messageCount={templates.length} />
-        {view === 'rules' && mayManage ? (
-          <NewAutomationSheet organizationId={organizationId} />
-        ) : null}
-      </div>
+      <PageHeader
+        title={areaLabel('automations')}
+        description={
+          view === 'rules'
+            ? 'A rule watches for something happening, checks whether the job looks the way you describe, and then does something. Every condition has to hold — two rules is how you say “or”.'
+            : undefined
+        }
+        actions={view === 'rules' && mayManage ? <NewAutomationSheet organizationId={organizationId} /> : null}
+      />
+      <AutomationsViewTabs view={view} messageCount={templates.length} />
 
       {view === 'rules' ? (
         <RulesView organizationId={organizationId} mayManage={mayManage} />
@@ -96,11 +101,6 @@ async function RulesView({
 
   return (
     <>
-      <Hint className="mt-6 max-w-2xl">
-        A rule watches for something happening, checks whether the job looks the way you
-        describe, and then does something. Every condition has to hold — two rules is how you
-        say &ldquo;or&rdquo;.
-      </Hint>
       <RulesTable organizationId={organizationId} rules={rules} warnings={warnings} mayManage={mayManage} />
     </>
   );

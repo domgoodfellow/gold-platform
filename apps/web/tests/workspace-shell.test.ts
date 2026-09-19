@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -6,13 +6,16 @@ import { describe, expect, it } from 'vitest';
  * Phase A — the authenticated application frame Business, Platform, Settings, Import, Schedule
  * and Agent all build on. No harness here mounts a component (this repository runs none — see
  * `layout.test.ts`'s own note on why), so — exactly as `navigation.test.ts` and
- * `operator-ui.test.ts` already do — these are source guards: the geometry contract itself lives
- * in `WorkspaceHeader`/`WorkspaceRightRail`, and what a regression here would actually break is
+ * `operator-ui.test.ts` already do — these are source guards: the ownership contract itself lives
+ * in `WorkspaceHeader` (global), `PageHeader` (page identity) and `WorkspaceRightRail` (auxiliary surface), and what a regression here would actually break is
  * either one drifting from what this file asserts about it, or a caller wiring a slot to the
  * wrong content.
  */
 
 const WEB = fileURLToPath(new URL('..', import.meta.url));
+
+// Doc comments legitimately name what a file does not do; only the code is under test.
+const code = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 const workspaceHeader = readFileSync(`${WEB}/components/containers/workspace-header.tsx`, 'utf8');
 const workspaceRightRail = readFileSync(`${WEB}/components/containers/workspace-right-rail.tsx`, 'utf8');
@@ -24,8 +27,10 @@ const organizationLayout = readFileSync(
 );
 const platformLayout = readFileSync(`${WEB}/app/(platform)/platform/layout.tsx`, 'utf8');
 const workspaceShell = readFileSync(`${WEB}/components/containers/workspace-shell.tsx`, 'utf8');
-const workspacePageChrome = readFileSync(
-  `${WEB}/components/containers/workspace-page-chrome.tsx`,
+const pageHeader = readFileSync(`${WEB}/components/containers/page-header.tsx`, 'utf8');
+const orgShell = readFileSync(`${WEB}/app/organizations/[organizationId]/org-shell.tsx`, 'utf8');
+const resourcesPage = readFileSync(
+  `${WEB}/app/organizations/[organizationId]/resources/page.tsx`,
   'utf8',
 );
 const recordHeader = readFileSync(`${WEB}/components/containers/record-header.tsx`, 'utf8');
@@ -38,24 +43,29 @@ const platformOrganizationOverview = readFileSync(
 const platformCatalogPage = readFileSync(`${WEB}/app/(platform)/platform/catalog/page.tsx`, 'utf8');
 const platformOverview = readFileSync(`${WEB}/features/platform/platform-overview.tsx`, 'utf8');
 
-describe('WorkspaceHeader is geometry only', () => {
-  it('carries no organization id, platform route, AreaTrail or authorization knowledge', () => {
+describe('WorkspaceHeader is the global bar, not a page header', () => {
+  it('carries no organization id, platform route, area trail or authorization knowledge', () => {
     expect(workspaceHeader).not.toMatch(/organizationId/);
     expect(workspaceHeader).not.toMatch(/\/platform/);
-    expect(workspaceHeader).not.toContain('AreaTrail');
+    expect(workspaceHeader).not.toMatch(/AreaTrail|PlatformTrail/);
     expect(workspaceHeader).not.toMatch(/requireOrganization|requireActor|isPlatformStaff/);
   });
 
-  it('renders its slots in one fixed order: trigger, context, primary, status, spacer, page actions, beforeActions, actions', () => {
+  it('renders no page title, status, breadcrumb or page actions — it accepts no slot for them', () => {
+    const source = code(workspaceHeader);
+    expect(source).not.toMatch(/usePageChrome|PageChrome|PageHeader/);
+    expect(source).not.toMatch(/\bprimary\b|\bstatus\b/);
+    expect(source).not.toContain('<h1');
+    expect(source).not.toContain('Breadcrumb');
+  });
+
+  it('renders its slots in one fixed order: trigger, context, spacer, beforeActions, Agent', () => {
     const order = [
       'SidebarTrigger',
       '{context}',
-      'chrome ? <PageChromeIdentity',
-      'chrome?.status ? (',
-      "className=\"flex-1\"",
-      'chrome?.actions ? (',
+      'className="flex-1"',
       '{beforeActions}',
-      '<WorkspaceHeaderActions',
+      '<AgentTrigger',
     ];
     let cursor = -1;
     for (const token of order) {
@@ -66,19 +76,42 @@ describe('WorkspaceHeader is geometry only', () => {
     }
   });
 
-  it('ends the row at Agent — Configure/Agent ordering lives in WorkspaceHeaderActions alone, never reimplemented here', () => {
-    expect(workspaceHeader).toContain('<WorkspaceHeaderActions />');
-    expect(workspaceHeader).not.toContain('Bot');
-    expect(workspaceHeader).not.toContain('Settings');
+  it('still exposes Agent as its furthest-right control, and no Configure', () => {
+    expect(workspaceHeader).toContain('<AgentTrigger />');
+    expect(code(workspaceHeader)).not.toMatch(/Configure|Settings/);
   });
 });
 
-describe('WorkspaceHeaderActions keeps Configure before Agent, Agent last', () => {
-  it('renders the Configure button before the Agent button', () => {
-    const configureAt = workspaceRightRail.indexOf('aria-label="Configure"');
-    const agentAt = workspaceRightRail.indexOf('aria-label="Agent"');
-    expect(configureAt).toBeGreaterThan(-1);
-    expect(agentAt).toBeGreaterThan(configureAt);
+describe('Agent is workspace-global and Configure is page-level', () => {
+  it('AgentTrigger is the rail\'s global Agent control, labelled and pressed-state aware', () => {
+    expect(workspaceRightRail).toContain('export function AgentTrigger');
+    expect(workspaceRightRail).toContain('aria-label="Agent"');
+    expect(workspaceRightRail).toContain("aria-pressed={mode === 'agent'}");
+  });
+
+  it('ConfigureTrigger is a separate export a page places itself, with pressed state', () => {
+    expect(workspaceRightRail).toContain('export function ConfigureTrigger');
+    expect(workspaceRightRail).toContain("aria-pressed={mode === 'configure'}");
+    const agentBody = workspaceRightRail.slice(
+      workspaceRightRail.indexOf('export function AgentTrigger'),
+      workspaceRightRail.indexOf('export function ConfigureTrigger'),
+    );
+    expect(agentBody).not.toContain('toggleConfigure');
+  });
+
+  it('no page header ever renders Agent, and the generic PageHeader does not know about Configure', () => {
+    expect(code(pageHeader)).not.toMatch(/Agent|Configure|useWorkspaceRail/);
+  });
+
+  it('every page that offers Configure also registers the panel it opens', () => {
+    for (const area of ['resources', 'locations', 'customers', 'assets', 'work', 'schedule']) {
+      const source = readFileSync(
+        `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
+        'utf8',
+      );
+      expect(source, `${area}/page.tsx places ConfigureTrigger`).toContain('<ConfigureTrigger />');
+      expect(source, `${area}/page.tsx registers its panel`).toContain('<ConfigureRegistrar');
+    }
   });
 });
 
@@ -86,12 +119,16 @@ describe('the Business phone header — compact controls wired to the right slot
   it('gives the context slot the compact context switcher and nothing else', () => {
     const contextBlock = organizationLayout.slice(
       organizationLayout.indexOf('context={'),
-      organizationLayout.indexOf('primary={'),
+      organizationLayout.indexOf('beforeActions={'),
     );
     expect(contextBlock).toContain('CompactContextSwitcher');
+    // Setup has no bottom-bar entry, so a phone reaches it through this badge — and only a phone:
+    // the sidebar's own SetupEntry covers every wider width.
+    expect(contextBlock).toContain('SetupBadge');
+    expect(contextBlock).toContain('md:hidden');
   });
 
-  it('gives beforeActions the compact account menu — Account sits before Configure/Agent, never after', () => {
+  it('gives beforeActions the compact account menu — Account sits before Agent, never after', () => {
     const start = organizationLayout.indexOf('beforeActions={');
     const beforeActionsBlock = organizationLayout.slice(start, organizationLayout.indexOf('/>', start));
     expect(beforeActionsBlock).toContain('CompactAccountMenu');
@@ -119,13 +156,13 @@ describe('the Business phone header — compact controls wired to the right slot
 });
 
 describe('the Platform route uses the unified workspace shell', () => {
-  it('no longer lives beside generic header markup, and delegates title/breadcrumb entirely to page chrome', () => {
+  it('no longer lives beside generic header markup, and leaves every title to the page’s own PageHeader', () => {
     expect(existsSync(`${WEB}/components/site-header.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-header-title.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-header.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-shell.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/app/(platform)/platform/gold-bootstrap-form.tsx`)).toBe(false);
-    // No pathname → title table — every Platform page registers its own via workspace-page-chrome.
+    // No pathname → title table — every Platform page renders its own PageHeader.
     expect(platformLayout).toContain('WorkspaceHeader');
     expect(platformLayout).toContain('OrgSidebar');
   });
@@ -153,9 +190,15 @@ describe('the Platform route uses the unified workspace shell', () => {
     expect(platformLayout).toContain('CompactContextSwitcher');
   });
 
-  it('uses the shared workspace header for platform routes', () => {
-    expect(platformLayout).toContain('PlatformTrail');
-    expect(platformLayout).not.toContain('SiteHeader');
+  it('uses the shared workspace header for platform routes, with no title of its own', () => {
+    expect(platformLayout).toContain('<WorkspaceHeader');
+    expect(platformLayout).not.toMatch(/PlatformTrail|primary=|SiteHeader/);
+  });
+
+  it('keeps the two contexts’ navigation apart — neither shell inherits the other’s domain model', () => {
+    expect(platformLayout).not.toMatch(/\bAREAS\b|areaLabel|areasIn\(/);
+    expect(organizationLayout).not.toMatch(/PLATFORM_NAV|PlatformNavigation/);
+    expect(orgShell).not.toMatch(/AreaTrail|PlatformTrail/);
   });
 
   it('mounts no bottom bar — Platform keeps its Sidebar Sheet rather than a copy of the Business bottom bar', () => {
@@ -225,58 +268,114 @@ describe('the right rail — three responsive layouts, not two', () => {
   });
 });
 
-describe('the page-chrome contract — the header, not the body, owns page location', () => {
-  it('WorkspaceShell gives page chrome the same lifetime as the rail — one provider tree', () => {
-    expect(workspaceShell).toContain('WorkspacePageChromeProvider');
-    const railAt = workspaceShell.indexOf('WorkspaceRailProvider');
-    const chromeAt = workspaceShell.indexOf('WorkspacePageChromeProvider');
-    expect(railAt).toBeGreaterThan(-1);
-    expect(chromeAt).toBeGreaterThan(railAt);
+describe('the page-header contract — the page, not the workspace header, owns page identity', () => {
+  it('the page-chrome registration mechanism is gone — nothing registers identity upward', () => {
+    expect(existsSync(`${WEB}/components/containers/workspace-page-chrome.tsx`)).toBe(false);
+    expect(workspaceShell).not.toContain('PageChrome');
+    expect(recordHeader).not.toContain('useWorkspacePageChrome');
   });
 
-  it('WorkspaceHeader consumes registered chrome, never a route or organization id, to decide what wins', () => {
-    expect(workspaceHeader).toContain('usePageChrome');
-    expect(workspaceHeader).toContain('PageChromeIdentity');
+  it('WorkspaceShell hosts the rail and shell only; a page renders its own header', () => {
+    expect(workspaceShell).toContain('WorkspaceRailProvider');
+    expect(code(workspaceShell)).not.toMatch(/PageHeader|<h1/);
   });
 
-  it('a registered page action renders ahead of the mobile account control and WorkspaceHeaderActions', () => {
-    const actionsAt = workspaceHeader.indexOf('chrome?.actions');
-    const beforeActionsAt = workspaceHeader.indexOf('{beforeActions}');
-    const railActionsAt = workspaceHeader.indexOf('<WorkspaceHeaderActions');
-    expect(actionsAt).toBeGreaterThan(-1);
-    expect(beforeActionsAt).toBeGreaterThan(actionsAt);
-    expect(railActionsAt).toBeGreaterThan(beforeActionsAt);
+  it('PageHeader is one server-safe composition: one <h1>, ancestors-only breadcrumbs, description, meta, actions', () => {
+    expect(pageHeader).not.toContain("'use client'");
+    expect(code(pageHeader).match(/<h1\b/g)).toHaveLength(1);
+    expect(pageHeader).toContain('<Breadcrumb');
+    for (const prop of ['title', 'crumbs', 'description', 'meta', 'actions']) {
+      expect(pageHeader, `PageHeader takes ${prop}`).toMatch(new RegExp(`\\b${prop}\\b`));
+    }
   });
 
-  it('chrome is presentation metadata only — no domain/auth logic in the registrar or its context', () => {
-    expect(workspacePageChrome).not.toMatch(/organizationId|requireOrganization|requireActor|isPlatformStaff/);
+  it('PageHeader is presentation only — no domain, authorization or width knowledge', () => {
+    expect(code(pageHeader)).not.toMatch(/organizationId|requireOrganization|requireActor|isPlatformStaff|capabilit/i);
+    // The canvas — width and centring — is AppPage's; a description's own measure is not.
+    expect(code(pageHeader)).not.toMatch(/mx-auto|max-w-screen|max-w-\[/);
   });
 
-  it('RecordHeader registers chrome and renders nothing of its own — the body no longer duplicates the header’s identity', () => {
-    expect(recordHeader).toContain('useWorkspacePageChrome');
-    expect(recordHeader).toContain('return null');
-    expect(recordHeader).not.toContain('<h1');
-    expect(recordHeader).not.toContain('Breadcrumb');
-  });
-
-  it('RecordHeader drops its own last crumb before registering — its historical crumbs shape already ends with the current page, and title would otherwise repeat it', () => {
+  it('RecordHeader keeps its historical props but renders PageHeader, dropping its own last crumb', () => {
+    expect(recordHeader).toContain('<PageHeader');
     expect(recordHeader).toContain('crumbs.slice(0, -1)');
+    expect(recordHeader).not.toContain('<h1');
+  });
+
+  it('every organization page renders exactly one page identity, and no route is left to the retired header trail', () => {
+    const root = `${WEB}/app/organizations/[organizationId]`;
+    const pages: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) walk(`${dir}/${entry.name}`);
+        else if (entry.name === 'page.tsx') pages.push(`${dir}/${entry.name}`);
+      }
+    };
+    walk(root);
+    expect(pages.length).toBeGreaterThan(20);
+
+    // A page's identity is its PageHeader, a RecordHeader-based header component, or a feature
+    // that renders one (Today, the customer record). A pure redirect renders nothing at all.
+    const identity = /<PageHeader|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<TodayDashboard/;
+    for (const page of pages) {
+      const source = readFileSync(page, 'utf8');
+      const label = page.slice(root.length);
+      if (/^\s*redirect\(/m.test(source) && !identity.test(source)) continue;
+      expect(source, `${label} renders no page identity`).toMatch(identity);
+      expect(source, `${label} would render two <h1> elements`).not.toMatch(/<h1\b|<PageHeading/);
+    }
   });
 });
 
-describe('Business area roots register chrome actions but no longer duplicate AreaTrail’s heading', () => {
-  it('Resources, Locations, Customers and Assets stop rendering their own PageHeading', () => {
+describe('Resources — the reference page for the workspace/page hierarchy', () => {
+  const [beforeHeader, headerOnward] = [
+    resourcesPage.slice(0, resourcesPage.indexOf('<PageHeader')),
+    resourcesPage.slice(resourcesPage.indexOf('<PageHeader')),
+  ];
+  const headerBlock = headerOnward.slice(0, headerOnward.indexOf('/>\n', headerOnward.indexOf('actions=')));
+
+  it('renders one PageHeader, titled from the navigation entry, inside AppPage', () => {
+    expect(resourcesPage.match(/<PageHeader\b/g)).toHaveLength(1);
+    expect(resourcesPage).toContain("title={areaLabel('resources')}");
+    expect(resourcesPage.indexOf('<AppPage')).toBeLessThan(resourcesPage.indexOf('<PageHeader'));
+    expect(resourcesPage).not.toContain('<h1');
+    expect(resourcesPage).not.toContain('PageChromeRegistrar');
+  });
+
+  it('puts Add resource in the page-action area, after Configure — one primary action', () => {
+    expect(headerBlock).toContain('<CreateResourceTrigger />');
+    expect(headerBlock).toContain('<ConfigureTrigger />');
+    expect(headerBlock.indexOf('<ConfigureTrigger')).toBeLessThan(headerBlock.indexOf('<CreateResourceTrigger'));
+  });
+
+  it('keeps its Configure panel registration and the create-sheet provider around the header', () => {
+    expect(resourcesPage).toContain('<ConfigureRegistrar');
+    expect(resourcesPage).toContain('title="Resources configuration"');
+    expect(beforeHeader).toContain('<CreateResourceSheetProvider');
+  });
+
+  it('repeats the same Add trigger in the empty state, which is the same operation rather than a second action', () => {
+    expect(resourcesPage).toMatch(/emptyAction=\{mayAdd \? <CreateResourceTrigger \/> : undefined\}/);
+  });
+
+  it('still hides controls by capability as courtesy only — the guard stays in the database', () => {
+    expect(resourcesPage).toContain("'resource.create'");
+    expect(resourcesPage).toContain("'field.manage'");
+  });
+});
+
+describe('Business area roots with an Add action keep it in their PageHeader', () => {
+  it('Resources, Locations, Customers and Assets no longer render PageHeading or register chrome', () => {
     for (const area of ['resources', 'locations', 'customers', 'assets']) {
       const source = readFileSync(
         `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
         'utf8',
       );
       expect(source, `${area}/page.tsx should not import PageHeading`).not.toContain('PageHeading');
-      expect(source, `${area}/page.tsx should register chrome`).toContain('PageChromeRegistrar');
+      expect(source, `${area}/page.tsx should render PageHeader`).toContain('<PageHeader');
     }
   });
 
-  it('each area’s primary "Add" action moves into the registered chrome, not a body header row', () => {
+  it('each area’s primary "Add" action sits in the PageHeader actions, not a body header row', () => {
     const triggers: Record<string, string> = {
       resources: 'CreateResourceTrigger',
       locations: 'CreateLocationTrigger',
@@ -288,23 +387,19 @@ describe('Business area roots register chrome actions but no longer duplicate Ar
         `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
         'utf8',
       );
-      const registrarBlock = source.slice(
-        source.indexOf('<PageChromeRegistrar'),
-        source.indexOf('/>', source.indexOf('<PageChromeRegistrar')) + 2,
-      );
-      expect(registrarBlock, `${area}/page.tsx should place ${trigger} in chrome actions`).toContain(
-        trigger,
-      );
+      const start = source.indexOf('<PageHeader');
+      const header = source.slice(start, source.indexOf('\n        />', start));
+      expect(header, `${area}/page.tsx should place ${trigger} in PageHeader actions`).toContain(trigger);
     }
   });
 });
 
-describe('Platform pages register chrome instead of duplicating their own heading', () => {
-  it('the Catalog and Overview pages no longer render PageHeading — chrome owns the title', () => {
+describe('Platform pages render their own PageHeader', () => {
+  it('the Catalog and Overview pages render PageHeader and no PageHeading', () => {
     expect(platformCatalogPage).not.toContain('PageHeading');
-    expect(platformCatalogPage).toContain('PageChromeRegistrar');
+    expect(platformCatalogPage).toContain('<PageHeader');
     expect(platformOverview).not.toContain('PageHeading');
-    expect(platformOverview).toContain('PageChromeRegistrar');
+    expect(platformOverview).toContain('<PageHeader');
   });
 
   it('the legacy flat SKU list reads as "Line items" under Catalog, never a second "Products"', () => {
@@ -329,8 +424,8 @@ describe('Platform navigation highlights the most specific matching item, never 
 });
 
 describe('the tenant workspace header — Platform administering an organization, not operating it', () => {
-  it('registers chrome instead of an sr-only heading plus the retired override store', () => {
-    expect(tenantWorkspace).toContain('PageChromeRegistrar');
+  it('renders a PageHeader instead of an sr-only heading plus the retired override store', () => {
+    expect(tenantWorkspace).toContain('<PageHeader');
     expect(tenantWorkspace).not.toContain('sr-only');
     expect(tenantWorkspace).not.toContain('PlatformHeaderTitle');
   });
@@ -354,6 +449,11 @@ describe('Account shares the authenticated shell — no standalone island', () =
   it('mounts WorkspaceShell rather than a bare <main>', () => {
     expect(accountPage).toContain('<WorkspaceShell');
     expect(accountPage).not.toMatch(/<main\b/);
+  });
+
+  it('names itself with a PageHeader, not a title in the global header', () => {
+    expect(accountPage).toContain('<PageHeader title="Account"');
+    expect(accountPage).not.toContain('primary=');
   });
 
   it('registers an Agent rail — every workspace keeps Agent as a furthest-right control', () => {

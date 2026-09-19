@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
+import { PageHeader } from '@/components/containers/page-header';
 import { GroupHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
+import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listAutomationRules, listAutomationRuns } from '@/lib/domain/automation/rules';
@@ -69,14 +71,13 @@ export default async function AutomationRulePage({
 
   return (
     <div className="flex flex-col gap-6">
-      {mayManage ? (
-        <RuleHeading organizationId={organizationId} rule={rule} />
-      ) : (
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">{rule.name}</h1>
-          <span className="text-sm text-subtle">{rule.enabled ? 'Enabled' : 'Off'}</span>
-        </div>
-      )}
+      <PageHeader
+        title={rule.name}
+        crumbs={[{ label: areaLabel('automations'), href: `/organizations/${organizationId}/automations` }]}
+        meta={mayManage ? undefined : rule.enabled ? 'Enabled' : 'Off'}
+        className="mb-0"
+      />
+      {mayManage ? <RuleHeading organizationId={organizationId} rule={rule} /> : null}
 
       <RuleWarnings warnings={warnings.map((warning) => warning.message)} />
 

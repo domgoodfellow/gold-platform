@@ -59,9 +59,9 @@ Sidebar primitives — and, since the shell/context correction, through the shar
 one Agent/Configure rail mechanism, three widths rather than two — docked and resizable from
 1280px, an overlay Sheet from the right between that and 768px (so a tablet does not shrink the
 workspace behind it, and does not behave like a phone either), a bottom Drawer below 768px. Both
-shells also share `WorkspaceHeader` (`apps/web/components/containers/workspace-header.tsx`) for
-the sticky header's geometry — Platform's own title logic and Business's own `AreaTrail` sit
-inside it as content, never the geometry itself. Agent itself is scope-bound rather than shared
+shells also share `WorkspaceHeader` (`apps/web/components/containers/workspace-header.tsx`), the
+sticky *global* bar, and `PageHeader` (`components/containers/page-header.tsx`), the page's own
+identity and actions — §2a says which owns what. Agent itself is scope-bound rather than shared
 data: `TenantAgentRail` answers with
 one business's own rows under the caller's RLS; `PlatformAgentRail` takes no organization id at
 all and never runs "inside" a tenant, GOLD's own included — a selected organization may appear as
@@ -172,25 +172,41 @@ with it, so that bar is a sibling of the sidebar rather than a second `<nav>` in
 
 ## 2a. The header
 
-**Every operator screen sits under one sticky header, and it answers *where am I*.** Scrolling a
-long list of jobs is exactly when that stops being obvious, so it does not scroll away. It
-carries its own background: the page moves underneath it, and a transparent bar shows rows
-sliding through the text.
+**Two layers, and they answer different questions.** The sticky `WorkspaceHeader` answers *which
+application am I in* and holds global utilities. The `PageHeader` inside the page answers *which
+page or record am I on* and holds that page's controls. They were one bar once, which put
+*Resources*, *Add resource* and *Configure* — all about one page — on the same row as *Agent*,
+which is about the workspace. A control belongs to the layer whose scope it has.
 
-Four things, in the order they are read — `WorkspaceHeader` owns the row itself; each shell
-supplies its own content for a slot:
+**`WorkspaceHeader` — global, sticky.** It carries its own background: the page moves underneath
+it, and a transparent bar shows rows sliding through the text. It is sparse on desktop by design,
+and holds no title, breadcrumb, status or page action.
 
 | | What | Which widths |
 |---|---|---|
-| Left | the compact context switcher — the business's mark and name, opening the same chooser the sidebar's own switcher does | below `md` only, Business Context — the sidebar says it above that; Platform Context reaches the switcher through its `Sidebar`'s own header at every width instead |
-| Middle | where you are: the area's name, or a link back to it from a detail route | all |
-| Right, before Configure/Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
-| Right, furthest | Configure (when the page registered one), then Agent | all — Agent is always the last control in the row |
+| Left | the sidebar trigger | `md` and up in Business Context; every width in Platform Context and Account |
+| Left | the compact context switcher — the business's mark and name, opening the same chooser the sidebar's own switcher does, with the Setup badge beside it while the business is still setting up | below `md` only, Business and Platform Context — the sidebar says it above that |
+| Right, before Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
+| Right, furthest | Agent | all — always the last control in the row |
 
-**The area's `<h1>` lives here now, and it is still one string.** `navigation.ts` supplies the
-navigation entry and the heading both, exactly as before — `AreaTrail` renders it, and what
-changed is only where. A detail route is *in* an area and not *at* it, so there the header shows
-the way back and the page writes its own `<h1>`, because a job's title is a tenant's words.
+**`PageHeader` — the page's identity, inside its `AppPage`.** Ancestors as a breadcrumb, the
+page's single `<h1>`, an optional description and metadata line, and the page's actions at the
+right (wrapping below the title on a narrow screen). It shares the canvas the content below it
+sits on; `AppPage` still owns width. It is a Server Component and knows no domain: a page hands it
+whatever actions it offers. **One primary action per page**, then secondary ones — Resources is
+*Add resource* with *Configure* beside it, and the empty state may repeat *Add resource* because
+that is the same operation in an otherwise empty body, not a second action.
+
+**Configure belongs to the page.** A page places `ConfigureTrigger` in its `PageHeader` actions
+and registers the panel it opens with `ConfigureRegistrar`; `WorkspaceRightRail` hosts that panel
+(docked, Sheet or Drawer, per §2). Whether to offer it is presentation — the panel's writes are
+still refused by the database.
+
+**The area's `<h1>` is still one string.** `navigation.ts` supplies the navigation entry and the
+heading both — an area's root page reads it with `areaLabel(segment)` instead of writing it again.
+A detail route is *in* an area and not *at* it, so it writes its own title (a job's title is a
+tenant's words) and passes the way back as `PageHeader` crumbs; `RecordHeader` keeps its older
+props and renders the same `PageHeader`. Every page renders exactly one page identity.
 
 **Organization switching belongs to the organization identity.** The identity control opens the
 existing business chooser; it does not manufacture a list or creation action without a server
@@ -301,6 +317,7 @@ the generic layers merely because it has multiple call sites.
 | `TextInput` · `SelectInput` · `TextArea` | `controls/inputs.tsx` | 92 · 31 · 5 |
 | `FieldLabel` · `Hint` · `ErrorText` | `controls/inputs.tsx` | 10 · 113 · 50 |
 | `Section` · `SectionHeading` · `PageHeading` · `GroupHeading` | `containers/section.tsx` | 35 · 53 · 8 · 5 |
+| `PageHeader` · `RecordHeader` | `containers/page-header.tsx` · `containers/record-header.tsx` | every operator page — see §2a |
 | `DividedList` · `EmptyState` | `containers/section.tsx` | 31 · 37 |
 | `DataTable` — responsive; `TableScroll` · `TableHeaderCell` · `TableCell` | `display/table.tsx` | the lists and the reports |
 | `Card` · `Disclosure` | `containers/card.tsx` | the boards and every create form |

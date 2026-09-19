@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { AreaTrail, OrgNavBar, OrgSidebar, SetupBadge, SetupEntry } from './org-shell';
+import { OrgNavBar, OrgSidebar, SetupBadge, SetupEntry } from './org-shell';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
@@ -119,27 +119,27 @@ export default async function OrganizationLayout({
   );
 
   /*
-    The header, composed from the shared `WorkspaceHeader` geometry. Left to right: the sidebar's
-    own trigger (from `md` up, where the sidebar exists at all), where in the business you are,
-    and — on a phone, where the sidebar itself renders nothing and `OrgNavBar` carries navigation
-    instead — the two identity controls the sidebar would otherwise have held: a compact context
-    switcher first, and the account menu immediately before Configure/Agent, so Agent stays the
-    furthest-right control at every width.
+    The global header, composed from the shared `WorkspaceHeader`. Left to right: the sidebar's
+    own trigger (from `md` up, where the sidebar exists at all) and — on a phone, where the
+    sidebar itself renders nothing and `OrgNavBar` carries navigation instead — the two identity
+    controls the sidebar would otherwise have held: a compact context switcher (with the Setup
+    badge, the only phone route into Setup) and the account menu immediately before Agent, so
+    Agent stays the furthest-right control at every width. Page identity is each page's own
+    `PageHeader`.
   */
   const header = (
     <WorkspaceHeader
       navigationTrigger="md"
       context={
-        <div className="md:hidden">
+        <div className="flex min-w-0 items-center gap-3 md:hidden">
           <CompactContextSwitcher
             mark={mark}
             current={{ kind: 'business', organizationId, name: organization.name, role: organization.role }}
             organizations={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
           />
+          {inSetup ? <SetupBadge organizationId={organizationId} /> : null}
         </div>
       }
-      primary={<AreaTrail organizationId={organizationId} />}
-      status={inSetup ? <SetupBadge organizationId={organizationId} /> : null}
       beforeActions={
         <div className="md:hidden">
           <CompactAccountMenu email={email} signOutAction={signOutAction} />

@@ -1,3 +1,4 @@
+import { areaLabel } from '@/lib/navigation';
 import { WorkList } from '@/features/work/work-list';
 import { AppPage } from '@/components/containers/app-page';
 import { listAssets } from '@/lib/domain/assets/assets';
@@ -16,6 +17,8 @@ import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types
 import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
+import { PageHeader } from '@/components/containers/page-header';
+import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 
 export const dynamic = 'force-dynamic';
@@ -70,6 +73,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
           />
         </ConfigureRegistrar>
       ) : null}
+      <PageHeader title={areaLabel('work')} actions={mayConfigure ? <ConfigureTrigger /> : null} />
       <WorkList
         organizationId={organizationId}
         role={organization.role}

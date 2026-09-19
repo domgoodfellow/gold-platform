@@ -1,13 +1,13 @@
-import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { EmptyState, PageHeading } from '@/components/containers/section';
-import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
+import { EmptyState } from '@/components/containers/section';
 import { buildPipelineColumns, PipelineBoard } from '@/features/crm/sales/pipeline-board';
 import { CustomerStageControl } from '@/features/crm/sales/stage-control';
 import { StageSettingsSheet } from '@/features/crm/sales/stage-settings-sheet';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
+import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -26,16 +26,16 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
 
   return (
     <AppPage width="wide">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href={`/organizations/${organizationId}/customers`} className="text-sm text-muted underline underline-offset-4">← Customers</Link>
-          <PageHeading className="mt-3">Pipeline</PageHeading>
-          <Hint className="mt-1">Where each relationship has got to.</Hint>
-        </div>
-        {reception ? (
-          <StageSettingsSheet organizationId={organizationId} stages={stages} mayConfigure={organization.capabilities.includes('field.manage')} role={organization.role} />
-        ) : null}
-      </header>
+      <PageHeader
+        title="Pipeline"
+        crumbs={[{ label: areaLabel('customers'), href: `/organizations/${organizationId}/customers` }]}
+        description="Where each relationship has got to."
+        actions={
+          reception ? (
+            <StageSettingsSheet organizationId={organizationId} stages={stages} mayConfigure={organization.capabilities.includes('field.manage')} role={organization.role} />
+          ) : null
+        }
+      />
 
       {!reception ? (
         <EmptyState className="mt-6">Switch Communications/Voice on to name a pipeline for this business.</EmptyState>

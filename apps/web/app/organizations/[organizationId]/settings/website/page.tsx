@@ -1,5 +1,7 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
+
 import { HomepageEditor } from '@/features/public-site/homepage-editor';
 import { CommunicationProfileForm } from './communication-profile-form';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
@@ -17,8 +19,7 @@ export default async function WebsiteSettingsPage({ params }: PageProps<'/organi
   const profileValue = profile?.data as { displayName?:string; greeting?:string; instructions?:string; handoffMessage?:string } | null;
 
   return <SettingsPageFrame>
-    <PageHeading>Website</PageHeading>
-    <Hint className="mt-1">Edit a private draft, review the exact rendered page, then publish deliberately. Profile and brand remain in Public presence.</Hint>
+    <PageHeader title="Website" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} description="Edit a private draft, review the exact rendered page, then publish deliberately. Profile and brand remain in Public presence." />
     {mayManage && state ? <>
       <HomepageEditor organizationId={organizationId} working={state?.working ?? null} published={state?.published ?? null} />
       <CommunicationProfileForm organizationId={organizationId} siteId={state.siteId} initial={{enabled:Boolean(profileValue),displayName:profileValue?.displayName??'Assistant',greeting:profileValue?.greeting??'Hi — how can I help?',instructions:profileValue?.instructions??'',handoffMessage:profileValue?.handoffMessage??'Thanks — a member of our team will follow up.',handoffDestination:''}} />

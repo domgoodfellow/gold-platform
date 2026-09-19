@@ -6,7 +6,7 @@ import { ArrowUpRight } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { Hint } from '@/components/controls/inputs';
-import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
+import { PageHeader } from '@/components/containers/page-header';
 
 const sections = [['Overview', ''], ['Plan & Entitlements', '/commercial'], ['Providers', '/providers'], ['Usage', '/usage'], ['Failures', '/failures']] as const;
 
@@ -34,7 +34,7 @@ export function TenantWorkspaceHeader({
 
   return (
     <>
-      <PageChromeRegistrar
+      <PageHeader
         title={name}
         crumbs={[{ label: 'Organizations', href: '/platform/organizations' }]}
         actions={

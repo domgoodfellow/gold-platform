@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/containers/page-header';
 import { DividedList, EmptyState, GroupHeading, Section, SectionHeading } from '@/components/containers/section';
 import { AppPage } from '@/components/containers/app-page';
 import { Hint } from '@/components/controls/inputs';
@@ -9,7 +10,7 @@ import {
 } from '@/lib/domain/configuration/proposals';
 import { computeReadiness } from '@/lib/domain/tenancy/lifecycle';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
-import { AREAS, areaHref } from '@/lib/navigation';
+import { AREAS, areaHref, areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { DescribeForm, LaunchForm, ProposalHistory, ProposalReview } from './setup-forms';
 
@@ -80,6 +81,7 @@ export default async function SetupPage({
 
   return (
     <AppPage width="standard">
+      <PageHeader title={areaLabel('setup')} />
       {/* **The one section that only shows while there is still a launch ahead of it.** Once
           this business is Live, everything below reverts to exactly what this page has always
           been — the drafting tool — because ordinary operation does not need a readiness

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { AppPage } from '@/components/containers/app-page';
+import { PageHeader } from '@/components/containers/page-header';
 import { WorkspaceHeader } from '@/components/containers/workspace-header';
 import { WorkspaceShell } from '@/components/containers/workspace-shell';
 import { AccountAgentRail } from '@/features/account/account-agent-rail';
@@ -59,15 +60,13 @@ export default async function AccountPage() {
   );
 
   const header = (
-    <WorkspaceHeader
-      navigationTrigger="always"
-      primary={<span className="min-w-0 flex-1 truncate text-sm font-semibold sm:text-base">Account</span>}
-    />
+    <WorkspaceHeader navigationTrigger="always" />
   );
 
   return (
     <WorkspaceShell sidebar={sidebar} header={header} agent={<AccountAgentRail />}>
       <AppPage width="reading">
+        <PageHeader title="Account" />
         <AccountSettings email={email} hasPassword={hasPassword} changePasswordAction={changePasswordAction} />
       </AppPage>
     </WorkspaceShell>

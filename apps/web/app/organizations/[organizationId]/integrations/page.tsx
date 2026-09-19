@@ -1,4 +1,6 @@
 import { Hint } from '@/components/controls/inputs';
+import { areaLabel } from '@/lib/navigation';
+import { PageHeader } from '@/components/containers/page-header';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { Card } from '@/components/containers/card';
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
@@ -73,9 +75,8 @@ export default async function IntegrationsPage({
 
   return (
     <>
-      <Hint>Connect GOLD to the tools and data your organization already uses.</Hint>
-
-      <WidgetGrid className="mt-6">
+      <PageHeader title={areaLabel('integrations')} description="Connect GOLD to the tools and data your organization already uses." />
+      <WidgetGrid>
         <Widget title="Connected apps" value={active.length} />
         <Widget title="Data sources" value={resources.length} href={`/organizations/${organizationId}/integrations/sources`} />
         <Widget title="Imports" value={runs.length} href={`/organizations/${organizationId}/integrations/imports`} />

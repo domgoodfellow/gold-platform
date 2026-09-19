@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
-import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
-import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
+import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { ResourceConfiguration } from '@/features/resources/configuration/resource-configuration';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listResources } from '@/lib/domain/resources/resources';
+import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { CreateResourceSheetProvider, CreateResourceTrigger } from './create-resource-sheet';
 
@@ -35,7 +36,16 @@ export default async function ResourcesPage({
           resource.create in the database, so a caller who reaches the action anyway is
           refused there (constraints.md: hiding a UI element is not authorization).
         */}
-        <PageChromeRegistrar title="Resources" actions={mayAdd ? <CreateResourceTrigger /> : null} />
+        <PageHeader
+          title={areaLabel('resources')}
+          description="People, vehicles and equipment that work is scheduled against."
+          actions={
+            <>
+              {mayConfigure ? <ConfigureTrigger /> : null}
+              {mayAdd ? <CreateResourceTrigger /> : null}
+            </>
+          }
+        />
         {mayConfigure ? (
           <ConfigureRegistrar
             title="Resources configuration"
@@ -49,9 +59,7 @@ export default async function ResourcesPage({
             />
           </ConfigureRegistrar>
         ) : null}
-        <Hint>People, vehicles and equipment that work is scheduled against.</Hint>
-
-        <div className="mt-6">
+        <div>
           <DataTable
             rows={resources}
             rowKey={(resource) => resource.id}

@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { Disclosure } from '@/components/containers/card';
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
-import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
-import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
+import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { LocationConfiguration } from '@/features/locations/configuration/location-configuration';
@@ -11,6 +11,7 @@ import { geocodingProvider } from '@/lib/adapters/geocoding';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
+import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { CreateLocationSheetProvider, CreateLocationTrigger } from './create-location-sheet';
 import { LinkCustomerForm, LocationCoordinatesForm } from './location-forms';
@@ -41,7 +42,16 @@ export default async function LocationsPage({
           location.create in the database, so a caller who reaches the action anyway is
           refused there.
         */}
-        <PageChromeRegistrar title="Locations" actions={mayAdd ? <CreateLocationTrigger /> : null} />
+        <PageHeader
+          title={areaLabel('locations')}
+          description="Places where this organization works, and the customers they serve."
+          actions={
+            <>
+              {mayConfigure ? <ConfigureTrigger /> : null}
+              {mayAdd ? <CreateLocationTrigger /> : null}
+            </>
+          }
+        />
         {mayConfigure ? (
           <ConfigureRegistrar
             title="Locations configuration"
@@ -55,8 +65,6 @@ export default async function LocationsPage({
             />
           </ConfigureRegistrar>
         ) : null}
-        <Hint>Places where this organization works, and the customers they serve.</Hint>
-
         {/*
           Linking an existing customer to an existing place is a different act from creating
           one, so it keeps its own inline disclosure rather than folding into the Sheet.
@@ -73,7 +81,7 @@ export default async function LocationsPage({
           </Disclosure>
         ) : null}
 
-        <div className="mt-6">
+        <div>
           <DataTable
             rows={locations}
             rowKey={(location) => location.id}

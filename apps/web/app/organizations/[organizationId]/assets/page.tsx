@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
-import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
-import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
+import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { AssetConfiguration } from '@/features/assets/configuration/asset-configuration';
@@ -11,6 +11,7 @@ import { listAssetReadings } from '@/lib/domain/assets/readings';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
+import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { recordReadingAction } from './actions';
 import { CreateAssetSheetProvider, CreateAssetTrigger } from './create-asset-sheet';
@@ -66,7 +67,16 @@ export default async function AssetsPage({
           asset.create in the database (constraints.md: hiding a UI element is not
           authorization).
         */}
-        <PageChromeRegistrar title="Assets" actions={mayAdd ? <CreateAssetTrigger /> : null} />
+        <PageHeader
+          title={areaLabel('assets')}
+          description="What work is about — machines, vehicles, properties, customer-owned equipment."
+          actions={
+            <>
+              {mayConfigure ? <ConfigureTrigger /> : null}
+              {mayAdd ? <CreateAssetTrigger /> : null}
+            </>
+          }
+        />
         {mayConfigure ? (
           <ConfigureRegistrar
             title="Assets configuration"
@@ -80,9 +90,7 @@ export default async function AssetsPage({
             />
           </ConfigureRegistrar>
         ) : null}
-        <Hint>What work is about — machines, vehicles, properties, customer-owned equipment.</Hint>
-
-        <div className="mt-6">
+        <div>
           <DataTable
             rows={assets}
             rowKey={(asset) => asset.id}

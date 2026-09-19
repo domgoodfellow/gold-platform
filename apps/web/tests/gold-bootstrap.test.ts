@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { FOUNDING_ROLE } from '@/lib/domain/tenancy/organizations';
 import { bootstrapGoldInternalWorkspace } from '@/lib/domain/tenancy/gold-internal';
@@ -12,6 +12,26 @@ const CONNECTION =
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+
+// GOLD Internal has one current holder, and this file proves the door refuses a second — so the
+// holder it creates must not outlive it, or the next run (and `catalogue-plans`) meets it.
+const bootstrapped: string[] = [];
+
+afterAll(async () => {
+  if (bootstrapped.length === 0) return;
+  const pg = new Client(CONNECTION);
+  await pg.connect();
+  try {
+    await pg.query(
+      `delete from public.organization_plan_assignments
+        where organization_id = any($1::uuid[])
+          and plan_id = (select id from public.platform_plans where key = 'gold_internal')`,
+      [bootstrapped],
+    );
+  } finally {
+    await pg.end();
+  }
+});
 
 describe('bootstrap_gold_internal_workspace', () => {
   it('creates a real GOLD membership with canonical founding authority', async () => {
@@ -32,6 +52,7 @@ describe('bootstrap_gold_internal_workspace', () => {
       [orgId, `GOLD bootstrap ${randomUUID().slice(0, 8)}`, actorId, customerOrgId, 'Customer untouched'],
     );
 
+    bootstrapped.push(orgId);
     const membershipId = await bootstrapGoldInternalWorkspace(staff, { organizationId: orgId });
     expect(membershipId).toBeTruthy();
 

@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
 import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
-import { PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/containers/section';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { WidgetGrid, Widget } from '@/components/display/widget';
@@ -46,7 +48,7 @@ export default async function ImportRunPage({
 
   return (
     <>
-      <PageHeading>Import</PageHeading>
+      <PageHeader title="Import" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]} />
 
       {run.status === 'completed' || run.status === 'completed_with_errors' ? (
         <Section className="mt-6">

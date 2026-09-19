@@ -1,5 +1,7 @@
 import Link from 'next/link';
-import { PageHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
+
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
@@ -48,7 +50,7 @@ export default async function WorkConfigurationPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeading>Work configuration</PageHeading>
+      <PageHeader title="Work configuration" crumbs={[{ label: areaLabel('work'), href: `/organizations/${organizationId}/work` }]} />
       <Hint className="mt-1">
         The kinds of work this business does, the stages a job moves through, and the steps every
         job of a kind involves.{' '}

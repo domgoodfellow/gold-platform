@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { PageHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/containers/page-header';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';
@@ -18,9 +18,12 @@ export default async function ModulesPage() {
 
   return (
     <AppPage width="full">
-      <PageHeading>Modules</PageHeading>
-      <p className="mt-2 max-w-3xl text-sm text-muted-foreground">Available code capabilities. A catalogue row can sell a module, but creating a new software module remains a development change.</p>
-      <div className="mt-6">
+      <PageHeader
+        title="Modules"
+        crumbs={[{ label: 'Catalog', href: '/platform/catalog' }]}
+        description="Available code capabilities. A catalogue row can sell a module, but creating a new software module remains a development change."
+      />
+      <div>
         <DataTable
           rows={[...modules]}
           rowKey={(module) => module.key}

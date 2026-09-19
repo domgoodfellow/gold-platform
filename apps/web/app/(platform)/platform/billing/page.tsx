@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { SectionHeading } from '@/components/containers/section';
-import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
+import { PageHeader } from '@/components/containers/page-header';
 import { Badge } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';
 import { platformBillingProvider } from '@/lib/adapters/platform-billing';
@@ -42,15 +42,7 @@ export default async function PlatformBillingPage() {
 
   return (
     <AppPage width="full">
-      <PageChromeRegistrar title="Billing" />
-      <p className="max-w-3xl text-sm text-muted-foreground">
-        GOLD’s own subscription book — organizations paying GOLD, never the other direction. Plans
-        and prices are managed at{' '}
-        <Link href="/platform/catalog/plans" className="underline underline-offset-4">
-          Catalog → Plans
-        </Link>
-        .
-      </p>
+      <PageHeader title="Billing" description={<>GOLD’s own subscription book — organizations paying GOLD, never the other direction. Plans and prices are managed at{' '} <Link href="/platform/catalog/plans" className="underline underline-offset-4"> Catalog → Plans </Link> .</>} />
 
       {!provider ? (
         <p className="mt-6 rounded border border-border bg-muted/30 p-4 text-sm text-muted-foreground">

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
+import { PageHeader } from '@/components/containers/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { Progress } from '@gold/ui/components/progress';
 import { Badge } from '@/components/display/data';
@@ -49,13 +49,9 @@ export default async function CatalogPage() {
 
   return (
     <AppPage width="full">
-      <PageChromeRegistrar title="Catalog" />
-      <p className="max-w-3xl text-sm text-muted-foreground">
-        What GOLD sells, as a customer would recognize it: seven Products, each a coherent set of
-        Modules and Features. Internal keys and legacy runtime mappings live one click deeper.
-      </p>
+      <PageHeader title="Catalog" description="What GOLD sells, as a customer would recognize it: seven Products, each a coherent set of Modules and Features. Internal keys and legacy runtime mappings live one click deeper." />
 
-      <div className="mt-6 flex flex-wrap gap-3 text-sm">
+      <div className="flex flex-wrap gap-3 text-sm">
         <Link href="/platform/catalog/plans" className="underline underline-offset-4">
           Plans &amp; Add-ons
         </Link>

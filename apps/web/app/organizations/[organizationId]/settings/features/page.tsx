@@ -1,4 +1,6 @@
-import { DividedList, PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { DividedList, Section, SectionHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import {
@@ -48,7 +50,7 @@ export default async function FeaturesSettingsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeading>Features</PageHeading>
+      <PageHeader title="Features" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
       <Hint className="mt-1">
         What this business is entitled to, and what it has switched off. An entitled feature is
         on by default — disabling one hides it from this business without removing anything it

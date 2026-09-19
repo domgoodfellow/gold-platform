@@ -1,6 +1,5 @@
 import { AppPage } from '@/components/containers/app-page';
-import { PageHeading } from '@/components/containers/section';
-import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
 import { WidgetPanel } from '@/components/display/widget';
 import { CallHistory } from '@/features/communications/voice/call-history';
 import { VoiceOverview } from '@/features/communications/voice/voice-overview';
@@ -12,6 +11,7 @@ import { listCalls } from '@/lib/domain/reception/calls';
 import { listCallOutcomes } from '@/lib/domain/reception/outcomes';
 import { callingNumber } from '@/lib/domain/reception/telephony';
 import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
+import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -37,6 +37,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
   if (open === 'calls') {
     return (
       <AppPage width="wide">
+        <PageHeader title={areaLabel('calls')} />
         <WidgetPanel title="Every call" backHref={area} backLabel="Calls">
           <CallHistory
             calls={calls}
@@ -50,22 +51,22 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
 
   return (
     <AppPage width="wide">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <PageHeading>Voice</PageHeading>
-          <Hint className="mt-1">Calling activity, follow-up and the identity this business calls from.</Hint>
-        </div>
-        <div id="setup" className="scroll-mt-20">
-          <VoiceSettingsSheet
-            organizationId={organizationId}
-            number={number}
-            outcomes={outcomes}
-            mayManageIdentity={organization.capabilities.includes('organization.manage')}
-            mayConfigureOutcomes={organization.capabilities.includes('field.manage')}
-            role={organization.role}
-          />
-        </div>
-      </header>
+      <PageHeader
+        title={areaLabel('calls')}
+        description="Calling activity, follow-up and the identity this business calls from."
+        actions={
+          <div id="setup" className="scroll-mt-20">
+            <VoiceSettingsSheet
+              organizationId={organizationId}
+              number={number}
+              outcomes={outcomes}
+              mayManageIdentity={organization.capabilities.includes('organization.manage')}
+              mayConfigureOutcomes={organization.capabilities.includes('field.manage')}
+              role={organization.role}
+            />
+          </div>
+        }
+      />
       <VoiceOverview organizationId={organizationId} calls={calls} todaysCalls={todaysCalls} customers={customers} stages={stages} />
     </AppPage>
   );

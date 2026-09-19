@@ -5,12 +5,15 @@ import { ConfigureRegistrar } from '@/components/containers/configure-registrar'
 import { DatePicker } from '@/components/controls/date-picker';
 import { Toolbar } from '@/components/display/data';
 import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
+import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
 import { ScheduleConfiguration } from '@/features/scheduling/configuration/schedule-configuration';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { formatWindow, todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
+import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -76,21 +79,27 @@ export default async function SchedulePage({
 
       {/* I9: every window below is an absolute instant rendered in this business's own
           zone, so naming the zone is part of reading the day rather than decoration. */}
-      <Hint>
-        Times shown in {organization.timezone} ·{' '}
-        <Link
-          href={`/organizations/${organizationId}/schedule/configuration`}
-          className="underline underline-offset-4"
-        >
-          Opening hours
-        </Link>
-      </Hint>
+      <PageHeader
+        title={areaLabel('schedule')}
+        description={
+          <>
+            Times shown in {organization.timezone} ·{' '}
+            <Link
+              href={`/organizations/${organizationId}/schedule/configuration`}
+              className="underline underline-offset-4"
+            >
+              Opening hours
+            </Link>
+          </>
+        }
+        actions={mayConfigure ? <ConfigureTrigger /> : null}
+      />
 
       {/* **A day is picked, not scrolled to.** Previous and Next were the whole of it, so
           getting to next Tuesday was six clicks and getting back to today was counting.
           *Today* is the one destination that is always worth a single control on a screen
           about days. */}
-      <Toolbar className="mt-4" aria-label="Day">
+      <Toolbar aria-label="Day">
         <div className="flex flex-wrap items-center gap-2">
           <ButtonLink href={dayHref(shift(-1))} size="small">
             ← Previous

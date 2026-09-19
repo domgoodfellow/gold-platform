@@ -1,4 +1,5 @@
-import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
 import { ButtonLink } from '@/components/controls/button';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
@@ -25,9 +26,13 @@ export default async function IntegrationSourcesPage({
 
   return (
     <>
-      <Hint>Every sheet, file or feed selected from a connection, across every connector.</Hint>
+      <PageHeader
+        title="Data sources"
+        crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]}
+        description="Every sheet, file or feed selected from a connection, across every connector."
+      />
 
-      <div className="mt-6">
+      <div>
         <DataTable
           rows={resources}
           rowKey={(resource) => resource.id}

@@ -1,4 +1,6 @@
-import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { ButtonLink } from '@/components/controls/button';
@@ -54,7 +56,7 @@ export default async function ConnectionsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeading>Connections</PageHeading>
+      <PageHeader title="Connections" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
       <Hint className="mt-1">
         What this business is connected to, and what it can choose from. Never what any of it
         costs GOLD, and never a secret.

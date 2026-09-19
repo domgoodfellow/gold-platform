@@ -6,7 +6,7 @@ import {
   AREA_GROUPS,
   MODULES,
   areaHref,
-  areaRootSegment,
+  areaLabel,
   areasIn,
   currentSegment,
   moduleConfiguration,
@@ -87,15 +87,10 @@ describe('the operator shell navigation', () => {
     expect(currentSegment(`/organizations/org-1/${work.segment}?type=abc`)).toBe(work.segment);
   });
 
-  it('is at an area only on the area itself, never on a route inside it', () => {
-    // The bug this exists for: the shell renders the area label as the page's <h1>, and a
-    // detail screen already has one — the job's title, the customer's name. Marked *in* the
-    // area for navigation, not *at* it for the heading.
+  it('reads an area’s page heading from the same entry as its navigation label', () => {
     const [work] = AREAS;
-    expect(areaRootSegment(areaHref('org-1', work.segment))).toBe(work.segment);
-    expect(areaRootSegment(`/organizations/org-1/${work.segment}?type=abc`)).toBe(work.segment);
-    expect(areaRootSegment(`/organizations/org-1/${work.segment}/item-9`)).toBeNull();
-    expect(currentSegment(`/organizations/org-1/${work.segment}/item-9`)).toBe(work.segment);
+    expect(areaLabel(work.segment)).toBe(work.label);
+    expect(() => areaLabel('no-such-area')).toThrow();
   });
 
   it('marks no area outside a business, or on a segment it does not own', () => {
@@ -605,7 +600,6 @@ describe('Pricing, Automations, Custom fields and Team are canonical sidebar are
       const area = AREAS.find((entry) => entry.segment === segment);
       expect(area, `${segment} was removed from AREAS entirely`).toBeDefined();
       expect(area?.sidebar).not.toBe(false);
-      expect(area?.parent).toBeUndefined();
       // Still resolves through the one href function — no second path was added for it.
       expect(areaHref('org-1', segment)).toBe(`/organizations/org-1/${segment}`);
     }

@@ -1,4 +1,6 @@
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { areaLabel } from '@/lib/navigation';
+import { PageHeader } from '@/components/containers/page-header';
 import { Hint } from '@/components/controls/inputs';
 import { Disclosure } from '@/components/containers/card';
 import { DataTable } from '@/components/display/table';
@@ -40,9 +42,8 @@ export default async function PricingPage({
 
   return (
     <>
-      <Hint>What this business sells, and how it collects payment.</Hint>
-
-      <Section className="mt-6">
+      <PageHeader title={areaLabel('pricing')} description="What this business sells, and how it collects payment." />
+      <Section>
         <SectionHeading>Services &amp; pricing</SectionHeading>
         <Hint className="mt-1">
           What this business charges for. Nothing here is quoted until it is put on a job, and

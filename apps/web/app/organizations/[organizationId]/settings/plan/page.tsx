@@ -1,5 +1,7 @@
 import Link from 'next/link';
-import { DividedList, EmptyState, PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
+import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { communicationsAccount } from '@/lib/domain/communications/credits';
@@ -69,7 +71,7 @@ export default async function PlanAndUsagePage({
 
   return (
     <SettingsPageFrame>
-      <PageHeading>Plan &amp; usage</PageHeading>
+      <PageHeader title="Plan &amp; usage" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
       <Hint className="mt-1">
         What this business is entitled to use right now, what GOLD has recorded selling it, and
         what it has used. Nothing here is what any of it cost GOLD to provide.{' '}

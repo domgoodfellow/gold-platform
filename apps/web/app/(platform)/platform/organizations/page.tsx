@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { AppPage } from '@/components/containers/app-page';
-import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
+import { PageHeader } from '@/components/containers/page-header';
 import { TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
@@ -16,9 +16,9 @@ export default async function PlatformOrganizationsPage({ searchParams }: { sear
 
   return (
     <AppPage width="full">
-      <PageChromeRegistrar
+      <PageHeader
         title="Organizations"
-        status={`${total === 1 ? '1 organization' : `${total} organizations`} on GOLD`}
+        meta={`${total === 1 ? '1 organization' : `${total} organizations`} on GOLD`}
         actions={<ProvisionOrganizationDialog />}
       />
       <form method="get" role="search" className="relative max-w-md">

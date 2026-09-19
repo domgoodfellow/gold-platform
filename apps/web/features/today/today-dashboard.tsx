@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { DividedList, EmptyState } from '@/components/containers/section';
-import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { Widget, WidgetGrid, WidgetPanel } from '@/components/display/widget';
 import type { AutomationRun } from '@/lib/domain/automation/rules';
 import type { MessageDelivery } from '@/lib/domain/automation/templates';
 import type { Call } from '@/lib/domain/reception/calls';
+import { areaLabel } from '@/lib/navigation';
 import { formatWindow, type Window } from '@/lib/domain/scheduling/window';
 import type { Readiness } from '@/lib/domain/tenancy/lifecycle';
 import type { TimelineEntry } from '@/lib/domain/timeline/timeline';
@@ -48,12 +49,14 @@ export function TodayDashboard({ organizationId, timezone, date, inSetup, typesC
   const byId = new Map(workItems.map((item) => [item.id, item]));
 
   const dateHeading = (
-    <div className="border-b border-border pb-5">
-      <time dateTime={date} className="block text-2xl font-semibold tracking-tight sm:text-3xl">
-        {formatBusinessDate(date)}
-      </time>
-      <Hint className="mt-1 block">Operational view for {timezone}</Hint>
-    </div>
+    <PageHeader
+      title={areaLabel('today')}
+      description={
+        <>
+          <time dateTime={date}>{formatBusinessDate(date)}</time> · Operational view for {timezone}
+        </>
+      }
+    />
   );
   const committedTable = <DataTable rows={committed} rowKey={(row) => row.workItemId} empty="Nothing is scheduled for today." columns={[
     { key: 'title', header: 'Job', emphasis: 'primary', cell: (row) => <Link href={workHref(row.workItemId)} className="underline underline-offset-4">{row.title}</Link> },
@@ -75,7 +78,7 @@ export function TodayDashboard({ organizationId, timezone, date, inSetup, typesC
 
   if (open === 'committed' || open === 'waiting' || open === 'activity') {
     const title = open === 'committed' ? 'Committed today' : open === 'waiting' ? 'Waiting to be scheduled' : 'Recent activity';
-    return <AppPage width="full">{dateHeading}<div className="mt-5"><WidgetPanel title={title} backHref={area} backLabel="Today">{open === 'committed' ? committedTable : open === 'waiting' ? waitingTable : activityTable}</WidgetPanel></div></AppPage>;
+    return <AppPage width="full">{dateHeading}<div><WidgetPanel title={title} backHref={area} backLabel="Today">{open === 'committed' ? committedTable : open === 'waiting' ? waitingTable : activityTable}</WidgetPanel></div></AppPage>;
   }
 
   const readinessWidget = inSetup && readiness ? <Widget key="readiness" title="Setup readiness" href={`/organizations/${organizationId}/setup`} value={readiness.blockers.length === 0 ? 'Ready to launch' : 'Not ready to launch'} note={`${readiness.blockers.length} blocker${readiness.blockers.length === 1 ? '' : 's'} · ${readiness.warnings.length} warning${readiness.warnings.length === 1 ? '' : 's'}`} wide>{readiness.blockers.length === 0 && readiness.warnings.length === 0 ? <EmptyState weight="subtle">Nothing outstanding. Launching remains a deliberate step in Business Setup.</EmptyState> : <DividedList className="text-sm">{[...readiness.blockers, ...readiness.warnings].slice(0, PREVIEW).map((item) => <li key={item.key} className="flex items-baseline gap-2 py-1.5"><Badge>{readiness.blockers.includes(item) ? 'Blocker' : 'Warning'}</Badge><span className="min-w-0 truncate">{item.message}</span></li>)}</DividedList>}</Widget> : null;
@@ -88,5 +91,5 @@ export function TodayDashboard({ organizationId, timezone, date, inSetup, typesC
   ] : [];
   const callsWidget = receptionOn ? <Widget key="calls" title="Calls" value={todaysCalls.length} note={unwrittenCalls ? `${unwrittenCalls} not written up` : undefined} href={`/organizations/${organizationId}/calls`}>{todaysCalls.length === 0 ? <EmptyState weight="subtle">No calls today.</EmptyState> : <DividedList className="text-sm">{todaysCalls.slice(0, PREVIEW).map((call) => <li key={call.id} className="flex items-baseline gap-2 py-1.5"><span className="min-w-0 truncate">{call.direction === 'inbound' ? 'Inbound' : 'Outbound'} · {call.toNumber}</span><span className="ml-auto shrink-0 text-muted">{call.outcome?.name ?? call.status.replace('_', ' ')}</span></li>)}</DividedList>}</Widget> : null;
   const operations = [committedWidget, waitingWidget, ...automationWidgets, callsWidget].filter(Boolean);
-  return <AppPage width="full">{dateHeading}{!typesConfigured ? <EmptyState className="mt-5">No kinds of work are defined yet. <Link href={`/organizations/${organizationId}/work`} className="underline underline-offset-4">Start in Work</Link></EmptyState> : null}<WidgetGrid className="mt-5">{inSetup ? readinessWidget : null}{inSetup ? activityWidget : null}{operations}{inSetup ? null : activityWidget}</WidgetGrid></AppPage>;
+  return <AppPage width="full">{dateHeading}{!typesConfigured ? <EmptyState className="mb-5">No kinds of work are defined yet. <Link href={`/organizations/${organizationId}/work`} className="underline underline-offset-4">Start in Work</Link></EmptyState> : null}<WidgetGrid>{inSetup ? readinessWidget : null}{inSetup ? activityWidget : null}{operations}{inSetup ? null : activityWidget}</WidgetGrid></AppPage>;
 }

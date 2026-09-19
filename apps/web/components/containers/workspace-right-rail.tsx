@@ -175,8 +175,7 @@ export function useWorkspaceRail() {
 
 /**
  * A page registers what its Configure button opens. The effect's cleanup un-registers on
- * navigation away, which is what makes the header's Configure button disappear on a workspace
- * that has none.
+ * navigation away, which is what stops the rail showing a panel for a page that has none.
  *
  * **Callers must pass a `panel` that is referentially stable across re-renders that carry no new
  * data** (`useMemo`d on `title`/`settingsHref`/`content` — see `ConfigureRegistrar`). This
@@ -203,39 +202,50 @@ export function useAgentContent(content: ReactNode | null) {
   }, [content]);
 }
 
-/** The two furthest-right header controls. Configure only renders when a page has registered one. */
-export function WorkspaceHeaderActions() {
-  const { mode, configure, toggleAgent, toggleConfigure } = useWorkspaceRail();
+/**
+ * The workspace-global Agent control — the far-right end of `WorkspaceHeader`. Agent is scoped to
+ * the workspace, never to a page, so it is never rendered by a `PageHeader`.
+ */
+export function AgentTrigger() {
+  const { mode, toggleAgent } = useWorkspaceRail();
 
   return (
-    <div className="flex items-center gap-1 sm:gap-2">
-      {configure ? (
-        <Button
-          type="button"
-          tone="secondary"
-          size="small"
-          aria-pressed={mode === 'configure'}
-          aria-label="Configure"
-          onClick={toggleConfigure}
-          className={cx('gap-1.5 px-2 sm:px-3', mode === 'configure' && 'bg-muted')}
-        >
-          <Settings aria-hidden size={16} />
-          <span className="hidden sm:inline">Configure</span>
-        </Button>
-      ) : null}
-      <Button
-        type="button"
-        tone="secondary"
-        size="small"
-        aria-pressed={mode === 'agent'}
-        aria-label="Agent"
-        onClick={toggleAgent}
-        className={cx('gap-1.5 px-2 sm:px-3', mode === 'agent' && 'bg-muted')}
-      >
-        <Bot aria-hidden size={16} />
-        <span className="hidden sm:inline">Agent</span>
-      </Button>
-    </div>
+    <Button
+      type="button"
+      tone="secondary"
+      size="small"
+      aria-pressed={mode === 'agent'}
+      aria-label="Agent"
+      onClick={toggleAgent}
+      className={cx('gap-1.5 px-2 sm:px-3', mode === 'agent' && 'bg-muted')}
+    >
+      <Bot aria-hidden size={16} />
+      <span className="hidden sm:inline">Agent</span>
+    </Button>
+  );
+}
+
+/**
+ * Configure is contextual to a page, so the page places this in its own `PageHeader` actions,
+ * beside the `ConfigureRegistrar` that supplies the panel it opens. The page decides whether to
+ * offer it (`mayConfigure`); that is presentation, never the guard — the panel's own writes are
+ * refused by RLS regardless. With no registered panel the rail reads as closed, so a stray
+ * trigger opens nothing rather than a stale panel.
+ */
+export function ConfigureTrigger() {
+  const { mode, toggleConfigure } = useWorkspaceRail();
+
+  return (
+    <Button
+      type="button"
+      tone="secondary"
+      aria-pressed={mode === 'configure'}
+      onClick={toggleConfigure}
+      className={cx('gap-1.5', mode === 'configure' && 'bg-muted')}
+    >
+      <Settings aria-hidden size={16} />
+      Configure
+    </Button>
   );
 }
 

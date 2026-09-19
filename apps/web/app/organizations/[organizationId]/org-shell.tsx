@@ -32,7 +32,6 @@ import {
   BarChart3,
   Bot,
   CalendarDays,
-  ChevronLeft,
   ClipboardList,
   Layers,
   Landmark,
@@ -51,10 +50,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import {
-  AREAS,
   AREA_GROUPS,
   areaHref,
-  areaRootSegment,
   areasIn,
   currentSegment,
   visibleAreas,
@@ -433,74 +430,4 @@ export function SetupBadge({ organizationId }: { organizationId: string }) {
       <Badge tone="accent">Setting up</Badge>
     </Link>
   );
-}
-
-/**
- * Where you are, in the header bar.
- *
- * **Still one string doing two jobs.** An area page carries no `<h1>` of its own — the entry in
- * `navigation.ts` is the navigation label and the heading both, exactly as before. What changed is
- * where it renders: in the shell's header rather than at the top of the content column, so it
- * stays on screen while a long list scrolls under it.
- *
- * On a detail route it becomes the way back instead. `areaRootSegment` is what tells the two
- * apart — a job is *in* Work but not *at* it — and there the page writes its own `<h1>`, because
- * a job's title is a tenant's words and not a platform noun.
- *
- * **An area with `parent` set gets a small link above its heading, reading whose it is** — for
- * an area that stays a real, directly addressable route (`sidebar: false`) without being a
- * permanent row in the ordinary sidebar, so somebody arriving straight from a bookmark or
- * another area's own configuration link still needs to be told where they've landed. No area
- * currently sets `parent`; the parent's own `label` would be read off its `Area` entry rather
- * than written again here, which is what keeps this a single registry if one does.
- */
-export function AreaTrail({ organizationId }: { organizationId: string }) {
-  const pathname = usePathname();
-  const area = AREAS.find((candidate) => candidate.segment === currentSegment(pathname));
-  if (!area) return null;
-
-  if (areaRootSegment(pathname) !== null) {
-    const parent = area.parent ? AREAS.find((candidate) => candidate.segment === area.parent) : null;
-
-    return (
-      <div className="min-w-0">
-        {parent ? (
-          <Link
-            href={areaHref(organizationId, parent.segment)}
-            className={cx(
-              'block text-xs text-muted underline-offset-4 hover:underline',
-              FOCUS_RING,
-            )}
-          >
-            {parent.label}
-          </Link>
-        ) : null}
-        <h1 className="min-w-0 truncate text-lg font-semibold leading-tight">{area.label}</h1>
-      </div>
-    );
-  }
-
-  return (
-    <nav aria-label="Breadcrumb" className="min-w-0">
-      <Link
-        href={areaHref(organizationId, area.segment)}
-        className={cx(
-          'flex min-w-0 items-center gap-1 rounded text-sm text-muted underline-offset-4 hover:underline',
-          FOCUS_RING,
-        )}
-      >
-        <ChevronLeft aria-hidden size={16} className="shrink-0" />
-        <span className="truncate">{area.label}</span>
-      </Link>
-    </nav>
-  );
-}
-
-export function PlatformTrail() {
-  const pathname = usePathname();
-  const active = [...PLATFORM_NAV]
-    .sort((a, b) => b.href.length - a.href.length)
-    .find((item) => (item.href === '/platform' ? pathname === item.href : pathname.startsWith(item.href)));
-
-  return <h1 className="min-w-0 truncate text-lg font-semibold leading-tight">{active?.label ?? 'Platform'}</h1>;
 }

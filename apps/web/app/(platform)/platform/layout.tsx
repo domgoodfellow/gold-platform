@@ -22,7 +22,6 @@ import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import {
   OrgNavBar,
   OrgSidebar,
-  PlatformTrail,
   SetupBadge,
   SetupEntry,
 } from '@/app/organizations/[organizationId]/org-shell';
@@ -116,7 +115,7 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
           <WorkspaceHeader
             navigationTrigger="md"
             context={
-              <div className="md:hidden">
+              <div className="flex min-w-0 items-center gap-3 md:hidden">
                 <CompactContextSwitcher
                   mark={mark}
                   current={{
@@ -127,10 +126,9 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
                   }}
                   organizations={organizations}
                 />
+                {inSetup ? <SetupBadge organizationId={organization.id} /> : null}
               </div>
             }
-            primary={<PlatformTrail />}
-            status={inSetup ? <SetupBadge organizationId={organization.id} /> : null}
             beforeActions={
               <div className="md:hidden">
                 <CompactAccountMenu email={email} signOutAction={signOutAction} />

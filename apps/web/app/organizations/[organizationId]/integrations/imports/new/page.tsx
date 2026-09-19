@@ -1,4 +1,6 @@
-import { PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import { SelectInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
@@ -28,8 +30,7 @@ export default async function NewImportPage({
   if (typeof resourceId !== 'string') {
     return (
       <>
-        <PageHeading>Import customers</PageHeading>
-        <Hint className="mt-2">Upload a CSV export. GOLD reads the header row and shows you a mapping to review before anything is written.</Hint>
+        <PageHeader title="Import customers" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]} description="Upload a CSV export. GOLD reads the header row and shows you a mapping to review before anything is written." />
         <UploadSourceForm organizationId={organizationId} />
       </>
     );
@@ -45,7 +46,7 @@ export default async function NewImportPage({
 
   return (
     <>
-      <PageHeading>Map your columns</PageHeading>
+      <PageHeader title="Map your columns" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]} />
       <Hint className="mt-2">
         {source.totalRows} row{source.totalRows === 1 ? '' : 's'} detected. Each becomes a
         Customer. GOLD has guessed a mapping below — check it before continuing; nothing is

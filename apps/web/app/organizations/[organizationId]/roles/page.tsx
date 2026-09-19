@@ -1,4 +1,6 @@
 import { Hint } from '@/components/controls/inputs';
+import { areaLabel } from '@/lib/navigation';
+import { PageHeader } from '@/components/containers/page-header';
 import { listPendingInvitations } from '@/lib/domain/tenancy/invitations';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { listRoles } from '@/lib/domain/tenancy/roles';
@@ -40,9 +42,8 @@ export default async function RolesPage({
 
   return (
     <AddMemberSheetProvider organizationId={organizationId} roles={roles}>
-      <Hint>Who works here, and what each role may do.</Hint>
-
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <PageHeader title={areaLabel('roles')} description="Who works here, and what each role may do." />
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <TeamViewTabs view={view} invitationCount={invitations.length} />
         {mayManage ? (
           view === 'roles' ? <CreateRoleSheet organizationId={organizationId} /> : <AddMemberTrigger />

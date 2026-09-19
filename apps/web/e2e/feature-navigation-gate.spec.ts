@@ -60,11 +60,9 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
     await expect(page.getByRole('link', { name: 'Assets', exact: true })).toHaveCount(0);
 
     // What it already recorded is untouched and still directly reachable — disabling a Feature
-    // hides the door, not what is behind it. Two "Assets" level-1 headings exist on this route
-    // (the shell header's AreaTrail label and the page's own content heading, both inside
-    // `<main>`) — `.last()` is the page's own, the one that answers "did the route render".
+    // hides the door, not what is behind it. The page's own PageHeader is the one level-1 heading.
     await page.goto(`${orgHref}/assets`);
-    await expect(page.getByRole('heading', { name: 'Assets', level: 1 }).last()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Assets', level: 1 })).toBeVisible();
     await expect(page.getByText('E2E Test Compressor').first()).toBeVisible();
 
     // Re-enable restores the area.

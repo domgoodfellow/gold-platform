@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
-import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
-import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/containers/page-header';
+import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import {
   CreateCustomerSheetProvider,
   CreateCustomerTrigger,
@@ -14,6 +14,7 @@ import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
+import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -43,10 +44,12 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
   return (
     <AppPage width="wide">
       <CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions}>
-        <PageChromeRegistrar
-          title="Customers"
+        <PageHeader
+          title={areaLabel('customers')}
+          description="People and businesses this organization works for."
           actions={
             <>
+              {mayConfigure ? <ConfigureTrigger /> : null}
               {salesEnabled ? (
                 <Link
                   href={`/organizations/${organizationId}/customers/pipeline`}
@@ -74,9 +77,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
             />
           </ConfigureRegistrar>
         ) : null}
-        <Hint>People and businesses this organization works for.</Hint>
-
-        <div className="mt-6">
+        <div>
           <CustomerListToolbar organizationId={organizationId} stages={visibleStages} search={search} stage={stage} mayImport={modules.has('integrations')} />
         </div>
 

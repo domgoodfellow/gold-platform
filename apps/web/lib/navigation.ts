@@ -230,13 +230,6 @@ export type Area = {
    */
   sidebar?: boolean;
   /**
-   * The area this one reads as nested under, for `AreaTrail` alone — never a second grouping
-   * axis and never consulted by `areasIn`. Only relevant to an area with `sidebar: false`, which
-   * still needs to say where it belongs when somebody arrives at it directly — the parent's own
-   * `label` is read straight off its `Area` entry rather than inventing a second label registry.
-   */
-  parent?: string;
-  /**
    * A role must hold at least one of these to see this area in navigation — never a substitute
    * for the module gate above, layered on top of it. Absent (the default) means every member
    * sees the area regardless of capability, which stays true for every kernel and general
@@ -398,22 +391,22 @@ export function moduleConfiguration(
   };
 }
 
-/** One parser — the two questions below differ only in what they do with the depth. */
-function parse(pathname: string): { segment: string; depth: number } | null {
+/** Which area a pathname is **in**, for the current navigation entry — a detail route counts, so reading one job still marks Work. */
+export function currentSegment(pathname: string): string | null {
   const parts = pathname.split(/[?#]/)[0].split('/').filter(Boolean);
   if (parts.length < 3 || parts[0] !== 'organizations') return null;
   const segment = parts[2];
-  if (!AREAS.some((area) => area.segment === segment)) return null;
-  return { segment, depth: parts.length };
+  return AREAS.some((area) => area.segment === segment) ? segment : null;
 }
 
-/** Which area a pathname is **in**, for the current navigation entry — a detail route counts, so reading one job still marks Work. */
-export function currentSegment(pathname: string): string | null {
-  return parse(pathname)?.segment ?? null;
-}
-
-/** Which area a pathname is **at**, for the shell's heading — `/work` is at Work, `/work/{id}` is only in it, since a detail screen owns its own `<h1>`. */
-export function areaRootSegment(pathname: string): string | null {
-  const parsed = parse(pathname);
-  return parsed && parsed.depth === 3 ? parsed.segment : null;
+/**
+ * An area's name, for the `<h1>` of its root page. One string is still both the navigation entry
+ * and the heading — the page reads it from here rather than writing it again, so the two cannot
+ * drift. Throws on an unknown segment: a page naming an area that does not exist is a build
+ * mistake, not a runtime case to render around.
+ */
+export function areaLabel(segment: string): string {
+  const area = AREAS.find((candidate) => candidate.segment === segment);
+  if (!area) throw new Error(`No area has the segment "${segment}".`);
+  return area.label;
 }

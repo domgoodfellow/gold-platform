@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
 import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
-import { PageHeading, Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/containers/section';
 import { DataTable } from '@/components/display/table';
 import { Badge, DefinitionList, Detail } from '@/components/display/data';
 import { getConnection } from '@/lib/domain/integrations/connections';
@@ -25,26 +27,29 @@ export default async function ConnectionDetailPage({
 
   return (
     <>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <PageHeading>{connection.accountLabel ?? connection.connectorKey}</PageHeading>
-          <Badge tone={connection.status === 'active' || connection.status === 'connecting' ? 'success' : 'neutral'} className="mt-2">
+      <PageHeader
+        title={connection.accountLabel ?? connection.connectorKey}
+        crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]}
+        meta={
+          <Badge tone={connection.status === 'active' || connection.status === 'connecting' ? 'success' : 'neutral'}>
             {connection.status.replace(/_/g, ' ')}
           </Badge>
-        </div>
-        <div className="flex items-center gap-3">
-          {connection.status !== 'disconnected' ? (
-            <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">
-              Add data source
-            </ButtonLink>
-          ) : null}
-          {mayManage && connection.status !== 'disconnected' ? (
-            <DisconnectForm organizationId={organizationId} connectionId={connectionId} />
-          ) : null}
-        </div>
-      </div>
+        }
+        actions={
+          <>
+            {mayManage && connection.status !== 'disconnected' ? (
+              <DisconnectForm organizationId={organizationId} connectionId={connectionId} />
+            ) : null}
+            {connection.status !== 'disconnected' ? (
+              <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">
+                Add data source
+              </ButtonLink>
+            ) : null}
+          </>
+        }
+      />
 
-      <Section className="mt-6">
+      <Section>
         <SectionHeading>Overview</SectionHeading>
         <DefinitionList className="mt-3">
           <Detail label="Connector">{connection.connectorKey}</Detail>

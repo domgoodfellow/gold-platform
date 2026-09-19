@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { Client } from 'pg';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   getCatalogProduct,
   listCatalogFeatures,
@@ -52,6 +53,32 @@ import { CATALOGUE_SURFACE_COVERAGE } from '@/lib/catalogue-surface-coverage';
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+const CONNECTION =
+  process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+
+// **GOLD Internal may have exactly one current holder**, and `gold-bootstrap.test.ts` proves the
+// bootstrap door refuses a second. The two tests below give it to a throwaway organization to
+// prove it resolves like any other Plan; an assignment running to 9999-12-31 that nobody removes
+// would be the "second holder" every later run of that file trips over, so they are removed here.
+// Written over a direct connection because no role holds a delete grant on assignments — the
+// same reason `communications.test.ts` writes its rate table that way.
+const goldInternalHolders: string[] = [];
+
+afterAll(async () => {
+  if (goldInternalHolders.length === 0) return;
+  const pg = new Client({ connectionString: CONNECTION });
+  await pg.connect();
+  try {
+    await pg.query(
+      `delete from public.organization_plan_assignments
+        where organization_id = any($1::uuid[])
+          and plan_id = (select id from public.platform_plans where key = 'gold_internal')`,
+      [goldInternalHolders],
+    );
+  } finally {
+    await pg.end();
+  }
+});
 
 async function newTenant(label: string): Promise<{ db: SupabaseClient; organizationId: string }> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -329,6 +356,7 @@ describe('Plans and Add-ons', () => {
 
   it('assigns GOLD Internal to an ordinary organization through the same door as any other Plan — no tenancy bypass', async () => {
     const org = await newTenant('dogfood-check');
+    goldInternalHolders.push(org.organizationId);
     const goldInternal = await getPlan(staff, 'gold_internal');
     expect(goldInternal).toBeTruthy();
     expect(goldInternal?.billable).toBe(false);
@@ -343,6 +371,7 @@ describe('Plans and Add-ons', () => {
 
   it('resolves GOLD Internal available Features through the canonical Plan resolver', async () => {
     const org = await newTenant('gold-internal-resolver');
+    goldInternalHolders.push(org.organizationId);
     const goldInternal = await getPlan(staff, 'gold_internal');
     await recordPlanAssignment(staff, {
       organizationId: org.organizationId,

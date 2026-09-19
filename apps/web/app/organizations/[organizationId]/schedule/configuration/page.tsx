@@ -1,5 +1,7 @@
 import Link from 'next/link';
-import { PageHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/containers/page-header';
+import { areaLabel } from '@/lib/navigation';
+
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { ScheduleConfiguration } from '@/features/scheduling/configuration/schedule-configuration';
@@ -20,7 +22,7 @@ export default async function ScheduleConfigurationPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeading>Schedule configuration</PageHeading>
+      <PageHeader title="Schedule configuration" crumbs={[{ label: areaLabel('schedule'), href: `/organizations/${organizationId}/schedule` }]} />
       <Hint className="mt-1">
         Opening hours used by the{' '}
         <Link href={`/organizations/${organizationId}/schedule`} className="underline underline-offset-4">

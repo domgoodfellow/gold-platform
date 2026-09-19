@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { PageChromeRegistrar } from '@/components/containers/workspace-page-chrome';
+import { PageHeader } from '@/components/containers/page-header';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@gold/ui/components/card';
@@ -41,9 +41,8 @@ export default async function PricingPage() {
     ...retailRates.map((r) => ({ id: r.id, capability: meterById.get(r.meterId)?.description ?? r.meterId, price: displayRate(r.unitAmountMicros, r.currency, meterById.get(r.meterId)?.unit ?? 'unit'), currency: r.currency, source: r.source, effective: r.effectiveFrom })),
   ];
   const internal = plans.find((plan) => plan.key === 'gold_internal');
-  return <AppPage width="full"><PageChromeRegistrar title="Pricing" />
-    <p className="max-w-3xl text-sm text-muted-foreground">GOLD&apos;s launch commercial console. Plans and Add-ons are the primary offer model; the legacy rate card remains for compatibility.</p>
-    <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[['Sellable Plans', sellable.length], ['Priced Plans', offers.filter((o) => o.monthly || o.annual).length], ['Active usage rates', usage.length], ['Provider cost coverage', `${new Set(providerRates.map((r) => r.meterId)).size}/${meters.length}`]].map(([label, value]) => <Card key={String(label)}><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle></CardHeader><CardContent className="text-2xl font-semibold">{value}</CardContent></Card>)}</div>
+  return <AppPage width="full"><PageHeader title="Pricing" description="GOLD&apos;s launch commercial console. Plans and Add-ons are the primary offer model; the legacy rate card remains for compatibility." />
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[['Sellable Plans', sellable.length], ['Priced Plans', offers.filter((o) => o.monthly || o.annual).length], ['Active usage rates', usage.length], ['Provider cost coverage', `${new Set(providerRates.map((r) => r.meterId)).size}/${meters.length}`]].map(([label, value]) => <Card key={String(label)}><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle></CardHeader><CardContent className="text-2xl font-semibold">{value}</CardContent></Card>)}</div>
     <section className="mt-10"><h2 className="text-lg font-semibold">Plans &amp; offers</h2><p className="mt-1 text-sm text-muted-foreground">Package prices, included allowances, and monthly planning economics.</p><div className="mt-4"><DataTable rows={offers} rowKey={(r) => r.plan.id} empty="No canonical Plans or Add-ons recorded." columns={[
       { key: 'offer', header: 'Offer', emphasis: 'primary', cell: (r) => <div><Link className="font-medium underline-offset-4 hover:underline" href={`/platform/catalog/plans/${r.plan.key}`}>{r.plan.label}</Link><span className="block text-xs text-muted-foreground">{r.plan.kind === 'addon' ? 'Add-on' : 'Base plan'}</span></div> },
       { key: 'monthly', header: 'Monthly', cell: (r) => r.monthly ? money(r.monthly.amountMinor, r.monthly.currency) : '—' }, { key: 'annual', header: 'Annual / one-time', cell: (r) => r.annual ? money(r.annual.amountMinor, r.annual.currency) : '—' },

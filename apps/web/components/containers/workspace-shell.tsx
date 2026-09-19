@@ -1,14 +1,13 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { AppShell } from './app-shell';
 import { WorkspaceRailProvider, WorkspaceRightRail } from './workspace-right-rail';
-import { WorkspacePageChromeProvider } from './workspace-page-chrome';
 
 /**
  * The one authenticated shell host. Organization pages, account pages, and global Platform
- * routes provide their own sidebar/header/bottom-bar content, while the rail host, page chrome
- * provider, and main layout geometry stay shared.
+ * routes provide their own sidebar/header/bottom-bar content, while the rail host and main layout
+ * geometry stay shared. A page's own identity is `PageHeader`, rendered by the page itself.
  */
 export function WorkspaceShell({
   sidebar,
@@ -25,16 +24,16 @@ export function WorkspaceShell({
 }) {
   return (
     <WorkspaceRailProvider>
-      <WorkspacePageChromeProvider>
-        <WorkspaceRightRail
-          main={
-            <AppShell sidebar={sidebar} header={header} bottomBar={bottomBar}>
-              {children}
-            </AppShell>
-          }
-        />
-        {agent}
-      </WorkspacePageChromeProvider>
+      <WorkspaceRightRail
+        main={
+          <AppShell sidebar={sidebar} header={header} bottomBar={bottomBar}>
+            {children}
+          </AppShell>
+        }
+      />
+      {/* `agent` is an element the calling layout created on the server, and sitting beside the
+          rail as an unkeyed sibling trips React's dev key check on every render. */}
+      <Fragment key="agent">{agent}</Fragment>
     </WorkspaceRailProvider>
   );
 }

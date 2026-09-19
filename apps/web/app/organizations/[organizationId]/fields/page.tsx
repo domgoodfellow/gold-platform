@@ -1,4 +1,6 @@
 import { Hint } from '@/components/controls/inputs';
+import { areaLabel } from '@/lib/navigation';
+import { PageHeader } from '@/components/containers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
 import {
   CUSTOM_FIELD_ENTITY_LABELS,
@@ -25,9 +27,8 @@ export default async function FieldsPage({
 
   return (
     <>
-      <Hint>What this business records beyond the platform&rsquo;s own fields.</Hint>
-
-      <div className="mt-6">
+      <PageHeader title={areaLabel('fields')} description="What this business records beyond the platform&rsquo;s own fields." />
+      <div>
         <FieldEntityTabs entityType={entityType} />
       </div>
       <section className="mt-6">
