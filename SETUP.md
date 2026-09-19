@@ -100,7 +100,7 @@ the case this pre-flight exists to make safe without asking you to migrate first
 ## SUPABASE_JWT_SECRET pre-flight (machine roles only)
 
 This section is unrelated to the human-auth path above — `SUPABASE_JWT_SECRET` is read only by
-the three machine-role writers below and never by `app/auth`.
+the machine-role writers below and never by `app/auth`.
 
 Current consumers:
 
@@ -108,6 +108,7 @@ Current consumers:
 |---|---|
 | Stripe payment webhook | `apps/api/app/core/config.py::load_settings` reads `SUPABASE_JWT_SECRET`; `apps/api/api/stripe_webhook.py::handler.do_POST` calls `load_settings`; `apps/api/app/core/db.py::record_provider_payment` calls `machine_token` for role `payment_webhook`; SQL grant: `record_provider_payment(...)` to `payment_webhook`. |
 | GOLD platform billing webhook | `apps/api/app/core/config.py::load_platform_billing_settings` reads `SUPABASE_JWT_SECRET`; `apps/api/api/stripe_platform_billing_webhook.py::handler.do_POST` calls `load_platform_billing_settings`; `apps/api/app/core/db.py::apply_platform_subscription_event`/`record_platform_billing_notice` call `machine_token` for role `platform_billing_webhook`; SQL grants: both functions to `platform_billing_webhook` only. **Not the row above** — a different Stripe destination (GOLD's own account, not the tenant-Connect one), a different signing secret (`STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET`), a different Postgres role, holding no grant the payment webhook holds and vice versa. |
+| Provider operations (staff acting on a GOLD provider account) | `apps/api/app/core/config.py::load_provider_operations_settings` reads `SUPABASE_JWT_SECRET`; `apps/api/api/provider_operations.py::handler.do_POST` proves the caller is platform staff, then `apps/api/app/core/db.py::read_provider_account_credential`/`record_provider_account_verification` call `machine_token` for role `provider_operator`; SQL grants: those two functions to `provider_operator` only. `apps/web` reaches it through `GOLD_API_URL` and the operator's own token. |
 | Automation runner | `apps/api/app/core/config.py::load_runner_settings` reads `SUPABASE_JWT_SECRET`; `apps/api/api/automation_tick.py::handler._tick` calls `load_runner_settings`; `apps/api/app/core/runner.py::_post` calls `machine_token` for role `automation_runner`; runtime calls `run_due_automations`, `queued_messages`, `record_message_delivery`, `places_to_watch`, and `record_external_readings`. |
 | Voice webhook/callback handling | `apps/api/app/core/config.py::load_voice_settings` reads `SUPABASE_JWT_SECRET`; `apps/api/api/voice_inbound.py`, `voice_outbound.py`, `voice_status.py`, and `voice_recording.py` call `load_voice_settings`; `apps/api/app/core/db.py::record_call_event` calls `machine_token` for role `voice_webhook`; SQL grant: `record_call_event(...)` to `voice_webhook`. |
 

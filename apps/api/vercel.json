@@ -36,6 +36,10 @@
       "destination": "/api/voice_recording"
     },
     {
+      "source": "/providers/operate",
+      "destination": "/api/provider_operations"
+    },
+    {
       "source": "/crm/change-customer-stage",
       "destination": "/api/crm_change_customer_stage"
     },

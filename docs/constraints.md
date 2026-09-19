@@ -1053,7 +1053,7 @@ set. A binding can be `active` with no external account at all — Resend's shap
 account with a business's own domain named beneath it.
 
 **Vault, enabled for exactly one kind of fact.** GOLD's own master credentials (a Twilio account
-SID and auth token, a Resend platform key) stay deployment environment secrets, unchanged — D14
+SID and auth token, a Resend platform key) stay deployment environment secrets, unchanged (D54 adds an opt-in, Vault-held account beside them) — D14
 already refused a database as the place a person reads those from, and Vault existing does not
 reopen that. What Vault holds is narrower: a credential *this platform generates* per
 organization — today, a Twilio subaccount's own API key secret — that must be retained for a
@@ -1488,3 +1488,40 @@ decision (`organizationHomeHref`, I44) and one place that lists areas replaces t
 (currency, profile) or Connections area would need a fact the domain does not hold, and a required
 Work area would contradict the launch blockers. Readiness reads wanted modules, not wanted ∩ paid
 (D41), as `computeReadiness` always has.
+
+
+### D54 — A GOLD provider account is a row with a write-only credential, used by one runtime
+
+**Decision.** GOLD's own account with an upstream provider (the Twilio parent) is a row in
+`platform_provider_accounts`, beside the three older nouns: a **provider account** is the
+GOLD-owned upstream account; an **organization provider binding** (D44) is the scope provisioned
+for one organization beneath it, and now records which account it lives under; an **organization
+provider resource** is one safe thing inside that scope; an **integration connection** is a
+tenant's own authorization to an outside system and is a different owner and a different table.
+The credential is written to Vault by `store_provider_account_credential`, which returns the
+account id and nothing else. A row exposes `credential_set_at` and no more.
+
+**The one exception to D44's "nothing selects a secret back out", stated exactly.**
+`read_provider_account_credential` returns a decrypted credential, and is executable by a new
+machine role, `provider_operator`, and by no signed-in role. Only `apps/api` can wear it, and only
+after proving through RLS that the human asking is platform staff
+(`app/domains/providers/operations.py`). A function granted to `authenticated` would let a staff
+member read the secret from a browser console, which is why using a stored credential is not done
+in `apps/web`: that runtime holds no signing secret and must not (D14). `provider_operator` holds
+no table grant and exactly two executes — the reader and `record_provider_account_verification`,
+so that only the runtime that actually asked the provider can mark an account verified. It is the
+fourth role on `SUPABASE_JWT_SECRET`'s legacy path; `app/core/db.py` says not to widen that path,
+and this widens it by one role deliberately, narrowly and on record. Retiring it is the same
+migration the other three wait on.
+
+**Deployment credentials keep working.** A binding with no `provider_account_id` is a bootstrap
+binding: it keeps provisioning, retrying and placing calls from the deployment's own environment
+exactly as before, and is never moved under an account by a retry. Only a new organization is
+placed under the provider's default account. Runtime call placement (`telephonyProvider`,
+`apps/api`'s voice handlers) still reads the environment; giving it a Vault-held credential is not
+built.
+
+**Reconciliation reports; it does not repair.** It compares a provider's own subaccount list with
+GOLD's bindings and records *in sync / missing / changed* on each binding. A subaccount GOLD does
+not know is listed and never adopted; a missing one is never recreated; no status moves. Disabling
+an account stops new provisioning under it and touches nothing existing.

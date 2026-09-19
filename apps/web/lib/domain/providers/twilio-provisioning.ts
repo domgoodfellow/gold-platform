@@ -1,11 +1,15 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { requireAccessToken } from '@/lib/api/client';
 import {
   TELEPHONY_RESOURCE_TYPES,
   callbackBase,
+  telephonyAccountOperations,
   telephonyProviderKey,
   telephonyProvisioner,
+  telephonySubaccountName,
 } from '@/lib/adapters/telephony';
+import { getDefaultProviderAccount, getProviderAccount, listProviderOrganizationStandings } from './accounts';
 import {
   beginProviderBinding,
   listProviderResources,
@@ -34,14 +38,36 @@ import {
  */
 export async function provisionTelephonySubaccount(
   db: Db,
-  input: { organizationId: string },
+  input: { organizationId: string; providerAccountId?: string },
 ): Promise<{ subaccountSid: string; twimlAppSid: string }> {
   const { organizationId } = input;
   const providerKey = telephonyProviderKey();
 
-  await beginProviderBinding(db, { organizationId, providerKey });
+  // **Whose account this binding lives under is decided once and then kept.** A binding that
+  // already exists keeps the account it began under — a retry must never strand resources under
+  // one account while pointing at another — and a bootstrap binding (no account) keeps using the
+  // deployment's own credential. Only a first provisioning chooses: the account named, else the
+  // provider's default, else the deployment bootstrap exactly as before accounts existed.
+  const [standing] = await listProviderOrganizationStandings(db, { providerKey, organizationId });
+  const accountId = standing?.bindingId
+    ? standing.providerAccountId
+    : (input.providerAccountId ?? (await getDefaultProviderAccount(db, providerKey))?.id ?? null);
 
-  const provisioner = await telephonyProvisioner();
+  if (accountId) {
+    const account = await getProviderAccount(db, accountId);
+    if (!account || account.status !== 'active') {
+      throw new DomainError('That provider account is not active.', 'providers.account_inactive');
+    }
+    if (account.verificationState !== 'verified') {
+      throw new DomainError('Verify the provider account before provisioning under it.', 'providers.account_unverified');
+    }
+  }
+
+  await beginProviderBinding(db, { organizationId, providerKey, providerAccountId: standing?.bindingId ? undefined : accountId ?? undefined });
+
+  const provisioner = accountId
+    ? (await telephonyAccountOperations({ token: await requireAccessToken(db), accountId })).provisioner
+    : await telephonyProvisioner();
   const voiceUrl = callbackBase();
 
   if (!provisioner || !voiceUrl) {
@@ -54,7 +80,7 @@ export async function provisionTelephonySubaccount(
 
   try {
     const existing = await listProviderResources(db, { organizationId, providerKey });
-    const friendlyName = `gold-org-${organizationId}`;
+    const friendlyName = telephonySubaccountName(organizationId);
 
     let subaccountSid = existing.find(
       (resource) => resource.resourceType === TELEPHONY_RESOURCE_TYPES.subaccount,

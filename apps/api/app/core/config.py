@@ -90,6 +90,35 @@ def load_platform_billing_settings() -> PlatformBillingSettings | None:
 
 
 @dataclass(frozen=True)
+class ProviderOperationsSettings:
+    """What acting on a GOLD-owned provider account needs.
+
+    **Separate from every other settings group, because the credential it reaches is the most
+    sensitive one in this repository.** It signs a 60-second token for `provider_operator`, a
+    machine role holding no table grant and exactly two executes -- one of which returns a
+    decrypted credential. No human's session can call that function; only this runtime can, and
+    only after proving the caller is platform staff.
+    """
+
+    supabase_url: str
+    supabase_publishable_key: str
+    supabase_jwt_secret: str
+
+
+def load_provider_operations_settings() -> ProviderOperationsSettings | None:
+    values = {
+        "supabase_url": os.environ.get("SUPABASE_URL"),
+        "supabase_publishable_key": _publishable_key(),
+        "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
+    }
+
+    if not all(values.values()):
+        return None
+
+    return ProviderOperationsSettings(**values)  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
 class RunnerSettings:
     """What the automation tick needs.
 

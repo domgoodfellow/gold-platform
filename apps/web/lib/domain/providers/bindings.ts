@@ -147,6 +147,20 @@ export async function listProviderBindingCounts(db: Db): Promise<Map<string, num
   return counts;
 }
 
+/** Per-provider binding totals and how many are failed — counts only, for the control plane. */
+export async function listProviderBindingSummary(db: Db): Promise<Map<string, { total: number; failed: number }>> {
+  const { data, error } = await db.from('organization_provider_bindings').select('provider_key, status');
+  if (error) throw new DomainError(error.message, 'providers.binding_counts_failed');
+  const summary = new Map<string, { total: number; failed: number }>();
+  for (const row of data ?? []) {
+    const entry = summary.get(row.provider_key) ?? { total: 0, failed: 0 };
+    entry.total += 1;
+    if (row.status === 'failed') entry.failed += 1;
+    summary.set(row.provider_key, entry);
+  }
+  return summary;
+}
+
 /** One organization's binding to one provider, or null if it has never had one. */
 export async function getProviderBinding(
   db: Db,
@@ -197,11 +211,12 @@ function staffWriteError(error: { code?: string; message: string }, action: stri
 /** Starts, or resumes after a failure, one organization's binding to one provider. Staff-only. */
 export async function beginProviderBinding(
   db: Db,
-  input: { organizationId: string; providerKey: string },
+  input: { organizationId: string; providerKey: string; providerAccountId?: string },
 ): Promise<string> {
   const { data, error } = await db.rpc('begin_provider_binding', {
     p_organization_id: input.organizationId,
     p_provider_key: input.providerKey,
+    p_provider_account_id: input.providerAccountId,
   });
 
   if (error) throw staffWriteError(error, 'begin a provider binding');

@@ -515,6 +515,21 @@ what the underlying events truthfully snapshot — a job's *current* location or
 joined in, since both are mutable and a current-state join would misattribute history (I8). These
 gaps belong to Product work, not new generic controls.
 
+### 9a. The platform provider workspace
+
+`/platform/providers` is a list, not a settings table: each row says whether the provider is
+operational and why not, how many organizations depend on it, and how many are failing. A provider
+opens a detail workspace only when it has an account model to operate; today that is Twilio alone,
+and no other row pretends. The workspace is the standard grammar: one `PageHeader` with the
+provider's status in `meta`, **Configure** in `actions`, local tabs (Overview, Accounts,
+Organizations) as links, and the drawer from `ConfigureRegistrar`.
+
+Configure renders `TwilioConfiguration` and so does the full route
+`/platform/providers/twilio/configure`; there is one set of fields, actions and validation. A
+credential field is write-only and says whether a value is stored. Disabling an account is
+confirmed in place and says what it does not touch. A tenant never sees any of this: it sees phone
+numbers, routing and recording in its own workspace.
+
 ## 10. What this document does not decide
 
 - **The marketing surface.** The tenant site/revision editor, preview and publishing foundation

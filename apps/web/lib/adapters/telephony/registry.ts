@@ -1,4 +1,9 @@
-import type { TelephonyProvider, TelephonyProvisioner } from './index';
+import type {
+  TelephonyAccountOperations,
+  TelephonyCredentialKind,
+  TelephonyProvider,
+  TelephonyProvisioner,
+} from './index';
 
 /**
  * Which implementation this deployment uses.
@@ -102,3 +107,65 @@ export const TELEPHONY_RESOURCE_TYPES = {
   twimlApp: 'twilio_twiml_app',
   phoneNumber: 'twilio_phone_number',
 } as const;
+
+/**
+ * Whether this deployment still holds GOLD's carrier account in its own environment — the
+ * bootstrap path every binding used before a provider account could be recorded. Exposed as a
+ * fact for the platform console; it reads no value out.
+ */
+export function telephonyBootstrapConfigured(): boolean {
+  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN);
+}
+
+/**
+ * What a business's subaccount is called at the carrier. One place, because reconciliation
+ * recognises a scope GOLD made by this name and provisioning is what gave it.
+ */
+export function telephonySubaccountName(organizationId: string): string {
+  return `gold-org-${organizationId}`;
+}
+
+const CREDENTIAL_KINDS: readonly TelephonyCredentialKind[] = [
+  { key: 'api_key', label: 'API key (recommended)', identifierLabel: 'API key SID' },
+  { key: 'auth_token', label: 'Account auth token', identifierLabel: null },
+];
+
+export function telephonyCredentialKinds(): readonly TelephonyCredentialKind[] {
+  return CREDENTIAL_KINDS;
+}
+
+/**
+ * The shape of an account's *public* facts, checked before anything is stored. A better error
+ * message and never an authorization — the carrier's own answer at verification is the real check.
+ */
+export function validateTelephonyAccountIdentity(input: {
+  accountId: string;
+  credentialKind: string;
+  credentialIdentifier: string | null;
+}): string | null {
+  if (!/^AC[0-9a-fA-F]{32}$/.test(input.accountId)) {
+    return 'The Account SID starts with AC followed by 32 characters.';
+  }
+  const kind = CREDENTIAL_KINDS.find((candidate) => candidate.key === input.credentialKind);
+  if (!kind) return 'Choose one of the supported credential types.';
+  if (kind.identifierLabel === null) {
+    return input.credentialIdentifier ? `${kind.label} takes no separate identifier.` : null;
+  }
+  if (!input.credentialIdentifier || !/^SK[0-9a-fA-F]{32}$/.test(input.credentialIdentifier)) {
+    return `${kind.identifierLabel} starts with SK followed by 32 characters.`;
+  }
+  return null;
+}
+
+/**
+ * GOLD's account as held in Vault, reached through `apps/api` with the caller's own token. The
+ * token is forwarded and nothing is minted here: `apps/api` proves the caller is platform staff
+ * before it reads a credential.
+ */
+export async function telephonyAccountOperations(input: {
+  token: string;
+  accountId: string;
+}): Promise<TelephonyAccountOperations> {
+  const { twilioAccountOperations } = await import('./twilio-accounts');
+  return twilioAccountOperations(input);
+}

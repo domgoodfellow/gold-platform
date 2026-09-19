@@ -94,6 +94,45 @@ export type TelephonyProvisioner = {
 };
 
 /**
+ * Acting on GOLD's *own* account with the carrier, as a capability distinct from acting inside one
+ * business's scope.
+ *
+ * **Every method reaches the carrier through `apps/api`, never from here.** The credential for a
+ * GOLD-owned account is stored in Vault and readable by exactly one machine role that only that
+ * runtime can wear; this runtime holds no signing secret and must not (D14). What comes back is
+ * an answer, never the credential.
+ *
+ * `provisioner` is the same three-step contract the deployment-credential path implements, so
+ * `lib/domain/providers/` provisions identically whichever way GOLD's account is held.
+ */
+export type ProviderAccountVerification = {
+  ok: boolean;
+  error: string | null;
+  metadata: Record<string, unknown>;
+};
+
+/** One scope the carrier reports beneath GOLD's account. Identifier, name and state, no more. */
+export type RemoteSubaccount = {
+  sid: string;
+  friendlyName: string | null;
+  status: string | null;
+};
+
+export type TelephonyAccountOperations = {
+  verify(): Promise<ProviderAccountVerification>;
+  listSubaccounts(): Promise<RemoteSubaccount[]>;
+  provisioner: TelephonyProvisioner;
+};
+
+/** How a GOLD account may authenticate, named by the capability so a form can offer the choice. */
+export type TelephonyCredentialKind = {
+  key: string;
+  label: string;
+  /** The public identifier this mechanism needs beside the secret, or null when it needs none. */
+  identifierLabel: string | null;
+};
+
+/**
  * Re-exported so domain code imports the capability and nothing deeper.
  *
  * `adapters.test.ts` allows a domain file to import `@/lib/adapters/<capability>` exactly, and
@@ -104,7 +143,12 @@ export type TelephonyProvisioner = {
 export {
   TELEPHONY_RESOURCE_TYPES,
   callbackBase,
+  telephonyAccountOperations,
+  telephonyBootstrapConfigured,
+  telephonyCredentialKinds,
   telephonyProvider,
   telephonyProviderKey,
   telephonyProvisioner,
+  telephonySubaccountName,
+  validateTelephonyAccountIdentity,
 } from './registry';

@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-from app.core.config import PlatformBillingSettings, Settings, VoiceSettings
+from app.core.config import PlatformBillingSettings, ProviderOperationsSettings, Settings, VoiceSettings
 
 if TYPE_CHECKING:
     from app.integrations.stripe.platform_billing_webhook import NoticeEvent, SubscriptionEvent
@@ -277,3 +277,75 @@ def record_call_event(
         raise RuntimeError(f"record_call_event failed: {response.status_code}")
 
     return response.json()
+
+
+PROVIDER_ROLE = "provider_operator"
+
+# The provider-operations integration's own `auth.users` row, fixed in
+# 20260929000001_platform_provider_accounts.sql. No email, no password.
+PROVIDER_ACTOR = "00000000-0000-4000-8000-0000000000a4"
+
+
+def read_provider_account_credential(
+    settings: ProviderOperationsSettings,
+    *,
+    account_id: str,
+) -> dict | None:
+    """One GOLD provider account's decrypted credential, or `None` for an account that is
+    absent, disabled or has none stored.
+
+    **The only place in this repository a decrypted secret is read.** The caller has already
+    proved the human asking is platform staff; the value returned here goes to one upstream
+    request and is never logged, stored, or put in a response.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=PROVIDER_ROLE, sub=PROVIDER_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/read_provider_account_credential",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={"p_account_id": account_id},
+        timeout=10.0,
+    )
+
+    if response.status_code >= 400:
+        # Deliberately no body: an error from this call could echo an argument, and nothing here
+        # may put a credential-adjacent value into an exception message.
+        raise RuntimeError(f"read_provider_account_credential failed: {response.status_code}")
+
+    rows = response.json()
+    return rows[0] if rows else None
+
+
+def record_provider_account_verification(
+    settings: ProviderOperationsSettings,
+    *,
+    account_id: str,
+    ok: bool,
+    error: str | None,
+    metadata: dict,
+) -> None:
+    """Record what the provider said when this runtime asked it. Only this role may."""
+    token = machine_token(settings.supabase_jwt_secret, role=PROVIDER_ROLE, sub=PROVIDER_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/record_provider_account_verification",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "p_account_id": account_id,
+            "p_ok": ok,
+            "p_error": error,
+            "p_metadata": metadata,
+        },
+        timeout=10.0,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"record_provider_account_verification failed: {response.status_code}")

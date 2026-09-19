@@ -3224,10 +3224,14 @@ export type Database = {
           external_account_id: string | null
           id: string
           last_error: string | null
+          last_reconciled_at: string | null
           last_verified_at: string | null
           metadata: Json
           organization_id: string
+          provider_account_id: string | null
           provider_key: string
+          reconciliation_detail: string | null
+          reconciliation_state: string | null
           status: string
           updated_at: string
         }
@@ -3236,10 +3240,14 @@ export type Database = {
           external_account_id?: string | null
           id?: string
           last_error?: string | null
+          last_reconciled_at?: string | null
           last_verified_at?: string | null
           metadata?: Json
           organization_id: string
+          provider_account_id?: string | null
           provider_key: string
+          reconciliation_detail?: string | null
+          reconciliation_state?: string | null
           status?: string
           updated_at?: string
         }
@@ -3248,10 +3256,14 @@ export type Database = {
           external_account_id?: string | null
           id?: string
           last_error?: string | null
+          last_reconciled_at?: string | null
           last_verified_at?: string | null
           metadata?: Json
           organization_id?: string
+          provider_account_id?: string | null
           provider_key?: string
+          reconciliation_detail?: string | null
+          reconciliation_state?: string | null
           status?: string
           updated_at?: string
         }
@@ -3268,6 +3280,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_provider_bindings_provider_account_id_fkey"
+            columns: ["provider_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_accounts"
             referencedColumns: ["id"]
           },
           {
@@ -4483,6 +4502,74 @@ export type Database = {
           sale_status?: string
         }
         Relationships: []
+      }
+      platform_provider_accounts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          credential_identifier: string | null
+          credential_kind: string
+          credential_set_at: string | null
+          external_account_id: string | null
+          id: string
+          is_default: boolean
+          label: string
+          last_verified_at: string | null
+          metadata: Json
+          provider_key: string
+          secret_id: string | null
+          status: string
+          updated_at: string
+          verification_error: string | null
+          verification_state: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          credential_identifier?: string | null
+          credential_kind: string
+          credential_set_at?: string | null
+          external_account_id?: string | null
+          id?: string
+          is_default?: boolean
+          label: string
+          last_verified_at?: string | null
+          metadata?: Json
+          provider_key: string
+          secret_id?: string | null
+          status?: string
+          updated_at?: string
+          verification_error?: string | null
+          verification_state?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          credential_identifier?: string | null
+          credential_kind?: string
+          credential_set_at?: string | null
+          external_account_id?: string | null
+          id?: string
+          is_default?: boolean
+          label?: string
+          last_verified_at?: string | null
+          metadata?: Json
+          provider_key?: string
+          secret_id?: string | null
+          status?: string
+          updated_at?: string
+          verification_error?: string | null
+          verification_state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_provider_accounts_provider_key_fkey"
+            columns: ["provider_key"]
+            isOneToOne: false
+            referencedRelation: "platform_providers"
+            referencedColumns: ["key"]
+          },
+        ]
       }
       platform_provider_rates: {
         Row: {
@@ -6280,7 +6367,11 @@ export type Database = {
         Returns: string
       }
       begin_provider_binding: {
-        Args: { p_organization_id: string; p_provider_key: string }
+        Args: {
+          p_organization_id: string
+          p_provider_account_id?: string
+          p_provider_key: string
+        }
         Returns: string
       }
       booking_organization: { Args: { p_slug: string }; Returns: string }
@@ -6684,6 +6775,24 @@ export type Database = {
           usage_event_count: number
         }[]
       }
+      platform_provider_organization_overview: {
+        Args: { p_organization_id?: string; p_provider_key: string }
+        Returns: {
+          binding_id: string
+          binding_status: string
+          bound_at: string
+          external_account_id: string
+          last_error: string
+          last_reconciled_at: string
+          last_verified_at: string
+          organization_id: string
+          organization_name: string
+          provider_account_id: string
+          reconciliation_detail: string
+          reconciliation_state: string
+          resource_count: number
+        }[]
+      }
       provision_organization: {
         Args: {
           p_capabilities: string[]
@@ -6721,6 +6830,16 @@ export type Database = {
           id: string
           recipient: string
           subject_line: string
+        }[]
+      }
+      read_provider_account_credential: {
+        Args: { p_account_id: string }
+        Returns: {
+          credential_identifier: string
+          credential_kind: string
+          external_account_id: string
+          provider_key: string
+          secret: string
         }[]
       }
       record_call_event: {
@@ -6915,6 +7034,35 @@ export type Database = {
         }
         Returns: string
       }
+      record_provider_account: {
+        Args: {
+          p_account_id?: string
+          p_credential_identifier: string
+          p_credential_kind: string
+          p_external_account_id: string
+          p_label: string
+          p_provider_key: string
+        }
+        Returns: string
+      }
+      record_provider_account_verification: {
+        Args: {
+          p_account_id: string
+          p_error?: string
+          p_metadata?: Json
+          p_ok: boolean
+        }
+        Returns: undefined
+      }
+      record_provider_binding_reconciliation: {
+        Args: {
+          p_detail?: string
+          p_organization_id: string
+          p_provider_key: string
+          p_state: string
+        }
+        Returns: undefined
+      }
       record_provider_payment: {
         Args: {
           p_amount_minor: number
@@ -7087,6 +7235,10 @@ export type Database = {
         Args: { p_checklist_item_id: string; p_done: boolean }
         Returns: undefined
       }
+      set_default_provider_account: {
+        Args: { p_account_id: string }
+        Returns: undefined
+      }
       set_organization_profile: {
         Args: {
           p_address: string
@@ -7118,6 +7270,10 @@ export type Database = {
           p_unit: string
         }
         Returns: string
+      }
+      set_provider_account_status: {
+        Args: { p_account_id: string; p_status: string }
+        Returns: undefined
       }
       set_provider_binding_status: {
         Args: {
@@ -7165,6 +7321,10 @@ export type Database = {
           p_organization_id: string
           p_secret: string
         }
+        Returns: string
+      }
+      store_provider_account_credential: {
+        Args: { p_account_id: string; p_secret: string }
         Returns: string
       }
       store_provider_secret: {
