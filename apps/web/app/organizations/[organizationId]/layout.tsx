@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation';
-import { OrgNavBar, OrgSidebar, SetupBadge, SetupEntry } from './org-shell';
+import { OrgNavBar, OrgSidebar } from './org-shell';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
+import { computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import {
@@ -98,7 +99,19 @@ export default async function OrganizationLayout({
     </span>
   );
 
-  const inSetup = organization.operationalState === 'setup';
+  // The one place the shell asks whether this business is still being set up. The sidebar row and
+  // the phone bar's first item both read this and nothing else, so neither can outlive Launch.
+  // Only asked while there is a launch ahead: a LIVE business pays for no readiness read.
+  const setupOverview =
+    organization.operationalState === 'setup' ? await computeSetupOverview(db, { organizationId }) : null;
+  const setup = setupOverview ? { ready: setupOverview.ready, total: setupOverview.total } : null;
+
+  const switchable = myOrganizations.map((org) => ({
+    id: org.id,
+    name: org.name,
+    role: org.role,
+    operationalState: org.operationalState,
+  }));
 
   const sidebar = (
     <OrgSidebar
@@ -106,13 +119,13 @@ export default async function OrganizationLayout({
       mark={mark}
       name={organization.name}
       role={organization.role}
-      organizations={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
+      organizations={switchable}
       platformStaff={staff}
       isGoldInternal={isGoldInternal}
       enabledModules={[...enabledModules]}
       featureAvailability={[...featureAvailability]}
       capabilities={organization.capabilities}
-      setupEntry={inSetup ? <SetupEntry organizationId={organizationId} /> : null}
+      setup={setup}
       email={email}
       signOutAction={signOutAction}
     />
@@ -122,10 +135,10 @@ export default async function OrganizationLayout({
     The global header, composed from the shared `WorkspaceHeader`. Left to right: the sidebar's
     own trigger (from `md` up, where the sidebar exists at all) and — on a phone, where the
     sidebar itself renders nothing and `OrgNavBar` carries navigation instead — the two identity
-    controls the sidebar would otherwise have held: a compact context switcher (with the Setup
-    badge, the only phone route into Setup) and the account menu immediately before Agent, so
-    Agent stays the furthest-right control at every width. Page identity is each page's own
-    `PageHeader`.
+    controls the sidebar would otherwise have held: a compact context switcher and the account
+    menu immediately before Agent, so Agent stays the furthest-right control at every width. A
+    phone reaches Setup through `OrgNavBar`'s own first item while SETUP lasts, never through this
+    header. Page identity is each page's own `PageHeader`.
   */
   const header = (
     <WorkspaceHeader
@@ -135,9 +148,8 @@ export default async function OrganizationLayout({
           <CompactContextSwitcher
             mark={mark}
             current={{ kind: 'business', organizationId, name: organization.name, role: organization.role }}
-            organizations={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
+            organizations={switchable}
           />
-          {inSetup ? <SetupBadge organizationId={organizationId} /> : null}
         </div>
       }
       beforeActions={
@@ -163,6 +175,7 @@ export default async function OrganizationLayout({
             capabilities={organization.capabilities}
             platformStaff={staff}
             isGoldInternal={isGoldInternal}
+            setup={setup}
           />
         }
         agent={

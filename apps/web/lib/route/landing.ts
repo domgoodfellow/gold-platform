@@ -4,6 +4,7 @@ import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal
 import { organizationHomeHref } from '@/lib/navigation';
 import { consumePendingInviteDestination } from '@/lib/route/pending-invite';
 import type { Db } from '@/lib/db/types';
+import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 
 /**
  * Where `/organizations` sends somebody, decided from two independent facts about one identity:
@@ -14,19 +15,22 @@ import type { Db } from '@/lib/db/types';
 export type OrganizationsLanding =
   | { kind: 'onboarding' }
   | { kind: 'platform' }
-  | { kind: 'enter'; organizationId: string }
+  | { kind: 'enter'; organizationId: string; operationalState: OperationalState }
   | { kind: 'chooser' };
 
 export function resolveOrganizationsLanding(input: {
-  organizations: readonly { id: string }[];
+  organizations: readonly { id: string; operationalState: OperationalState }[];
   staff: boolean;
   preferredOrganizationId?: string | null;
   showAll: boolean;
 }): OrganizationsLanding {
   const { organizations, staff, preferredOrganizationId, showAll } = input;
 
-  if (!showAll && preferredOrganizationId && organizations.some((org) => org.id === preferredOrganizationId)) {
-    return { kind: 'enter', organizationId: preferredOrganizationId };
+  const preferred = preferredOrganizationId
+    ? organizations.find((org) => org.id === preferredOrganizationId)
+    : undefined;
+  if (!showAll && preferred) {
+    return { kind: 'enter', organizationId: preferred.id, operationalState: preferred.operationalState };
   }
 
   if (staff && !showAll) {
@@ -38,18 +42,19 @@ export function resolveOrganizationsLanding(input: {
   }
 
   if (organizations.length === 1 && !showAll) {
-    return { kind: 'enter', organizationId: organizations[0].id };
+    return { kind: 'enter', organizationId: organizations[0].id, operationalState: organizations[0].operationalState };
   }
 
   return { kind: 'chooser' };
 }
 
-function destinationFor(landing: OrganizationsLanding): string {
+/** The one place a landing becomes a URL — pure, so a SETUP and a LIVE business can be told apart without a session. */
+export function destinationFor(landing: OrganizationsLanding): string {
   switch (landing.kind) {
     case 'platform':
       return '/platform';
     case 'enter':
-      return organizationHomeHref(landing.organizationId);
+      return organizationHomeHref(landing.organizationId, landing.operationalState);
     case 'onboarding':
     case 'chooser':
       return '/organizations';

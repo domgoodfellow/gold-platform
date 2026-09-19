@@ -270,8 +270,9 @@ describe('Work, as an operational surface (source scan)', () => {
 
 describe('Business Setupâ€™s manual links (source scan)', () => {
   it('points its Work step at Work configuration, not the operational board', () => {
-    const setup = readFileSync(`${ROUTES}/setup/page.tsx`, 'utf8');
-    expect(setup).toMatch(/segment === 'work'[\s\S]{0,160}'work'[\s\S]{0,60}configuration/);
+    // The area list is the domain's (`computeSetupOverview`), so the link is read from there.
+    const overview = readFileSync(`${WEB_ROOT}lib/domain/tenancy/lifecycle.ts`, 'utf8');
+    expect(overview).toMatch(/'work',\s*'work',\s*`\$\{areaHref\(organizationId, 'work'\)\}\/configuration`/);
   });
 });
 

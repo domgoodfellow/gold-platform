@@ -54,17 +54,17 @@ export default async function SettingsPage({
       <PageHeader title={areaLabel('settings')} description="Durable configuration for how this business runs." />
       <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
         <Card as="section" className="border-accent">
-          <SectionHeading>Guided setup</SectionHeading>
+          <SectionHeading>Setup</SectionHeading>
           <Hint className="mt-1">
             {organization.operationalState === 'setup'
-              ? 'Readiness checks and launch controls for this business.'
-              : 'Review the setup path this business launched through.'}
+              ? 'This business is still being set up. See what is finished and what blocks launch.'
+              : 'This business is live. Review or reconfigure the areas setup covers.'}
           </Hint>
           <Link
             href={`${root}/setup`}
             className="mt-4 inline-block text-sm font-medium underline underline-offset-4"
           >
-            Open guided setup
+            Open setup
           </Link>
         </Card>
 

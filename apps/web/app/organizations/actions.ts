@@ -3,16 +3,16 @@
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
-import { canDraftConfiguration } from '@/lib/domain/configuration/proposals';
 import { createOrganization } from '@/lib/domain/tenancy/organizations';
-import { areaHref, organizationHomeHref } from '@/lib/navigation';
+import { organizationHomeHref } from '@/lib/navigation';
 
 export type CreateBusinessState = { error: string | null };
 
 /**
- * Make a business and land on guided setup rather than an empty schedule — unless this
- * deployment can't draft, in which case setup would just say so, and the operational area
- * is the better first screen (D31).
+ * Make a business and enter it the way every entry does — a business that has just been created
+ * is in SETUP, so `organizationHomeHref` sends it to Setup. Whether this deployment can draft is
+ * not part of that: Setup is the map of manual configuration first, and drafting is one optional
+ * card on it.
  */
 export async function createBusinessAction(
   _previous: CreateBusinessState,
@@ -35,7 +35,5 @@ export async function createBusinessAction(
   }
 
   // Outside the try — `redirect` works by throwing, so catching around it would turn success into an error.
-  redirect(
-    (await canDraftConfiguration()) ? areaHref(organizationId, 'setup') : organizationHomeHref(organizationId),
-  );
+  redirect(organizationHomeHref(organizationId, 'setup'));
 }

@@ -127,7 +127,7 @@ export function LaunchForm({ organizationId }: { organizationId: string }) {
     <form action={action}>
       <input type="hidden" name="organizationId" value={organizationId} />
       <Button type="submit" disabled={pending}>
-        {pending ? 'Launching…' : 'Launch'}
+        {pending ? 'Launching…' : 'Launch business'}
       </Button>
       <Error state={state} />
     </form>

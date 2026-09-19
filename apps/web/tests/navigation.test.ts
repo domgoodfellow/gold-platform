@@ -154,8 +154,11 @@ describe('the operator shell navigation', () => {
  */
 describe('organizationHomeHref', () => {
   it('resolves to the first area, through areaHref', () => {
-    expect(organizationHomeHref('org-1')).toBe(areaHref('org-1', AREAS[0].segment));
-    expect(organizationHomeHref('org-1')).toBe('/organizations/org-1/today');
+    expect(organizationHomeHref('org-1', 'live')).toBe(areaHref('org-1', AREAS[0].segment));
+    expect(organizationHomeHref('org-1', 'live')).toBe('/organizations/org-1/today');
+    // SETUP is a lifecycle state with its own default destination — and only a default: Today
+    // and every other area stay reachable by direct navigation.
+    expect(organizationHomeHref('org-1', 'setup')).toBe('/organizations/org-1/setup');
   });
 });
 
@@ -531,22 +534,22 @@ describe('a switch leads to its inputs', () => {
     );
   });
 
-  it('gates the shell’s prominent Setup treatment on operational_state, not on a module', () => {
-    // Business Setup is implementation infrastructure while a business is in Setup, not a
-    // switched-on capability (product reality audit) — so its shell prominence must disappear
-    // once a business is Live, on its own, with nothing left to remember to turn off. Source
-    // scan for the same reason `layout.test.ts` gives: nothing here renders in a harness this
-    // repository runs.
+  it('gates the shell’s Setup treatment on operational_state, not on a module', () => {
+    // Setup is a lifecycle state, so its shell treatment must disappear once a business is Live,
+    // on its own, with nothing left to remember to turn off. Source scan for the same reason
+    // `layout.test.ts` gives: nothing here renders in a harness this repository runs.
     const layout = readFileSync(`${ROUTES}/layout.tsx`, 'utf8');
     const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
 
     expect(layout, 'the shell never asks whether this business is still in setup').toContain(
       "operationalState === 'setup'",
     );
-    expect(layout).toContain('SetupEntry');
-    expect(layout).toContain('SetupBadge');
+    expect(layout).toContain('setup={setup}');
     expect(shell).toContain('export function SetupEntry');
-    expect(shell).toContain('export function SetupBadge');
+    expect(shell).toContain('export function SetupNavLink');
+    // One treatment, not several: the header badge this replaced must not come back.
+    expect(shell).not.toContain('SetupBadge');
+    expect(layout).not.toContain('SetupBadge');
   });
 
   it('builds a link that says where it goes', () => {
@@ -699,19 +702,18 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
     const drafting = MODULES.find((sold) => sold.key === 'drafting')!;
     expect(moduleConfiguration('org-1', drafting)).toEqual({
       href: '/organizations/org-1/setup',
-      label: 'Guided setup',
+      label: 'Setup',
     });
   });
 
-  it('still gets its elevated SETUP-only shell treatment, and no second row in Configuration', () => {
+  it('still gets its SETUP-only shell treatment, and no second row in Configuration', () => {
     const layout = readFileSync(`${ROUTES}/layout.tsx`, 'utf8');
-    expect(layout).toContain('SetupEntry');
-    expect(layout).toContain('SetupBadge');
+    expect(layout).toContain('setup={setup}');
 
     // `OrgNav` — the ordinary Configuration-group renderer — is generic over `AREAS`/`areasIn`
     // and must not special-case 'setup' itself; if it did, that would be the second,
     // equal-weight row this patch exists to remove. Extracted by name rather than grepping the
-    // whole file, since `SetupEntry`/`SetupBadge` legitimately mention 'setup' right beside it.
+    // whole file, since `SetupEntry`/`SetupNavLink` legitimately mention 'setup' right beside it.
     const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
     const orgNavBody = shell.slice(shell.indexOf('export function OrgNav('), shell.indexOf('export function OrgNavBar('));
     expect(orgNavBody, 'OrgNav should not hardcode a setup-specific row').not.toContain("'setup'");
@@ -720,19 +722,18 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
   it('gives Settings a path back to it, worded so Launch never sounds available again', () => {
     const settings = readFileSync(`${ROUTES}/settings/page.tsx`, 'utf8');
     expect(settings, 'no card links Settings to /setup').toContain('href={`${root}/setup`}');
-    expect(settings, 'Guided setup card is missing').toContain('Guided setup');
+    expect(settings, 'Setup card is missing').toContain('<SectionHeading>Setup</SectionHeading>');
     expect(
       settings,
       'post-launch wording must not imply Launch can happen again',
-    ).toContain('Review the setup path this business launched through.');
+    ).toContain('This business is live. Review or reconfigure the areas setup covers.');
   });
 
   it('never renders Launch again on /setup once the business is LIVE', () => {
-    // The whole readiness/Launch section — `LaunchForm` included — is gated on `inSetup`, so a
-    // LIVE business visiting `/setup` directly sees no Launch control to press, on top of the
-    // database's own refusal if one were pressed anyway (`lifecycle.test.ts`: a second attempt
-    // is refused as `organizations.already_live`).
+    // `LaunchReview` — and so `LaunchForm` — is gated on `inSetup`, so a LIVE business visiting
+    // `/setup` directly sees no Launch control to press, on top of the database's own refusal if
+    // one were pressed anyway (`lifecycle.test.ts`: a second attempt is `organizations.already_live`).
     const setup = readFileSync(`${ROUTES}/setup/page.tsx`, 'utf8');
-    expect(setup).toMatch(/inSetup && readiness \? \(([\s\S]*?)LaunchForm/);
+    expect(setup).toMatch(/inSetup \? \(\s*<LaunchReview[\s\S]*?LaunchForm/);
   });
 });

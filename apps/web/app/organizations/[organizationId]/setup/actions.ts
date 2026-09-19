@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import type { BusinessShape } from '@/lib/domain/configuration/configure';
@@ -12,6 +13,7 @@ import {
   reviseConfigurationProposal,
 } from '@/lib/domain/configuration/proposals';
 import { launchOrganization } from '@/lib/domain/tenancy/lifecycle';
+import { organizationHomeHref } from '@/lib/navigation';
 import { invalidateGoldHomepageIfReferenced } from '@/lib/domain/public-site/cached';
 
 export type SetupActionState = { error: string | null };
@@ -127,7 +129,14 @@ export async function launchAction(
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
 
-  return run(organizationId, () => launchOrganization(db, { organizationId }));
+  const result = await run(organizationId, () => launchOrganization(db, { organizationId }));
+  if (result.error) return result;
+
+  // The shell's Setup treatment is read by the layout, so the layout is revalidated too — the
+  // business is LIVE and must stop looking like it is onboarding on the very next screen.
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
+  // Outside `run`'s try — `redirect` works by throwing.
+  redirect(organizationHomeHref(organizationId, 'live'));
 }
 
 export async function discardAction(

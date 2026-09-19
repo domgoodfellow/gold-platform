@@ -5,6 +5,19 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Setup becomes a lifecycle: a business opens on Setup and stops being onboarded at Launch
+
+A business in SETUP is entered through `/setup` from every door (`organizationHomeHref` now takes
+the lifecycle state); a LIVE one still opens on Today. `/setup` is a cockpit of areas with a count
+("4 of 6 setup areas ready"), each area marked Blocks launch, Recommended, Optional or Ready and
+linking to the workspace that owns it, followed by a Review & launch card that lists blockers with
+links or, when none stand, what Launch will do. Drafting is one optional "Set up faster with
+Agent" card. The sidebar's giant call to action, the header "Setting up" badge and Today's
+readiness widget are replaced by one Setup item (sidebar and phone bottom bar) that leaves at
+Launch, and Today keeps a single sentence with a way back. Launch now lands on Today, and
+`/setup` stays reachable from Settings as a reconfiguration map with no Launch. Area label
+`Guided setup` is now `Setup`.
+
 ### GOLD's marketing site gets a complete shell
 
 Every marketing page now shares `MarketingShell`: a floating header (Products menu with the three

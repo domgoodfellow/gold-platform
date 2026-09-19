@@ -59,10 +59,11 @@ describe('WorkspaceHeader is the global bar, not a page header', () => {
     expect(source).not.toContain('Breadcrumb');
   });
 
-  it('renders its slots in one fixed order: trigger, context, spacer, beforeActions, Agent', () => {
+  it('renders its slots in one fixed order: trigger, context, breadcrumbs, spacer, beforeActions, Agent', () => {
     const order = [
       'SidebarTrigger',
       '{context}',
+      '<WorkspaceCrumbSlot',
       'className="flex-1"',
       '{beforeActions}',
       '<AgentTrigger',
@@ -122,9 +123,9 @@ describe('the Business phone header — compact controls wired to the right slot
       organizationLayout.indexOf('beforeActions={'),
     );
     expect(contextBlock).toContain('CompactContextSwitcher');
-    // Setup has no bottom-bar entry, so a phone reaches it through this badge — and only a phone:
-    // the sidebar's own SetupEntry covers every wider width.
-    expect(contextBlock).toContain('SetupBadge');
+    // The header carries no Setup treatment at any width: a phone reaches Setup through the
+    // bottom bar's own lifecycle-aware first item (`SetupNavLink`), the sidebar through `SetupEntry`.
+    expect(contextBlock).not.toMatch(/Setup/);
     expect(contextBlock).toContain('md:hidden');
   });
 
@@ -150,7 +151,8 @@ describe('the Business phone header — compact controls wired to the right slot
     );
     expect(contextBlock).toContain('mark={mark}');
     expect(contextBlock).toMatch(/kind:\s*'business'/);
-    expect(contextBlock).toContain('organizations={myOrganizations.map');
+    expect(contextBlock).toContain('organizations={switchable}');
+    expect(organizationLayout).toMatch(/const switchable = myOrganizations\.map/);
     expect(contextBlock).not.toContain('platformStaff=');
   });
 });
@@ -280,10 +282,11 @@ describe('the page-header contract — the page, not the workspace header, owns 
     expect(code(workspaceShell)).not.toMatch(/PageHeader|<h1/);
   });
 
-  it('PageHeader is one server-safe composition: one <h1>, ancestors-only breadcrumbs, description, meta, actions', () => {
+  it('PageHeader is one server-safe composition: one <h1>, description, meta, actions, and crumbs sent to the workspace bar', () => {
     expect(pageHeader).not.toContain("'use client'");
     expect(code(pageHeader).match(/<h1\b/g)).toHaveLength(1);
-    expect(pageHeader).toContain('<Breadcrumb');
+    expect(pageHeader).toContain('<PageCrumbs');
+    expect(code(pageHeader)).not.toContain('<Breadcrumb');
     for (const prop of ['title', 'crumbs', 'description', 'meta', 'actions']) {
       expect(pageHeader, `PageHeader takes ${prop}`).toMatch(new RegExp(`\\b${prop}\\b`));
     }

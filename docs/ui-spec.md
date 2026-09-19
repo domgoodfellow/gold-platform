@@ -108,7 +108,7 @@ operator does.
 |---|---|---|
 | Operations | Today, Work, Schedule, Resources, Ask, Reports | The loop that gets work done, and what it came to |
 | Records | Customers, Calls, Locations, Assets | Who the work is for and what it is done to — entities rather than activities |
-| Configuration | Pricing, Automations, Custom fields, Team, Guided setup, Settings | What a business sets up once and adjusts rarely |
+| Configuration | Pricing, Automations, Custom fields, Team, Settings | What a business sets up once and adjusts rarely |
 
 A section whose every area belongs to a switched-off module renders as nothing at all, heading
 included — naming a part of the application that is not there for that business would be worse
@@ -173,24 +173,25 @@ with it, so that bar is a sibling of the sidebar rather than a second `<nav>` in
 ## 2a. The header
 
 **Two layers, and they answer different questions.** The sticky `WorkspaceHeader` answers *which
-application am I in* and holds global utilities. The `PageHeader` inside the page answers *which
+application, and where in it* (the breadcrumb trail) and holds global utilities. The `PageHeader` inside the page answers *which
 page or record am I on* and holds that page's controls. They were one bar once, which put
 *Resources*, *Add resource* and *Configure* — all about one page — on the same row as *Agent*,
 which is about the workspace. A control belongs to the layer whose scope it has.
 
 **`WorkspaceHeader` — global, sticky.** It carries its own background: the page moves underneath
-it, and a transparent bar shows rows sliding through the text. It is sparse on desktop by design,
-and holds no title, breadcrumb, status or page action.
+it, and a transparent bar shows rows sliding through the text. It holds the breadcrumb trail and
+no title, status or page action. The page writes the trail (`PageHeader`'s `crumbs`) and it
+renders here, through a slot, so a page never draws its own.
 
 | | What | Which widths |
 |---|---|---|
 | Left | the sidebar trigger | `md` and up in Business Context; every width in Platform Context and Account |
-| Left | the compact context switcher — the business's mark and name, opening the same chooser the sidebar's own switcher does, with the Setup badge beside it while the business is still setting up | below `md` only, Business and Platform Context — the sidebar says it above that |
+| Left | the compact context switcher — the business's mark and name, opening the same chooser the sidebar's own switcher does — nothing about Setup lives in this header at any width | below `md` only, Business and Platform Context — the sidebar says it above that |
+| Left, after the above | the breadcrumb trail — ancestors only, on a page that passes `crumbs` | all |
 | Right, before Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
 | Right, furthest | Agent | all — always the last control in the row |
 
-**`PageHeader` — the page's identity, inside its `AppPage`.** Ancestors as a breadcrumb, the
-page's single `<h1>`, an optional description and metadata line, and the page's actions at the
+**`PageHeader` — the page's identity, inside its `AppPage`.** The page's single `<h1>`, an optional description and metadata line, and the page's actions at the
 right (wrapping below the title on a narrow screen). It shares the canvas the content below it
 sits on; `AppPage` still owns width. It is a Server Component and knows no domain: a page hands it
 whatever actions it offers. **One primary action per page**, then secondary ones — Resources is

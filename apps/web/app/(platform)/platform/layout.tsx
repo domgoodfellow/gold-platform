@@ -18,12 +18,11 @@ import {
 } from '@/lib/domain/catalogue/organization-plans';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
+import { computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import {
   OrgNavBar,
   OrgSidebar,
-  SetupBadge,
-  SetupEntry,
 } from '@/app/organizations/[organizationId]/org-shell';
 
 export default async function PlatformLayout({ children }: LayoutProps<'/platform'>) {
@@ -87,8 +86,18 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
       {organization.name.charAt(0).toUpperCase()}
     </span>
   );
-  const inSetup = organization.operationalState === 'setup';
-  const organizations = myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }));
+  // The same lifecycle treatment the operator shell gives every business: present while SETUP lasts.
+  const setupOverview =
+    organization.operationalState === 'setup'
+      ? await computeSetupOverview(db, { organizationId: organization.id })
+      : null;
+  const setup = setupOverview ? { ready: setupOverview.ready, total: setupOverview.total } : null;
+  const organizations = myOrganizations.map((org) => ({
+    id: org.id,
+    name: org.name,
+    role: org.role,
+    operationalState: org.operationalState,
+  }));
 
   return (
     <div data-brand className="min-h-full">
@@ -106,7 +115,7 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
             enabledModules={[...enabledModules]}
             featureAvailability={[...featureAvailability]}
             capabilities={organization.capabilities}
-            setupEntry={inSetup ? <SetupEntry organizationId={organization.id} /> : null}
+            setup={setup}
             email={email}
             signOutAction={signOutAction}
           />
@@ -126,7 +135,6 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
                   }}
                   organizations={organizations}
                 />
-                {inSetup ? <SetupBadge organizationId={organization.id} /> : null}
               </div>
             }
             beforeActions={
@@ -144,6 +152,7 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
             capabilities={organization.capabilities}
             platformStaff
             isGoldInternal
+            setup={setup}
           />
         }
         agent={<PlatformAgentRail canAnswer={canAnswerAgent} />}

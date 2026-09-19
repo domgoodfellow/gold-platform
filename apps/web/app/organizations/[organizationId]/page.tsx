@@ -15,6 +15,6 @@ export default async function OrganizationRootPage({
   params,
 }: PageProps<'/organizations/[organizationId]'>) {
   const { organizationId } = await params;
-  await requireOrganization(organizationId);
-  redirect(organizationHomeHref(organizationId));
+  const { organization } = await requireOrganization(organizationId);
+  redirect(organizationHomeHref(organizationId, organization.operationalState));
 }

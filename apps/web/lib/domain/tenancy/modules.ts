@@ -143,6 +143,19 @@ export async function setModuleEnabled(
 }
 
 /**
+ * The modules `outstandingModuleSetup` can say something about even when nothing is outstanding —
+ * the ones with a real check of their own below. Setup shows these as complete when they pass;
+ * every other module has nothing business-wide to finish and so is never a setup area (a note
+ * that a dependency is missing is reported for any module regardless of this list).
+ */
+export const MODULES_WITH_READINESS_CHECK: ReadonlySet<ModuleKey> = new Set<ModuleKey>([
+  'billing',
+  'booking',
+  'card_payments',
+  'reception',
+]);
+
+/**
  * What a business still has to do before a module it has switched on does anything (D31). A
  * link alone still lets a business believe it's finished — card payments on, nothing connected
  * behind it — so an enabled module is also checked against what it actually needs to work.

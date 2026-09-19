@@ -2,7 +2,6 @@
 
 import { AccountMenu } from '@/components/containers/account-menu';
 import { Button } from '@/components/controls/button';
-import { Badge } from '@/components/display/data';
 import { ContextSwitcher, type SwitchableOrganization } from '@/components/containers/context-switcher';
 import {
   Sidebar,
@@ -13,6 +12,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -41,7 +41,7 @@ import {
   Phone,
   Plug,
   Settings,
-  Sparkles,
+  ListChecks,
   SlidersHorizontal,
   Tag,
   UserCog,
@@ -92,7 +92,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   automations: Zap,
   fields: SlidersHorizontal,
   roles: UserCog,
-  setup: Sparkles,
+  setup: ListChecks,
   integrations: Plug,
   settings: Settings,
 };
@@ -255,6 +255,7 @@ export function OrgNavBar({
   featureAvailability,
   platformStaff = false,
   isGoldInternal = false,
+  setup = null,
 }: {
   organizationId: string;
   enabledModules: string[];
@@ -263,6 +264,8 @@ export function OrgNavBar({
   featureAvailability: string[];
   platformStaff?: boolean;
   isGoldInternal?: boolean;
+  /** Present only while the business is in SETUP — the layout decides, and it leaves the bar the moment the business is LIVE. */
+  setup?: SetupProgress | null;
 }) {
   const pathname = usePathname();
   const segment = currentSegment(pathname);
@@ -276,6 +279,11 @@ export function OrgNavBar({
       className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background md:hidden"
     >
       <ul className="flex gap-1 overflow-x-auto p-2">
+        {setup ? (
+          <li className="shrink-0">
+            <SetupNavLink organizationId={organizationId} setup={setup} />
+          </li>
+        ) : null}
         {visibleAreas(enabled, capabilitySet, featureSet).map((area) => (
           <li key={area.segment} className="shrink-0">
             <PhoneNavLink
@@ -295,13 +303,17 @@ export function OrgNavBar({
   );
 }
 
+/** How far Setup has got, as the shell needs it: areas ready out of areas listed. */
+export type SetupProgress = { ready: number; total: number };
+
 /**
- * The elevated, accent-coloured entry Business Setup gets instead of an ordinary row — not a
- * `SidebarGroupLabel`'d group of its own, since `SetupBadge`/the layout decide *when* (only
- * while `organization.operationalState === 'setup'`), and this is just what it looks like once
- * that's true. Same collapse-to-icon and tooltip behaviour as every other row.
+ * The one Setup treatment while a business is in SETUP — an ordinary row at the top of the
+ * sidebar carrying the count ("4 of 6"), not a second call to action beside a header badge. The
+ * layout renders it only while `operationalState === 'setup'`, so it is gone the moment the
+ * business is LIVE with nothing left to remember to turn off. Same collapse-to-icon and tooltip
+ * behaviour as every other row.
  */
-export function SetupEntry({ organizationId }: { organizationId: string }) {
+export function SetupEntry({ organizationId, setup }: { organizationId: string; setup: SetupProgress }) {
   const current = currentSegment(usePathname()) === 'setup';
 
   return (
@@ -311,17 +323,47 @@ export function SetupEntry({ organizationId }: { organizationId: string }) {
           <SidebarMenuButton
             asChild
             isActive={current}
-            tooltip="Set up your business"
-            className="bg-accent text-on-accent hover:bg-accent hover:text-on-accent data-[active=true]:bg-accent data-[active=true]:text-on-accent"
+            tooltip={`Setup — ${setup.ready} of ${setup.total} ready`}
           >
             <Link href={areaHref(organizationId, 'setup')} aria-current={current ? 'page' : undefined}>
-              <Sparkles aria-hidden />
-              <span>Set up your business</span>
+              <ListChecks aria-hidden />
+              <span>Setup</span>
             </Link>
           </SidebarMenuButton>
+          <SidebarMenuBadge>
+            {setup.ready} of {setup.total}
+          </SidebarMenuBadge>
         </SidebarMenuItem>
       </SidebarMenu>
     </SidebarGroup>
+  );
+}
+
+/**
+ * The phone's rendering of the same lifecycle treatment: the first item in the bottom bar, only
+ * while the business is in SETUP. It is the bar's own row, not a header badge, and `ui-spec.md` §2's
+ * rule against a permanent extra bottom-bar destination holds because it disappears at Launch.
+ */
+export function SetupNavLink({ organizationId, setup }: { organizationId: string; setup: SetupProgress }) {
+  const current = currentSegment(usePathname()) === 'setup';
+
+  return (
+    <Link
+      href={areaHref(organizationId, 'setup')}
+      aria-current={current ? 'page' : undefined}
+      aria-label={`Setup, ${setup.ready} of ${setup.total} ready`}
+      className={cx(
+        FOCUS_RING,
+        'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm',
+        current ? 'bg-foreground font-medium text-background' : 'hover:bg-black/5 dark:hover:bg-white/10',
+      )}
+    >
+      <ListChecks aria-hidden size={18} className="shrink-0" />
+      <span className="min-w-0">Setup</span>
+      <span className="text-xs tabular-nums opacity-80">
+        {setup.ready} of {setup.total}
+      </span>
+    </Link>
   );
 }
 
@@ -373,7 +415,7 @@ export function OrgSidebar({
   enabledModules,
   capabilities,
   featureAvailability,
-  setupEntry,
+  setup,
   email,
   signOutAction,
   ...props
@@ -389,8 +431,8 @@ export function OrgSidebar({
   enabledModules: string[];
   capabilities: Capability[];
   featureAvailability: string[];
-  /** `<SetupEntry />`, or nothing — the layout decides, from `operationalState`, the same place `SetupBadge` is decided. */
-  setupEntry?: ReactNode;
+  /** Present only while the business is in SETUP — the layout decides, from `operationalState`. */
+  setup?: SetupProgress | null;
   email: string;
   signOutAction: () => Promise<void>;
 } & React.ComponentProps<typeof Sidebar>) {
@@ -404,7 +446,7 @@ export function OrgSidebar({
         />
       </SidebarHeader>
       <SidebarContent>
-        {setupEntry}
+        {setup ? <SetupEntry organizationId={organizationId} setup={setup} /> : null}
         <OrgNav
           organizationId={organizationId}
           enabledModules={enabledModules}
@@ -416,18 +458,5 @@ export function OrgSidebar({
       <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  );
-}
-
-/**
- * The header's version of the same fact, for the width the sidebar is not there at all —
- * `ui-spec.md` §2's rule against a second permanent bottom-nav destination on a phone is why
- * this is a header treatment rather than a fourth thing in `OrgNavBar`.
- */
-export function SetupBadge({ organizationId }: { organizationId: string }) {
-  return (
-    <Link href={areaHref(organizationId, 'setup')} className={cx(FOCUS_RING, 'rounded shrink-0')}>
-      <Badge tone="accent">Setting up</Badge>
-    </Link>
   );
 }

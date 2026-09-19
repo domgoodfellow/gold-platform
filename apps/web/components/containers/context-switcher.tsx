@@ -14,6 +14,7 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@gold/ui/components/sidebar';
 import { Building2, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/controls/button';
+import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 import { organizationHomeHref } from '@/lib/navigation';
 
 export const GOLD_MARK = (
@@ -26,6 +27,7 @@ export type SwitchableOrganization = {
   id: string;
   name: string;
   role: string;
+  operationalState: OperationalState;
 };
 
 export type SwitcherContext =
@@ -76,7 +78,7 @@ function ContextSwitcherMenuContent({
           </DropdownMenuLabel>
           {businesses.map((organization) => (
             <DropdownMenuItem key={organization.id} asChild>
-              <Link href={organizationHomeHref(organization.id)} className="flex items-center gap-2">
+              <Link href={organizationHomeHref(organization.id, organization.operationalState)} className="flex items-center gap-2">
                 <Building2 className="shrink-0" />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate">{organization.name}</span>

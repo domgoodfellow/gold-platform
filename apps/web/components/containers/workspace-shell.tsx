@@ -2,6 +2,7 @@
 
 import { Fragment, type ReactNode } from 'react';
 import { AppShell } from './app-shell';
+import { WorkspaceCrumbsProvider } from './workspace-crumbs';
 import { WorkspaceRailProvider, WorkspaceRightRail } from './workspace-right-rail';
 
 /**
@@ -24,16 +25,18 @@ export function WorkspaceShell({
 }) {
   return (
     <WorkspaceRailProvider>
-      <WorkspaceRightRail
-        main={
-          <AppShell sidebar={sidebar} header={header} bottomBar={bottomBar}>
-            {children}
-          </AppShell>
-        }
-      />
-      {/* `agent` is an element the calling layout created on the server, and sitting beside the
-          rail as an unkeyed sibling trips React's dev key check on every render. */}
-      <Fragment key="agent">{agent}</Fragment>
+      <WorkspaceCrumbsProvider>
+        <WorkspaceRightRail
+          main={
+            <AppShell sidebar={sidebar} header={header} bottomBar={bottomBar}>
+              {children}
+            </AppShell>
+          }
+        />
+        {/* `agent` is an element the calling layout created on the server, and sitting beside the
+            rail as an unkeyed sibling trips React's dev key check on every render. */}
+        <Fragment key="agent">{agent}</Fragment>
+      </WorkspaceCrumbsProvider>
     </WorkspaceRailProvider>
   );
 }

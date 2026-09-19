@@ -1,4 +1,5 @@
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
+import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 
 /**
  * The areas of one business, and the only place the platform's own nouns are written down.
@@ -280,7 +281,7 @@ export const AREAS: readonly Area[] = [
   { segment: 'roles', label: 'Team', group: 'configuration', relevantCapabilities: ['role.manage'] },
   // `sidebar: false`: Business Setup is implementation infrastructure, not a permanent tenant
   // area (Product Contract, Slice 1/3). While a business is in SETUP it already has its own
-  // elevated shell treatment (`SetupEntry`/`SetupBadge` in `layout.tsx`) — a second, equal-weight
+  // lifecycle shell treatment (`SetupEntry` in the sidebar, `SetupNavLink` in the phone bar) — a second, equal-weight
   // row in the ordinary Configuration group would be the very thing that treatment exists to
   // avoid. While LIVE, the route recedes to a Settings hub card instead of the sidebar. The
   // route, its module gate and `/setup` itself are all unchanged — only where it is *found*
@@ -289,7 +290,7 @@ export const AREAS: readonly Area[] = [
   // (`20260918000001`'s seed has no such runtime mapping) — a real gap, not an oversight, kept
   // on the legacy module-only gate rather than inventing a catalogue identifier that doesn't
   // exist yet.
-  { segment: 'setup', label: 'Guided setup', group: 'configuration', module: 'drafting', sidebar: false, relevantCapabilities: ['configuration.propose'] },
+  { segment: 'setup', label: 'Setup', group: 'configuration', module: 'drafting', sidebar: false, relevantCapabilities: ['configuration.propose'] },
   // Its own area, not folded into Settings — a business returns here often enough (checking a
   // run, adding a source) that it isn't a set-once switch the way pricing or automations config
   // is, the same reasoning that keeps Automations and Guided setup each their own area.
@@ -367,12 +368,13 @@ export function areaHref(organizationId: string, segment: string): string {
 
 /**
  * "Enter this business" — the one canonical destination, for every caller whose job is switching
- * into an organization rather than linking to a specific area inside one. Today that is
- * `AREAS[0]` (Today), but callers ask for "home", not for what the first Area happens to be, so
- * that fact lives here once rather than being re-derived (`AREAS[0].segment`) at each call site.
+ * into an organization rather than linking to a specific area inside one. **The lifecycle state is
+ * part of the answer and a required argument, so no caller can forget to ask:** a business still
+ * in SETUP is entered through Setup, a LIVE one through Today (`AREAS[0]`). Direct navigation to
+ * any other area is unaffected — SETUP is a lifecycle state, not a route prison.
  */
-export function organizationHomeHref(organizationId: string): string {
-  return areaHref(organizationId, AREAS[0].segment);
+export function organizationHomeHref(organizationId: string, operationalState: OperationalState): string {
+  return areaHref(organizationId, operationalState === 'setup' ? 'setup' : AREAS[0].segment);
 }
 
 /** One function rather than a separate href and label lookup — a link with the wrong word on it is the same dead end as a link to the wrong place. */

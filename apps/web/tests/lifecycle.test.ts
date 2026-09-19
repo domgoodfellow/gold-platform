@@ -2,7 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { describe, expect, it } from 'vitest';
-import { computeReadiness, launchOrganization } from '@/lib/domain/tenancy/lifecycle';
+import { createWorkItemType } from '@/lib/domain/work-items/types';
+import {
+  computeReadiness,
+  computeSetupOverview,
+  launchOrganization,
+} from '@/lib/domain/tenancy/lifecycle';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { createOrganization, getOrganization } from '@/lib/domain/tenancy/organizations';
 import { foundBusiness, newAccountEmail } from './helpers/founding';
@@ -227,5 +232,76 @@ describe('a business starts in setup and someone launches it', () => {
     );
     await pg.end();
     expect(rows[0].operational_state).toBe('setup');
+  });
+});
+
+/**
+ * THE SETUP COCKPIT'S AREAS. Progress counts finished *areas*, importance is only ever what the
+ * database and `computeReadiness` already say, and an optional gap is a gap — never a blocker.
+ */
+describe('the setup overview — areas, importance and progress', () => {
+  it('lists a fresh business’s areas with no blocker, one recommendation and optional kernel gaps', async () => {
+    const { db, organizationId } = await freshOrganization();
+
+    const overview = await computeSetupOverview(db, { organizationId });
+
+    expect(overview.blockers).toEqual([]);
+    const byKey = new Map(overview.areas.map((area) => [area.key, area]));
+    // Billing is on by default and nothing is priced: a real gap, but the database does not block on it.
+    expect(byKey.get('billing')).toMatchObject({ state: 'incomplete', importance: 'recommended' });
+    // Kernel configuration is never required — a solo tenant with none of it is a valid business.
+    for (const key of ['work', 'resources', 'locations']) {
+      expect(byKey.get(key)).toMatchObject({ state: 'incomplete', importance: 'optional' });
+    }
+    expect(overview.ready).toBe(0);
+    expect(overview.total).toBe(overview.areas.length);
+    expect(overview.recommendedOpen).toBe(1);
+    expect(overview.optionalOpen).toBe(3);
+    // Each area points at the surface that owns it, not at a copy of it.
+    expect(byKey.get('work')?.area.href).toBe(`/organizations/${organizationId}/work/configuration`);
+    expect(byKey.get('billing')?.area.href).toBe(`/organizations/${organizationId}/pricing`);
+  });
+
+  it('counts an area as ready the moment its real fact is true, and orders required gaps first', async () => {
+    const { db, organizationId } = await freshOrganization();
+
+    await createWorkItemType(db, { organizationId, name: 'Repair' });
+    await setModuleEnabled(db, { organizationId, key: 'booking', enabled: true });
+
+    const overview = await computeSetupOverview(db, { organizationId });
+    const byKey = new Map(overview.areas.map((area) => [area.key, area]));
+
+    expect(byKey.get('work')).toMatchObject({ state: 'complete' });
+    expect(overview.ready).toBe(1);
+    // A switched-on module the database would refuse a launch for is the one required area.
+    expect(overview.blockers.map((area) => area.key)).toEqual(['booking']);
+    expect(overview.areas[0]).toMatchObject({ key: 'booking', state: 'incomplete', importance: 'required' });
+    // Finished areas sort last.
+    expect(overview.areas[overview.areas.length - 1].state).toBe('complete');
+  });
+
+  it('agrees with what Launch actually refuses — blockers here are exactly the ones the database names', async () => {
+    const { db, organizationId } = await freshOrganization();
+    await setModuleEnabled(db, { organizationId, key: 'booking', enabled: true });
+
+    const [overview, readiness] = await Promise.all([
+      computeSetupOverview(db, { organizationId }),
+      computeReadiness(db, { organizationId }),
+    ]);
+    expect(overview.blockers.map((area) => area.key)).toEqual(readiness.blockers.map((item) => item.key));
+    await expect(launchOrganization(db, { organizationId })).rejects.toMatchObject({
+      code: 'organizations.not_ready',
+    });
+  });
+
+  it('launches with a recommendation and every optional area still open', async () => {
+    const { db, organizationId } = await freshOrganization();
+    const overview = await computeSetupOverview(db, { organizationId });
+    expect(overview.recommendedOpen).toBeGreaterThan(0);
+    expect(overview.optionalOpen).toBeGreaterThan(0);
+    expect(overview.blockers).toEqual([]);
+
+    await launchOrganization(db, { organizationId });
+    expect((await getOrganization(db, organizationId))?.operationalState).toBe('live');
   });
 });

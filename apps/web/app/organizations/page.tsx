@@ -74,7 +74,7 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
     redirect('/platform');
   }
   if (landing.kind === 'enter') {
-    redirect(organizationHomeHref(landing.organizationId));
+    redirect(organizationHomeHref(landing.organizationId, landing.operationalState));
   }
 
   return (
@@ -139,7 +139,7 @@ export default async function OrganizationsPage({ searchParams }: PageProps<'/or
           {organizations.map((organization) => (
             <li key={organization.id} className="flex items-baseline justify-between gap-4 py-3">
               <Link
-                href={organizationHomeHref(organization.id)}
+                href={organizationHomeHref(organization.id, organization.operationalState)}
                 className="font-medium underline underline-offset-4"
               >
                 {organization.name}

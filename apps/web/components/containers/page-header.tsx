@@ -1,14 +1,8 @@
-import { Fragment, type ReactNode } from 'react';
-import Link from 'next/link';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbSeparator,
-} from '@gold/ui/components/breadcrumb';
-import { cx, FOCUS_RING } from '../class-names';
+import type { ReactNode } from 'react';
+import { cx } from '../class-names';
+import { PageCrumbs, type Crumb } from './workspace-crumbs';
 
-export type PageHeaderCrumb = { label: ReactNode; href?: string };
+export type PageHeaderCrumb = Crumb;
 
 /**
  * The one page/record identity: which page am I on, and what can I do to it. It sits inside the
@@ -42,30 +36,7 @@ export function PageHeader({
   return (
     <header className={cx('flex flex-wrap items-start justify-between gap-x-4 gap-y-3', className ?? 'mb-6')}>
       <div className="min-w-0 flex-1 basis-64">
-        {crumbs && crumbs.length > 0 ? (
-          <Breadcrumb className="mb-1">
-            <BreadcrumbList className="gap-1 text-sm">
-              {crumbs.map((crumb, index) => (
-                <Fragment key={index}>
-                  {index > 0 ? <BreadcrumbSeparator /> : null}
-                  <BreadcrumbItem className="min-w-0">
-                    {crumb.href ? (
-                      <Link
-                        href={crumb.href}
-                        className={cx('truncate rounded underline-offset-4 hover:text-foreground hover:underline', FOCUS_RING)}
-                      >
-                        {crumb.label}
-                      </Link>
-                    ) : (
-                      // An ancestor label with no route of its own — a group name, not a page.
-                      <span className="truncate">{crumb.label}</span>
-                    )}
-                  </BreadcrumbItem>
-                </Fragment>
-              ))}
-            </BreadcrumbList>
-          </Breadcrumb>
-        ) : null}
+        {crumbs && crumbs.length > 0 ? <PageCrumbs crumbs={crumbs} /> : null}
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         {description ? <p className="mt-1 max-w-3xl text-sm text-muted">{description}</p> : null}
         {meta ? <div className="mt-1 text-sm text-muted">{meta}</div> : null}

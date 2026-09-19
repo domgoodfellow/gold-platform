@@ -130,9 +130,9 @@ state granted through the same ordinary path the platform uses for other organiz
 business uses* — flip Assets and Billing and watch the sidebar change; switching Billing off also
 takes the quote, invoice and margin off every job screen.
 
-### 2b. The shortcut, if this deployment has one — *Guided setup*
+### 2b. The shortcut, if this deployment has one — *Set up faster with Agent*
 
-Already in the sidebar. Describe the business in your own words — the work, how a job moves start
+On the Setup screen, below the areas and the launch review. Describe the business in your own words — the work, how a job moves start
 to finish, what you charge, when you're open — and get back a proposed setup with questions
 attached for whatever it couldn't work out.
 

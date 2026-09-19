@@ -67,42 +67,35 @@ describe('Today, with nothing configured yet', () => {
 
     expect(source).toContain('listWorkItemTypes');
     expect(source).toContain('typesConfigured={types.length > 0}');
-    expect(source).toMatch(/!typesConfigured[\s\S]{0,300}organizations\/\$\{organizationId\}\/work/);
+    expect(source).toMatch(/!typesConfigured[\s\S]{0,300}organizations\/\$\{organizationId\}\/work\/configuration/);
   });
 });
 
 describe('Today, structural composition (source scan)', () => {
   const source = `${readFileSync(TODAY, 'utf8')}\n${readFileSync(TODAY_FEATURE, 'utf8')}`;
 
-  it('reads readiness from the existing Slice 1 mechanism rather than a second calculation', () => {
+  it('reads readiness from the existing mechanism rather than a second calculation', () => {
     expect(source).toContain("import { computeReadiness } from '@/lib/domain/tenancy/lifecycle'");
     expect(source).toContain('computeReadiness(db, { organizationId })');
   });
 
-  it('puts readiness and activity before operational widgets while in SETUP, and omits readiness entirely once LIVE', () => {
-    // Rendered exactly once anywhere in the file — if LIVE also rendered it, this would be 2.
-    const readinessOccurrences = source.match(/readinessWidget : null/g) ?? [];
-    expect(readinessOccurrences, 'readinessWidget is rendered more than once, or not at all').toHaveLength(1);
+  it('shows one restrained setup notice in SETUP and never the full Setup dashboard', () => {
+    // Today is the operating cockpit. The readiness checklist, its blocker/warning lists and the
+    // launch controls live on Setup — here there is a sentence, a count and a way back.
+    expect(source).not.toContain('readinessWidget');
+    expect(source).not.toMatch(/Setup readiness/);
+    expect(source).not.toMatch(/LaunchForm|Blocker'|Warning'/);
+    expect(source).toContain('This business is still being set up.');
+    expect(source).toContain('Continue setup');
 
-    const setupTernary = source.indexOf('{inSetup ? readinessWidget');
-    const readinessIndex = setupTernary;
-    const activityIndex = source.indexOf('{inSetup ? activityWidget', setupTernary);
-    const operationalIndex = source.indexOf('{operations}', setupTernary);
-
-    expect(setupTernary).toBeGreaterThan(-1);
-    // The one rendering of readinessWidget sits inside the `inSetup ? (` branch, ahead of both
-    // activity and the operational widgets — proving SETUP leads with readiness rather than
-    // merely including it somewhere on the page.
-    expect(readinessIndex).toBe(setupTernary);
-    expect(readinessIndex).toBeLessThan(activityIndex);
-    expect(activityIndex).toBeLessThan(operationalIndex);
+    // Rendered once, gated on the lifecycle state, and the widget grid is the same in both states.
+    expect(source.match(/\{setupNotice\}/g) ?? []).toHaveLength(1);
+    expect(source).toMatch(/const setupNotice = inSetup \?/);
+    expect(source).toContain('<WidgetGrid>{operations}{activityWidget}</WidgetGrid>');
   });
 
   it('never claims a business with zero blockers is complete or launched', () => {
-    expect(source).toContain('Ready to launch');
     expect(source).not.toMatch(/Setup complete/i);
-    // "Not ready to launch" contains "launch" adjacent to a negative, which is fine; what must
-    // never appear is a bare claim that setup — or the business — is finished or live.
     expect(source).not.toMatch(/setup is (complete|finished|done)/i);
   });
 

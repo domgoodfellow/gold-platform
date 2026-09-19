@@ -55,7 +55,12 @@ export default async function AccountPage() {
     <AccountSidebar
       email={email}
       signOutAction={signOutAction}
-      businesses={myOrganizations.map((org) => ({ id: org.id, name: org.name, role: org.role }))}
+      businesses={myOrganizations.map((org) => ({
+        id: org.id,
+        name: org.name,
+        role: org.role,
+        operationalState: org.operationalState,
+      }))}
     />
   );
 

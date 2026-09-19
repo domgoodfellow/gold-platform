@@ -1,8 +1,11 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from './actor';
-import { listEnabledModules, outstandingModuleSetup } from './modules';
-import { MODULES, moduleConfiguration } from '@/lib/navigation';
+import { listLocations } from '@/lib/domain/locations/locations';
+import { listResources } from '@/lib/domain/resources/resources';
+import { listWorkItemTypes } from '@/lib/domain/work-items/types';
+import { listEnabledModules, MODULES_WITH_READINESS_CHECK, outstandingModuleSetup } from './modules';
+import { areaHref, areaLabel, MODULES, moduleConfiguration } from '@/lib/navigation';
 
 /**
  * SETUP or LIVE. Nothing else, on purpose (see the migration this ships with) — suspension,
@@ -83,6 +86,149 @@ export async function computeReadiness(
   // Nothing populates this yet. A requirement invented to fill it would be exactly the "look
   // complete" mistake this function exists to refuse.
   return { blockers, warnings, optional: [] };
+}
+
+/**
+ * One thing a business may set up, and whether it is done. Importance exists only while
+ * something is outstanding — a finished area has no importance worth reporting.
+ *
+ * **Importance is never invented here.** `required` is exactly what the database names as a
+ * launch blocker; `recommended` is a switched-on module with a note that does not block; `optional`
+ * is kernel configuration (work, resources, locations), which `computeReadiness` documents as
+ * never a requirement of a business on its own.
+ */
+export type SetupImportance = 'required' | 'recommended' | 'optional';
+
+export type SetupArea = {
+  key: string;
+  label: string;
+  /** Application state, in the platform's own voice. */
+  message: string;
+  /** The canonical surface that owns this configuration. */
+  area: { href: string; label: string };
+} & ({ state: 'complete' } | { state: 'incomplete'; importance: SetupImportance });
+
+export type SetupOverview = {
+  /** Required gaps first, then recommended, then optional, then everything finished. */
+  areas: SetupArea[];
+  blockers: SetupArea[];
+  ready: number;
+  total: number;
+  recommendedOpen: number;
+  optionalOpen: number;
+};
+
+const IMPORTANCE_ORDER: Record<string, number> = { required: 0, recommended: 1, optional: 2 };
+
+/**
+ * The setup cockpit's whole answer, built from `computeReadiness` (the module areas, and which of
+ * them block) plus three plain facts about the kernel configuration a business has or has not
+ * done. A count of areas, never a count of fields — 4 of 6 means four things are finished.
+ *
+ * Kernel areas are always optional: a solo tenant with none of them is a valid business, and
+ * saying otherwise here would contradict `computeReadiness` and the database's own launch check.
+ */
+export async function computeSetupOverview(
+  db: Db,
+  input: { organizationId: string },
+): Promise<SetupOverview> {
+  const { organizationId } = input;
+  const [readiness, enabled, types, resources, locations] = await Promise.all([
+    computeReadiness(db, { organizationId }),
+    listEnabledModules(db, { organizationId }),
+    listWorkItemTypes(db, { organizationId }),
+    listResources(db, { organizationId, limit: 1 }),
+    listLocations(db, { organizationId, limit: 1 }),
+  ]);
+
+  const moduleArea = (item: ReadinessRequirement, importance: SetupImportance): SetupArea => ({
+    key: item.key,
+    label: MODULES.find((entry) => entry.key === item.key)?.label ?? item.key,
+    message: item.message,
+    area: item.area,
+    state: 'incomplete',
+    importance,
+  });
+
+  const areas: SetupArea[] = [
+    ...readiness.blockers.map((item) => moduleArea(item, 'required')),
+    ...readiness.warnings.map((item) => moduleArea(item, 'recommended')),
+  ];
+
+  // A checked module with nothing outstanding is finished, and worth saying so.
+  const open = new Set(areas.map((entry) => entry.key));
+  for (const sold of MODULES) {
+    if (!enabled.has(sold.key) || open.has(sold.key) || !MODULES_WITH_READINESS_CHECK.has(sold.key)) continue;
+    areas.push({
+      key: sold.key,
+      label: sold.label,
+      message: 'Nothing outstanding.',
+      area: moduleConfiguration(organizationId, sold),
+      state: 'complete',
+    });
+  }
+
+  const kernel = (
+    key: string,
+    segment: string,
+    href: string,
+    count: number,
+    done: string,
+    missing: string,
+  ): SetupArea => ({
+    key,
+    label: areaLabel(segment),
+    message: count > 0 ? done : missing,
+    area: { href, label: areaLabel(segment) },
+    ...(count > 0
+      ? { state: 'complete' as const }
+      : { state: 'incomplete' as const, importance: 'optional' as const }),
+  });
+
+  areas.push(
+    kernel(
+      'work',
+      'work',
+      `${areaHref(organizationId, 'work')}/configuration`,
+      types.length,
+      types.length === 1 ? '1 kind of work is defined.' : `${types.length} kinds of work are defined.`,
+      'No kinds of work are defined.',
+    ),
+    kernel(
+      'resources',
+      'resources',
+      areaHref(organizationId, 'resources'),
+      resources.total,
+      'Resources exist to assign to a job.',
+      'No resources exist, so nothing can be assigned to a job.',
+    ),
+    kernel(
+      'locations',
+      'locations',
+      areaHref(organizationId, 'locations'),
+      locations.total,
+      'Locations exist to attach to a job.',
+      'No locations exist.',
+    ),
+  );
+
+  areas.sort((a, b) => {
+    const rank = (entry: SetupArea) =>
+      entry.state === 'complete' ? 3 : IMPORTANCE_ORDER[entry.importance];
+    return rank(a) - rank(b);
+  });
+
+  const count = (importance: SetupImportance) =>
+    areas.filter((entry) => entry.state === 'incomplete' && entry.importance === importance).length;
+
+  return {
+    areas,
+    blockers: areas.filter((entry) => entry.state === 'incomplete' && entry.importance === 'required'),
+    ready: areas.filter((entry) => entry.state === 'complete').length,
+    total: areas.length,
+    recommendedOpen: count('recommended'),
+    optionalOpen: count('optional'),
+  };
 }
 
 /** The database's own answer to which module keys currently block a launch. */

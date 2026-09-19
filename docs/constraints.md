@@ -1465,3 +1465,26 @@ advice.
   file now agrees with it.
 - **`market.md` and this file once disagreed about the tenant marketing surface.** M16 now owns
   public distribution while `market.md` owns demand and commercial hypotheses.
+
+### D53 — Setup is a lifecycle the shell and every entry follow, and a map of configuration that lives elsewhere
+
+**Decision.** While `operationalState === 'setup'`, a business is entered through `/setup`, the
+sidebar and the phone bottom bar each carry one Setup item with its count ("4 of 6"), and Today
+shows a single sentence pointing back. At Launch all three stop, on their own: the layout reads the
+state once and hands both renderings the same value, and Launch revalidates the layout and lands on
+Today. Setup lists *areas*, never fields, and every area links to the workspace that owns its
+configuration; nothing on `/setup` edits a business. Importance is only what the domain already
+says: `required` is exactly what `organization_launch_blockers` names (I27), `recommended` is a
+switched-on module with a note that does not block, and `optional` is kernel configuration (work,
+resources, locations), which `computeReadiness` already refuses to make a requirement. Drafting is
+one optional card on the page; the areas and Launch render outside every drafting condition.
+
+**Why.** Setup had seven separate manifestations — a sidebar call to action, a header badge, a
+readiness widget on Today, a banner, a section on `/setup`, a Settings card and a creation redirect
+that depended on whether drafting existed — and none of them agreed. One lifecycle state, one entry
+decision (`organizationHomeHref`, I44) and one place that lists areas replaces them.
+
+**Not done, deliberately.** No area is made *required* to fill a fuller-looking cockpit: a Business
+(currency, profile) or Connections area would need a fact the domain does not hold, and a required
+Work area would contradict the launch blockers. Readiness reads wanted modules, not wanted ∩ paid
+(D41), as `computeReadiness` always has.

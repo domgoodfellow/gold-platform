@@ -23,7 +23,7 @@ export default async function TodayPage({
   const inSetup = organization.operationalState === 'setup';
   const date = todayInZone(organization.timezone);
   const within = zonedDayRange(date, organization.timezone);
-  const [schedule, workItems, types, enabledModules, readiness, activity] = await Promise.all([
+  const [schedule, workItems, types, enabledModules, setupReadiness, activity] = await Promise.all([
     listSchedule(db, { organizationId, within, on: { date, timeZone: organization.timezone } }),
     listWorkItems(db, { organizationId }),
     listWorkItemTypes(db, { organizationId }),
@@ -58,7 +58,7 @@ export default async function TodayPage({
       committed={committed}
       unscheduled={unscheduled}
       workItems={workItems}
-      readiness={readiness}
+      setupRemaining={setupReadiness ? setupReadiness.blockers.length : null}
       activity={activity}
       failedRuns={failedRuns}
       failedMessages={failedMessages}
