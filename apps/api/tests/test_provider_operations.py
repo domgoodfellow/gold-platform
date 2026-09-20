@@ -21,7 +21,7 @@ from app.core.config import ProviderOperationsSettings  # noqa: E402
 from app.domains.errors import NotFoundError, ValidationError  # noqa: E402
 from app.domains.providers import operations as ops  # noqa: E402
 from app.domains.providers.operations import OperateCommand, ProviderRefusedError, operate  # noqa: E402
-from app.integrations.twilio import accounts as twilio  # noqa: E402
+from app.providers.twilio import accounts as twilio  # noqa: E402
 
 SETTINGS = ProviderOperationsSettings(
     supabase_url="http://db.test", supabase_publishable_key="anon", supabase_jwt_secret="signing"
@@ -177,4 +177,4 @@ def test_a_missing_argument_is_a_validation_refusal(monkeypatch) -> None:
 
 def test_the_domain_module_names_no_vendor() -> None:
     source = Path(ops.__file__).read_text(encoding="utf-8").lower()
-    assert "twilio" not in source.replace("app.integrations", "")
+    assert "twilio" not in source.replace("app.providers", "")

@@ -5,13 +5,14 @@ import { cx } from '../class-names';
 /**
  * Never coloured by what the value means (ui-spec §7) — the platform can't tell if a tenant's
  * status word is good or bad. `tone="accent"` is the tenant's own colour, meaning "this one",
- * never "this one is good".
+ * never "this one is good". `tone="danger"` is for a state the platform itself reports as failing
+ * (a connection that needs attention) and never for a word a tenant wrote.
  */
 export function Badge({
   tone = 'neutral',
   className,
   ...props
-}: ComponentProps<'span'> & { tone?: 'neutral' | 'accent' | 'success' }) {
+}: ComponentProps<'span'> & { tone?: 'neutral' | 'accent' | 'success' | 'danger' }) {
   return (
     <ShadcnBadge
       variant={tone === 'accent' ? 'default' : 'outline'}
@@ -22,6 +23,8 @@ export function Badge({
           ? 'bg-accent text-on-accent'
           : tone === 'success'
             ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+          : tone === 'danger'
+            ? 'border-danger/30 bg-danger/10 text-danger'
           : 'border border-border text-muted',
         className,
       )}

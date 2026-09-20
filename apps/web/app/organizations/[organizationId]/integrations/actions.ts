@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { disconnectConnection, recordConnection } from '@/lib/domain/integrations/connections';
+import { setAssistantAccess } from '@/lib/domain/integrations/assistant-grants';
 import { checkConnection } from '@/lib/domain/integrations/oauth';
 
 export type ConnectState = { error: string | null };
@@ -78,4 +79,25 @@ export async function checkConnectionAction(_previous: CheckState, formData: For
   revalidatePath(`/organizations/${organizationId}/integrations`);
   revalidatePath(`/organizations/${organizationId}/integrations/${connectionId}`);
   return { error: null, checked: true };
+}
+
+export type AccessState = { error: string | null };
+
+/** Grant or withdraw the assistant's right to read one resource. A connection never implies it. */
+export async function setAssistantAccessAction(_previous: AccessState, formData: FormData): Promise<AccessState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const connectionId = String(formData.get('connectionId') ?? '');
+  const resourceId = String(formData.get('resourceId') ?? '');
+  const allowed = formData.get('allowed') === 'true';
+
+  try {
+    await setAssistantAccess(db, { organizationId, resourceId, allowed });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/integrations/${connectionId}`);
+  return { error: null };
 }

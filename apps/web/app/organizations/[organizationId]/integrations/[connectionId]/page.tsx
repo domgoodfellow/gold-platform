@@ -11,7 +11,8 @@ import { connectorLogoUrl, getConnector, isConnectable } from '@/lib/domain/inte
 import { listResources } from '@/lib/domain/integrations/resources';
 import { requireOrganization } from '@/lib/route/organization';
 import { usesSignIn } from '@/lib/adapters/integrations';
-import { CheckConnectionForm, DisconnectForm } from '../connection-actions';
+import { listGrantedResourceIds } from '@/lib/domain/integrations/assistant-grants';
+import { AssistantAccessForm, CheckConnectionForm, DisconnectForm } from '../connection-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,7 @@ export default async function ConnectionDetailPage({
     listResources(db, { organizationId, connectionId }),
     getConnector(db, connection.connectorKey),
   ]);
+  const granted = await listGrantedResourceIds(db, { organizationId, resourceIds: resources.map((r) => r.id) });
   const name = connector?.name ?? connection.connectorKey;
   const needsReconnect =
     connector !== null && connector.authMethod !== 'none' && isConnectable(connector) && connection.status !== 'active';
@@ -96,7 +98,9 @@ export default async function ConnectionDetailPage({
 
       <Section className="mt-8">
         <SectionHeading>Resources</SectionHeading>
-        <Hint className="mt-1">What GOLD reads from this connection.</Hint>
+        <Hint className="mt-1">
+          What GOLD can reach through this connection. Connecting does not let the assistant read any of it — turn that on for each resource.
+        </Hint>
         <div className="mt-3">
           <DataTable
             rows={resources}
@@ -109,6 +113,18 @@ export default async function ConnectionDetailPage({
                 key: 'status',
                 header: 'Status',
                 cell: (r) => <Badge tone={r.status === 'active' ? 'success' : 'neutral'}>{r.status.replace(/_/g, ' ')}</Badge>,
+              },
+              {
+                key: 'assistant',
+                header: 'Assistant',
+                cell: (r) =>
+                  mayManage ? (
+                    <AssistantAccessForm organizationId={organizationId} connectionId={connectionId} resourceId={r.id} allowed={granted.has(r.id)} />
+                  ) : granted.has(r.id) ? (
+                    'May read'
+                  ) : (
+                    'No access'
+                  ),
               },
               {
                 key: 'actions',

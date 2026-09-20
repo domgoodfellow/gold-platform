@@ -6,7 +6,7 @@ runtime's) and selects the connection row (a business sees its own and nobody el
 answer means *not yours, or no such connection* -- I18's ambiguous refusal). Only then does this
 mint the one machine token that may touch the credential.
 
-**Nothing here decides what a vendor means.** `app.integrations.oauth` owns the handshake and the
+**Nothing here decides what a vendor means.** `app.connectors` owns the handshake and the
 two reads; this module sequences them, records what happened, and returns only what a person may
 see: never a token, never a refresh token, never the client secret.
 """
@@ -24,9 +24,9 @@ from app.core import db
 from app.core.config import IntegrationSettings
 from app.domains.errors import DomainError, NotFoundError, ValidationError
 from app.domains.integrations.state import StateInvalid, sign_state, verify_state
-from app.integrations.oauth import oauth_app_for, oauth_provider_for
-from app.integrations.oauth.base import OAuthApp, OAuthProvider, Tokens
-from app.integrations.providers import UpstreamRefused
+from app.connectors import oauth_app_for, oauth_provider_for
+from app.connectors.base import OAuthApp, OAuthProvider, Tokens
+from app.providers.providers import UpstreamRefused
 
 # A token this close to expiring is refreshed before it is used.
 _REFRESH_MARGIN_SECONDS = 120

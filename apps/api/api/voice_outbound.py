@@ -19,7 +19,7 @@ from http.server import BaseHTTPRequestHandler
 
 from api.voice_status import form_params, public_url
 from app.core.config import load_voice_settings
-from app.integrations.twilio.voice import conference_twiml, verify_signature
+from app.providers.twilio.voice import conference_twiml, verify_signature
 
 
 class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name

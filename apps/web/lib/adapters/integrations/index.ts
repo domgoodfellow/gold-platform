@@ -8,7 +8,7 @@
  *
  * `csv` needs no handshake — there is no account to authorize — so it is implemented by
  * `lib/domain/integrations/csv.ts` and the import engine. An OAuth connector adds its key here in
- * the same change that adds its adapter in `apps/api/app/integrations/oauth/`.
+ * the same change that adds its adapter in `apps/api/app/connectors/`.
  */
 const NEEDS_NO_HANDSHAKE = new Set<string>(['csv']);
 
@@ -17,7 +17,7 @@ const NEEDS_NO_HANDSHAKE = new Set<string>(['csv']);
  * deployment has an API to relay to; whether the API holds the vendor's client registration is the
  * API's own answer, given plainly when a person presses Connect.
  */
-const NEEDS_API = new Set<string>(['google_workspace', 'microsoft_365']);
+const NEEDS_API = new Set<string>(['google_workspace', 'microsoft_365', 'hubspot', 'notion', 'slack', 'dropbox']);
 
 export function isConnectorImplemented(key: string): boolean {
   return NEEDS_NO_HANDSHAKE.has(key) || (NEEDS_API.has(key) && Boolean(process.env.GOLD_API_URL));

@@ -143,7 +143,8 @@ apps/
     app/ai/         the tool loop and its two registries. No SQL, no arithmetic
     app/channels/   sending a message to a person, as a capability
     app/conditions/ what the world is doing at a place, as a capability
-    app/integrations/ the only place this repo's Python names a vendor
+    app/providers/  the infrastructure GOLD operates (Twilio, Stripe, Resend, model vendors) — the only place Python names one
+    app/connectors/ the outside apps a business authorizes (OAuth handshakes); never a provider
   desktop/          Electron shell (M10; not before)
 packages/           each with a real, immediate consumer inside apps/web (D45); packages/sdk stays deferred
   types/            ContextDescriptor and the other cross-cutting shapes — never Capability, which stays the domain layer's
@@ -293,7 +294,8 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | A provider named in `lib/domain/` | I15, extended: a resource-type string like `twilio_subaccount` is a vendor's name wearing a different shape | `organization_provider_resources.resourceType` is opaque `string`; `lib/adapters/telephony/registry.ts` alone knows `telephonyProviderKey()` and `TELEPHONY_RESOURCE_TYPES` |
 | A React page or constant owning the list of outside apps | The connector list is catalogue data an admin edits; a second list in code disagrees the day someone edits the first (D55) | `platform_connectors`; `integration_connections_insert` refuses a `planned` or private connector at the table; `connector-catalogue.test.ts` |
 | A signed-in role executing a tenant-credential door, or `secret_id` selectable on `integration_connections` | A business's own OAuth token is read back only to be used, and the person it belongs to must not be able to read it from a console either (D56) | `integration_operator` alone holds the five executes and no table grant; `secret_id` is in no column grant; `integration-credentials.test.ts` |
-| A vendor's client secret, a token or the OAuth state secret in `apps/web` | The web runtime relays a browser and proves nothing about a token (D14, D56) | `apps/api/app/integrations/oauth/` and `app/domains/integrations/` do the handshake; `integration-credentials.test.ts` scans `apps/web` for the names |
+| A connection standing in for the assistant's permission | "Connected" and "the assistant may read this" are two decisions; one implying the other would give an assistant everything a sync finds tomorrow | `assistant_resource_grants` is per resource with no default row; `public.assistant_may_read_resource` also needs the resource and connection active; `assistant-grants.test.ts` |
+| A vendor's client secret, a token or the OAuth state secret in `apps/web` | The web runtime relays a browser and proves nothing about a token (D14, D56) | `apps/api/app/connectors/` and `app/domains/integrations/` do the handshake; `integration-credentials.test.ts` scans `apps/web` for the names |
 | A tenant selecting another organization's bound resource as its own | A number or a domain typed by hand must not let GOLD use somebody else's scope (D39) | `app.phone_number_owner`, `security definer`, checked inside `set_calling_number`; a number bound to a different organization is refused, one bound to nobody is unaffected |
 | A subaccount's own credential used to place a call | GOLD's master account can already address any subaccount by naming it in the request path (D39); a second credential per business is a second thing to rotate for no isolation gained | `telephonyProvider(actingAccountSid)` authenticates with GOLD's master token throughout; only the acting account in the URL path changes |
 

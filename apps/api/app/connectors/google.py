@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import httpx
 
-from app.integrations.oauth.base import Account, OAuthApp, OAuthProvider
-from app.integrations.providers import UpstreamRefused
+from app.connectors.base import Account, OAuthApp, OAuthProvider
+from app.providers.providers import UpstreamRefused
 
 
 class GoogleWorkspace(OAuthProvider):

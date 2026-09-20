@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.integrations.twilio.voice import (  # noqa: E402
+from app.providers.twilio.voice import (  # noqa: E402
     TERMINAL,
     conference_twiml,
     normalise_status,

@@ -102,7 +102,8 @@ apps/
     app/ai/               the loop, the tool registry, the provider registry
     app/channels/         sending a message, as a capability
     app/conditions/       what the world is doing at a place
-    app/integrations/     the only place Python names a vendor
+    app/providers/     the infrastructure GOLD operates — the only place Python names a provider
+    app/connectors/    a business's own outside apps, one OAuth contract
   desktop/                Electron shell — M10
 packages/                 types, schemas, ui, config — each with a real consumer inside apps/web (D45); sdk still waits, see D13
 supabase/                 migrations, policies, snippets
@@ -1574,11 +1575,24 @@ way; only then does it mint the machine token. A `state` is signed, ten minutes 
 the business, the person, the connector and the nonce, and is completed only by the same person
 holding the same browser's cookie.
 
-**One contract, two suites.** `app/integrations/oauth/base.py` is the handshake, the refresh and
-two reads (who is this account; what can it reach). Google Workspace and Microsoft 365 each
-implement it in one small file, and a difference between them (Microsoft rotates every refresh
-token and has no per-token revocation) is absorbed by the base or by an override, never by the
-domain. A third connector that needs a different method on the base is the signal it is wrong.
+**One contract, six connectors.** `app/connectors/base.py` is the handshake, the refresh and
+two reads (who is this account; what can it reach). Google Workspace, Microsoft 365, HubSpot,
+Notion, Slack and Dropbox each implement it in one small file. A difference between them is
+absorbed by the base or by an override, never by the domain: Microsoft rotates every refresh
+token; Notion exchanges a code with Basic credentials and a JSON body and issues tokens that
+never expire (`default_expires_in`); Slack reports a refusal as HTTP 200 with `ok: false`;
+Dropbox is POST-only. Salesforce, QuickBooks and Shopify are still `planned` because each needs
+a value from the person before the handshake (an instance, a company, a shop domain) that this
+contract has no place to carry. That is the signal to extend the base, in the change that adds
+one of them.
+
+**Connected is not permitted.** A connection says a business authorized an outside app.
+`assistant_resource_grants` is the separate decision: a person with `integration.manage` names
+each *resource* GOLD's assistant may read. Absence is the default, a resource a later sync
+discovers starts ungranted, and `public.assistant_may_read_resource` also requires the resource
+and its connection to be active, so disconnecting ends the assistant's reach without a delete.
+Read is the only access; a write grant arrives with the first tool that writes. No assistant tool
+calls the check yet.
 
 **Health is the provider's words.** `integration_connections.last_error` holds what the vendor
 said, is visible to the business, and is written only by the runtime that asked. A refused refresh

@@ -23,7 +23,7 @@ def sender_for(channel: str) -> Sender | None:
         sender = os.environ.get("MESSAGE_FROM_ADDRESS")
         if not api_key or not sender:
             return None
-        from app.integrations.resend.email import resend_sender
+        from app.providers.resend.email import resend_sender
 
         return resend_sender(api_key=api_key, sender=sender)
 
@@ -33,7 +33,7 @@ def sender_for(channel: str) -> Sender | None:
         number = os.environ.get("MESSAGE_FROM_NUMBER")
         if not account or not token or not number:
             return None
-        from app.integrations.twilio.sms import twilio_sender
+        from app.providers.twilio.sms import twilio_sender
 
         return twilio_sender(account=account, token=token, number=number)
 

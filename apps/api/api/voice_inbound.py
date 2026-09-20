@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler
 
 from api.voice_status import form_params, public_url
 from app.core.config import load_voice_settings
-from app.integrations.twilio.voice import verify_signature
+from app.providers.twilio.voice import verify_signature
 
 # Not `<Hangup/>`: a rejected call is one the network never answered, so the caller is not
 # billed and hears their own carrier's tone rather than silence from us. It is the honest signal

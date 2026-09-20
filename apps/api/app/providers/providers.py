@@ -18,7 +18,7 @@ class UpstreamRefused(RuntimeError):
 
 def operations_for(provider_key: str) -> dict[str, Operation] | None:
     if provider_key == "twilio":
-        from app.integrations.twilio.accounts import OPERATIONS
+        from app.providers.twilio.accounts import OPERATIONS
 
         return OPERATIONS
     return None

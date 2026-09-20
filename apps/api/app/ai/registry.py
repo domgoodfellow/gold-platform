@@ -36,7 +36,7 @@ def answering_provider() -> AnsweringProvider | None:
     # model server on every question. A missing value means the feature is off, which is what
     # every other setting in this runtime already means.
     if base_url and model:
-        from app.integrations.openai_dialect.answering import dialect_provider
+        from app.providers.openai_dialect.answering import dialect_provider
 
         return dialect_provider(
             base_url=base_url,
@@ -49,7 +49,7 @@ def answering_provider() -> AnsweringProvider | None:
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if api_key:
-        from app.integrations.anthropic.answering import anthropic_provider
+        from app.providers.anthropic.answering import anthropic_provider
 
         return anthropic_provider(api_key=api_key)
 

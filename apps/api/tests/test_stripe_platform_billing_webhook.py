@@ -30,7 +30,7 @@ from app.core.db import (  # noqa: E402
     ROLE,
     machine_token,
 )
-from app.integrations.stripe.platform_billing_webhook import (  # noqa: E402
+from app.providers.stripe.platform_billing_webhook import (  # noqa: E402
     NoticeEvent,
     SubscriptionEvent,
     parse,

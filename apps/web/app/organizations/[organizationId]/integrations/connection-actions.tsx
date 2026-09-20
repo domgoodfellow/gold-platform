@@ -4,7 +4,14 @@ import { useActionState } from 'react';
 import { ConfirmSubmit } from '@/components/containers/dialog';
 import { Button } from '@/components/controls/button';
 import { ErrorText, Hint } from '@/components/controls/inputs';
-import { checkConnectionAction, disconnectAction, type CheckState, type DisconnectState } from './actions';
+import {
+  checkConnectionAction,
+  disconnectAction,
+  setAssistantAccessAction,
+  type AccessState,
+  type CheckState,
+  type DisconnectState,
+} from './actions';
 
 const DISCONNECT_INITIAL: DisconnectState = { error: null };
 
@@ -50,6 +57,36 @@ export function CheckConnectionForm({ organizationId, connectionId }: { organiza
       </Button>
       <ErrorText role="alert">{state.error}</ErrorText>
       {state.checked ? <Hint role="status">Checked.</Hint> : null}
+    </form>
+  );
+}
+
+const ACCESS_INITIAL: AccessState = { error: null };
+
+/** One resource's switch for the assistant. Off unless somebody turned it on. */
+export function AssistantAccessForm({
+  organizationId,
+  connectionId,
+  resourceId,
+  allowed,
+}: {
+  organizationId: string;
+  connectionId: string;
+  resourceId: string;
+  allowed: boolean;
+}) {
+  const [state, formAction, pending] = useActionState(setAssistantAccessAction, ACCESS_INITIAL);
+
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="connectionId" value={connectionId} />
+      <input type="hidden" name="resourceId" value={resourceId} />
+      <input type="hidden" name="allowed" value={allowed ? 'false' : 'true'} />
+      <Button type="submit" tone="text" size="small" disabled={pending}>
+        {allowed ? 'Stop assistant reading' : 'Let assistant read'}
+      </Button>
+      <ErrorText>{state.error}</ErrorText>
     </form>
   );
 }

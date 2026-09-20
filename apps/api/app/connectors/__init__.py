@@ -1,7 +1,7 @@
 """Which vendor implementation answers for a connector key, and GOLD's registration with it.
 
 **The one place a connector key is turned into an OAuth implementation** (I15, as
-`app.integrations.providers` is for provider keys). `app.domains.integrations` asks for a provider
+`app.providers.providers` is for provider keys). `app.domains.integrations` asks for a provider
 by key and never imports a vendor. A connector with no entry here, or no client credentials in
 this deployment's environment, is refused rather than guessed at.
 """
@@ -10,12 +10,16 @@ from __future__ import annotations
 
 import os
 
-from app.integrations.oauth.base import OAuthApp, OAuthProvider
+from app.connectors.base import OAuthApp, OAuthProvider
 
 # connector key -> (implementation, environment variable prefix). Data, not a branch.
 _REGISTRY: dict[str, tuple[str, str, str]] = {
-    "google_workspace": ("app.integrations.oauth.google", "GoogleWorkspace", "GOOGLE_OAUTH"),
-    "microsoft_365": ("app.integrations.oauth.microsoft", "Microsoft365", "MICROSOFT_OAUTH"),
+    "google_workspace": ("app.connectors.google", "GoogleWorkspace", "GOOGLE_OAUTH"),
+    "microsoft_365": ("app.connectors.microsoft", "Microsoft365", "MICROSOFT_OAUTH"),
+    "hubspot": ("app.connectors.hubspot", "HubSpot", "HUBSPOT_OAUTH"),
+    "notion": ("app.connectors.notion", "Notion", "NOTION_OAUTH"),
+    "slack": ("app.connectors.slack", "Slack", "SLACK_OAUTH"),
+    "dropbox": ("app.connectors.dropbox", "Dropbox", "DROPBOX_OAUTH"),
 }
 
 

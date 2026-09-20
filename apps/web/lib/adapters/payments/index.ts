@@ -36,7 +36,7 @@ export type PaymentProvider = {
   completeConnection(input: { code: string; returnUrl: string }): Promise<ConnectedAccount>;
   /**
    * Outbound only — being called back by the processor is webhook ingress, which belongs to
-   * Python (D2), in `apps/api/app/integrations/stripe/`.
+   * Python (D2), in `apps/api/app/providers/stripe/`.
    */
   request(input: PaymentRequest): Promise<PaymentRequested>;
 };

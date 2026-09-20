@@ -264,6 +264,27 @@ export async function listOrganizationConnections(db: Db, input: { organizationI
   }));
 }
 
+export type ConnectorUsage = { activeConnections: number; attentionConnections: number; organizations: number };
+
+/** Platform staff's per-connector counts, keyed by connector key. Counts only — no account, no credential. */
+export async function connectorUsage(db: Db): Promise<Map<string, ConnectorUsage>> {
+  const { data, error } = await db.rpc('platform_connector_usage');
+  if (error) {
+    if (error.code === '42501') throw new DomainError('Only platform staff can read this.', 'integrations.forbidden');
+    throw new DomainError(error.message, 'integrations.usage_failed');
+  }
+  return new Map(
+    (data ?? []).map((row) => [
+      row.connector_key,
+      {
+        activeConnections: Number(row.active_connections),
+        attentionConnections: Number(row.attention_connections),
+        organizations: Number(row.organizations),
+      },
+    ]),
+  );
+}
+
 /** The categories that exist, in the order the catalogue shows its connectors — never a list kept in a page. */
 export function connectorCategories(connectors: readonly Pick<Connector, 'category'>[]): string[] {
   return [...new Set(connectors.map((connector) => connector.category))];

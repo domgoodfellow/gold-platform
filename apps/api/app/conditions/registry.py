@@ -22,6 +22,6 @@ def conditions_provider() -> ConditionsProvider | None:
     if os.environ.get("CONDITIONS_ENABLED", "").lower() not in ("1", "true", "yes"):
         return None
 
-    from app.integrations.open_meteo.conditions import open_meteo_provider
+    from app.providers.open_meteo.conditions import open_meteo_provider
 
     return open_meteo_provider()

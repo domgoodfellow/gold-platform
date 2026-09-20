@@ -5,6 +5,26 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### HubSpot, Notion, Slack and Dropbox connect; the assistant reads only what is granted
+
+Four more connectors implement the one OAuth contract in `apps/api/app/connectors/`. Their catalogue
+rows stay `planned` until staff mark them `beta` in Platform → Integrations, once the deployment
+holds each vendor's client registration. Salesforce, QuickBooks and Shopify remain `planned`.
+
+`assistant_resource_grants` makes connected and permitted two decisions: a business names each
+resource the assistant may read, and nothing is readable by default. `assistant_may_read_resource`
+is the check a future tool must call. The connection page has a switch per resource.
+
+`apps/api/app/integrations/` is split by what it holds: `app/providers/` is the infrastructure GOLD
+operates, `app/connectors/` is a business's own outside apps. `Badge` gains a `danger` tone for
+failing states the platform reports.
+
+### Platform → Integrations shows who is connected
+
+`public.platform_connector_usage()` gives platform staff, per connector, how many businesses are
+connected and how many connections need attention — counts only, no account and no credential.
+The Platform → Integrations table shows both columns.
+
 ### Integrations become a catalogue, and Google Workspace and Microsoft 365 connect
 
 The apps a business may connect are now data. `platform_connectors` holds each one (category,

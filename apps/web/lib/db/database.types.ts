@@ -370,6 +370,52 @@ export type Database = {
           },
         ]
       }
+      assistant_resource_grants: {
+        Row: {
+          created_at: string
+          granted_by: string
+          id: string
+          organization_id: string
+          resource_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by: string
+          id?: string
+          organization_id: string
+          resource_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string
+          id?: string
+          organization_id?: string
+          resource_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_resource_grants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_resource_grants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_resource_grants_organization_id_resource_id_fkey"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: true
+            referencedRelation: "integration_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       automation_actions: {
         Row: {
           action_kind: string
@@ -6457,6 +6503,10 @@ export type Database = {
         Args: { p_membership_id: string; p_role_id: string }
         Returns: undefined
       }
+      assistant_may_read_resource: {
+        Args: { p_organization_id: string; p_resource_id: string }
+        Returns: boolean
+      }
       begin_external_card_payment: {
         Args: { p_invoice_id: string; p_provider: string }
         Returns: {
@@ -6897,6 +6947,15 @@ export type Database = {
         Args: { p_plan_id: string }
         Returns: {
           feature_id: string
+        }[]
+      }
+      platform_connector_usage: {
+        Args: never
+        Returns: {
+          active_connections: number
+          attention_connections: number
+          connector_key: string
+          organizations: number
         }[]
       }
       platform_meter_observations: {

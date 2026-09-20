@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import httpx
 
-from app.integrations.providers import UpstreamRefused
+from app.providers.providers import UpstreamRefused
 
 API = "https://api.twilio.com/2010-04-01"
 _PAGE_SIZE = 1000

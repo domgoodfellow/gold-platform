@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler
 from api.voice_status import form_params, public_url
 from app.core.config import load_voice_settings
 from app.core.db import record_call_event
-from app.integrations.twilio.voice import (
+from app.providers.twilio.voice import (
     payload_hash,
     recording_download_url,
     recording_report,

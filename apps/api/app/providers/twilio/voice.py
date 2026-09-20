@@ -3,7 +3,7 @@
 **The second half of the telephony adapter, and the half that could not live in TypeScript.**
 Placing a call is an operator pressing a button, which D2 gives to the transactional runtime;
 being *called* by the carrier with nobody signed in is webhook ingress, which D2 gives to this
-one. The same split payments already made, stated in `app/integrations/stripe/webhook.py`.
+one. The same split payments already made, stated in `app/providers/stripe/webhook.py`.
 
 **No SDK, and the same reasoning as everywhere else here.** What this needs is one HMAC, one
 form parse and some XML, all of them specified and stable. Everything below is pure and is

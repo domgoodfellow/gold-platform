@@ -5,7 +5,7 @@ through the tenant's own connected account. This is the opposite money direction
 organization paying GOLD, on GOLD's own Stripe account (`domain-model.md`'s two-plane table).
 Its own destination, its own `STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET`, its own Postgres role
 (`platform_billing_webhook`) — see `20260922000004_gold_bills_the_organization_its_own_subscription.sql`
-and `app.integrations.stripe.platform_billing_webhook` for why the two are never folded together.
+and `app.providers.stripe.platform_billing_webhook` for why the two are never folded together.
 
 **The same three refusals that must not be distinguishable to a caller**, restated from
 `stripe_webhook.py`: a bad signature, a body that is not JSON, and an event about nothing all
@@ -22,7 +22,7 @@ from http.server import BaseHTTPRequestHandler
 
 from app.core.config import load_platform_billing_settings
 from app.core.db import apply_platform_subscription_event, record_platform_billing_notice
-from app.integrations.stripe.platform_billing_webhook import NoticeEvent, SubscriptionEvent, parse
+from app.providers.stripe.platform_billing_webhook import NoticeEvent, SubscriptionEvent, parse
 
 
 class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name

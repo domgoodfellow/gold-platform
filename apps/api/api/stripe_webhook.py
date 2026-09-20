@@ -22,7 +22,7 @@ from http.server import BaseHTTPRequestHandler
 
 from app.core.config import load_settings
 from app.core.db import record_provider_payment
-from app.integrations.stripe.webhook import settlement
+from app.providers.stripe.webhook import settlement
 
 
 class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name

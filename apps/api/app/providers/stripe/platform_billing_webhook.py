@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from app.integrations.stripe.webhook import verify_signature
+from app.providers.stripe.webhook import verify_signature
 
 SUBSCRIPTION_EVENTS = {
     "customer.subscription.created",

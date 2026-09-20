@@ -6,6 +6,7 @@ import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { recordConnection } from '@/lib/domain/integrations/connections';
 import {
+  connectorUsage,
   getConnector,
   listOrganizationConnections,
   setConnectorApp,
@@ -213,6 +214,16 @@ describe('support visibility of a business connections', () => {
   it('returns nothing about another business to a business asking directly', async () => {
     const direct = await tenant.db.from('integration_connections').select('id').neq('organization_id', tenant.organizationId);
     expect(direct.data).toEqual([]);
+  });
+});
+
+describe('platform usage of the catalogue', () => {
+  it('shows staff counts per connector, and refuses a business', async () => {
+    await recordConnection(tenant.db, { organizationId: tenant.organizationId, connectorKey: 'csv', accountLabel: 'Usage export' });
+    const usage = await connectorUsage(staff);
+    expect(usage.get('csv')?.organizations).toBeGreaterThanOrEqual(1);
+    expect(Object.keys(usage.get('csv') ?? {}).sort()).toEqual(['activeConnections', 'attentionConnections', 'organizations']);
+    await expect(connectorUsage(tenant.db)).rejects.toThrow(/platform staff/);
   });
 });
 

@@ -19,7 +19,7 @@ from urllib.parse import urlencode
 
 import httpx
 
-from app.integrations.providers import UpstreamRefused
+from app.providers.providers import UpstreamRefused
 
 
 @dataclass(frozen=True)
@@ -53,6 +53,9 @@ class OAuthProvider:
     token_endpoint: str = ""
     scopes: tuple[str, ...] = ()
     authorize_extra: dict[str, str] = {}
+    # What a token response with no `expires_in` means. A vendor whose tokens do not expire says so
+    # here, rather than the default making GOLD try (and fail) to refresh one after an hour.
+    default_expires_in: int = 3600
 
     # --- the handshake, identical for every vendor -----------------------------------------
 
@@ -61,10 +64,11 @@ class OAuthProvider:
             "client_id": app.client_id,
             "redirect_uri": redirect_uri,
             "response_type": "code",
-            "scope": " ".join(self.scopes),
             "state": state,
             **self.authorize_extra,
         }
+        if self.scopes:  # Notion has none: access is chosen on its consent screen
+            query["scope"] = " ".join(self.scopes)
         return f"{self.authorize_endpoint}?{urlencode(query)}"
 
     def exchange(self, app: OAuthApp, *, code: str, redirect_uri: str) -> Tokens:
@@ -109,21 +113,38 @@ class OAuthProvider:
         return Tokens(
             access_token=payload["access_token"],
             refresh_token=payload.get("refresh_token"),
-            expires_at=int(time.time()) + int(payload.get("expires_in") or 3600),
+            expires_at=int(time.time()) + int(payload.get("expires_in") or self.default_expires_in),
             scopes=str(payload.get("scope") or "").split(),
         )
 
-    def _get(self, url: str, access_token: str, params: dict | None = None) -> dict:
+    def _get(self, url: str, access_token: str, params: dict | None = None, headers: dict | None = None) -> dict:
+        return self._request("GET", url, access_token, params=params, headers=headers)
+
+    def _post(self, url: str, access_token: str, body: dict | None = None, headers: dict | None = None) -> dict:
+        return self._request("POST", url, access_token, json=body, headers=headers)
+
+    def _request(
+        self,
+        method: str,
+        url: str,
+        access_token: str,
+        *,
+        params: dict | None = None,
+        json: dict | None = None,
+        headers: dict | None = None,
+    ) -> dict:
+        auth = {"Authorization": f"Bearer {access_token}", **(headers or {})}
         try:
-            response = httpx.get(
-                url, headers={"Authorization": f"Bearer {access_token}"}, params=params, timeout=15.0
-            )
+            if method == "POST":
+                response = httpx.post(url, headers=auth, json=json, timeout=15.0)
+            else:
+                response = httpx.get(url, headers=auth, params=params, timeout=15.0)
         except httpx.HTTPError as failure:
             raise UpstreamRefused(f"{self.key} could not be reached: {type(failure).__name__}") from failure
         payload = _json(response)
         if response.status_code >= 400:
             error = payload.get("error")
-            words = error.get("message") if isinstance(error, dict) else (error or f"status {response.status_code}")
+            words = error.get("message") if isinstance(error, dict) else (error or payload.get("message") or f"status {response.status_code}")
             raise UpstreamRefused(f"The provider refused the request: {str(words)[:300]}")
         return payload
 

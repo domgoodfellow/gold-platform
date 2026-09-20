@@ -7,7 +7,7 @@ That module decides nothing RLS or a narrow database function would not decide a
 later; it exists so the decision has one caller-independent home, on the same terms `app/ai`
 already reaches Postgres on (D17, D34) rather than as a new authority of its own.
 
-**What does not.** A vendor's shape (`app/integrations/**`), a model's tool loop (`app/ai/**`),
+**What does not.** A vendor's shape (`app/providers/**`), a model's tool loop (`app/ai/**`),
 and the database's own authorization (RLS, a check constraint, a `security definer` function)
 are each somebody else's job. A domain module here never imports an integration and never mints
 its own credential -- it forwards the caller's token and calls one narrow RPC.

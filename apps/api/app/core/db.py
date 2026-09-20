@@ -42,7 +42,7 @@ from app.core.config import (
 )
 
 if TYPE_CHECKING:
-    from app.integrations.stripe.platform_billing_webhook import NoticeEvent, SubscriptionEvent
+    from app.providers.stripe.platform_billing_webhook import NoticeEvent, SubscriptionEvent
 
 ROLE = "payment_webhook"
 

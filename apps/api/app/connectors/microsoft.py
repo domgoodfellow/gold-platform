@@ -7,7 +7,7 @@ files and calendars through Graph.
 
 from __future__ import annotations
 
-from app.integrations.oauth.base import Account, OAuthProvider
+from app.connectors.base import Account, OAuthProvider
 
 GRAPH = "https://graph.microsoft.com/v1.0"
 

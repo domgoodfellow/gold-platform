@@ -19,7 +19,7 @@ from urllib.parse import parse_qs
 
 from app.core.config import load_voice_settings
 from app.core.db import record_call_event
-from app.integrations.twilio.voice import payload_hash, status_report, verify_signature
+from app.providers.twilio.voice import payload_hash, status_report, verify_signature
 
 
 def form_params(body: str) -> dict[str, str]:

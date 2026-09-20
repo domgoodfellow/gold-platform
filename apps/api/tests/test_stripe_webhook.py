@@ -22,7 +22,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.db import INTEGRATION_ACTOR, ROLE, machine_token  # noqa: E402
-from app.integrations.stripe.webhook import settlement, verify_signature  # noqa: E402
+from app.providers.stripe.webhook import settlement, verify_signature  # noqa: E402
 
 SECRET = "whsec_test_secret"
 NOW = 1_800_000_000

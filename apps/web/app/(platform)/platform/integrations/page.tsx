@@ -5,12 +5,13 @@ import { ButtonLink } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { getDb } from '@/lib/db/server';
-import { listConnectors } from '@/lib/domain/integrations/connectors';
+import { connectorUsage, listConnectors } from '@/lib/domain/integrations/connectors';
 
 export const dynamic = 'force-dynamic';
 
 export default async function PlatformIntegrationsPage() {
-  const connectors = await listConnectors(await getDb());
+  const db = await getDb();
+  const [connectors, usage] = await Promise.all([listConnectors(db), connectorUsage(db)]);
 
   return (
     <AppPage width="full">
@@ -48,6 +49,15 @@ export default async function PlatformIntegrationsPage() {
           { key: 'visibility', header: 'Visibility', cell: (connector) => (connector.isPublic ? 'Public' : 'Private') },
           { key: 'method', header: 'Connects by', cell: (connector) => connector.connectionMethod },
           { key: 'capabilities', header: 'Capabilities', cell: (connector) => connector.capabilities.length },
+          { key: 'organizations', header: 'Businesses connected', cell: (connector) => usage.get(connector.key)?.organizations ?? 0 },
+          {
+            key: 'attention',
+            header: 'Needs attention',
+            cell: (connector) => {
+              const count = usage.get(connector.key)?.attentionConnections ?? 0;
+              return count > 0 ? <Badge tone="danger">{count}</Badge> : '—';
+            },
+          },
         ]}
       />
     </AppPage>

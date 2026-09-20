@@ -7,7 +7,7 @@ refusal the rest of this runtime gives (I18). Only then does this mint the one m
 that may read the credential.
 
 **Nothing here decides what the operation means.** Which operations exist, and how a provider
-spells them, is `app.integrations`' subject; this module dispatches by name and returns the
+spells them, is `app.providers`' subject; this module dispatches by name and returns the
 result. What is returned is never the credential -- a provisioned API key's secret is the one
 value a result may carry, because that key belongs to a tenant's subaccount, is created by this
 call, and is stored by the caller in the same act (D44).
@@ -22,7 +22,7 @@ import httpx
 from app.core.config import ProviderOperationsSettings
 from app.core.db import read_provider_account_credential, record_provider_account_verification
 from app.domains.errors import DomainError, NotFoundError, ValidationError
-from app.integrations.providers import UpstreamRefused, operations_for
+from app.providers.providers import UpstreamRefused, operations_for
 
 
 class ProviderRefusedError(DomainError):

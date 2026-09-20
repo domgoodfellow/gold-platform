@@ -127,7 +127,7 @@ class IntegrationSettings:
     table grant and exactly five executes -- one of which returns a decrypted tenant credential.
     `state_secret` signs the short-lived `state` that binds a provider redirect to the person and
     business that began it; `redirect_uri` is the one address every provider is registered with.
-    A connector's own client id and secret are read by `app.integrations.oauth`, the only place a
+    A connector's own client id and secret are read by `app.connectors`, the only place a
     vendor is named.
     """
 
