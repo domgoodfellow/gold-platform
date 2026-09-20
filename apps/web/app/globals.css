@@ -65,6 +65,13 @@
      places and red-700 in others; one role is the point. */
   --danger: #dc2626;
 
+  /* A state GOLD itself reports as good -- Setup ready, a connection live, a feature included. A
+     platform fact, never a tenant's word (ui-spec §7), so it is not one of the three roles a
+     tenant may set and `BrandStyle` never writes it. One role: the border and fill are this
+     colour at low opacity, exactly as `--danger`'s are. Darker in light for text contrast on its
+     own tint (>= 4.5:1), lighter in dark. */
+  --success: #047857;
+
   /* The three roles a tenant's own colour lands in, and their defaults are the platform's own
      look rather than a colour. A business that has chosen nothing renders exactly as this
      application did before brands existed -- `--accent` resolving to the foreground is what
@@ -116,6 +123,7 @@
   --color-muted: var(--muted);
   --color-subtle: var(--subtle);
   --color-danger: var(--danger);
+  --color-success: var(--success);
   --color-destructive: var(--destructive);
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
@@ -136,6 +144,7 @@
     --muted: rgb(237 237 237 / 0.7);
     --subtle: rgb(237 237 237 / 0.6);
     --danger: #f87171;
+    --success: #6ee7b7;
   }
 }
 

@@ -302,6 +302,7 @@ and each one names something the screens were already drawing without a word for
 | muted | hint and help text | `opacity-70` |
 | subtle | the quieter weight beneath it | `opacity-60` |
 | danger | a refusal, an error, a destructive action | `red-600` in 34 places and `red-700` in 7 |
+| success | a state GOLD itself reports as good — Setup ready, a connection live, a feature included; never a tenant's word (§7) | `emerald-*` literals inside `Badge` |
 | accent / on-accent | emphasis, and the text on it — the primary button | `bg-foreground text-background` |
 | accent-text | the accent used as *text*: a link, a focus ring | nothing; there was no link colour |
 | hover | a neutral control or menu item under the pointer — the sidebar's own tint | `bg-muted` (a 70% black text role), `black/5`, `accent` |
@@ -347,8 +348,9 @@ is that colour moved in lightness until it reads on the page. Both come from
 `lib/domain/branding/palette.ts` and nothing else may derive one — there is one contrast
 calculation for the reason there is one price calculation.
 
-**No role is named for a business meaning.** No `success`, no `complete`, no `pending`. Those are
-statuses, the tenant owns them, and §7 is why.
+**No role is named for a tenant's meaning.** No `complete`, no `pending`, no `overdue`. Those are
+statuses, the tenant owns them, and §7 is why. `danger` and `success` are the exception because they
+are *GOLD's* facts — a refusal, a connection that is live — and neither is a tenant-settable role.
 
 ---
 
@@ -525,9 +527,11 @@ tenant's word and GOLD cannot know whether it is good. `tone="accent"` paints a 
 scanning — never *this one is good*. **GOLD-owned facts may carry a tone**, because GOLD defined
 them and knows what they mean: Setup's *Ready* is `success`, a provider connection that failed is
 `danger`, a Plan feature that is included is `success`. The tell that the rule has been broken is
-still a lookup keyed to an English word a tenant wrote. Known gap: `success` and `danger` are
-spelled with palette literals inside `Badge` (`components/display/data.tsx`) because there is no
-colour role for them yet; a `success` role belongs in `globals.css` when that is next touched.
+still a lookup keyed to an English word a tenant wrote. Both tones are central roles in
+`globals.css` (`--success`, `--danger`), consumed by `Badge`; neither is one of the three a tenant
+may set, and no screen spells either as a palette literal. Known exception: the automation
+rule-review *warning* (`features/automations/review/`) still uses an amber literal inside its own
+feature — there is no warning role, and adding one is a design decision, not cleanup.
 
 ---
 
@@ -551,9 +555,10 @@ businesses.
 **An empty collection explains state; it does not repeat the page's primary action.** *No customers
 yet.* is state. A second *New customer* under a header that already offers one is the same control
 twice, and *Add your first customer to get started* is advice the platform has no standing to
-give. `DataTable.emptyAction` remains for a collection that has no header action of its own; a page
-whose `PageHeader` already creates the record passes none (Customers, Team, Resources, Locations,
-Assets). Known remaining case: the Configure drawers' field lists still repeat *New field*.
+give. `EmptyState` and `DataTable` therefore carry no action at all — the prop was removed when its
+last caller went. That holds for a page whose `PageHeader` creates the record (Customers, Team,
+Resources, Locations, Assets) and for a drawer or view whose create control is always visible beside
+the count (a Configure drawer's field list, Automations' rules and messages).
 
 **Inside a page, four layers in one order.** *Page header* — identity and the page's actions
 (Configure, create, import); one is primary. *Local view navigation* — sibling views of the same

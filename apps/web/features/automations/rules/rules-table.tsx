@@ -6,7 +6,6 @@ import type { AutomationRule } from '@/lib/domain/automation/rules';
 import type { RuleWarning } from '@/lib/domain/automation/review';
 import { describeTrigger } from './trigger';
 import { RuleEnabledToggle } from './rule-enabled-toggle';
-import { NewAutomationSheet } from './new-automation-sheet';
 
 /**
  * The Rules collection — a compact table rather than one fully-open `AutomationRuleCard` per
@@ -36,7 +35,6 @@ export function RulesTable({
         rows={rules}
         rowKey={(rule) => rule.id}
         empty="No rules yet. Nothing happens on its own until this business says it should."
-        emptyAction={mayManage ? <NewAutomationSheet organizationId={organizationId} /> : undefined}
         columns={[
           {
             key: 'name',

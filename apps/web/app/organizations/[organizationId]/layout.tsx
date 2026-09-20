@@ -5,7 +5,6 @@ import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
-import { computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import {
@@ -102,11 +101,10 @@ export default async function OrganizationLayout({
   );
 
   // The one place the shell asks whether this business is still being set up. The sidebar row and
-  // the phone bar's first item both read this and nothing else, so neither can outlive Launch.
-  // Only asked while there is a launch ahead: a LIVE business pays for no readiness read.
-  const setupOverview =
-    organization.operationalState === 'setup' ? await computeSetupOverview(db, { organizationId }) : null;
-  const setup = setupOverview ? { ready: setupOverview.ready, total: setupOverview.total } : null;
+  // the phone bar's first item both read this and nothing else, so neither can outlive Launch. It
+  // is the lifecycle fact already on the organization — the shell prints no progress, so it runs
+  // no readiness query; the Setup page owns the count and `launchOrganization` the guard.
+  const setup = organization.operationalState === 'setup';
 
   const switchable = myOrganizations.map((org) => ({
     id: org.id,

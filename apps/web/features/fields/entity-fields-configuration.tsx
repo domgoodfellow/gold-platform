@@ -48,7 +48,6 @@ export function EntityFieldsConfiguration({
           rows={definitions}
           rowKey={(definition) => definition.id}
           empty={`No custom fields for ${CUSTOM_FIELD_ENTITY_LABELS[entityType]} yet.`}
-          emptyAction={create}
           columns={[
             {
               key: 'field',

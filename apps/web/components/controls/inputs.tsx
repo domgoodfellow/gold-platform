@@ -21,7 +21,7 @@ export function SelectInput({
   className,
   ...props
 }: Omit<ComponentProps<'select'>, 'size'> & { size?: ControlSize }) {
-  return <NativeSelect {...props} wrapperClassName={className} className={cx(FOCUS_RING, size === 'small' && 'h-7 px-2 pr-7 text-sm')} />;
+  return <NativeSelect {...props} wrapperClassName={className} className={cx(FOCUS_RING, size === 'small' && 'h-7 px-2 py-0 pr-7 text-sm')} />;
 }
 
 export function TextArea({

@@ -1,4 +1,4 @@
-import type { ComponentProps, ElementType, ReactNode } from 'react';
+import type { ComponentProps, ElementType } from 'react';
 import { Hint } from '../controls/inputs';
 import { cx } from '../class-names';
 
@@ -48,20 +48,9 @@ export function DividedList<T extends ElementType = 'ul'>({
 
 /**
  * Application state, not advice (ui-spec §8) — "no customers yet", never "add your first
- * customer". `action` is the one exception: the same create trigger the populated collection's
- * header already offers, surfaced again where the empty body area would otherwise say nothing
- * can be done — not advice, the identical control.
+ * customer". It carries no action: an empty collection explains state and does not repeat a
+ * create control the page or drawer already shows continuously.
  */
-export function EmptyState({
-  action,
-  className,
-  ...props
-}: ComponentProps<typeof Hint> & { action?: ReactNode }) {
-  if (!action) return <Hint {...props} className={className} />;
-  return (
-    <div className={cx('flex flex-col items-start gap-3', className)}>
-      <Hint {...props} />
-      {action}
-    </div>
-  );
+export function EmptyState({ className, ...props }: ComponentProps<typeof Hint>) {
+  return <Hint {...props} className={className} />;
 }

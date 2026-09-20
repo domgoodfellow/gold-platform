@@ -40,7 +40,6 @@ export function MessagesView({
         rows={templates}
         rowKey={(template) => template.id}
         empty="Nothing written yet."
-        emptyAction={mayManage ? <MessageSheet organizationId={organizationId} /> : undefined}
         columns={[
           { key: 'name', header: 'Name', emphasis: 'primary', cell: (template) => template.name },
           {

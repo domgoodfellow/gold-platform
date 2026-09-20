@@ -261,7 +261,7 @@ export function OrgNavBar({
   featureAvailability,
   platformStaff = false,
   isGoldInternal = false,
-  setup = null,
+  setup = false,
 }: {
   organizationId: string;
   enabledModules: string[];
@@ -270,8 +270,8 @@ export function OrgNavBar({
   featureAvailability: string[];
   platformStaff?: boolean;
   isGoldInternal?: boolean;
-  /** Present only while the business is in SETUP — the layout decides, and it leaves the bar the moment the business is LIVE. */
-  setup?: SetupProgress | null;
+  /** True only while the business is in SETUP — the layout decides, and it leaves the bar the moment the business is LIVE. */
+  setup?: boolean;
 }) {
   const pathname = usePathname();
   const segment = currentSegment(pathname);
@@ -312,9 +312,6 @@ export function OrgNavBar({
     </nav>
   );
 }
-
-/** How far Setup has got, as the shell needs it: areas ready out of areas listed. */
-export type SetupProgress = { ready: number; total: number };
 
 /**
  * The one Setup treatment while a business is in SETUP — an ordinary navigation row at the top of
@@ -439,8 +436,8 @@ export function OrgSidebar({
   enabledModules: string[];
   capabilities: Capability[];
   featureAvailability: string[];
-  /** Present only while the business is in SETUP — the layout decides, from `operationalState`. */
-  setup?: SetupProgress | null;
+  /** True only while the business is in SETUP — the layout decides, from `operationalState`. */
+  setup?: boolean;
   email: string;
   signOutAction: () => Promise<void>;
 } & React.ComponentProps<typeof Sidebar>) {

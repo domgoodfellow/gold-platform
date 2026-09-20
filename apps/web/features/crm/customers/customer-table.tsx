@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
@@ -17,14 +16,12 @@ export function CustomerTable({
   definitions,
   stages = [],
   empty = 'No customers yet.',
-  emptyAction,
 }: {
   organizationId: string;
   customers: Customer[];
   definitions: FieldDefinition[];
   stages?: CustomerStage[];
   empty?: string;
-  emptyAction?: ReactNode;
 }) {
   const stageNames = new Map(stages.map((stage) => [stage.id, stage.name]));
   return (
@@ -32,7 +29,6 @@ export function CustomerTable({
       rows={customers}
       rowKey={(customer) => customer.id}
       empty={empty}
-      emptyAction={emptyAction}
       columns={[
         {
           key: 'name',

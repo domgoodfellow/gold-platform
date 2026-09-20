@@ -37,7 +37,6 @@ export type DataTableProps<T> = {
   actions?: (row: T) => ReactNode;
   empty: ReactNode;
   /** Offered only at zero rows — the same create trigger the page's header already shows. */
-  emptyAction?: ReactNode;
   footer?: ReactNode;
 };
 
@@ -47,10 +46,9 @@ export function DataTable<T>({
   rowKey,
   actions,
   empty,
-  emptyAction,
   footer,
 }: DataTableProps<T>) {
-  if (rows.length === 0) return <EmptyState action={emptyAction}>{empty}</EmptyState>;
+  if (rows.length === 0) return <EmptyState>{empty}</EmptyState>;
 
   const wide = columns.filter((column) => column.emphasis !== 'secondary');
 
@@ -121,7 +119,7 @@ export function DataTable<T>({
                 </div>
               ))}
 
-              <dl className={cx('grid grid-cols-[auto_1fr] gap-x-3 gap-y-1', heading.length > 0 && 'mt-2')}>
+              <dl className={cx('grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-1', heading.length > 0 && 'mt-2')}>
                 {rest.map((column) => (
                   <div key={column.key} className="contents">
                     <dt className="text-sm text-subtle">{column.header}</dt>

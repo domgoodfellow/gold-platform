@@ -21,7 +21,7 @@ const PROBLEM: ReadonlySet<TenantHealth> = new Set(['failed', 'remote_missing', 
 
 export function TenantHealthBadge({ health }: { health: TenantHealth }) {
   return (
-    <Badge tone={health === 'in_sync' ? 'success' : 'neutral'} className={PROBLEM.has(health) ? 'border-danger/40 text-danger' : undefined}>
+    <Badge tone={health === 'in_sync' ? 'success' : PROBLEM.has(health) ? 'danger' : 'neutral'}>
       {LABEL[health]}
     </Badge>
   );
@@ -29,7 +29,7 @@ export function TenantHealthBadge({ health }: { health: TenantHealth }) {
 
 export function ReadinessBadge({ state }: { state: ProviderReadiness['state'] }) {
   return (
-    <Badge tone={state === 'operational' ? 'success' : 'neutral'} className={state === 'attention' ? 'border-danger/40 text-danger' : undefined}>
+    <Badge tone={state === 'operational' ? 'success' : state === 'attention' ? 'danger' : 'neutral'}>
       {state === 'operational' ? 'Operational' : state === 'attention' ? 'Needs attention' : 'Not configured'}
     </Badge>
   );

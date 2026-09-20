@@ -105,7 +105,7 @@ export function AddMemberTrigger({
 }) {
   const open = useContext(AddMemberSheetContext);
   return (
-    <Button type="button" size="small" onClick={() => open?.()}>
+    <Button type="button" onClick={() => open?.()}>
       {children}
     </Button>
   );

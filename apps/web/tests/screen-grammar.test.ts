@@ -93,8 +93,9 @@ describe('an empty collection explains state; it does not repeat the header’s 
     }
   });
 
-  it('the DataTable API still offers emptyAction for a collection that has no header action', () => {
-    expect(read(`${WEB}/components/display/table.tsx`)).toContain('emptyAction');
+  it('the emptyAction API is gone: no caller needed it once each create control was continuously visible', () => {
+    // Enforced across the whole application in `residual-polish.test.ts`.
+    expect(read(`${WEB}/components/display/table.tsx`)).not.toContain('emptyAction');
   });
 });
 

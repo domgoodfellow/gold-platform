@@ -22,7 +22,7 @@ export function Badge({
         tone === 'accent'
           ? 'bg-accent text-on-accent'
           : tone === 'success'
-            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+            ? 'border-success/30 bg-success/10 text-success'
           : tone === 'danger'
             ? 'border-danger/30 bg-danger/10 text-danger'
           : 'border border-border text-muted',

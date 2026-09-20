@@ -18,7 +18,6 @@ import {
 } from '@/lib/domain/catalogue/organization-plans';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
-import { computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import {
   OrgNavBar,
@@ -87,11 +86,7 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
     </span>
   );
   // The same lifecycle treatment the operator shell gives every business: present while SETUP lasts.
-  const setupOverview =
-    organization.operationalState === 'setup'
-      ? await computeSetupOverview(db, { organizationId: organization.id })
-      : null;
-  const setup = setupOverview ? { ready: setupOverview.ready, total: setupOverview.total } : null;
+  const setup = organization.operationalState === 'setup';
   const organizations = myOrganizations.map((org) => ({
     id: org.id,
     name: org.name,

@@ -141,7 +141,7 @@ describe('who owns which failure', () => {
 
 describe('the phone bar leads with the current context', () => {
   const shell = read('app/organizations/[organizationId]/org-shell.tsx');
-  const bar = shell.slice(shell.indexOf('export function OrgNavBar('), shell.indexOf('export type SetupProgress'));
+  const bar = shell.slice(shell.indexOf('export function OrgNavBar('), shell.indexOf('export function SetupEntry'));
 
   it('Platform comes first while on /platform/**, and after the areas in a business', () => {
     const before = bar.indexOf('{inPlatform ? platformMenu : null}');

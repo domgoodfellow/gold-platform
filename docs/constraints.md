@@ -1470,8 +1470,8 @@ advice.
 ### D53 — Setup is a lifecycle the shell and every entry follow, and a map of configuration that lives elsewhere
 
 **Decision.** While `operationalState === 'setup'`, a business is entered through `/setup`, the
-sidebar and the phone bottom bar each carry one Setup item with its count ("4 of 6"), and Today
-shows a single sentence pointing back. At Launch all three stop, on their own: the layout reads the
+sidebar and the phone bottom bar each carry one Setup item — navigation only, no count, since Setup
+owns progress — and Today shows a single sentence pointing back. At Launch all three stop, on their own: the layout reads the
 state once and hands both renderings the same value, and Launch revalidates the layout and lands on
 Today. Setup lists *areas*, never fields, and every area links to the workspace that owns its
 configuration; nothing on `/setup` edits a business. Importance is only what the domain already

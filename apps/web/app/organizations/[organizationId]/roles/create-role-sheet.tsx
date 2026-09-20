@@ -28,7 +28,7 @@ export function CreateRoleSheet({ organizationId }: { organizationId: string }) 
   return (
     <PageDrawer open={open} onOpenChange={setOpen}>
       <PageDrawerTrigger asChild>
-        <Button type="button" size="small">
+        <Button type="button">
           <Plus aria-hidden className="size-4" /> New role
         </Button>
       </PageDrawerTrigger>
