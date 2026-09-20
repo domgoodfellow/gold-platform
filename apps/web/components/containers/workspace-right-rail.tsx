@@ -16,14 +16,17 @@ import {
 import { Bot, Settings, X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { cx, FOCUS_RING } from '@/components/class-names';
+import { HEADER_HEIGHT_STYLE } from './workspace-geometry';
 
 /**
  * Two independent panels beside the workspace, each with its own open state:
  *
- * - **Agent** is workspace-scoped and always the outermost right panel.
+ * - **Agent** is workspace-scoped and always the outermost right panel. Its header is the
+ *   workspace header's band.
  * - **The page drawer** is page-scoped: Configure, and every create/edit form a page opens. It
- *   sits between the page and Agent. Its content is written by whoever opened it (`PageDrawer`)
- *   and portalled into the slot this host exposes, so it keeps its owner's state and context.
+ *   sits between the page and Agent, beneath the workspace header, and its header aligns with the
+ *   page's (`workspace-geometry.ts`). Its content is written by whoever opened it (`PageDrawer`)
+ *   and portalled into the slot `PagePanel` exposes, so it keeps its owner's state and context.
  *
  * Neither is modal: nothing dims, blurs or blocks the page behind them.
  */
@@ -224,7 +227,7 @@ export function AgentTrigger() {
       aria-pressed={agentOpen}
       aria-label="Agent"
       onClick={toggleAgent}
-      className={cx('gap-1.5 px-2 sm:px-3', agentOpen && 'bg-muted')}
+      className="gap-1.5 px-2 sm:px-3"
     >
       <Bot aria-hidden size={16} />
       <span className="hidden sm:inline">Agent</span>
@@ -247,7 +250,7 @@ export function ConfigureTrigger() {
       tone="secondary"
       aria-pressed={configureOpen}
       onClick={toggleConfigure}
-      className={cx('gap-1.5', configureOpen && 'bg-muted')}
+      className="gap-1.5"
     >
       <Settings aria-hidden size={16} />
       Configure
@@ -255,16 +258,35 @@ export function ConfigureTrigger() {
   );
 }
 
-function panelClass(layout: RailLayout, shown: boolean): string {
+/**
+ * Where each panel sits, in every layout. Agent is workspace-global: it runs the full height and
+ * its header takes the workspace header's band. The page panel is page-local: it starts beneath
+ * that band (it is rendered inside `AppShell`, under the header), so its own header lines up with
+ * the page's. The header height is `--header-height`, set once on the rail root.
+ */
+function panelClass(panel: Panel, layout: RailLayout, shown: boolean): string {
   if (!shown) return 'hidden';
+  const global = panel === 'agent';
   const base = 'flex flex-col overflow-hidden bg-background';
   if (layout === 'wide' || layout === 'docked') {
-    return cx(base, 'sticky top-0 h-svh shrink-0 self-start border-l border-border');
+    return cx(
+      base,
+      'shrink-0 self-start border-l border-border',
+      global ? 'sticky top-0 h-svh' : 'sticky top-(--header-height) h-[calc(100svh-var(--header-height))]',
+    );
   }
   if (layout === 'overlay') {
-    return cx(base, 'fixed inset-y-0 right-0 z-40 w-full max-w-md border-l border-border shadow-lg');
+    return cx(
+      base,
+      'fixed right-0 bottom-0 z-40 w-full max-w-md border-l border-border shadow-lg',
+      global ? 'top-0' : 'top-(--header-height)',
+    );
   }
-  return cx(base, 'fixed inset-x-0 bottom-0 z-40 h-[85dvh] rounded-t-xl border-t border-border shadow-lg');
+  return cx(
+    base,
+    'fixed inset-x-0 bottom-0 z-40 rounded-t-xl border-t border-border shadow-lg',
+    global ? 'h-[85dvh]' : 'h-[min(85dvh,calc(100dvh-var(--header-height)))]',
+  );
 }
 
 function docked(layout: RailLayout) {
@@ -318,15 +340,15 @@ function AgentPanel() {
   const style: CSSProperties | undefined = docked(layout) ? { width: agentWidth } : undefined;
 
   return (
-    <aside aria-label="Agent" className={cx('relative', panelClass(layout, showAgent))} style={style}>
+    <aside aria-label="Agent" className={panelClass('agent', layout, showAgent)} style={style}>
       {docked(layout) ? <AgentResizeHandle /> : null}
-      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+      <div className="flex h-(--header-height) shrink-0 items-center gap-3 border-b border-border px-4">
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">Agent</h2>
         <button
           type="button"
           onClick={closeAgent}
           aria-label="Close Agent"
-          className={cx('rounded p-1 text-muted hover:bg-muted hover:text-foreground', FOCUS_RING)}
+          className={cx('rounded p-1 text-muted hover:bg-hover hover:text-foreground', FOCUS_RING)}
         >
           <X aria-hidden size={16} />
         </button>
@@ -336,7 +358,8 @@ function AgentPanel() {
   );
 }
 
-function PagePanel() {
+/** Rendered by `AppShell`, beneath the workspace header and beside the page — never by the rail. */
+export function PagePanel() {
   const { layout, showPage, setPageSlot } = useWorkspaceRail();
   const style: CSSProperties | undefined = docked(layout) ? { width: PAGE_DRAWER_WIDTH } : undefined;
 
@@ -344,22 +367,22 @@ function PagePanel() {
     <aside
       ref={setPageSlot}
       aria-label="Page panel"
-      className={panelClass(layout, showPage)}
+      className={panelClass('page', layout, showPage)}
       style={style}
     />
   );
 }
 
 /**
- * The single host for both panels. `main` never moves in the tree, so opening or closing a panel
- * never remounts the page. The same two elements serve every layout — only their classes change —
- * so resizing the window never remounts the drawer content either.
+ * The workspace row: the whole shell (`main`, which hosts the page panel under its own header) and
+ * Agent beside it. `main` never moves in the tree, so opening or closing a panel never remounts
+ * the page, and the same two elements serve every layout — only their classes change. It owns
+ * `--header-height`, so Agent's header and the workspace header are one band.
  */
 export function WorkspaceRightRail({ main }: { main: ReactNode }) {
   return (
-    <div className="flex min-h-svh w-full">
+    <div className="flex min-h-svh w-full" style={HEADER_HEIGHT_STYLE}>
       <div className="min-w-0 flex-1">{main}</div>
-      <PagePanel />
       <AgentPanel />
     </div>
   );

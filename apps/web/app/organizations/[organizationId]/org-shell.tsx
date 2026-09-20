@@ -182,7 +182,7 @@ function PhoneNavLink({
       className={cx(
         FOCUS_RING,
         'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm',
-        current ? 'bg-foreground font-medium text-background' : 'hover:bg-black/5 dark:hover:bg-white/10',
+        current ? 'bg-foreground font-medium text-background' : 'hover:bg-hover',
       )}
     >
       {Icon ? <Icon aria-hidden size={18} className="shrink-0" /> : null}
@@ -355,7 +355,7 @@ export function SetupNavLink({ organizationId, setup }: { organizationId: string
       className={cx(
         FOCUS_RING,
         'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm',
-        current ? 'bg-foreground font-medium text-background' : 'hover:bg-black/5 dark:hover:bg-white/10',
+        current ? 'bg-foreground font-medium text-background' : 'hover:bg-hover',
       )}
     >
       <ListChecks aria-hidden size={18} className="shrink-0" />
@@ -410,6 +410,7 @@ export function OrgSidebar({
   name,
   role,
   organizations,
+  platformAdministration,
   platformStaff,
   isGoldInternal,
   enabledModules,
@@ -425,6 +426,8 @@ export function OrgSidebar({
   name: string;
   role: string;
   organizations: SwitchableOrganization[];
+  /** The switcher offers Platform Administration (`platformAdministrationAvailable`). Not the same fact as `platformStaff`. */
+  platformAdministration: boolean;
   platformStaff: boolean;
   /** Server-resolved from a real membership plus the current `gold_internal` base Plan. */
   isGoldInternal: boolean;
@@ -443,6 +446,7 @@ export function OrgSidebar({
           mark={mark}
           current={{ kind: 'business', organizationId, name, role }}
           organizations={organizations}
+          platformAdministration={platformAdministration}
         />
       </SidebarHeader>
       <SidebarContent>

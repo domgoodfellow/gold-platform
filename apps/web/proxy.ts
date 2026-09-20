@@ -2,6 +2,8 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { updateSession } from '@/lib/db/session';
 import { decideRedirect } from '@/lib/route/access';
+import { LAST_ORGANIZATION_COOKIE, LAST_ORGANIZATION_COOKIE_OPTIONS } from '@/lib/route/last-organization';
+import { organizationIdFromPath } from '@/lib/route/platform-context';
 
 /**
  * The routing rules themselves — the closed public-path set and `decideRedirect` — live in
@@ -23,6 +25,13 @@ export async function proxy(request: NextRequest) {
     url.pathname = target;
     url.search = '';
     return NextResponse.redirect(url);
+  }
+
+  // Remember the business being worked in, so a later sign-in lands there. Only a hint: the
+  // landing checks it against the caller's memberships before honouring it.
+  const organizationId = organizationIdFromPath(pathname);
+  if (organizationId && request.cookies.get(LAST_ORGANIZATION_COOKIE)?.value !== organizationId) {
+    response.cookies.set(LAST_ORGANIZATION_COOKIE, organizationId, LAST_ORGANIZATION_COOKIE_OPTIONS);
   }
 
   return response;

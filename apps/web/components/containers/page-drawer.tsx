@@ -16,12 +16,14 @@ import { createPortal } from 'react-dom';
 import { XIcon } from 'lucide-react';
 import { Slot } from 'radix-ui';
 import { cx, FOCUS_RING } from '../class-names';
+import { PAGE_PADDING_TOP, PAGE_TITLE_ROW, PAGE_TOP_OFFSET } from './workspace-geometry';
 import { useWorkspaceRail } from './workspace-right-rail';
 
 /**
  * The one drawer a page opens — a create or edit form, a Configure panel. It replaces the modal
  * `Sheet` for page work: nothing dims or blurs, the page stays usable beside it, and it docks full
- * height next to the page (`WorkspaceRightRail` owns where). The API mirrors `Sheet`'s so an owner
+ * height beneath the workspace header, next to the page (`PagePanel` owns where; the header's
+ * alignment with `PageHeader` comes from `workspace-geometry.ts`). The API mirrors `Sheet`'s so an owner
  * keeps its own `open` state, form and context; only the surface differs.
  *
  * Content is portalled into the host's slot, so it is written by its owner and survives Agent and
@@ -151,7 +153,11 @@ export function PageDrawerContent({ className, children }: { className?: string;
       <button
         type="button"
         onClick={() => setOpen(false)}
-        className={cx('absolute top-3 right-3 rounded p-1 text-muted hover:bg-muted hover:text-foreground', FOCUS_RING)}
+        className={cx(
+          'absolute right-3 flex size-8 items-center justify-center rounded text-muted hover:bg-hover hover:text-foreground',
+          PAGE_TOP_OFFSET,
+          FOCUS_RING,
+        )}
       >
         <XIcon aria-hidden className="size-4" />
         <span className="sr-only">Close</span>
@@ -162,7 +168,8 @@ export function PageDrawerContent({ className, children }: { className?: string;
 }
 
 export function PageDrawerHeader({ className, ...props }: ComponentProps<'div'>) {
-  return <div className={cx('flex flex-col gap-0.5 p-4 pr-12', className)} {...props} />;
+  // Starts at the page's own top inset, so its title row lines up with `PageHeader`'s `<h1>`.
+  return <div className={cx('flex flex-col gap-0.5 pr-14 pb-4 pl-4', PAGE_PADDING_TOP, className)} {...props} />;
 }
 
 export function PageDrawerFooter({ className, ...props }: ComponentProps<'div'>) {
@@ -171,7 +178,13 @@ export function PageDrawerFooter({ className, ...props }: ComponentProps<'div'>)
 
 export function PageDrawerTitle({ className, ...props }: ComponentProps<'h2'>) {
   const { titleId } = useDrawer();
-  return <h2 id={titleId} className={cx('text-base font-medium text-foreground', className)} {...props} />;
+  return (
+    <h2
+      id={titleId}
+      className={cx('flex items-center text-base font-medium text-foreground', PAGE_TITLE_ROW, className)}
+      {...props}
+    />
+  );
 }
 
 export function PageDrawerDescription({ className, ...props }: ComponentProps<'p'>) {

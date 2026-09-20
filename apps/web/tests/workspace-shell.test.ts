@@ -154,6 +154,8 @@ describe('the Business phone header — compact controls wired to the right slot
     expect(contextBlock).toContain('organizations={switchable}');
     expect(organizationLayout).toMatch(/const switchable = myOrganizations\.map/);
     expect(contextBlock).not.toContain('platformStaff=');
+    // Platform Administration is offered by the same server-resolved fact the sidebar's switcher gets.
+    expect(contextBlock).toContain('platformAdministration={platformAdministration}');
   });
 });
 
@@ -250,6 +252,8 @@ describe('AccountMenu — the compact trigger is not built from Sidebar-only geo
 
 describe('the right rail — Agent and the page drawer are two independent, non-modal panels', () => {
   const pageDrawer = readFileSync(`${WEB}/components/containers/page-drawer.tsx`, 'utf8');
+  const appShell = readFileSync(`${WEB}/components/containers/app-shell.tsx`, 'utf8');
+  const workspaceGeometry = readFileSync(`${WEB}/components/containers/workspace-geometry.ts`, 'utf8');
   const configureRegistrar = readFileSync(`${WEB}/components/containers/configure-registrar.tsx`, 'utf8');
 
   it('keeps Agent and the page drawer open independently, both docked only where the screen has room', () => {
@@ -264,9 +268,59 @@ describe('the right rail — Agent and the page drawer are two independent, non-
   it('is never modal: no overlay, blur or focus trap, and the same two elements serve every layout', () => {
     const source = code(workspaceRightRail);
     expect(source).not.toMatch(/<Sheet|<Drawer|backdrop|Overlay/);
-    expect(source).toContain('<PagePanel />');
     expect(source).toContain('<AgentPanel />');
+    expect(source).not.toContain('<PagePanel />');
     expect(source).toContain('<div className="min-w-0 flex-1">{main}</div>');
+  });
+
+  it('Agent is workspace-global: full height from the top, its header the workspace header\'s band', () => {
+    const agentPanel = workspaceRightRail.slice(
+      workspaceRightRail.indexOf('function AgentPanel'),
+      workspaceRightRail.indexOf('/** Rendered by `AppShell`'),
+    );
+    expect(agentPanel).toContain("panelClass('agent'");
+    expect(agentPanel).toContain('h-(--header-height)');
+    expect(agentPanel).not.toMatch(/\bpy-3\b/);
+    expect(workspaceRightRail).toContain("global ? 'sticky top-0 h-svh'");
+  });
+
+  it('the page panel is page-local: rendered by AppShell beneath the header, offset by the header height in every layout', () => {
+    expect(code(appShell)).toContain('<PagePanel />');
+    expect(appShell.indexOf('{header}')).toBeLessThan(appShell.indexOf('<PagePanel />'));
+    expect(workspaceRightRail).toContain("sticky top-(--header-height) h-[calc(100svh-var(--header-height))]");
+    expect(workspaceRightRail).toContain("global ? 'top-0' : 'top-(--header-height)'");
+    expect(workspaceRightRail).toContain('calc(100dvh-var(--header-height))');
+  });
+
+  it('--header-height has one owner, the rail root, so both panels and the header read the same value', () => {
+    expect(workspaceRightRail).toContain('style={HEADER_HEIGHT_STYLE}');
+    expect(code(appShell)).not.toContain('--header-height');
+    expect(workspaceGeometry).toContain("HEADER_HEIGHT = '3.5rem'");
+  });
+
+  it('a drawer header starts at the page\'s own top inset and its title row is the h1\'s height', () => {
+    expect(code(appShell)).toContain('PAGE_PADDING');
+    expect(code(pageDrawer)).toContain('PAGE_PADDING_TOP');
+    expect(code(pageDrawer)).toContain('PAGE_TITLE_ROW');
+    expect(code(pageDrawer)).toContain('PAGE_TOP_OFFSET');
+    expect(workspaceGeometry).toContain("PAGE_PADDING = 'p-4 sm:p-6 lg:p-8'");
+    expect(workspaceGeometry).toContain("PAGE_PADDING_TOP = 'pt-4 sm:pt-6 lg:pt-8'");
+    expect(workspaceGeometry).toContain("PAGE_TOP_OFFSET = 'top-4 sm:top-6 lg:top-8'");
+  });
+
+  it('no page, feature or drawer positions itself against the header with its own offset', () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) walk(`${dir}/${entry.name}`);
+        else if (/\.tsx$/.test(entry.name) && /header-height/.test(readFileSync(`${dir}/${entry.name}`, 'utf8'))) {
+          offenders.push(`${dir}/${entry.name}`.slice(WEB.length));
+        }
+      }
+    };
+    walk(`${WEB}/app`);
+    walk(`${WEB}/features`);
+    expect(offenders).toEqual([]);
   });
 
   it('every page drawer is a PageDrawer — no modal Sheet is left in a page or feature', () => {
@@ -471,34 +525,41 @@ describe('the tenant workspace header — Platform administering an organization
   });
 });
 
-describe('Account shares the authenticated shell — no standalone island', () => {
-  const accountPage = readFileSync(`${WEB}/app/account/page.tsx`, 'utf8');
+describe('Personal settings shares the authenticated shell — no standalone island', () => {
+  const shell = readFileSync(`${WEB}/features/account/personal-settings-shell.tsx`, 'utf8');
   const contextSwitcherSource = readFileSync(`${WEB}/components/containers/context-switcher.tsx`, 'utf8');
-  const accountSidebar = readFileSync(`${WEB}/features/account/account-sidebar.tsx`, 'utf8');
+  const sidebar = readFileSync(`${WEB}/features/account/personal-settings-sidebar.tsx`, 'utf8');
+  const profile = readFileSync(`${WEB}/app/settings/account/page.tsx`, 'utf8');
+  const security = readFileSync(`${WEB}/app/settings/account/security/page.tsx`, 'utf8');
 
-  it('mounts WorkspaceShell rather than a bare <main>', () => {
-    expect(accountPage).toContain('<WorkspaceShell');
-    expect(accountPage).not.toMatch(/<main\b/);
+  it('mounts WorkspaceShell inside the shared Settings frame rather than a bare <main>', () => {
+    expect(shell).toContain('<WorkspaceShell');
+    expect(shell).toContain('<SettingsPageFrame>');
+    expect(shell).not.toMatch(/<main\b/);
   });
 
-  it('names itself with a PageHeader, not a title in the global header', () => {
-    expect(accountPage).toContain('<PageHeader title="Account"');
-    expect(accountPage).not.toContain('primary=');
+  it('every page names itself with one PageHeader, not a title in the global header', () => {
+    for (const page of [profile, security]) {
+      expect(page).toContain('<PageHeader');
+      expect(page).toContain('<PersonalSettingsShell');
+      expect(page).not.toContain('primary=');
+    }
   });
 
   it('registers an Agent rail — every workspace keeps Agent as a furthest-right control', () => {
-    expect(accountPage).toContain('AccountAgentRail');
+    expect(shell).toContain('AccountAgentRail');
   });
 
   it('has its own SwitcherContext kind, rather than borrowing "business" or "platform"', () => {
     expect(contextSwitcherSource).toMatch(/\{\s*kind:\s*'account'\s*\}/);
-    expect(accountSidebar).toContain("kind: 'account'");
+    expect(sidebar).toContain("kind: 'account'");
   });
 
-  it('keeps ContextSwitcher as the only cross-context navigation — no second business list here', () => {
-    expect(accountSidebar).toContain('ContextSwitcher');
-    expect(accountSidebar).not.toContain('PlatformNavigation');
-    expect(accountSidebar).not.toMatch(/AREAS|areasIn\(/);
+  it('keeps ContextSwitcher as the only cross-context navigation, and lists personal sections only', () => {
+    expect(sidebar).toContain('ContextSwitcher');
+    expect(sidebar).toContain('PERSONAL_SECTIONS');
+    expect(sidebar).not.toContain('PlatformNavigation');
+    expect(sidebar).not.toMatch(/AREAS|areasIn\(/);
   });
 });
 

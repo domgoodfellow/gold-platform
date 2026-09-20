@@ -175,7 +175,7 @@ function ActionButton({ name, value, pending, label }: { name: string; value: st
       name={name}
       value={value}
       disabled={pending}
-      className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
+      className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-hover disabled:opacity-50"
     >
       {pending && value === 'carry-out' ? 'Working…' : label}
     </button>

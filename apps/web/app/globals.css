@@ -47,6 +47,13 @@
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
 
+  /* The neutral interaction states. Hover is the sidebar's own tint -- the one that already
+     reads right -- so a content control and a nav row shade alike. Selected is the same
+     foreground at a stronger step, so *current* never looks like *passing over*. Neither is
+     `--muted`, which is a text colour: `bg-muted` is a 70% black block. */
+  --hover: var(--sidebar-accent);
+  --selected: color-mix(in srgb, var(--foreground) 12%, transparent);
+
   /* The rule between things. Was `black/10 dark:white/15` at 24 hand-written call sites. */
   --border: rgb(0 0 0 / 0.12);
 
@@ -103,6 +110,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-hover: var(--hover);
+  --color-selected: var(--selected);
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-subtle: var(--subtle);

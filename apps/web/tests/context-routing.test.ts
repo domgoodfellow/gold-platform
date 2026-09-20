@@ -22,8 +22,9 @@ import { foundBusiness } from './helpers/founding';
  * The locked product decision: platform staff default into the GOLD operating workspace when initialized, regardless of
  * how many businesses they also belong to. Membership itself is untouched by this — `mixed one`
  * and `mixed multi` below both prove their real membership rows still exist and are still read —
- * only the *default landing* changed. `?all=1` (not exercised against real identities here;
- * `landing.test.ts` covers it purely) is the explicit override that shows the chooser instead.
+ * only the *default landing* changed. Reaching a business or Platform later is the context
+ * switcher's job (`context-switcher.tsx`), which links straight to each; no request shows a
+ * directory instead.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -158,7 +159,6 @@ describe('who lands where, once platform authority and organization membership a
     const landing = resolveOrganizationsLanding({
       organizations,
       staff: false,
-      showAll: false,
     });
     expect(landing.kind).toBe('enter');
   });
@@ -168,7 +168,7 @@ describe('who lands where, once platform authority and organization membership a
     const organizations = await listMyOrganizations(platformOnly.db);
     expect(organizations).toHaveLength(0);
 
-    expect(resolveOrganizationsLanding({ organizations, staff: true, showAll: false })).toEqual({
+    expect(resolveOrganizationsLanding({ organizations, staff: true })).toEqual({
       kind: 'platform',
     });
   });
@@ -181,25 +181,18 @@ describe('who lands where, once platform authority and organization membership a
     expect(organizations).toHaveLength(1);
     expect(organizations[0].id).toBe(mixedOneOrgId);
 
-    expect(resolveOrganizationsLanding({ organizations, staff: true, showAll: false })).toEqual({
+    expect(resolveOrganizationsLanding({ organizations, staff: true })).toEqual({
       kind: 'platform',
-    });
-    // The explicit override still reaches the same real membership.
-    expect(resolveOrganizationsLanding({ organizations, staff: true, showAll: true })).toEqual({
-      kind: 'chooser',
     });
   });
 
-  it('mixed, multiple organizations → /platform by default, chooser on explicit request', async () => {
+  it('mixed, multiple organizations → /platform by default, every membership still read', async () => {
     expect(await isPlatformStaff(mixedMulti.db)).toBe(true);
     const organizations = await listMyOrganizations(mixedMulti.db);
     expect(organizations).toHaveLength(2);
 
-    expect(resolveOrganizationsLanding({ organizations, staff: true, showAll: false })).toEqual({
+    expect(resolveOrganizationsLanding({ organizations, staff: true })).toEqual({
       kind: 'platform',
-    });
-    expect(resolveOrganizationsLanding({ organizations, staff: true, showAll: true })).toEqual({
-      kind: 'chooser',
     });
   });
 

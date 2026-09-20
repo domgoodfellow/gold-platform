@@ -3,7 +3,7 @@ import { loadDemoContext, OWNER_STORAGE_STATE } from './helpers';
 
 test.use({ storageState: OWNER_STORAGE_STATE });
 
-test('reaches /account through the account menu and sees identity and businesses', async ({
+test('reaches Personal settings through the account menu and can return to the business', async ({
   page,
 }) => {
   const ctx = loadDemoContext();
@@ -16,10 +16,17 @@ test('reaches /account through the account menu and sees identity and businesses
   await accountTrigger.click();
   // Radix's DropdownMenuItem renders `role="menuitem"` even when it wraps a Link via `asChild`
   // — not `role="link"`, which is what the underlying `<a>` would suggest.
-  await page.getByRole('menuitem', { name: 'Account' }).click();
+  await page.getByRole('menuitem', { name: 'Personal settings' }).click();
 
-  await expect(page).toHaveURL('/account');
-  await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible();
-  await expect(page.getByText(ctx.ownerEmail)).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Businesses' })).toBeVisible();
+  await expect(page).toHaveURL(`/settings/account?org=${ctx.organizationId}`);
+  await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible();
+  await expect(page.getByText(ctx.ownerEmail).first()).toBeVisible();
+
+  // The retired address lands here rather than on a second surface.
+  await page.goto('/account');
+  await expect(page).toHaveURL('/settings/account');
+
+  await page.goto(`/settings/account?org=${ctx.organizationId}`);
+  await page.getByRole('link', { name: /^Back to/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/organizations/${ctx.organizationId}/`));
 });

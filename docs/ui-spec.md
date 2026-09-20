@@ -44,6 +44,17 @@ Three consequences that are easy to undo.
 Internal. Public, portal and auth surfaces remain flows or single-purpose pages. A customer must
 never meet a business-configuration concept or a Platform section.
 
+**Settings has two scopes, and they share a presentation without sharing ownership.** *Personal
+settings* (`/settings/account`: Profile, Security & sign-in) is the signed-in person's identity —
+their email and password belong to them, so no business's Settings ever holds them (D45).
+*Organization settings* (`/organizations/{id}/settings`) is the selected business's. Both render
+through `WorkspaceShell` and `SettingsPageFrame`, and each says whose it is in its own description.
+The account menu offers *Personal settings* and *Sign out* (switching is the context switcher's); it carries the
+business being left as `?org=`, which the page honours only for a business the caller belongs to,
+so Personal settings can offer *Back to* it. `/account` redirects here and has no page. Nothing
+organization-owned is listed in the Personal sidebar to fill it. Addresses:
+`lib/route/personal-settings.ts`.
+
 **`SiteShell` is GOLD's chrome and belongs on GOLD's pages only** — the front page and the four
 credential screens, which is why those two rows share a description above. It is a header saying
 GOLD and a footer saying GOLD, and on `/book/{slug}` or `/portal/{token}` that would be our
@@ -59,7 +70,11 @@ Sidebar primitives — and, since the shell/context correction, through the shar
 two independent panels — Agent, and the page drawer that Configure and every create/edit form
 open into — neither modal. Both dock beside the page from 1720px; from 1280px one docks, the one
 opened last; between that and 768px one floats over the page from the right; below 768px one
-floats from the bottom. Nothing dims or blurs the page behind them. Both
+floats from the bottom. Nothing dims or blurs the page behind them. **Workspace-global tools align
+to workspace chrome; page-local tools align to page chrome.** Agent runs the full height and its
+header is the workspace header's band; the page drawer starts beneath that band, and its title row
+lines up with the page's `<h1>`. Every measurement is in `workspace-geometry.ts` — no route sets a
+margin to get there. Both
 shells also share `WorkspaceHeader` (`apps/web/components/containers/workspace-header.tsx`), the
 sticky *global* bar, and `PageHeader` (`components/containers/page-header.tsx`), the page's own
 identity and actions — §2a says which owns what. Agent itself is scope-bound rather than shared
@@ -187,7 +202,7 @@ renders here, through a slot, so a page never draws its own.
 | | What | Which widths |
 |---|---|---|
 | Left | the sidebar trigger | `md` and up in Business Context; every width in Platform Context and Account |
-| Left | the compact context switcher — the business's mark and name, opening the same chooser the sidebar's own switcher does — nothing about Setup lives in this header at any width | below `md` only, Business and Platform Context — the sidebar says it above that |
+| Left | the compact context switcher — the business's mark and name, opening the same menu the sidebar's own switcher does — nothing about Setup lives in this header at any width | below `md` only, Business and Platform Context — the sidebar says it above that |
 | Left, after the above | the breadcrumb trail — ancestors only, on a page that passes `crumbs` | all |
 | Right, before Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
 | Right, furthest | Agent | all — always the last control in the row |
@@ -210,9 +225,15 @@ A detail route is *in* an area and not *at* it, so it writes its own title (a jo
 tenant's words) and passes the way back as `PageHeader` crumbs; `RecordHeader` keeps its older
 props and renders the same `PageHeader`. Every page renders exactly one page identity.
 
-**Organization switching belongs to the organization identity.** The identity control opens the
-existing business chooser; it does not manufacture a list or creation action without a server
-read behind it. **Sign out belongs to the account menu**, in the sidebar footer on desktop and in
+**Context switching belongs to the context switcher, and only to it.** One identity, zero or
+more memberships, optionally Platform Administration, and one current context. The menu's header
+is the current context and its list is *where else*: the other businesses, each linking straight
+to that business's own lifecycle entry, and — for staff holding a GOLD Internal membership —
+*Platform Administration*, apart from the businesses because it is a scope and not one. Inside
+Platform, GOLD is listed so it can be returned to. With nowhere else to go it is a label, not an
+empty menu. There is no directory page: `/organizations` only lands a sign-in (the business last
+worked in, else the first) and founds a first business, and the old `?all=1` request is ignored.
+It does not manufacture a list or creation action without a server read behind it. **Sign out belongs to the account menu**, in the sidebar footer on desktop and in
 the compact header menu on a phone. Neither is an operating action or permanent page-header
 command.
 
@@ -274,6 +295,16 @@ and each one names something the screens were already drawing without a word for
 | danger | a refusal, an error, a destructive action | `red-600` in 34 places and `red-700` in 7 |
 | accent / on-accent | emphasis, and the text on it — the primary button | `bg-foreground text-background` |
 | accent-text | the accent used as *text*: a link, a focus ring | nothing; there was no link colour |
+| hover | a neutral control or menu item under the pointer — the sidebar's own tint | `bg-muted` (a 70% black text role), `black/5`, `accent` |
+| selected | the current / pressed / open neutral state, one step stronger than hover | `bg-muted` again |
+
+**Interaction states.** Neutral default is transparent or surface; neutral hover is `hover`;
+selected, pressed and open (`aria-pressed`, `aria-expanded`, `data-open`) is `selected`;
+focus-visible is `FOCUS_RING`, independent of hover; primary keeps its own `accent/80` hover and
+never takes `hover`; destructive keeps `danger`; disabled is `opacity-50` with no hover. They live
+in the shared variants (`Button`, `DropdownMenuItem`, `TableRow`, `Calendar`), and a screen writes
+none. `muted` is text and is never a background. A container shades on hover only when the whole
+of it is the action: a table row or card that merely holds links does not.
 
 **Two muted levels rather than one**, because the screens were already making that distinction by
 hand and flattening it would have been a design decision disguised as a cleanup. `danger` went

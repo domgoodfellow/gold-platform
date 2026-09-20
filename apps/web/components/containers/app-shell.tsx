@@ -1,10 +1,10 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { SidebarInset, SidebarProvider } from '@gold/ui/components/sidebar';
 import { cx } from '../class-names';
-
-const HEADER_HEIGHT_STYLE = { '--header-height': '3.5rem' } as CSSProperties;
+import { PAGE_PADDING } from './workspace-geometry';
+import { PagePanel } from './workspace-right-rail';
 
 /**
  * The two-column frame every shell renders inside: a `Sidebar` the caller builds (each shell
@@ -32,12 +32,17 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <SidebarProvider style={HEADER_HEIGHT_STYLE}>
+    <SidebarProvider>
       {sidebar}
       <SidebarInset className="min-w-0">
         {header}
-        <div className={cx('min-w-0 flex-1 p-4 sm:p-6 lg:p-8', bottomBar ? 'pb-24 md:pb-6' : undefined)}>
-          {children}
+        {/* Beneath the workspace header, beside the page: the page drawer lives here, so it starts
+            under the header and the page stays visible next to it. */}
+        <div className="flex min-w-0 flex-1">
+          <div className={cx('min-w-0 flex-1', PAGE_PADDING, bottomBar ? 'pb-24 md:pb-6' : undefined)}>
+            {children}
+          </div>
+          <PagePanel />
         </div>
       </SidebarInset>
       {bottomBar}

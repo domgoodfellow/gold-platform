@@ -14,6 +14,7 @@ import {
   organizationResolvedFeatureStates,
 } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganization } from '@/lib/route/organization';
+import { platformAdministrationAvailable } from '@/lib/route/platform-context';
 import { CompactAccountMenu } from '@/components/containers/account-menu';
 import { CompactContextSwitcher } from '@/components/containers/context-switcher';
 import { WorkspaceHeader } from '@/components/containers/workspace-header';
@@ -58,6 +59,7 @@ export default async function OrganizationLayout({
   const featureAvailability = availableFeatureKeys(featureStates);
   const goldInternal = await findGoldInternalOrganization(db, myOrganizations);
   const isGoldInternal = goldInternal?.id === organizationId;
+  const platformAdministration = platformAdministrationAvailable({ staff, goldInternal });
   // `requireOrganization` already proved a session exists; this is a second, deliberately
   // separate read of the same session for the one extra fact the shell shows (I11's minimal
   // `Actor` shape carries only an id).
@@ -120,6 +122,7 @@ export default async function OrganizationLayout({
       name={organization.name}
       role={organization.role}
       organizations={switchable}
+      platformAdministration={platformAdministration}
       platformStaff={staff}
       isGoldInternal={isGoldInternal}
       enabledModules={[...enabledModules]}
@@ -149,6 +152,7 @@ export default async function OrganizationLayout({
             mark={mark}
             current={{ kind: 'business', organizationId, name: organization.name, role: organization.role }}
             organizations={switchable}
+            platformAdministration={platformAdministration}
           />
         </div>
       }

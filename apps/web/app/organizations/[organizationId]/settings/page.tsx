@@ -51,7 +51,7 @@ export default async function SettingsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader title={areaLabel('settings')} description="Durable configuration for how this business runs." />
+      <PageHeader title={areaLabel('settings')} description={`Durable configuration for ${organization.name}. Changes here apply to this business, not to your personal account.`} />
       <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
         <Card as="section" className="border-accent">
           <SectionHeading>Setup</SectionHeading>

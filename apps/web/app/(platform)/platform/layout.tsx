@@ -110,6 +110,7 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
             name={organization.name}
             role={organization.role}
             organizations={organizations}
+            platformAdministration
             platformStaff
             isGoldInternal
             enabledModules={[...enabledModules]}
@@ -134,6 +135,7 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
                     role: organization.role,
                   }}
                   organizations={organizations}
+                  platformAdministration
                 />
               </div>
             }

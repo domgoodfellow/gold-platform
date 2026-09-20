@@ -112,7 +112,7 @@ public visitor
                                       │
                                       ├─ tenant host + membership ─► that Organization Context
                                       ├─ one organization ─────────► that Organization Context
-                                      ├─ many organizations ───────► chooser
+                                      ├─ many organizations ───────► the one last worked in, else the first
                                       ├─ platform only ────────────► Platform Context
                                       └─ none ─────────────────────► onboarding
 

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ChevronUp, LogOut, UserRound } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import {
@@ -13,11 +14,13 @@ import {
 } from '@gold/ui/components/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@gold/ui/components/sidebar';
 import { Button } from '@/components/controls/button';
+import { organizationIdFromPath } from '@/lib/route/platform-context';
+import { personalSettingsHref } from '@/lib/route/personal-settings';
 
 /**
  * The truthful, shared person/session menu, one implementation for every shell's sidebar footer.
  * Represents the PERSON, not where they are operating — cross-context navigation (switching
- * business) is `ContextSwitcher`'s job alone.
+ * business, entering Platform Administration) is `ContextSwitcher`'s job alone.
  */
 
 type AccountMenuProps = {
@@ -27,13 +30,17 @@ type AccountMenuProps = {
 };
 
 function AccountMenuContent({ email, signOutAction }: AccountMenuProps) {
+  // The business being left, so Personal settings can offer the way back. Read from the path
+  // rather than passed in: this menu is shared by shells that have no organization at all.
+  const from = organizationIdFromPath(usePathname());
+
   return (
     <>
       <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
       <DropdownMenuSeparator />
-      <DropdownMenuItem asChild><Link href="/account"><UserRound />Account</Link></DropdownMenuItem>
+      <DropdownMenuItem asChild><Link href={personalSettingsHref('profile', from)}><UserRound />Personal settings</Link></DropdownMenuItem>
       <DropdownMenuSeparator />
-      <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Log out</DropdownMenuItem>
+      <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Sign out</DropdownMenuItem>
     </>
   );
 }
