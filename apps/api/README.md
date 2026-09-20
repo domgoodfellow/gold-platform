@@ -26,6 +26,9 @@ platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and acces
 `vercel.json` owns the rewrites from those logical routes to the physical handlers. Local
 development uses `python apps/api/dev.py` and defaults to port 8787.
 
+Tests need `pip install -r apps/api/requirements-dev.txt` (production installs `requirements.txt`
+alone). `pytest.ini` sets the import root, so a test imports `app` and `api` as the handlers do.
+
 These routes prove the payment, Automation, Ask and Voice foundations. They do not prove M9:
 recording metadata exists, but transcription, call analysis, timeline attachment of that
 analysis, reviewed domain actions, browser softphone and realtime voice-agent delegation remain.

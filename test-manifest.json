@@ -1,0 +1,1147 @@
+{
+  "version": 1,
+  "categories": {
+    "unit": {
+      "runner": "vitest",
+      "dir": "apps/web/tests/unit",
+      "requires": "none",
+      "gate": true,
+      "description": "One function or a small group, in-process, nothing external."
+    },
+    "component": {
+      "runner": "vitest",
+      "dir": "apps/web/tests/component",
+      "requires": "none",
+      "gate": true,
+      "description": "A coherent UI component rendered in-process, outer boundaries faked."
+    },
+    "architecture-static": {
+      "runner": "vitest",
+      "dir": "apps/web/tests/architecture/static",
+      "requires": "none",
+      "gate": true,
+      "description": "A codebase, build or dependency rule enforced by reading source or running the compiler. No database."
+    },
+    "architecture-db": {
+      "runner": "vitest",
+      "dir": "apps/web/tests/architecture/database",
+      "requires": "database",
+      "gate": true,
+      "description": "A rule about the live schema, grants or roles, asked of the real local Postgres."
+    },
+    "database-integration": {
+      "runner": "vitest",
+      "dir": "apps/web/tests/integration/database",
+      "requires": "database",
+      "gate": true,
+      "description": "Domain layer and/or policies against real local Supabase (Auth, Postgres, RLS)."
+    },
+    "offline-contract": {
+      "runner": "vitest",
+      "dir": "apps/web/tests/contract",
+      "requires": "none",
+      "gate": true,
+      "description": "A provider or protocol shape checked offline from the web runtime. None exist yet."
+    },
+    "python-unit": {
+      "runner": "pytest",
+      "dir": "apps/api/tests/unit",
+      "requires": "none",
+      "gate": true,
+      "description": "Python: one function or a small group."
+    },
+    "python-component": {
+      "runner": "pytest",
+      "dir": "apps/api/tests/component",
+      "requires": "none",
+      "gate": true,
+      "description": "Python: a command or handler with its outer HTTP/database boundary faked."
+    },
+    "python-contract": {
+      "runner": "pytest",
+      "dir": "apps/api/tests/contract",
+      "requires": "none",
+      "gate": true,
+      "description": "Python: a provider or protocol shape, checked offline."
+    },
+    "playwright-acceptance": {
+      "runner": "playwright",
+      "dir": "apps/web/e2e",
+      "requires": "running-app",
+      "gate": false,
+      "description": "Browser journeys against the running app and seeded demo data."
+    },
+    "playwright-smoke": {
+      "runner": "playwright",
+      "dir": "apps/web/e2e/smoke",
+      "requires": "running-app",
+      "gate": false,
+      "description": "The smallest deployed-shaped check: app answers, login renders, a session works, the shell loads."
+    },
+    "provider-contract": {
+      "runner": "vitest",
+      "dir": "apps/web/tests/provider-contract",
+      "requires": "sandbox-credentials",
+      "gate": false,
+      "description": "A real vendor sandbox, called with credentials. Never in the default run; each test skips itself without its credentials. None exist yet."
+    }
+  },
+  "tiers": {
+    "fast": [
+      "unit",
+      "component",
+      "architecture-static",
+      "offline-contract",
+      "python-unit",
+      "python-component",
+      "python-contract"
+    ],
+    "local": [
+      "architecture-db",
+      "database-integration"
+    ],
+    "e2e": [
+      "playwright-acceptance"
+    ],
+    "smoke": [
+      "playwright-smoke"
+    ],
+    "provider": [
+      "provider-contract"
+    ]
+  },
+  "files": {
+    "apps/api/tests/component/test_ai_loop.py": {
+      "category": "python-component",
+      "concerns": [
+        "ai",
+        "security"
+      ]
+    },
+    "apps/api/tests/component/test_auth.py": {
+      "category": "python-component",
+      "concerns": [
+        "auth",
+        "security"
+      ]
+    },
+    "apps/api/tests/component/test_domains_crm.py": {
+      "category": "python-component",
+      "concerns": [
+        "crm"
+      ],
+      "note": "Domain command over a patched PostgREST call."
+    },
+    "apps/api/tests/component/test_domains_voice.py": {
+      "category": "python-component",
+      "concerns": [
+        "voice"
+      ],
+      "note": "Domain command over a patched PostgREST call."
+    },
+    "apps/api/tests/component/test_handlers.py": {
+      "category": "python-component",
+      "concerns": [
+        "security",
+        "voice",
+        "payments",
+        "billing",
+        "automation",
+        "auth",
+        "ai",
+        "integrations",
+        "providers"
+      ],
+      "note": "Drives every apps/api/api entrypoint in-process: the refusal, and that the sink was never reached."
+    },
+    "apps/api/tests/component/test_integration_operations.py": {
+      "category": "python-component",
+      "concerns": [
+        "integrations"
+      ],
+      "note": "Component, despite the filename: every boundary is patched. \"Integration\" names the product feature."
+    },
+    "apps/api/tests/component/test_provider_operations.py": {
+      "category": "python-component",
+      "concerns": [
+        "providers",
+        "security"
+      ]
+    },
+    "apps/api/tests/contract/test_connectors.py": {
+      "category": "python-contract",
+      "concerns": [
+        "integrations",
+        "providers"
+      ]
+    },
+    "apps/api/tests/contract/test_stripe_platform_billing_webhook.py": {
+      "category": "python-contract",
+      "concerns": [
+        "billing",
+        "providers",
+        "security"
+      ]
+    },
+    "apps/api/tests/contract/test_stripe_webhook.py": {
+      "category": "python-contract",
+      "concerns": [
+        "payments",
+        "providers",
+        "security"
+      ]
+    },
+    "apps/api/tests/contract/test_voice.py": {
+      "category": "python-contract",
+      "concerns": [
+        "voice",
+        "providers"
+      ]
+    },
+    "apps/api/tests/unit/test_automation_tick.py": {
+      "category": "python-unit",
+      "concerns": [
+        "automation",
+        "communications"
+      ]
+    },
+    "apps/web/e2e/account.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "identity",
+        "navigation"
+      ]
+    },
+    "apps/web/e2e/automation.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "automation"
+      ]
+    },
+    "apps/web/e2e/catalog-plans.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "commercial",
+        "platform"
+      ]
+    },
+    "apps/web/e2e/crm-voice.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "crm",
+        "voice"
+      ]
+    },
+    "apps/web/e2e/documents.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "documents"
+      ]
+    },
+    "apps/web/e2e/feature-navigation-gate.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "modules",
+        "navigation"
+      ]
+    },
+    "apps/web/e2e/operator-paths.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "rbac",
+        "portal"
+      ]
+    },
+    "apps/web/e2e/platform-catalog.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "platform",
+        "catalogue"
+      ]
+    },
+    "apps/web/e2e/portal-payments.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "payments",
+        "portal"
+      ]
+    },
+    "apps/web/e2e/public-presence.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "public",
+        "branding"
+      ]
+    },
+    "apps/web/e2e/record-navigation.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "navigation",
+        "records"
+      ]
+    },
+    "apps/web/e2e/setup-lifecycle.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "lifecycle",
+        "setup"
+      ]
+    },
+    "apps/web/e2e/smoke/smoke.spec.ts": {
+      "category": "playwright-smoke",
+      "concerns": [
+        "auth",
+        "availability"
+      ]
+    },
+    "apps/web/e2e/work-relationships.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "work",
+        "records"
+      ]
+    },
+    "apps/web/tests/architecture/database/payment-webhook-role.test.ts": {
+      "category": "architecture-db",
+      "concerns": [
+        "payments",
+        "security"
+      ],
+      "note": "Split out of adapters.test.ts."
+    },
+    "apps/web/tests/architecture/database/python-rpc-surface.test.ts": {
+      "category": "architecture-db",
+      "concerns": [
+        "security",
+        "providers",
+        "platform",
+        "ai"
+      ],
+      "note": "Cross-runtime: every database function apps/api calls exists and is granted to the right role."
+    },
+    "apps/web/tests/architecture/database/schema-conformance.test.ts": {
+      "category": "architecture-db",
+      "concerns": [
+        "tenancy",
+        "security",
+        "schema"
+      ]
+    },
+    "apps/web/tests/architecture/static/adapters.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "providers",
+        "boundaries"
+      ],
+      "note": "I15 import and vocabulary scan. The payment_webhook grant checks now live in payment-webhook-role.test.ts."
+    },
+    "apps/web/tests/architecture/static/auth-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "security",
+        "auth"
+      ]
+    },
+    "apps/web/tests/architecture/static/catalogue-surface-coverage.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "commercial",
+        "catalogue"
+      ]
+    },
+    "apps/web/tests/architecture/static/context-switcher.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "navigation",
+        "platform"
+      ],
+      "note": "Also runs pure route functions."
+    },
+    "apps/web/tests/architecture/static/crm-voice-feature-architecture.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "crm",
+        "voice"
+      ]
+    },
+    "apps/web/tests/architecture/static/custom-fields-workspace.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "fields",
+        "ui"
+      ],
+      "note": "Also runs a pure entity resolver."
+    },
+    "apps/web/tests/architecture/static/dashboard.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "ui"
+      ]
+    },
+    "apps/web/tests/architecture/static/demo-route.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "marketing",
+        "public"
+      ]
+    },
+    "apps/web/tests/architecture/static/fallback-frames.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "navigation",
+        "security"
+      ]
+    },
+    "apps/web/tests/architecture/static/gold-internal-workspace.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "platform",
+        "navigation"
+      ]
+    },
+    "apps/web/tests/architecture/static/integrations-browse.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "integrations",
+        "ui"
+      ],
+      "note": "Also runs pure connector filters."
+    },
+    "apps/web/tests/architecture/static/interaction-states.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "design-system"
+      ]
+    },
+    "apps/web/tests/architecture/static/layout.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "design-system"
+      ]
+    },
+    "apps/web/tests/architecture/static/marketing-homepage.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "marketing",
+        "seo"
+      ]
+    },
+    "apps/web/tests/architecture/static/marketing-shell.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "marketing",
+        "seo"
+      ],
+      "note": "Also runs the real sitemap and robots functions."
+    },
+    "apps/web/tests/architecture/static/milestone-m11.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "design-system",
+        "accessibility"
+      ],
+      "note": "Named for a roadmap period; it is a source scan."
+    },
+    "apps/web/tests/architecture/static/navigation.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "navigation",
+        "modules"
+      ],
+      "note": "Also runs pure navigation-model functions."
+    },
+    "apps/web/tests/architecture/static/operator-ui.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "ui",
+        "work"
+      ]
+    },
+    "apps/web/tests/architecture/static/organization-page-guard.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "tenancy",
+        "security",
+        "navigation"
+      ],
+      "note": "Holds the \"every page calls requireOrganization\" rule."
+    },
+    "apps/web/tests/architecture/static/personal-settings.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "identity",
+        "navigation"
+      ],
+      "note": "Also runs pure route functions."
+    },
+    "apps/web/tests/architecture/static/platform-control-plane.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "platform",
+        "commercial"
+      ]
+    },
+    "apps/web/tests/architecture/static/public-seo.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "seo",
+        "public"
+      ],
+      "note": "Also runs canonical-URL, sitemap and robots functions."
+    },
+    "apps/web/tests/architecture/static/public-site-schema.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "public-site"
+      ],
+      "note": "Zod schema checks plus build-time cache source scans."
+    },
+    "apps/web/tests/architecture/static/residual-polish.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "design-system"
+      ]
+    },
+    "apps/web/tests/architecture/static/screen-grammar.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "design-system",
+        "ui"
+      ]
+    },
+    "apps/web/tests/architecture/static/settings-configuration-center.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "settings",
+        "navigation"
+      ],
+      "note": "The one database-backed authority test moved to settings-configuration-authority.test.ts."
+    },
+    "apps/web/tests/architecture/static/setup-lifecycle.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "lifecycle",
+        "setup"
+      ]
+    },
+    "apps/web/tests/architecture/static/tailwind-source.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "build",
+        "design-system"
+      ],
+      "note": "Runs the real PostCSS and Tailwind compile."
+    },
+    "apps/web/tests/architecture/static/team-workspace.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "rbac",
+        "ui"
+      ],
+      "note": "Also runs a pure view resolver."
+    },
+    "apps/web/tests/architecture/static/test-manifest.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "test-strategy"
+      ],
+      "note": "Guards this manifest: every test file classified, no stale entries."
+    },
+    "apps/web/tests/architecture/static/workspace-shell.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "navigation",
+        "ui"
+      ]
+    },
+    "apps/web/tests/component/ui-components.test.ts": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "accessibility"
+      ]
+    },
+    "apps/web/tests/contract/nominatim-geocoding.test.ts": {
+      "category": "offline-contract",
+      "concerns": [
+        "locations",
+        "providers"
+      ]
+    },
+    "apps/web/tests/contract/resend-email.test.ts": {
+      "category": "offline-contract",
+      "concerns": [
+        "communications",
+        "providers",
+        "security"
+      ]
+    },
+    "apps/web/tests/contract/stripe-payments.test.ts": {
+      "category": "offline-contract",
+      "concerns": [
+        "payments",
+        "security",
+        "providers"
+      ]
+    },
+    "apps/web/tests/contract/twilio-browser-token.test.ts": {
+      "category": "offline-contract",
+      "concerns": [
+        "voice",
+        "security",
+        "providers"
+      ],
+      "note": "The browser softphone token boundary (browserTelephoneToken) had no test."
+    },
+    "apps/web/tests/integration/database/ai-tools.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "ai",
+        "security"
+      ],
+      "note": "Also reads apps/api/app/ai/tools.py."
+    },
+    "apps/web/tests/integration/database/assets.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "assets"
+      ]
+    },
+    "apps/web/tests/integration/database/assistant-grants.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "ai",
+        "integrations",
+        "security"
+      ]
+    },
+    "apps/web/tests/integration/database/automations.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "automation"
+      ]
+    },
+    "apps/web/tests/integration/database/availability.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling"
+      ]
+    },
+    "apps/web/tests/integration/database/booking.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "booking",
+        "security"
+      ]
+    },
+    "apps/web/tests/integration/database/branding.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "branding",
+        "public"
+      ],
+      "note": "Also runs pure palette maths and reads globals.css."
+    },
+    "apps/web/tests/integration/database/buffer.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling"
+      ]
+    },
+    "apps/web/tests/integration/database/catalogue-plans.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "catalogue"
+      ]
+    },
+    "apps/web/tests/integration/database/checklist-templates.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "work"
+      ]
+    },
+    "apps/web/tests/integration/database/commercial-catalogue.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "catalogue"
+      ]
+    },
+    "apps/web/tests/integration/database/commercial-terms.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "billing"
+      ]
+    },
+    "apps/web/tests/integration/database/commercial-usage.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "usage"
+      ]
+    },
+    "apps/web/tests/integration/database/communications.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "communications",
+        "commercial",
+        "tenancy",
+        "security"
+      ],
+      "note": "Named for the credit purse and call cost, not messaging."
+    },
+    "apps/web/tests/integration/database/connector-catalogue.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "integrations",
+        "platform"
+      ],
+      "note": "Also contains source scans."
+    },
+    "apps/web/tests/integration/database/consumption.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "work",
+        "costs"
+      ]
+    },
+    "apps/web/tests/integration/database/context-routing.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "navigation",
+        "platform",
+        "tenancy"
+      ],
+      "note": "Also contains source scans."
+    },
+    "apps/web/tests/integration/database/counted.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "work"
+      ]
+    },
+    "apps/web/tests/integration/database/customers.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "crm"
+      ]
+    },
+    "apps/web/tests/integration/database/documents.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "documents"
+      ]
+    },
+    "apps/web/tests/integration/database/editing.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "work"
+      ]
+    },
+    "apps/web/tests/integration/database/feature-activation.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "modules"
+      ]
+    },
+    "apps/web/tests/integration/database/field-choices.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "fields"
+      ]
+    },
+    "apps/web/tests/integration/database/field-definitions.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "fields"
+      ]
+    },
+    "apps/web/tests/integration/database/field-forms.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "fields"
+      ]
+    },
+    "apps/web/tests/integration/database/gold-bootstrap.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "platform",
+        "tenancy"
+      ]
+    },
+    "apps/web/tests/integration/database/identity.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "auth",
+        "identity"
+      ]
+    },
+    "apps/web/tests/integration/database/integration-credentials.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "integrations",
+        "security"
+      ],
+      "note": "Also scans apps/web for credential names."
+    },
+    "apps/web/tests/integration/database/integrations.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "integrations"
+      ]
+    },
+    "apps/web/tests/integration/database/invitations.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "tenancy",
+        "identity"
+      ]
+    },
+    "apps/web/tests/integration/database/invoices.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "pricing"
+      ]
+    },
+    "apps/web/tests/integration/database/lifecycle.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "lifecycle",
+        "setup"
+      ]
+    },
+    "apps/web/tests/integration/database/location-asset-timeline.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "assets",
+        "locations"
+      ]
+    },
+    "apps/web/tests/integration/database/locations.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "locations"
+      ]
+    },
+    "apps/web/tests/integration/database/members.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "tenancy",
+        "rbac"
+      ]
+    },
+    "apps/web/tests/integration/database/milestone-m1.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "tenancy",
+        "rbac"
+      ]
+    },
+    "apps/web/tests/integration/database/milestone-m2.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "work",
+        "scheduling"
+      ]
+    },
+    "apps/web/tests/integration/database/milestone-m3.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "configuration"
+      ]
+    },
+    "apps/web/tests/integration/database/milestone-m4.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "pricing",
+        "billing"
+      ]
+    },
+    "apps/web/tests/integration/database/milestone-m5.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "payments"
+      ]
+    },
+    "apps/web/tests/integration/database/milestone-m6.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "automation"
+      ],
+      "note": "Also contains a source scan."
+    },
+    "apps/web/tests/integration/database/milestone-m7.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "reporting"
+      ],
+      "note": "Also contains a source scan."
+    },
+    "apps/web/tests/integration/database/milestone-m8.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "ai",
+        "configuration"
+      ],
+      "note": "Stubs the drafting adapter. Also contains source scans."
+    },
+    "apps/web/tests/integration/database/modules.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "modules",
+        "commercial"
+      ]
+    },
+    "apps/web/tests/integration/database/operating-hours.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling"
+      ]
+    },
+    "apps/web/tests/integration/database/platform-billing.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "platform",
+        "providers"
+      ],
+      "note": "Stripe HTTP is stubbed with fetch spies; not a provider contract."
+    },
+    "apps/web/tests/integration/database/platform-overview.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "platform"
+      ],
+      "note": "Also contains a source scan."
+    },
+    "apps/web/tests/integration/database/platform-staff.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "platform",
+        "security"
+      ]
+    },
+    "apps/web/tests/integration/database/portal-payments.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "payments",
+        "portal"
+      ]
+    },
+    "apps/web/tests/integration/database/portal.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "portal"
+      ]
+    },
+    "apps/web/tests/integration/database/price-book.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "pricing"
+      ]
+    },
+    "apps/web/tests/integration/database/prices.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "pricing"
+      ]
+    },
+    "apps/web/tests/integration/database/product-catalogue-control.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "catalogue"
+      ]
+    },
+    "apps/web/tests/integration/database/proposals.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "ai",
+        "configuration"
+      ],
+      "note": "Also contains a source scan."
+    },
+    "apps/web/tests/integration/database/provider-accounts.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "providers",
+        "security"
+      ],
+      "note": "Mocks the API client and telephony adapter. Also scans apps/web for secret names."
+    },
+    "apps/web/tests/integration/database/provider-bindings.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "providers",
+        "security"
+      ],
+      "note": "One describe stubs Twilio fetch."
+    },
+    "apps/web/tests/integration/database/provisioning.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "platform",
+        "tenancy"
+      ]
+    },
+    "apps/web/tests/integration/database/public-intake.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "public",
+        "security"
+      ]
+    },
+    "apps/web/tests/integration/database/public-profile.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "public",
+        "branding"
+      ],
+      "note": "Also contains source scans."
+    },
+    "apps/web/tests/integration/database/public-site-cache-invalidation.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "public-site"
+      ],
+      "note": "Fakes next/cache."
+    },
+    "apps/web/tests/integration/database/public-site-publishing.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "public-site"
+      ]
+    },
+    "apps/web/tests/integration/database/reception.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "communications"
+      ]
+    },
+    "apps/web/tests/integration/database/reporting.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "reporting"
+      ]
+    },
+    "apps/web/tests/integration/database/resources.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "resources"
+      ]
+    },
+    "apps/web/tests/integration/database/role-editing.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "rbac"
+      ]
+    },
+    "apps/web/tests/integration/database/roles.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "rbac"
+      ]
+    },
+    "apps/web/tests/integration/database/scheduling.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling"
+      ]
+    },
+    "apps/web/tests/integration/database/session-identity.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "auth",
+        "identity"
+      ],
+      "note": "Also runs pure classification and redirect rules."
+    },
+    "apps/web/tests/integration/database/settings-configuration-authority.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "settings",
+        "rbac",
+        "security"
+      ],
+      "note": "Split out of settings-configuration-center.test.ts."
+    },
+    "apps/web/tests/integration/database/support-access.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "platform",
+        "security"
+      ]
+    },
+    "apps/web/tests/integration/database/tenancy.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "tenancy",
+        "security"
+      ]
+    },
+    "apps/web/tests/integration/database/timeline.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "timeline"
+      ]
+    },
+    "apps/web/tests/integration/database/today.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "work",
+        "dashboard"
+      ],
+      "note": "Also contains source scans."
+    },
+    "apps/web/tests/integration/database/work-item-editing.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "work"
+      ]
+    },
+    "apps/web/tests/integration/database/work-item-transitions.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "work"
+      ]
+    },
+    "apps/web/tests/integration/database/work-item-types.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "work"
+      ]
+    },
+    "apps/web/tests/integration/database/work-items.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "work"
+      ]
+    },
+    "apps/web/tests/unit/capability-selector.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "rbac"
+      ]
+    },
+    "apps/web/tests/unit/economics.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "pricing",
+        "margins"
+      ]
+    },
+    "apps/web/tests/unit/landing.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "routing",
+        "lifecycle"
+      ]
+    }
+  }
+}

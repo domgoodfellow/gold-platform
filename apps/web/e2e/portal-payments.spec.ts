@@ -10,7 +10,7 @@ import { loadDemoContext, OWNER_STORAGE_STATE } from './helpers';
  * Pay and landing on an actual checkout page is not something this file can show; what it proves
  * instead is the two things that matter most about an *unconfigured* deployment — the invoice
  * section is genuinely reachable, and no button pretends a payment can be started when nothing
- * behind it exists (I12: hiding it is the courtesy, and `tests/portal-payments.test.ts` already
+ * behind it exists (I12: hiding it is the courtesy, and `tests/integration/database/portal-payments.test.ts` already
  * proves the RPC-level guard independently of what the page renders).
  */
 

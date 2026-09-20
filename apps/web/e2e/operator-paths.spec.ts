@@ -5,8 +5,8 @@ import { loadDemoContext, COLLEAGUE_STORAGE_STATE, OWNER_STORAGE_STATE } from '.
  * The two P0 gaps `docs/product-surface-audit.md` named: `assignRole` and `revokePortalInvite`
  * existed in the domain layer, tested, with no screen that reached either. This proves both are
  * now reachable and usable through the rendered application — not a re-proof of `assign_role`'s
- * own invariant or `revokePortalInvite`'s own refusal, which `tests/roles.test.ts` and
- * `tests/portal.test.ts` already hold against real Postgres/RLS.
+ * own invariant or `revokePortalInvite`'s own refusal, which `tests/integration/database/roles.test.ts` and
+ * `tests/integration/database/portal.test.ts` already hold against real Postgres/RLS.
  *
  * Fixture names below come straight from `scripts/demo/businesses.ts`'s `GRACHTWERK` business —
  * the owner ("Sanne de Vries") holds the founding role and is its only `role.manage` holder; the

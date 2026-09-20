@@ -5,6 +5,36 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### The test suite is classified and runnable by category
+
+`test-manifest.json` records each test file's level (unit, component, architecture, database
+integration, contract, end to end, smoke) and what it needs running; `pnpm test:unit`,
+`test:component`, `test:architecture`, `test:architecture:db`, `test:db`, `test:contract`,
+`test:api`, `test:e2e` and `test:smoke` run one slice each. `pnpm check` still runs all of Vitest and
+all of pytest, and `tests/architecture/static/test-manifest.test.ts` fails it for a test nobody classified. `adapters`
+and `settings-configuration-center` each gave their database half to a file of its own;
+`zz-uid.test.ts`, which asserted nothing, is gone. pytest is declared in
+`apps/api/requirements-dev.txt` and its import root in `apps/api/pytest.ini`, so no test edits
+`sys.path`. The old login-page `smoke.spec.ts` became `e2e/smoke/`, a sign-in and shell check with
+its own config. See `docs/testing.md`.
+
+The files now live where their category says: `apps/web/tests/{unit,component,architecture/static,architecture/database,integration/database}/`
+and `apps/api/tests/{unit,component,contract}/`. Nothing was renamed, so a test is still found by its
+filename; the suite's shared setup and `founding.ts` moved to `tests/support/`. Entries below this one
+still cite the old flat paths, as they were when written.
+
+Tests are grouped into tiers: `pnpm test:fast` (no database: unit, component, architecture, contract,
+all Python), `pnpm test:local` (real Supabase), with `pnpm check:fast` around the fast tier and
+`pnpm check` still the gate — fast plus local, which the guard now enforces. `.github/workflows/ci.yml`
+runs fast and local on every pull request, e2e nightly, and smoke by hand against a URL; it has not yet
+run on GitHub. New tests: `test_handlers.py` drives all thirteen `apps/api/api` entrypoints and asserts
+an unsigned, unauthenticated or mis-secreted request is refused before anything is written;
+`python-rpc-surface.test.ts` checks every database function Python calls exists and is granted to the
+right role; `organization-page-guard.test.ts` holds the rule that every business page asks for the
+membership itself; and four offline contract tests pin what the card-payment, email and geocoding
+adapters send and the browser telephone token's claims and signature. `docs/testing.md` now holds the
+gap analysis and the coverage matrix.
+
 ### HubSpot, Notion, Slack and Dropbox connect; the assistant reads only what is granted
 
 Four more connectors implement the one OAuth contract in `apps/api/app/connectors/`. Their catalogue

@@ -591,7 +591,7 @@ every grant and written only through `store_integration_secret`, the same Vault 
 `store_provider_secret` already uses (I34), reapplied to a tenant-writable table. CSV needs no
 vendor handshake and is the first working connector; Google Sheets and any OAuth-based connector
 land later as a `lib/adapters/` implementation, no schema change, per D44/I15's own reasoning
-about where a vendor's name may live. `tests/integrations.test.ts` proves idempotency (re-importing
+about where a vendor's name may live. `tests/integration/database/integrations.test.ts` proves idempotency (re-importing
 the same file never duplicates a customer), tenancy isolation, capability refusal, and that
 disconnecting a connection never reaches a customer already imported through it.
 

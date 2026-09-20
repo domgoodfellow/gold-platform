@@ -1,0 +1,307 @@
+"""The HTTP entrypoints in `apps/api/api/`, driven as Vercel drives them.
+
+Every other Python test proves a *function* refuses what it should -- `verify_signature`,
+`require_caller`, `settlement`. None of them proves the handler actually **calls** it before doing
+anything, and that wiring is the whole of the guarantee: a handler that verified a signature and
+then wrote regardless would pass every one of them. This file closes that gap and no other.
+
+What is real: the handler class, its signature/secret/bearer checks, and its routing of the
+refusal. What is patched: the deployment's settings and the sink that would write -- the database
+or a domain command. Each test asserts the refusal **and that the sink was never reached**, which
+is the property CLAUDE.md's "an unsigned callback accepted" row holds.
+
+No socket is opened: a handler is instantiated without its request loop and fed a byte buffer.
+"""
+
+from __future__ import annotations
+
+import base64
+import email.message
+import hashlib
+import hmac
+import io
+import json
+from types import SimpleNamespace
+from urllib.parse import urlencode
+
+import pytest
+
+import api.ai_ask as ai_ask
+import api.automation_tick as automation_tick
+import api.crm_change_customer_stage as crm_change_customer_stage
+import api.integration_operations as integration_operations
+import api.provider_operations as provider_operations
+import api.stripe_platform_billing_webhook as platform_billing_webhook
+import api.stripe_webhook as stripe_webhook
+import api.voice_inbound as voice_inbound
+import api.voice_outbound as voice_outbound
+import api.voice_recording as voice_recording
+import api.voice_status as voice_status
+import api.voice_wrap_up_call as voice_wrap_up_call
+
+HOST = "gold.example"
+TOKEN = "an-account-auth-token"
+SETTINGS = SimpleNamespace(
+    supabase_url="https://project.supabase.test",
+    supabase_publishable_key="anon",
+    supabase_jwt_secret="signing",
+    twilio_auth_token=TOKEN,
+    stripe_signing_secret="whsec_test",
+    signing_secret="whsec_platform",
+    cron_secret="the-cron-secret",
+)
+
+
+def call(module, method: str, *, path: str = "/x", headers: dict[str, str] | None = None, body: bytes = b""):
+    """Run one request through a handler and return (status, body)."""
+    cls = module.handler
+    instance = cls.__new__(cls)  # skip the base class's request loop: no socket, no parsing
+    instance.headers = email.message.Message()
+    for key, value in {"content-length": str(len(body)), **(headers or {})}.items():
+        instance.headers[key] = value
+    instance.rfile = io.BytesIO(body)
+    instance.wfile = io.BytesIO()
+    instance.path = path
+    instance.command = method
+    instance.request_version = "HTTP/1.1"
+    instance.requestline = f"{method} {path} HTTP/1.1"
+    instance.client_address = ("127.0.0.1", 0)
+    instance.log_message = lambda *args, **kwargs: None
+    getattr(instance, f"do_{method}")()
+    raw = instance.wfile.getvalue()
+    return int(raw.split(b" ", 2)[1]), raw.split(b"\r\n\r\n", 1)[1].decode()
+
+
+class Sink:
+    """Stands in for whatever would write, and remembers whether anything reached it."""
+
+    def __init__(self, result=True) -> None:
+        self.calls: list[tuple] = []
+        self.result = result
+
+    def __call__(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+        return self.result
+
+
+def twilio_signature(url: str, params: dict[str, str], token: str = TOKEN) -> str:
+    payload = url + "".join(f"{key}{params[key]}" for key in sorted(params))
+    return base64.b64encode(hmac.new(token.encode(), payload.encode(), hashlib.sha1).digest()).decode()
+
+
+def form(params: dict[str, str]) -> bytes:
+    return urlencode(params).encode()
+
+
+# --- the carrier's callbacks: signed, or refused before anything is written ---------------------
+
+CALLBACKS = [
+    # module, path, sink attribute (None: the endpoint writes nothing), body the carrier would send
+    (voice_status, "/voice/status", "record_call_event", {"CallSid": "CA1", "CallStatus": "completed", "CallDuration": "42"}),
+    (
+        voice_recording,
+        "/voice/recording",
+        "record_call_event",
+        {"CallSid": "CA1", "RecordingSid": "RE1", "RecordingUrl": "https://api.twilio.com/2010-04-01/Recordings/RE1", "RecordingStatus": "completed"},
+    ),
+    (voice_inbound, "/voice/inbound", None, {"CallSid": "CA1", "To": "+31000000000"}),
+    (voice_outbound, "/voice/outbound", None, {"CallSid": "CA1", "Conference": "room-1"}),
+]
+IDS = [module.__name__.split(".")[-1] for module, *_ in CALLBACKS]
+
+
+@pytest.fixture
+def configured(monkeypatch):
+    for module in (voice_status, voice_recording, voice_inbound, voice_outbound):
+        monkeypatch.setattr(module, "load_voice_settings", lambda: SETTINGS)
+
+
+@pytest.mark.parametrize(("module", "path", "sink_name", "params"), CALLBACKS, ids=IDS)
+class TestCarrierCallbacks:
+    def _sink(self, monkeypatch, module, sink_name):
+        sink = Sink(result="recorded")
+        if sink_name:
+            monkeypatch.setattr(module, sink_name, sink)
+        return sink
+
+    def test_a_deployment_with_no_carrier_answers_404_and_writes_nothing(self, monkeypatch, module, path, sink_name, params):
+        monkeypatch.setattr(module, "load_voice_settings", lambda: None)
+        sink = self._sink(monkeypatch, module, sink_name)
+
+        status, _ = call(module, "POST", path=path, headers={"host": HOST}, body=form(params))
+
+        assert status == 404
+        assert sink.calls == []
+
+    def test_an_unsigned_callback_is_refused_and_writes_nothing(self, configured, monkeypatch, module, path, sink_name, params):
+        sink = self._sink(monkeypatch, module, sink_name)
+
+        status, body = call(module, "POST", path=path, headers={"host": HOST}, body=form(params))
+
+        assert (status, body) == (403, "rejected")
+        assert sink.calls == []
+
+    def test_a_callback_signed_for_another_address_is_refused(self, configured, monkeypatch, module, path, sink_name, params):
+        sink = self._sink(monkeypatch, module, sink_name)
+        signature = twilio_signature(f"https://{HOST}/somewhere/else", params)
+
+        status, _ = call(module, "POST", path=path, headers={"host": HOST, "x-twilio-signature": signature}, body=form(params))
+
+        assert status == 403
+        assert sink.calls == []
+
+    def test_a_callback_edited_after_signing_is_refused(self, configured, monkeypatch, module, path, sink_name, params):
+        sink = self._sink(monkeypatch, module, sink_name)
+        signature = twilio_signature(f"https://{HOST}{path}", params)
+        edited = {**params, "CallSid": "CA-someone-elses"}
+
+        status, _ = call(module, "POST", path=path, headers={"host": HOST, "x-twilio-signature": signature}, body=form(edited))
+
+        assert status == 403
+        assert sink.calls == []
+
+    def test_a_callback_signed_with_another_token_is_refused(self, configured, monkeypatch, module, path, sink_name, params):
+        sink = self._sink(monkeypatch, module, sink_name)
+        signature = twilio_signature(f"https://{HOST}{path}", params, token="not-our-token")
+
+        status, _ = call(module, "POST", path=path, headers={"host": HOST, "x-twilio-signature": signature}, body=form(params))
+
+        assert status == 403
+        assert sink.calls == []
+
+
+class TestCarrierCallbacksThatAreSigned:
+    """The other half of the wiring: a genuine callback does reach the sink, once."""
+
+    def _signed(self, module, path, params):
+        signature = twilio_signature(f"https://{HOST}{path}", params)
+        return call(module, "POST", path=path, headers={"host": HOST, "x-twilio-signature": signature}, body=form(params))
+
+    def test_a_signed_status_report_is_recorded(self, configured, monkeypatch) -> None:
+        sink = Sink(result="a-call-row")
+        monkeypatch.setattr(voice_status, "record_call_event", sink)
+
+        status, body = self._signed(voice_status, "/voice/status", CALLBACKS[0][3])
+
+        assert (status, body) == (200, "recorded")
+        assert len(sink.calls) == 1
+        assert sink.calls[0][1]["external_id"] == "CA1"
+
+    def test_a_replayed_or_unknown_report_is_the_same_harmless_answer(self, configured, monkeypatch) -> None:
+        monkeypatch.setattr(voice_status, "record_call_event", Sink(result=None))
+
+        assert self._signed(voice_status, "/voice/status", CALLBACKS[0][3]) == (200, "ignored")
+
+    def test_a_signed_inbound_call_is_declined_rather_than_improvised(self, configured) -> None:
+        status, body = self._signed(voice_inbound, "/voice/inbound", CALLBACKS[2][3])
+
+        assert status == 200
+        assert "<Reject" in body
+
+    def test_a_signed_outbound_leg_joins_only_the_room_it_was_given(self, configured) -> None:
+        status, body = self._signed(voice_outbound, "/voice/outbound", CALLBACKS[3][3])
+        assert status == 200 and "room-1" in body
+
+        status, _ = self._signed(voice_outbound, "/voice/outbound", {"CallSid": "CA1"})
+        assert status == 400
+
+
+# --- the payment processors' webhooks: verified over the raw body, or refused --------------------
+
+
+class TestProcessorWebhooks:
+    @pytest.mark.parametrize(
+        ("module", "loader", "sinks"),
+        [
+            (stripe_webhook, "load_settings", ["record_provider_payment"]),
+            (platform_billing_webhook, "load_platform_billing_settings", ["apply_platform_subscription_event", "record_platform_billing_notice"]),
+        ],
+        ids=["tenant_payments", "platform_billing"],
+    )
+    def test_refuses_without_a_valid_signature_and_writes_nothing(self, monkeypatch, module, loader, sinks) -> None:
+        monkeypatch.setattr(module, loader, lambda: SETTINGS)
+        recorded = [Sink() for _ in sinks]
+        for name, sink in zip(sinks, recorded):
+            monkeypatch.setattr(module, name, sink)
+        body = json.dumps({"type": "checkout.session.completed", "data": {"object": {}}}).encode()
+
+        for headers in ({}, {"stripe-signature": "t=1,v1=deadbeef"}):
+            status, text = call(module, "POST", headers=headers, body=body)
+            assert (status, text) == (400, "rejected")
+
+        assert all(sink.calls == [] for sink in recorded)
+
+    @pytest.mark.parametrize(
+        ("module", "loader"),
+        [(stripe_webhook, "load_settings"), (platform_billing_webhook, "load_platform_billing_settings")],
+        ids=["tenant_payments", "platform_billing"],
+    )
+    def test_a_deployment_with_no_processor_answers_404(self, monkeypatch, module, loader) -> None:
+        monkeypatch.setattr(module, loader, lambda: None)
+
+        assert call(module, "POST", body=b"{}")[0] == 404
+
+
+# --- the scheduler's tick: a shared secret, or nothing runs --------------------------------------
+
+
+class TestAutomationTick:
+    def _armed(self, monkeypatch):
+        monkeypatch.setattr(automation_tick, "load_runner_settings", lambda: SETTINGS)
+        ran = Sink(result=0)
+        monkeypatch.setattr(automation_tick, "run_due_automations", ran)
+        return ran
+
+    @pytest.mark.parametrize("method", ["GET", "POST"])
+    @pytest.mark.parametrize("authorization", [None, "", "Bearer wrong", "the-cron-secret", "bearer the-cron-secret"])
+    def test_runs_nothing_without_the_exact_secret(self, monkeypatch, method, authorization) -> None:
+        ran = self._armed(monkeypatch)
+        headers = {} if authorization is None else {"authorization": authorization}
+
+        status, _ = call(automation_tick, method, headers=headers)
+
+        assert status == 401
+        assert ran.calls == []
+
+    def test_a_deployment_with_no_runner_answers_404(self, monkeypatch) -> None:
+        monkeypatch.setattr(automation_tick, "load_runner_settings", lambda: None)
+
+        assert call(automation_tick, "GET", headers={"authorization": "Bearer the-cron-secret"})[0] == 404
+
+
+# --- the signed-in person's endpoints: a bearer token, or the domain is never called ------------
+
+PEOPLE = [
+    (ai_ask, "load_assistant_settings", "answer"),
+    (crm_change_customer_stage, "load_domain_settings", "change_customer_stage"),
+    (voice_wrap_up_call, "load_domain_settings", "wrap_up_call"),
+    (integration_operations, "load_integration_settings", "operate"),
+    (provider_operations, "load_provider_operations_settings", "operate"),
+]
+
+
+@pytest.mark.parametrize(("module", "loader", "command"), PEOPLE, ids=[m.__name__.split(".")[-1] for m, *_ in PEOPLE])
+class TestSignedInEndpoints:
+    def _armed(self, monkeypatch, module, loader, command):
+        monkeypatch.setattr(module, loader, lambda: SETTINGS)
+        if module is ai_ask:
+            # The assistant checks that a model is configured before it looks at the caller.
+            monkeypatch.setattr(module, "answering_provider", lambda: object())
+        sink = Sink()
+        monkeypatch.setattr(module, command, sink)
+        return sink
+
+    @pytest.mark.parametrize("authorization", [None, "", "Basic abc", "Bearer"])
+    def test_refuses_a_request_with_no_usable_bearer_token_and_calls_no_domain(self, monkeypatch, module, loader, command, authorization) -> None:
+        sink = self._armed(monkeypatch, module, loader, command)
+        headers = {} if authorization is None else {"authorization": authorization}
+
+        status, _ = call(module, "POST", headers=headers, body=b"{}")
+
+        assert status == 401
+        assert sink.calls == []
+
+    def test_a_deployment_that_does_not_offer_it_answers_404(self, monkeypatch, module, loader, command) -> None:
+        monkeypatch.setattr(module, loader, lambda: None)
+
+        assert call(module, "POST", headers={"authorization": "Bearer x"}, body=b"{}")[0] == 404

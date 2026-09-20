@@ -14,6 +14,8 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
+  // The smoke suite is its own thing (playwright.smoke.config.ts): no seeded fixtures, no globalSetup.
+  testIgnore: '**/smoke/**',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 0,

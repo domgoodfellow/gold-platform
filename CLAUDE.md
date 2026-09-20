@@ -35,6 +35,7 @@ tellings of one thing and no way to tell which is stale.
 | [docs/roadmap.md](docs/roadmap.md) | You are deciding whether something belongs now |
 | [docs/walkthrough.md](docs/walkthrough.md) | You need to drive the running application by hand |
 | [docs/ui-spec.md](docs/ui-spec.md) | You are building or changing a screen |
+| [docs/testing.md](docs/testing.md) | You are adding, classifying or running a test |
 | [docs/public-web-architecture.md](docs/public-web-architecture.md) | You are touching GOLD's site, tenant publishing, public auth, domains, media or legal pages |
 
 `docs/starting_conversation.txt` is an archived source, not a governing document. It is
@@ -89,6 +90,8 @@ Report a failure verbatim; do not summarise one.
 | `pnpm check` | The gate. Both runtimes: `apps/web` typecheck, lint, test, build, then `apps/api` pytest. |
 | `pnpm --filter @gold/web check` | The TypeScript half alone, when iterating |
 | `pnpm check:api` | The Python half alone (`python -m pytest apps/api/tests`) |
+| `pnpm check:fast` | The gate without a database: typecheck, lint, `test:fast`, build. What a change with no schema or RLS in it can iterate on |
+| `pnpm test:<tier or category>` | `fast`, `local`, `unit`, `component`, `architecture`, `architecture:db`, `db`, `contract`, `api`, `e2e`, `smoke`, `provider`. Never the gate; `docs/testing.md` says what each runs and needs |
 | `pnpm --filter @gold/web dev` | Next.js dev server on :3000 |
 | `pnpm demo` | Two populated businesses, in one command. Localhost only; refuses a database that already holds organizations (D37). |
 | `pnpm demo:fresh` | `db:reset` then `demo`. What you want after a walkthrough. |
@@ -97,6 +100,7 @@ Report a failure verbatim; do not summarise one.
 | `pnpm db:types` | Regenerate `apps/web/lib/db/database.types.ts`. Checked in; a stale one fails the gate (D15). |
 | `pnpm db:push` | Apply migrations to the linked remote project |
 
+- Every test file is classified once in `test-manifest.json`; an unclassified one fails the gate. Python tests need `pip install -r apps/api/requirements-dev.txt`.
 - The tests talk to a **real Postgres with real RLS**, as two genuinely signed-in users. A policy
   cannot be proven by a fake, and a service-role client would bypass the thing under test.
   `pnpm db:start` must be running.
@@ -135,7 +139,7 @@ apps/
     lib/adapters/   vendors. Domain code imports the capability, never the implementation
     scripts/demo/   the demo builder. Covered by the gate on purpose (D37)
     proxy.ts        Next 16's middleware. Refreshes the session; not the auth boundary (I12)
-    tests/          the suites. Real Postgres — see Commands
+    tests/          the suites, by level: unit, component, architecture, integration/database — see docs/testing.md
   api/              Python. Provider ingress, automation clock, AI loop and a narrow domain layer; Vercel serverless
     api/            physical HTTP entrypoints — one file per handler
     app/core/       configuration, database handles, the one place a machine token is minted

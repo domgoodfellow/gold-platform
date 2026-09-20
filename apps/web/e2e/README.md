@@ -15,12 +15,12 @@ second, parallel test suite duplicating Vitest's coverage.
    app's dev server is very often already running in a developer's own terminal, and having
    Playwright try to manage a second one on the same port fights it rather than reusing it.
 
-Then, from `apps/web`:
+Then, from the repository root, `pnpm test:e2e` runs the acceptance specs headless, once. From
+`apps/web`, `pnpm test:e2e:ui` is Playwright's own UI mode, for iterating on a spec. Every spec is
+classified `playwright-acceptance` in `test-manifest.json`; `docs/testing.md` explains the levels.
 
-```
-pnpm test:e2e       # headless, once
-pnpm test:e2e:ui    # Playwright's own UI mode, for iterating on a spec
-```
+`e2e/smoke/` is not part of this suite. It has its own config (`playwright.smoke.config.ts`), no
+`globalSetup` and no fixtures, and runs as `pnpm test:smoke`.
 
 ## What `globalSetup` does
 

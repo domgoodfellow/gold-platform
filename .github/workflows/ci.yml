@@ -1,0 +1,152 @@
+# The execution tiers of docs/testing.md, as jobs.
+#
+#   pull requests  fast + local     together they are `pnpm check`, split so a failure names its tier
+#   nightly/manual  e2e             Playwright acceptance against a freshly seeded local stack
+#   manual          smoke           the deployment check, against any URL
+#
+# Not here yet: a vendor-sandbox tier. `pnpm test:provider` exists and no sandbox test does; add a
+# scheduled job with the vendor secrets the day the first one lands. Nothing below ever holds a
+# vendor credential, so no job here can call a live vendor.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      run:
+        description: 'What to run by hand'
+        type: choice
+        options: [e2e, smoke]
+        default: smoke
+      base_url:
+        description: 'Smoke only: the deployment to check'
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # `next build` reads the public Supabase pair at build time. These are placeholders for the
+  # fast tier, which starts no database; the jobs that do start one overwrite them.
+  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-not-a-key
+
+jobs:
+  fast:
+    name: fast (typecheck, lint, unit, component, architecture, contract, API, build)
+    if: github.event_name != 'workflow_dispatch' && github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: apps/api/requirements-dev.txt
+      - run: pnpm install --frozen-lockfile
+      - run: python -m pip install -r apps/api/requirements-dev.txt
+      - run: pnpm check:fast
+
+  local:
+    name: 'local (real Supabase - schema, RLS, domain integration)'
+    if: github.event_name != 'workflow_dispatch' && github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: pnpm install --frozen-lockfile
+      - name: Start the local stack and write .env.test
+        run: |
+          supabase start
+          eval "$(supabase status -o env)"
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "SUPABASE_DB_URL=$DB_URL"
+          } > .env.test
+      - run: pnpm test:local
+
+  e2e:
+    name: e2e (Playwright acceptance, freshly seeded local stack)
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run == 'e2e')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: pnpm install --frozen-lockfile
+      - name: Start the stack, seed it, and start the app
+        run: |
+          supabase start
+          eval "$(supabase status -o env)"
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "SUPABASE_DB_URL=$DB_URL"
+          } > .env.test
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+          } > apps/web/.env.local
+          pnpm demo
+          pnpm --filter @gold/web dev > dev.log 2>&1 &
+          for _ in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/login && break; sleep 2; done
+          curl -sf -o /dev/null http://localhost:3000/login
+      - run: pnpm --filter @gold/web exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - run: pnpm test:smoke
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-and-dev-logs
+          path: |
+            dev.log
+            apps/web/test-results/
+
+  smoke:
+    name: smoke (a running deployment)
+    if: github.event_name == 'workflow_dispatch' && inputs.run == 'smoke'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @gold/web exec playwright install --with-deps chromium
+      - run: pnpm test:smoke
+        env:
+          SMOKE_BASE_URL: ${{ inputs.base_url }}
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}

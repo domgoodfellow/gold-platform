@@ -1,0 +1,8 @@
+# Test-only dependencies. Production installs requirements.txt alone; this file adds what the
+# gate needs and nothing that ships. `pnpm check:api` and `pnpm test:api` run pytest, so pytest
+# is declared here rather than assumed to be installed.
+#
+#   python -m pip install -r apps/api/requirements-dev.txt
+-r requirements.txt
+
+pytest==9.0.2
