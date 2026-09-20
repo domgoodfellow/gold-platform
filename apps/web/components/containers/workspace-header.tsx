@@ -23,11 +23,13 @@ export function WorkspaceHeader({
   beforeActions,
 }: {
   /**
-   * 'always' — the sidebar trigger and its separator show at every width (Platform, whose
-   * `Sidebar` renders an off-canvas Sheet at every width below `lg` and needs a trigger to open
-   * it there). 'md' — both appear only from `md` up (Business, where a phone gets `OrgNavBar`
-   * instead and the sidebar itself renders nothing below that width, per `AppShell`). Omit where
-   * no sidebar sits behind this header.
+   * 'md' — the sidebar trigger and its separator appear only from `md` up. Business *and*
+   * Platform Context use this: Platform is GOLD's own organization shell, so a phone gets the
+   * bottom bar (`OrgNavBar`, which puts Platform first while in Platform Context) and the
+   * sidebar itself renders nothing below that width, per `AppShell`.
+   * 'always' — the trigger shows at every width, for a shell with no bottom bar whose only phone
+   * navigation *is* the sidebar's off-canvas Sheet (Personal settings and the fallback frame).
+   * Omit where no sidebar sits behind this header.
    */
   navigationTrigger?: 'always' | 'md';
   /**

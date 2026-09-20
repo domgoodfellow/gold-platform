@@ -1,6 +1,5 @@
-import Link from 'next/link';
 import { Search } from 'lucide-react';
-import { Button } from '@/components/controls/button';
+import { Button, ButtonLink } from '@/components/controls/button';
 import { SelectInput, TextInput } from '@/components/controls/inputs';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 
@@ -9,13 +8,11 @@ export function CustomerListToolbar({
   stages,
   search,
   stage,
-  mayImport,
 }: {
   organizationId: string;
   stages: CustomerStage[];
   search: string;
   stage: string;
-  mayImport: boolean;
 }) {
   return (
     <form className="flex flex-col gap-2 sm:flex-row" role="search">
@@ -32,10 +29,7 @@ export function CustomerListToolbar({
       ) : null}
       <Button type="submit" tone="secondary">Filter</Button>
       {search || stage ? (
-        <Link href={`/organizations/${organizationId}/customers`} className="self-center text-sm text-muted underline underline-offset-4">Clear</Link>
-      ) : null}
-      {mayImport ? (
-        <Link href={`/organizations/${organizationId}/integrations/imports/new`} className="self-center text-sm underline underline-offset-4">Import</Link>
+        <ButtonLink href={`/organizations/${organizationId}/customers`} tone="text">Clear</ButtonLink>
       ) : null}
     </form>
   );

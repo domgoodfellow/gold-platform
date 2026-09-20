@@ -116,7 +116,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
 
   it('/roles is canonical and renders the Team workspace â€” Members, Invitations and Roles as URL-backed sibling views', () => {
     const page = readFileSync(`${ROUTES}/roles/page.tsx`, 'utf8');
-    expect(page).toContain('TeamViewTabs');
+    expect(page).toContain('<ViewNav');
     expect(page).toContain('AddMemberSheetProvider');
     expect(page).toContain('MembersTable');
     expect(page).toContain('InvitationsTable');

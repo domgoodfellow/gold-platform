@@ -95,7 +95,6 @@ export default async function AssetsPage({
             rows={assets}
             rowKey={(asset) => asset.id}
             empty="No assets yet."
-            emptyAction={mayAdd ? <CreateAssetTrigger /> : undefined}
             // **Recording a reading is the action a list of assets implies**, which is why it is
             // the row action rather than a form under every entry. Nothing is assumed about what
             // a counter counts — hours, miles, cycles — and a machine nobody meters has none.

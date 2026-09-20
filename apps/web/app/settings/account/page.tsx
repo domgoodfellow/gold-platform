@@ -2,7 +2,6 @@ import { PageHeader } from '@/components/containers/page-header';
 import { Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { PersonalSettingsShell } from '@/features/account/personal-settings-shell';
-import { PERSONAL_SETTINGS_ROOT } from '@/lib/route/personal-settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +15,6 @@ export default async function ProfilePage({ searchParams }: PageProps<'/settings
         <>
           <PageHeader
             title="Profile"
-            crumbs={[{ label: 'Personal settings', href: PERSONAL_SETTINGS_ROOT }]}
             description="Your identity. It belongs to you, not to any business, and applies in every business you belong to."
           />
           <Section>

@@ -300,12 +300,12 @@ describe('the tenant-safe refusal survives being thrown by the layout, not a pag
     'utf8',
   );
 
-  it('app/organizations/not-found.tsx exists and renders the shared tenant-safe copy', () => {
-    expect(organizationsNotFound).toContain('OrganizationNotFound');
+  it('app/organizations/not-found.tsx renders the safe frame for an organization that cannot be proven', () => {
+    expect(organizationsNotFound).toContain('OrganizationUnavailable');
   });
 
-  it('[organizationId]/not-found.tsx renders the same shared copy, for a page-level notFound()', () => {
-    expect(organizationIdNotFound).toContain('OrganizationNotFound');
+  it('[organizationId]/not-found.tsx renders in-shell content for a page-level notFound()', () => {
+    expect(organizationIdNotFound).toContain('OrganizationPageNotFound');
   });
 
   it('the layout still calls requireOrganization itself, which is exactly what makes the ancestor boundary necessary', () => {

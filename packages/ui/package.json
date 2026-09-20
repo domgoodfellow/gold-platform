@@ -31,6 +31,7 @@
     "./components/skeleton": "./src/components/skeleton.tsx",
     "./components/sonner": "./src/components/sonner.tsx",
     "./components/table": "./src/components/table.tsx",
+    "./components/tab-styles": "./src/components/tab-styles.ts",
     "./components/tabs": "./src/components/tabs.tsx",
     "./components/textarea": "./src/components/textarea.tsx",
     "./components/tooltip": "./src/components/tooltip.tsx",

@@ -6,14 +6,9 @@ import { AccountAgentRail } from '@/features/account/account-agent-rail';
 import { PersonalSettingsSidebar } from '@/features/account/personal-settings-sidebar';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { getDb } from '@/lib/db/server';
-import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
-import { requireActor } from '@/lib/domain/tenancy/actor';
-import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import { isPlatformStaff } from '@/lib/domain/platform/tenants';
-import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
-import { platformAdministrationAvailable } from '@/lib/route/platform-context';
 import { organizationHomeHref } from '@/lib/navigation';
+import { loadPersonContext } from '@/lib/route/person-context';
 
 /**
  * The frame both Personal settings pages render inside. Each page calls this itself rather than
@@ -31,27 +26,7 @@ export async function PersonalSettingsShell({
   returnOrganizationId?: string;
   children: (person: { email: string; hasPassword: boolean }) => ReactNode;
 }) {
-  const db = await getDb();
-
-  let email: string;
-  let hasPassword: boolean;
-  try {
-    await requireActor(db);
-    const { data } = await db.auth.getUser();
-    email = data.user?.email ?? '';
-    // Supabase records how somebody actually signed in as a list of identities. A Google-only
-    // account has no password to change, and offering the form anyway would be a control with
-    // nothing behind it (D31's reasoning, restated for auth rather than a module switch).
-    hasPassword = (data.user?.identities ?? []).some((identity) => identity.provider === 'email');
-  } catch (error) {
-    if (error instanceof DomainError && error.code === 'auth.required') {
-      redirect('/login');
-    }
-    throw error;
-  }
-
-  const myOrganizations = await listMyOrganizations(db);
-  const [staff, goldInternal] = await Promise.all([isPlatformStaff(db), findGoldInternalOrganization(db, myOrganizations)]);
+  const { email, hasPassword, organizations: myOrganizations, platformAdministration } = await loadPersonContext();
   const origin = returnOrganizationId
     ? myOrganizations.find((organization) => organization.id === returnOrganizationId)
     : undefined;
@@ -67,7 +42,7 @@ export async function PersonalSettingsShell({
     <PersonalSettingsSidebar
       email={email}
       signOutAction={signOutAction}
-      platformAdministration={platformAdministrationAvailable({ staff, goldInternal })}
+      platformAdministration={platformAdministration}
       businesses={myOrganizations.map((org) => ({
         id: org.id,
         name: org.name,

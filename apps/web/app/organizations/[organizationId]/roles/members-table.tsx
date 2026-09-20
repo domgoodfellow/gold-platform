@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import type { Member } from '@/lib/domain/tenancy/members';
@@ -15,20 +14,17 @@ export function MembersTable({
   members,
   roles,
   mayManage,
-  emptyAction,
 }: {
   organizationId: string;
   members: Member[];
   roles: Role[];
   mayManage: boolean;
-  emptyAction?: ReactNode;
 }) {
   return (
     <DataTable
       rows={members}
       rowKey={(member) => member.id}
       empty="Nobody here yet."
-      emptyAction={emptyAction}
       columns={[
         { key: 'name', header: 'Name', emphasis: 'primary', cell: (member) => member.displayName },
         {

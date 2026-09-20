@@ -102,12 +102,22 @@ was — segments, labels, groups, modules.
 
 | | Navigation | Layout | Overlays | State |
 |---|---|---|---|---|
-| Phone | bottom bar, fixed, scrolls sideways | single column | sheets, sticky action bars | built |
+| Phone | bottom bar, fixed, scrolls sideways; leads with the current context | single column | sheets, sticky action bars | built |
 | Tablet | rail, icon-only | two column | sheets or dialogs | built |
 | Desktop | persistent sidebar | denser tables | dialogs | built |
 
 **The sidebar is the desktop rendering of the IA, never its source.** Both renderings map the
 same `AREAS`; two lists that had to agree eventually would not.
+
+**The phone bar leads with the current context.** Platform Administration is GOLD's own
+organization shell plus a scope, so eligible staff (platform authority *and* a GOLD Internal
+membership) get both on a phone as on a desktop. In a business the bar reads Setup (while it
+applies), the areas, then *Platform*. Inside `/platform/**` the context is Platform, so *Platform*
+comes first — at the start of the bar, never at the far end of a scrolling row — followed by the
+same business destinations. The Platform menu is `PLATFORM_NAV`, the one Platform registry; a phone
+never gets a second list, and a user without both facts never gets the menu. The sidebar trigger is
+hidden below `md` in both contexts for that reason: the bottom bar is the phone's navigation
+(`OrgNavBar`).
 
 **Three sections, ruled apart, in `AREA_GROUPS` order** — Operations, Records, Configuration.
 `navigation.test.ts` fails on an interleaved list: each section must be one unbroken run, and an
@@ -201,7 +211,7 @@ renders here, through a slot, so a page never draws its own.
 
 | | What | Which widths |
 |---|---|---|
-| Left | the sidebar trigger | `md` and up in Business Context; every width in Platform Context and Account |
+| Left | the sidebar trigger | `md` and up in Business and Platform Context, where a phone gets the bottom bar instead; every width in Personal settings and the fallback frame, whose only phone navigation is the sidebar sheet |
 | Left | the compact context switcher — the business's mark and name, opening the same menu the sidebar's own switcher does — nothing about Setup lives in this header at any width | below `md` only, Business and Platform Context — the sidebar says it above that |
 | Left, after the above | the breadcrumb trail — ancestors only, on a page that passes `crumbs` | all |
 | Right, before Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
@@ -211,8 +221,7 @@ renders here, through a slot, so a page never draws its own.
 right (wrapping below the title on a narrow screen). It shares the canvas the content below it
 sits on; `AppPage` still owns width. It is a Server Component and knows no domain: a page hands it
 whatever actions it offers. **One primary action per page**, then secondary ones — Resources is
-*Add resource* with *Configure* beside it, and the empty state may repeat *Add resource* because
-that is the same operation in an otherwise empty body, not a second action.
+*Add resource* with *Configure* beside it, and the empty state does not repeat it (§8).
 
 **Configure belongs to the page.** A page places `ConfigureTrigger` in its `PageHeader` actions
 and registers the drawer it opens with `ConfigureRegistrar`, a `PageDrawer`; `WorkspaceRightRail`
@@ -305,6 +314,12 @@ never takes `hover`; destructive keeps `danger`; disabled is `opacity-50` with n
 in the shared variants (`Button`, `DropdownMenuItem`, `TableRow`, `Calendar`), and a screen writes
 none. `muted` is text and is never a background. A container shades on hover only when the whole
 of it is the action: a table row or card that merely holds links does not.
+
+**A static fill is a surface, never `muted`.** `muted` is a text role and is not a background at
+any opacity. A quiet non-interactive fill (a table footer, a chat bubble, an avatar, a skeleton)
+uses `secondary`; a track or a handle uses `border`. Neither is `hover` or `selected`, which mean
+"under the pointer" and "current". `screen-grammar.test.ts` fails on `bg-muted` anywhere in the
+workspace or the shared UI.
 
 **Two muted levels rather than one**, because the screens were already making that distinction by
 hand and flattening it would have been a design decision disguised as a cleanup. `danger` went
@@ -503,14 +518,52 @@ The tenant's own answers about meaning already exist and are deliberately narrow
 `releases_resource` and `marks_complete`, two questions rather than one flag. Neither is a
 styling hook.
 
-**`Badge` is where this rule now lives, and it has exactly one variation.** `tone="accent"` paints
-a badge in the *tenant's* colour and says **this one** — who a job is assigned to, on a board
-somebody is scanning — never *this one is good*. The tell that the rule has been broken is a
-lookup keyed to an English word.
+**`Badge` is where this rule lives, and the line it draws is about who owns the meaning.**
+Tenant-authored statuses stay neutral: a work status, a customer stage, a role name is the
+tenant's word and GOLD cannot know whether it is good. `tone="accent"` paints a badge in the
+*tenant's* colour and says **this one** — who a job is assigned to, on a board somebody is
+scanning — never *this one is good*. **GOLD-owned facts may carry a tone**, because GOLD defined
+them and knows what they mean: Setup's *Ready* is `success`, a provider connection that failed is
+`danger`, a Plan feature that is included is `success`. The tell that the rule has been broken is
+still a lookup keyed to an English word a tenant wrote. Known gap: `success` and `danger` are
+spelled with palette literals inside `Badge` (`components/display/data.tsx`) because there is no
+colour role for them yet; a `success` role belongs in `globals.css` when that is next touched.
 
 ---
 
 ## 8. The words on screen
+
+**Public routes fail publicly; authenticated routes fail inside an authenticated frame.** The root
+`not-found.tsx` is the public/marketing 404 and stays so — Next renders it for any address that
+matches no route, outside every segment layout, so a segment that wants a frame must own a catch-all
+page that throws `notFound()` from inside its layout. Three do: `[organizationId]/[...unmatched]`
+(the real organization shell surrounds the missing page), `platform/[...unmatched]` (Platform
+context is kept) and `settings/[[...unmatched]]` (Personal settings renders its own shell, since no
+layout above it does). What may be drawn depends on what is proven. **A proven membership** (the
+layout rendered) keeps its shell. **An organization that cannot be proven** — missing and not-yours
+are one answer — gets `GlobalFallbackShell`: the person's own context (switcher, account menu) and
+nothing about the requested business, never its name, brand, areas or existence. The frame is built
+without ever receiving the requested id, so it cannot decorate the lobby as the room. Every
+fallback is one heading, one sentence and one recovery (`FallbackPage`); the recovery is the
+validated landing a sign-in uses, named for what it does (*Return to workspace*), never a list of
+businesses.
+
+**An empty collection explains state; it does not repeat the page's primary action.** *No customers
+yet.* is state. A second *New customer* under a header that already offers one is the same control
+twice, and *Add your first customer to get started* is advice the platform has no standing to
+give. `DataTable.emptyAction` remains for a collection that has no header action of its own; a page
+whose `PageHeader` already creates the record passes none (Customers, Team, Resources, Locations,
+Assets). Known remaining case: the Configure drawers' field lists still repeat *New field*.
+
+**Inside a page, four layers in one order.** *Page header* — identity and the page's actions
+(Configure, create, import); one is primary. *Local view navigation* — sibling views of the same
+workspace as URLs (`ViewNav`: Customers' List and Pipeline, Team's Members, Invitations and
+Roles); it holds nothing but views and is never disguised as an action or stood beside one.
+*Toolbar* — search, filter, sort. *Content* — the table, cards or empty state. A naked underlined
+link belongs in none of the first three; navigation between siblings is the second, and an
+operation is a `Button`/`ButtonLink` in the first or third. Tables have one grammar: column
+headers at reading size in full-strength text, cells centred on the row so a control and the text
+beside it share a line, and no hover on a row that is not itself the action.
 
 **Strings describing application state stay in code**: "Loading", "No results", aria labels, and
 the sentences `outstandingModuleSetup` produces about what a deployment cannot do.

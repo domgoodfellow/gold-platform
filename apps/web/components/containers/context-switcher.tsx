@@ -34,7 +34,9 @@ export type SwitchableOrganization = {
 
 export type SwitcherContext =
   | { kind: 'business'; organizationId: string; name: string; role: string }
-  | { kind: 'account' };
+  | { kind: 'account' }
+  /** The fallback frame: no organization is trusted, so the trigger names only GOLD. */
+  | { kind: 'global' };
 
 type SwitcherProps = {
   mark: ReactNode;
@@ -58,9 +60,27 @@ function deriveSwitcherView(
 ) {
   const inPlatform = current.kind === 'business' && inPlatformContext(pathname);
 
-  const triggerName = inPlatform ? 'Platform Administration' : current.kind === 'business' ? current.name : 'Personal settings';
-  const triggerRole = inPlatform ? 'Global tools' : current.kind === 'business' ? current.role : 'Your identity';
-  const avatarInitial = inPlatform ? 'P' : current.kind === 'business' ? triggerName.charAt(0).toUpperCase() : 'A';
+  const triggerName = inPlatform
+    ? 'Platform Administration'
+    : current.kind === 'business'
+      ? current.name
+      : current.kind === 'global'
+        ? 'GOLD'
+        : 'Personal settings';
+  const triggerRole = inPlatform
+    ? 'Global tools'
+    : current.kind === 'business'
+      ? current.role
+      : current.kind === 'global'
+        ? 'Choose where to work'
+        : 'Your identity';
+  const avatarInitial = inPlatform
+    ? 'P'
+    : current.kind === 'business'
+      ? triggerName.charAt(0).toUpperCase()
+      : current.kind === 'global'
+        ? 'G'
+        : 'A';
   const businesses =
     current.kind === 'business' && !inPlatform
       ? organizations.filter((organization) => organization.id !== current.organizationId)

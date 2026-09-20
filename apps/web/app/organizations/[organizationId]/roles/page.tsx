@@ -1,6 +1,7 @@
 import { Hint } from '@/components/controls/inputs';
 import { areaLabel } from '@/lib/navigation';
 import { PageHeader } from '@/components/containers/page-header';
+import { ViewNav } from '@/components/containers/view-nav';
 import { listPendingInvitations } from '@/lib/domain/tenancy/invitations';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { listRoles } from '@/lib/domain/tenancy/roles';
@@ -10,8 +11,7 @@ import { CreateRoleSheet } from './create-role-sheet';
 import { InvitationsTable } from './invitations-table';
 import { MembersTable } from './members-table';
 import { RolesTable } from './roles-table';
-import { resolveTeamView } from './team-views';
-import { TeamViewTabs } from './team-view-tabs';
+import { resolveTeamView, teamViewHref } from './team-views';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,13 +42,28 @@ export default async function RolesPage({
 
   return (
     <AddMemberSheetProvider organizationId={organizationId} roles={roles}>
-      <PageHeader title={areaLabel('roles')} description="Who works here, and what each role may do." />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <TeamViewTabs view={view} invitationCount={invitations.length} />
-        {mayManage ? (
-          view === 'roles' ? <CreateRoleSheet organizationId={organizationId} /> : <AddMemberTrigger />
-        ) : null}
-      </div>
+      <PageHeader
+        title={areaLabel('roles')}
+        description="Who works here, and what each role may do."
+        actions={
+          mayManage ? (
+            view === 'roles' ? <CreateRoleSheet organizationId={organizationId} /> : <AddMemberTrigger />
+          ) : null
+        }
+      />
+      <ViewNav
+        label="Team views"
+        current={view}
+        views={[
+          { key: 'members', label: 'Members', href: teamViewHref(organizationId, 'members') },
+          {
+            key: 'invitations',
+            label: `Invitations${invitations.length ? ` (${invitations.length})` : ''}`,
+            href: teamViewHref(organizationId, 'invitations'),
+          },
+          { key: 'roles', label: 'Roles', href: teamViewHref(organizationId, 'roles') },
+        ]}
+      />
 
       {view === 'members' ? (
         <div className="mt-4">
@@ -60,7 +75,6 @@ export default async function RolesPage({
             members={members}
             roles={roles}
             mayManage={mayManage}
-            emptyAction={mayManage ? <AddMemberTrigger /> : undefined}
           />
         </div>
       ) : null}
@@ -74,7 +88,6 @@ export default async function RolesPage({
             organizationId={organizationId}
             invitations={invitations}
             mayManage={mayManage}
-            emptyAction={mayManage ? <AddMemberTrigger /> : undefined}
           />
         </div>
       ) : null}
@@ -88,7 +101,6 @@ export default async function RolesPage({
             organizationId={organizationId}
             roles={roles}
             mayManage={mayManage}
-            emptyAction={mayManage ? <CreateRoleSheet organizationId={organizationId} /> : undefined}
           />
         </div>
       ) : null}

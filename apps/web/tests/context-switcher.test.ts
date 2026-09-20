@@ -51,7 +51,10 @@ describe('the switcher', () => {
 
   it('every shell hands it the platform fact, the two layouts that host Platform from server facts', () => {
     expect(read('app/organizations/[organizationId]/layout.tsx')).toContain('platformAdministrationAvailable({ staff, goldInternal })');
-    expect(read('features/account/personal-settings-shell.tsx')).toContain('platformAdministrationAvailable({ staff, goldInternal })');
+    // Personal settings and the fallback frame both take it from the one person-context read.
+    expect(read('lib/route/person-context.ts')).toContain('platformAdministrationAvailable({ staff, goldInternal })');
+    expect(read('features/account/personal-settings-shell.tsx')).toContain('loadPersonContext()');
+    expect(read('features/account/global-fallback-shell.tsx')).toContain('loadPersonContext()');
     expect(read('app/(platform)/platform/layout.tsx')).toMatch(/platformAdministration\s/);
   });
 });

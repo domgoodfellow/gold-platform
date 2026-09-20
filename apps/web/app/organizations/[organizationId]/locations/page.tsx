@@ -86,7 +86,6 @@ export default async function LocationsPage({
             rows={locations}
             rowKey={(location) => location.id}
             empty="No locations yet."
-            emptyAction={mayAdd ? <CreateLocationTrigger /> : undefined}
             // **Coordinates are the row action, which is what they always were.** They are
             // derived from the address rather than part of it, so they belong beside the row
             // rather than inside its line — and a place with none is an ordinary place. Nothing

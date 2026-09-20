@@ -136,7 +136,7 @@ export function AgentConversation({
     <>
       {[...runs].reverse().map((run) => (
         <div key={run.id} className="flex flex-col gap-2">
-          <div className="ml-auto max-w-[85%] rounded-lg bg-muted px-3 py-2 text-sm">{run.question}</div>
+          <div className="ml-auto max-w-[85%] rounded-lg bg-secondary px-3 py-2 text-sm text-secondary-foreground">{run.question}</div>
           {run.outcome === 'answered' ? (
             <div className="mr-auto max-w-[85%] whitespace-pre-wrap rounded-lg border border-border px-3 py-2 text-sm">
               {run.answer}

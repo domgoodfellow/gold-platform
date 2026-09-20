@@ -64,7 +64,6 @@ export default async function ResourcesPage({
             rows={resources}
             rowKey={(resource) => resource.id}
             empty="No resources yet."
-            emptyAction={mayAdd ? <CreateResourceTrigger /> : undefined}
             columns={[
               {
                 key: 'name',

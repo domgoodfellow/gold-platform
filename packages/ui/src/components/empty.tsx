@@ -35,7 +35,7 @@ function EmptyMedia({
       data-variant={variant}
       className={cn(
         "flex items-center justify-center",
-        "data-[variant=icon]:mb-1 data-[variant=icon]:size-10 data-[variant=icon]:rounded-full data-[variant=icon]:bg-muted data-[variant=icon]:text-muted-foreground [&_svg]:size-5",
+        "data-[variant=icon]:mb-1 data-[variant=icon]:size-10 data-[variant=icon]:rounded-full data-[variant=icon]:bg-secondary data-[variant=icon]:text-muted-foreground [&_svg]:size-5",
         className
       )}
       {...props}

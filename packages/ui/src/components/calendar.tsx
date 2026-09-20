@@ -40,7 +40,7 @@ function Calendar({
         range_end: "day-range-end",
         selected:
           "[&>button]:bg-foreground [&>button]:text-background [&>button]:hover:bg-foreground [&>button]:hover:text-background",
-        today: "[&>button]:bg-muted [&>button]:font-semibold",
+        today: "[&>button]:bg-secondary [&>button]:font-semibold",
         outside: "text-muted-foreground opacity-50",
         disabled: "text-muted-foreground opacity-50",
         hidden: "invisible",

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CircleAlert, CircleCheck, CircleDashed } from 'lucide-react';
+import { CircleAlert, CircleCheck } from 'lucide-react';
 import { Progress } from '@gold/ui/components/progress';
 import { Card } from '@/components/containers/card';
 import { DividedList, SectionHeading } from '@/components/containers/section';
@@ -36,8 +36,7 @@ export function SetupProgressCard({ overview }: { overview: SetupOverview }) {
       </p>
       <Progress
         value={percent}
-        // The primitive's track is shadcn's `bg-muted`, which is this system's text role; the rule colour is the track.
-        className="mt-3 bg-border"
+        className="mt-3"
         aria-label={`${overview.ready} of ${overview.total} setup areas ready`}
       />
     </Card>
@@ -45,17 +44,18 @@ export function SetupProgressCard({ overview }: { overview: SetupOverview }) {
 }
 
 /** The two words a row carries — importance and state — so nothing depends on colour or an icon alone. */
-function areaStatus(area: SetupArea): { label: string; icon: ReactNode; tone: 'accent' | 'success' | 'neutral' } {
+function areaStatus(area: SetupArea): { label: string; icon?: ReactNode; tone: 'accent' | 'success' | 'neutral' } {
   if (area.state === 'complete') {
     return { label: 'Ready', icon: <CircleCheck aria-hidden className="size-4" />, tone: 'success' };
   }
   switch (area.importance) {
     case 'required':
       return { label: 'Blocks launch', icon: <CircleAlert aria-hidden className="size-4" />, tone: 'accent' };
+    // The word carries the meaning; a dashed circle here read as a loading spinner.
     case 'recommended':
-      return { label: 'Recommended', icon: <CircleDashed aria-hidden className="size-4" />, tone: 'neutral' };
+      return { label: 'Recommended', tone: 'neutral' };
     case 'optional':
-      return { label: 'Optional', icon: <CircleDashed aria-hidden className="size-4" />, tone: 'neutral' };
+      return { label: 'Optional', tone: 'neutral' };
   }
 }
 
@@ -78,8 +78,13 @@ export function SetupAreaList({ areas }: { areas: SetupArea[] }) {
                 </div>
                 <p className="mt-0.5 text-sm text-muted">{area.message}</p>
               </div>
-              <ButtonLink href={area.area.href} tone="secondary" size="small">
-                {area.state === 'complete' ? `Open ${area.area.label}` : `Configure ${area.area.label}`}
+              <ButtonLink
+                href={area.area.href}
+                tone="secondary"
+                size="small"
+                aria-label={`${area.state === 'complete' ? 'Open' : 'Configure'} ${area.area.label}`}
+              >
+                {area.state === 'complete' ? 'Open' : 'Configure'}
               </ButtonLink>
             </li>
           );
@@ -120,8 +125,8 @@ export function LaunchReview({
                 <span className="min-w-0 flex-1 basis-64">
                   <span className="font-medium">{area.label}.</span> {area.message}
                 </span>
-                <ButtonLink href={area.area.href} tone="text" size="small">
-                  Configure {area.area.label}
+                <ButtonLink href={area.area.href} tone="text" size="small" aria-label={`Configure ${area.area.label}`}>
+                  Configure
                 </ButtonLink>
               </li>
             ))}

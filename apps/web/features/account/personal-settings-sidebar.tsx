@@ -2,23 +2,28 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, UserRound } from 'lucide-react';
 import { AccountMenu } from '@/components/containers/account-menu';
 import { ContextSwitcher, GOLD_MARK, type SwitchableOrganization } from '@/components/containers/context-switcher';
-import { PERSONAL_SECTIONS, personalSettingsHref } from '@/lib/route/personal-settings';
+import { PERSONAL_SECTIONS, personalSettingsHref, type PersonalSection } from '@/lib/route/personal-settings';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from '@gold/ui/components/sidebar';
+
+/** Presentation only, keyed by section like `AREA_ICONS`: the collapsed sidebar shows nothing but these. */
+const SECTION_ICONS: Record<PersonalSection, typeof UserRound> = {
+  profile: UserRound,
+  security: ShieldCheck,
+};
 
 /**
  * Personal settings' own sidebar: the same header/footer pair every shell carries, and a list of
@@ -69,19 +74,23 @@ export function PersonalSettingsSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
+        {/* No group label: the switcher above already says "Personal settings", once. */}
         <SidebarGroup>
-          <SidebarGroupLabel>Personal settings</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {PERSONAL_SECTIONS.map((section) => (
-                <SidebarMenuItem key={section.key}>
-                  <SidebarMenuButton asChild isActive={pathname === section.path} tooltip={section.label}>
-                    <Link href={personalSettingsHref(section.key, back?.organizationId)}>
-                      <span>{section.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {PERSONAL_SECTIONS.map((section) => {
+                const Icon = SECTION_ICONS[section.key];
+                return (
+                  <SidebarMenuItem key={section.key}>
+                    <SidebarMenuButton asChild isActive={pathname === section.path} tooltip={section.label}>
+                      <Link href={personalSettingsHref(section.key, back?.organizationId)}>
+                        <Icon aria-hidden />
+                        <span>{section.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

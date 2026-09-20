@@ -45,7 +45,7 @@ export default async function PlatformBillingPage() {
       <PageHeader title="Billing" description={<>GOLD’s own subscription book — organizations paying GOLD, never the other direction. Plans and prices are managed at{' '} <Link href="/platform/catalog/plans" className="underline underline-offset-4"> Catalog → Plans </Link> .</>} />
 
       {!provider ? (
-        <p className="mt-6 rounded border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+        <p className="mt-6 rounded border border-border bg-secondary p-4 text-sm text-muted-foreground">
           Billing is not configured for this deployment — no STRIPE_SECRET_KEY is set.
         </p>
       ) : (

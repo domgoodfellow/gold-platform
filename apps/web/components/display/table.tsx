@@ -87,7 +87,7 @@ export function DataTable<T>({
                   <ShadcnTableCell
                     key={column.key}
                     className={cx(
-                      'py-2 pr-4 align-top',
+                      'py-2 pr-4 align-middle',
                       column.numeric && 'text-right tabular-nums',
                     )}
                   >
@@ -95,7 +95,7 @@ export function DataTable<T>({
                   </ShadcnTableCell>
                 ))}
                 {actions ? (
-                  <ShadcnTableCell className="align-top">
+                  <ShadcnTableCell className="align-middle">
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       {actions(row)}
                     </div>
@@ -179,7 +179,7 @@ export function TableCell({
   return (
     <ShadcnTableCell
       {...props}
-      className={cx('py-2 pr-4 align-top', numeric && 'text-right tabular-nums', className)}
+      className={cx('py-2 pr-4 align-middle', numeric && 'text-right tabular-nums', className)}
     />
   );
 }

@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { DataTable } from '@/components/display/table';
 import type { PendingInvitation } from '@/lib/domain/tenancy/invitations';
 import { RevokeInvitationDialog } from './revoke-invitation-dialog';
@@ -8,19 +7,16 @@ export function InvitationsTable({
   organizationId,
   invitations,
   mayManage,
-  emptyAction,
 }: {
   organizationId: string;
   invitations: PendingInvitation[];
   mayManage: boolean;
-  emptyAction?: ReactNode;
 }) {
   return (
     <DataTable
       rows={invitations}
       rowKey={(invitation) => invitation.id}
       empty="No pending invitations."
-      emptyAction={emptyAction}
       columns={[
         { key: 'email', header: 'Email', emphasis: 'primary', cell: (invitation) => invitation.email },
         { key: 'role', header: 'Role', cell: (invitation) => invitation.roleName },

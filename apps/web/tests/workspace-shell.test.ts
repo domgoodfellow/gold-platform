@@ -403,7 +403,9 @@ describe('the page-header contract — the page, not the workspace header, owns 
     for (const page of pages) {
       const source = readFileSync(page, 'utf8');
       const label = page.slice(root.length);
-      if (/^\s*redirect\(/m.test(source) && !identity.test(source)) continue;
+      // A pure redirect renders nothing, and so does an unmatched-address catch-all that only
+      // throws `notFound()` so the segment's own `not-found.tsx` renders inside its layout.
+      if ((/^\s*redirect\(/m.test(source) || /^\s*notFound\(\);/m.test(source)) && !identity.test(source)) continue;
       expect(source, `${label} renders no page identity`).toMatch(identity);
       expect(source, `${label} would render two <h1> elements`).not.toMatch(/<h1\b|<PageHeading/);
     }
@@ -437,8 +439,8 @@ describe('Resources — the reference page for the workspace/page hierarchy', ()
     expect(beforeHeader).toContain('<CreateResourceSheetProvider');
   });
 
-  it('repeats the same Add trigger in the empty state, which is the same operation rather than a second action', () => {
-    expect(resourcesPage).toMatch(/emptyAction=\{mayAdd \? <CreateResourceTrigger \/> : undefined\}/);
+  it('does not repeat the Add trigger in the empty state — the header already offers it', () => {
+    expect(resourcesPage).not.toContain('emptyAction=');
   });
 
   it('still hides controls by capability as courtesy only — the guard stays in the database', () => {

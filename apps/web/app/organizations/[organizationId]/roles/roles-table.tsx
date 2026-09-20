@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { DataTable } from '@/components/display/table';
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { EditRoleSheet } from './edit-role-sheet';
@@ -18,19 +17,16 @@ export function RolesTable({
   organizationId,
   roles,
   mayManage,
-  emptyAction,
 }: {
   organizationId: string;
   roles: Role[];
   mayManage: boolean;
-  emptyAction?: ReactNode;
 }) {
   return (
     <DataTable
       rows={roles}
       rowKey={(role) => role.id}
       empty="No roles yet."
-      emptyAction={emptyAction}
       columns={[
         { key: 'name', header: 'Role', emphasis: 'primary', cell: (role) => role.name },
         {

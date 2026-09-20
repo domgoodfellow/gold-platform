@@ -35,7 +35,7 @@ function Item({
         "group/item flex flex-wrap items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-sm transition-colors",
         "data-[size=sm]:px-2.5 data-[size=sm]:py-2",
         "data-[variant=outline]:border-border",
-        "data-[variant=muted]:bg-muted/40",
+        "data-[variant=muted]:bg-secondary",
         className
       )}
       {...props}
@@ -54,7 +54,7 @@ function ItemMedia({
       data-variant={variant}
       className={cn(
         "flex shrink-0 items-center justify-center self-start",
-        "data-[variant=icon]:size-8 data-[variant=icon]:rounded-md data-[variant=icon]:bg-muted data-[variant=icon]:text-muted-foreground [&_svg]:size-4",
+        "data-[variant=icon]:size-8 data-[variant=icon]:rounded-md data-[variant=icon]:bg-secondary data-[variant=icon]:text-muted-foreground [&_svg]:size-4",
         className
       )}
       {...props}

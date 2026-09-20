@@ -1,12 +1,13 @@
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeader } from '@/components/containers/page-header';
+import { CustomersViewNav } from '@/features/crm/customers/customers-view-nav';
 import { EmptyState } from '@/components/containers/section';
 import { buildPipelineColumns, PipelineBoard } from '@/features/crm/sales/pipeline-board';
 import { CustomerStageControl } from '@/features/crm/sales/stage-control';
 import { StageSettingsSheet } from '@/features/crm/sales/stage-settings-sheet';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
-import { listUsableModules } from '@/lib/domain/tenancy/modules';
+import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -15,20 +16,21 @@ export const dynamic = 'force-dynamic';
 export default async function PipelinePage({ params }: PageProps<'/organizations/[organizationId]/customers/pipeline'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  const [customers, stages, modules] = await Promise.all([
+  // The same answer the Customers list uses to offer this view at all — one source, so the two
+  // sibling views can never disagree about whether the Pipeline exists.
+  const [customers, stages, resolvedFeatures] = await Promise.all([
     listCustomers(db, { organizationId }),
     listCustomerStages(db, { organizationId }),
-    listUsableModules(db, { organizationId }),
+    organizationResolvedFeatureStates(db, { organizationId }),
   ]);
-  const reception = modules.has('reception');
+  const reception = activeModuleKeys(resolvedFeatures).has('reception');
   const mayMoveCustomers = organization.capabilities.includes('customer.update');
   const stageById = new Map(customers.map((customer) => [customer.id, customer.stageId]));
 
   return (
     <AppPage width="wide">
       <PageHeader
-        title="Pipeline"
-        crumbs={[{ label: areaLabel('customers'), href: `/organizations/${organizationId}/customers` }]}
+        title={areaLabel('customers')}
         description="Where each relationship has got to."
         actions={
           reception ? (
@@ -36,6 +38,8 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
           ) : null
         }
       />
+
+      {reception ? <CustomersViewNav organizationId={organizationId} current="pipeline" /> : null}
 
       {!reception ? (
         <EmptyState className="mt-6">Switch Communications/Voice on to name a pipeline for this business.</EmptyState>

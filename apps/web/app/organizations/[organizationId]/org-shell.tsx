@@ -12,7 +12,6 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -59,6 +58,7 @@ import {
 } from '@/lib/navigation';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 import { PLATFORM_NAV } from '@/features/platform/platform-navigation';
+import { inPlatformContext } from '@/lib/route/platform-context';
 
 /**
  * The two pieces of the shell that need to know which area is on screen. Client components
@@ -242,6 +242,12 @@ function PlatformPhoneNavMenu({ pathname }: { pathname: string }) {
  * sideways rather than collapsing into a drawer (`ui-spec.md` §2 says why: a drawer needs
  * state, a toggle, a focus trap and an escape key to be correct, and a bar needs none of it).
  *
+ * **Order follows the current context.** In a business the bar reads Setup (while it applies),
+ * the areas, then *Platform* for eligible GOLD Internal staff. Inside `/platform/**` the context
+ * is Platform, so *Platform* comes first — where the bar starts, not at the far end of a
+ * scrolling row — followed by the same business destinations. The Platform menu is always
+ * `PLATFORM_NAV`; there is no second list.
+ *
  * It renders outside `Sidebar` entirely, never inside it: shadcn's own mobile rendering below
  * `md` is an off-canvas sheet, which is exactly the drawer this bar exists to avoid. `AppShell`
  * places it as a sibling of `SidebarInset`, and no trigger anywhere reaches the sidebar's sheet
@@ -272,16 +278,24 @@ export function OrgNavBar({
   const enabled = new Set(enabledModules);
   const capabilitySet = new Set(capabilities);
   const featureSet = new Set(featureAvailability);
+  const inPlatform = inPlatformContext(pathname);
+  const platformMenu =
+    platformStaff && isGoldInternal ? (
+      <li className="shrink-0">
+        <PlatformPhoneNavMenu pathname={pathname} />
+      </li>
+    ) : null;
 
   return (
     <nav
-      aria-label="This business"
+      aria-label={inPlatform ? 'Platform Administration' : 'This business'}
       className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background md:hidden"
     >
       <ul className="flex gap-1 overflow-x-auto p-2">
+        {inPlatform ? platformMenu : null}
         {setup ? (
           <li className="shrink-0">
-            <SetupNavLink organizationId={organizationId} setup={setup} />
+            <SetupNavLink organizationId={organizationId} />
           </li>
         ) : null}
         {visibleAreas(enabled, capabilitySet, featureSet).map((area) => (
@@ -293,11 +307,7 @@ export function OrgNavBar({
             />
           </li>
         ))}
-        {platformStaff && isGoldInternal ? (
-          <li className="shrink-0">
-            <PlatformPhoneNavMenu pathname={pathname} />
-          </li>
-        ) : null}
+        {inPlatform ? null : platformMenu}
       </ul>
     </nav>
   );
@@ -307,13 +317,15 @@ export function OrgNavBar({
 export type SetupProgress = { ready: number; total: number };
 
 /**
- * The one Setup treatment while a business is in SETUP — an ordinary row at the top of the
- * sidebar carrying the count ("4 of 6"), not a second call to action beside a header badge. The
- * layout renders it only while `operationalState === 'setup'`, so it is gone the moment the
- * business is LIVE with nothing left to remember to turn off. Same collapse-to-icon and tooltip
- * behaviour as every other row.
+ * The one Setup treatment while a business is in SETUP — an ordinary navigation row at the top of
+ * the sidebar, not a second call to action beside a header badge. The layout renders it only while
+ * `operationalState === 'setup'`, so it is gone the moment the business is LIVE with nothing left
+ * to remember to turn off. Same collapse-to-icon and tooltip behaviour as every other row.
+ *
+ * It carries no progress count: Setup owns progress (`SetupProgressCard`), navigation only goes
+ * there.
  */
-export function SetupEntry({ organizationId, setup }: { organizationId: string; setup: SetupProgress }) {
+export function SetupEntry({ organizationId }: { organizationId: string }) {
   const current = currentSegment(usePathname()) === 'setup';
 
   return (
@@ -323,16 +335,13 @@ export function SetupEntry({ organizationId, setup }: { organizationId: string; 
           <SidebarMenuButton
             asChild
             isActive={current}
-            tooltip={`Setup — ${setup.ready} of ${setup.total} ready`}
+            tooltip="Setup"
           >
             <Link href={areaHref(organizationId, 'setup')} aria-current={current ? 'page' : undefined}>
               <ListChecks aria-hidden />
               <span>Setup</span>
             </Link>
           </SidebarMenuButton>
-          <SidebarMenuBadge>
-            {setup.ready} of {setup.total}
-          </SidebarMenuBadge>
         </SidebarMenuItem>
       </SidebarMenu>
     </SidebarGroup>
@@ -344,14 +353,13 @@ export function SetupEntry({ organizationId, setup }: { organizationId: string; 
  * while the business is in SETUP. It is the bar's own row, not a header badge, and `ui-spec.md` §2's
  * rule against a permanent extra bottom-bar destination holds because it disappears at Launch.
  */
-export function SetupNavLink({ organizationId, setup }: { organizationId: string; setup: SetupProgress }) {
+export function SetupNavLink({ organizationId }: { organizationId: string }) {
   const current = currentSegment(usePathname()) === 'setup';
 
   return (
     <Link
       href={areaHref(organizationId, 'setup')}
       aria-current={current ? 'page' : undefined}
-      aria-label={`Setup, ${setup.ready} of ${setup.total} ready`}
       className={cx(
         FOCUS_RING,
         'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm',
@@ -360,9 +368,6 @@ export function SetupNavLink({ organizationId, setup }: { organizationId: string
     >
       <ListChecks aria-hidden size={18} className="shrink-0" />
       <span className="min-w-0">Setup</span>
-      <span className="text-xs tabular-nums opacity-80">
-        {setup.ready} of {setup.total}
-      </span>
     </Link>
   );
 }
@@ -450,7 +455,7 @@ export function OrgSidebar({
         />
       </SidebarHeader>
       <SidebarContent>
-        {setup ? <SetupEntry organizationId={organizationId} setup={setup} /> : null}
+        {setup ? <SetupEntry organizationId={organizationId} /> : null}
         <OrgNav
           organizationId={organizationId}
           enabledModules={enabledModules}

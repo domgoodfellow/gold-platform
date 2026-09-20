@@ -68,7 +68,9 @@ describe('one Add Member Sheet exposes both existing operations', () => {
   it('is one Sheet, reused rather than duplicated, and reachable from both Members and Invitations', () => {
     expect(sheet.match(/function AddMemberSheetProvider/g)?.length).toBe(1);
     const page = readFileSync(`${ROUTES}/page.tsx`, 'utf8');
-    expect(page.match(/<AddMemberTrigger/g)?.length).toBeGreaterThanOrEqual(2);
+    // One trigger, in the page header, serving both views that add a person; Roles has its own.
+    expect(page.match(/<AddMemberTrigger/g)?.length).toBe(1);
+    expect(page).toContain("view === 'roles' ? <CreateRoleSheet organizationId={organizationId} /> : <AddMemberTrigger />");
   });
 });
 

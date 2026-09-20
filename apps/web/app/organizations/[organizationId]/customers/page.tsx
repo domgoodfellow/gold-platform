@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageHeader } from '@/components/containers/page-header';
+import { ButtonLink } from '@/components/controls/button';
 import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import {
   CreateCustomerSheetProvider,
@@ -9,6 +9,7 @@ import {
 } from '@/features/crm/customers/create-customer-sheet';
 import { CustomerConfiguration } from '@/features/customers/configuration/customer-configuration';
 import { CustomerListToolbar } from '@/features/crm/customers/customer-list-toolbar';
+import { CustomersViewNav } from '@/features/crm/customers/customers-view-nav';
 import { CustomerTable } from '@/features/crm/customers/customer-table';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
@@ -50,13 +51,10 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
           actions={
             <>
               {mayConfigure ? <ConfigureTrigger /> : null}
-              {salesEnabled ? (
-                <Link
-                  href={`/organizations/${organizationId}/customers/pipeline`}
-                  className="text-sm underline underline-offset-4"
-                >
-                  Pipeline
-                </Link>
+              {modules.has('integrations') ? (
+                <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="secondary">
+                  Import
+                </ButtonLink>
               ) : null}
               <CreateCustomerTrigger />
             </>
@@ -77,9 +75,8 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
             />
           </ConfigureRegistrar>
         ) : null}
-        <div>
-          <CustomerListToolbar organizationId={organizationId} stages={visibleStages} search={search} stage={stage} mayImport={modules.has('integrations')} />
-        </div>
+        {salesEnabled ? <CustomersViewNav organizationId={organizationId} current="list" /> : null}
+        <CustomerListToolbar organizationId={organizationId} stages={visibleStages} search={search} stage={stage} />
 
         <div className="mt-4">
           <CustomerTable
@@ -88,7 +85,6 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
             definitions={definitions}
             stages={visibleStages}
             empty={search || stage ? 'No customers match these filters.' : 'No customers yet.'}
-            emptyAction={search || stage ? undefined : <CreateCustomerTrigger />}
           />
         </div>
       </CreateCustomerSheetProvider>

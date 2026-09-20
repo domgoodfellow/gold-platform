@@ -4,6 +4,8 @@ import * as React from "react"
 import { Tabs as TabsPrimitive } from "radix-ui"
 import { cn } from "cn"
 
+import { tabsListClassName, tabsTriggerClassName } from "./tab-styles"
+
 function Tabs({
   className,
   ...props
@@ -24,10 +26,7 @@ function TabsList({
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
-      className={cn(
-        "flex w-full max-w-full items-center gap-1 overflow-x-auto border-b border-border sm:w-fit",
-        className
-      )}
+      className={cn(tabsListClassName, className)}
       {...props}
     />
   )
@@ -40,10 +39,7 @@ function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-accent data-[state=active]:text-foreground",
-        className
-      )}
+      className={cn(tabsTriggerClassName, className)}
       {...props}
     />
   )

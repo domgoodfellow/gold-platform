@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { SectionHeading } from '@/components/containers/section';
 import { PageHeader } from '@/components/containers/page-header';
-import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { Widget, WidgetGrid } from '@/components/display/widget';
@@ -21,8 +20,7 @@ export function PlatformOverview({ organizations, failures, catalogue, rates }: 
 
   return (
     <AppPage width="full">
-      <PageHeader title="Overview" />
-      <Hint className="block">The state of every business running on GOLD.</Hint>
+      <PageHeader title="Overview" description="The state of every business running on GOLD." />
 
       <WidgetGrid className="mt-6">
         <Widget
