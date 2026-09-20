@@ -15,7 +15,7 @@ and are checked against the seeded catalogue by `catalogue-plans.test.ts`.
 |---|---|---|---|---|
 | CRM / Customers & Contacts | `customer_profile`, `ownership_assignment`*, `tags_segmentation`*, `activity_timeline` | `customers`, `timeline` / `features/crm/customers` | `/customers`, `/customers/[id]` | operational / E2E |
 | CRM / Sales | `pipeline`, `configurable_stages`, `qualification_state`* | `customers/stages` / `features/crm/sales` | `/customers/pipeline` | configurable / E2E |
-| CRM / Data | `custom_fields`, `configurable_views`*, `csv_import` | `fields`, `integrations` / shared feature packages | `/customers`, `/integrations/imports` | operational / integration |
+| CRM / Data | `custom_fields`, `configurable_views`*, `file_imports`, `app_connections`, `data_mapping` | `fields`, `integrations` / shared feature packages | `/customers`, `/integrations/imports` | operational / integration |
 | Communications / Voice | `inbound_calling`, `outbound_calling`, `call_controls`*, `call_history`, `number_inventory`*, `caller_id`, `recording`*, `call_dispositions` | `reception` / `features/communications/voice` | `/calls`, customer Communications tab | operational / E2E |
 | Communications / Email | `sending`, `sender_identity` | `automation`, provider bindings / Automations and Connections | `/automations`, `/settings/connections` | partial operational / integration |
 | Operations / Work Management | `work_items`, `work_types_statuses`, `assignment`, `checklists`, `time_cost_capture`, `work_timeline` | `work-items` / `features/work` | `/work` | operational / integration |

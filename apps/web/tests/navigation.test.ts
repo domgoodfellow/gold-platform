@@ -277,7 +277,14 @@ describe('canonical Feature-level navigation gating', () => {
       'email_action',
       'run_history',
     ]);
-    expect(AREAS.find((a) => a.segment === 'integrations')?.featureKeys).toEqual(['csv_import']);
+    expect(AREAS.find((a) => a.segment === 'integrations')?.featureKeys).toEqual([
+      'app_connections',
+      'file_imports',
+      'data_mapping',
+      'scheduled_sync',
+      'triggers_actions',
+      'agent_tools',
+    ]);
     expect(AREAS.find((a) => a.segment === 'assets')?.featureKeys).toEqual(['assets']);
   });
 

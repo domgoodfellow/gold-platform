@@ -26,6 +26,6 @@ export async function recordEmailDomainAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/connections`);
+  revalidatePath(`/organizations/${organizationId}/settings/communications`);
   return { error: null, recorded: true };
 }

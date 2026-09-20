@@ -33,9 +33,9 @@ export default async function SettingsPage({
       href: `${root}/settings/website`,
     },
     {
-      title: 'Connections',
-      description: 'Provider connections used by this business.',
-      href: `${root}/settings/connections`,
+      title: 'Communications',
+      description: 'The phone numbers and email this business sends from.',
+      href: `${root}/settings/communications`,
     },
     {
       title: 'Features',

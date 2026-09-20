@@ -1,19 +1,27 @@
 import type { Metadata } from 'next';
 import { CtaBand } from '@/components/marketing/cta-band';
-import { INTEGRATIONS } from '@/lib/marketing/content';
+import { groupByCategory } from '@/lib/domain/integrations/published';
+import { getPublishedConnectors } from '@/lib/domain/integrations/published-cache';
+
+// Read at request time: the catalogue is data an admin edits, and is cached and expired by tag.
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Integrations · GOLD',
-  description: 'The tools GOLD connects to today, organized by what they do for your business.',
+  description: 'The tools GOLD connects to, and the ones on the way, organized by what they do for your business.',
   alternates: { canonical: '/integrations' },
   openGraph: {
     title: 'Integrations · GOLD',
-    description: 'The tools GOLD connects to today, organized by what they do for your business.',
+    description: 'The tools GOLD connects to, and the ones on the way, organized by what they do for your business.',
     url: '/integrations',
   },
 };
 
-export default function IntegrationsPage() {
+const STATUS_WORD = { planned: 'Planned', beta: 'Beta', live: null } as const;
+
+export default async function IntegrationsPage() {
+  const groups = groupByCategory(await getPublishedConnectors());
+
   return (
     <div className="flex flex-col gap-16 py-6 sm:gap-24 sm:py-10">
       <div className="flex flex-col gap-4">
@@ -27,19 +35,26 @@ export default function IntegrationsPage() {
       </div>
 
       <div className="grid gap-10 sm:grid-cols-2">
-        {INTEGRATIONS.map((category) => (
-          <div key={category.category}>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-subtle">{category.category}</h2>
+        {groups.map((group) => (
+          <div key={group.category}>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-subtle">{group.category}</h2>
             <div className="mt-4 flex flex-col gap-4">
-              {category.items.map((item) => (
-                <div key={item.name} className="border-t-2 border-foreground pt-3">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="font-semibold">{item.name}</h3>
-                    {item.status === 'planned' ? (
-                      <span className="shrink-0 font-mono text-xs uppercase tracking-wide text-subtle">Planned</span>
+              {group.items.map((item) => (
+                <div key={item.key} className="border-t-2 border-foreground pt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      {item.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.logoUrl} alt="" className="h-5 w-5 shrink-0 object-contain" />
+                      ) : null}
+                      <h3 className="font-semibold">{item.name}</h3>
+                    </div>
+                    {STATUS_WORD[item.status] ? (
+                      <span className="shrink-0 font-mono text-xs uppercase tracking-wide text-subtle">{STATUS_WORD[item.status]}</span>
                     ) : null}
                   </div>
-                  <p className="mt-1 text-sm leading-relaxed text-muted">{item.description}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted">{item.summary}</p>
+                  {item.apps.length > 0 ? <p className="mt-1 text-xs text-subtle">{item.apps.join(' · ')}</p> : null}
                 </div>
               ))}
             </div>

@@ -44,7 +44,7 @@ describe('Settings, as the Configuration Center (source scan)', () => {
       '/settings/general',
       '/settings/branding',
       '/settings/website',
-      '/settings/connections',
+      '/settings/communications',
       '/settings/features',
       '/settings/plan',
     ]) {

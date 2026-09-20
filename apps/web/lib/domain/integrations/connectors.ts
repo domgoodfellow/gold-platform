@@ -1,0 +1,285 @@
+import type { Db } from '@/lib/db/types';
+import { isConnectorImplemented } from '@/lib/adapters/integrations';
+import { DomainError } from '@/lib/domain/errors';
+
+/**
+ * The connector catalogue (D55) — which outside apps exist, never which a business has
+ * connected (`connections.ts`) and never who GOLD buys infrastructure from (`providers/`).
+ * Visibility is the table's own policy: a business sees public rows, platform staff sees all.
+ */
+
+export const CONNECTOR_STATUSES = ['planned', 'beta', 'live'] as const;
+export const CONNECTOR_AUTH_METHODS = ['none', 'oauth2', 'api_key'] as const;
+export const CONNECTOR_CONNECTION_METHODS = ['native', 'mcp', 'automation', 'file', 'custom'] as const;
+export const CONNECTOR_CAPABILITIES = [
+  'app_connections',
+  'file_imports',
+  'data_mapping',
+  'scheduled_sync',
+  'triggers_actions',
+  'agent_tools',
+] as const;
+
+export type ConnectorStatus = (typeof CONNECTOR_STATUSES)[number];
+export type ConnectorAuthMethod = (typeof CONNECTOR_AUTH_METHODS)[number];
+export type ConnectorConnectionMethod = (typeof CONNECTOR_CONNECTION_METHODS)[number];
+export type ConnectorCapability = (typeof CONNECTOR_CAPABILITIES)[number];
+
+export type ConnectorApp = { key: string; name: string; description: string; displayOrder: number };
+
+export type Connector = {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  category: string;
+  suite: string | null;
+  status: ConnectorStatus;
+  authMethod: ConnectorAuthMethod;
+  connectionMethod: ConnectorConnectionMethod;
+  isPublic: boolean;
+  displayOrder: number;
+  iconRef: string | null;
+  marketingSlug: string | null;
+  marketingSummary: string;
+  marketingDescription: string;
+  capabilities: ConnectorCapability[];
+  apps: ConnectorApp[];
+};
+
+export type ConnectorInput = Omit<Connector, 'id' | 'apps'>;
+
+const COLUMNS =
+  'id, key, name, description, category, suite, status, auth_method, connection_method, is_public, display_order, icon_ref, marketing_slug, marketing_summary, marketing_description, capabilities, platform_connector_apps(key, name, description, display_order)';
+
+type Row = {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  category: string;
+  suite: string | null;
+  status: string;
+  auth_method: string;
+  connection_method: string;
+  is_public: boolean;
+  display_order: number;
+  icon_ref: string | null;
+  marketing_slug: string | null;
+  marketing_summary: string;
+  marketing_description: string;
+  capabilities: string[];
+  platform_connector_apps: { key: string; name: string; description: string; display_order: number }[] | null;
+};
+
+function fromRow(row: Row): Connector {
+  return {
+    id: row.id,
+    key: row.key,
+    name: row.name,
+    description: row.description,
+    category: row.category,
+    suite: row.suite,
+    status: row.status as ConnectorStatus,
+    authMethod: row.auth_method as ConnectorAuthMethod,
+    connectionMethod: row.connection_method as ConnectorConnectionMethod,
+    isPublic: row.is_public,
+    displayOrder: row.display_order,
+    iconRef: row.icon_ref,
+    marketingSlug: row.marketing_slug,
+    marketingSummary: row.marketing_summary,
+    marketingDescription: row.marketing_description,
+    capabilities: row.capabilities as ConnectorCapability[],
+    apps: (row.platform_connector_apps ?? [])
+      .map((app) => ({ key: app.key, name: app.name, description: app.description, displayOrder: app.display_order }))
+      .sort((a, b) => a.displayOrder - b.displayOrder),
+  };
+}
+
+export async function listConnectors(db: Db): Promise<Connector[]> {
+  const { data, error } = await db
+    .from('platform_connectors')
+    .select(COLUMNS)
+    .order('display_order')
+    .order('name');
+  if (error) throw new DomainError(error.message, 'integrations.connectors_list_failed');
+  return (data as unknown as Row[]).map(fromRow);
+}
+
+export async function getConnector(db: Db, key: string): Promise<Connector | null> {
+  const { data, error } = await db.from('platform_connectors').select(COLUMNS).eq('key', key).maybeSingle();
+  if (error) throw new DomainError(error.message, 'integrations.connector_get_failed');
+  return data ? fromRow(data as unknown as Row) : null;
+}
+
+/**
+ * Whether a business can press Connect. The catalogue says the app is `beta` or `live`; the
+ * registry says GOLD has code that can actually connect it. Both, or the button stays off.
+ */
+export function isConnectable(connector: Pick<Connector, 'key' | 'status'>): boolean {
+  return connector.status !== 'planned' && isConnectorImplemented(connector.key);
+}
+
+function oneOf<T extends string>(value: string, allowed: readonly T[], message: string): T {
+  if (!allowed.includes(value as T)) throw new DomainError(message, 'integrations.connector_invalid');
+  return value as T;
+}
+
+/** Validate here so a person gets a sentence; the table's CHECKs remain the guarantee. */
+export function validateConnectorInput(input: ConnectorInput): ConnectorInput {
+  if (!/^[a-z][a-z0-9_]{0,40}$/.test(input.key)) {
+    throw new DomainError('A key is lowercase letters, digits and underscores, starting with a letter.', 'integrations.connector_invalid');
+  }
+  if (input.name.trim() === '') throw new DomainError('Give the connector a name.', 'integrations.connector_invalid');
+  if (input.category.trim() === '') throw new DomainError('Give the connector a category.', 'integrations.connector_invalid');
+  if (input.marketingSlug && !/^[a-z][a-z0-9-]{0,60}$/.test(input.marketingSlug)) {
+    throw new DomainError('A public address is lowercase letters, digits and hyphens.', 'integrations.connector_invalid');
+  }
+  if (input.marketingSummary.length > 200) {
+    throw new DomainError('The public summary is longer than 200 characters.', 'integrations.connector_invalid');
+  }
+  return {
+    ...input,
+    status: oneOf(input.status, CONNECTOR_STATUSES, 'Choose planned, beta or live.'),
+    authMethod: oneOf(input.authMethod, CONNECTOR_AUTH_METHODS, 'Choose how it authorizes.'),
+    connectionMethod: oneOf(input.connectionMethod, CONNECTOR_CONNECTION_METHODS, 'Choose how it connects.'),
+    capabilities: input.capabilities.map((c) => oneOf(c, CONNECTOR_CAPABILITIES, `Unknown capability ${c}.`)),
+  };
+}
+
+function forbidden(error: { code?: string; message: string }, code: string): DomainError {
+  if (error.code === '42501') return new DomainError('Only platform staff can edit the connector catalogue.', 'integrations.forbidden');
+  return new DomainError(error.message, code);
+}
+
+export async function upsertConnector(db: Db, input: ConnectorInput): Promise<string> {
+  const v = validateConnectorInput(input);
+  const { data, error } = await db.rpc('upsert_platform_connector', {
+    p_key: v.key,
+    p_name: v.name,
+    p_description: v.description,
+    p_category: v.category,
+    p_suite: v.suite ?? '',
+    p_status: v.status,
+    p_auth_method: v.authMethod,
+    p_connection_method: v.connectionMethod,
+    p_is_public: v.isPublic,
+    p_display_order: v.displayOrder,
+    p_icon_ref: v.iconRef ?? '',
+    p_marketing_slug: v.marketingSlug ?? '',
+    p_marketing_summary: v.marketingSummary,
+    p_marketing_description: v.marketingDescription,
+    p_capabilities: v.capabilities,
+  });
+  if (error) {
+    if (error.code === '23505') throw new DomainError('That public address is already used by another connector.', 'integrations.connector_invalid');
+    throw forbidden(error, 'integrations.connector_write_failed');
+  }
+  return data;
+}
+
+export async function setConnectorApp(
+  db: Db,
+  input: { connectorKey: string; key: string; name: string; description: string; displayOrder: number },
+): Promise<void> {
+  if (!/^[a-z][a-z0-9_]{0,40}$/.test(input.key) || input.name.trim() === '') {
+    throw new DomainError('An app needs a key (lowercase) and a name.', 'integrations.connector_invalid');
+  }
+  const { error } = await db.rpc('set_platform_connector_app', {
+    p_connector_key: input.connectorKey,
+    p_key: input.key,
+    p_name: input.name,
+    p_description: input.description,
+    p_display_order: input.displayOrder,
+  });
+  if (error) throw forbidden(error, 'integrations.connector_write_failed');
+}
+
+export async function removeConnectorApp(db: Db, input: { connectorKey: string; key: string }): Promise<void> {
+  const { error } = await db.rpc('remove_platform_connector_app', { p_connector_key: input.connectorKey, p_key: input.key });
+  if (error) throw forbidden(error, 'integrations.connector_write_failed');
+}
+
+const LOGO_TYPES = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/webp'];
+
+/** Upload a logo and point the connector at it; the bytes it replaces are removed afterwards. */
+export async function uploadConnectorLogo(db: Db, input: { key: string; file: File }): Promise<void> {
+  if (!LOGO_TYPES.includes(input.file.type)) {
+    throw new DomainError('A logo is a PNG, SVG, JPEG or WebP image.', 'integrations.logo_invalid');
+  }
+  if (input.file.size > 1_048_576) throw new DomainError('A logo is at most 1 MB.', 'integrations.logo_invalid');
+
+  const connector = await getConnector(db, input.key);
+  if (!connector) throw new DomainError('No such connector.', 'integrations.connector_get_failed');
+
+  const path = `${input.key}/${crypto.randomUUID()}`;
+  const upload = await db.storage.from('connector-logos').upload(path, input.file, { contentType: input.file.type, upsert: false });
+  if (upload.error) throw new DomainError(upload.error.message, 'integrations.logo_upload_failed');
+
+  try {
+    await upsertConnector(db, { ...connector, iconRef: path });
+  } catch (error) {
+    await db.storage.from('connector-logos').remove([path]);
+    throw error;
+  }
+  if (connector.iconRef) await db.storage.from('connector-logos').remove([connector.iconRef]);
+}
+
+/** Public, not signed — a logo is on a page a stranger opens. */
+export function connectorLogoUrl(db: Db, iconRef: string): string {
+  return db.storage.from('connector-logos').getPublicUrl(iconRef).data.publicUrl;
+}
+
+export type OrganizationConnection = {
+  id: string;
+  connectorKey: string;
+  connectorName: string;
+  accountLabel: string | null;
+  status: string;
+  scopes: string[];
+  hasCredential: boolean;
+  resourceCount: number;
+  lastVerifiedAt: string | null;
+  createdAt: string;
+};
+
+/** Platform staff's read of one business's connections: metadata and health, never a credential. */
+export async function listOrganizationConnections(db: Db, input: { organizationId: string }): Promise<OrganizationConnection[]> {
+  const { data, error } = await db.rpc('organization_integration_connections', { p_organization_id: input.organizationId });
+  if (error) {
+    if (error.code === '42501') throw new DomainError('Only platform staff can read this.', 'integrations.forbidden');
+    throw new DomainError(error.message, 'integrations.connections_list_failed');
+  }
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    connectorKey: row.connector_key,
+    connectorName: row.connector_name,
+    accountLabel: row.account_label,
+    status: row.status,
+    scopes: row.scopes ?? [],
+    hasCredential: row.has_credential,
+    resourceCount: Number(row.resource_count),
+    lastVerifiedAt: row.last_verified_at,
+    createdAt: row.created_at,
+  }));
+}
+
+/** The categories that exist, in the order the catalogue shows its connectors — never a list kept in a page. */
+export function connectorCategories(connectors: readonly Pick<Connector, 'category'>[]): string[] {
+  return [...new Set(connectors.map((connector) => connector.category))];
+}
+
+/** Search across what a person would type — name, suite, category, description — and narrow by one category. */
+export function filterConnectors<T extends Pick<Connector, 'name' | 'suite' | 'category' | 'description'>>(
+  connectors: readonly T[],
+  input: { query?: string; category?: string },
+): T[] {
+  const needle = input.query?.trim().toLowerCase() ?? '';
+  return connectors.filter((connector) => {
+    if (input.category && connector.category !== input.category) return false;
+    if (needle === '') return true;
+    return [connector.name, connector.suite ?? '', connector.category, connector.description].some((field) =>
+      field.toLowerCase().includes(needle),
+    );
+  });
+}

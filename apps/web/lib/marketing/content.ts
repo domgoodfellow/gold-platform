@@ -147,36 +147,6 @@ export const HOW_IT_WORKS_STEPS: { title: string; body: string }[] = [
   { title: 'Improve and expand over time', body: 'Turn on more of GOLD as the business needs it, without starting over.' },
 ];
 
-export type IntegrationStatus = 'live' | 'planned';
-
-export interface IntegrationCategory {
-  category: string;
-  items: { name: string; description: string; status: IntegrationStatus }[];
-}
-
-/** Only vendors this codebase actually integrates with — nothing here is aspirational. */
-export const INTEGRATIONS: IntegrationCategory[] = [
-  {
-    category: 'Communication',
-    items: [{ name: 'Twilio', description: 'Phone calls and SMS, under your own number.', status: 'live' }],
-  },
-  {
-    category: 'Email',
-    items: [{ name: 'Resend', description: 'Transactional and customer email.', status: 'live' }],
-  },
-  {
-    category: 'Payments',
-    items: [{ name: 'Stripe', description: 'Card payments, held in your own account.', status: 'live' }],
-  },
-  {
-    category: 'AI',
-    items: [
-      { name: 'Anthropic (Claude)', description: 'Drafting, summarizing and assisting — never acting without review.', status: 'live' },
-      { name: 'OpenAI', description: 'An alternate model for the same assisted, reviewed work.', status: 'live' },
-    ],
-  },
-];
-
 export interface PricingPackage {
   slug: ProductSlug;
   name: string;

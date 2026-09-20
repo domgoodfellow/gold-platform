@@ -2090,6 +2090,7 @@ export type Database = {
           connector_key: string
           created_at: string
           id: string
+          last_error: string | null
           last_verified_at: string | null
           organization_id: string
           scopes: string[]
@@ -2103,6 +2104,7 @@ export type Database = {
           connector_key: string
           created_at?: string
           id?: string
+          last_error?: string | null
           last_verified_at?: string | null
           organization_id: string
           scopes?: string[]
@@ -2116,6 +2118,7 @@ export type Database = {
           connector_key?: string
           created_at?: string
           id?: string
+          last_error?: string | null
           last_verified_at?: string | null
           organization_id?: string
           scopes?: string[]
@@ -2124,6 +2127,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "integration_connections_connector_fk"
+            columns: ["connector_key"]
+            isOneToOne: false
+            referencedRelation: "platform_connectors"
+            referencedColumns: ["key"]
+          },
           {
             foreignKeyName: "integration_connections_organization_id_fkey"
             columns: ["organization_id"]
@@ -4050,6 +4060,104 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_connector_apps: {
+        Row: {
+          connector_id: string
+          description: string
+          display_order: number
+          id: string
+          key: string
+          name: string
+        }
+        Insert: {
+          connector_id: string
+          description?: string
+          display_order?: number
+          id?: string
+          key: string
+          name: string
+        }
+        Update: {
+          connector_id?: string
+          description?: string
+          display_order?: number
+          id?: string
+          key?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_connector_apps_connector_id_fkey"
+            columns: ["connector_id"]
+            isOneToOne: false
+            referencedRelation: "platform_connectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_connectors: {
+        Row: {
+          auth_method: string
+          capabilities: string[]
+          category: string
+          connection_method: string
+          created_at: string
+          description: string
+          display_order: number
+          icon_ref: string | null
+          id: string
+          is_public: boolean
+          key: string
+          marketing_description: string
+          marketing_slug: string | null
+          marketing_summary: string
+          name: string
+          status: string
+          suite: string | null
+          updated_at: string
+        }
+        Insert: {
+          auth_method: string
+          capabilities?: string[]
+          category: string
+          connection_method: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          icon_ref?: string | null
+          id?: string
+          is_public?: boolean
+          key: string
+          marketing_description?: string
+          marketing_slug?: string | null
+          marketing_summary?: string
+          name: string
+          status?: string
+          suite?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auth_method?: string
+          capabilities?: string[]
+          category?: string
+          connection_method?: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          icon_ref?: string | null
+          id?: string
+          is_public?: boolean
+          key?: string
+          marketing_description?: string
+          marketing_slug?: string | null
+          marketing_summary?: string
+          name?: string
+          status?: string
+          suite?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       platform_meters: {
         Row: {
@@ -6383,6 +6491,10 @@ export type Database = {
         }
         Returns: string
       }
+      can_manage_integrations: {
+        Args: { p_organization_id: string }
+        Returns: boolean
+      }
       change_customer_stage: {
         Args: {
           p_customer_id: string
@@ -6412,6 +6524,10 @@ export type Database = {
         Returns: undefined
       }
       claim_portal_invite: { Args: { p_token: string }; Returns: string }
+      clear_integration_credential: {
+        Args: { p_connection_id: string }
+        Returns: undefined
+      }
       clear_plan_feature_override: {
         Args: { p_feature_id: string; p_plan_id: string }
         Returns: undefined
@@ -6705,6 +6821,21 @@ export type Database = {
           unit: string
         }[]
       }
+      organization_integration_connections: {
+        Args: { p_organization_id: string }
+        Returns: {
+          account_label: string
+          connector_key: string
+          connector_name: string
+          created_at: string
+          has_credential: boolean
+          id: string
+          last_verified_at: string
+          resource_count: number
+          scopes: string[]
+          status: string
+        }[]
+      }
       organization_launch_blockers: {
         Args: { p_id: string }
         Returns: string[]
@@ -6821,6 +6952,21 @@ export type Database = {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: undefined
       }
+      published_connectors: {
+        Args: never
+        Returns: {
+          apps: Json
+          category: string
+          icon_ref: string
+          key: string
+          marketing_description: string
+          marketing_slug: string
+          marketing_summary: string
+          name: string
+          status: string
+          suite: string
+        }[]
+      }
       published_gold_homepage: { Args: never; Returns: Json }
       queued_messages: {
         Args: { p_limit?: number }
@@ -6830,6 +6976,15 @@ export type Database = {
           id: string
           recipient: string
           subject_line: string
+        }[]
+      }
+      read_integration_credential: {
+        Args: { p_connection_id: string }
+        Returns: {
+          connector_key: string
+          organization_id: string
+          secret: string
+          status: string
         }[]
       }
       read_provider_account_credential: {
@@ -6914,6 +7069,16 @@ export type Database = {
           p_organization_id: string
         }
         Returns: string
+      }
+      record_integration_health: {
+        Args: {
+          p_account_label?: string
+          p_connection_id: string
+          p_error?: string
+          p_ok: boolean
+          p_scopes?: string[]
+        }
+        Returns: undefined
       }
       record_integration_mapping: {
         Args: {
@@ -7160,6 +7325,10 @@ export type Database = {
         Args: { p_allowance_key: string; p_plan_id: string }
         Returns: undefined
       }
+      remove_platform_connector_app: {
+        Args: { p_connector_key: string; p_key: string }
+        Returns: undefined
+      }
       remove_runtime_mapping: {
         Args: { p_mapping_id: string }
         Returns: undefined
@@ -7171,6 +7340,10 @@ export type Database = {
       }
       rename_work_item_type: {
         Args: { p_id: string; p_name: string }
+        Returns: undefined
+      }
+      replace_integration_resources: {
+        Args: { p_connection_id: string; p_resources: Json }
         Returns: undefined
       }
       resolve_effective_outbound_identity: {
@@ -7271,6 +7444,16 @@ export type Database = {
         }
         Returns: string
       }
+      set_platform_connector_app: {
+        Args: {
+          p_connector_key: string
+          p_description: string
+          p_display_order: number
+          p_key: string
+          p_name: string
+        }
+        Returns: undefined
+      }
       set_provider_account_status: {
         Args: { p_account_id: string; p_status: string }
         Returns: undefined
@@ -7314,6 +7497,10 @@ export type Database = {
       start_support_session: {
         Args: { p_organization_id: string; p_reason?: string }
         Returns: string
+      }
+      store_integration_credential: {
+        Args: { p_connection_id: string; p_secret: string }
+        Returns: undefined
       }
       store_integration_secret: {
         Args: {
@@ -7517,6 +7704,26 @@ export type Database = {
           p_releases_resource: boolean
         }
         Returns: undefined
+      }
+      upsert_platform_connector: {
+        Args: {
+          p_auth_method: string
+          p_capabilities: string[]
+          p_category: string
+          p_connection_method: string
+          p_description: string
+          p_display_order: number
+          p_icon_ref: string
+          p_is_public: boolean
+          p_key: string
+          p_marketing_description: string
+          p_marketing_slug: string
+          p_marketing_summary: string
+          p_name: string
+          p_status: string
+          p_suite: string
+        }
+        Returns: string
       }
       usable_modules: { Args: { p_organization_id: string }; Returns: string[] }
       work_at_risk: {

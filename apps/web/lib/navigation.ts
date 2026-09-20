@@ -199,7 +199,7 @@ export const MODULES = [
     key: 'integrations',
     label: 'Integrations',
     description:
-      'Connect a spreadsheet or an external system and bring its customers into GOLD, once or on a schedule. A business that enters everything by hand runs without this.',
+      'Connect GOLD to the apps and files a business already uses, and bring their data in. A business that enters everything by hand runs without this.',
     configuredAt: { segment: 'integrations' },
   },
 ] as const satisfies readonly Module[];
@@ -294,7 +294,7 @@ export const AREAS: readonly Area[] = [
   // Its own area, not folded into Settings — a business returns here often enough (checking a
   // run, adding a source) that it isn't a set-once switch the way pricing or automations config
   // is, the same reasoning that keeps Automations and Guided setup each their own area.
-  { segment: 'integrations', label: 'Integrations', group: 'configuration', module: 'integrations', relevantCapabilities: ['integration.manage'], featureKeys: ['csv_import'] },
+  { segment: 'integrations', label: 'Integrations', group: 'configuration', module: 'integrations', relevantCapabilities: ['integration.manage'], featureKeys: ['app_connections', 'file_imports', 'data_mapping', 'scheduled_sync', 'triggers_actions', 'agent_tools'] },
   // Names no module — it's where the switches are, so a module able to hide it would lock a business out of its own account.
   { segment: 'settings', label: 'Settings', group: 'configuration' },
 ] as const;

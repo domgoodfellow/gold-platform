@@ -8,7 +8,7 @@ import { cx, FOCUS_RING } from '@/components/class-names';
 import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/containers/page-header';
 
-const sections = [['Overview', ''], ['Plan & Entitlements', '/commercial'], ['Providers', '/providers'], ['Usage', '/usage'], ['Failures', '/failures']] as const;
+const sections = [['Overview', ''], ['Plan & Entitlements', '/commercial'], ['Providers', '/providers'], ['Integrations', '/integrations'], ['Usage', '/usage'], ['Failures', '/failures']] as const;
 
 /**
  * A Platform view OF an organization — never the organization's own tenant shell. `canOpenBusiness`

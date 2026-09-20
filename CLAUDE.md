@@ -291,6 +291,9 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | `secret_id` reaching any caller | A vault reference is exactly as sensitive as what it points to handing back | Withheld from every grant on `organization_provider_resources`, the same column-grant mechanism `usage_events` uses for GOLD's own cost |
 | A signed-in role executing `read_provider_account_credential` | A staff token could then read GOLD's parent credential from a browser console, and the web runtime holds no signing secret to use it any other way (D14, D54) | Executable by `provider_operator` alone, which only `apps/api` wears after proving the caller is staff; `provider-accounts.test.ts` asserts `has_function_privilege` false for `authenticated`, no table grant, and exactly two executes. `platform_provider_accounts.secret_id` is in no column grant |
 | A provider named in `lib/domain/` | I15, extended: a resource-type string like `twilio_subaccount` is a vendor's name wearing a different shape | `organization_provider_resources.resourceType` is opaque `string`; `lib/adapters/telephony/registry.ts` alone knows `telephonyProviderKey()` and `TELEPHONY_RESOURCE_TYPES` |
+| A React page or constant owning the list of outside apps | The connector list is catalogue data an admin edits; a second list in code disagrees the day someone edits the first (D55) | `platform_connectors`; `integration_connections_insert` refuses a `planned` or private connector at the table; `connector-catalogue.test.ts` |
+| A signed-in role executing a tenant-credential door, or `secret_id` selectable on `integration_connections` | A business's own OAuth token is read back only to be used, and the person it belongs to must not be able to read it from a console either (D56) | `integration_operator` alone holds the five executes and no table grant; `secret_id` is in no column grant; `integration-credentials.test.ts` |
+| A vendor's client secret, a token or the OAuth state secret in `apps/web` | The web runtime relays a browser and proves nothing about a token (D14, D56) | `apps/api/app/integrations/oauth/` and `app/domains/integrations/` do the handshake; `integration-credentials.test.ts` scans `apps/web` for the names |
 | A tenant selecting another organization's bound resource as its own | A number or a domain typed by hand must not let GOLD use somebody else's scope (D39) | `app.phone_number_owner`, `security definer`, checked inside `set_calling_number`; a number bound to a different organization is refused, one bound to nobody is unaffected |
 | A subaccount's own credential used to place a call | GOLD's master account can already address any subaccount by naming it in the request path (D39); a second credential per business is a second thing to rotate for no isolation gained | `telephonyProvider(actingAccountSid)` authenticates with GOLD's master token throughout; only the acting account in the URL path changes |
 
@@ -404,6 +407,8 @@ Every entry above has a decision record behind it. Read it before changing the t
 | GOLD's own provider account, its write-only credential, and reconciliation | D54 |
 | The canonical Product/Module/Feature catalogue, Plans/Add-ons, and how they coexist with the legacy commercial layer | D46, D50 |
 | The API's human-auth boundary, JWKS verification, and the Supabase key rename | D52 |
+| Connectors as catalogue data, against providers and connections | D55 |
+| A tenant's OAuth credential, the fifth machine role, one contract for two suites | D56 |
 
 ## When you finish a change
 

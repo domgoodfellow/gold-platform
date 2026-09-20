@@ -4,7 +4,6 @@ import { areaLabel } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { ButtonLink } from '@/components/controls/button';
-import { listProviders } from '@/lib/domain/commercial/catalogue';
 import { listProviderBindings, listProviderResources } from '@/lib/domain/providers/bindings';
 import { callingNumber } from '@/lib/domain/reception/telephony';
 import { requireOrganization } from '@/lib/route/organization';
@@ -20,7 +19,10 @@ const RESEND_STATUS_WORD: Record<string, string> = {
 };
 
 /**
- * The service GOLD exposes to this business — never GOLD's vendor accounts.
+ * The communication services GOLD runs for this business — never GOLD's vendor accounts, and
+ * never a choice of wholesale model or speech vendor: a business configures what it wants done
+ * (call transcription, AI quality) once those exist, not which vendor GOLD calls to do it.
+ *
  *
  * **What is deliberately absent.** No parent provider account, no API secret, no Vault
  * reference, no wholesale provider rate, no provider cost, no provider billing data
@@ -33,33 +35,28 @@ const RESEND_STATUS_WORD: Record<string, string> = {
  * This page shows what is bound and which one is chosen; changing which one is chosen happens
  * there.
  */
-export default async function ConnectionsPage({
+export default async function CommunicationsPage({
   params,
-}: PageProps<'/organizations/[organizationId]/settings/connections'>) {
+}: PageProps<'/organizations/[organizationId]/settings/communications'>) {
   const { organizationId } = await params;
   const { db } = await requireOrganization(organizationId);
 
-  const [bindings, resources, providers, selectedNumber] = await Promise.all([
+  const [bindings, resources, selectedNumber] = await Promise.all([
     listProviderBindings(db, { organizationId }),
     listProviderResources(db, { organizationId }),
-    listProviders(db),
     callingNumber(db, { organizationId }),
   ]);
 
   const twilioBinding = bindings.find((row) => row.providerKey === 'twilio') ?? null;
-  const providerLabel = new Map(providers.map((provider) => [provider.key, provider.label]));
   const numbers = resources.filter((resource) => resource.resourceType === 'twilio_phone_number');
   const domains = resources.filter((resource) => resource.resourceType === 'resend_domain');
-  const speechProviders = providers.filter((provider) =>
-    ['deepgram', 'elevenlabs', 'anthropic', 'openai_compatible'].includes(provider.key),
-  );
 
   return (
     <SettingsPageFrame>
-      <PageHeader title="Connections" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
+      <PageHeader title="Communications" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
       <Hint className="mt-1">
-        What this business is connected to, and what it can choose from. Never what any of it
-        costs GOLD, and never a secret.
+        The phone and email this business communicates through. Never what any of it costs GOLD,
+        and never a secret. Apps a business connects itself are under Integrations.
       </Hint>
 
       <Section className="mt-8">
@@ -113,26 +110,6 @@ export default async function ConnectionsPage({
           </DividedList>
         )}
         <AddEmailDomainForm organizationId={organizationId} />
-      </Section>
-
-      <Section className="mt-8">
-        <SectionHeading>AI &amp; speech</SectionHeading>
-        <Hint className="mt-1">
-          What this deployment can call on. There is no business decision here yet — which model
-          or speech provider answers is this deployment&rsquo;s own configuration, not this
-          business&rsquo;s.
-        </Hint>
-        {speechProviders.length === 0 ? (
-          <EmptyState className="mt-2">Nothing available on this deployment.</EmptyState>
-        ) : (
-          <DividedList as="div" className="mt-2">
-            {speechProviders.map((provider) => (
-              <div key={provider.key} className="py-2 text-sm">
-                {providerLabel.get(provider.key) ?? provider.label}
-              </div>
-            ))}
-          </DividedList>
-        )}
       </Section>
     </SettingsPageFrame>
   );

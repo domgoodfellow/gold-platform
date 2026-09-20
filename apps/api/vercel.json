@@ -40,6 +40,10 @@
       "destination": "/api/provider_operations"
     },
     {
+      "source": "/integrations/operate",
+      "destination": "/api/integration_operations"
+    },
+    {
       "source": "/crm/change-customer-stage",
       "destination": "/api/crm_change_customer_stage"
     },

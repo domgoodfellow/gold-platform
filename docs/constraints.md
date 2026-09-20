@@ -1525,3 +1525,69 @@ built.
 GOLD's bindings and records *in sync / missing / changed* on each binding. A subaccount GOLD does
 not know is listed and never adopted; a missing one is never recreated; no status moves. Disabling
 an account stops new provisioning under it and touches nothing existing.
+
+### D55 — A connector is catalogue data, and is neither a provider nor a connection
+
+**Decision.** The outside apps GOLD knows about are rows in `platform_connectors`: key, name,
+category, optional suite, `planned`/`beta`/`live`, auth and connection method, public or private,
+and the GOLD capabilities it takes part in. Three nouns, three owners: a **provider**
+(`platform_providers`, D44) is who GOLD buys infrastructure from; a **connector** is an outside app
+a business may authorize; an **integration connection** (D33) is one business's actual
+authorization to one connector, and now names a connector by foreign key. A catalogue edit never
+rewrites a connection.
+
+**Status is enforced, not displayed.** `integration_connections_insert` requires a connector that
+is `beta` or `live` and that the caller can see, so a planned or private connector is refused by
+the table, whichever door is used. A private row is visible to platform staff alone.
+
+**Two descriptions.** `description` is in-product; `marketing_summary` and `marketing_description`
+are public copy an admin edits without touching anything that runs.
+
+**Not built yet, on purpose.** There is no write door and no public read; the staff editor and the
+published catalogue arrive with the screens that call them. Rows arrive by seed.
+
+**Capability vocabulary.** The Integrations area gates on `app_connections`, `file_imports`,
+`data_mapping`, `scheduled_sync`, `triggers_actions` and `agent_tools`, Features under CRM → Data.
+`csv_import` is renamed `file_imports`: it named one connector, and the capability is importing a
+file.
+
+### D56 — A tenant's OAuth credential is written by the API, read by the API, and never by a person
+
+**Decision.** A business connects an outside app (Google Workspace, Microsoft 365) by signing in
+at the vendor; the tenant holds the account and GOLD stores a reference (D33). The whole handshake
+runs in `apps/api` (`app/domains/integrations/`), because the credential it produces is readable
+by exactly one machine role and only that runtime can wear it (D14, D26). `apps/web` relays: it
+forwards the caller's own token and a browser's one-time values, and holds no token, no vendor
+client secret and no state-signing secret.
+
+**The reader is `integration_operator`, and D54's exception is repeated, not widened.** It holds no
+table grant and exactly five executes: read a credential, store one, record a connection's health,
+replace what a connection can reach, clear a credential. It is the fifth role on
+`SUPABASE_JWT_SECRET`'s legacy path, added deliberately, narrowly and on record; retiring it is the
+same migration the other four wait on. A signed-in role cannot execute any of the five, so a
+business cannot mark its own connection healthy and a staff token cannot read a tenant's credential
+from a browser console.
+
+**Authorization is proved before a credential is touched, and RLS proves it.** The API asks
+`can_manage_integrations` under the caller's own token and selects the connection row the same
+way; only then does it mint the machine token. A `state` is signed, ten minutes old at most, names
+the business, the person, the connector and the nonce, and is completed only by the same person
+holding the same browser's cookie.
+
+**One contract, two suites.** `app/integrations/oauth/base.py` is the handshake, the refresh and
+two reads (who is this account; what can it reach). Google Workspace and Microsoft 365 each
+implement it in one small file, and a difference between them (Microsoft rotates every refresh
+token and has no per-token revocation) is absorbed by the base or by an override, never by the
+domain. A third connector that needs a different method on the base is the signal it is wrong.
+
+**Health is the provider's words.** `integration_connections.last_error` holds what the vendor
+said, is visible to the business, and is written only by the runtime that asked. A refused refresh
+marks the connection *needs attention* and does not delete its credential; Disconnect does.
+
+**A correction.** D33 and `20260914000001` claimed `secret_id` was withheld from every grant.
+`select` had been granted table-wide, so a business could read the Vault pointer. `20260929000005`
+re-grants `select` by column without it.
+
+**Not built.** No write scope, no scheduled sync and no webhook from a vendor: the connection
+proves itself when a person checks it. Microsoft's grant is removed in the person's own account;
+GOLD deletes its copy.

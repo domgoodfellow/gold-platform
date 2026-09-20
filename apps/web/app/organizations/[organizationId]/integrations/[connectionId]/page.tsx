@@ -7,28 +7,38 @@ import { Section, SectionHeading } from '@/components/containers/section';
 import { DataTable } from '@/components/display/table';
 import { Badge, DefinitionList, Detail } from '@/components/display/data';
 import { getConnection } from '@/lib/domain/integrations/connections';
+import { connectorLogoUrl, getConnector, isConnectable } from '@/lib/domain/integrations/connectors';
 import { listResources } from '@/lib/domain/integrations/resources';
 import { requireOrganization } from '@/lib/route/organization';
-import { DisconnectForm } from '../connection-actions';
+import { usesSignIn } from '@/lib/adapters/integrations';
+import { CheckConnectionForm, DisconnectForm } from '../connection-actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ConnectionDetailPage({
   params,
+  searchParams,
 }: PageProps<'/organizations/[organizationId]/integrations/[connectionId]'>) {
   const { organizationId, connectionId } = await params;
+  const justConnected = (await searchParams).connected === '1';
   const { db, organization } = await requireOrganization(organizationId);
 
   const connection = await getConnection(db, { organizationId, connectionId });
   if (!connection) notFound();
 
-  const resources = await listResources(db, { organizationId, connectionId });
+  const [resources, connector] = await Promise.all([
+    listResources(db, { organizationId, connectionId }),
+    getConnector(db, connection.connectorKey),
+  ]);
+  const name = connector?.name ?? connection.connectorKey;
+  const needsReconnect =
+    connector !== null && connector.authMethod !== 'none' && isConnectable(connector) && connection.status !== 'active';
   const mayManage = organization.capabilities.includes('integration.manage');
 
   return (
     <>
       <PageHeader
-        title={connection.accountLabel ?? connection.connectorKey}
+        title={name}
         crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]}
         meta={
           <Badge tone={connection.status === 'active' || connection.status === 'connecting' ? 'success' : 'neutral'}>
@@ -37,6 +47,14 @@ export default async function ConnectionDetailPage({
         }
         actions={
           <>
+            {mayManage && connection.status !== 'disconnected' && usesSignIn(connection.connectorKey) ? (
+              <CheckConnectionForm organizationId={organizationId} connectionId={connectionId} />
+            ) : null}
+            {mayManage && needsReconnect ? (
+              <ButtonLink href={`/organizations/${organizationId}/integrations/connect/${connection.connectorKey}?connection=${connectionId}`} tone="primary" size="small">
+                Reconnect
+              </ButtonLink>
+            ) : null}
             {mayManage && connection.status !== 'disconnected' ? (
               <DisconnectForm organizationId={organizationId} connectionId={connectionId} />
             ) : null}
@@ -49,10 +67,25 @@ export default async function ConnectionDetailPage({
         }
       />
 
+      {justConnected ? <Hint className="block" role="status">Connected.</Hint> : null}
+      {connection.lastError ? (
+        <Hint className="block" role="alert">
+          This connection stopped working: {connection.lastError}
+        </Hint>
+      ) : null}
+
       <Section>
         <SectionHeading>Overview</SectionHeading>
         <DefinitionList className="mt-3">
-          <Detail label="Connector">{connection.connectorKey}</Detail>
+          <Detail label="App">
+            {connector?.iconRef ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={connectorLogoUrl(db, connector.iconRef)} alt="" className="mr-2 inline h-5 w-5 object-contain" />
+            ) : null}
+            {name}
+            {connector?.apps.length ? <span className="block text-sm text-muted">Reaches {connector.apps.map((app) => app.name).join(', ')}.</span> : null}
+          </Detail>
+          <Detail label="Account">{connection.accountLabel}</Detail>
           <Detail label="Scopes">{connection.scopes.length > 0 ? connection.scopes.join(', ') : null}</Detail>
           <Detail label="Last verified">
             {connection.lastVerifiedAt ? new Date(connection.lastVerifiedAt).toLocaleString('en-GB') : null}

@@ -1,6 +1,8 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { usesSignIn } from '@/lib/adapters/integrations';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { disconnectOAuth } from './oauth';
 
 /**
  * A tenant's own authorization to an external system — D33's axis, never D44's
@@ -13,6 +15,8 @@ export type IntegrationConnection = {
   accountLabel: string | null;
   status: 'connecting' | 'active' | 'needs_attention' | 'disconnected';
   scopes: string[];
+  /** The provider's own words when the connection last failed; never a credential. */
+  lastError: string | null;
   connectedBy: string;
   lastVerifiedAt: string | null;
   createdAt: string;
@@ -26,7 +30,7 @@ export async function listConnections(
 ): Promise<IntegrationConnection[]> {
   const { data, error } = await db
     .from('integration_connections')
-    .select('id, connector_key, account_label, status, scopes, connected_by, last_verified_at, created_at')
+    .select('id, connector_key, account_label, status, scopes, last_error, connected_by, last_verified_at, created_at')
     .eq('organization_id', input.organizationId)
     .order('created_at', { ascending: false });
 
@@ -40,6 +44,7 @@ export async function listConnections(
     accountLabel: row.account_label,
     status: row.status as IntegrationConnection['status'],
     scopes: row.scopes ?? [],
+    lastError: row.last_error,
     connectedBy: row.connected_by,
     lastVerifiedAt: row.last_verified_at,
     createdAt: row.created_at,
@@ -52,7 +57,7 @@ export async function getConnection(
 ): Promise<IntegrationConnection | null> {
   const { data, error } = await db
     .from('integration_connections')
-    .select('id, connector_key, account_label, status, scopes, connected_by, last_verified_at, created_at')
+    .select('id, connector_key, account_label, status, scopes, last_error, connected_by, last_verified_at, created_at')
     .eq('organization_id', input.organizationId)
     .eq('id', input.connectionId)
     .maybeSingle();
@@ -68,6 +73,7 @@ export async function getConnection(
     accountLabel: data.account_label,
     status: data.status as IntegrationConnection['status'],
     scopes: data.scopes ?? [],
+    lastError: data.last_error,
     connectedBy: data.connected_by,
     lastVerifiedAt: data.last_verified_at,
     createdAt: data.created_at,
@@ -118,6 +124,14 @@ export async function disconnectConnection(
   input: { organizationId: string; connectionId: string },
 ): Promise<void> {
   await requireActor(db);
+
+  // A connection made through a vendor's sign-in holds a credential only the API can reach, so it
+  // is the API that revokes upstream, deletes it and retires the connection.
+  const connection = await getConnection(db, input);
+  if (connection && usesSignIn(connection.connectorKey)) {
+    await disconnectOAuth(db, { connectionId: input.connectionId });
+    return;
+  }
 
   const { error } = await db.rpc('disconnect_integration', {
     p_organization_id: input.organizationId,

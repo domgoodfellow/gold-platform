@@ -119,6 +119,41 @@ def load_provider_operations_settings() -> ProviderOperationsSettings | None:
 
 
 @dataclass(frozen=True)
+class IntegrationSettings:
+    """What acting on a tenant's own OAuth connection needs (D56).
+
+    **Separate from every other settings group, because it reaches a credential that is not
+    GOLD's.** It signs a 60-second token for `integration_operator`, a machine role holding no
+    table grant and exactly five executes -- one of which returns a decrypted tenant credential.
+    `state_secret` signs the short-lived `state` that binds a provider redirect to the person and
+    business that began it; `redirect_uri` is the one address every provider is registered with.
+    A connector's own client id and secret are read by `app.integrations.oauth`, the only place a
+    vendor is named.
+    """
+
+    supabase_url: str
+    supabase_publishable_key: str
+    supabase_jwt_secret: str
+    state_secret: str
+    redirect_uri: str
+
+
+def load_integration_settings() -> IntegrationSettings | None:
+    values = {
+        "supabase_url": os.environ.get("SUPABASE_URL"),
+        "supabase_publishable_key": _publishable_key(),
+        "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
+        "state_secret": os.environ.get("GOLD_OAUTH_STATE_SECRET"),
+        "redirect_uri": os.environ.get("GOLD_OAUTH_REDIRECT_URI"),
+    }
+
+    if not all(values.values()):
+        return None
+
+    return IntegrationSettings(**values)  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
 class RunnerSettings:
     """What the automation tick needs.
 

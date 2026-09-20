@@ -33,7 +33,13 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-from app.core.config import PlatformBillingSettings, ProviderOperationsSettings, Settings, VoiceSettings
+from app.core.config import (
+    IntegrationSettings,
+    PlatformBillingSettings,
+    ProviderOperationsSettings,
+    Settings,
+    VoiceSettings,
+)
 
 if TYPE_CHECKING:
     from app.integrations.stripe.platform_billing_webhook import NoticeEvent, SubscriptionEvent
@@ -349,3 +355,78 @@ def record_provider_account_verification(
 
     if response.status_code >= 400:
         raise RuntimeError(f"record_provider_account_verification failed: {response.status_code}")
+
+
+INTEGRATION_ROLE = "integration_operator"
+
+# The integration-credentials integration's own `auth.users` row, fixed in
+# 20260929000005_integration_credentials_and_oauth.sql. No email, no password.
+INTEGRATION_CREDENTIALS_ACTOR = "00000000-0000-4000-8000-0000000000a5"
+
+
+def _integration_rpc(settings: IntegrationSettings, function: str, payload: dict) -> object:
+    """One call to one of `integration_operator`'s five doors.
+
+    **Deliberately no response body in a failure**: an error from these calls could echo an
+    argument, and nothing here may put a credential-adjacent value into an exception message.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=INTEGRATION_ROLE, sub=INTEGRATION_CREDENTIALS_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/{function}",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=10.0,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"{function} failed: {response.status_code}")
+
+    return response.json() if response.content else None
+
+
+def read_integration_credential(settings: IntegrationSettings, *, connection_id: str) -> dict | None:
+    """A connection's decrypted credential, or `None` for one that is absent, disconnected or has
+    none. **The only place in this repository a tenant's decrypted credential is read.**"""
+    rows = _integration_rpc(settings, "read_integration_credential", {"p_connection_id": connection_id})
+    return rows[0] if rows else None  # type: ignore[index]
+
+
+def store_integration_credential(settings: IntegrationSettings, *, connection_id: str, secret: str) -> None:
+    _integration_rpc(settings, "store_integration_credential", {"p_connection_id": connection_id, "p_secret": secret})
+
+
+def record_integration_health(
+    settings: IntegrationSettings,
+    *,
+    connection_id: str,
+    ok: bool,
+    error: str | None = None,
+    account_label: str | None = None,
+    scopes: list[str] | None = None,
+) -> None:
+    _integration_rpc(
+        settings,
+        "record_integration_health",
+        {
+            "p_connection_id": connection_id,
+            "p_ok": ok,
+            "p_error": error,
+            "p_account_label": account_label,
+            "p_scopes": scopes,
+        },
+    )
+
+
+def replace_integration_resources(settings: IntegrationSettings, *, connection_id: str, resources: list[dict]) -> None:
+    _integration_rpc(
+        settings, "replace_integration_resources", {"p_connection_id": connection_id, "p_resources": resources}
+    )
+
+
+def clear_integration_credential(settings: IntegrationSettings, *, connection_id: str) -> None:
+    _integration_rpc(settings, "clear_integration_credential", {"p_connection_id": connection_id})

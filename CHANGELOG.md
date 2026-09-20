@@ -5,6 +5,29 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Integrations become a catalogue, and Google Workspace and Microsoft 365 connect
+
+The apps a business may connect are now data. `platform_connectors` holds each one (category,
+optional suite, planned/beta/live, how it authorizes and connects, public or private, a logo, and
+public copy kept apart from the in-product description), and a business's own authorization to
+one (`integration_connections`) names it by foreign key. Platform staff edit the catalogue at
+Platform → Integrations, including the apps inside a suite and the logo, and see a business's
+connections, scopes and health under its Integrations tab, never a credential. A connection to a
+planned or private connector is refused by the table.
+
+The business Integrations area is rebuilt on it: Connected, Browse apps with search and category
+filters, and Data sources and Imports beside them. CSV is a connector of type file and its import
+is unchanged. Connect is enabled only for a connector that is not planned and has an adapter.
+Google Workspace and Microsoft 365 connect through the vendor's own sign-in run by `apps/api`,
+which stores the credential in Vault where only a new machine role, `integration_operator`, can
+read it, rotates it before use, lists the calendars and files it reaches, and records health in the
+vendor's own words. Disconnect revokes upstream where the vendor allows it and deletes GOLD's copy.
+`integration_connections.secret_id` was selectable by a business and no longer is.
+
+Tenant Settings → Connections is now Communications (phone and email) and no longer lists AI or
+speech vendors. The marketing `/integrations` page reads the published catalogue instead of a
+list in code, and an edit expires its cache without a deployment.
+
 ### Setup becomes a lifecycle: a business opens on Setup and stops being onboarded at Launch
 
 A business in SETUP is entered through `/setup` from every door (`organizationHomeHref` now takes
