@@ -31,6 +31,7 @@ import api.automation_tick as automation_tick
 import api.crm_change_customer_stage as crm_change_customer_stage
 import api.integration_operations as integration_operations
 import api.provider_operations as provider_operations
+import api.public_chat as public_chat
 import api.stripe_platform_billing_webhook as platform_billing_webhook
 import api.stripe_webhook as stripe_webhook
 import api.voice_inbound as voice_inbound
@@ -305,3 +306,53 @@ class TestSignedInEndpoints:
         monkeypatch.setattr(module, loader, lambda: None)
 
         assert call(module, "POST", headers={"authorization": "Bearer x"}, body=b"{}")[0] == 404
+
+
+# --- the public-site assistant: one shared key from apps/web, and any mismatch is a plain "not found" ----
+
+
+class TestPublicChat:
+    KEY = "the-public-chat-key"
+    BODY = json.dumps({"message": "hello", "instructions": "be brief", "deploymentId": "d1", "organizationId": "o1"}).encode()
+
+    def _armed(self, monkeypatch, *, secret: str | None = KEY, settings=SETTINGS, provider=object()):
+        if secret is None:
+            monkeypatch.delenv("PUBLIC_CHAT_API_SECRET", raising=False)
+        else:
+            monkeypatch.setenv("PUBLIC_CHAT_API_SECRET", secret)
+        monkeypatch.setattr(public_chat, "load_assistant_settings", lambda: settings)
+        monkeypatch.setattr(public_chat, "answering_provider", lambda: provider)
+        sink = Sink(result=SimpleNamespace(text="Hello.", action=None))
+        monkeypatch.setattr(public_chat, "answer", sink)
+        return sink
+
+    @pytest.mark.parametrize("presented", [None, "", "wrong-key", "THE-PUBLIC-CHAT-KEY"])
+    def test_a_missing_or_wrong_key_is_not_found_and_never_reaches_the_model(self, monkeypatch, presented) -> None:
+        sink = self._armed(monkeypatch)
+        headers = {} if presented is None else {"x-gold-public-chat-key": presented}
+
+        assert call(public_chat, "POST", headers=headers, body=self.BODY)[0] == 404
+        assert sink.calls == []
+
+    def test_a_deployment_with_no_secret_answers_404_even_to_an_empty_key(self, monkeypatch) -> None:
+        sink = self._armed(monkeypatch, secret=None)
+
+        for headers in ({}, {"x-gold-public-chat-key": ""}):
+            assert call(public_chat, "POST", headers=headers, body=self.BODY)[0] == 404
+        assert sink.calls == []
+
+    def test_a_deployment_with_no_assistant_answers_404(self, monkeypatch) -> None:
+        sink = self._armed(monkeypatch, settings=None)
+
+        assert call(public_chat, "POST", headers={"x-gold-public-chat-key": self.KEY}, body=self.BODY)[0] == 404
+        assert sink.calls == []
+
+    def test_the_right_key_reaches_the_assistant_with_no_caller_token_and_only_the_public_actions(self, monkeypatch) -> None:
+        sink = self._armed(monkeypatch)
+
+        status, body = call(public_chat, "POST", headers={"x-gold-public-chat-key": self.KEY}, body=self.BODY)
+
+        assert status == 200 and json.loads(body)["answer"] == "Hello."
+        assert len(sink.calls) == 1
+        assert sink.calls[0][1]["token"] == ""        # no signed-in person stands behind a public visitor
+        assert sink.calls[0][1]["tools"] == ()        # and no database tool is offered

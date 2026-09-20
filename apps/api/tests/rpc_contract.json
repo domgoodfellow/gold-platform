@@ -1,0 +1,313 @@
+{
+  "_about": "The named arguments apps/api sends to each database function, and the role it sends them as. `sends` is every name Python may send; `optional` is the subset it may leave out. Checked against Python by tests/contract/test_rpc_contract.py and against pg_proc by apps/web/tests/architecture/database/python-rpc-surface.test.ts. Change a database function's parameters, or a Python payload, and update this file with it. A function with `naming: bare` is called by a domain command that names its arguments without the `p_` prefix; app/core/caller.py adds it.",
+  "functions": {
+    "apply_platform_subscription_event": {
+      "role": "platform_billing_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_cancel_at_period_end",
+        "p_canceled_at",
+        "p_currency",
+        "p_current_period_end",
+        "p_current_period_start",
+        "p_customer_reference",
+        "p_event_reference",
+        "p_event_type",
+        "p_price_reference",
+        "p_status",
+        "p_subscription_reference"
+      ]
+    },
+    "can_manage_integrations": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/integrations/operations.py"
+      ],
+      "sends": [
+        "p_organization_id"
+      ]
+    },
+    "change_customer_stage": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/crm/stages.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_customer_id",
+        "p_organization_id",
+        "p_stage_id"
+      ]
+    },
+    "clear_integration_credential": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_connection_id"
+      ]
+    },
+    "customers_not_contacted": {
+      "role": "authenticated",
+      "callers": [
+        "app/ai/tools.py"
+      ],
+      "sends": [
+        "p_days",
+        "p_organization_id"
+      ]
+    },
+    "disconnect_integration": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/integrations/operations.py"
+      ],
+      "sends": [
+        "p_connection_id",
+        "p_organization_id"
+      ]
+    },
+    "invoiced_and_incurred": {
+      "role": "authenticated",
+      "callers": [
+        "app/ai/tools.py"
+      ],
+      "sends": [
+        "p_from",
+        "p_grouping",
+        "p_organization_id",
+        "p_to"
+      ],
+      "optional": [
+        "p_from",
+        "p_to"
+      ]
+    },
+    "places_to_watch": {
+      "role": "automation_runner",
+      "callers": [
+        "app/core/runner.py"
+      ],
+      "sends": []
+    },
+    "queued_messages": {
+      "role": "automation_runner",
+      "callers": [
+        "app/core/runner.py"
+      ],
+      "sends": [
+        "p_limit"
+      ]
+    },
+    "read_integration_credential": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_connection_id"
+      ]
+    },
+    "read_provider_account_credential": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_account_id"
+      ]
+    },
+    "record_call_event": {
+      "role": "voice_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_duration",
+        "p_external_id",
+        "p_payload",
+        "p_payload_hash",
+        "p_raw_status",
+        "p_recording_url",
+        "p_source",
+        "p_status"
+      ]
+    },
+    "record_call_outcome": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/communications/voice/wrap_up.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_call_id",
+        "p_duration_seconds",
+        "p_note",
+        "p_organization_id",
+        "p_outcome_id",
+        "p_status"
+      ]
+    },
+    "record_external_readings": {
+      "role": "automation_runner",
+      "callers": [
+        "app/core/runner.py"
+      ],
+      "sends": [
+        "p_location_id",
+        "p_readings"
+      ]
+    },
+    "record_integration_connection": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/integrations/operations.py"
+      ],
+      "sends": [
+        "p_account_label",
+        "p_connector_key",
+        "p_organization_id"
+      ]
+    },
+    "record_integration_health": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_account_label",
+        "p_connection_id",
+        "p_error",
+        "p_ok",
+        "p_scopes"
+      ]
+    },
+    "record_message_delivery": {
+      "role": "automation_runner",
+      "callers": [
+        "app/core/runner.py"
+      ],
+      "sends": [
+        "p_detail",
+        "p_id",
+        "p_sent"
+      ]
+    },
+    "record_platform_billing_notice": {
+      "role": "platform_billing_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_customer_reference",
+        "p_event_reference",
+        "p_event_type"
+      ]
+    },
+    "record_provider_account_verification": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_account_id",
+        "p_error",
+        "p_metadata",
+        "p_ok"
+      ]
+    },
+    "record_provider_payment": {
+      "role": "payment_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_amount_minor",
+        "p_provider",
+        "p_provider_reference",
+        "p_request_id"
+      ]
+    },
+    "replace_integration_resources": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_connection_id",
+        "p_resources"
+      ]
+    },
+    "run_due_automations": {
+      "role": "automation_runner",
+      "callers": [
+        "app/core/runner.py"
+      ],
+      "sends": []
+    },
+    "schedule_ahead": {
+      "role": "authenticated",
+      "callers": [
+        "app/ai/tools.py"
+      ],
+      "sends": [
+        "p_days",
+        "p_organization_id"
+      ]
+    },
+    "store_integration_credential": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_connection_id",
+        "p_secret"
+      ]
+    },
+    "time_committed": {
+      "role": "authenticated",
+      "callers": [
+        "app/ai/tools.py"
+      ],
+      "sends": [
+        "p_from",
+        "p_grouping",
+        "p_organization_id",
+        "p_to"
+      ],
+      "optional": [
+        "p_from",
+        "p_to"
+      ]
+    },
+    "work_at_risk": {
+      "role": "authenticated",
+      "callers": [
+        "app/ai/tools.py"
+      ],
+      "sends": [
+        "p_organization_id"
+      ]
+    },
+    "work_marked_complete": {
+      "role": "authenticated",
+      "callers": [
+        "app/ai/tools.py"
+      ],
+      "sends": [
+        "p_from",
+        "p_grouping",
+        "p_organization_id",
+        "p_to"
+      ],
+      "optional": [
+        "p_from",
+        "p_to"
+      ]
+    }
+  }
+}

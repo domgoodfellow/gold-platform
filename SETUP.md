@@ -240,9 +240,9 @@ listens for `checkout.session.completed` scoped to **Connected accounts**. This 
    it (subscription lifecycle is fully covered by the events above, resolved by Stripe's customer
    reference rather than a session id; see that file's module docstring for the reasoning).
 4. Under **Destination type**, choose **Webhook endpoint** and enter:
-   `https://<api-preview-or-production-host>/webhooks/stripe-platform-billing` (or whatever path
-   `apps/api/api/stripe_platform_billing_webhook.py` is deployed at — Vercel's Python runtime
-   routes a file under `api/` to a path matching its name, D24).
+   `https://<api-preview-or-production-host>/webhooks/stripe-platform-billing` (a rewrite in
+   `apps/api/vercel.json` to `apps/api/api/stripe_platform_billing_webhook.py`; the physical
+   `/api/stripe_platform_billing_webhook` also answers, D24).
 5. Create the destination, then open it and **Reveal** the signing secret, `whsec_...`.
 
 ### 4. Where each value goes

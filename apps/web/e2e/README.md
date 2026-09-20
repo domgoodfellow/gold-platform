@@ -62,7 +62,8 @@ customer's portal link, each also proven absent for a caller who lacks the gover
 ## What's deliberately not here
 
 Not a replacement for `pnpm test` (real Postgres, real RLS, the actual authorization boundary) —
-this harness's job is UI reachability and rendering, not policy. Not wired into `pnpm check`: it
-needs a browser install, a running dev server and seeded data that the fast gate does not assume.
-Run it by hand, or wire it into CI separately once there is a CI environment that can satisfy its
-prerequisites.
+this harness's job is UI reachability and rendering, not policy. Not part of `pnpm check`: it
+needs a browser install, a running dev server and seeded data that the gate does not assume. It runs
+nightly, and on demand, in `.github/workflows/ci.yml` (job `e2e`: a freshly seeded local stack and a
+dev server started against it); by hand, it is the steps above. Whether that job has passed on
+GitHub is recorded in `docs/testing.md`, not here.

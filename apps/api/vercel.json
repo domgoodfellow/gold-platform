@@ -50,6 +50,14 @@
     {
       "source": "/voice/wrap-up-call",
       "destination": "/api/voice_wrap_up_call"
+    },
+    {
+      "source": "/webhooks/stripe-platform-billing",
+      "destination": "/api/stripe_platform_billing_webhook"
+    },
+    {
+      "source": "/public_chat",
+      "destination": "/api/public_chat"
     }
   ],
   "crons": [

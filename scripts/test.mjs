@@ -78,5 +78,14 @@ if (playwrightFiles.length > 0) {
 }
 
 if (ran === 0) {
-  console.log(`Nothing is classified under ${categories.join(', ')} yet, so nothing ran. That is not a pass.`);
+  if (command === 'provider') {
+    // The provider tier is provisioned before its first sandbox contract, so an empty tier is a known
+    // state, not a failure. It is also not a verification: the words below say so, and the exit code
+    // is only success so that a scheduled job can exist before the first test does.
+    console.log('provider: NOT CONFIGURED. No vendor-sandbox contract tests exist, so no vendor was verified.');
+  } else {
+    // Any other category with no files means a classification or a path went wrong. Fail, loudly.
+    console.error(`Nothing is classified under ${categories.join(', ')}, so nothing ran. Treating that as a failure.`);
+    process.exit(1);
+  }
 }

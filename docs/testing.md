@@ -46,7 +46,7 @@ Run from the repository root. A tier is a set of categories; `test-manifest.json
 | **Gate** | `pnpm check` | typecheck, lint, all of Vitest, build, all of pytest | local Supabase |
 | **E2E** | `pnpm test:e2e` | Playwright acceptance | Supabase, `pnpm demo:fresh`, `pnpm dev` |
 | **Smoke** | `pnpm test:smoke` | the deployment check | a running app, one account |
-| **Provider** | `pnpm test:provider` | vendor-sandbox contracts (none exist yet) | sandbox credentials |
+| **Provider** | `pnpm test:provider` | vendor-sandbox contracts. None exist: it prints `NOT CONFIGURED`, exits 0, and verified no vendor | sandbox credentials |
 
 One category at a time: `test:unit`, `test:component`, `test:architecture`, `test:architecture:db`,
 `test:db`, `test:contract`, `test:api`. Python tests need
@@ -117,9 +117,18 @@ does, and say so in `note`.
 | Deployment smoke | manual, after a deploy | `smoke` against `SMOKE_BASE_URL` with `SMOKE_EMAIL`/`SMOKE_PASSWORD` |
 | Provider | none yet | `pnpm test:provider` with sandbox secrets, scheduled, never on a PR |
 
-`.github/workflows/ci.yml` defines these. It has **not been run on GitHub**: its YAML parses and the
-`.env.test` recipe was checked against the local stack, but expect a first-run fix. Promote `e2e` to
-every merge only after its first green nightly.
+`.github/workflows/ci.yml` defines these, and it has **not been run on GitHub**: its YAML parses, its
+shell steps were run locally, and the `.env.test` recipe was checked against the local stack, so expect
+a first-run fix. Promote `e2e` to every merge only after its first green nightly. Decisions it holds,
+each guarded by `ci-workflow.test.ts`:
+
+- **No Supabase variable at workflow scope.** Next.js lets an existing `process.env` value beat
+  `.env.local`, so a workflow-wide placeholder would override the real pair the e2e job discovers, and
+  would put a fake localhost into the deployment smoke. `next build` needs none, so the fast job sets none.
+- **The Supabase CLI is the lockfile's** (`pnpm exec supabase`, 2.115.0 today), not a setup action, so
+  CI and `pnpm db:start` run the same binary and it moves only when the lockfile does.
+- **Manual smoke requires its inputs.** It fails before installing anything unless given an https
+  `base_url`, `SMOKE_EMAIL` and `SMOKE_PASSWORD`, and it never falls back to localhost or the demo owner.
 
 ## A name is not a category
 
@@ -181,7 +190,7 @@ Why each **P** and **—** is graded so:
 - **Public site / intake E2E P:** the preview link is walked; an anonymous visitor submitting an
   inquiry or a booking is not.
 - **UI / accessibility P:** one component file renders to a string (no DOM, no focus, no keyboard);
-  31 architecture files check conventions by reading source. Nothing measures accessibility by
+  the architecture files that check UI conventions do so by reading source. Nothing measures accessibility by
   behaviour. This is the largest structural weakness and the least urgent.
 - **Voice, softphone:** call history renders; there is no browser softphone to test (M9/M14).
 
@@ -189,12 +198,12 @@ Why each **P** and **—** is graded so:
 
 | Asymmetry | Status |
 |---|---|
-| Every signature/secret/bearer check tested as a function, none as the wired handler | **Closed.** `test_handlers.py` drives all 13 entrypoints and asserts each refusal *and* that the sink was never reached |
+| Every signature/secret/bearer check tested as a function, none as the wired handler | **Closed.** `test_handlers.py` drives all 13 deployable handlers and asserts each refusal *and* that the sink was never reached. The first version drove 12 and the README listed 7; `python-handler-inventory.test.ts` now holds the files, `vercel.json`, the README table and this test to one inventory |
 | Python names 27 database functions and only the assistant's tools were checked against the schema | **Closed.** `python-rpc-surface.test.ts`: names, the calling role's grant, machine doors closed to signed-in roles, and a new call must be declared |
 | "Every page calls `requireOrganization`" (I12) had an empty `Held by` | **Closed.** `organization-page-guard.test.ts`; verified by mutation |
 | Adapter mocks with no contract: card payments, transactional email, geocoding, browser telephone token | **Closed** for these four. See *Contract P* for what remains |
 | Credential-minting boundary `browserTelephoneToken` had no test | **Partly closed.** The minted token is pinned; the domain function around it is not |
 | Duplicate assertions at the expensive level: `documents.spec.ts` uploads to three records; four read-only `catalog-plans` render checks; `portal-payments.spec.ts` list checks | **Open.** Fold into one journey each once the rule is held lower; changing e2e was out of scope |
-| 31 source-scan files assert UI behaviour by matching text | **Open.** Real component tests need a DOM harness this repo does not have |
-| Python argument names (`p_...`) are not checked against the database functions' parameters | **Open.** The natural next extension of `python-rpc-surface` |
+| Source-scan files assert UI behaviour by matching text | **Open.** Real component tests need a DOM harness this repo does not have |
+| Python argument names (`p_...`) were not checked against the database functions' parameters | **Closed.** `apps/api/tests/rpc_contract.json` is held to `pg_proc` (overloads and defaults handled) by `python-rpc-surface.test.ts` and to the Python source by `test_rpc_contract.py`. Types are deliberately not compared |
 | E2E with no underlying authorization test | **None found.** Every mutating spec (`operator-paths`, `platform-catalog`, `feature-navigation-gate`) has a database test for its rule |

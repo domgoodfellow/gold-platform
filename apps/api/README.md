@@ -13,15 +13,26 @@ handler re-checking `Authorization: Bearer ...` for itself. It answers *is this 
 *who is it*, never *what may this person do* — that stays with RLS, `app/domains/**`, and the
 platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and access").
 
-| Logical route | Entrypoint | Purpose / trust path |
+| Logical route | Entrypoint | Trust and purpose |
 |---|---|---|
-| `POST /webhooks/stripe` | `api/stripe_webhook.py` | Verify Stripe signature and record settlement through the narrow payment machine role. |
-| `POST /tasks/automation-tick` | `api/automation_tick.py` | Verify `CRON_SECRET`, run due automations and drain configured message/reading work. |
-| `POST /ai/ask` | `api/ai_ask.py` | Verify the signed-in person's token through `app/auth`, then forward it; the API holds no database role for this path. |
-| `POST /voice/inbound` | `api/voice_inbound.py` | Verify/configure inbound carrier callback and record through the Voice machine path. |
-| `POST /voice/outbound` | `api/voice_outbound.py` | Produce outbound call instructions and record provider events. |
-| `POST /voice/status` | `api/voice_status.py` | Receive call/conference status callbacks. |
-| `POST /voice/recording` | `api/voice_recording.py` | Receive recording metadata callbacks. |
+| `POST /webhooks/stripe` | `api/stripe_webhook.py` | Stripe signature over the raw body. Records a customer's settlement through the narrow payment machine role. |
+| `POST /webhooks/stripe-platform-billing` | `api/stripe_platform_billing_webhook.py` | Stripe signature, on its own secret and role. Applies GOLD's own subscription events; never the tenant-payment path. |
+| `GET, POST /tasks/automation-tick` | `api/automation_tick.py` | `Authorization: Bearer $CRON_SECRET` from the host's scheduler. Runs due automations and drains message and reading work. |
+| `POST /ai/ask` | `api/ai_ask.py` | The signed-in person's bearer token through `app/auth`, then forwarded. The API holds no database role for this path. |
+| `POST /crm/change-customer-stage` | `api/crm_change_customer_stage.py` | Bearer token, forwarded. A domain command under the caller's own rights. |
+| `POST /voice/wrap-up-call` | `api/voice_wrap_up_call.py` | Bearer token, forwarded. A domain command under the caller's own rights. |
+| `POST /integrations/operate` | `api/integration_operations.py` | Bearer token; the caller must be able to manage integrations for that business. OAuth handshake and disconnect. |
+| `POST /providers/operate` | `api/provider_operations.py` | Bearer token; platform staff only, proved by RLS. Operates GOLD's own provider account. |
+| `POST /voice/inbound` | `api/voice_inbound.py` | Twilio signature. Declines the call; a number with no configured behaviour says nothing of its own. |
+| `POST /voice/outbound` | `api/voice_outbound.py` | Twilio signature. Returns the conference instructions for the room the web app created. |
+| `POST /voice/status` | `api/voice_status.py` | Twilio signature. Records a call's status through the Voice machine role. |
+| `POST /voice/recording` | `api/voice_recording.py` | Twilio signature. Records recording metadata through the Voice machine role. |
+| `POST /public_chat` | `api/public_chat.py` | Shared server-to-server key (`x-gold-public-chat-key`) from `apps/web` only; the same answer as "not configured" on any mismatch. Public-site assistant. |
+
+13 deployable handlers, one file each. Vercel also serves every file under `api/` at its
+physical `/api/<name>` path, so a rewrite is the documented route, not the only reachable one.
+`tests/architecture/static/python-handler-inventory.test.ts` holds this table, `vercel.json`, the
+files in `api/` and the handler tests to one another.
 
 `vercel.json` owns the rewrites from those logical routes to the physical handlers. Local
 development uses `python apps/api/dev.py` and defaults to port 8787.

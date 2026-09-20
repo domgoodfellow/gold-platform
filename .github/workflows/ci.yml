@@ -2,11 +2,20 @@
 #
 #   pull requests  fast + local     together they are `pnpm check`, split so a failure names its tier
 #   nightly/manual  e2e             Playwright acceptance against a freshly seeded local stack
-#   manual          smoke           the deployment check, against any URL
+#   manual          smoke           the deployment check, against a URL that must be given
 #
 # Not here yet: a vendor-sandbox tier. `pnpm test:provider` exists and no sandbox test does; add a
-# scheduled job with the vendor secrets the day the first one lands. Nothing below ever holds a
-# vendor credential, so no job here can call a live vendor.
+# scheduled job with the vendor secrets the day the first one lands. Nothing below holds a vendor
+# credential, so no job here can call a live vendor.
+#
+# **No Supabase variable is set at workflow scope, on purpose.** Next.js gives a value already in
+# `process.env` precedence over `.env.local`, so a workflow-wide placeholder would silently win over
+# the real local pair the e2e job discovers, and would leak a fake localhost into the deployment
+# smoke. `next build` needs none (checked: it builds with the variables absent), so the fast job sets
+# none either. Each job that starts a stack takes its values from that stack, in that job only.
+#
+# The Supabase CLI is the one the lockfile pins (`pnpm exec supabase`, currently 2.115.0), not a
+# setup action: the same binary CI and a developer's `pnpm db:start` use, moved only by a lockfile change.
 name: ci
 
 on:
@@ -23,7 +32,7 @@ on:
         options: [e2e, smoke]
         default: smoke
       base_url:
-        description: 'Smoke only: the deployment to check'
+        description: 'Smoke only, required: the https URL of the deployment to check'
         required: false
 
 permissions:
@@ -32,12 +41,6 @@ permissions:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
-env:
-  # `next build` reads the public Supabase pair at build time. These are placeholders for the
-  # fast tier, which starts no database; the jobs that do start one overwrite them.
-  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-not-a-key
 
 jobs:
   fast:
@@ -71,14 +74,14 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
       - run: pnpm install --frozen-lockfile
       - name: Start the local stack and write .env.test
         run: |
-          supabase start
-          eval "$(supabase status -o env)"
+          pnpm exec supabase --version
+          pnpm exec supabase start
+          eval "$(pnpm exec supabase status -o env)"
+          echo "::add-mask::$ANON_KEY"
+          echo "::add-mask::$SERVICE_ROLE_KEY"
           {
             echo "SUPABASE_URL=$API_URL"
             echo "SUPABASE_ANON_KEY=$ANON_KEY"
@@ -99,24 +102,28 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
       - run: pnpm install --frozen-lockfile
-      - name: Start the stack, seed it, and start the app
+      - name: Start the stack, seed it, and start the app against it
         run: |
-          supabase start
-          eval "$(supabase status -o env)"
+          pnpm exec supabase start
+          eval "$(pnpm exec supabase status -o env)"
+          echo "::add-mask::$ANON_KEY"
+          echo "::add-mask::$SERVICE_ROLE_KEY"
+          echo "::add-mask::$PUBLISHABLE_KEY"
           {
             echo "SUPABASE_URL=$API_URL"
             echo "SUPABASE_ANON_KEY=$ANON_KEY"
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
             echo "SUPABASE_DB_URL=$DB_URL"
           } > .env.test
+          # Exported, not only written to .env.local: the values must be in the environment of the
+          # `next dev` process started below (and of every later step), because the environment wins.
+          export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
+          export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$PUBLISHABLE_KEY"
           {
             echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
             echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
-          } > apps/web/.env.local
+          } >> "$GITHUB_ENV"
           pnpm demo
           pnpm --filter @gold/web dev > dev.log 2>&1 &
           for _ in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/login && break; sleep 2; done
@@ -136,7 +143,30 @@ jobs:
     name: smoke (a running deployment)
     if: github.event_name == 'workflow_dispatch' && inputs.run == 'smoke'
     runs-on: ubuntu-latest
+    env:
+      SMOKE_BASE_URL: ${{ inputs.base_url }}
+      SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+      SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
     steps:
+      # First, before anything is installed: this job starts no app, so a missing URL cannot mean
+      # localhost, and a missing account cannot mean the demo owner. Names only; never a value.
+      - name: Require a deployment URL and a smoke account
+        run: |
+          missing=""
+          [ -n "$SMOKE_BASE_URL" ] || missing="$missing base_url (workflow input)"
+          [ -n "$SMOKE_EMAIL" ] || missing="$missing SMOKE_EMAIL (repository secret)"
+          [ -n "$SMOKE_PASSWORD" ] || missing="$missing SMOKE_PASSWORD (repository secret)"
+          if [ -n "$missing" ]; then
+            echo "::error::Deployment smoke needs:$missing"
+            exit 1
+          fi
+          case "$SMOKE_BASE_URL" in
+            https://*) ;;
+            *) echo "::error::base_url must be an https:// deployment URL"; exit 1 ;;
+          esac
+          case "$SMOKE_BASE_URL" in
+            https://localhost*|https://127.*) echo "::error::base_url must be a deployment, not this runner"; exit 1 ;;
+          esac
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -146,7 +176,3 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @gold/web exec playwright install --with-deps chromium
       - run: pnpm test:smoke
-        env:
-          SMOKE_BASE_URL: ${{ inputs.base_url }}
-          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
-          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}

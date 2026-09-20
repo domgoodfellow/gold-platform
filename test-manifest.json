@@ -41,7 +41,7 @@
       "dir": "apps/web/tests/contract",
       "requires": "none",
       "gate": true,
-      "description": "A provider or protocol shape checked offline from the web runtime. None exist yet."
+      "description": "A provider or protocol shape checked offline from the web runtime: what an adapter sends a vendor and how it reads the reply, with fetch replaced."
     },
     "python-unit": {
       "runner": "pytest",
@@ -174,6 +174,15 @@
         "integrations",
         "providers"
       ]
+    },
+    "apps/api/tests/contract/test_rpc_contract.py": {
+      "category": "python-contract",
+      "concerns": [
+        "security",
+        "providers",
+        "platform"
+      ],
+      "note": "Holds apps/api/tests/rpc_contract.json to the Python source; the database half is python-rpc-surface.test.ts."
     },
     "apps/api/tests/contract/test_stripe_platform_billing_webhook.py": {
       "category": "python-contract",
@@ -349,6 +358,14 @@
         "catalogue"
       ]
     },
+    "apps/web/tests/architecture/static/ci-workflow.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "build",
+        "test-strategy"
+      ],
+      "note": "Holds three CI properties by text; the workflow itself has not run on GitHub."
+    },
     "apps/web/tests/architecture/static/context-switcher.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -495,6 +512,15 @@
         "public-site"
       ],
       "note": "Zod schema checks plus build-time cache source scans."
+    },
+    "apps/web/tests/architecture/static/python-handler-inventory.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "security",
+        "providers",
+        "boundaries"
+      ],
+      "note": "Files in apps/api/api, vercel.json, the README route table and test_handlers.py must agree."
     },
     "apps/web/tests/architecture/static/residual-polish.test.ts": {
       "category": "architecture-static",

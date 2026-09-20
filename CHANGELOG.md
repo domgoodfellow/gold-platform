@@ -5,6 +5,19 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Test-system closeout
+
+The CI workflow no longer sets Supabase variables for the whole workflow (they would have beaten the real
+pair the e2e job writes), uses the lockfile's Supabase CLI instead of `latest`, and manual smoke now fails
+at once without an https deployment URL and a smoke account. `apps/api` has 13 deployable handlers, not the
+7 the README listed or the 12 the handler test drove: `/public_chat` and `/webhooks/stripe-platform-billing`
+had no rewrite, so the routes the web app and `SETUP.md` name did not exist; both are routed, `public_chat`
+is now under `test_handlers.py`, and `python-handler-inventory.test.ts` holds the files, `vercel.json`, the
+README table and that test to one inventory. `apps/api/tests/rpc_contract.json` now records the argument
+names Python sends to each database function, checked against `pg_proc` and against the Python source.
+`pnpm test:provider` says `NOT CONFIGURED` and exits 0 while no sandbox test exists; any other empty test
+category now fails.
+
 ### The test suite is classified and runnable by category
 
 `test-manifest.json` records each test file's level (unit, component, architecture, database
