@@ -14,7 +14,7 @@ export default async function PlatformIntegrationsPage() {
   const [connectors, usage] = await Promise.all([listConnectors(db), connectorUsage(db)]);
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader
         title="Integrations"
         description="The outside apps a business may connect. This is the catalogue — who GOLD buys infrastructure from is under Providers."

@@ -17,7 +17,7 @@ export default async function ConnectorPage({ params }: PageProps<'/platform/int
   if (!connector) notFound();
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader title={connector.name} crumbs={[{ label: 'Integrations', href: '/platform/integrations' }]} />
       {connector.status !== 'planned' && !isConnectorImplemented(connector.key) ? (
         <Hint className="block" role="status">

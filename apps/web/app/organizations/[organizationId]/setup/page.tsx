@@ -55,7 +55,7 @@ export default async function SetupPage({
   const pastProposals = history.filter((entry) => entry.outcome !== 'draft');
 
   return (
-    <AppPage width="standard">
+    <AppPage>
       <PageHeader
         title={inSetup ? `Set up ${organization.name}` : 'Setup'}
         description={

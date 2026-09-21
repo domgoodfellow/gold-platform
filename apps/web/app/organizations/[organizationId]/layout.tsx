@@ -195,8 +195,10 @@ export default async function OrganizationLayout({
           <TenantAgentRail
             organizationId={organizationId}
             organizationName={organization.name}
+            timezone={organization.timezone}
             canAnswer={canAnswer}
             mayAsk={organization.capabilities.includes('assistant.ask')}
+            canManageConnections={organization.capabilities.includes('integration.manage')}
             conversations={conversations}
             initialConversation={initialConversation}
           />

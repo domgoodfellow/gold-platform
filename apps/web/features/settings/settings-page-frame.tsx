@@ -7,5 +7,5 @@ export function SettingsPageFrame({
 }: {
   children: ReactNode;
 }) {
-  return <AppPage width="wide">{children}</AppPage>;
+  return <AppPage>{children}</AppPage>;
 }

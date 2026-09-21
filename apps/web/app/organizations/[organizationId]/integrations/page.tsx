@@ -94,7 +94,7 @@ export default async function IntegrationsPage({
           <Section className="mt-8">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <SectionHeading>Connected</SectionHeading>
-              {connectedKeys.has('csv') ? (
+              {mayManage && connectedKeys.has('csv') ? (
                 <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">
                   Import file
                 </ButtonLink>

@@ -53,12 +53,13 @@ describe('confirmation dialog composition', () => {
 });
 
 describe('application workspace composition', () => {
-  it('provides named canvas widths instead of a universal content column', () => {
-    const wide = renderToStaticMarkup(createElement(AppPage, { width: 'wide' }));
-    const full = renderToStaticMarkup(createElement(AppPage, { width: 'full' }));
+  it('is fluid by default and bounded only by an explicit form or reading mode', () => {
+    const fluid = renderToStaticMarkup(createElement(AppPage));
+    const form = renderToStaticMarkup(createElement(AppPage, { width: 'form' }));
 
-    expect(wide).toContain('max-w-[90rem]');
-    expect(full).toContain('max-w-none');
+    expect(fluid).not.toContain('max-w-');
+    expect(form).toContain('max-w-4xl');
+    expect(form).toContain('mx-auto');
   });
 
   it('uses CSS Grid for responsive dashboard composition', () => {

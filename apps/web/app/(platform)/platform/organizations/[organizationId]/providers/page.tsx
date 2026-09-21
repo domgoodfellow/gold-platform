@@ -38,7 +38,7 @@ export default async function TenantProviders({ params }: PageProps<'/platform/o
   const canProvision = health === 'not_provisioned' || health === 'failed';
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <TenantWorkspaceHeader id={organizationId} name={tenant.name} currency={tenant.currency} />
 
       <section className="mt-6">

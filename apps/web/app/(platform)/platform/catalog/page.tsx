@@ -48,7 +48,7 @@ export default async function CatalogPage() {
   }
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader title="Catalog" description="What GOLD sells, as a customer would recognize it: seven Products, each a coherent set of Modules and Features. Internal keys and legacy runtime mappings live one click deeper." />
 
       <div className="flex flex-wrap gap-3 text-sm">

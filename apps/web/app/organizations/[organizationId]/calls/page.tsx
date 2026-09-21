@@ -36,7 +36,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
 
   if (open === 'calls') {
     return (
-      <AppPage width="wide">
+      <AppPage>
         <PageHeader title={areaLabel('calls')} />
         <WidgetPanel title="Every call" backHref={area} backLabel="Calls">
           <CallHistory
@@ -50,7 +50,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
   }
 
   return (
-    <AppPage width="wide">
+    <AppPage>
       <PageHeader
         title={areaLabel('calls')}
         description="Calling activity, follow-up and the identity this business calls from."

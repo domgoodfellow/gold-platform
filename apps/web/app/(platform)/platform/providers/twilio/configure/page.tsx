@@ -19,7 +19,7 @@ export default async function ConfigureTwilioPage({ searchParams }: PageProps<'/
   const key = telephonyProviderKey();
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader
         title={account ? `Configure ${account.label}` : 'Add a Twilio account'}
         crumbs={[

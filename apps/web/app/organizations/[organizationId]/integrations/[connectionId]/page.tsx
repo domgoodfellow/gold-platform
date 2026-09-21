@@ -60,7 +60,7 @@ export default async function ConnectionDetailPage({
             {mayManage && connection.status !== 'disconnected' ? (
               <DisconnectForm organizationId={organizationId} connectionId={connectionId} />
             ) : null}
-            {connection.status !== 'disconnected' ? (
+            {mayManage && connection.status !== 'disconnected' ? (
               <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">
                 Add data source
               </ButtonLink>

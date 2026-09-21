@@ -17,7 +17,7 @@ export default async function ModulesPage() {
   const modules: readonly Module[] = MODULES;
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader
         title="Modules"
         crumbs={[{ label: 'Catalog', href: '/platform/catalog' }]}

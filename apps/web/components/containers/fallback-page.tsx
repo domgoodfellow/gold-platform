@@ -18,7 +18,7 @@ export function FallbackPage({
   action: ReactNode;
 }) {
   return (
-    <AppPage width="standard">
+    <AppPage>
       <PageHeader title={title} description={description} actions={action} />
     </AppPage>
   );

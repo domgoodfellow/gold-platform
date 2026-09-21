@@ -19,7 +19,7 @@ export function PlatformOverview({ organizations, failures, catalogue, rates }: 
   const totalFailures = failures.operational + failures.providerReconciliation;
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader title="Overview" description="The state of every business running on GOLD." />
 
       <WidgetGrid className="mt-6">

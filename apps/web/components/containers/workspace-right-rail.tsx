@@ -353,7 +353,8 @@ function AgentPanel() {
           <X aria-hidden size={16} />
         </button>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{everOpened ? agent : null}</div>
+      {/* Not a scroll container: the transcript's `MessageScroller` is the one thing in Agent that scrolls. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{everOpened ? agent : null}</div>
     </aside>
   );
 }

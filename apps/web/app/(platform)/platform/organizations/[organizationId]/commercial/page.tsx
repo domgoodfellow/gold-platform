@@ -61,7 +61,7 @@ export default async function Commercial({ params }: PageProps<'/platform/organi
   const resolvedByFeature = new Map(resolvedFeatures.map((r) => [r.featureId, r]));
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <TenantWorkspaceHeader id={organizationId} name={tenant.name} currency={tenant.currency} />
 
       <Card className="mt-6">

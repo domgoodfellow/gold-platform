@@ -28,7 +28,7 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
   const stageById = new Map(customers.map((customer) => [customer.id, customer.stageId]));
 
   return (
-    <AppPage width="wide">
+    <AppPage>
       <PageHeader
         title={areaLabel('customers')}
         description="Where each relationship has got to."

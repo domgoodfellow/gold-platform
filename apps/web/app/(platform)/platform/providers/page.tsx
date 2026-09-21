@@ -35,7 +35,7 @@ export default async function ProvidersPage() {
   const apiConfigured = Boolean(process.env.GOLD_API_URL);
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader
         title="Providers"
         crumbs={[{ label: 'Infrastructure' }]}

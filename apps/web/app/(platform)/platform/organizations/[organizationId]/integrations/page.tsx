@@ -37,7 +37,7 @@ export default async function TenantIntegrations({ params }: PageProps<'/platfor
   const connections = await listOrganizationConnections(db, { organizationId });
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <TenantWorkspaceHeader id={organizationId} name={tenant.name} currency={tenant.currency} />
       <section className="mt-6">
         <SectionHeading>Connected apps</SectionHeading>

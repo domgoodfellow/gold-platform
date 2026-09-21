@@ -52,10 +52,12 @@ describe('sibling views are navigation, not page actions', () => {
 });
 
 describe('the page header owns the page’s actions; the toolbar owns search and filter', () => {
-  it('Customers: Configure, Import and New customer are header actions, Import a ButtonLink', () => {
+  it('Customers: Import, New customer and Configure (last) are header actions, Import a ButtonLink', () => {
     const page = read(`${ORG}/customers/page.tsx`);
     const header = page.slice(page.indexOf('<PageHeader'), page.indexOf('<ConfigureRegistrar'));
-    expect(header).toContain('<ConfigureTrigger />');
+    expect(header).toContain('configure={mayConfigure}');
+    expect(header.indexOf('<CreateCustomerTrigger />')).toBeLessThan(header.indexOf('configure='));
+    expect(header.indexOf('Import')).toBeLessThan(header.indexOf('<CreateCustomerTrigger />'));
     expect(header).toContain('<ButtonLink');
     expect(header).toContain('Import');
     expect(header).toContain('<CreateCustomerTrigger />');
@@ -130,8 +132,11 @@ describe('muted is a text role and is never a background', () => {
   });
 
   it('the Agent question bubble is a static surface', () => {
+    // The secondary Bubble is `bg-secondary`; it takes a hover only when its content is a link or a button, and a question is neither.
     const shared = read(`${WEB}/features/agent/agent-shared.tsx`);
-    expect(shared).toContain('bg-secondary px-3 py-2');
+    const bubble = read(`${UI}/bubble.tsx`);
+    expect(shared).toContain('<Bubble variant="secondary" align="end"');
+    expect(bubble).toContain('*:data-[slot=bubble-content]:bg-secondary');
   });
 });
 

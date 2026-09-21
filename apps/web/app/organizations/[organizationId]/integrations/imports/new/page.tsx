@@ -1,3 +1,5 @@
+import { Lock } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@gold/ui/components/alert';
 import { Section, SectionHeading } from '@/components/containers/section';
 import { PageHeader } from '@/components/containers/page-header';
 import { areaLabel } from '@/lib/navigation';
@@ -25,7 +27,22 @@ export default async function NewImportPage({
 }: PageProps<'/organizations/[organizationId]/integrations/imports/new'>) {
   const { organizationId } = await params;
   const { resourceId, error } = await searchParams;
-  const { db } = await requireOrganization(organizationId);
+  const { db, organization } = await requireOrganization(organizationId);
+
+  // Importing is the organization's own capability. The database refuses every step without it
+  // (`integration.manage`); this only says so instead of showing a form that cannot succeed.
+  if (!organization.capabilities.includes('integration.manage')) {
+    return (
+      <>
+        <PageHeader title="Import customers" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]} />
+        <Alert>
+          <Lock aria-hidden />
+          <AlertTitle>Your role, {organization.role}, cannot import data</AlertTitle>
+          <AlertDescription>Importing needs the permission to connect external data sources. Ask someone who has it in this business.</AlertDescription>
+        </Alert>
+      </>
+    );
+  }
 
   if (typeof resourceId !== 'string') {
     return (

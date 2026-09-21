@@ -19,7 +19,7 @@ export default async function ProductsPage() {
   }
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader title="Line items" crumbs={[{ label: 'Catalog', href: '/platform/catalog' }]} description="The legacy flat SKUs this platform still sells by, one level under the seven Products. Presentation and sale state are staff-managed; identifiers and module mappings remain deployment-owned." />
 
       <div>

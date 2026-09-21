@@ -38,7 +38,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
   const voice = modules.has('reception');
 
   return (
-    <AppPage width="wide">
+    <AppPage>
       <CustomerDetail
         organizationId={organizationId}
         customer={customer}

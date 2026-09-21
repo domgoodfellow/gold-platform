@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageHeader } from '@/components/containers/page-header';
-import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { ResourceConfiguration } from '@/features/resources/configuration/resource-configuration';
@@ -29,7 +28,7 @@ export default async function ResourcesPage({
   const mayConfigure = organization.capabilities.includes('field.manage');
 
   return (
-    <AppPage width="wide">
+    <AppPage>
       <CreateResourceSheetProvider organizationId={organizationId} definitions={definitions}>
         {/*
           Hiding the trigger is a courtesy, not the guard. `resources_insert` requires
@@ -39,12 +38,8 @@ export default async function ResourcesPage({
         <PageHeader
           title={areaLabel('resources')}
           description="People, vehicles and equipment that work is scheduled against."
-          actions={
-            <>
-              {mayConfigure ? <ConfigureTrigger /> : null}
-              {mayAdd ? <CreateResourceTrigger /> : null}
-            </>
-          }
+          actions={mayAdd ? <CreateResourceTrigger /> : null}
+          configure={mayConfigure}
         />
         {mayConfigure ? (
           <ConfigureRegistrar

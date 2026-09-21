@@ -100,8 +100,9 @@ describe('Agent is workspace-global and Configure is page-level', () => {
     expect(agentBody).not.toContain('toggleConfigure');
   });
 
-  it('no page header ever renders Agent, and the generic PageHeader does not know about Configure', () => {
-    expect(code(pageHeader)).not.toMatch(/Agent|Configure|useWorkspaceRail/);
+  it('no page header ever renders Agent, and PageHeader offers Configure only as its final action', () => {
+    expect(code(pageHeader)).not.toMatch(/Agent|useWorkspaceRail/);
+    expect(code(pageHeader)).toContain('configure');
   });
 
   it('every page that offers Configure also registers the panel it opens', () => {
@@ -110,7 +111,7 @@ describe('Agent is workspace-global and Configure is page-level', () => {
         `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
         'utf8',
       );
-      expect(source, `${area}/page.tsx places ConfigureTrigger`).toContain('<ConfigureTrigger />');
+      expect(source, `${area}/page.tsx asks for Configure`).toMatch(/configure=\{mayConfigure\}/);
       expect(source, `${area}/page.tsx registers its panel`).toContain('<ConfigureRegistrar');
     }
   });
@@ -298,14 +299,13 @@ describe('the right rail — Agent and the page drawer are two independent, non-
     expect(workspaceGeometry).toContain("HEADER_HEIGHT = '3.5rem'");
   });
 
-  it('a drawer header starts at the page\'s own top inset and its title row is the h1\'s height', () => {
+  it('a drawer header is one compact band read from the shared tokens, thinner than the workspace header', () => {
     expect(code(appShell)).toContain('PAGE_PADDING');
-    expect(code(pageDrawer)).toContain('PAGE_PADDING_TOP');
-    expect(code(pageDrawer)).toContain('PAGE_TITLE_ROW');
-    expect(code(pageDrawer)).toContain('PAGE_TOP_OFFSET');
+    expect(code(pageDrawer)).toContain('DRAWER_HEADER');
+    expect(code(pageDrawer)).toContain('DRAWER_CLOSE_OFFSET');
     expect(workspaceGeometry).toContain("PAGE_PADDING = 'p-4 sm:p-6 lg:p-8'");
-    expect(workspaceGeometry).toContain("PAGE_PADDING_TOP = 'pt-4 sm:pt-6 lg:pt-8'");
-    expect(workspaceGeometry).toContain("PAGE_TOP_OFFSET = 'top-4 sm:top-6 lg:top-8'");
+    expect(workspaceGeometry).toContain("DRAWER_HEADER = 'min-h-12 py-2 pl-4 pr-14'");
+    expect(workspaceGeometry).toContain("DRAWER_CLOSE_OFFSET = 'top-2'");
   });
 
   it('no page, feature or drawer positions itself against the header with its own offset', () => {
@@ -427,10 +427,10 @@ describe('Resources — the reference page for the workspace/page hierarchy', ()
     expect(resourcesPage).not.toContain('PageChromeRegistrar');
   });
 
-  it('puts Add resource in the page-action area, after Configure — one primary action', () => {
+  it('puts Add resource in the page-action area, before Configure — one primary action', () => {
     expect(headerBlock).toContain('<CreateResourceTrigger />');
-    expect(headerBlock).toContain('<ConfigureTrigger />');
-    expect(headerBlock.indexOf('<ConfigureTrigger')).toBeLessThan(headerBlock.indexOf('<CreateResourceTrigger'));
+    expect(headerBlock).toContain('configure={mayConfigure}');
+    expect(headerBlock.indexOf('<CreateResourceTrigger')).toBeLessThan(headerBlock.indexOf('configure='));
   });
 
   it('keeps its Configure panel registration and the create-sheet provider around the header', () => {
@@ -579,5 +579,45 @@ describe('Drawer is a shared primitive, not a duplicate', () => {
     const uiRoot = fileURLToPath(new URL('../../../../../packages/ui/src/components', import.meta.url));
     expect(existsSync(`${uiRoot}/drawer.tsx`)).toBe(true);
     expect(existsSync(`${WEB}/components/ui/drawer.tsx`)).toBe(false);
+  });
+});
+
+describe('organization page composition', () => {
+  const listSource = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const path = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) return listSource(path);
+      return /\.tsx$/.test(entry.name) ? [path] : [];
+    });
+  const sources = ['app', 'features', 'components'].flatMap((root) => listSource(`${WEB}/${root}`));
+  const read = (path: string) => readFileSync(path, 'utf8');
+
+  it('AppPage is the one frame: fluid by default, and no page names a width of its own', () => {
+    const appPage = read(`${WEB}/components/containers/app-page.tsx`);
+    expect(code(appPage)).toContain("width = 'fluid'");
+    expect(code(appPage)).not.toMatch(/max-w-\[|max-w-screen|max-w-none/);
+    const offenders = sources
+      .filter((path) => path.includes('organizations') || path.includes('features'))
+      .filter((path) => /<AppPage[^>]*width="(wide|full|standard)"/.test(read(path)));
+    expect(offenders).toEqual([]);
+  });
+
+  it('a page never places Configure: only PageHeader renders it, after the business actions', () => {
+    const renderers = sources.filter((path) => /<ConfigureTrigger\b/.test(read(path)));
+    expect(renderers.map((path) => path.slice(WEB.length))).toEqual(['/components/containers/page-header.tsx']);
+    const header = code(read(`${WEB}/components/containers/page-header.tsx`));
+    expect(header.indexOf('{actions}')).toBeGreaterThan(-1);
+    expect(header.indexOf('{actions}')).toBeLessThan(header.indexOf('<ConfigureTrigger />'));
+  });
+
+  it('Import is offered by the organization capability, not by the module alone or by platform role', () => {
+    const customers = read(`${WEB}/app/organizations/[organizationId]/customers/page.tsx`);
+    expect(customers).toContain("organization.capabilities.includes('integration.manage')");
+    expect(customers).not.toMatch(/staff/i);
+    const newImport = read(
+      `${WEB}/app/organizations/[organizationId]/integrations/imports/new/page.tsx`,
+    );
+    expect(newImport).toContain("organization.capabilities.includes('integration.manage')");
+    expect(newImport.indexOf('integration.manage')).toBeLessThan(newImport.indexOf('await downloadCsvResource'));
   });
 });

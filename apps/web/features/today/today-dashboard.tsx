@@ -75,7 +75,7 @@ export function TodayDashboard({ organizationId, timezone, date, typesConfigured
 
   if (open === 'committed' || open === 'waiting' || open === 'activity') {
     const title = open === 'committed' ? 'Committed today' : open === 'waiting' ? 'Waiting to be scheduled' : 'Recent activity';
-    return <AppPage width="full">{dateHeading}<div><WidgetPanel title={title} backHref={area} backLabel="Today">{open === 'committed' ? committedTable : open === 'waiting' ? waitingTable : activityTable}</WidgetPanel></div></AppPage>;
+    return <AppPage>{dateHeading}<div><WidgetPanel title={title} backHref={area} backLabel="Today">{open === 'committed' ? committedTable : open === 'waiting' ? waitingTable : activityTable}</WidgetPanel></div></AppPage>;
   }
 
   const committedWidget = <Widget key="committed" title="Committed today" value={committed.length} href={committed.length ? `${area}?widget=committed` : undefined}>{committed.length === 0 ? <EmptyState weight="subtle">Nothing is scheduled today. <Link href={`/organizations/${organizationId}/schedule`} className="underline underline-offset-4">Open the schedule</Link></EmptyState> : <DividedList className="text-sm">{committed.slice(0, PREVIEW).map((row) => <li key={row.workItemId} className="flex items-baseline gap-2 py-1.5"><span className="shrink-0 tabular-nums text-muted">{formatWindow(row.window, timezone)}</span><Link href={workHref(row.workItemId)} className="min-w-0 truncate underline underline-offset-4">{row.title}</Link></li>)}</DividedList>}</Widget>;
@@ -87,5 +87,5 @@ export function TodayDashboard({ organizationId, timezone, date, typesConfigured
   ] : [];
   const callsWidget = receptionOn ? <Widget key="calls" title="Calls" value={todaysCalls.length} note={unwrittenCalls ? `${unwrittenCalls} not written up` : undefined} href={`/organizations/${organizationId}/calls`}>{todaysCalls.length === 0 ? <EmptyState weight="subtle">No calls today.</EmptyState> : <DividedList className="text-sm">{todaysCalls.slice(0, PREVIEW).map((call) => <li key={call.id} className="flex items-baseline gap-2 py-1.5"><span className="min-w-0 truncate">{call.direction === 'inbound' ? 'Inbound' : 'Outbound'} · {call.toNumber}</span><span className="ml-auto shrink-0 text-muted">{call.outcome?.name ?? call.status.replace('_', ' ')}</span></li>)}</DividedList>}</Widget> : null;
   const operations = [committedWidget, waitingWidget, ...automationWidgets, callsWidget].filter(Boolean);
-  return <AppPage width="full">{dateHeading}{!typesConfigured ? <EmptyState className="mb-5">No kinds of work are defined yet. <Link href={`/organizations/${organizationId}/work/configuration`} className="underline underline-offset-4">Configure work</Link></EmptyState> : null}<WidgetGrid>{operations}{activityWidget}</WidgetGrid></AppPage>;
+  return <AppPage>{dateHeading}{!typesConfigured ? <EmptyState className="mb-5">No kinds of work are defined yet. <Link href={`/organizations/${organizationId}/work/configuration`} className="underline underline-offset-4">Configure work</Link></EmptyState> : null}<WidgetGrid>{operations}{activityWidget}</WidgetGrid></AppPage>;
 }

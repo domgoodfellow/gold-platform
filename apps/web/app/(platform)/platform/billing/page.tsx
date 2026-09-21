@@ -41,7 +41,7 @@ export default async function PlatformBillingPage() {
   };
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader title="Billing" description={<>GOLD’s own subscription book — organizations paying GOLD, never the other direction. Plans and prices are managed at{' '} <Link href="/platform/catalog/plans" className="underline underline-offset-4"> Catalog → Plans </Link> .</>} />
 
       {!provider ? (

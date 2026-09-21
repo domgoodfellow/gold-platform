@@ -5,6 +5,26 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### One page frame for the organization workspace
+
+`AppPage` is the only page frame and has three modes: `fluid` (the default), `form` and `reading`. The `standard`, `wide` and `full` caps are gone, so Resources, Customers, Locations and Assets no longer stop short of the right edge; Reports now sits in the same frame as Today, Work and Schedule. `PageHeader` takes `configure` and renders Configure after the business actions, so it is always last (Resources: Add resource, Configure; Customers: Import, New customer, Configure); `ConfigureTrigger` is placed nowhere else. Every drawer and Configure rail shares one compact header band (`DRAWER_HEADER`, 3rem for a title row) instead of the page's top inset. Import is offered by the organization's own `integration.manage` capability as well as the module, and `/integrations/imports/new` says so instead of showing a form the database would refuse.
+
+### The Agent panel is a conversation
+
+The Chat / Context / Activity tabs are gone, and `AgentTabs` with them. The panel is now Agent header →
+conversation header (the title, History, New chat) → transcript → composer (a textarea above Context,
+Configure and Send). The transcript is the shadcn Message, Bubble, Marker and Message Scroller, added to
+`@gold/ui` on GOLD's roles (no avatars, reactions, `bg-muted` or demo blue; `@shadcn/react` is the new
+dependency behind the scroller), and the scroller is the only thing in the panel that scrolls. Questions sit at
+the end and the Agent's words at the start; short notes such as *Thinking…*, *Checked 14 records* and *Tool
+refused* sit inline, and a proposed action stays beneath its response with Decline and Approve. Activity is
+retired from the rail; the recorded tool and run facts are untouched. Context is a popover of what the next
+turn is given (the business, the workspace, the record open on the page, the business's time zone) and follows
+navigation; the workspace and record are now actually sent, derived on the server from the path. Configure is a
+popover with the one control that has behaviour behind it, whether the open record is named, and a link to
+Connections & permissions. Enter sends, Shift+Enter adds a line, and the field grows to a bound. Platform Agent
+is still unavailable. The rail's breakpoints are unchanged; its content wrapper stopped being a scroll container.
+
 ### Agent conversations, History and New chat
 
 The Agent is now a conversation rather than a list of unrelated questions. `agent_conversations` (one

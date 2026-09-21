@@ -3,7 +3,6 @@ import { Disclosure } from '@/components/containers/card';
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageHeader } from '@/components/containers/page-header';
-import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import { DataTable } from '@/components/display/table';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { LocationConfiguration } from '@/features/locations/configuration/location-configuration';
@@ -35,7 +34,7 @@ export default async function LocationsPage({
   const mayConfigure = organization.capabilities.includes('field.manage');
 
   return (
-    <AppPage width="wide">
+    <AppPage>
       <CreateLocationSheetProvider organizationId={organizationId} definitions={definitions}>
         {/*
           Hiding the trigger is a courtesy, not the guard. `locations_insert` requires
@@ -45,12 +44,8 @@ export default async function LocationsPage({
         <PageHeader
           title={areaLabel('locations')}
           description="Places where this organization works, and the customers they serve."
-          actions={
-            <>
-              {mayConfigure ? <ConfigureTrigger /> : null}
-              {mayAdd ? <CreateLocationTrigger /> : null}
-            </>
-          }
+          actions={mayAdd ? <CreateLocationTrigger /> : null}
+          configure={mayConfigure}
         />
         {mayConfigure ? (
           <ConfigureRegistrar

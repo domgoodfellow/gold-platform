@@ -15,7 +15,7 @@ export default async function PlatformOrganizationsPage({ searchParams }: { sear
   const visible = query ? tenants.filter((tenant) => tenant.name.toLowerCase().includes(query) || tenant.id.toLowerCase().includes(query)) : tenants;
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader
         title="Organizations"
         meta={`${total === 1 ? '1 organization' : `${total} organizations`} on GOLD`}

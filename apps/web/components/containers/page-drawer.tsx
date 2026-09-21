@@ -16,14 +16,14 @@ import { createPortal } from 'react-dom';
 import { XIcon } from 'lucide-react';
 import { Slot } from 'radix-ui';
 import { cx, FOCUS_RING } from '../class-names';
-import { PAGE_PADDING_TOP, PAGE_TITLE_ROW, PAGE_TOP_OFFSET } from './workspace-geometry';
+import { DRAWER_CLOSE_OFFSET, DRAWER_HEADER } from './workspace-geometry';
 import { useWorkspaceRail } from './workspace-right-rail';
 
 /**
  * The one drawer a page opens — a create or edit form, a Configure panel. It replaces the modal
  * `Sheet` for page work: nothing dims or blurs, the page stays usable beside it, and it docks full
- * height beneath the workspace header, next to the page (`PagePanel` owns where; the header's
- * alignment with `PageHeader` comes from `workspace-geometry.ts`). The API mirrors `Sheet`'s so an owner
+ * height beneath the workspace header, next to the page (`PagePanel` owns where; the compact
+ * header band comes from `workspace-geometry.ts`). The API mirrors `Sheet`'s so an owner
  * keeps its own `open` state, form and context; only the surface differs.
  *
  * Content is portalled into the host's slot, so it is written by its owner and survives Agent and
@@ -155,7 +155,7 @@ export function PageDrawerContent({ className, children }: { className?: string;
         onClick={() => setOpen(false)}
         className={cx(
           'absolute right-3 flex size-8 items-center justify-center rounded text-muted hover:bg-hover hover:text-foreground',
-          PAGE_TOP_OFFSET,
+          DRAWER_CLOSE_OFFSET,
           FOCUS_RING,
         )}
       >
@@ -167,9 +167,23 @@ export function PageDrawerContent({ className, children }: { className?: string;
   );
 }
 
-export function PageDrawerHeader({ className, ...props }: ComponentProps<'div'>) {
-  // Starts at the page's own top inset, so its title row lines up with `PageHeader`'s `<h1>`.
-  return <div className={cx('flex flex-col gap-0.5 pr-14 pb-4 pl-4', PAGE_PADDING_TOP, className)} {...props} />;
+export function PageDrawerHeader({
+  inline = false,
+  className,
+  ...props
+}: ComponentProps<'div'> & { inline?: boolean }) {
+  // `inline` puts a title and one secondary control on a single row; otherwise they stack.
+  return (
+    <div
+      className={cx(
+        'flex gap-0.5',
+        DRAWER_HEADER,
+        inline ? 'items-center justify-between gap-3' : 'flex-col justify-center',
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function PageDrawerFooter({ className, ...props }: ComponentProps<'div'>) {
@@ -181,7 +195,7 @@ export function PageDrawerTitle({ className, ...props }: ComponentProps<'h2'>) {
   return (
     <h2
       id={titleId}
-      className={cx('flex items-center text-base font-medium text-foreground', PAGE_TITLE_ROW, className)}
+      className={cx('flex items-center text-base font-medium text-foreground', className)}
       {...props}
     />
   );

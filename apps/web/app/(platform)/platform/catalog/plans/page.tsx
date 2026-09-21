@@ -31,7 +31,7 @@ export default async function PlansPage() {
   const addons = details.filter((d) => d.plan.kind === 'addon');
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader title="Plans & Add-ons" actions={<CreatePlanSheet />} description="Reusable packaging over the canonical catalogue. A Plan is one organization&rsquo;s base package; an Add-on stacks alongside it." />
 
       <SectionHeading>Plans</SectionHeading>

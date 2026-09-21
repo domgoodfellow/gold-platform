@@ -82,8 +82,9 @@ data: `TenantAgentRail` answers with
 one business's own rows under the caller's RLS; `PlatformAgentRail` takes no organization id at
 all and never runs "inside" a tenant, GOLD's own included — a selected organization may appear as
 Platform Agent's *context*, never as a switch of its scope. What's shared is presentation only
-(`features/agent/agent-shared.tsx`): the tabs, the message bubbles, and the unavailable-vs-empty
-distinction described at `lib/domain/assistant/platform-questions.ts`.
+(`features/agent/agent-shared.tsx`): the conversation header, the transcript, the composer, and the
+unavailable-vs-empty distinction described at `lib/domain/assistant/platform-questions.ts`. §2c
+holds the grammar.
 
 ---
 
@@ -269,10 +270,19 @@ Administration remains a separate control-plane context; it is available in the 
 desktop GOLD Internal sidebar may compose shortcuts to it for platform staff. Neither authority
 substitutes for the other, and the phone bar remains organization-only.
 
-**The application canvas has named modes.** `AppPage` owns `reading`, `form`, `standard`, `wide`
-and `full`, so an operations surface can use its workspace without every route inventing width
-classes. Forms may remain focused inside a wide configuration canvas; `AppShell` itself never
-imposes a universal content maximum.
+**The application canvas has three modes.** `AppPage` owns `fluid` (the default), `form` and
+`reading`. Operational and collection pages are `fluid`: header, local navigation, toolbar and
+content are children of one `AppPage` and share its left and right edge, and an open Configure
+rail or drawer narrows the workspace rather than changing the page. `form` and `reading` are the
+deliberate, bounded, centred layouts for one focused task. No page writes a `max-w-*` of its own.
+
+**Configure is always the last page action.** A page passes `configure` to `PageHeader`, which
+renders it after `actions`; `ConfigureTrigger` is placed nowhere else. Resources reads *Add
+resource, Configure*; Customers reads *Import, New customer, Configure*. Agent stays in the
+workspace header.
+
+**A drawer's chrome is one compact band** (`DRAWER_HEADER` in `workspace-geometry.ts`), the same
+for Configure and every create or edit form.
 
 ---
 
@@ -299,6 +309,38 @@ platform's. A business still builds report dashboards on top of it.
 `dashboard.test.ts` holds the second rule from both ends: `widget.tsx` never becomes a client
 component, and a page linking to `?widget=` reads `searchParams` — a tile that opens onto nothing
 is `navigation.test.ts`'s dead entry in another costume.
+
+---
+
+## 2c. The Agent panel
+
+**The Agent is a conversation, not a set of tabs.** Top to bottom, the panel is four regions:
+
+    Agent header  →  conversation header  →  transcript  →  composer
+
+| Region | Owner | What it holds |
+|---|---|---|
+| Agent header | `WorkspaceRightRail` | *Agent* and Close. Its geometry and breakpoints are the shell's and this panel never sets them |
+| Conversation header | `AgentConversationHeader` | The selected conversation's title (*New chat* while it is unsaved), and **History** and **New chat** on the right |
+| Transcript | `AgentTranscript` on `MessageScroller` | The only thing in the panel that scrolls. Questions sit at the end, the Agent's words at the start |
+| Composer | `AgentComposer` | A textarea above a toolbar: **Context** and **Configure** on the left, **Send** on the right |
+
+| Rule | Why |
+|---|---|
+| No Chat / Context / Activity tabs | Context and Configure are things you do while composing, and Activity was an audit list sitting in a place people read answers. The recorded tool facts remain on every run and will feed a Reports surface; the rail no longer draws them |
+| History is a Popover, never a page | The bounded list (thirty, newest activity first) is a way to switch, not a destination. Hover is `bg-hover`, the current one `bg-selected`, never `bg-muted` |
+| New chat is an unsaved state | It clears the selection and focuses the composer; nothing is written until its first question is sent |
+| The transcript is `Message`, `Bubble`, `Marker` inside `MessageScroller` | The shadcn chat set in `@gold/ui`, adapted to GOLD roles: no avatars, reactions, delivery states or regeneration, no `bg-muted`, no demo blue |
+| A `Marker` is a concise, non-speech note | *Thinking…*, *Checked 14 records*, *Tool refused*, *Action completed*, *Action failed*. Never a list of tool calls — `run-events.ts` is the one place that decides what is worth a line |
+| A proposed action sits directly beneath the response it belongs to | Two shared Buttons, **Decline** and **Approve**. Nothing happens until somebody presses Approve, and then the domain layer does it under their own session (D34) |
+| Enter sends, Shift+Enter adds a line, the field grows to a bound | The bound is `COMPOSER_MAX_HEIGHT`; past it the field scrolls inside itself, and the composer never pushes the transcript off screen |
+| Context is inspection, not configuration | A popover listing what the next turn is given, using only facts GOLD has: the business, the workspace, the record open on the page, the business's time zone. It follows navigation. A row for something that does not exist (an attachment, a connected source the loop does not read) is not drawn |
+| Configure is runtime only | Today one control has a behaviour behind it — whether the open record is named — and a link to *Connections & permissions* for those who may manage them. Durable settings stay in Settings and Platform; a control is added the day something honours it, never before |
+| No Attachment button until attachments exist | Reserving room is fine; a dead control is not |
+| Popovers never outgrow the rail | `max-w-(--radix-popover-content-available-width)` and collision padding, opening above the composer, so the whole composition holds at the rail's 320px minimum and on a phone |
+| Neither popover shows a secret or GOLD's economics | The same rule as every tenant screen (D45) |
+
+`agent-conversations.test.ts` reads the source for each of these; nothing here mounts a component.
 
 ---
 

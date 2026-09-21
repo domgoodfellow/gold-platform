@@ -2,7 +2,6 @@ import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageHeader } from '@/components/containers/page-header';
 import { ButtonLink } from '@/components/controls/button';
-import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import {
   CreateCustomerSheetProvider,
   CreateCustomerTrigger,
@@ -36,6 +35,9 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
   const salesEnabled = modules.has('reception');
   const visibleStages = salesEnabled ? stages : [];
   const mayConfigure = organization.capabilities.includes('field.manage');
+  // The database refuses an import from a role without `integration.manage`; the button follows
+  // the organization's own capability, never platform authority, and only when the module is on.
+  const mayImport = modules.has('integrations') && organization.capabilities.includes('integration.manage');
   const customers = await listCustomers(db, {
     organizationId,
     search,
@@ -43,15 +45,14 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
   });
 
   return (
-    <AppPage width="wide">
+    <AppPage>
       <CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions}>
         <PageHeader
           title={areaLabel('customers')}
           description="People and businesses this organization works for."
           actions={
             <>
-              {mayConfigure ? <ConfigureTrigger /> : null}
-              {modules.has('integrations') ? (
+              {mayImport ? (
                 <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="secondary">
                   Import
                 </ButtonLink>
@@ -59,6 +60,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
               <CreateCustomerTrigger />
             </>
           }
+          configure={mayConfigure}
         />
         {mayConfigure ? (
           <ConfigureRegistrar

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { cx } from '../class-names';
 import { PageCrumbs, type Crumb } from './workspace-crumbs';
+import { ConfigureTrigger } from './workspace-right-rail';
 
 export type PageHeaderCrumb = Crumb;
 
@@ -14,6 +15,10 @@ export type PageHeaderCrumb = Crumb;
  * client code. Presentation only: no route, no capability, no domain knowledge. A page decides
  * which actions to offer; hiding one is courtesy, never the security boundary.
  *
+ * **Configure is always the last action.** It opens the right-hand rail, so it sits nearest that
+ * edge, after every business action. A page asks for it with `configure` and never places it, which
+ * is what makes the order impossible to get wrong; `ConfigureTrigger` is rendered nowhere else.
+ *
  * `crumbs` are ancestors only; `title` is the current page and the page's single `<h1>`.
  */
 export function PageHeader({
@@ -22,6 +27,7 @@ export function PageHeader({
   description,
   meta,
   actions,
+  configure = false,
   className,
 }: {
   title: ReactNode;
@@ -29,7 +35,10 @@ export function PageHeader({
   description?: ReactNode;
   /** Short, secondary facts about the record — a schedule window, a status — under the title. */
   meta?: ReactNode;
+  /** Business actions, in reading order. Never Configure — see `configure`. */
   actions?: ReactNode;
+  /** Offers Configure, rendered after `actions`. Courtesy only; the panel's own writes are guarded by RLS. */
+  configure?: boolean;
   /** Replaces the default bottom margin (`mb-6`) where the parent already spaces its children. */
   className?: string;
 }) {
@@ -41,7 +50,12 @@ export function PageHeader({
         {description ? <p className="mt-1 max-w-3xl text-sm text-muted">{description}</p> : null}
         {meta ? <div className="mt-1 text-sm text-muted">{meta}</div> : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions || configure ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {actions}
+          {configure ? <ConfigureTrigger /> : null}
+        </div>
+      ) : null}
     </header>
   );
 }

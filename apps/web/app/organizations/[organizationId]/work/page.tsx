@@ -18,7 +18,6 @@ import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items
 import { requireOrganization } from '@/lib/route/organization';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageHeader } from '@/components/containers/page-header';
-import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 
 export const dynamic = 'force-dynamic';
@@ -50,7 +49,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
   const mayConfigure = can('field.manage');
 
   return (
-    <AppPage width="full">
+    <AppPage>
       {mayConfigure ? (
         <ConfigureRegistrar
           title="Work configuration"
@@ -73,7 +72,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
           />
         </ConfigureRegistrar>
       ) : null}
-      <PageHeader title={areaLabel('work')} actions={mayConfigure ? <ConfigureTrigger /> : null} />
+      <PageHeader title={areaLabel('work')} configure={mayConfigure} />
       <WorkList
         organizationId={organizationId}
         role={organization.role}

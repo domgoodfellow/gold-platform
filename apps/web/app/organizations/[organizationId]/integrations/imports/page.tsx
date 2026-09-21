@@ -22,7 +22,7 @@ export default async function ImportRunsPage({
   params,
 }: PageProps<'/organizations/[organizationId]/integrations/imports'>) {
   const { organizationId } = await params;
-  const { db } = await requireOrganization(organizationId);
+  const { db, organization } = await requireOrganization(organizationId);
 
   const [runs, resources, connections] = await Promise.all([
     listImportRuns(db, { organizationId }),
@@ -40,9 +40,11 @@ export default async function ImportRunsPage({
         crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]}
         description="Every import this business has run, newest first."
         actions={
-          <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">
-            Import file
-          </ButtonLink>
+          organization.capabilities.includes('integration.manage') ? (
+            <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">
+              Import file
+            </ButtonLink>
+          ) : null
         }
       />
 

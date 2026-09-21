@@ -6,7 +6,6 @@ import { DatePicker } from '@/components/controls/date-picker';
 import { Toolbar } from '@/components/display/data';
 import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/containers/page-header';
-import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
 import Link from 'next/link';
 import { ScheduleConfiguration } from '@/features/scheduling/configuration/schedule-configuration';
@@ -61,7 +60,7 @@ export default async function SchedulePage({
   const dayHref = (isoValue: string) => `/organizations/${organizationId}/schedule?on=${isoValue}`;
 
   return (
-    <AppPage width="full">
+    <AppPage>
       {mayConfigure ? (
         <ConfigureRegistrar
           title="Schedule configuration"
@@ -92,7 +91,7 @@ export default async function SchedulePage({
             </Link>
           </>
         }
-        actions={mayConfigure ? <ConfigureTrigger /> : null}
+        configure={mayConfigure}
       />
 
       {/* **A day is picked, not scrolled to.** Previous and Next were the whole of it, so

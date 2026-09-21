@@ -4,7 +4,6 @@ import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageHeader } from '@/components/containers/page-header';
 import { SectionHeading } from '@/components/containers/section';
-import { ConfigureTrigger } from '@/components/containers/workspace-right-rail';
 import { ButtonLink } from '@/components/controls/button';
 import { Badge, DefinitionList, Detail } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
@@ -57,7 +56,7 @@ export default async function TwilioProviderPage({ searchParams }: PageProps<'/p
   const organizationNames = Object.fromEntries(standings.map((row) => [row.organizationId, row.organizationName]));
 
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader
         title="Twilio"
         crumbs={[{ label: 'Infrastructure' }, { label: 'Providers', href: '/platform/providers' }]}
@@ -68,7 +67,7 @@ export default async function TwilioProviderPage({ searchParams }: PageProps<'/p
             {readiness.summary}
           </span>
         }
-        actions={<ConfigureTrigger />}
+        configure
       />
 
       <nav aria-label="Twilio" className="mb-6 flex gap-1 border-b border-border">

@@ -80,6 +80,26 @@ export function deriveConversationTitle(question: string): string {
 }
 
 /**
+ * What the person has open when they ask: the workspace, and a record in it. Application state,
+ * never a tenant's own words — the workspace is navigation's label and the record an id, checked
+ * here to be one, so nothing a browser typed becomes a sentence in the prompt.
+ */
+export type Viewing = { workspace: string | null; recordId: string | null };
+
+const RECORD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function describeViewing(viewing: Viewing | null | undefined): string {
+  if (!viewing?.workspace) return '';
+  const workspace = viewing.workspace.replace(/[^\p{L}\p{N} &'-]/gu, '').slice(0, 60);
+  if (!workspace) return '';
+  const record =
+    viewing.recordId && RECORD_ID.test(viewing.recordId)
+      ? `, on one record there (id ${viewing.recordId})`
+      : '';
+  return ` The person asking has the ${workspace} workspace open${record}.`;
+}
+
+/**
  * How much of a conversation's past an answering request may carry. Bounded twice on purpose —
  * here, and again in `apps/api/app/ai/loop.py`, which cannot assume its caller was careful. The
  * numbers are restated there because the two runtimes share no code.
@@ -266,7 +286,13 @@ async function priorTurnsOf(
  */
 export async function askQuestion(
   db: Db,
-  input: { organizationId: string; question: string; conversationId?: string | null },
+  input: {
+    organizationId: string;
+    question: string;
+    conversationId?: string | null;
+    /** Where the person is, if the caller knows. Left out, nothing about it is sent. */
+    viewing?: Viewing | null;
+  },
 ): Promise<AgentRun> {
   const actor = await requireActor(db);
 
@@ -344,7 +370,7 @@ export async function askQuestion(
       context: `Today is ${new Intl.DateTimeFormat('en-CA', {
         timeZone: organization.timezone,
         dateStyle: 'full',
-      }).format(new Date())} in ${organization.timezone}, which is the time zone this business works in. Any date you give must be in that zone.`,
+      }).format(new Date())} in ${organization.timezone}, which is the time zone this business works in. Any date you give must be in that zone.${describeViewing(input.viewing)}`,
     });
     outcome = answer.outcome;
     text = answer.text;

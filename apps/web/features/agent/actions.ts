@@ -9,6 +9,7 @@ import {
   type AgentRun,
 } from '@/lib/domain/assistant/questions';
 import { DomainError } from '@/lib/domain/errors';
+import { resolveAgentViewing } from './agent-context';
 
 /**
  * What an Agent action hands back. `runs` is the transcript of the conversation it touched,
@@ -39,12 +40,18 @@ export async function askAction(
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
   const conversationId = String(formData.get('conversationId') ?? '') || null;
+  // Where the person is comes from the path, re-derived here against navigation's own areas — a
+  // label the browser sent would be a sentence somebody else wrote into the prompt. The Configure
+  // popover's switch can withhold the open record; it can never add anything.
+  const viewing = resolveAgentViewing(String(formData.get('pathname') ?? ''));
+  if (formData.get('includeRecord') !== 'on') viewing.recordId = null;
 
   let state: AskActionState;
   try {
     const run = await askQuestion(db, {
       organizationId,
       conversationId,
+      viewing,
       question: String(formData.get('question') ?? ''),
     });
     state = {

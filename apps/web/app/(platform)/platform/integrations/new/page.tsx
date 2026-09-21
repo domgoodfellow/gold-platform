@@ -4,7 +4,7 @@ import { ConnectorForm } from '@/features/platform/integrations/connector-form';
 
 export default function NewConnectorPage() {
   return (
-    <AppPage width="full">
+    <AppPage>
       <PageHeader title="New connector" crumbs={[{ label: 'Integrations', href: '/platform/integrations' }]} />
       <ConnectorForm connector={null} />
     </AppPage>

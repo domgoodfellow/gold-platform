@@ -37,13 +37,13 @@ export function ConfigureRegistrar({
   return (
     <PageDrawer open={configureOpen} onOpenChange={setConfigureOpen}>
       <PageDrawerContent className="gap-0">
-        <PageDrawerHeader className="border-b border-border">
+        <PageDrawerHeader inline className="border-b border-border">
           <PageDrawerTitle>{title}</PageDrawerTitle>
           <Link
             href={settingsHref}
-            className={cx('flex items-center gap-1 text-xs text-muted underline-offset-4 hover:underline', FOCUS_RING)}
+            className={cx('flex shrink-0 items-center gap-1 text-xs text-muted underline-offset-4 hover:underline', FOCUS_RING)}
           >
-            Open full settings
+            Full settings
             <ArrowRight aria-hidden size={12} />
           </Link>
         </PageDrawerHeader>
