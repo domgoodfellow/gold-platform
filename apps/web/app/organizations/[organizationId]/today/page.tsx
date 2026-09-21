@@ -4,7 +4,6 @@ import { listMessageDeliveries } from '@/lib/domain/automation/templates';
 import { listCalls } from '@/lib/domain/reception/calls';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
-import { computeReadiness } from '@/lib/domain/tenancy/lifecycle';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { listRecentActivity } from '@/lib/domain/timeline/timeline';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
@@ -20,15 +19,13 @@ export default async function TodayPage({
 }: PageProps<'/organizations/[organizationId]/today'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  const inSetup = organization.operationalState === 'setup';
   const date = todayInZone(organization.timezone);
   const within = zonedDayRange(date, organization.timezone);
-  const [schedule, workItems, types, enabledModules, setupReadiness, activity] = await Promise.all([
+  const [schedule, workItems, types, enabledModules, activity] = await Promise.all([
     listSchedule(db, { organizationId, within, on: { date, timeZone: organization.timezone } }),
     listWorkItems(db, { organizationId }),
     listWorkItemTypes(db, { organizationId }),
     listUsableModules(db, { organizationId }),
-    inSetup ? computeReadiness(db, { organizationId }) : Promise.resolve(null),
     listRecentActivity(db, { organizationId, limit: 50 }),
   ]);
   const automationsOn = enabledModules.has('automations');
@@ -52,13 +49,11 @@ export default async function TodayPage({
       organizationId={organizationId}
       timezone={organization.timezone}
       date={date}
-      inSetup={inSetup}
       typesConfigured={types.length > 0}
       open={open}
       committed={committed}
       unscheduled={unscheduled}
       workItems={workItems}
-      setupRemaining={setupReadiness ? setupReadiness.blockers.length : null}
       activity={activity}
       failedRuns={failedRuns}
       failedMessages={failedMessages}

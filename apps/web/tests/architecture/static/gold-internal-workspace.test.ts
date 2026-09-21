@@ -24,19 +24,22 @@ describe('GOLD Internal operating context composition', () => {
     expect(helper).not.toContain("organization.name === 'GOLD'");
   });
 
-  it('passes a server-resolved internal-workspace fact into the organization sidebar', () => {
-    expect(layout).toContain('findGoldInternalOrganization');
-    expect(layout).toContain('isGoldInternal={isGoldInternal}');
-    expect(shell).toContain('PLATFORM_NAV');
-    expect(shell).toContain('platformStaff && isGoldInternal');
+  it('offers Platform Administration through the switcher only — never as navigation inside GOLD', () => {
+    expect(layout).toContain('platformAdministrationAvailable({ staff, goldInternal })');
+    expect(layout).toContain('platformAdministration={platformAdministration}');
+    expect(shell).not.toMatch(/PLATFORM_NAV|PlatformPhoneNavMenu|GoldPlatformNav|isGoldInternal|platformStaff/);
+    expect(layout).not.toMatch(/isGoldInternal|platformStaff=/);
   });
 
-  it('keeps platform destinations behind one compact mobile Platform doorway when GOLD is current', () => {
-    const phoneStart = shell.indexOf('export function OrgNavBar');
-    const phone = shell.slice(phoneStart, shell.indexOf('export function SetupEntry'));
-    expect(phone).toContain('platformStaff && isGoldInternal');
-    expect(phone).toContain('PlatformPhoneNavMenu');
-    expect(phone).not.toContain('PLATFORM_NAV.map');
-    expect(shell).toContain('function PlatformPhoneNavMenu');
+  it('gives Platform Administration its own sidebar and phone bar, reading the one PLATFORM_NAV registry', () => {
+    const platformLayout = readFileSync(`${WEB}/app/(platform)/platform/layout.tsx`, 'utf8');
+    const nav = readFileSync(`${WEB}/features/platform/platform-navigation.tsx`, 'utf8');
+    expect(platformLayout).toContain('PlatformSidebar');
+    expect(platformLayout).toContain('PlatformNavBar');
+    expect(platformLayout).not.toMatch(/OrgSidebar|OrgNavBar|AREAS/);
+    expect(nav).toContain('export function PlatformSidebar');
+    expect(nav).toContain('export function PlatformNavBar');
+    // The way back into GOLD or any other business is the switcher, present at every width.
+    expect(nav).toContain('<ContextSwitcher');
   });
 });

@@ -57,7 +57,6 @@ export default async function OrganizationLayout({
   const enabledModules = activeModuleKeys(featureStates);
   const featureAvailability = availableFeatureKeys(featureStates);
   const goldInternal = await findGoldInternalOrganization(db, myOrganizations);
-  const isGoldInternal = goldInternal?.id === organizationId;
   const platformAdministration = platformAdministrationAvailable({ staff, goldInternal });
   // `requireOrganization` already proved a session exists; this is a second, deliberately
   // separate read of the same session for the one extra fact the shell shows (I11's minimal
@@ -121,8 +120,6 @@ export default async function OrganizationLayout({
       role={organization.role}
       organizations={switchable}
       platformAdministration={platformAdministration}
-      platformStaff={staff}
-      isGoldInternal={isGoldInternal}
       enabledModules={[...enabledModules]}
       featureAvailability={[...featureAvailability]}
       capabilities={organization.capabilities}
@@ -175,8 +172,6 @@ export default async function OrganizationLayout({
             enabledModules={[...enabledModules]}
             featureAvailability={[...featureAvailability]}
             capabilities={organization.capabilities}
-            platformStaff={staff}
-            isGoldInternal={isGoldInternal}
             setup={setup}
           />
         }

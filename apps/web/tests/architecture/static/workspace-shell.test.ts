@@ -168,7 +168,7 @@ describe('the Platform route uses the unified workspace shell', () => {
     expect(existsSync(`${WEB}/app/(platform)/platform/gold-bootstrap-form.tsx`)).toBe(false);
     // No pathname → title table — every Platform page renders its own PageHeader.
     expect(platformLayout).toContain('WorkspaceHeader');
-    expect(platformLayout).toContain('OrgSidebar');
+    expect(platformLayout).toContain('PlatformSidebar');
   });
 
   it('does not expose GOLD bootstrap as product UI', () => {

@@ -52,14 +52,14 @@ test('a new business enters Setup, can leave it freely, launches, and lands on T
   await expect(page.getByText('Setting up')).toHaveCount(0);
   await expect(page.getByText('Set up your business')).toHaveCount(0);
 
-  // SETUP is not a route prison: Today opens, with one restrained notice and a way back.
+  // SETUP is not a route prison: Today opens as the ordinary workspace, with no setup chrome of
+  // its own — the sidebar's one Setup row is the way back.
   await page.goto(`/organizations/${organizationId}/today`);
-  await expect(page.getByText('This business is still being set up.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Continue setup' })).toBeVisible();
+  await expect(page.getByText('This business is still being set up.')).toHaveCount(0);
   await expect(page.getByText('Setup readiness')).toHaveCount(0);
 
   // Launch.
-  await page.getByRole('link', { name: 'Continue setup' }).click();
+  await page.getByRole('link', { name: /^Setup/ }).first().click();
   await page.getByRole('button', { name: 'Launch business' }).click();
   await expect(page).toHaveURL(`/organizations/${organizationId}/today`);
 
@@ -69,7 +69,7 @@ test('a new business enters Setup, can leave it freely, launches, and lands on T
 
   // Setup remains reachable from Settings, as a reconfiguration map with no Launch.
   await page.goto(`/organizations/${organizationId}/settings`);
-  await page.getByRole('link', { name: 'Open setup' }).click();
+  await page.getByRole('link', { name: 'Setup', exact: true }).click();
   await expect(page).toHaveURL(`/organizations/${organizationId}/setup`);
   await expect(page.getByRole('heading', { level: 1, name: 'Setup' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Launch business' })).toHaveCount(0);

@@ -145,18 +145,17 @@ describe('Platform Overview follows the shared header geometry', () => {
 
 describe('the Settings hub', () => {
   const hub = read(`${ORG}/settings/page.tsx`);
+  const index = read(`${WEB}/features/settings/settings-index.tsx`);
 
-  it('stands Setup apart from the grid of durable-settings destinations', () => {
-    expect(hub.indexOf('Open setup')).toBeGreaterThan(-1);
-    expect(hub.indexOf('Open setup')).toBeLessThan(hub.indexOf('destinations.map'));
-    const grid = hub.slice(hub.indexOf('destinations.map'));
-    expect(grid).not.toContain('Open setup');
+  it('renders the configuration map through one SettingsIndex, with Setup as its own section rather than a card above it', () => {
+    expect(hub).toContain('<SettingsIndex');
+    expect(hub).not.toContain('Open setup');
   });
 
   it('gives each destination one link — its title — and no row of identical Opens', () => {
-    const grid = hub.slice(hub.indexOf('destinations.map'));
+    const grid = index.slice(index.indexOf('section.entries.map'));
     expect(grid.match(/<Link\b/g)).toHaveLength(1);
-    expect(grid).toContain('{destination.title}');
+    expect(grid).toContain('{entry.title}');
     expect(grid).not.toMatch(/>\s*Open\s*</);
     expect(grid).not.toMatch(/<Button|<input|<select/);
   });
@@ -167,7 +166,7 @@ describe('Setup owns progress; navigation only navigates', () => {
   const cockpit = read(`${WEB}/features/setup/setup-cockpit.tsx`);
 
   it('neither the sidebar row nor the phone bar item prints an x of y count', () => {
-    const entries = shell.slice(shell.indexOf('export function SetupEntry'), shell.indexOf('/** Desktop shortcut group only'));
+    const entries = shell.slice(shell.indexOf('export function SetupEntry'), shell.indexOf('export function OrgSidebar'));
     expect(entries).not.toMatch(/setup\.ready|setup\.total|SidebarMenuBadge| of \$\{/);
     expect(entries).toContain('export function SetupNavLink');
   });

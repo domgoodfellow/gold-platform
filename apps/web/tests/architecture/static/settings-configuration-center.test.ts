@@ -30,16 +30,21 @@ describe('Settings, as the Configuration Center (source scan)', () => {
     expect(frame).not.toContain('grid-cols-[13rem_minmax(0,1fr)]');
   });
 
-  it('links the remaining Settings-owned destinations from the hub', () => {
+  it('links the Settings-owned destinations from the map the hub renders', () => {
+    const map = readFileSync(
+      fileURLToPath(new URL('../../../features/settings/settings-map.ts', import.meta.url)),
+      'utf8',
+    );
+    expect(settings).toContain('offeredSections');
     for (const path of [
-      '/settings/general',
-      '/settings/branding',
-      '/settings/website',
-      '/settings/communications',
-      '/settings/features',
-      '/settings/plan',
+      'settings/general',
+      'settings/branding',
+      'settings/website',
+      'settings/communications',
+      'settings/features',
+      'settings/plan',
     ]) {
-      expect(settings).toContain(path);
+      expect(map).toContain(path);
     }
   });
 

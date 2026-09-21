@@ -3,14 +3,27 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Building2, CircleDollarSign, CreditCard, Gauge, LayoutDashboard, Landmark, Blocks, Package, Plug, TriangleAlert } from 'lucide-react';
+import type { ReactNode } from 'react';
 import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
 } from '@gold/ui/components/sidebar';
+import { AccountMenu } from '@/components/containers/account-menu';
+import { cx, FOCUS_RING } from '@/components/class-names';
+import {
+  ContextSwitcher,
+  type SwitchableOrganization,
+  type SwitcherContext,
+} from '@/components/containers/context-switcher';
 
 export const PLATFORM_NAV = [
   { label: 'Overview', href: '/platform', icon: LayoutDashboard, group: 'Platform' },
@@ -73,6 +86,77 @@ export function PlatformNavigation() {
           </SidebarGroupContent>
         </SidebarGroup>
       ))}
+    </nav>
+  );
+}
+
+/**
+ * The whole Platform Administration sidebar. It is its own context, not a section of GOLD's
+ * business navigation: the switcher in its header is how somebody returns to GOLD or any other
+ * business they belong to, and nothing here reads `AREAS`. `current` is the GOLD Internal
+ * membership `/platform` renders inside; the switcher derives Platform from the path.
+ */
+export function PlatformSidebar({
+  mark,
+  current,
+  organizations,
+  email,
+  signOutAction,
+  ...props
+}: {
+  mark: ReactNode;
+  current: Extract<SwitcherContext, { kind: 'business' }>;
+  organizations: SwitchableOrganization[];
+  email: string;
+  signOutAction: () => Promise<void>;
+} & React.ComponentProps<typeof Sidebar>) {
+  return (
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
+        <ContextSwitcher mark={mark} current={current} organizations={organizations} platformAdministration />
+      </SidebarHeader>
+      <SidebarContent>
+        <PlatformNavigation />
+      </SidebarContent>
+      <SidebarFooter className="border-t border-sidebar-border">
+        <AccountMenu email={email} signOutAction={signOutAction} />
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  );
+}
+
+/** The phone rendering of `PLATFORM_NAV`: the same registry, a scrolling bottom bar, no drawer. */
+export function PlatformNavBar() {
+  const active = activeHref(usePathname());
+
+  return (
+    <nav
+      aria-label="Platform Administration"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background md:hidden"
+    >
+      <ul className="flex gap-1 overflow-x-auto p-2">
+        {PLATFORM_NAV.map((item) => {
+          const Icon = item.icon;
+          const current = item.href === active;
+          return (
+            <li key={item.href} className="shrink-0">
+              <Link
+                href={item.href}
+                aria-current={current ? 'page' : undefined}
+                className={cx(
+                  FOCUS_RING,
+                  'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm',
+                  current ? 'bg-foreground font-medium text-background' : 'hover:bg-hover',
+                )}
+              >
+                <Icon aria-hidden size={18} className="shrink-0" />
+                <span className="min-w-0">{item.label}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }

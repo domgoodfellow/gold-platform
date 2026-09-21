@@ -109,42 +109,59 @@ was — segments, labels, groups, modules.
 **The sidebar is the desktop rendering of the IA, never its source.** Both renderings map the
 same `AREAS`; two lists that had to agree eventually would not.
 
-**The phone bar leads with the current context.** Platform Administration is GOLD's own
-organization shell plus a scope, so eligible staff (platform authority *and* a GOLD Internal
-membership) get both on a phone as on a desktop. In a business the bar reads Setup (while it
-applies), the areas, then *Platform*. Inside `/platform/**` the context is Platform, so *Platform*
-comes first — at the start of the bar, never at the far end of a scrolling row — followed by the
-same business destinations. The Platform menu is `PLATFORM_NAV`, the one Platform registry; a phone
-never gets a second list, and a user without both facts never gets the menu. The sidebar trigger is
-hidden below `md` in both contexts for that reason: the bottom bar is the phone's navigation
-(`OrgNavBar`).
+**One context at a time, and the phone bar lists that context only.** A business's bar (`OrgNavBar`)
+is Setup (while it applies) and the business's own areas. Platform Administration is another
+scope, not a section of GOLD's navigation: it has its own sidebar and its own phone bar
+(`PlatformSidebar`, `PlatformNavBar`, both reading `PLATFORM_NAV`, the one Platform registry), and
+the only door between contexts is the context switcher, in the sidebar header from `md` up and in
+the top bar below it. The switcher lists the businesses a person belongs to and, for platform
+staff with a GOLD Internal membership, Platform Administration beneath a rule; from inside
+Platform, GOLD and every other business are listed as the way back. The sidebar trigger is hidden
+below `md` because the bottom bar is the phone's navigation.
 
-**Three sections, ruled apart, in `AREA_GROUPS` order** — Operations, Records, Configuration.
-`navigation.test.ts` fails on an interleaved list: each section must be one unbroken run, and an
-operator must never reach today's work by going through settings (D23).
+**Five sections, ruled apart, in `AREA_GROUPS` order** — Work, Relationships, Operations, Tools,
+and Settings (unlabelled, one row). `navigation.test.ts` fails on an interleaved list: each
+section must be one unbroken run, and an operator must never reach today's work by going through
+settings (D23).
 
-The grouping comes from `starting_conversation.txt`'s four layers, with one deliberate difference.
-That document's third layer is *business modules*, and it cannot be a section here: *module* is
-the billing axis (D25), and Reports, Assets, Automations and Reception are all modules — so a
-section by that name would have to hold areas belonging to all three of the others. Two axes
-crossed in one list is how a sidebar stops making sense. These three are named for what an
-operator does.
+**The test for a permanent row:** would somebody enter this area to do ongoing work, or are they
+configuring how another workspace behaves? The first kind is a row; the second is reached from
+Settings (`Area.sidebar: false`, the route, module and capability gating unchanged).
+
+*Module* is the billing axis (D25), and Reports, Assets, Automations and Reception are all
+modules — so no section is named for one. These are named for what an operator does.
 
 | Section | Holds | Why |
 |---|---|---|
-| Operations | Today, Work, Schedule, Resources, Ask, Reports | The loop that gets work done, and what it came to |
-| Records | Customers, Calls, Locations, Assets | Who the work is for and what it is done to — entities rather than activities |
-| Configuration | Pricing, Automations, Custom fields, Team, Settings | What a business sets up once and adjusts rarely |
+| Work | Today, Work, Schedule | The loop that gets work done |
+| Relationships | Customers, Calls | Who the work is for, and how they reach the business |
+| Operations | Resources, Locations, Assets | What the work is done with, and where |
+| Tools | Automations, Reports | Building and observing rules, and reading what a period came to |
+| (Settings) | Settings | Where the business is configured — set apart by the rule above it |
+
+There is no Ask row. The Agent is a rail on every workspace and understands the page and record it
+is opened from; the `assistant` module and `assistant.ask` capability are unchanged, and the old
+`/ask` address redirects to Today.
 
 A section whose every area belongs to a switched-off module renders as nothing at all, heading
 included — naming a part of the application that is not there for that business would be worse
 than the gap.
 
-**Settings is one organization Area, not a second application shell.** A first-class product
-workspace has one canonical owner and is not repeated as a Settings destination — Pricing,
-Automations, Custom fields and Team each own their own row in this table, not a tab
-or a section under Settings. Settings holds what has no other home: identity, branding, opening
-hours, connections, and the platform-billing plane (`features/settings/settings-navigation.tsx`).
+**Settings is the configuration map, not a second application shell.** `settings-map.ts` groups
+every place a business is configured by the concern it answers — Business, Work & scheduling,
+Services & pricing, Customers & data, People & access, Brand & public presence, Connections,
+Products & features, Plan & usage, Setup & launch — and `SettingsIndex` renders it: one link per
+entry, its title stretched over its card. Each entry links to the route that owns the
+configuration (Pricing, Custom fields, Team and Apps and files keep their own routes) and is
+offered only when the sidebar's own entitlement and capability predicates would offer that area,
+so the map cannot show a door the sidebar would hide. Guided setup and the Agent target an entry's
+`key`, never a hand-typed URL.
+
+**Setup is a lifecycle with one shell affordance.** A business in SETUP is entered through Setup
+(`organizationHomeHref`), and the sidebar (or phone bar) keeps one plain Setup row while it lasts
+— no badge, no count, no readiness query on every request. Today carries no setup chrome. After
+Launch the row is gone and Setup remains reviewable from Settings' *Setup & launch*, worded so
+Launch never sounds available again.
 
 **Automations is a collection with a detail route, not a page of open editors.** `/automations`
 holds three URL-backed sibling views — Rules, Messages, Activity (`?view=`, Tabs presentation,

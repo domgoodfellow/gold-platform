@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { DividedList, EmptyState } from '@/components/containers/section';
 import { PageHeader } from '@/components/containers/page-header';
-import { ButtonLink } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { Widget, WidgetGrid, WidgetPanel } from '@/components/display/widget';
@@ -25,18 +24,15 @@ function formatBusinessDate(date: string): string {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
-export function TodayDashboard({ organizationId, timezone, date, inSetup, typesConfigured, open, committed, unscheduled, workItems, setupRemaining, activity, failedRuns, failedMessages, todaysCalls, unwrittenCalls, automationsOn, receptionOn }: {
+export function TodayDashboard({ organizationId, timezone, date, typesConfigured, open, committed, unscheduled, workItems, activity, failedRuns, failedMessages, todaysCalls, unwrittenCalls, automationsOn, receptionOn }: {
   organizationId: string;
   timezone: string;
   date: string;
-  inSetup: boolean;
   typesConfigured: boolean;
   open?: string;
   committed: Commitment[];
   unscheduled: WorkItem[];
   workItems: WorkItem[];
-  /** Required setup areas still standing between this business and Launch, while it is in SETUP; null once LIVE. */
-  setupRemaining: number | null;
   activity: TimelineEntry[];
   failedRuns: AutomationRun[];
   failedMessages: MessageDelivery[];
@@ -59,19 +55,6 @@ export function TodayDashboard({ organizationId, timezone, date, inSetup, typesC
       }
     />
   );
-  // A deliberate visit to Today during SETUP gets one sentence and a way back — not the checklist,
-  // which lives on Setup. Nothing else on this screen changes with the lifecycle state.
-  const setupNotice = inSetup ? (
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-border p-3 text-sm">
-      <p className="min-w-0 flex-1 basis-64">
-        This business is still being set up.{' '}
-        {setupRemaining
-          ? `${setupRemaining} required area${setupRemaining === 1 ? '' : 's'} remain${setupRemaining === 1 ? 's' : ''}.`
-          : 'Nothing blocks launch.'}
-      </p>
-      <ButtonLink href={`/organizations/${organizationId}/setup`} tone="secondary" size="small">Continue setup</ButtonLink>
-    </div>
-  ) : null;
   const committedTable = <DataTable rows={committed} rowKey={(row) => row.workItemId} empty="Nothing is scheduled for today." columns={[
     { key: 'title', header: 'Job', emphasis: 'primary', cell: (row) => <Link href={workHref(row.workItemId)} className="underline underline-offset-4">{row.title}</Link> },
     { key: 'window', header: 'When', cell: (row) => <span className="tabular-nums">{formatWindow(row.window, timezone)}</span> },
@@ -104,5 +87,5 @@ export function TodayDashboard({ organizationId, timezone, date, inSetup, typesC
   ] : [];
   const callsWidget = receptionOn ? <Widget key="calls" title="Calls" value={todaysCalls.length} note={unwrittenCalls ? `${unwrittenCalls} not written up` : undefined} href={`/organizations/${organizationId}/calls`}>{todaysCalls.length === 0 ? <EmptyState weight="subtle">No calls today.</EmptyState> : <DividedList className="text-sm">{todaysCalls.slice(0, PREVIEW).map((call) => <li key={call.id} className="flex items-baseline gap-2 py-1.5"><span className="min-w-0 truncate">{call.direction === 'inbound' ? 'Inbound' : 'Outbound'} · {call.toNumber}</span><span className="ml-auto shrink-0 text-muted">{call.outcome?.name ?? call.status.replace('_', ' ')}</span></li>)}</DividedList>}</Widget> : null;
   const operations = [committedWidget, waitingWidget, ...automationWidgets, callsWidget].filter(Boolean);
-  return <AppPage width="full">{dateHeading}{setupNotice}{!typesConfigured ? <EmptyState className="mb-5">No kinds of work are defined yet. <Link href={`/organizations/${organizationId}/work/configuration`} className="underline underline-offset-4">Configure work</Link></EmptyState> : null}<WidgetGrid>{operations}{activityWidget}</WidgetGrid></AppPage>;
+  return <AppPage width="full">{dateHeading}{!typesConfigured ? <EmptyState className="mb-5">No kinds of work are defined yet. <Link href={`/organizations/${organizationId}/work/configuration`} className="underline underline-offset-4">Configure work</Link></EmptyState> : null}<WidgetGrid>{operations}{activityWidget}</WidgetGrid></AppPage>;
 }

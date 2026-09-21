@@ -15,7 +15,7 @@ import {
 } from './agent-shared';
 import type { AgentRun } from '@/lib/domain/assistant/questions';
 import { AREAS, currentSegment } from '@/lib/navigation';
-import { askAction, decideAction, type AskActionState } from '@/app/organizations/[organizationId]/ask/actions';
+import { askAction, decideAction, type AskActionState } from './actions';
 
 const INITIAL: AskActionState = { error: null };
 

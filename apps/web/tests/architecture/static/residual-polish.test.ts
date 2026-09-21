@@ -151,7 +151,8 @@ describe('the shell asks one question — is this business in SETUP — and runs
 
   it('both derive it from the lifecycle fact already on the organization', () => {
     expect(orgLayout).toContain("const setup = organization.operationalState === 'setup';");
-    expect(platformLayout).toContain("const setup = organization.operationalState === 'setup';");
+    // Platform Administration is not a business and draws no lifecycle treatment.
+    expect(platformLayout).not.toContain('operationalState === ');
   });
 
   it('the shell components take a boolean, and no count type or prop remains', () => {

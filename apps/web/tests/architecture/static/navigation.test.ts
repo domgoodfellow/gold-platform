@@ -14,6 +14,7 @@ import {
   visibleAreas,
   type Module,
 } from '@/lib/navigation';
+import { SETTINGS_SECTIONS } from '@/features/settings/settings-map';
 import { AREA_ICONS } from '@/app/organizations/[organizationId]/org-shell';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
@@ -75,7 +76,7 @@ describe('the operator shell navigation', () => {
   it('gives every area an icon for the tablet rail (M11)', () => {
     // The rail renders icon-only between `md` and `lg` — an area with no entry here would
     // render blank rather than failing loudly.
-    for (const area of AREAS) {
+    for (const area of AREAS.filter((entry) => entry.sidebar !== false)) {
       expect(AREA_ICONS[area.segment], `"${area.segment}" has no rail icon`).toBeDefined();
     }
   });
@@ -115,8 +116,8 @@ describe('the operator shell navigation', () => {
       (group, index, all) => group !== all[index - 1],
     );
     expect(runs).toEqual(order);
-    expect(order[0]).toBe('operations');
-    expect(order[order.length - 1]).toBe('configuration');
+    expect(order[0]).toBe('work');
+    expect(order[order.length - 1]).toBe('settings');
   });
 
   it('leads with the area an operator opens the application for', () => {
@@ -135,15 +136,36 @@ describe('the operator shell navigation', () => {
     );
     expect(total).toBe(AREAS.length);
   });
-  it('keeps Platform as one compact phone doorway instead of appending every platform destination', () => {
+  it('keeps Platform Administration out of a business’s navigation, on every rendering', () => {
     const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
-    const phone = shell.slice(shell.indexOf('export function OrgNavBar('), shell.indexOf('export function SetupEntry'));
+    expect(shell).not.toMatch(/PLATFORM_NAV|PlatformPhoneNavMenu|GoldPlatformNav|inPlatformContext/);
+    expect(shell).not.toMatch(/platformStaff|isGoldInternal/);
+  });
 
-    expect(phone).toContain('PlatformPhoneNavMenu');
-    expect(phone).not.toContain('PLATFORM_NAV.map');
-    expect(shell).toContain('function PlatformPhoneNavMenu');
-    expect(shell).toContain('DropdownMenuContent');
-    expect(shell).toContain('PLATFORM_NAV.map');
+  it('draws no permanent row for the Agent — Ask is a rail on every workspace, not an area', () => {
+    expect(AREAS.some((area) => area.segment === 'ask')).toBe(false);
+    expect(AREA_ICONS.ask).toBeUndefined();
+    expect(existsSync(`${ROUTES}/ask`)).toBe(false);
+    // A bookmark still lands somewhere true; the assistant module and capability are untouched.
+    const config = readFileSync(`${WEB_ROOT}/next.config.ts`, 'utf8');
+    expect(config).toContain('/organizations/:organizationId/ask');
+    expect(MODULES.some((sold) => sold.key === 'assistant')).toBe(true);
+  });
+
+  it('keeps only places somebody works in the sidebar, and configuration behind Settings', () => {
+    const inSidebar = AREAS.filter((area) => area.sidebar !== false).map((area) => area.segment);
+    expect(inSidebar).toEqual([
+      'today', 'work', 'schedule',
+      'customers', 'calls',
+      'resources', 'locations', 'assets',
+      'automations', 'reports',
+      'settings',
+    ]);
+    for (const segment of ['pricing', 'fields', 'roles', 'integrations', 'setup']) {
+      const area = AREAS.find((entry) => entry.segment === segment)!;
+      expect(area.sidebar, `${segment} is configuration and belongs behind Settings`).toBe(false);
+      expect(area.group).toBe('settings');
+    }
   });
 });
 
@@ -222,18 +244,17 @@ describe('modules', () => {
     // And the two that are modules are gone. This is a module gate, not the capability-relevance
     // layer Slice E added: a role that cannot manage locations still sees Locations and is told
     // why (I12, evolved — most areas stay ungated on capability), whereas a module the business
-    // never bought is not part of that business at all. `pricing`/`assets` are still absent here
-    // purely because their module is off, independent of any capability.
-    expect(shown.map((area) => area.segment)).not.toContain('pricing');
+    // never bought is not part of that business at all. `assets` is absent here
+    // purely because its module is off, independent of any capability.
     expect(shown.map((area) => area.segment)).not.toContain('assets');
   });
 
   it('shows an area once its module is on', () => {
-    const shown = areasIn('records', new Set(['assets']));
+    const shown = areasIn('operations', new Set(['assets']));
     expect(shown.map((area) => area.segment)).toContain('assets');
 
-    const withBilling = areasIn('configuration', new Set(['billing']));
-    expect(withBilling.map((area) => area.segment)).toContain('pricing');
+    const withAutomations = areasIn('tools', new Set(['automations']));
+    expect(withAutomations.map((area) => area.segment)).toContain('automations');
 
     // And with nothing passed, every area still in the sidebar: a caller with no business in
     // hand means all of it, on the module axis. `sidebar: false` areas (only Guided setup today)
@@ -259,7 +280,6 @@ describe('canonical Feature-level navigation gating', () => {
   const calls = AREAS.find((area) => area.segment === 'calls')!;
 
   it('is defined for the areas the audit named, using real catalogue feature keys', () => {
-    expect(AREAS.find((a) => a.segment === 'ask')?.featureKeys).toEqual(['ask_gold']);
     expect(AREAS.find((a) => a.segment === 'reports')?.featureKeys).toEqual([
       'saved_dashboards',
       'saved_reports',
@@ -291,25 +311,25 @@ describe('canonical Feature-level navigation gating', () => {
   it('hides a feature-specific area once every one of its backing Features is unavailable (disabled)', () => {
     const enabled = new Set(['reception']);
     const withAllActive = new Set(calls.featureKeys);
-    expect(areasIn('records', enabled, undefined, withAllActive).map((a) => a.segment)).toContain('calls');
+    expect(areasIn('relationships', enabled, undefined, withAllActive).map((a) => a.segment)).toContain('calls');
 
     // Every Calls-backing Feature disabled (the activation override cleared them from
     // `availableFeatureKeys`) — the area disappears even though the legacy module is still on.
     const noneActive = new Set<string>();
-    expect(areasIn('records', enabled, undefined, noneActive).map((a) => a.segment)).not.toContain('calls');
+    expect(areasIn('relationships', enabled, undefined, noneActive).map((a) => a.segment)).not.toContain('calls');
   });
 
   it('restores the area once a backing Feature is available again (override removed)', () => {
     const enabled = new Set(['reception']);
     const oneRestored = new Set(['outbound_calling']);
-    expect(areasIn('records', enabled, undefined, oneRestored).map((a) => a.segment)).toContain('calls');
+    expect(areasIn('relationships', enabled, undefined, oneRestored).map((a) => a.segment)).toContain('calls');
   });
 
   it('hides a feature-specific area the organization is simply not entitled to', () => {
     // No Calls-backing key present at all — never entitled, not merely disabled — same absence.
     const enabled = new Set(['reception']);
     const unentitled = new Set(['pipeline']); // a sibling Feature under the same legacy module key
-    expect(areasIn('records', enabled, undefined, unentitled).map((a) => a.segment)).not.toContain('calls');
+    expect(areasIn('relationships', enabled, undefined, unentitled).map((a) => a.segment)).not.toContain('calls');
   });
 
   it('keeps a feature-specific area visible when it is merely setup_required rather than off', () => {
@@ -317,7 +337,7 @@ describe('canonical Feature-level navigation gating', () => {
     // that is implemented, entitled and active still counts even with nothing configured yet.
     // Only 'unavailable' (not implemented, not entitled, or disabled) is ever absent from the set.
     const available = new Set(['outbound_calling']);
-    expect(areasIn('records', new Set(['reception']), undefined, available).map((a) => a.segment)).toContain(
+    expect(areasIn('relationships', new Set(['reception']), undefined, available).map((a) => a.segment)).toContain(
       'calls',
     );
   });
@@ -326,15 +346,15 @@ describe('canonical Feature-level navigation gating', () => {
     const enabled = new Set(['reception']);
     const available = new Set(calls.featureKeys);
 
-    const noCapability = areasIn('records', enabled, new Set<Capability>(), available);
+    const noCapability = areasIn('relationships', enabled, new Set<Capability>(), available);
     expect(noCapability.map((a) => a.segment)).not.toContain('calls');
 
-    const withCapability = areasIn('records', enabled, new Set<Capability>(['call.place']), available);
+    const withCapability = areasIn('relationships', enabled, new Set<Capability>(['call.place']), available);
     expect(withCapability.map((a) => a.segment)).toContain('calls');
   });
 
   it('leaves kernel areas untouched by feature availability, empty or not', () => {
-    const shown = areasIn('operations', new Set(), undefined, new Set());
+    const shown = AREA_GROUPS.flatMap((group) => areasIn(group.key, new Set(), undefined, new Set()));
     for (const segment of ['today', 'work', 'schedule']) {
       expect(shown.map((a) => a.segment)).toContain(segment);
     }
@@ -352,11 +372,11 @@ describe('canonical Feature-level navigation gating', () => {
 
     // The legacy module-only call (no featureAvailability) would show it — the very gap this
     // slice closes for callers that do supply the canonical resolution.
-    expect(areasIn('records', enabledAtModuleLevel).map((a) => a.segment)).toContain('calls');
+    expect(areasIn('relationships', enabledAtModuleLevel).map((a) => a.segment)).toContain('calls');
 
     // With featureAvailability supplied, Calls is correctly absent despite the module key
     // reading "active", because none of its own backing Features are in the available set.
-    expect(areasIn('records', enabledAtModuleLevel, undefined, onlyPipelineActive).map((a) => a.segment)).not.toContain(
+    expect(areasIn('relationships', enabledAtModuleLevel, undefined, onlyPipelineActive).map((a) => a.segment)).not.toContain(
       'calls',
     );
   });
@@ -393,28 +413,28 @@ describe('capability-relevance filtering (Slice E)', () => {
     const reports = AREAS.find((area) => area.segment === 'reports')!;
     expect(reports.relevantCapabilities).toBeDefined();
 
-    const shown = areasIn('operations', undefined, new Set());
+    const shown = areasIn('tools', undefined, new Set());
     expect(shown.map((area) => area.segment)).not.toContain('reports');
   });
 
   it('shows a feature-specific area to a role holding at least one of its relevant capabilities', () => {
-    const shown = areasIn('operations', undefined, new Set(['report.read']));
+    const shown = areasIn('tools', undefined, new Set(['report.read']));
     expect(shown.map((area) => area.segment)).toContain('reports');
   });
 
   it('layers on top of the module gate rather than replacing it', () => {
     // Entitled to reporting (module on) but the role itself lacks both report capabilities:
     // still hidden. Neither gate alone decides this — both must pass.
-    const moduleOnCapabilityOff = areasIn('operations', new Set(['reporting']), new Set());
+    const moduleOnCapabilityOff = areasIn('tools', new Set(['reporting']), new Set());
     expect(moduleOnCapabilityOff.map((area) => area.segment)).not.toContain('reports');
 
     // The reverse: the role could read reports, but the business never bought reporting.
-    const moduleOffCapabilityOn = areasIn('operations', new Set(), new Set(['report.read']));
+    const moduleOffCapabilityOn = areasIn('tools', new Set(), new Set(['report.read']));
     expect(moduleOffCapabilityOn.map((area) => area.segment)).not.toContain('reports');
   });
 
   it('passing no capabilities at all shows every area the module gate allows, same as before Slice E', () => {
-    const withModuleOnly = areasIn('operations', new Set(['reporting']));
+    const withModuleOnly = areasIn('tools', new Set(['reporting']));
     expect(withModuleOnly.map((area) => area.segment)).toContain('reports');
   });
 });
@@ -596,42 +616,34 @@ describe('a switch leads to its inputs', () => {
 });
 
 /**
- * Pricing, Automations, Custom fields and Team are first-class organization
- * workspaces, each with one canonical sidebar Area — the information-architecture correction
- * that reversed a Settings migration which had made Settings the primary door to all four
- * (`CLAUDE.md`: "Settings must not become a second application shell containing first-class
- * organization workspaces").
+ * Automations is a workspace; Pricing, Custom fields, Team and Integrations are configuration.
+ * Ongoing work earns a permanent row, configuring how another workspace behaves is reached from
+ * the Settings map — but every one of them stays a real, directly addressable route with its
+ * module and capability gating unchanged, so nothing about who may do what moved.
  */
-describe('Pricing, Automations, Custom fields and Team are canonical sidebar areas', () => {
-  const RESTORED = ['pricing', 'automations', 'fields', 'roles'] as const;
+describe('Automations is a workspace; the configuration-only areas sit behind Settings', () => {
+  it('keeps Automations in the sidebar, gated by its module and capability', () => {
+    expect(areasIn('tools', new Set(['automations']), new Set(['automation.manage']))
+      .map((area) => area.segment)).toContain('automations');
+    expect(areasIn('tools', new Set(), new Set(['automation.manage']))
+      .map((area) => area.segment)).not.toContain('automations');
+  });
 
-  it('is a real, directly addressable area with its href and capability gating unchanged, and no longer hidden behind Settings', () => {
-    for (const segment of RESTORED) {
+  it('keeps each configuration-only area addressable through the one href function, and out of the sidebar', () => {
+    for (const segment of ['pricing', 'fields', 'roles', 'integrations'] as const) {
       const area = AREAS.find((entry) => entry.segment === segment);
       expect(area, `${segment} was removed from AREAS entirely`).toBeDefined();
-      expect(area?.sidebar).not.toBe(false);
-      // Still resolves through the one href function — no second path was added for it.
       expect(areaHref('org-1', segment)).toBe(`/organizations/org-1/${segment}`);
+      expect(
+        AREA_GROUPS.flatMap((group) => areasIn(group.key)).map((entry) => entry.segment),
+      ).not.toContain(segment);
     }
   });
 
-  it('appears in the sidebar once its module/entitlement and capability conditions permit it', () => {
-    expect(areasIn('configuration', new Set(['billing']), new Set(['price.manage']))
-      .map((area) => area.segment)).toContain('pricing');
-    expect(areasIn('configuration', new Set(['automations']), new Set(['automation.manage']))
-      .map((area) => area.segment)).toContain('automations');
-    // Custom fields and Team name no module — the kernel gate, not a switch.
-    expect(areasIn('configuration', new Set(), new Set(['field.manage']))
-      .map((area) => area.segment)).toContain('fields');
-    expect(areasIn('configuration', new Set(), new Set(['role.manage']))
-      .map((area) => area.segment)).toContain('roles');
-  });
-
-  it('stays hidden from a role none of whose capabilities make it relevant', () => {
-    expect(areasIn('configuration', new Set(), new Set())
-      .map((area) => area.segment)).not.toContain('fields');
-    expect(areasIn('configuration', new Set(), new Set())
-      .map((area) => area.segment)).not.toContain('roles');
+  it('keeps the capability that makes each one relevant, for the Settings map to read', () => {
+    expect(AREAS.find((a) => a.segment === 'pricing')?.relevantCapabilities).toEqual(['price.manage']);
+    expect(AREAS.find((a) => a.segment === 'fields')?.relevantCapabilities).toEqual(['field.manage']);
+    expect(AREAS.find((a) => a.segment === 'roles')?.relevantCapabilities).toEqual(['role.manage']);
   });
 });
 
@@ -646,7 +658,7 @@ describe('the roles Area reads as Team', () => {
     const area = AREAS.find((entry) => entry.segment === 'roles');
     expect(area?.label).toBe('Team');
     expect(area?.segment).toBe('roles');
-    expect(area?.group).toBe('configuration');
+    expect(area?.group).toBe('settings');
     expect(area?.relevantCapabilities).toEqual(['role.manage']);
     expect(areaHref('org-1', 'roles')).toBe('/organizations/org-1/roles');
   });
@@ -692,7 +704,7 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
   it('is hidden from areasIn regardless of whether drafting is enabled', () => {
     // Sidebar visibility and module gating are orthogonal (Slice 3's own point) — proven here
     // by enabling the module and still finding no sidebar entry.
-    const withDrafting = areasIn('configuration', new Set(['drafting']));
+    const withDrafting = areasIn('settings', new Set(['drafting']));
     expect(withDrafting.map((area) => area.segment)).not.toContain('setup');
 
     const area = AREAS.find((entry) => entry.segment === 'setup');
@@ -728,12 +740,12 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
 
   it('gives Settings a path back to it, worded so Launch never sounds available again', () => {
     const settings = readFileSync(`${ROUTES}/settings/page.tsx`, 'utf8');
-    expect(settings, 'no card links Settings to /setup').toContain('href={`${root}/setup`}');
-    expect(settings, 'Setup card is missing').toContain('<SectionHeading>Setup</SectionHeading>');
+    expect(SETTINGS_SECTIONS.find((section) => section.key === 'setup')?.entries[0].path).toBe('setup');
+    expect(settings, 'the Setup entry does not follow the lifecycle').toContain("key === 'setup' ? setupSentence");
     expect(
       settings,
       'post-launch wording must not imply Launch can happen again',
-    ).toContain('This business is live. Review or reconfigure the areas setup covers.');
+    ).toContain('This business is live. Review or reconfigure what setup covered.');
   });
 
   it('never renders Launch again on /setup once the business is LIVE', () => {

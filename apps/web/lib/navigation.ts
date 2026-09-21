@@ -20,30 +20,35 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 /**
  * Which section of the shell an area belongs to.
  *
- * **Three, and they are named for what an operator does rather than for what we bill.** The
- * source this grouping comes from (`starting_conversation.txt`) describes four layers — core
- * platform, operational engine, business modules, business configuration — and the third of them
- * cannot be a navigation section here. *Module* is the billing axis (D25): Reports, Assets,
- * Automations and Reception are all modules, so a section by that name would have to hold areas
- * that belong in all three of these. Two axes crossed in one list is how a sidebar stops making
- * sense.
+ * **Named for what an operator does, never for what we bill.** *Module* is the billing axis
+ * (D25): Reports, Assets, Automations and Reception are all modules, so a section by that name
+ * would have to hold areas belonging to every other section. Two axes crossed in one list is how
+ * a sidebar stops making sense.
  *
- * D23 still governs the part that matters: operations comes first and configuration last, and an
- * operator must never reach today's work by going through settings.
+ * The test for a permanent row: would somebody enter this area to do ongoing work, or are they
+ * configuring how another workspace behaves? The second kind lives under `settings` and is
+ * reached from the Settings map (`Area.sidebar: false`).
+ *
+ * D23 still governs the part that matters: work comes first and Settings last, and an operator
+ * must never reach today's work by going through settings.
  */
-export type AreaGroup = 'operations' | 'records' | 'configuration';
+export type AreaGroup = 'work' | 'relationships' | 'operations' | 'tools' | 'settings';
 
 /**
  * The sections, in the order the sidebar draws them. One list, so the ordering rule D23 states
- * is a value the test can read rather than a sentence it has to trust.
+ * is a value the test can read rather than a sentence it has to trust. `label: null` draws no
+ * heading: Settings is one row set apart by the rule above it, and a heading repeating its only
+ * entry would say the word twice.
  */
 export const AREA_GROUPS = [
+  { key: 'work', label: 'Work' },
+  // Who the work is for — the people a business keeps a record of and refers back to.
+  { key: 'relationships', label: 'Relationships' },
+  // What the work is done with, and where.
   { key: 'operations', label: 'Operations' },
-  // Who the work is for, and what it is done to. Entities rather than activities — the things a
-  // business keeps a record of and refers back to.
-  { key: 'records', label: 'Records' },
-  { key: 'configuration', label: 'Configuration' },
-] as const satisfies readonly { key: AreaGroup; label: string }[];
+  { key: 'tools', label: 'Tools' },
+  { key: 'settings', label: null },
+] as const satisfies readonly { key: AreaGroup; label: string | null }[];
 
 /**
  * The modules this platform sells, and the only list of them — a row in `organization_modules`,
@@ -161,12 +166,13 @@ export const MODULES = [
   },
   {
     key: 'assistant',
-    label: 'Ask',
+    label: 'Agent',
     // The one description that says where data goes, since it's the one module that sends any.
     description:
-      'Ask about this business in plain words and get an answer built from what you can already see. It reads and changes nothing. Questions, and the rows read to answer them, are sent to whichever model this installation uses — see the note on the Ask screen. A business that would rather look at the screens itself runs without it.',
-    // Its own working surface — nothing to configure, so the switch leads straight to where the thing happens.
-    configuredAt: { segment: 'ask' },
+      'Ask the Agent about this business in plain words, from any screen, and get an answer built from what you can already see. It reads and changes nothing until a person approves a proposed action. Questions, and the rows read to answer them, are sent to whichever model this installation uses. A business that would rather look at the screens itself runs without it.',
+    outside: 'the Agent, opened from any workspace',
+    // The Agent is a rail on every workspace, not an area — nothing to configure, so the switch leads to the features list where it is turned on.
+    configuredAt: { segment: 'settings', path: 'features' },
   },
   {
     key: 'reporting',
@@ -215,7 +221,7 @@ export type Area = {
   segment: string;
   /** The platform's word for this area — used for the nav entry **and** the page's `<h1>`, so no page under `[organizationId]` carries its own heading. */
   label: string;
-  /** Operational or configuration (D23). */
+  /** Which sidebar section (D23). */
   group: AreaGroup;
   /** The module this area belongs to, or absent for the kernel. A business without a named module doesn't see its entry — not capability gating (I12), just a fact that it isn't part of that business. */
   module?: ModuleKey;
@@ -224,10 +230,9 @@ export type Area = {
    * route, href, capability and module gating are all unchanged — it is still a real, directly
    * addressable page — it simply is not one of the permanent rows a business scans every day
    * (Guided setup alone, while `operationalState === 'setup'` gives it its own elevated
-   * treatment instead). A product capability with its own canonical workspace — Pricing,
-   * Automations, Custom fields, Team — belongs in the sidebar; Settings is one
-   * organization Area among these, never a second door to one of them (`CLAUDE.md`). Absent
-   * (the default) means shown, same as before this field existed.
+   * treatment instead). A configuration-only area — Pricing, Custom fields, Team,
+   * Integrations, Setup — is reached from the Settings map rather than holding a permanent row;
+   * a genuine workspace belongs in the sidebar. Absent (the default) means shown.
    */
   sidebar?: boolean;
   /**
@@ -252,51 +257,47 @@ export type Area = {
   featureKeys?: readonly string[];
 };
 
-/** Operational areas first, configuration last — a claim about what an operator does all day, not an alphabetisation. */
+/** Work first, Settings last — a claim about what an operator does all day, not an alphabetisation. */
 export const AREAS: readonly Area[] = [
   // Leads because D23 says the action an operator's phone is designed around is "what do I do next".
-  { segment: 'today', label: 'Today', group: 'operations' },
-  { segment: 'work', label: 'Work', group: 'operations' },
-  { segment: 'schedule', label: 'Schedule', group: 'operations' },
-  { segment: 'resources', label: 'Resources', group: 'operations' },
-  // Operational, not configuration — asking what's at risk of being late happens mid-shift, and nothing here is configured at all.
-  { segment: 'ask', label: 'Ask', group: 'operations', module: 'assistant', relevantCapabilities: ['assistant.ask'], featureKeys: ['ask_gold'] },
-  // Last in operations, on purpose — reading what a month came to is periodic, not part of the loop that gets work done.
-  { segment: 'reports', label: 'Reports', group: 'operations', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
+  { segment: 'today', label: 'Today', group: 'work' },
+  { segment: 'work', label: 'Work', group: 'work' },
+  { segment: 'schedule', label: 'Schedule', group: 'work' },
 
-  { segment: 'customers', label: 'Customers', group: 'records' },
+  { segment: 'customers', label: 'Customers', group: 'relationships' },
   // Beside Customers — the same loop from the other end: who to ring is a question about the customer list.
   // The specific Communications/Voice features this surface is — not `pipeline`/`configurable_stages`/
   // `qualification_state`, which also map to the `reception` module key but back the CRM pipeline
   // (Customers), a different surface entirely (D46's many-to-many seam, and the reason `featureKeys`
   // exists rather than gating on `module` alone).
-  { segment: 'calls', label: 'Calls', group: 'records', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
-  { segment: 'locations', label: 'Locations', group: 'records' },
-  { segment: 'assets', label: 'Assets', group: 'records', module: 'assets', featureKeys: ['assets'] },
+  { segment: 'calls', label: 'Calls', group: 'relationships', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
 
-  // Turning this off also takes priced lines and the invoice off a job screen — see the work item route.
-  { segment: 'pricing', label: 'Pricing', group: 'configuration', module: 'billing', relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
-  { segment: 'automations', label: 'Automations', group: 'configuration', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
-  { segment: 'fields', label: 'Custom fields', group: 'configuration', relevantCapabilities: ['field.manage'] },
-  { segment: 'roles', label: 'Team', group: 'configuration', relevantCapabilities: ['role.manage'] },
-  // `sidebar: false`: Business Setup is implementation infrastructure, not a permanent tenant
-  // area (Product Contract, Slice 1/3). While a business is in SETUP it already has its own
-  // lifecycle shell treatment (`SetupEntry` in the sidebar, `SetupNavLink` in the phone bar) — a second, equal-weight
-  // row in the ordinary Configuration group would be the very thing that treatment exists to
-  // avoid. While LIVE, the route recedes to a Settings hub card instead of the sidebar. The
-  // route, its module gate and `/setup` itself are all unchanged — only where it is *found*
-  // moved.
-  // No `featureKeys`: no canonical Feature currently maps to `module_key = 'drafting'`
-  // (`20260918000001`'s seed has no such runtime mapping) — a real gap, not an oversight, kept
-  // on the legacy module-only gate rather than inventing a catalogue identifier that doesn't
-  // exist yet.
-  { segment: 'setup', label: 'Setup', group: 'configuration', module: 'drafting', sidebar: false, relevantCapabilities: ['configuration.propose'] },
-  // Its own area, not folded into Settings — a business returns here often enough (checking a
-  // run, adding a source) that it isn't a set-once switch the way pricing or automations config
-  // is, the same reasoning that keeps Automations and Guided setup each their own area.
-  { segment: 'integrations', label: 'Integrations', group: 'configuration', module: 'integrations', relevantCapabilities: ['integration.manage'], featureKeys: ['app_connections', 'file_imports', 'data_mapping', 'scheduled_sync', 'triggers_actions', 'agent_tools'] },
+  { segment: 'resources', label: 'Resources', group: 'operations' },
+  { segment: 'locations', label: 'Locations', group: 'operations' },
+  { segment: 'assets', label: 'Assets', group: 'operations', module: 'assets', featureKeys: ['assets'] },
+
+  // A workspace, not a setting: building, reviewing and observing rules is ongoing work.
+  { segment: 'automations', label: 'Automations', group: 'tools', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  // Last of the tools, on purpose — reading what a month came to is periodic, not part of the loop that gets work done.
+  { segment: 'reports', label: 'Reports', group: 'tools', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
+
+  // Configuration, not places somebody works: each is a real, directly addressable route with its
+  // module and capability gating unchanged, found from the Settings map (`sidebar: false`).
+  // Turning Pricing off also takes priced lines and the invoice off a job screen — see the work item route.
+  { segment: 'pricing', label: 'Pricing', group: 'settings', module: 'billing', sidebar: false, relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
+  { segment: 'fields', label: 'Custom fields', group: 'settings', sidebar: false, relevantCapabilities: ['field.manage'] },
+  { segment: 'roles', label: 'Team', group: 'settings', sidebar: false, relevantCapabilities: ['role.manage'] },
+  // Setup is a lifecycle, not a permanent area: while SETUP lasts it is the one row `SetupEntry`
+  // draws above the areas, and once LIVE it recedes to the Settings map's "Setup & launch".
+  // No `featureKeys`: no canonical Feature maps to `module_key = 'drafting'` (`20260918000001`'s
+  // seed has no such runtime mapping) — a real gap, kept on the legacy module-only gate rather
+  // than inventing a catalogue identifier that doesn't exist yet.
+  { segment: 'setup', label: 'Setup', group: 'settings', module: 'drafting', sidebar: false, relevantCapabilities: ['configuration.propose'] },
+  // A business returns here to check a run or add a source, but connecting is configuring how
+  // other workspaces get their data — so it is reached from Settings' Connections section.
+  { segment: 'integrations', label: 'Integrations', group: 'settings', module: 'integrations', sidebar: false, relevantCapabilities: ['integration.manage'], featureKeys: ['app_connections', 'file_imports', 'data_mapping', 'scheduled_sync', 'triggers_actions', 'agent_tools'] },
   // Names no module — it's where the switches are, so a module able to hide it would lock a business out of its own account.
-  { segment: 'settings', label: 'Settings', group: 'configuration' },
+  { segment: 'settings', label: 'Settings', group: 'settings' },
 ] as const;
 
 /** Whether `area` should appear in navigation for a caller with `capabilities` — the layer `areasIn`/`OrgNavBar` both apply on top of the module gate. Absent `relevantCapabilities` always passes; absent `capabilities` always passes (no gate to apply). */

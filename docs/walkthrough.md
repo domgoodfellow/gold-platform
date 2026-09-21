@@ -374,14 +374,15 @@ scheduled rules simply wait.
 
 ---
 
-### 12. Ask it something — *Ask*
+### 12. Ask it something — the *Agent*
 
-Switch *Ask* on in Settings. Type *what work is at risk of being late today*.
+Switch the Agent on in Settings → *Features*. Open **Agent** from the top bar on any screen and
+type *what work is at risk of being late today*. There is no Ask screen; `/ask` redirects to Today.
 
 **What comes back is built from what you can already see.** The loop reaches this database
 through one function, `public.work_at_risk`, called with your own access token — scoped by
 membership, not capability. A colleague with fewer capabilities gets the same answer; the portal
-has no Ask screen at all.
+has no Agent at all.
 
 **It needs two things and says so when it has neither.** `ASSISTANT_API_URL` in `apps/web`, and a
 model on that deployment. Missing the first, the screen says this installation can't answer;

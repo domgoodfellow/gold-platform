@@ -31,7 +31,8 @@ export async function askAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/ask`);
+  // The Agent rail is mounted by the organization layout, so its history is refreshed there.
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
   return { error: null };
 }
 
@@ -59,6 +60,7 @@ export async function decideAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/ask`);
+  // The Agent rail is mounted by the organization layout, so its history is refreshed there.
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
   return { error: null };
 }

@@ -5,6 +5,19 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### One context at a time, a smaller sidebar, and Settings as the configuration map
+
+Ask is no longer a destination: the Agent rail on every workspace replaced it, `/ask` redirects to Today,
+and the `assistant` module and `assistant.ask` capability are unchanged (the Agent's server actions moved to
+`features/agent/`). GOLD's business sidebar no longer embeds the Platform Administration tree or a phone
+Platform menu; Platform has its own `PlatformSidebar` and `PlatformNavBar`, and the context switcher is the
+only door between GOLD, other businesses and Platform in both directions. The business sidebar holds only
+places somebody works, in five sections (Work, Relationships, Operations, Tools, Settings); Pricing,
+Custom fields, Team, Integrations and Setup are configuration and are reached from Settings, keeping their
+routes, modules and capability gates. Settings is now a map of ten business concerns (`settings-map.ts`),
+each entry offered only when the sidebar would offer its area. Today no longer carries a setup sentence;
+Setup keeps one sidebar row while it lasts and a "Setup & launch" entry in Settings afterwards.
+
 ### Test-system closeout
 
 The CI workflow no longer sets Supabase variables for the whole workflow (they would have beaten the real

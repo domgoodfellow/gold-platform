@@ -1,7 +1,6 @@
 'use client';
 
 import { AccountMenu } from '@/components/containers/account-menu';
-import { Button } from '@/components/controls/button';
 import { ContextSwitcher, type SwitchableOrganization } from '@/components/containers/context-switcher';
 import {
   Sidebar,
@@ -21,29 +20,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@gold/ui/components/dropdown-menu';
-import {
   BarChart3,
-  Bot,
   CalendarDays,
   ClipboardList,
   Layers,
-  Landmark,
   LayoutDashboard,
   MapPin,
   Package,
   Phone,
-  Plug,
   Settings,
   ListChecks,
-  SlidersHorizontal,
-  Tag,
-  UserCog,
   Users,
   Zap,
   type LucideIcon,
@@ -57,8 +43,6 @@ import {
   type Area,
 } from '@/lib/navigation';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
-import { PLATFORM_NAV } from '@/features/platform/platform-navigation';
-import { inPlatformContext } from '@/lib/route/platform-context';
 
 /**
  * The two pieces of the shell that need to know which area is on screen. Client components
@@ -83,23 +67,18 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   schedule: CalendarDays,
   customers: Users,
   calls: Phone,
-  ask: Bot,
   locations: MapPin,
   assets: Package,
   resources: Layers,
   reports: BarChart3,
-  pricing: Tag,
   automations: Zap,
-  fields: SlidersHorizontal,
-  roles: UserCog,
   setup: ListChecks,
-  integrations: Plug,
   settings: Settings,
 };
 
 /**
  * The tablet and desktop rendering: `Sidebar`'s own grouped-menu vocabulary, one `SidebarGroup`
- * per `AREA_GROUPS` entry in order — operations first and configuration last (D23 — never reach
+ * per `AREA_GROUPS` entry in order — work first and Settings last (D23 — never reach
  * today's work through settings). Collapse-to-icon, the tooltip that appears while collapsed,
  * and the `md`-and-up-only rendering are all `Sidebar`'s own, not reimplemented here. `OrgNavBar`
  * below is the phone rendering of the same list. One `AREAS`, two presentations, so they cannot
@@ -133,7 +112,7 @@ export function OrgNav({
 
         return (
           <SidebarGroup key={group.key}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            {group.label ? <SidebarGroupLabel>{group.label}</SidebarGroupLabel> : null}
             <SidebarGroupContent>
               <SidebarMenu>
                 {areas.map((area) => {
@@ -191,62 +170,14 @@ function PhoneNavLink({
   );
 }
 
-function PlatformPhoneNavMenu({ pathname }: { pathname: string }) {
-  const active = PLATFORM_NAV.some((item) =>
-    item.href === '/platform'
-      ? pathname === item.href
-      : pathname === item.href || pathname.startsWith(`${item.href}/`),
-  );
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          aria-label="Platform"
-          tone="secondary"
-          size="small"
-          className={cx(
-            FOCUS_RING,
-            'gap-2 rounded px-3 py-1.5 text-sm',
-            active ? 'bg-foreground font-medium text-background hover:bg-foreground' : '',
-          )}
-        >
-          <Landmark aria-hidden size={18} className="shrink-0" />
-          <span className="min-w-0">Platform</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="end" className="w-64">
-        <DropdownMenuLabel>Platform</DropdownMenuLabel>
-        {PLATFORM_NAV.map((item) => {
-          const Icon = item.icon;
-          const current = item.href === '/platform'
-            ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <DropdownMenuItem key={item.href} asChild>
-              <Link href={item.href} aria-current={current ? 'page' : undefined} className="flex items-center gap-2">
-                <Icon aria-hidden className="shrink-0" />
-                <span>{item.label}</span>
-              </Link>
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 /**
  * The phone rendering of the same `AREAS` list — a fixed bar along the bottom that scrolls
  * sideways rather than collapsing into a drawer (`ui-spec.md` §2 says why: a drawer needs
  * state, a toggle, a focus trap and an escape key to be correct, and a bar needs none of it).
  *
- * **Order follows the current context.** In a business the bar reads Setup (while it applies),
- * the areas, then *Platform* for eligible GOLD Internal staff. Inside `/platform/**` the context
- * is Platform, so *Platform* comes first — where the bar starts, not at the far end of a
- * scrolling row — followed by the same business destinations. The Platform menu is always
- * `PLATFORM_NAV`; there is no second list.
+ * It lists this business's places and nothing else: Platform Administration is a different
+ * scope, reached through the context switcher in the header, and has its own bar
+ * (`PlatformNavBar`) — never a doorway inside a business's navigation.
  *
  * It renders outside `Sidebar` entirely, never inside it: shadcn's own mobile rendering below
  * `md` is an off-canvas sheet, which is exactly the drawer this bar exists to avoid. `AppShell`
@@ -259,8 +190,6 @@ export function OrgNavBar({
   enabledModules,
   capabilities,
   featureAvailability,
-  platformStaff = false,
-  isGoldInternal = false,
   setup = false,
 }: {
   organizationId: string;
@@ -268,31 +197,20 @@ export function OrgNavBar({
   capabilities: Capability[];
   /** Same resolved set `OrgNav` receives — one shared predicate (`visibleAreas`), so the two can't drift. */
   featureAvailability: string[];
-  platformStaff?: boolean;
-  isGoldInternal?: boolean;
   /** True only while the business is in SETUP — the layout decides, and it leaves the bar the moment the business is LIVE. */
   setup?: boolean;
 }) {
-  const pathname = usePathname();
-  const segment = currentSegment(pathname);
+  const segment = currentSegment(usePathname());
   const enabled = new Set(enabledModules);
   const capabilitySet = new Set(capabilities);
   const featureSet = new Set(featureAvailability);
-  const inPlatform = inPlatformContext(pathname);
-  const platformMenu =
-    platformStaff && isGoldInternal ? (
-      <li className="shrink-0">
-        <PlatformPhoneNavMenu pathname={pathname} />
-      </li>
-    ) : null;
 
   return (
     <nav
-      aria-label={inPlatform ? 'Platform Administration' : 'This business'}
+      aria-label="This business"
       className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background md:hidden"
     >
       <ul className="flex gap-1 overflow-x-auto p-2">
-        {inPlatform ? platformMenu : null}
         {setup ? (
           <li className="shrink-0">
             <SetupNavLink organizationId={organizationId} />
@@ -307,20 +225,18 @@ export function OrgNavBar({
             />
           </li>
         ))}
-        {inPlatform ? null : platformMenu}
       </ul>
     </nav>
   );
 }
 
 /**
- * The one Setup treatment while a business is in SETUP — an ordinary navigation row at the top of
- * the sidebar, not a second call to action beside a header badge. The layout renders it only while
+ * The one Setup treatment while a business is in SETUP — an ordinary navigation row above the
+ * areas, and the only setup affordance the shell draws: not a second call to action, not a badge,
+ * not a count. Setup owns progress (`SetupProgressCard`); navigation only goes there, so the
+ * shell runs no readiness query on every request. The layout renders it only while
  * `operationalState === 'setup'`, so it is gone the moment the business is LIVE with nothing left
  * to remember to turn off. Same collapse-to-icon and tooltip behaviour as every other row.
- *
- * It carries no progress count: Setup owns progress (`SetupProgressCard`), navigation only goes
- * there.
  */
 export function SetupEntry({ organizationId }: { organizationId: string }) {
   const current = currentSegment(usePathname()) === 'setup';
@@ -369,42 +285,12 @@ export function SetupNavLink({ organizationId }: { organizationId: string }) {
   );
 }
 
-/** Desktop shortcut group only: the shared registry still owns every platform destination. */
-function GoldPlatformNav() {
-  const pathname = usePathname();
-
-  return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {PLATFORM_NAV.map((item) => {
-            const Icon = item.icon;
-            const active = item.href === '/platform'
-              ? pathname === item.href
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
-                  <Link href={item.href} aria-current={active ? 'page' : undefined}>
-                    <Icon aria-hidden />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
-}
-
 /**
- * The whole operator sidebar: identity and business switching in the header, Business Setup
- * (while it applies) and the grouped area list in the content, the account menu in the footer.
- * `collapsible="icon"` and everything collapse-related is `Sidebar`'s own state, shared with the
- * platform console rather than a second, `localStorage`-backed implementation beside it.
+ * The whole operator sidebar: identity and context switching in the header, Setup (while it
+ * applies) and the grouped area list in the content, the account menu in the footer. It holds
+ * this business's places only — Platform Administration is another context, entered from the
+ * switcher. `collapsible="icon"` and everything collapse-related is `Sidebar`'s own state, shared
+ * with the platform console rather than a second, `localStorage`-backed implementation beside it.
  */
 export function OrgSidebar({
   organizationId,
@@ -413,8 +299,6 @@ export function OrgSidebar({
   role,
   organizations,
   platformAdministration,
-  platformStaff,
-  isGoldInternal,
   enabledModules,
   capabilities,
   featureAvailability,
@@ -428,11 +312,8 @@ export function OrgSidebar({
   name: string;
   role: string;
   organizations: SwitchableOrganization[];
-  /** The switcher offers Platform Administration (`platformAdministrationAvailable`). Not the same fact as `platformStaff`. */
+  /** The switcher offers Platform Administration (`platformAdministrationAvailable`). */
   platformAdministration: boolean;
-  platformStaff: boolean;
-  /** Server-resolved from a real membership plus the current `gold_internal` base Plan. */
-  isGoldInternal: boolean;
   enabledModules: string[];
   capabilities: Capability[];
   featureAvailability: string[];
@@ -459,7 +340,6 @@ export function OrgSidebar({
           capabilities={capabilities}
           featureAvailability={featureAvailability}
         />
-        {platformStaff && isGoldInternal ? <GoldPlatformNav /> : null}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
       <SidebarRail />

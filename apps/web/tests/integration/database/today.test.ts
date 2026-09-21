@@ -74,23 +74,14 @@ describe('Today, with nothing configured yet', () => {
 describe('Today, structural composition (source scan)', () => {
   const source = `${readFileSync(TODAY, 'utf8')}\n${readFileSync(TODAY_FEATURE, 'utf8')}`;
 
-  it('reads readiness from the existing mechanism rather than a second calculation', () => {
-    expect(source).toContain("import { computeReadiness } from '@/lib/domain/tenancy/lifecycle'");
-    expect(source).toContain('computeReadiness(db, { organizationId })');
-  });
-
-  it('shows one restrained setup notice in SETUP and never the full Setup dashboard', () => {
-    // Today is the operating cockpit. The readiness checklist, its blocker/warning lists and the
-    // launch controls live on Setup — here there is a sentence, a count and a way back.
+  it('carries no setup chrome and computes no readiness of its own', () => {
+    // Today is the operating cockpit. A setup business is entered through Setup and the sidebar
+    // keeps one Setup row, so a notice, a count or a readiness query here would be a second,
+    // competing setup affordance. The checklist and Launch live on Setup alone.
+    expect(source).not.toContain('computeReadiness');
     expect(source).not.toContain('readinessWidget');
-    expect(source).not.toMatch(/Setup readiness/);
+    expect(source).not.toMatch(/Setup readiness|being set up|Continue setup|setupNotice|inSetup/);
     expect(source).not.toMatch(/LaunchForm|Blocker'|Warning'/);
-    expect(source).toContain('This business is still being set up.');
-    expect(source).toContain('Continue setup');
-
-    // Rendered once, gated on the lifecycle state, and the widget grid is the same in both states.
-    expect(source.match(/\{setupNotice\}/g) ?? []).toHaveLength(1);
-    expect(source).toMatch(/const setupNotice = inSetup \?/);
     expect(source).toContain('<WidgetGrid>{operations}{activityWidget}</WidgetGrid>');
   });
 

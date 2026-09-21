@@ -11,18 +11,10 @@ import { DomainError } from '@/lib/domain/errors';
 import { canAnswerPlatformQuestions } from '@/lib/domain/assistant/platform-questions';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
-import {
-  activeModuleKeys,
-  availableFeatureKeys,
-  organizationResolvedFeatureStates,
-} from '@/lib/domain/catalogue/organization-plans';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import {
-  OrgNavBar,
-  OrgSidebar,
-} from '@/app/organizations/[organizationId]/org-shell';
+import { PlatformNavBar, PlatformSidebar } from '@/features/platform/platform-navigation';
 
 export default async function PlatformLayout({ children }: LayoutProps<'/platform'>) {
   const db = await getDb();
@@ -65,14 +57,11 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
     throw new DomainError('GOLD Internal membership was not available.', 'gold_internal.membership_required');
   }
 
-  const [featureStates, brand, canAnswerAgent] = await Promise.all([
-    organizationResolvedFeatureStates(db, { organizationId: organization.id }),
+  const [brand, canAnswerAgent] = await Promise.all([
     getBrand(db, { organizationId: organization.id }),
     canAnswerPlatformQuestions(),
   ]);
 
-  const enabledModules = activeModuleKeys(featureStates);
-  const featureAvailability = availableFeatureKeys(featureStates);
   const logo = brand.logoPath ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={logoUrl(db, brand.logoPath)} alt="" className="h-7 w-7 shrink-0 rounded object-contain" />
@@ -85,8 +74,6 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
       {organization.name.charAt(0).toUpperCase()}
     </span>
   );
-  // The same lifecycle treatment the operator shell gives every business: present while SETUP lasts.
-  const setup = organization.operationalState === 'setup';
   const organizations = myOrganizations.map((org) => ({
     id: org.id,
     name: org.name,
@@ -99,19 +86,15 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
       <BrandStyle brand={brand} />
       <WorkspaceShell
         sidebar={
-          <OrgSidebar
-            organizationId={organization.id}
+          <PlatformSidebar
             mark={mark}
-            name={organization.name}
-            role={organization.role}
+            current={{
+              kind: 'business',
+              organizationId: organization.id,
+              name: organization.name,
+              role: organization.role,
+            }}
             organizations={organizations}
-            platformAdministration
-            platformStaff
-            isGoldInternal
-            enabledModules={[...enabledModules]}
-            featureAvailability={[...featureAvailability]}
-            capabilities={organization.capabilities}
-            setup={setup}
             email={email}
             signOutAction={signOutAction}
           />
@@ -141,17 +124,7 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
             }
           />
         }
-        bottomBar={
-          <OrgNavBar
-            organizationId={organization.id}
-            enabledModules={[...enabledModules]}
-            featureAvailability={[...featureAvailability]}
-            capabilities={organization.capabilities}
-            platformStaff
-            isGoldInternal
-            setup={setup}
-          />
-        }
+        bottomBar={<PlatformNavBar />}
         agent={<PlatformAgentRail canAnswer={canAnswerAgent} />}
       >
         {children}

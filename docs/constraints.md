@@ -1471,9 +1471,11 @@ advice.
 
 **Decision.** While `operationalState === 'setup'`, a business is entered through `/setup`, the
 sidebar and the phone bottom bar each carry one Setup item — navigation only, no count, since Setup
-owns progress — and Today shows a single sentence pointing back. At Launch all three stop, on their own: the layout reads the
-state once and hands both renderings the same value, and Launch revalidates the layout and lands on
-Today. Setup lists *areas*, never fields, and every area links to the workspace that owns its
+owns progress — and Today carries no setup chrome (it once held a sentence pointing back; a
+setup business is entered through Setup and the row is always there, so the sentence was a third
+affordance). After Launch the row stops, on its own: the layout reads the state once and hands both
+renderings the same value, Launch revalidates the layout and lands on Today, and Setup stays
+reviewable from Settings' *Setup & launch* entry, worded so Launch never sounds available again. Setup lists *areas*, never fields, and every area links to the workspace that owns its
 configuration; nothing on `/setup` edits a business. Importance is only what the domain already
 says: `required` is exactly what `organization_launch_blockers` names (I27), `recommended` is a
 switched-on module with a note that does not block, and `optional` is kernel configuration (work,

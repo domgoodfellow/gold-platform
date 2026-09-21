@@ -543,6 +543,14 @@
       ],
       "note": "The one database-backed authority test moved to settings-configuration-authority.test.ts."
     },
+    "apps/web/tests/architecture/static/settings-map.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "navigation",
+        "settings"
+      ],
+      "note": "Also runs the pure Settings-map gating functions."
+    },
     "apps/web/tests/architecture/static/setup-lifecycle.test.ts": {
       "category": "architecture-static",
       "concerns": [

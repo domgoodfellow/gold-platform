@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { deriveSwitcherView } from '@/components/containers/context-switcher';
 import { inPlatformContext, platformAdministrationAvailable } from '@/lib/route/platform-context';
 
 /**
@@ -95,5 +96,31 @@ describe('the last business is remembered, and only as a hint', () => {
     const landing = read('lib/route/landing.ts');
     expect(landing).toContain('organizations.find((org) => org.id === lastOrganizationId)');
     expect(landing).not.toContain("kind: 'chooser'");
+  });
+});
+
+describe('moving between contexts', () => {
+  const gold = { id: 'gold', name: 'GOLD', role: 'Owner', operationalState: 'live' as const };
+  const nextfund = { id: 'nf', name: 'NextFund', role: 'Owner', operationalState: 'live' as const };
+  const current = { kind: 'business' as const, organizationId: 'gold', name: 'GOLD', role: 'Owner' };
+
+  it('from a business, offers the other businesses and Platform Administration, never the current one', () => {
+    const view = deriveSwitcherView(current, [gold, nextfund], true, '/organizations/gold/today');
+    expect(view.triggerName).toBe('GOLD');
+    expect(view.businesses.map((org) => org.id)).toEqual(['nf']);
+    expect(view.platform).toBe(true);
+  });
+
+  it('from Platform Administration, names the context and lists every business, GOLD included, as the way back', () => {
+    const view = deriveSwitcherView(current, [gold, nextfund], true, '/platform/organizations');
+    expect(view.triggerName).toBe('Platform Administration');
+    expect(view.businesses.map((org) => org.id)).toEqual(['gold', 'nf']);
+    // Already there, so it is not offered as somewhere else to go.
+    expect(view.platform).toBe(false);
+  });
+
+  it('offers Platform Administration to nobody who was not given it', () => {
+    const view = deriveSwitcherView(current, [gold, nextfund], false, '/organizations/gold/today');
+    expect(view.platform).toBe(false);
   });
 });

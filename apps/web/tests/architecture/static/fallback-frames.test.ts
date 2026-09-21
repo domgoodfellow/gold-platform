@@ -143,30 +143,18 @@ describe('the phone bar leads with the current context', () => {
   const shell = read('app/organizations/[organizationId]/org-shell.tsx');
   const bar = shell.slice(shell.indexOf('export function OrgNavBar('), shell.indexOf('export function SetupEntry'));
 
-  it('Platform comes first while on /platform/**, and after the areas in a business', () => {
-    const before = bar.indexOf('{inPlatform ? platformMenu : null}');
-    const areas = bar.indexOf('visibleAreas(');
-    const after = bar.indexOf('{inPlatform ? null : platformMenu}');
-    expect(before).toBeGreaterThan(-1);
-    expect(before).toBeLessThan(bar.indexOf('<SetupNavLink'));
-    expect(before).toBeLessThan(areas);
-    expect(after).toBeGreaterThan(areas);
-  });
-
-  it('the Platform menu is offered only to platform staff with GOLD Internal, in either position', () => {
-    expect(bar).toContain('platformStaff && isGoldInternal ?');
-    expect(bar.match(/<PlatformPhoneNavMenu/g)).toHaveLength(1);
-    // Neither position renders it unconditionally.
-    expect(bar).not.toMatch(/\{\s*<PlatformPhoneNavMenu/);
-  });
-
-  it('every layout passes the platform facts only from server resolution — a plain business never asserts them', () => {
-    const org = read('app/organizations/[organizationId]/layout.tsx');
-    expect(org).toContain('platformStaff={staff}');
-    expect(org).toContain('isGoldInternal={isGoldInternal}');
+  it('a business’s bar lists that business only — Platform is a different context with its own bar', () => {
+    expect(bar).toContain('visibleAreas(');
+    expect(bar).not.toMatch(/PlatformPhoneNavMenu|PLATFORM_NAV|inPlatform/);
     const platform = read('app/(platform)/platform/layout.tsx');
-    expect(platform).toContain('platformStaff');
-    expect(platform).toContain('isGoldInternal');
+    expect(platform).toContain('<PlatformNavBar />');
+    expect(platform).not.toContain('OrgNavBar');
+  });
+
+  it('Platform is offered only from server-resolved facts, and only through the switcher', () => {
+    const org = read('app/organizations/[organizationId]/layout.tsx');
+    expect(org).toContain('platformAdministrationAvailable({ staff, goldInternal })');
+    expect(org).not.toMatch(/platformStaff=|isGoldInternal=/);
   });
 
   it('reads the Platform context from the path, and only /platform and beneath', () => {
@@ -176,10 +164,11 @@ describe('the phone bar leads with the current context', () => {
     expect(inPlatformContext('/organizations/x/today')).toBe(false);
   });
 
-  it('PLATFORM_NAV is the one Platform navigation registry, and the phone menu maps it rather than copying it', () => {
+  it('PLATFORM_NAV is the one Platform navigation registry, and the phone bar maps it rather than copying it', () => {
     expect(PLATFORM_NAV.length).toBeGreaterThan(3);
-    const menu = shell.slice(shell.indexOf('function PlatformPhoneNavMenu'), shell.indexOf('export function OrgNavBar('));
-    expect(menu).toContain('PLATFORM_NAV.map');
+    const nav = read('features/platform/platform-navigation.tsx');
+    const bar = nav.slice(nav.indexOf('export function PlatformNavBar'));
+    expect(bar).toContain('PLATFORM_NAV.map');
     const literals = walk(`${WEB}/app`).concat(walk(`${WEB}/features`), walk(`${WEB}/components`))
       .filter((path) => /(^|[^A-Z_])PLATFORM_NAV\s*=\s*\[/.test(readFileSync(path, 'utf8')));
     expect(literals.map((path) => path.slice(WEB.length))).toEqual(['/features/platform/platform-navigation.tsx']);

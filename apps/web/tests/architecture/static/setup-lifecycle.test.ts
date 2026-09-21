@@ -133,7 +133,8 @@ describe('the shell — one lifecycle treatment at every width, gone at LIVE', (
   it('reads the lifecycle state once and hands both renderings the same progress', () => {
     expect(LAYOUT).toContain("organization.operationalState === 'setup'");
     expect(LAYOUT.match(/setup=\{setup\}/g) ?? []).toHaveLength(2);
-    expect(PLATFORM_LAYOUT).toContain("organization.operationalState === 'setup'");
+    // Platform Administration is not a business, so it has no lifecycle treatment at all.
+    expect(PLATFORM_LAYOUT).not.toMatch(/SetupEntry|SetupNavLink|setup={/);
   });
 
   it('gives a phone a path to Setup as the bottom bar’s own item, only while a progress value exists', () => {
@@ -155,9 +156,9 @@ describe('the shell — one lifecycle treatment at every width, gone at LIVE', (
 });
 
 describe('Today — the operating cockpit, not a second onboarding dashboard', () => {
-  it('holds one setup sentence and a way back, with no readiness list', () => {
-    expect(TODAY_FEATURE).toContain('This business is still being set up.');
-    expect(TODAY_FEATURE).toContain('Continue setup');
-    expect(TODAY_FEATURE).not.toMatch(/blockers|warnings/);
+  it('carries no setup chrome of its own — the sidebar row and Setup itself are the lifecycle', () => {
+    // A setup business enters through Setup (`organizationHomeHref`), and the sidebar keeps one
+    // row for it; a third sentence on Today would be the competing affordance this replaced.
+    expect(TODAY_FEATURE).not.toMatch(/being set up|Continue setup|setupRemaining|inSetup|blockers|warnings/);
   });
 });

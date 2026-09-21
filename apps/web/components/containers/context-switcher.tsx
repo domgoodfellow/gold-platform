@@ -52,7 +52,7 @@ type SwitcherProps = {
  * list is always *where else can I go*. Platform is a path (`/platform/**`), not a business:
  * inside it the shell is GOLD's, but the context is Platform, and GOLD is one of the places to go.
  */
-function deriveSwitcherView(
+export function deriveSwitcherView(
   current: SwitcherContext,
   organizations: SwitchableOrganization[],
   platformAdministration: boolean,
