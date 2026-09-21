@@ -1,4 +1,5 @@
 import { DividedList, EmptyState } from '@/components/containers/section';
+import { cx } from '@/components/class-names';
 import type { TimelineEntry } from '@/lib/domain/timeline/timeline';
 
 /**
@@ -13,10 +14,13 @@ export function ActivityList({
   timeline,
   timezone,
   emptyMessage = 'Nothing recorded yet.',
+  compact = false,
 }: {
   timeline: TimelineEntry[];
   timezone: string;
   emptyMessage?: string;
+  /** Stacks the time above the sentence at every width — for a narrow rail, where a viewport breakpoint says nothing about the room the list has. */
+  compact?: boolean;
 }) {
   if (timeline.length === 0) {
     return <EmptyState weight="subtle" className="mt-1">{emptyMessage}</EmptyState>;
@@ -25,13 +29,13 @@ export function ActivityList({
   return (
     <DividedList as="ol" className="mt-2">
       {timeline.map((entry) => (
-        <li key={entry.id} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:gap-3">
+        <li key={entry.id} className={cx('flex flex-col gap-0.5 py-2', !compact && 'sm:flex-row sm:gap-3')}>
           {/* The instant, in this business's zone (I9). `formatWindow` takes a range and this
               is a moment, so the same rule is applied with the same zone rather than a second
               formatter deciding for itself. */}
           <time
             dateTime={entry.occurredAt}
-            className="shrink-0 text-xs tabular-nums text-subtle sm:w-40 sm:pt-0.5"
+            className={cx('shrink-0 text-xs tabular-nums text-subtle', !compact && 'sm:w-40 sm:pt-0.5')}
           >
             {new Intl.DateTimeFormat('en-GB', {
               dateStyle: 'medium',

@@ -63,7 +63,7 @@ export async function saveReportAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/reports`);
+  revalidatePath(`/organizations/${organizationId}/insights`);
   return { error: null };
 }
 
@@ -84,7 +84,7 @@ export async function deleteReportAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/reports`);
+  revalidatePath(`/organizations/${organizationId}/insights`);
   return { error: null };
 }
 
@@ -111,7 +111,7 @@ export async function setReportRolesAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/reports`);
+  revalidatePath(`/organizations/${organizationId}/insights`);
   return { error: null };
 }
 
@@ -132,7 +132,7 @@ export async function createDashboardAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/reports`);
+  revalidatePath(`/organizations/${organizationId}/insights`);
   return { error: null };
 }
 
@@ -153,7 +153,7 @@ export async function deleteDashboardAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/reports`);
+  revalidatePath(`/organizations/${organizationId}/insights`);
   return { error: null };
 }
 
@@ -188,6 +188,6 @@ export async function setPinAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/reports`);
+  revalidatePath(`/organizations/${organizationId}/insights`);
   return { error: null };
 }

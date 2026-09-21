@@ -3,7 +3,7 @@ import { Alert, AlertDescription, AlertTitle } from '@gold/ui/components/alert';
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeader } from '@/components/containers/page-header';
 import {
-  DashboardView,
+  InsightsViewNav,
   ReportFilters,
   ReportManagement,
   ReportNavigation,
@@ -13,7 +13,6 @@ import { listCustomers } from '@/lib/domain/customers/customers';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { listTimeCommitted } from '@/lib/domain/reporting/commitment';
 import { listWorkMarkedComplete } from '@/lib/domain/reporting/completion';
-import { listDashboards, readDashboard } from '@/lib/domain/reporting/dashboards';
 import {
   getReportDefinition,
   listReportDefinitions,
@@ -42,9 +41,9 @@ export const dynamic = 'force-dynamic';
 export default async function ReportsPage({
   params,
   searchParams,
-}: PageProps<'/organizations/[organizationId]/reports'>) {
+}: PageProps<'/organizations/[organizationId]/insights/reports'>) {
   const { organizationId } = await params;
-  const { by, of: ofMeasure, period, customer, resource, location, report, dashboard } =
+  const { by, of: ofMeasure, period, customer, resource, location, report } =
     await searchParams;
   const { db, organization } = await requireOrganization(organizationId);
   const one = (value: string | string[] | undefined) =>
@@ -53,7 +52,7 @@ export default async function ReportsPage({
   if (!organization.capabilities.includes('report.read')) {
     return (
       <AppPage>
-        <PageHeader title={areaLabel('reports')} description="What this business has invoiced, and what its work has consumed." />
+        <PageHeader title={areaLabel('insights')} description="What this business has invoiced, and what its work has consumed." />
         <Alert className="mt-8">
           <Lock aria-hidden />
           <AlertTitle>Your role, {organization.role}, cannot see this business&apos;s figures</AlertTitle>
@@ -93,7 +92,7 @@ export default async function ReportsPage({
   const today = todayInZone(organization.timezone);
   const args = { organizationId, grouping, period: periodFor(preset, today), filters };
 
-  const [result, customers, resources, locations, definitions, roles, dashboards] =
+  const [result, customers, resources, locations, definitions, roles] =
     await Promise.all([
       measure === 'work_marked_complete'
         ? listWorkMarkedComplete(db, args).then((groups) => ({ measure, groups }) as const)
@@ -107,28 +106,7 @@ export default async function ReportsPage({
       listLocations(db, { organizationId }),
       listReportDefinitions(db, { organizationId }),
       mayManage ? listRoles(db, { organizationId }) : Promise.resolve([]),
-      listDashboards(db, { organizationId }),
     ]);
-
-  const openDashboard = dashboards.find((entry) => entry.id === one(dashboard)) ?? null;
-  const tiles = openDashboard
-    ? await readDashboard(db, { organizationId, dashboardId: openDashboard.id, today })
-    : [];
-  const pinnedByDashboard = new Map<string, string[]>();
-
-  if (mayManage && dashboards.length > 0) {
-    const { data: pins } = await db
-      .from('dashboard_reports')
-      .select('dashboard_id, report_id')
-      .eq('organization_id', organizationId);
-
-    for (const pin of pins ?? []) {
-      pinnedByDashboard.set(pin.dashboard_id, [
-        ...(pinnedByDashboard.get(pin.dashboard_id) ?? []),
-        pin.report_id,
-      ]);
-    }
-  }
 
   const shared = mayManage
     ? await Promise.all(
@@ -149,28 +127,13 @@ export default async function ReportsPage({
       answerable={answerable}
       definitions={definitions}
       savedId={saved?.id}
-      dashboards={dashboards}
-      openDashboardId={openDashboard?.id}
     />
   );
-
-  if (openDashboard) {
-    return (
-      <AppPage>
-        <PageHeader
-          title={areaLabel('reports')}
-          description={<>{openDashboard.name} · figures worked out now, in {organization.timezone}.</>}
-        />
-        {navigation}
-        <DashboardView tiles={tiles} />
-      </AppPage>
-    );
-  }
 
   return (
     <AppPage>
       <PageHeader
-        title={areaLabel('reports')}
+        title={areaLabel('insights')}
         description={
           <>
             What this business has invoiced, and what its work has consumed. Dated by the day on the
@@ -179,6 +142,7 @@ export default async function ReportsPage({
           </>
         }
       />
+      <InsightsViewNav organizationId={organizationId} current="reports" />
       {navigation}
       <ReportFilters
         grouping={grouping}
@@ -198,8 +162,6 @@ export default async function ReportsPage({
         definitions={definitions}
         roles={roles.map(({ id, name }) => ({ id, name }))}
         shared={shared}
-        dashboards={dashboards}
-        pinnedByDashboard={pinnedByDashboard}
         mayManage={mayManage}
         role={organization.role}
       />

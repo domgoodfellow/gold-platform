@@ -8,7 +8,7 @@ test('reaches Personal settings through the account menu and can return to the b
 }) => {
   const ctx = loadDemoContext();
 
-  await page.goto(`/organizations/${ctx.organizationId}/today`);
+  await page.goto(`/organizations/${ctx.organizationId}/home`);
 
   // The sidebar footer's account button shows the signed-in email as its visible text.
   const accountTrigger = page.getByRole('button').filter({ hasText: ctx.ownerEmail });

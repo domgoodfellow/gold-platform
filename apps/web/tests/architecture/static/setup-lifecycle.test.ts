@@ -21,7 +21,7 @@ const COCKPIT = read('../../../features/setup/setup-cockpit.tsx');
 const SHELL = read('../../../app/organizations/[organizationId]/org-shell.tsx');
 const LAYOUT = read('../../../app/organizations/[organizationId]/layout.tsx');
 const PLATFORM_LAYOUT = read('../../../app/(platform)/platform/layout.tsx');
-const TODAY_FEATURE = read('../../../features/today/today-dashboard.tsx');
+const HOME_FEATURE = read('../../../features/home/home-dashboard.tsx');
 const CREATE_ACTION = read('../../../app/organizations/actions.ts');
 const NAVIGATION = read('../../../lib/navigation.ts');
 
@@ -40,12 +40,12 @@ describe('entry — one decision, made in one place', () => {
 
   it('no caller decides the setup-versus-today question for itself', () => {
     for (const source of [CREATE_ACTION, read('../../../app/organizations/page.tsx'), read('../../../lib/route/landing.ts')]) {
-      expect(source).not.toMatch(/areaHref\([^)]*'(setup|today)'\)/);
+      expect(source).not.toMatch(/areaHref\([^)]*'(setup|home)'\)/);
     }
   });
 
   it('SETUP is not a route prison — no page redirects a setup business away from another area', () => {
-    for (const area of ['today', 'work', 'schedule', 'settings']) {
+    for (const area of ['home', 'work', 'schedule', 'settings']) {
       const page = read(`../../../app/organizations/[organizationId]/${area}/page.tsx`);
       expect(page, `${area} redirects on lifecycle state`).not.toMatch(/redirect\([^)]*setup/);
     }
@@ -90,8 +90,8 @@ describe('Launch — a review boundary, not a mystery button', () => {
     expect(COCKPIT).toContain('Required setup');
     expect(COCKPIT).toContain('Recommendations');
     expect(COCKPIT).toContain('Optional areas');
-    expect(COCKPIT).toContain('Launching makes Today the default workspace');
-    expect(COCKPIT.indexOf('Launching makes Today')).toBeLessThan(COCKPIT.indexOf('{launch}'));
+    expect(COCKPIT).toContain('Launching makes Home the default workspace');
+    expect(COCKPIT.indexOf('Launching makes Home')).toBeLessThan(COCKPIT.indexOf('{launch}'));
   });
 
   it('only offers Launch while SETUP, and the domain re-checks regardless of the page', () => {
@@ -99,7 +99,7 @@ describe('Launch — a review boundary, not a mystery button', () => {
     expect(SETUP_ACTIONS).toContain('launchOrganization(db, { organizationId })');
   });
 
-  it('lands on Today after a successful Launch, and revalidates the shell so Setup leaves it', () => {
+  it('lands on Home after a successful Launch, and revalidates the shell so Setup leaves it', () => {
     expect(SETUP_ACTIONS).toContain("organizationHomeHref(organizationId, 'live')");
     expect(SETUP_ACTIONS).toContain("revalidatePath(`/organizations/${organizationId}`, 'layout')");
     // A failed Launch returns its message before any redirect.
@@ -155,10 +155,10 @@ describe('the shell — one lifecycle treatment at every width, gone at LIVE', (
   });
 });
 
-describe('Today — the operating cockpit, not a second onboarding dashboard', () => {
+describe('Home — the operating cockpit, not a second onboarding dashboard', () => {
   it('carries no setup chrome of its own — the sidebar row and Setup itself are the lifecycle', () => {
     // A setup business enters through Setup (`organizationHomeHref`), and the sidebar keeps one
-    // row for it; a third sentence on Today would be the competing affordance this replaced.
-    expect(TODAY_FEATURE).not.toMatch(/being set up|Continue setup|setupRemaining|inSetup|blockers|warnings/);
+    // row for it; a third sentence on Home would be the competing affordance this replaced.
+    expect(HOME_FEATURE).not.toMatch(/being set up|Continue setup|setupRemaining|inSetup|blockers|warnings/);
   });
 });

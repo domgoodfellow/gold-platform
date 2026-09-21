@@ -58,10 +58,10 @@ describe('the shared variants own the states; a screen writes none', () => {
     expect(primary).not.toContain('hover:bg-hover');
   });
 
-  it('Agent and Configure show pressed through aria-pressed on the variant, not a class of their own', () => {
+  it('Agent and the page-support modes show pressed through aria-pressed on the variant, not a class of their own', () => {
     const rail = read(`${WEB}/components/containers/workspace-right-rail.tsx`);
     expect(rail).toContain('aria-pressed={agentOpen}');
-    expect(rail).toContain('aria-pressed={configureOpen}');
+    expect(rail).toContain('aria-pressed={supportMode === mode}');
     expect(rail).not.toMatch(/&& 'bg-/);
   });
 

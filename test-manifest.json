@@ -396,6 +396,12 @@
       ],
       "note": "Also runs a pure entity resolver."
     },
+    "apps/web/tests/architecture/static/organization-home.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "ui"
+      ]
+    },
     "apps/web/tests/architecture/static/dashboard.test.ts": {
       "category": "architecture-static",
       "concerns": [

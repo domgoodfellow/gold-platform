@@ -288,6 +288,24 @@ export async function listCustomerTimeline(
 }
 
 /**
+ * Which slice of the organization's history a workspace's Activity rail reads. A named scope over
+ * the same `describe` core, never an action list a caller supplies — so a page cannot ask the
+ * event log for anything the timeline has not already decided is worth a sentence.
+ */
+const ACTIVITY_SCOPE_ACTIONS = {
+  customers: [
+    'customer.created',
+    'customer.updated',
+    'customer.stage_changed',
+    'customer.imported',
+    'customer.import_matched',
+  ],
+  work: WORK_ITEM_ACTIONS,
+} as const;
+
+export type ActivityScope = keyof typeof ACTIVITY_SCOPE_ACTIONS;
+
+/**
  * What has happened in this business, newest first — the same interpretive core as
  * `listCustomerTimeline` (`describe`, the vocabulary lookups), reused rather than copied,
  * reading `events` directly instead of the customer-scoped `customer_activity` view since this
@@ -301,15 +319,16 @@ export async function listCustomerTimeline(
  */
 export async function listRecentActivity(
   db: Db,
-  input: { organizationId: string; limit?: number },
+  input: { organizationId: string; limit?: number; scope?: ActivityScope },
 ): Promise<TimelineEntry[]> {
   const limit = input.limit ?? 20;
+  const actions = input.scope ? ACTIVITY_SCOPE_ACTIONS[input.scope] : ORGANIZATION_ACTIONS;
 
   const { data, error } = await db
     .from('events')
     .select('id, action, payload, occurred_at, actor_id, entity_id')
     .eq('organization_id', input.organizationId)
-    .in('action', ORGANIZATION_ACTIONS as unknown as string[])
+    .in('action', actions as unknown as string[])
     .order('occurred_at', { ascending: false })
     .limit(limit);
 

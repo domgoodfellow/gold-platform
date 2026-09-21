@@ -21,9 +21,9 @@ import { listRecentActivity } from '@/lib/domain/timeline/timeline';
  */
 
 const TODAY = fileURLToPath(
-  new URL('../../../app/organizations/[organizationId]/today/page.tsx', import.meta.url),
+  new URL('../../../app/organizations/[organizationId]/home/page.tsx', import.meta.url),
 );
-const TODAY_FEATURE = fileURLToPath(new URL('../../../features/today/today-dashboard.tsx', import.meta.url));
+const TODAY_FEATURE = fileURLToPath(new URL('../../../features/home/home-dashboard.tsx', import.meta.url));
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
@@ -61,28 +61,26 @@ async function freshOrganization(): Promise<{ db: SupabaseClient; organizationId
   return { db, organizationId };
 }
 
-describe('Today, with nothing configured yet', () => {
-  it('names the empty state and links to Work rather than showing two silent zeroes', () => {
-    const source = `${readFileSync(TODAY, 'utf8')}\n${readFileSync(TODAY_FEATURE, 'utf8')}`;
-
-    expect(source).toContain('listWorkItemTypes');
-    expect(source).toContain('typesConfigured={types.length > 0}');
-    expect(source).toMatch(/!typesConfigured[\s\S]{0,300}organizations\/\$\{organizationId\}\/work\/configuration/);
+describe('Home, with nothing recorded yet', () => {
+  it('renders one intentional state rather than silent zeroes', () => {
+    const source = `${readFileSync(TODAY, 'utf8')}
+${readFileSync(TODAY_FEATURE, 'utf8')}`;
+    expect(source).toContain('Nothing recorded yet');
+    expect(source).toMatch(/if \(!empty\)/);
   });
 });
 
-describe('Today, structural composition (source scan)', () => {
-  const source = `${readFileSync(TODAY, 'utf8')}\n${readFileSync(TODAY_FEATURE, 'utf8')}`;
+describe('Home, structural composition (source scan)', () => {
+  const source = `${readFileSync(TODAY, 'utf8')}
+${readFileSync(TODAY_FEATURE, 'utf8')}`;
 
   it('carries no setup chrome and computes no readiness of its own', () => {
-    // Today is the operating cockpit. A setup business is entered through Setup and the sidebar
-    // keeps one Setup row, so a notice, a count or a readiness query here would be a second,
-    // competing setup affordance. The checklist and Launch live on Setup alone.
+    // A setup business is entered through Setup and the sidebar keeps one Setup row, so a notice,
+    // a count or a readiness query here would be a second, competing setup affordance.
     expect(source).not.toContain('computeReadiness');
     expect(source).not.toContain('readinessWidget');
     expect(source).not.toMatch(/Setup readiness|being set up|Continue setup|setupNotice|inSetup/);
     expect(source).not.toMatch(/LaunchForm|Blocker'|Warning'/);
-    expect(source).toContain('<WidgetGrid>{operations}{activityWidget}</WidgetGrid>');
   });
 
   it('never claims a business with zero blockers is complete or launched', () => {
@@ -90,38 +88,23 @@ describe('Today, structural composition (source scan)', () => {
     expect(source).not.toMatch(/setup is (complete|finished|done)/i);
   });
 
-  it('preserves the existing Committed/Waiting queries unchanged', () => {
+  it('preserves the existing schedule and work reads', () => {
     expect(source).toContain("import { listSchedule } from '@/lib/domain/scheduling/availability'");
     expect(source).toContain("import { listWorkItems } from '@/lib/domain/work-items/work-items'");
     expect(source).toContain('listSchedule(db, {');
   });
 
-  it('gates the new operational widgets on the module being enabled, never on their current count', () => {
-    expect(source).toMatch(/automationsOn \? \[/);
-    expect(source).toMatch(/receptionOn \? <Widget/);
-    // The tell for a count-based gate would be `failedRuns.length > 0 ?` guarding the whole
-    // widget rather than only its `href`/empty-state — asserted absent.
-    expect(source).not.toMatch(/failedRuns\.length > 0 \?\s*\(?\s*<Widget/);
-    expect(source).not.toMatch(/failedMessages\.length > 0 \?\s*\(?\s*<Widget/);
+  it('gates optional blocks on the workspace being available, never on their current count', () => {
+    expect(source).toMatch(/hasAutomation \? listAutomationRuns/);
+    expect(source).toMatch(/hasCommunications \? listCalls/);
   });
 
   it('counts only today’s calls when naming calls that still need a write-up', () => {
-    expect(source).toContain(
-      'unwrittenCalls={todaysCalls.filter((call) => call.outcome === null).length}',
-    );
-  });
-
-  it('expands Committed, Waiting and Recent activity through the existing ?widget= mechanism', () => {
-    expect(source).toContain(
-      "open === 'committed' || open === 'waiting' || open === 'activity'",
-    );
-    expect(source).toContain('${area}?widget=activity');
-    expect(source).toContain('${area}?widget=committed');
-    expect(source).toContain('${area}?widget=waiting');
+    expect(source).toContain('todaysCalls.filter((call) => call.outcome === null).length');
   });
 });
 
-describe('Today, real data behind the new widgets', () => {
+describe('Home, real data behind its blocks', () => {
   it('recent activity is tenant-isolated and renders a real, attributable event', async () => {
     const { db: dbA, organizationId: orgA } = await freshOrganization();
     const { organizationId: orgB } = await freshOrganization();

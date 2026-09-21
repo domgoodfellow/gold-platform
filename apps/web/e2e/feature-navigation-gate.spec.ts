@@ -40,7 +40,7 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
 
     // Before: Assets is a real, navigable area (desktop sidebar and phone bar both render the
     // same `visibleAreas` list — see navigation.test.ts's parity proof for the pure predicate).
-    await page.goto(`${orgHref}/today`);
+    await page.goto(`${orgHref}/home`);
     await expect(page.getByRole('link', { name: 'Assets', exact: true }).first()).toBeVisible();
 
     await page.goto(`${orgHref}/settings/features`);
@@ -56,7 +56,7 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
     await expect(page.getByText('disabled', { exact: true })).toBeVisible({ timeout: 15_000 });
 
     // The area is gone from navigation entirely — not merely relabelled.
-    await page.goto(`${orgHref}/today`);
+    await page.goto(`${orgHref}/home`);
     await expect(page.getByRole('link', { name: 'Assets', exact: true })).toHaveCount(0);
 
     // What it already recorded is untouched and still directly reachable — disabling a Feature
@@ -70,7 +70,7 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
     await page.getByRole('button', { name: 'More actions for Assets' }).click();
     await page.getByRole('menuitem', { name: 'Enable feature' }).click();
 
-    await page.goto(`${orgHref}/today`);
+    await page.goto(`${orgHref}/home`);
     await expect(page.getByRole('link', { name: 'Assets', exact: true }).first()).toBeVisible();
   });
 
@@ -104,13 +104,13 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
   });
 });
 
-test.describe('a colleague sees Reports only while their role holds a relevant capability', () => {
+test.describe('a colleague sees Insights only while their role holds a relevant capability', () => {
   test.use({ storageState: COLLEAGUE_STORAGE_STATE });
 
-  test('sees Reports once the owner granted report.read', async ({ page }) => {
+  test('sees Insights once the owner granted report.read', async ({ page }) => {
     const context = loadDemoContext();
-    await page.goto(`/organizations/${context.organizationId}/today`);
-    await expect(page.getByRole('link', { name: 'Reports', exact: true }).first()).toBeVisible();
+    await page.goto(`/organizations/${context.organizationId}/home`);
+    await expect(page.getByRole('link', { name: 'Insights', exact: true }).first()).toBeVisible();
   });
 });
 
@@ -132,12 +132,12 @@ test.describe('the owner revokes report.read again', () => {
   });
 });
 
-test.describe('the colleague loses Reports again once the capability is gone', () => {
+test.describe('the colleague loses Insights again once the capability is gone', () => {
   test.use({ storageState: COLLEAGUE_STORAGE_STATE });
 
-  test('no longer sees Reports', async ({ page }) => {
+  test('no longer sees Insights', async ({ page }) => {
     const context = loadDemoContext();
-    await page.goto(`/organizations/${context.organizationId}/today`);
-    await expect(page.getByRole('link', { name: 'Reports', exact: true })).toHaveCount(0);
+    await page.goto(`/organizations/${context.organizationId}/home`);
+    await expect(page.getByRole('link', { name: 'Insights', exact: true })).toHaveCount(0);
   });
 });

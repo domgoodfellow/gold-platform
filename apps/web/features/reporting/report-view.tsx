@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/controls/button';
 import { Hint, SelectInput } from '@/components/controls/inputs';
+import { ViewNav } from '@/components/containers/view-nav';
 import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
 import type { Dashboard, DashboardTile } from '@/lib/domain/reporting/dashboards';
 import type { ReportDefinition, ReportResult } from '@/lib/domain/reporting/definitions';
@@ -42,7 +43,7 @@ function reportHref({
   if (filters.customerId) params.set('customer', filters.customerId);
   if (filters.resourceId) params.set('resource', filters.resourceId);
   if (filters.locationId) params.set('location', filters.locationId);
-  return `/organizations/${organizationId}/reports?${params}`;
+  return `/organizations/${organizationId}/insights/reports?${params}`;
 }
 
 export function ReportNavigation({
@@ -54,8 +55,6 @@ export function ReportNavigation({
   answerable,
   definitions,
   savedId,
-  dashboards,
-  openDashboardId,
 }: {
   organizationId: string;
   measure: Measure;
@@ -65,8 +64,6 @@ export function ReportNavigation({
   answerable: readonly Grouping[];
   definitions: ReportDefinition[];
   savedId?: string;
-  dashboards: Dashboard[];
-  openDashboardId?: string;
 }) {
   const link = (next: { measure?: Measure; grouping?: Grouping; period?: PeriodPreset }) => {
     const nextMeasure = next.measure ?? measure;
@@ -82,56 +79,63 @@ export function ReportNavigation({
 
   return (
     <>
-      {openDashboardId ? null : (
-        <>
-          <nav aria-label="Report measure" className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-            {MEASURES.map((option) => (
-              <Link key={option} href={link({ measure: option })} aria-current={option === measure ? 'page' : undefined} className={option === measure ? 'font-medium' : 'text-muted'}>
-                {MEASURE_LABELS[option]}
-              </Link>
-            ))}
-          </nav>
-          <nav aria-label="Report grouping" className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-            {answerable.map((option) => (
-              <Link key={option} href={link({ grouping: option })} aria-current={option === grouping ? 'page' : undefined} className={option === grouping ? 'font-medium' : 'text-muted'}>
-                By {GROUPING_LABELS[option].toLowerCase()}
-              </Link>
-            ))}
-          </nav>
-          <nav aria-label="Report period" className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-            {PERIODS.map((option) => (
-              <Link key={option} href={link({ period: option })} aria-current={option === period ? 'page' : undefined} className={option === period ? 'font-medium' : 'text-muted'}>
-                {PERIOD_LABELS[option]}
-              </Link>
-            ))}
-          </nav>
-        </>
-      )}
+      <nav aria-label="Report measure" className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        {MEASURES.map((option) => (
+          <Link key={option} href={link({ measure: option })} aria-current={option === measure ? 'page' : undefined} className={option === measure ? 'font-medium' : 'text-muted'}>
+            {MEASURE_LABELS[option]}
+          </Link>
+        ))}
+      </nav>
+      <nav aria-label="Report grouping" className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        {answerable.map((option) => (
+          <Link key={option} href={link({ grouping: option })} aria-current={option === grouping ? 'page' : undefined} className={option === grouping ? 'font-medium' : 'text-muted'}>
+            By {GROUPING_LABELS[option].toLowerCase()}
+          </Link>
+        ))}
+      </nav>
+      <nav aria-label="Report period" className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        {PERIODS.map((option) => (
+          <Link key={option} href={link({ period: option })} aria-current={option === period ? 'page' : undefined} className={option === period ? 'font-medium' : 'text-muted'}>
+            {PERIOD_LABELS[option]}
+          </Link>
+        ))}
+      </nav>
 
-      {dashboards.length > 0 ? (
-        <nav aria-label="Dashboards" className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-          <span className="text-muted">Dashboards:</span>
-          {dashboards.map((entry) => (
-            <Link key={entry.id} href={`/organizations/${organizationId}/reports?dashboard=${entry.id}`} aria-current={entry.id === openDashboardId ? 'page' : undefined} className={entry.id === openDashboardId ? 'font-medium' : 'text-muted'}>
-              {entry.name}
-            </Link>
-          ))}
-          {openDashboardId ? <Link href={`/organizations/${organizationId}/reports`} className="text-muted">Back to figures</Link> : null}
-        </nav>
-      ) : null}
-
-      {!openDashboardId && definitions.length > 0 ? (
+      {definitions.length > 0 ? (
         <nav aria-label="Saved reports" className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
           <span className="text-muted">Saved:</span>
           {definitions.map((definition) => (
-            <Link key={definition.id} href={`/organizations/${organizationId}/reports?report=${definition.id}`} aria-current={definition.id === savedId ? 'page' : undefined} className={definition.id === savedId ? 'font-medium' : 'text-muted'}>
+            <Link key={definition.id} href={`/organizations/${organizationId}/insights/reports?report=${definition.id}`} aria-current={definition.id === savedId ? 'page' : undefined} className={definition.id === savedId ? 'font-medium' : 'text-muted'}>
               {definition.name}
             </Link>
           ))}
-          {savedId ? <Link href={`/organizations/${organizationId}/reports`} className="text-muted">Clear</Link> : null}
+          {savedId ? <Link href={`/organizations/${organizationId}/insights/reports`} className="text-muted">Clear</Link> : null}
         </nav>
       ) : null}
     </>
+  );
+}
+
+/** The saved dashboards of Insights' overview — each one a URL, so an open dashboard survives a reload. */
+export function DashboardNavigation({
+  organizationId,
+  dashboards,
+  openDashboardId,
+}: {
+  organizationId: string;
+  dashboards: Dashboard[];
+  openDashboardId?: string;
+}) {
+  if (dashboards.length === 0) return null;
+
+  return (
+    <nav aria-label="Dashboards" className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+      {dashboards.map((entry) => (
+        <Link key={entry.id} href={`/organizations/${organizationId}/insights?dashboard=${entry.id}`} aria-current={entry.id === openDashboardId ? 'page' : undefined} className={entry.id === openDashboardId ? 'font-medium' : 'text-muted'}>
+          {entry.name}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
@@ -235,8 +239,6 @@ export function ReportManagement({
   definitions,
   roles,
   shared,
-  dashboards,
-  pinnedByDashboard,
   mayManage,
   role,
 }: {
@@ -248,8 +250,6 @@ export function ReportManagement({
   definitions: ReportDefinition[];
   roles: { id: string; name: string }[];
   shared: { id: string; roleIds: string[] }[];
-  dashboards: Dashboard[];
-  pinnedByDashboard: Map<string, string[]>;
   mayManage: boolean;
   role: string;
 }) {
@@ -269,6 +269,27 @@ export function ReportManagement({
           </DividedList>
         </section>
       ) : null}
+    </>
+  );
+}
+
+/** Building a dashboard: naming one and choosing which saved reports sit on it. Lives on Insights' overview, beside the dashboards it makes. */
+export function DashboardManagement({
+  organizationId,
+  definitions,
+  dashboards,
+  pinnedByDashboard,
+  mayManage,
+}: {
+  organizationId: string;
+  definitions: ReportDefinition[];
+  dashboards: Dashboard[];
+  pinnedByDashboard: Map<string, string[]>;
+  mayManage: boolean;
+}) {
+  if (!mayManage) return null;
+
+  return (
       <section className="mt-8">
         <SectionHeading>Dashboards</SectionHeading>
         <Hint className="mt-1">A dashboard is saved reports side by side. It has no audience of its own — somebody sees it when something on it is theirs to read, which is why this platform ships none and a business builds its own.</Hint>
@@ -281,6 +302,20 @@ export function ReportManagement({
           </DividedList>
         ) : null}
       </section>
-    </>
+  );
+}
+
+/** Insights' two views. Each is a URL, so a report or dashboard opened from either survives a reload. */
+export function InsightsViewNav({ organizationId, current }: { organizationId: string; current: 'overview' | 'reports' }) {
+  return (
+    <ViewNav
+      label="Insights views"
+      current={current}
+      className="mt-6"
+      views={[
+        { key: 'overview', label: 'Overview', href: `/organizations/${organizationId}/insights` },
+        { key: 'reports', label: 'Reports', href: `/organizations/${organizationId}/insights/reports` },
+      ]}
+    />
   );
 }

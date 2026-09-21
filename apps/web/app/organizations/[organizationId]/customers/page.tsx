@@ -1,5 +1,6 @@
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
+import { SupportRegistrar } from '@/components/containers/support-registrar';
 import { PageHeader } from '@/components/containers/page-header';
 import { ButtonLink } from '@/components/controls/button';
 import {
@@ -13,8 +14,11 @@ import { CustomerTable } from '@/features/crm/customers/customer-table';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
-import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
-import { areaLabel } from '@/lib/navigation';
+import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
+import { todayInZone } from '@/lib/domain/scheduling/window';
+import { areaAvailable, areaHref, areaLabel } from '@/lib/navigation';
+import { CustomersInsights } from '@/features/insights/workspace-insights';
+import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -33,6 +37,13 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
   ]);
   const modules = activeModuleKeys(resolvedFeatures);
   const salesEnabled = modules.has('reception');
+  // Insights is offered only where the reporting workspace is this business's and this role reads it.
+  const mayInsight =
+    areaAvailable('insights', {
+      enabled: modules,
+      capabilities: new Set(organization.capabilities),
+      featureAvailability: availableFeatureKeys(resolvedFeatures),
+    }) && organization.capabilities.includes('report.read');
   const visibleStages = salesEnabled ? stages : [];
   const mayConfigure = organization.capabilities.includes('field.manage');
   // The database refuses an import from a role without `integration.manage`; the button follows
@@ -60,8 +71,34 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
               <CreateCustomerTrigger />
             </>
           }
+          activity
+          insights={mayInsight}
           configure={mayConfigure}
         />
+        <SupportRegistrar mode="activity" title="Customer activity">
+          <WorkspaceActivity
+            db={db}
+            organizationId={organizationId}
+            timezone={organization.timezone}
+            scope="customers"
+            emptyMessage="No customer activity yet."
+          />
+        </SupportRegistrar>
+        {mayInsight ? (
+          <SupportRegistrar
+            mode="insights"
+            title="Customer insights"
+            href={`${areaHref(organizationId, 'insights')}/reports?of=invoiced_and_incurred&by=customer&period=month`}
+            hrefLabel="Full report"
+          >
+            <CustomersInsights
+              db={db}
+              organizationId={organizationId}
+              today={todayInZone(organization.timezone)}
+              salesEnabled={salesEnabled}
+            />
+          </SupportRegistrar>
+        ) : null}
         {mayConfigure ? (
           <ConfigureRegistrar
             title="Customers configuration"

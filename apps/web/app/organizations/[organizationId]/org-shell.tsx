@@ -24,7 +24,7 @@ import {
   CalendarDays,
   ClipboardList,
   Layers,
-  LayoutDashboard,
+  Home,
   MapPin,
   Package,
   Phone,
@@ -62,7 +62,7 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  * without an icon fails at the gate rather than rendering blank in the rail.
  */
 export const AREA_ICONS: Record<string, LucideIcon> = {
-  today: LayoutDashboard,
+  home: Home,
   work: ClipboardList,
   schedule: CalendarDays,
   customers: Users,
@@ -70,7 +70,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   locations: MapPin,
   assets: Package,
   resources: Layers,
-  reports: BarChart3,
+  insights: BarChart3,
   automations: Zap,
   setup: ListChecks,
   settings: Settings,

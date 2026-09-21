@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cx } from '../class-names';
 import { PageCrumbs, type Crumb } from './workspace-crumbs';
-import { ConfigureTrigger } from './workspace-right-rail';
+import { SupportTrigger } from './workspace-right-rail';
 
 export type PageHeaderCrumb = Crumb;
 
@@ -11,13 +11,15 @@ export type PageHeaderCrumb = Crumb;
  * `WorkspaceHeader` above it is the global bar and holds none of this.
  *
  * A Server Component on purpose — a page passes whatever interactive actions it wants
- * (`CreateResourceTrigger`, `ConfigureTrigger`) as children of `actions`, and only those are
- * client code. Presentation only: no route, no capability, no domain knowledge. A page decides
- * which actions to offer; hiding one is courtesy, never the security boundary.
+ * (`CreateResourceTrigger`) as children of `actions`, and only those are client code.
+ * Presentation only: no route, no capability, no domain knowledge. A page decides which actions
+ * to offer; hiding one is courtesy, never the security boundary.
  *
- * **Configure is always the last action.** It opens the right-hand rail, so it sits nearest that
- * edge, after every business action. A page asks for it with `configure` and never places it, which
- * is what makes the order impossible to get wrong; `ConfigureTrigger` is rendered nowhere else.
+ * **The page-support modes are always last, in one order: Activity, Insights, Configure.** They open
+ * the right-hand rail, so they sit nearest that edge, after every business action. A page asks for
+ * a mode with `activity`, `insights` or `configure` — only a mode it genuinely supports — and never
+ * places one, which is what makes the order impossible to get wrong; `SupportTrigger` is rendered
+ * nowhere else. Each is paired with a `SupportRegistrar` on the page that holds its content.
  *
  * `crumbs` are ancestors only; `title` is the current page and the page's single `<h1>`.
  */
@@ -27,6 +29,8 @@ export function PageHeader({
   description,
   meta,
   actions,
+  activity = false,
+  insights = false,
   configure = false,
   className,
 }: {
@@ -37,7 +41,11 @@ export function PageHeader({
   meta?: ReactNode;
   /** Business actions, in reading order. Never Configure — see `configure`. */
   actions?: ReactNode;
-  /** Offers Configure, rendered after `actions`. Courtesy only; the panel's own writes are guarded by RLS. */
+  /** Offers the Activity mode: what recently changed here. Only where a domain-level read exists. */
+  activity?: boolean;
+  /** Offers the Insights mode: a few numbers for this workspace, from the reporting aggregates. */
+  insights?: boolean;
+  /** Offers Configure. Courtesy only; the panel's own writes are guarded by RLS. */
   configure?: boolean;
   /** Replaces the default bottom margin (`mb-6`) where the parent already spaces its children. */
   className?: string;
@@ -50,10 +58,12 @@ export function PageHeader({
         {description ? <p className="mt-1 max-w-3xl text-sm text-muted">{description}</p> : null}
         {meta ? <div className="mt-1 text-sm text-muted">{meta}</div> : null}
       </div>
-      {actions || configure ? (
+      {actions || activity || insights || configure ? (
         <div className="flex flex-wrap items-center gap-2">
           {actions}
-          {configure ? <ConfigureTrigger /> : null}
+          {activity ? <SupportTrigger mode="activity" /> : null}
+          {insights ? <SupportTrigger mode="insights" /> : null}
+          {configure ? <SupportTrigger mode="configure" /> : null}
         </div>
       ) : null}
     </header>

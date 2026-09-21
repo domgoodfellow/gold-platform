@@ -83,26 +83,70 @@ describe('WorkspaceHeader is the global bar, not a page header', () => {
   });
 });
 
-describe('Agent is workspace-global and Configure is page-level', () => {
+describe('Agent is workspace-global and the support modes are page-level', () => {
   it('AgentTrigger is the rail\'s global Agent control, labelled and pressed-state aware', () => {
     expect(workspaceRightRail).toContain('export function AgentTrigger');
     expect(workspaceRightRail).toContain('aria-label="Agent"');
     expect(workspaceRightRail).toContain('aria-pressed={agentOpen}');
   });
 
-  it('ConfigureTrigger is a separate export a page places itself, with pressed state', () => {
-    expect(workspaceRightRail).toContain('export function ConfigureTrigger');
-    expect(workspaceRightRail).toContain('aria-pressed={configureOpen}');
+  it('SupportTrigger is a separate export a page header places, with pressed state per mode', () => {
+    expect(workspaceRightRail).toContain('export function SupportTrigger');
+    expect(workspaceRightRail).toContain('aria-pressed={supportMode === mode}');
     const agentBody = workspaceRightRail.slice(
       workspaceRightRail.indexOf('export function AgentTrigger'),
-      workspaceRightRail.indexOf('export function ConfigureTrigger'),
+      workspaceRightRail.indexOf('export function SupportTrigger'),
     );
-    expect(agentBody).not.toContain('toggleConfigure');
+    expect(agentBody).not.toContain('toggleSupport');
   });
 
-  it('no page header ever renders Agent, and PageHeader offers Configure only as its final action', () => {
+  it('holds one support mode at a time, so switching reuses the rail rather than stacking drawers', () => {
+    expect(workspaceRightRail).toContain("export const SUPPORT_MODES = ['activity', 'insights', 'configure'] as const");
+    expect(workspaceRightRail).toMatch(/const \[supportMode, setSupportMode\] = useState<SupportMode \| null>/);
+    // No second open-state per mode: the three drawers are one value compared to their own mode.
+    expect(workspaceRightRail).not.toMatch(/activityOpen|insightsOpen|configureOpen/);
+    const registrar = readFileSync(`${WEB}/components/containers/support-registrar.tsx`, 'utf8');
+    expect(registrar).toContain('<PageDrawer open={supportMode === mode}');
+    // Closing on unmount is scoped to this registrar's own mode.
+    expect(registrar).toContain('current === mode ? null : current');
+  });
+
+  it('Agent stays a separate workspace-global panel beside the one page-support rail', () => {
+    expect(workspaceRightRail).toContain("type Panel = 'agent' | 'page'");
+    expect(workspaceRightRail).toContain('<AgentPanel />');
+    expect(code(pageHeader)).not.toMatch(/AgentTrigger|toggleAgent/);
+  });
+
+  it('no page header ever renders Agent, and PageHeader offers the support modes only as its final actions, in one order', () => {
     expect(code(pageHeader)).not.toMatch(/Agent|useWorkspaceRail/);
-    expect(code(pageHeader)).toContain('configure');
+    const header = code(pageHeader);
+    const activity = header.indexOf('<SupportTrigger mode="activity" />');
+    const insights = header.indexOf('<SupportTrigger mode="insights" />');
+    const configure = header.indexOf('<SupportTrigger mode="configure" />');
+    expect(activity).toBeGreaterThan(header.indexOf('{actions}'));
+    expect(insights).toBeGreaterThan(activity);
+    expect(configure).toBeGreaterThan(insights);
+  });
+
+  it('only offers a mode where the page also registers its content', () => {
+    const root = `${WEB}/app/organizations/[organizationId]`;
+    for (const area of ['customers', 'work']) {
+      const source = readFileSync(`${root}/${area}/page.tsx`, 'utf8');
+      expect(source, `${area} offers Activity`).toMatch(/\bactivity\b/);
+      expect(source, `${area} registers Activity`).toContain('<SupportRegistrar mode="activity"');
+      expect(source, `${area} registers Insights`).toContain('<SupportRegistrar');
+      expect(source, `${area} gates Insights on the reporting workspace`).toMatch(/areaAvailable\('insights'/);
+    }
+    // Activity reads only through the timeline's named scopes; a page never names event actions.
+    for (const path of ['features/timeline/workspace-activity.tsx', 'features/insights/workspace-insights.tsx']) {
+      const source = readFileSync(`${WEB}/${path}`, 'utf8');
+      expect(source).not.toMatch(/\.from\('events'\)|customer\.created|work_item\./);
+    }
+    const insights = readFileSync(`${WEB}/features/insights/workspace-insights.tsx`, 'utf8');
+    // The rail reuses the reporting aggregates; it computes no total of its own.
+    expect(insights).toContain('listWorkMarkedComplete');
+    expect(insights).toContain('listInvoicedAndIncurred');
+    expect(insights).not.toMatch(/\.reduce\(/);
   });
 
   it('every page that offers Configure also registers the panel it opens', () => {
@@ -263,7 +307,7 @@ describe('the right rail — Agent and the page drawer are two independent, non-
     expect(workspaceRightRail).toContain('const TABLET_BREAKPOINT = 768');
     expect(workspaceRightRail).toContain("const roomForBoth = layout === 'wide'");
     expect(workspaceRightRail).toMatch(/const \[agentOpen, setAgentOpen\]/);
-    expect(workspaceRightRail).toMatch(/const \[configureOpen, setConfigureOpen\]/);
+    expect(workspaceRightRail).toMatch(/const \[supportMode, setSupportMode\]/);
   });
 
   it('is never modal: no overlay, blur or focus trap, and the same two elements serve every layout', () => {
@@ -344,9 +388,10 @@ describe('the right rail — Agent and the page drawer are two independent, non-
     expect(code(pageDrawer)).not.toMatch(/max-w-|max-h-|side=/);
   });
 
-  it('Configure is a PageDrawer opened by ConfigureTrigger, closed when its page unmounts', () => {
-    expect(configureRegistrar).toContain('<PageDrawer open={configureOpen}');
-    expect(configureRegistrar).toContain('setConfigureOpen(false)');
+  it('Configure is the configure mode of the one support rail, closed when its page unmounts', () => {
+    expect(configureRegistrar).toContain('<SupportRegistrar mode="configure"');
+    const registrar = readFileSync(`${WEB}/components/containers/support-registrar.tsx`, 'utf8');
+    expect(registrar).toContain('setSupportMode((current) => (current === mode ? null : current))');
   });
 });
 
@@ -398,8 +443,8 @@ describe('the page-header contract — the page, not the workspace header, owns 
     expect(pages.length).toBeGreaterThan(20);
 
     // A page's identity is its PageHeader, a RecordHeader-based header component, or a feature
-    // that renders one (Today, the customer record). A pure redirect renders nothing at all.
-    const identity = /<PageHeader|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<TodayDashboard/;
+    // that renders one (Home, the customer record). A pure redirect renders nothing at all.
+    const identity = /<PageHeader|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard/;
     for (const page of pages) {
       const source = readFileSync(page, 'utf8');
       const label = page.slice(root.length);
@@ -602,12 +647,12 @@ describe('organization page composition', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('a page never places Configure: only PageHeader renders it, after the business actions', () => {
-    const renderers = sources.filter((path) => /<ConfigureTrigger\b/.test(read(path)));
+  it('a page never places a support mode: only PageHeader renders one, after the business actions', () => {
+    const renderers = sources.filter((path) => /<SupportTrigger\b/.test(read(path)));
     expect(renderers.map((path) => path.slice(WEB.length))).toEqual(['/components/containers/page-header.tsx']);
     const header = code(read(`${WEB}/components/containers/page-header.tsx`));
     expect(header.indexOf('{actions}')).toBeGreaterThan(-1);
-    expect(header.indexOf('{actions}')).toBeLessThan(header.indexOf('<ConfigureTrigger />'));
+    expect(header.indexOf('{actions}')).toBeLessThan(header.indexOf('<SupportTrigger mode="activity" />'));
   });
 
   it('Import is offered by the organization capability, not by the module alone or by platform role', () => {

@@ -116,7 +116,7 @@ describe('M11 — a destructive action with nothing between it and the write', (
       forms: `${FEATURES_ROOT}/automations/templates/delete-message-dialog.tsx`,
     },
     {
-      actions: `${APP_ROOT}/organizations/[organizationId]/reports/actions.ts`,
+      actions: `${APP_ROOT}/organizations/[organizationId]/insights/actions.ts`,
       forms: `${FEATURES_ROOT}/reporting/report-forms.tsx`,
     },
     {

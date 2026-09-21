@@ -31,7 +31,7 @@ async function foundBusiness(page: Page): Promise<string> {
   return /\/organizations\/([^/]+)\/setup/.exec(page.url())![1];
 }
 
-test('a new business enters Setup, can leave it freely, launches, and lands on Today with Setup gone', async ({
+test('a new business enters Setup, can leave it freely, launches, and lands on Home with Setup gone', async ({
   page,
 }) => {
   const organizationId = await foundBusiness(page);
@@ -52,16 +52,16 @@ test('a new business enters Setup, can leave it freely, launches, and lands on T
   await expect(page.getByText('Setting up')).toHaveCount(0);
   await expect(page.getByText('Set up your business')).toHaveCount(0);
 
-  // SETUP is not a route prison: Today opens as the ordinary workspace, with no setup chrome of
+  // SETUP is not a route prison: Home opens as the ordinary workspace, with no setup chrome of
   // its own — the sidebar's one Setup row is the way back.
-  await page.goto(`/organizations/${organizationId}/today`);
+  await page.goto(`/organizations/${organizationId}/home`);
   await expect(page.getByText('This business is still being set up.')).toHaveCount(0);
   await expect(page.getByText('Setup readiness')).toHaveCount(0);
 
   // Launch.
   await page.getByRole('link', { name: /^Setup/ }).first().click();
   await page.getByRole('button', { name: 'Launch business' }).click();
-  await expect(page).toHaveURL(`/organizations/${organizationId}/today`);
+  await expect(page).toHaveURL(`/organizations/${organizationId}/home`);
 
   // LIVE: nothing treats this business as onboarding any more.
   await expect(page.getByText('This business is still being set up.')).toHaveCount(0);
@@ -74,9 +74,9 @@ test('a new business enters Setup, can leave it freely, launches, and lands on T
   await expect(page.getByRole('heading', { level: 1, name: 'Setup' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Launch business' })).toHaveCount(0);
 
-  // And the business now opens on Today.
+  // And the business now opens on Home.
   await page.goto(`/organizations/${organizationId}`);
-  await expect(page).toHaveURL(`/organizations/${organizationId}/today`);
+  await expect(page).toHaveURL(`/organizations/${organizationId}/home`);
 });
 
 test('a phone reaches Setup from the bottom bar while SETUP lasts, and the header carries no badge', async ({
@@ -85,7 +85,7 @@ test('a phone reaches Setup from the bottom bar while SETUP lasts, and the heade
   await page.setViewportSize({ width: 390, height: 844 });
   const organizationId = await foundBusiness(page);
 
-  await page.goto(`/organizations/${organizationId}/today`);
+  await page.goto(`/organizations/${organizationId}/home`);
   const bar = page.getByRole('navigation', { name: 'This business' });
   const setupLink = bar.getByRole('link', { name: /^Setup/ });
   await expect(setupLink).toBeVisible();
@@ -95,6 +95,6 @@ test('a phone reaches Setup from the bottom bar while SETUP lasts, and the heade
   await expect(page).toHaveURL(`/organizations/${organizationId}/setup`);
 
   await page.getByRole('button', { name: 'Launch business' }).click();
-  await expect(page).toHaveURL(`/organizations/${organizationId}/today`);
+  await expect(page).toHaveURL(`/organizations/${organizationId}/home`);
   await expect(bar.getByRole('link', { name: /^Setup/ })).toHaveCount(0);
 });

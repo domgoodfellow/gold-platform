@@ -86,7 +86,7 @@ describe('resolveOrganizationsLanding — several memberships never meet a direc
   });
 });
 
-describe('the one organization-entry decision — SETUP enters Setup, LIVE enters Today', () => {
+describe('the one organization-entry decision — SETUP enters Setup, LIVE enters Home', () => {
   const one = (operationalState: 'setup' | 'live') => ({
     organizations: [{ id: 'org-1', operationalState }],
     staff: false,
@@ -98,8 +98,8 @@ describe('the one organization-entry decision — SETUP enters Setup, LIVE enter
     expect(destinationFor(landing)).toBe('/organizations/org-1/setup');
   });
 
-  it('sends a LIVE business to Today', () => {
-    expect(destinationFor(resolveOrganizationsLanding(one('live')))).toBe('/organizations/org-1/today');
+  it('sends a LIVE business to Home', () => {
+    expect(destinationFor(resolveOrganizationsLanding(one('live')))).toBe('/organizations/org-1/home');
   });
 
   it('follows the preferred workspace’s own state, not the first business listed', () => {

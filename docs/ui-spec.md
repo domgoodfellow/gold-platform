@@ -67,7 +67,7 @@ Products, Modules, Meters, Pricing, Providers and Failures are a separate IA bec
 GOLD itself, not one business. Both models render through the shared `AppShell` and shadcn
 Sidebar primitives — and, since the shell/context correction, through the shared
 `WorkspaceShell`/`WorkspaceRightRail` too (`apps/web/components/containers/workspace-shell.tsx`):
-two independent panels — Agent, and the page drawer that Configure and every create/edit form
+two independent panels — Agent, and the page-support rail that Activity, Insights, Configure and every create/edit form
 open into — neither modal. Both dock beside the page from 1720px; from 1280px one docks, the one
 opened last; between that and 768px one floats over the page from the right; below 768px one
 floats from the bottom. Nothing dims or blurs the page behind them. **Workspace-global tools align
@@ -134,15 +134,41 @@ modules — so no section is named for one. These are named for what an operator
 
 | Section | Holds | Why |
 |---|---|---|
-| Work | Today, Work, Schedule | The loop that gets work done |
-| Relationships | Customers, Calls | Who the work is for, and how they reach the business |
+| (Home) | Home | What matters in this business right now — set apart, first |
+| (Workspaces) | Customers, Work, Schedule, Communications, Automation, Insights | Where an operator does a kind of work; no heading, because the rows are the taxonomy |
 | Operations | Resources, Locations, Assets | What the work is done with, and where |
-| Tools | Automations, Reports | Building and observing rules, and reading what a period came to |
 | (Settings) | Settings | Where the business is configured — set apart by the rule above it |
+
+**The operating model.** An organization is *Home*, its *workspaces*, and *Settings*. A workspace
+is a place somebody works and follows one contract: an **Overview**, its primary views, an
+**Activity** read, a few contextual **Insights**, and **Configure**. Not every workspace has every
+part as a page; a part with no honest source is left out and not faked. *Insights* is also a
+workspace of its own — the deep, cross-workspace one: `/insights` is saved dashboards and
+`/insights/reports` the report builder. A workspace's Insights rail is a handful of numbers with a
+link into it; the report builder never sits in a rail. *Agent* is the workspace-global assistant
+rail, and is none of these.
+
+**Operator workspaces are not the commercial catalogue.** A row is a place somebody works. A Plan
+grants Features that may compose into several rows, and one row may compose Features from several
+catalogue Modules — there is no one-to-one, and no row per SKU (D25, D46). The sellable name of a
+Product (*Customer Experience*) and the operator's name for the place (*Website & Portal*) may
+differ.
+
+**Where each concern lives.**
+
+| Boundary | Rule |
+|---|---|
+| Customers / Communications | Customers owns the relationship — the record, the stage, the follow-up. Communications owns the channel — a call, a conversation, a message. A call appears on a customer's timeline; it is not a customer field |
+| Work / Schedule | Work owns what is to be done. Schedule alone owns when a resource can commit to it, and is the one engine that says what is free. Neither is a view of the other |
+| Financials / GOLD platform economics | Financials is the business's own price book, quotes, invoices, payments and costs. GOLD's Plans, subscription pricing, provider COGS, tenant economics, margin and forecasting stay in Platform Administration. Two money directions, never one screen |
+| Website & Portal / Communications | Website & Portal is what a customer meets before and outside a conversation — website, booking, forms, portal, brand. Communications is the conversation itself |
+| Library | Documents are shared organization resources, not a sub-feature of Customers, Work or Financials; a document may be linked to a customer, job, asset or invoice without being owned by it. Templates and Knowledge are Library's only when a real shared collection exists; automation message templates and checklist templates stay with their owning domain |
+| Service / pricing / scheduling | A Service (Offering) is the reusable definition of what the business does; a Work Item is one instance; the Price Book prices it; Scheduling says when resources can commit; a Quote or Invoice is the snapshotted result for one transaction. A Service may later supply estimated duration, resource requirements, a pricing rule, a checklist, bookability and a service-specific buffer. `buffer_minutes` remains a scheduling policy, and travel time is a separate, future scheduling input from locations and routes — never the same thing as a fixed buffer |
 
 There is no Ask row. The Agent is a rail on every workspace and understands the page and record it
 is opened from; the `assistant` module and `assistant.ask` capability are unchanged, and the old
-`/ask` address redirects to Today.
+`/ask` address redirects to Home; the old `/today` and `/reports` addresses redirect to Home and
+Insights' Reports.
 
 A section whose every area belongs to a switched-off module renders as nothing at all, heading
 included — naming a part of the application that is not there for that business would be worse
@@ -160,7 +186,7 @@ so the map cannot show a door the sidebar would hide. Guided setup and the Agent
 
 **Setup is a lifecycle with one shell affordance.** A business in SETUP is entered through Setup
 (`organizationHomeHref`), and the sidebar (or phone bar) keeps one plain Setup row while it lasts
-— no badge, no count, no readiness query on every request. Today carries no setup chrome. After
+— no badge, no count, no readiness query on every request. Home carries no setup chrome. After
 Launch the row is gone and Setup remains reviewable from Settings' *Setup & launch*, worded so
 Launch never sounds available again.
 
@@ -241,10 +267,17 @@ sits on; `AppPage` still owns width. It is a Server Component and knows no domai
 whatever actions it offers. **One primary action per page**, then secondary ones — Resources is
 *Add resource* with *Configure* beside it, and the empty state does not repeat it (§8).
 
-**Configure belongs to the page.** A page places `ConfigureTrigger` in its `PageHeader` actions
-and registers the drawer it opens with `ConfigureRegistrar`, a `PageDrawer`; `WorkspaceRightRail`
-hosts it beside the page and beside Agent, and either can be open without the other. Whether to offer it is presentation — the panel's writes are
-still refused by the database.
+**The page-support rail belongs to the page, with three modes.** A page may offer *Activity*
+(what recently changed here), *Insights* (a few numbers, with a link into Insights) and
+*Configure*, by passing `activity`, `insights` and `configure` to `PageHeader`; it registers each
+mode's content with a `SupportRegistrar` (`ConfigureRegistrar` is its `configure` mode). Only one
+mode is open at a time — `WorkspaceRightRail` holds a single `supportMode` — so choosing another
+replaces the open one in the same footprint. `WorkspaceRightRail` hosts it beside the page and
+beside Agent, and either can be open without the other. Whether to offer a mode is presentation —
+its reads and writes are still refused by the database. A mode is offered only where an
+authoritative source exists: Activity reads `listRecentActivity` through a named scope; Insights
+reuses the reporting aggregates and never computes its own. A Configure panel that would only
+repeat a Settings form links to the Settings owner instead.
 
 **The area's `<h1>` is still one string.** `navigation.ts` supplies the navigation entry and the
 heading both — an area's root page reads it with `areaLabel(segment)` instead of writing it again.
@@ -272,14 +305,13 @@ substitutes for the other, and the phone bar remains organization-only.
 
 **The application canvas has three modes.** `AppPage` owns `fluid` (the default), `form` and
 `reading`. Operational and collection pages are `fluid`: header, local navigation, toolbar and
-content are children of one `AppPage` and share its left and right edge, and an open Configure
-rail or drawer narrows the workspace rather than changing the page. `form` and `reading` are the
+content are children of one `AppPage` and share its left and right edge, and an open support rail or drawer narrows the workspace rather than changing the page. `form` and `reading` are the
 deliberate, bounded, centred layouts for one focused task. No page writes a `max-w-*` of its own.
 
-**Configure is always the last page action.** A page passes `configure` to `PageHeader`, which
-renders it after `actions`; `ConfigureTrigger` is placed nowhere else. Resources reads *Add
-resource, Configure*; Customers reads *Import, New customer, Configure*. Agent stays in the
-workspace header.
+**The support modes are always the last page actions, in one order.** `PageHeader` renders
+Activity, Insights, then Configure, after `actions`; `SupportTrigger` is placed nowhere else.
+Resources reads *Add resource, Configure*; Customers reads *Import, New customer, Activity,
+Insights, Configure*. Agent stays in the workspace header.
 
 **A drawer's chrome is one compact band** (`DRAWER_HEADER` in `workspace-geometry.ts`), the same
 for Configure and every create or edit form.
@@ -290,7 +322,8 @@ for Configure and every create or edit form.
 
 **An area may present itself as a dashboard of widgets**: tiles you read at a glance, any of
 which opens as the screen. `components/display/widget.tsx` holds `WidgetGrid`, `Widget` and
-`WidgetPanel`. Today is the first; the module areas follow.
+`WidgetPanel`. Calls, Integrations and Platform use them. Home is not built from them: it is
+KPI cards over domain reads, and a block whose source a business does not have is not drawn.
 
 **This is not the `dashboards` in `lib/domain/reporting/`, and the two must not converge.** That
 one is a business's own arrangement of saved reports, and `CLAUDE.md` refuses to let the platform
@@ -300,7 +333,7 @@ platform's. A business still builds report dashboards on top of it.
 
 | Rule | Why |
 |---|---|
-| The grid is CSS Grid, not a draggable layout | Today has product-owned placement. One column on a phone, two from `md`, and four on a very wide canvas gives dense, stable scanning without a persisted personalization model |
+| The grid is CSS Grid, not a draggable layout | A widget grid has product-owned placement. One column on a phone, two from `md`, and four on a very wide canvas gives dense, stable scanning without a persisted personalization model |
 | A widget opens to `?widget=<key>`, never to remembered state | It survives a reload, arrives with the back button, can be sent to somebody, and reads its rows on the server under the caller's own RLS. None of that is true of a panel a component remembers |
 | The expanded view replaces the grid; it does not cover it | Nothing overlays, so nothing traps focus and nothing needs an escape key. The way out is the way back |
 | The title is the link, not the whole tile | A tile whose every pixel navigates cannot hold the rows that make it worth looking at — a link inside a link is invalid, and the overlay that works around it swallows text selection |
@@ -432,7 +465,7 @@ the generic layers merely because it has multiple call sites.
 | `DataTable` — responsive; `TableScroll` · `TableHeaderCell` · `TableCell` | `display/table.tsx` | the lists and the reports |
 | `Card` · `Disclosure` | `containers/card.tsx` | the boards and every create form |
 | `Dialog` · `ConfirmSubmit` | `containers/dialog.tsx` | 10, every destructive action in the operator shell |
-| `Badge` · `DefinitionList` · `Detail` · `Stat` · `StatRow` · `Toolbar` | `display/data.tsx` | the detail screens and Today |
+| `Badge` · `DefinitionList` · `Detail` · `Stat` · `StatRow` · `Toolbar` | `display/data.tsx` | the detail screens |
 | `cx` | `class-names.ts` | the others |
 
 The operator and platform surfaces have converged on those layers. Dialog, Table, Badge, Card

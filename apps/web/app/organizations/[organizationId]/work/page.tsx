@@ -1,4 +1,3 @@
-import { areaLabel } from '@/lib/navigation';
 import { WorkList } from '@/features/work/work-list';
 import { AppPage } from '@/components/containers/app-page';
 import { listAssets } from '@/lib/domain/assets/assets';
@@ -17,6 +16,12 @@ import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types
 import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
+import { SupportRegistrar } from '@/components/containers/support-registrar';
+import { WorkInsights } from '@/features/insights/workspace-insights';
+import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
+import { availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
+import { todayInZone } from '@/lib/domain/scheduling/window';
+import { areaAvailable, areaHref, areaLabel } from '@/lib/navigation';
 import { PageHeader } from '@/components/containers/page-header';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 
@@ -47,9 +52,34 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
   const can = (capability: Capability) => organization.capabilities.includes(capability);
   const assetsEnabled = enabledModules.has('assets');
   const mayConfigure = can('field.manage');
+  const mayInsight =
+    areaAvailable('insights', {
+      enabled: enabledModules,
+      capabilities: new Set(organization.capabilities),
+      featureAvailability: availableFeatureKeys(await organizationResolvedFeatureStates(db, { organizationId })),
+    }) && can('report.read');
 
   return (
     <AppPage>
+      <SupportRegistrar mode="activity" title="Work activity">
+        <WorkspaceActivity
+          db={db}
+          organizationId={organizationId}
+          timezone={organization.timezone}
+          scope="work"
+          emptyMessage="No work activity yet."
+        />
+      </SupportRegistrar>
+      {mayInsight ? (
+        <SupportRegistrar
+          mode="insights"
+          title="Work insights"
+          href={`${areaHref(organizationId, 'insights')}/reports?of=work_marked_complete&by=customer&period=month`}
+          hrefLabel="Full report"
+        >
+          <WorkInsights db={db} organizationId={organizationId} today={todayInZone(organization.timezone)} />
+        </SupportRegistrar>
+      ) : null}
       {mayConfigure ? (
         <ConfigureRegistrar
           title="Work configuration"
@@ -72,7 +102,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
           />
         </ConfigureRegistrar>
       ) : null}
-      <PageHeader title={areaLabel('work')} configure={mayConfigure} />
+      <PageHeader title={areaLabel('work')} activity insights={mayInsight} configure={mayConfigure} />
       <WorkList
         organizationId={organizationId}
         role={organization.role}

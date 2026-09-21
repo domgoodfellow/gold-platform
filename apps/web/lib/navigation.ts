@@ -11,7 +11,7 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
  * or general-purpose area shows itself to any member and explains what their role can't do,
  * because the guard is the RLS policy and the sentence is the courtesy. `Area.relevantCapabilities`
  * is the narrow exception, added for a genuinely feature-specific area whose entire content is
- * behind one capability a role can lack (Reports, Automations' own settings, Integrations) — the
+ * behind one capability a role can lack (Insights, Automations' own settings, Integrations) — the
  * sidebar hides a link nobody assigned this role could do anything behind, but direct navigation
  * to the route is still refused server-side by RLS regardless of what the sidebar shows, exactly
  * as before this field existed.
@@ -32,7 +32,7 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
  * D23 still governs the part that matters: work comes first and Settings last, and an operator
  * must never reach today's work by going through settings.
  */
-export type AreaGroup = 'work' | 'relationships' | 'operations' | 'tools' | 'settings';
+export type AreaGroup = 'home' | 'workspaces' | 'operations' | 'settings';
 
 /**
  * The sections, in the order the sidebar draws them. One list, so the ordering rule D23 states
@@ -41,12 +41,13 @@ export type AreaGroup = 'work' | 'relationships' | 'operations' | 'tools' | 'set
  * entry would say the word twice.
  */
 export const AREA_GROUPS = [
-  { key: 'work', label: 'Work' },
-  // Who the work is for — the people a business keeps a record of and refers back to.
-  { key: 'relationships', label: 'Relationships' },
-  // What the work is done with, and where.
+  // Home is one row set apart, and the answer to "what matters right now".
+  { key: 'home', label: null },
+  // Where an operator does a kind of work. Unlabelled: a heading over the main list would name a
+  // taxonomy the rows already are.
+  { key: 'workspaces', label: null },
+  // What the work is done with, and where — real areas that are not one of the workspaces above.
   { key: 'operations', label: 'Operations' },
-  { key: 'tools', label: 'Tools' },
   { key: 'settings', label: null },
 ] as const satisfies readonly { key: AreaGroup; label: string | null }[];
 
@@ -179,7 +180,7 @@ export const MODULES = [
     label: 'Reporting',
     description:
       'What this business billed and what its work consumed, and how much work it marked finished — grouped by customer, service, resource or location. A business that reads its numbers in its accounting software runs without it.',
-    configuredAt: { segment: 'reports' },
+    configuredAt: { segment: 'insights' },
     // No `requires: 'billing'` any more — "work marked complete" reads the event log and needs no invoice, so a business that invoices elsewhere now has something to read here too.
   },
   {
@@ -239,7 +240,7 @@ export type Area = {
    * A role must hold at least one of these to see this area in navigation — never a substitute
    * for the module gate above, layered on top of it. Absent (the default) means every member
    * sees the area regardless of capability, which stays true for every kernel and general
-   * operational area (Today, Work, Customers, Schedule, Locations, Resources, Assets, Settings).
+   * operational area (Home, Work, Customers, Schedule, Locations, Resources, Assets, Settings).
    * Direct navigation to the route underneath is unaffected either way; RLS decides that.
    */
   relevantCapabilities?: readonly Capability[];
@@ -257,29 +258,35 @@ export type Area = {
   featureKeys?: readonly string[];
 };
 
-/** Work first, Settings last — a claim about what an operator does all day, not an alphabetisation. */
+/**
+ * Home first, Settings last — a claim about what an operator does all day, not an alphabetisation.
+ *
+ * **Operator workspaces are not the commercial catalogue.** A row here is a place somebody works;
+ * a Plan grants Features that may compose into several rows, and one row may compose Features from
+ * several catalogue Modules. Nothing here is one-to-one with a Product (D25, D46).
+ */
 export const AREAS: readonly Area[] = [
   // Leads because D23 says the action an operator's phone is designed around is "what do I do next".
-  { segment: 'today', label: 'Today', group: 'work' },
-  { segment: 'work', label: 'Work', group: 'work' },
-  { segment: 'schedule', label: 'Schedule', group: 'work' },
+  { segment: 'home', label: 'Home', group: 'home' },
 
-  { segment: 'customers', label: 'Customers', group: 'relationships' },
-  // Beside Customers — the same loop from the other end: who to ring is a question about the customer list.
+  { segment: 'customers', label: 'Customers', group: 'workspaces' },
+  { segment: 'work', label: 'Work', group: 'workspaces' },
+  { segment: 'schedule', label: 'Schedule', group: 'workspaces' },
+  // Communications is the workspace; Calls is the one channel implemented in it. The route is
+  // still `calls` — canonicalising it to /communications/calls waits for the call-domain work.
   // The specific Communications/Voice features this surface is — not `pipeline`/`configurable_stages`/
   // `qualification_state`, which also map to the `reception` module key but back the CRM pipeline
   // (Customers), a different surface entirely (D46's many-to-many seam, and the reason `featureKeys`
   // exists rather than gating on `module` alone).
-  { segment: 'calls', label: 'Calls', group: 'relationships', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
+  { segment: 'calls', label: 'Communications', group: 'workspaces', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
+  // A workspace, not a setting: building, reviewing and observing rules is ongoing work.
+  { segment: 'automations', label: 'Automation', group: 'workspaces', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  // Deep analytics: saved dashboards and reports. Workspace-local numbers stay in their workspace.
+  { segment: 'insights', label: 'Insights', group: 'workspaces', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
 
   { segment: 'resources', label: 'Resources', group: 'operations' },
   { segment: 'locations', label: 'Locations', group: 'operations' },
   { segment: 'assets', label: 'Assets', group: 'operations', module: 'assets', featureKeys: ['assets'] },
-
-  // A workspace, not a setting: building, reviewing and observing rules is ongoing work.
-  { segment: 'automations', label: 'Automations', group: 'tools', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
-  // Last of the tools, on purpose — reading what a month came to is periodic, not part of the loop that gets work done.
-  { segment: 'reports', label: 'Reports', group: 'tools', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
 
   // Configuration, not places somebody works: each is a real, directly addressable route with its
   // module and capability gating unchanged, found from the Settings map (`sidebar: false`).
@@ -333,6 +340,25 @@ export function areaEntitled(
 }
 
 /**
+ * Whether the named workspace is entitled to this organization and relevant to this role — the two
+ * predicates navigation applies, asked by a caller that is not drawing navigation (Home deciding
+ * which blocks exist, a workspace deciding whether to offer its Insights). One predicate, so a
+ * block and its sidebar row cannot disagree about whether a business has the thing.
+ */
+export function areaAvailable(
+  segment: string,
+  state: {
+    enabled?: ReadonlySet<string>;
+    capabilities?: ReadonlySet<Capability>;
+    featureAvailability?: ReadonlySet<string>;
+  },
+): boolean {
+  const area = AREAS.find((candidate) => candidate.segment === segment);
+  if (!area) throw new Error(`No area has the segment "${segment}".`);
+  return areaEntitled(area, state.enabled, state.featureAvailability) && areaVisibleTo(area, state.capabilities);
+}
+
+/**
  * Every area visible in navigation for the given state — one predicate, so `OrgNav` (grouped)
  * and `OrgNavBar` (flat, phone) can never diverge on eligibility even though they render
  * differently (D4 of this slice). `enabled` is legacy module keys, `featureAvailability` is the
@@ -371,7 +397,7 @@ export function areaHref(organizationId: string, segment: string): string {
  * "Enter this business" — the one canonical destination, for every caller whose job is switching
  * into an organization rather than linking to a specific area inside one. **The lifecycle state is
  * part of the answer and a required argument, so no caller can forget to ask:** a business still
- * in SETUP is entered through Setup, a LIVE one through Today (`AREAS[0]`). Direct navigation to
+ * in SETUP is entered through Setup, a LIVE one through Home (`AREAS[0]`). Direct navigation to
  * any other area is unaffected — SETUP is a lifecycle state, not a route prison.
  */
 export function organizationHomeHref(organizationId: string, operationalState: OperationalState): string {

@@ -144,7 +144,7 @@ export function LaunchReview({
             <dd>{overview.optionalOpen === 0 ? 'None unfinished' : `${overview.optionalOpen} unfinished`}</dd>
           </dl>
           <Hint className="mt-3">
-            Launching makes Today the default workspace for this business. Every area above stays
+            Launching makes Home the default workspace for this business. Every area above stays
             configurable from Settings.
           </Hint>
           <div className="mt-4">

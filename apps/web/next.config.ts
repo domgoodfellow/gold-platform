@@ -15,8 +15,13 @@ const nextConfig: NextConfig = {
     return [
       { source: "/account", destination: "/settings/account", permanent: true },
       // Ask was a workspace of its own; the Agent rail on every workspace replaced it. A
-      // bookmark lands on Today, and the assistant capability is untouched.
-      { source: "/organizations/:organizationId/ask", destination: "/organizations/:organizationId/today", permanent: false },
+      // bookmark lands on Home, and the assistant capability is untouched.
+      { source: "/organizations/:organizationId/ask", destination: "/organizations/:organizationId/home", permanent: false },
+      // Today was the narrow first version of Home. Query strings pass through a redirect.
+      { source: "/organizations/:organizationId/today", destination: "/organizations/:organizationId/home", permanent: true },
+      // Reports became one view of Insights; a saved dashboard opens on Insights' overview.
+      { source: "/organizations/:organizationId/reports", has: [{ type: "query", key: "dashboard" }], destination: "/organizations/:organizationId/insights", permanent: true },
+      { source: "/organizations/:organizationId/reports", destination: "/organizations/:organizationId/insights/reports", permanent: true },
     ];
   },
 };

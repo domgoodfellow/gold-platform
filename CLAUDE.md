@@ -23,6 +23,11 @@ tellings of one thing and no way to tell which is stale.
   paragraph, the paragraph goes in `docs/constraints.md` and the line here points at it.
 - **Simple first.** The plainest thing that does the job, and no structure built before something
   needs it.
+- **Look at it before saying it works.** A change to anything a person sees is not done until it
+  has been opened in the running app on `pnpm demo` data and screenshotted — at desktop width, at
+  the 320px rail if it lives there, and in the state a machine with a provider left unconfigured
+  lands in. Source-scanning tests prove a rule, not a screen. Say which of the two you did; never
+  report a screen as working from a passing test alone.
 
 ## The documents
 
@@ -375,12 +380,12 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | GOLD's header on a tenant's public page | `SiteShell` says GOLD twice. On `/book/{slug}` that is our wordmark on somebody else's shop front (D20) | `public-profile.test.ts` scans `app/(public)/` for it, beside the sentences it already refuses |
 | A heading on an area page | One string in `navigation.ts` is both the navigation entry and the `<h1>`; an area's root page reads it with `areaLabel`. A detail route writes its own, because a job's title is not a platform noun | `navigation.test.ts` fails on a route with no entry and on an entry with no route |
 | A page title or page action in `WorkspaceHeader` | It is the global bar; a control belongs to the layer whose scope it has, and *Configure* on Agent's row put one page's controls on the workspace's (`ui-spec.md` §2a). The breadcrumb trail is the one page-supplied thing it hosts, through `WorkspaceCrumbSlot` | `WorkspaceHeader` accepts no slot but that one; every page renders one `PageHeader`, and its `crumbs` render in the bar rather than the page; `workspace-shell.test.ts` scans both |
-| An interleaved `AREAS` list | An operator must never reach today's work by going through settings (D23), and the sidebar rules between sections — a broken run draws a divider through the middle of one | `navigation.test.ts` asserts each group is one unbroken run, in `AREA_GROUPS` order, work first and Settings last |
-| A navigation section named for the billing axis | *Module* is what a tenant switches on (D25), and Reports, Assets, Automations and Reception are all modules — a section by that name would have to hold areas belonging to all three sections | `AREA_GROUPS` names what an operator does: work, relationships, operations, tools, settings |
+| An interleaved `AREAS` list | An operator must never reach today's work by going through settings (D23), and the sidebar rules between sections — a broken run draws a divider through the middle of one | `navigation.test.ts` asserts each group is one unbroken run, in `AREA_GROUPS` order, Home first and Settings last |
+| A navigation section named for the billing axis | *Module* is what a tenant switches on (D25), and Reports, Assets, Automations and Reception are all modules — a section by that name would have to hold areas belonging to all three sections | `AREA_GROUPS` names what an operator does: home, workspaces, operations, settings |
 | A `required: true` module | That is the kernel misfiled. It shipped once with every area inside a required module, and module enablement could not change a single line of navigation | `navigation.test.ts` fails if no area belongs to an optional module |
 | A module that hides only its own area | Switching `billing` off must also remove the quote, invoice and margin sections from every job screen | `modules.test.ts`; `20260829000010` fixed the half-switch booking shipped |
 | A module without `configuredAt` | A switch with no route to its inputs looks finished and does nothing, which is what card payments did (D31) | Required by `Module`; `outstandingModuleSetup` says what is still missing |
-| Capability-gated navigation as the general rule | Each kernel or general-purpose screen shows itself and explains what a role cannot do. Hiding is on a module, not a role, for most of `AREAS` (I12) | `Area.relevantCapabilities` is the one narrow, explicit exception — a genuinely feature-specific area (Reports, Automations, Calls) whose entire content sits behind one capability, layered on top of the module gate, never instead of it. A kernel or general operational area (Today, Work, Customers, Schedule, Locations, Resources) carries none. Direct navigation to the route underneath is unaffected either way — RLS decides that regardless of what the sidebar shows |
+| Capability-gated navigation as the general rule | Each kernel or general-purpose screen shows itself and explains what a role cannot do. Hiding is on a module, not a role, for most of `AREAS` (I12) | `Area.relevantCapabilities` is the one narrow, explicit exception — a genuinely feature-specific area (Insights, Automation, Communications) whose entire content sits behind one capability, layered on top of the module gate, never instead of it. A kernel or general operational area (Home, Work, Customers, Schedule, Locations, Resources) carries none. Direct navigation to the route underneath is unaffected either way — RLS decides that regardless of what the sidebar shows |
 | A colour keyed to what a status means | The platform does not know what a tenant's status means; *Klaar* and *Awaiting parts* are the same shape of row | One neutral treatment, the tenant's word rendered as written (`ui-spec.md` §7) |
 | A colour literal in a screen | `globals.css` holds the roles and is the only place a value lives. Refusing a tokens *document* (D8) was once read as refusing the tokens, and the screens carried two reds nobody chose | Nine roles in `@theme`; `ui-spec.md` §3 |
 | A tenant colour outside the three accent roles | A business overriding its page, its rules or `danger` can make its own screens unreadable, or recolour a refusal | `BrandStyle` writes three variables and no others |
@@ -400,6 +405,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | Tenant identity, and the caller's own JWT | D14, D17 |
 | The external actor axis | D22 |
 | The interface, and the control set | D23, `docs/ui-spec.md` |
+| Home, workspaces, the page-support rail, and operator against catalogue taxonomy | D58 |
 | Modules against engines | D25 |
 | Payments, and whose account holds the money | D26, D27, D33 |
 | Platform staff, provisioning, the two doors | D28, D29 |

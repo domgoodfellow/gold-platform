@@ -377,7 +377,7 @@ scheduled rules simply wait.
 ### 12. Ask it something — the *Agent*
 
 Switch the Agent on in Settings → *Features*. Open **Agent** from the top bar on any screen and
-type *what work is at risk of being late today*. There is no Ask screen; `/ask` redirects to Today.
+type *what work is at risk of being late today*. There is no Ask screen; `/ask` redirects to Home.
 
 **What comes back is built from what you can already see.** The loop reaches this database
 through one function, `public.work_at_risk`, called with your own access token — scoped by

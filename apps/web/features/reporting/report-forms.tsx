@@ -22,7 +22,7 @@ import {
   setPinAction,
   setReportRolesAction,
   type ReportState,
-} from '@/app/organizations/[organizationId]/reports/actions';
+} from '@/app/organizations/[organizationId]/insights/actions';
 
 const INITIAL: ReportState = { error: null };
 /**

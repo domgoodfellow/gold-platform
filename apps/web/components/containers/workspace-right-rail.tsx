@@ -13,7 +13,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { Bot, Settings, X } from 'lucide-react';
+import { BarChart3, Bot, History, Settings, X, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { HEADER_HEIGHT_STYLE } from './workspace-geometry';
@@ -23,10 +23,13 @@ import { HEADER_HEIGHT_STYLE } from './workspace-geometry';
  *
  * - **Agent** is workspace-scoped and always the outermost right panel. Its header is the
  *   workspace header's band.
- * - **The page drawer** is page-scoped: Configure, and every create/edit form a page opens. It
- *   sits between the page and Agent, beneath the workspace header, and its header aligns with the
- *   page's (`workspace-geometry.ts`). Its content is written by whoever opened it (`PageDrawer`)
- *   and portalled into the slot `PagePanel` exposes, so it keeps its owner's state and context.
+ * - **The page-support rail** is page-scoped: one of Activity, Insights or Configure (a
+ *   `SupportMode`), and every create/edit form a page opens. It sits between the page and Agent,
+ *   beneath the workspace header, and its header aligns with the page's (`workspace-geometry.ts`).
+ *   Its content is written by whoever opened it (`PageDrawer`) and portalled into the one slot
+ *   `PagePanel` exposes, so it keeps its owner's state and context. **One mode is open at a time**:
+ *   `supportMode` is a single value, so choosing another mode replaces the open one in the same
+ *   footprint instead of stacking a second drawer.
  *
  * Neither is modal: nothing dims, blurs or blocks the page behind them.
  */
@@ -84,14 +87,25 @@ function readStoredWidth(): number {
 
 type Panel = 'agent' | 'page';
 
+/** What the page-support rail can show, in the order a page header offers it. */
+export const SUPPORT_MODES = ['activity', 'insights', 'configure'] as const;
+export type SupportMode = (typeof SUPPORT_MODES)[number];
+
+const SUPPORT_MODE_LABELS: Record<SupportMode, { label: string; icon: LucideIcon }> = {
+  activity: { label: 'Activity', icon: History },
+  insights: { label: 'Insights', icon: BarChart3 },
+  configure: { label: 'Configure', icon: Settings },
+};
+
 type RailContextValue = {
   layout: RailLayout;
   agentOpen: boolean;
   toggleAgent: () => void;
   closeAgent: () => void;
-  configureOpen: boolean;
-  setConfigureOpen: (open: boolean) => void;
-  toggleConfigure: () => void;
+  /** The one open page-support mode, or null. Never two. */
+  supportMode: SupportMode | null;
+  setSupportMode: (mode: SupportMode | null | ((current: SupportMode | null) => SupportMode | null)) => void;
+  toggleSupport: (mode: SupportMode) => void;
   agent: ReactNode | null;
   registerAgent: (content: ReactNode | null) => void;
   agentWidth: number;
@@ -110,7 +124,7 @@ const RailContext = createContext<RailContextValue | null>(null);
 export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
   const layout = useRailLayout();
   const [agentOpen, setAgentOpen] = useState(false);
-  const [configureOpen, setConfigureOpen] = useState(false);
+  const [supportMode, setSupportMode] = useState<SupportMode | null>(null);
   const [agent, setAgent] = useState<ReactNode | null>(null);
   const [agentWidth, setAgentWidthState] = useState(readStoredWidth);
   const [pageSlot, setPageSlot] = useState<HTMLElement | null>(null);
@@ -134,7 +148,10 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
     setLatest('agent');
   }, []);
   const closeAgent = useCallback(() => setAgentOpen(false), []);
-  const toggleConfigure = useCallback(() => setConfigureOpen((open) => !open), []);
+  const toggleSupport = useCallback(
+    (mode: SupportMode) => setSupportMode((current) => (current === mode ? null : mode)),
+    [],
+  );
 
   const openPage = useCallback((id: string) => {
     setPageStack((stack) => (stack.includes(id) ? stack : [...stack, id]));
@@ -158,9 +175,9 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
       agentOpen,
       toggleAgent,
       closeAgent,
-      configureOpen,
-      setConfigureOpen,
-      toggleConfigure,
+      supportMode,
+      setSupportMode,
+      toggleSupport,
       agent,
       registerAgent,
       agentWidth,
@@ -178,8 +195,8 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
       agentOpen,
       toggleAgent,
       closeAgent,
-      configureOpen,
-      toggleConfigure,
+      supportMode,
+      toggleSupport,
       agent,
       registerAgent,
       agentWidth,
@@ -236,24 +253,25 @@ export function AgentTrigger() {
 }
 
 /**
- * Configure is contextual to a page, so the page places this in its own `PageHeader` actions,
- * beside the `ConfigureRegistrar` whose drawer it opens. The page decides whether to offer it
- * (`mayConfigure`); that is presentation, never the guard — the panel's own writes are refused by
- * RLS regardless.
+ * The trigger for one page-support mode, placed by `PageHeader` and nowhere else, beside the
+ * registrar (`SupportRegistrar`) whose drawer it opens. Pressing the open mode closes it; pressing
+ * another switches the rail to that one. The page decides which modes it offers; that is
+ * presentation, never the guard — the panel's own reads and writes are refused by RLS regardless.
  */
-export function ConfigureTrigger() {
-  const { configureOpen, toggleConfigure } = useWorkspaceRail();
+export function SupportTrigger({ mode }: { mode: SupportMode }) {
+  const { supportMode, toggleSupport } = useWorkspaceRail();
+  const { label, icon: Icon } = SUPPORT_MODE_LABELS[mode];
 
   return (
     <Button
       type="button"
       tone="secondary"
-      aria-pressed={configureOpen}
-      onClick={toggleConfigure}
+      aria-pressed={supportMode === mode}
+      onClick={() => toggleSupport(mode)}
       className="gap-1.5"
     >
-      <Settings aria-hidden size={16} />
-      Configure
+      <Icon aria-hidden size={16} />
+      {label}
     </Button>
   );
 }

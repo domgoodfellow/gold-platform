@@ -1482,10 +1482,10 @@ advice.
 
 **Decision.** While `operationalState === 'setup'`, a business is entered through `/setup`, the
 sidebar and the phone bottom bar each carry one Setup item — navigation only, no count, since Setup
-owns progress — and Today carries no setup chrome (it once held a sentence pointing back; a
+owns progress — and Home carries no setup chrome (it once held a sentence pointing back; a
 setup business is entered through Setup and the row is always there, so the sentence was a third
 affordance). After Launch the row stops, on its own: the layout reads the state once and hands both
-renderings the same value, Launch revalidates the layout and lands on Today, and Setup stays
+renderings the same value, Launch revalidates the layout and lands on Home, and Setup stays
 reviewable from Settings' *Setup & launch* entry, worded so Launch never sounds available again. Setup lists *areas*, never fields, and every area links to the workspace that owns its
 configuration; nothing on `/setup` edits a business. Importance is only what the domain already
 says: `required` is exactly what `organization_launch_blockers` names (I27), `recommended` is a
@@ -1494,7 +1494,7 @@ resources, locations), which `computeReadiness` already refuses to make a requir
 one optional card on the page; the areas and Launch render outside every drafting condition.
 
 **Why.** Setup had seven separate manifestations — a sidebar call to action, a header badge, a
-readiness widget on Today, a banner, a section on `/setup`, a Settings card and a creation redirect
+readiness widget on Home, a banner, a section on `/setup`, a Settings card and a creation redirect
 that depended on whether drafting existed — and none of them agreed. One lifecycle state, one entry
 decision (`organizationHomeHref`, I44) and one place that lists areas replaces them.
 
@@ -1644,3 +1644,32 @@ one-line change to the mapping. A Plan assignment that has lapsed reads as *no c
 as unlocked. A locked business cannot reach General settings, so one with no currency cannot start
 Checkout until staff set it. The Python runtime (`apps/api`) and the OAuth callback do not yet
 consult the policy.
+
+### D58 — An organization is Home, its workspaces and Settings; the operator's taxonomy is not the catalogue's
+
+**Decision.** The organization shell is *Home*, a set of *workspaces*, and *Settings*. Home is an
+adaptive business dashboard, not a renamed list of today's appointments, and it draws a block only
+when its capability is entitled and relevant to the caller — the same `areaAvailable` predicate
+navigation applies — and the domain already answers the question. It computes nothing itself. A
+workspace follows one contract (Overview, primary views, Activity, contextual Insights, Configure);
+a page-support rail with three modes (Activity, Insights, Configure) is the one place a page shows
+them, and it holds a single open mode. Insights is the deep cross-workspace analytics workspace
+(`/insights` saved dashboards, `/insights/reports` the builder); a workspace's Insights rail is a
+few numbers from the same aggregates.
+
+**Why.** Today was too narrow to be the root of an organization, and Reports mixed a dashboard
+reader, a report builder and dashboard management on one screen. The sidebar answers *where do I do
+this kind of work*; it must not expose Product → Module → Feature. A commercial Plan packages
+Features across several workspaces, and one workspace composes Features from several Modules, so the
+two taxonomies are kept apart on purpose (D25, D46).
+
+**Holds.** `navigation.test.ts` (one Home, no Today or Reports route, no workspace without a page,
+one section heading), `organization-home.test.ts` (Home reads only what a business has and totals
+nothing), `workspace-shell.test.ts` (one support mode at a time, only supported modes offered).
+
+**Not built, and why.** Financials, Website & Portal and Library are target vocabulary, not rows: no
+operating surface exists yet for the first two beyond Settings-owned configuration and per-record
+job billing, and Documents are attached to a customer, location, asset or job with no
+organization-level collection to list. Quick Create waits on create flows a link can reach — every
+create form today is a sheet opened from its own page. Communications keeps the `/calls` route
+until the call-domain work lands.
