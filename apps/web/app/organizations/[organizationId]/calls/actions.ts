@@ -8,6 +8,7 @@ import { wrapUpCall } from '@/lib/api/voice';
 import { createCallOutcome } from '@/lib/domain/reception/outcomes';
 import { placeCall, recordCall } from '@/lib/domain/reception/calls';
 import { setCallingNumber } from '@/lib/domain/reception/telephony';
+import { requireOrganization } from '@/lib/route/organization';
 
 /**
  * The Voice module's writes.
@@ -45,6 +46,7 @@ export async function createOutcomeAction(
 ): Promise<FormState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   return attempt(organizationId, '/calls', () =>
     createCallOutcome(db, {
@@ -70,6 +72,7 @@ export async function placeCallAction(
 ): Promise<FormState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const customerId = String(formData.get('customerId') ?? '');
 
   return attempt(organizationId, `/customers/${customerId}`, () =>
@@ -88,6 +91,7 @@ export async function recordCallAction(
 ): Promise<FormState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const customerId = String(formData.get('customerId') ?? '');
   const direction = String(formData.get('direction') ?? 'outbound');
 
@@ -118,6 +122,7 @@ export async function wrapUpCallAction(
 ): Promise<FormState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const outcomeId = String(formData.get('outcomeId') ?? '');
   const duration = String(formData.get('durationSeconds') ?? '');
 
@@ -148,6 +153,7 @@ export async function setCallingNumberAction(
   formData: FormData,
 ): Promise<FormState> {
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   return attempt(organizationId, '/calls', async () => {
     const db = await getDb();

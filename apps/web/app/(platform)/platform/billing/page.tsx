@@ -4,7 +4,8 @@ import { SectionHeading } from '@/components/containers/section';
 import { PageHeader } from '@/components/containers/page-header';
 import { Badge } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';
-import { platformBillingProvider } from '@/lib/adapters/platform-billing';
+import { platformBillingEnvironment, platformBillingProvider } from '@/lib/adapters/platform-billing';
+import { getOrganizationServiceAccess } from '@/lib/domain/platform-billing/service-access';
 import { getTenant } from '@/lib/domain/platform/tenants';
 import {
   listOrganizationsRequiringAttention,
@@ -33,6 +34,16 @@ export default async function PlatformBillingPage() {
   const organizationIds = [...new Set(subscriptions.map((s) => s.organizationId))];
   const tenants = await Promise.all(organizationIds.map((id) => getTenant(db, id)));
   const nameById = new Map(organizationIds.map((id, i) => [id, tenants[i]?.name ?? id]));
+
+  // One row per organization: the resolver the tenant's own guard runs, not a second reading of `status`.
+  const environment = platformBillingEnvironment();
+  const accessById = new Map(
+    await Promise.all(
+      organizationIds.map(
+        async (id) => [id, await getOrganizationServiceAccess(db, { organizationId: id, environment })] as const,
+      ),
+    ),
+  );
 
   const counts = {
     active: subscriptions.filter((s) => s.status === 'active' || s.status === 'trialing').length,
@@ -95,6 +106,7 @@ export default async function PlatformBillingPage() {
             <tr className="border-b border-border text-left">
               <th className="py-2 pr-4 font-medium">Organization</th>
               <th className="py-2 pr-4 font-medium">Status</th>
+              <th className="py-2 pr-4 font-medium">Service access</th>
               <th className="py-2 pr-4 font-medium">Environment</th>
               <th className="py-2 font-medium">Current period ends</th>
             </tr>
@@ -113,6 +125,11 @@ export default async function PlatformBillingPage() {
                 <td className="py-2 pr-4">
                   <Badge tone={s.status === 'active' || s.status === 'trialing' ? 'success' : 'neutral'}>
                     {s.status.replace('_', ' ')}
+                  </Badge>
+                </td>
+                <td className="py-2 pr-4">
+                  <Badge tone={accessById.get(s.organizationId)?.permitted ? 'success' : 'neutral'}>
+                    {accessById.get(s.organizationId)?.permitted ? 'Available' : 'Locked'}
                   </Badge>
                 </td>
                 <td className="py-2 pr-4">{s.environment}</td>

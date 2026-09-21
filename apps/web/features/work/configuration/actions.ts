@@ -17,6 +17,7 @@ import {
   renameWorkItemType,
   setTypeBookable,
 } from '@/lib/domain/work-items/types';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type WorkConfigActionState = { error: string | null };
 
@@ -36,6 +37,7 @@ export async function createStatusAction(
 ): Promise<WorkConfigActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     // No position submitted: the domain puts a new status at the end of that type's board,
@@ -62,6 +64,7 @@ export async function createTypeAction(
 ): Promise<WorkConfigActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await createWorkItemType(db, {
@@ -85,6 +88,7 @@ export async function createTransitionAction(
 ): Promise<WorkConfigActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await createWorkItemTransition(db, {
@@ -110,6 +114,7 @@ export async function renameTypeAction(
 ): Promise<WorkConfigActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     // Nothing moves. Every status, transition and work item references the type by id, which
@@ -140,6 +145,7 @@ export async function setTypeBookableAction(
 ): Promise<WorkConfigActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const statusId = String(formData.get('statusId') ?? '');
   const duration = String(formData.get('durationMinutes') ?? '');
   const priceItemId = String(formData.get('priceItemId') ?? '');
@@ -173,6 +179,7 @@ export async function updateStatusAction(
 ): Promise<WorkConfigActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await updateWorkItemStatus(db, {
@@ -198,6 +205,7 @@ export async function addTypeChecklistItemAction(
 ): Promise<WorkConfigActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await addTypeChecklistItem(db, {
@@ -220,6 +228,7 @@ export async function removeTypeChecklistItemAction(
 ): Promise<WorkConfigActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     // Work items already created keep their copies — that is the design, not a caveat.

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { OrgNavBar, OrgSidebar } from './org-shell';
+import { LockedOrgSidebar, OrgNavBar, OrgSidebar } from './org-shell';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
@@ -12,7 +12,7 @@ import {
   availableFeatureKeys,
   organizationResolvedFeatureStates,
 } from '@/lib/domain/catalogue/organization-plans';
-import { requireOrganization } from '@/lib/route/organization';
+import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 import { platformAdministrationAvailable } from '@/lib/route/platform-context';
 import { CompactAccountMenu } from '@/components/containers/account-menu';
 import { CompactContextSwitcher } from '@/components/containers/context-switcher';
@@ -31,6 +31,11 @@ import {
  * layout across client navigations without re-rendering it. This call exists so the shell can
  * render the business's name, sharing the same request-scoped read.
  *
+ * It uses the billing-recovery guard, not `requireOrganization`, on purpose: while commercial
+ * service access is locked the shell must still draw (a coherent GOLD frame around the locked
+ * screen and Plan & usage), so the service question is answered here only to choose which shell
+ * to draw. Every operational page and action then refuses the locked business for itself.
+ *
  * Because this call runs here too, a non-member's `notFound()` is thrown by this layout itself,
  * not by whichever page they reached — and the file that actually renders for that is
  * `app/organizations/not-found.tsx`, an ancestor segment, not this segment's own
@@ -41,13 +46,16 @@ export default async function OrganizationLayout({
   children,
 }: LayoutProps<'/organizations/[organizationId]'>) {
   const { organizationId } = await params;
-  const { db, organization } = await requireOrganization(organizationId);
+  const { db, organization, access } = await requireOrganizationForBillingRecovery(organizationId);
+  const locked = !access.permitted;
+  // A locked business runs none of the workspace reads below — no feature resolution and no
+  // Agent transcript — because none of it is drawn.
   const [featureStates, myOrganizations, staff, { data: userData }, conversations, canAnswer] = await Promise.all([
-    organizationResolvedFeatureStates(db, { organizationId }),
+    locked ? Promise.resolve([]) : organizationResolvedFeatureStates(db, { organizationId }),
     listMyOrganizations(db),
     isPlatformStaff(db),
     db.auth.getUser(),
-    listAgentConversationSummaries(db, { organizationId }),
+    locked ? Promise.resolve([]) : listAgentConversationSummaries(db, { organizationId }),
     canAnswerQuestions(),
   ]);
   // The shell loads a bounded list of titles and one transcript — the most recent conversation.
@@ -128,7 +136,18 @@ export default async function OrganizationLayout({
     operationalState: org.operationalState,
   }));
 
-  const sidebar = (
+  const sidebar = locked ? (
+    <LockedOrgSidebar
+      organizationId={organizationId}
+      mark={mark}
+      name={organization.name}
+      role={organization.role}
+      organizations={switchable}
+      platformAdministration={platformAdministration}
+      email={email}
+      signOutAction={signOutAction}
+    />
+  ) : (
     <OrgSidebar
       organizationId={organizationId}
       mark={mark}
@@ -183,7 +202,7 @@ export default async function OrganizationLayout({
         sidebar={sidebar}
         header={header}
         bottomBar={
-          <OrgNavBar
+          locked ? undefined : <OrgNavBar
             organizationId={organizationId}
             enabledModules={[...enabledModules]}
             featureAvailability={[...featureAvailability]}
@@ -192,7 +211,7 @@ export default async function OrganizationLayout({
           />
         }
         agent={
-          <TenantAgentRail
+          locked ? null : <TenantAgentRail
             organizationId={organizationId}
             organizationName={organization.name}
             timezone={organization.timezone}

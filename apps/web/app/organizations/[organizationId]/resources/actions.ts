@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db/server';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import { DomainError } from '@/lib/domain/errors';
 import { createResource } from '@/lib/domain/resources/resources';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type CreateResourceState = { error: string | null; created: boolean };
 
@@ -14,6 +15,7 @@ export async function createResourceAction(
 ): Promise<CreateResourceState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await createResource(db, {

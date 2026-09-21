@@ -8,6 +8,7 @@ import {
   updatePriceBookItem,
 } from '@/lib/domain/pricing/price-book';
 import { setTradingCurrency } from '@/lib/domain/tenancy/organizations';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type PriceItemState = { error: string | null };
 
@@ -48,6 +49,7 @@ export async function createPriceItemAction(
 ): Promise<PriceItemState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await createPriceBookItem(db, {
@@ -80,6 +82,7 @@ export async function updatePriceItemAction(
 ): Promise<PriceItemState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await updatePriceBookItem(db, {
@@ -115,6 +118,7 @@ export async function chooseCurrencyAction(
 ): Promise<PriceItemState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await setTradingCurrency(db, {

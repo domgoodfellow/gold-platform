@@ -346,3 +346,64 @@ export function OrgSidebar({
     </Sidebar>
   );
 }
+
+/**
+ * The sidebar while the business's commercial service access is locked: identity and context
+ * switching, one row to where recovery lives, and the account menu. Not the enforcement — every
+ * page and action refuses on its own — only the shell agreeing with them, so a locked person is
+ * not offered twelve doors that all lead to the same locked screen.
+ */
+export function LockedOrgSidebar({
+  organizationId,
+  mark,
+  name,
+  role,
+  organizations,
+  platformAdministration,
+  email,
+  signOutAction,
+  ...props
+}: {
+  organizationId: string;
+  mark: ReactNode;
+  name: string;
+  role: string;
+  organizations: SwitchableOrganization[];
+  platformAdministration: boolean;
+  email: string;
+  signOutAction: () => Promise<void>;
+} & React.ComponentProps<typeof Sidebar>) {
+  const current = usePathname().includes('/settings/plan');
+
+  return (
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
+        <ContextSwitcher
+          mark={mark}
+          current={{ kind: 'business', organizationId, name, role }}
+          organizations={organizations}
+          platformAdministration={platformAdministration}
+        />
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={current} tooltip="Plan & usage">
+                <Link
+                  href={`/organizations/${organizationId}/settings/plan`}
+                  aria-current={current ? 'page' : undefined}
+                >
+                  <Settings aria-hidden />
+                  <span>Plan &amp; usage</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  );
+}

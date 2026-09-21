@@ -18,6 +18,7 @@ import {
 } from '@/lib/domain/automation/templates';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type AutomationActionState = { error: string | null };
 
@@ -53,6 +54,7 @@ export async function createRuleAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   let ruleId: string;
   try {
@@ -85,6 +87,7 @@ export async function renameRuleAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const ruleId = String(formData.get('ruleId') ?? '');
 
   return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
@@ -98,6 +101,7 @@ export async function setRuleEnabledAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const ruleId = String(formData.get('ruleId') ?? '');
 
   return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
@@ -111,6 +115,7 @@ export async function deleteRuleAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const ruleId = String(formData.get('ruleId') ?? '');
 
   try {
@@ -132,6 +137,7 @@ export async function addConditionAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const ruleId = String(formData.get('ruleId') ?? '');
 
   return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
@@ -151,6 +157,7 @@ export async function removeConditionAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const ruleId = String(formData.get('ruleId') ?? '');
 
   return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
@@ -164,6 +171,7 @@ export async function addActionAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const ruleId = String(formData.get('ruleId') ?? '');
 
   return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
@@ -186,6 +194,7 @@ export async function removeActionAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const ruleId = String(formData.get('ruleId') ?? '');
 
   return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
@@ -199,6 +208,7 @@ export async function createTemplateAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   return run([rootPath(organizationId)], () =>
     createMessageTemplate(db, {
@@ -216,6 +226,7 @@ export async function updateTemplateAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   return run([rootPath(organizationId)], () =>
     updateMessageTemplate(db, {
@@ -233,6 +244,7 @@ export async function deleteTemplateAction(
 ): Promise<AutomationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   return run([rootPath(organizationId)], () =>
     deleteMessageTemplate(db, { id: String(formData.get('templateId') ?? '') }),

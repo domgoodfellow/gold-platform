@@ -8,6 +8,7 @@ import { customValuesFromFormData } from '@/lib/custom-fields';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import { DomainError } from '@/lib/domain/errors';
 import type { UploadDocumentState } from '@/features/documents/upload-form';
+import { requireOrganization } from '@/lib/route/organization';
 
 export async function uploadCustomerDocumentAction(
   _previous: UploadDocumentState,
@@ -15,6 +16,7 @@ export async function uploadCustomerDocumentAction(
 ): Promise<UploadDocumentState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const customerId = String(formData.get('customerId') ?? '');
   const file = formData.get('file');
 
@@ -57,6 +59,7 @@ export async function createPortalInviteAction(
 ): Promise<{ error: string | null; token: string | null }> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const customerId = String(formData.get('customerId') ?? '');
 
   let token: string;
@@ -83,6 +86,7 @@ export async function revokePortalInviteAction(
 ): Promise<{ error: string | null }> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const customerId = String(formData.get('customerId') ?? '');
 
   try {
@@ -111,6 +115,7 @@ export async function editCustomerAction(
 ): Promise<EditCustomerState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const customerId = String(formData.get('customerId') ?? '');
   const stageId = String(formData.get('stageId') ?? '');
 

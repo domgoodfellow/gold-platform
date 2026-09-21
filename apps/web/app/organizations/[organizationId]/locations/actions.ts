@@ -10,6 +10,7 @@ import {
   locateAddress,
   setLocationCoordinates,
 } from '@/lib/domain/locations/locations';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type LocationActionState = { error: string | null; created: boolean };
 
@@ -19,6 +20,7 @@ export async function createLocationAction(
 ): Promise<LocationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await createLocation(db, {
@@ -45,6 +47,7 @@ export async function linkCustomerAction(
 ): Promise<LocationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     // None of these three ids is re-validated here. The composite foreign keys make a row
@@ -93,6 +96,7 @@ export async function locationCoordinatesAction(
   formData: FormData,
 ): Promise<CoordinatesActionState> {
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   if (String(formData.get('intent') ?? '') === 'look-up') {
     try {

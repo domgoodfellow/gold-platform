@@ -7,6 +7,7 @@ import { linkCustomerLocation, locateAddress, setLocationCoordinates } from '@/l
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import type { UploadDocumentState } from '@/features/documents/upload-form';
 import type { CoordinatesActionState } from '../actions';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type LinkCustomerActionState = { error: string | null };
 
@@ -19,6 +20,7 @@ export async function locationCoordinatesAction(
   formData: FormData,
 ): Promise<CoordinatesActionState> {
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const locationId = String(formData.get('locationId') ?? '');
 
   if (String(formData.get('intent') ?? '') === 'look-up') {
@@ -59,6 +61,7 @@ export async function linkCustomerAction(
 ): Promise<LinkCustomerActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const locationId = String(formData.get('locationId') ?? '');
 
   try {
@@ -87,6 +90,7 @@ export async function uploadLocationDocumentAction(
 ): Promise<UploadDocumentState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const locationId = String(formData.get('locationId') ?? '');
   const file = formData.get('file');
 

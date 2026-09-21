@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db/server';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { DomainError } from '@/lib/domain/errors';
 import { customValuesFromFormData } from '@/lib/custom-fields';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type CreateCustomerState = { error: string | null; created: boolean };
 
@@ -14,6 +15,7 @@ export async function createCustomerAction(
 ): Promise<CreateCustomerState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await createCustomer(db, {

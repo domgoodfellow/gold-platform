@@ -86,7 +86,7 @@ describe('an organization that cannot be proven is never described', () => {
 describe('who owns which failure', () => {
   it('a non-member is caught by the ancestor boundary and gets the safe frame', () => {
     expect(read('app/organizations/not-found.tsx')).toContain('OrganizationUnavailable');
-    expect(read('app/organizations/[organizationId]/layout.tsx')).toContain('requireOrganization(');
+    expect(read('app/organizations/[organizationId]/layout.tsx')).toContain('requireOrganizationForBillingRecovery(');
   });
 
   it('a missing child beneath a proven membership renders inside the organization layout', () => {

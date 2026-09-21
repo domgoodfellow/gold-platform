@@ -15,6 +15,7 @@ import {
 import { launchOrganization } from '@/lib/domain/tenancy/lifecycle';
 import { organizationHomeHref } from '@/lib/navigation';
 import { invalidateGoldHomepageIfReferenced } from '@/lib/domain/public-site/cached';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type SetupActionState = { error: string | null };
 
@@ -45,6 +46,7 @@ export async function proposeAction(
 ): Promise<SetupActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   return run(organizationId, async () => {
     // **A refinement carries the last proposal forward**, so answering a question keeps
@@ -79,6 +81,7 @@ export async function reviseAction(
 ): Promise<SetupActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const proposalId = String(formData.get('proposalId') ?? '');
 
   return run(organizationId, async () => {
@@ -102,6 +105,7 @@ export async function applyAction(
 ): Promise<SetupActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   return run(organizationId, async () => {
     // The id the page rendered, and nothing else about the proposal — the domain function reads
@@ -128,6 +132,7 @@ export async function launchAction(
 ): Promise<SetupActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   const result = await run(organizationId, () => launchOrganization(db, { organizationId }));
   if (result.error) return result;
@@ -145,6 +150,7 @@ export async function discardAction(
 ): Promise<SetupActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const proposalId = String(formData.get('proposalId') ?? '');
 
   return run(organizationId, () => discardConfigurationProposal(db, { proposalId }));

@@ -5,6 +5,11 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Commercial service access for an organization
+
+A business on a billable GOLD Plan now needs a serviceable subscription (`active` or `trialing`) to open any operational page, server action or route handler; without one it lands on a locked screen in its own shell, with Plan & usage, checkout and the billing portal still open. GOLD Internal and a business with no Plan are never locked. Nothing is stored or deleted: the answer is derived from the Plan and the cached subscription by one resolver, which Platform → Billing and the organization overview also read. D57, I50.
+
+
 ### One page frame for the organization workspace
 
 `AppPage` is the only page frame and has three modes: `fluid` (the default), `form` and `reading`. The `standard`, `wide` and `full` caps are gone, so Resources, Customers, Locations and Assets no longer stop short of the right edge; Reports now sits in the same frame as Today, Work and Schedule. `PageHeader` takes `configure` and renders Configure after the business actions, so it is always last (Resources: Add resource, Configure; Customers: Import, New customer, Configure); `ConfigureTrigger` is placed nowhere else. Every drawer and Configure rail shares one compact header band (`DRAWER_HEADER`, 3rem for a title row) instead of the page's top inset. Import is offered by the organization's own `integration.manage` capability as well as the module, and `/integrations/imports/new` says so instead of showing a form the database would refuse.

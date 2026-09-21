@@ -20,3 +20,15 @@ export async function platformBillingProvider(): Promise<PlatformBillingProvider
   const { stripePlatformBillingProvider } = await import('./stripe');
   return stripePlatformBillingProvider({ secret });
 }
+
+/**
+ * Which Stripe environment this deployment bills in, read from the same secret
+ * `platformBillingProvider` reads and by the same rule as `stripe.ts` — null when unconfigured.
+ * Service access needs the answer without constructing a provider, since it only reads cached
+ * rows and never calls out.
+ */
+export function platformBillingEnvironment(): 'sandbox' | 'live' | null {
+  const secret = process.env.STRIPE_SECRET_KEY;
+  if (!secret) return null;
+  return secret.startsWith('sk_live_') ? 'live' : 'sandbox';
+}

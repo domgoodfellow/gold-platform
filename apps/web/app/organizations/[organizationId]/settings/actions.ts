@@ -16,6 +16,7 @@ import { removeLogo, setBrand, uploadLogo } from '@/lib/domain/branding/brand';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { setPublicProfile } from '@/lib/domain/tenancy/profile';
 import { invalidateGoldHomepageIfReferenced } from '@/lib/domain/public-site/cached';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type SettingsActionState = { error: string | null };
 
@@ -25,6 +26,7 @@ export async function updateOrganizationAction(
 ): Promise<SettingsActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await updateOrganization(db, {
@@ -51,6 +53,7 @@ export async function addOperatingHoursAction(
 ): Promise<SettingsActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     // The day arrives as a number. Nothing in the platform holds a word for a day, in any
@@ -77,6 +80,7 @@ export async function removeOperatingHoursAction(
 ): Promise<SettingsActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await removeOperatingHours(db, { id: String(formData.get('id') ?? '') });
@@ -103,6 +107,7 @@ export async function updateProfileAction(
 ): Promise<{ error: string | null }> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await setPublicProfile(db, {
@@ -135,6 +140,7 @@ export async function setFeatureActivationAction(
 ): Promise<{ error: string | null }> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const featureId = String(formData.get('featureId') ?? '');
   const enabled = formData.get('enabled') === '1';
 
@@ -167,6 +173,7 @@ export async function disconnectPaymentAccountAction(
 ): Promise<{ error: string | null }> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await disconnectPaymentAccount(db, {
@@ -197,6 +204,7 @@ export async function updateBrandAction(
 ): Promise<BrandState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await setBrand(db, {
@@ -221,6 +229,7 @@ export async function uploadLogoAction(
 ): Promise<BrandState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const file = formData.get('logo');
 
   if (!(file instanceof File)) {
@@ -245,6 +254,7 @@ export async function removeLogoAction(
 ): Promise<BrandState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await removeLogo(db, { organizationId });

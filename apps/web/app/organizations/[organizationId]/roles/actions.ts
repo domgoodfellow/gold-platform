@@ -9,6 +9,7 @@ import { addMember } from '@/lib/domain/tenancy/members';
 import { inviteMember, revokeInvitation } from '@/lib/domain/tenancy/invitations';
 import { assignRole, createRole, updateRoleCapabilities } from '@/lib/domain/tenancy/roles';
 import { requestOrigin } from '@/lib/route/origin';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type CreateRoleState = { error: string | null; created: boolean };
 
@@ -18,6 +19,7 @@ export async function createRoleAction(
 ): Promise<CreateRoleState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await createRole(db, {
@@ -45,6 +47,7 @@ export async function updateRoleAction(
 ): Promise<UpdateRoleState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await updateRoleCapabilities(db, {
@@ -71,6 +74,7 @@ export async function addMemberAction(
 ): Promise<AddMemberState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     // Neither the organization id nor the role id is re-checked here. `add_member_by_email`
@@ -101,6 +105,7 @@ export async function inviteMemberAction(
 ): Promise<InviteMemberState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   const parsed = InviteMemberSchema.safeParse({
     organizationId,
@@ -164,6 +169,7 @@ export async function assignRoleAction(
 ): Promise<AssignRoleState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await assignRole(db, {
@@ -189,6 +195,7 @@ export async function revokeInvitationAction(
 ): Promise<RevokeInvitationState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await revokeInvitation(db, { id: String(formData.get('id') ?? '') });

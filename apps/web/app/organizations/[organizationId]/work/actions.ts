@@ -10,6 +10,7 @@ import {
 import { DomainError } from '@/lib/domain/errors';
 import { changeWorkItemStatus } from '@/lib/domain/work-items/transitions';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type WorkActionState = { error: string | null };
 
@@ -19,6 +20,7 @@ export async function createWorkItemAction(
 ): Promise<WorkActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     // None of these ids is re-validated here. Every reference is composite, so one naming
@@ -51,6 +53,7 @@ export async function changeStatusAction(
 ): Promise<WorkActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     // Whether this move is legal is not decided here, and is not decided in the domain layer
@@ -80,6 +83,7 @@ export async function scheduleWorkItemAction(
 ): Promise<WorkActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     // The overlap is not checked here and must not be. `work_items_resource_not_double_booked`

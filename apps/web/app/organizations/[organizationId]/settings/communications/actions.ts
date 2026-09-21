@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { recordOrganizationEmailDomain } from '@/lib/domain/providers/bindings';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type RecordDomainState = { error: string | null; recorded: boolean };
 
@@ -15,6 +16,7 @@ export async function recordEmailDomainAction(
 ): Promise<RecordDomainState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await recordOrganizationEmailDomain(db, {

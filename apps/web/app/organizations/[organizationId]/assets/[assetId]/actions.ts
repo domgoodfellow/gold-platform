@@ -6,6 +6,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { recordAssetReading } from '@/lib/domain/assets/readings';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import type { UploadDocumentState } from '@/features/documents/upload-form';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type AssetActionState = { error: string | null };
 
@@ -19,6 +20,7 @@ export async function recordReadingAction(
 ): Promise<AssetActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const assetId = String(formData.get('assetId') ?? '');
 
   try {
@@ -43,6 +45,7 @@ export async function uploadAssetDocumentAction(
 ): Promise<UploadDocumentState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const assetId = String(formData.get('assetId') ?? '');
   const file = formData.get('file');
 

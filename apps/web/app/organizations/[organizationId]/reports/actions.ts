@@ -15,6 +15,7 @@ import {
   setReportRoles,
 } from '@/lib/domain/reporting/definitions';
 import type { Grouping, Measure, PeriodPreset } from '@/lib/domain/reporting/shape';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type ReportState = { error: string | null };
 
@@ -40,6 +41,7 @@ export async function saveReportAction(
 ): Promise<ReportState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await saveReportDefinition(db, {
@@ -71,6 +73,7 @@ export async function deleteReportAction(
 ): Promise<ReportState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await deleteReportDefinition(db, { id: String(formData.get('reportId') ?? '') });
@@ -91,6 +94,7 @@ export async function setReportRolesAction(
 ): Promise<ReportState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await setReportRoles(db, {
@@ -117,6 +121,7 @@ export async function createDashboardAction(
 ): Promise<ReportState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await createDashboard(db, { organizationId, name: String(formData.get('name') ?? '') });
@@ -137,6 +142,7 @@ export async function deleteDashboardAction(
 ): Promise<ReportState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await deleteDashboard(db, { id: String(formData.get('dashboardId') ?? '') });
@@ -164,6 +170,7 @@ export async function setPinAction(
 ): Promise<ReportState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const dashboardId = String(formData.get('dashboardId') ?? '');
   const reportId = String(formData.get('reportId') ?? '');
   const pinned = formData.get('pinned') === 'yes';

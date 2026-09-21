@@ -1612,3 +1612,29 @@ re-grants `select` by column without it.
 **Not built.** No write scope, no scheduled sync and no webhook from a vendor: the connection
 proves itself when a person checks it. Microsoft's grant is removed in the person's own account;
 GOLD deletes its copy.
+
+### D57 — Commercial service access is derived, enforced at the request, and never a stored flag
+
+**Decision.** Whether a business may use GOLD's operational surfaces is one derived answer,
+`resolveServiceAccess` in `lib/domain/platform-billing/service-access.ts`, read from two facts
+that already exist: the current base Plan's `billable` flag and the processor's cached
+subscription. A billable Plan needs a subscription whose status the one mapping
+(`SERVICEABLE_SUBSCRIPTION_STATUS`) calls serviceable — today `active` and `trialing`; every other
+status, and no subscription at all, locks. A non-billable Plan (GOLD Internal) and a business with
+no current base Plan are never locked. Nothing is stored: an `is_paid` or `locked` column would be
+a second copy of those two facts.
+
+**It is enforced where a request is decided, not by navigation and not by RLS.** `requireOrganization`
+answers membership and then service, and every page, server action and route handler inside a
+business calls it. `requireOrganizationForBillingRecovery` is the one named door past the service
+question — for the shell layout, Plan & usage, checkout, the portal and the locked screen — and its
+users are a closed list a test holds. No RLS policy reads it (D25: a lapsed term is not an access
+policy), which is also why locking writes nothing: data is refused a door, never deleted, disabled or
+rewritten. Authentication is a separate question and is unaffected; platform administration does not
+pass through this guard at all.
+
+**Deferred edges, recorded rather than guessed.** `past_due` locks immediately; a grace period is a
+one-line change to the mapping. A Plan assignment that has lapsed reads as *no current Plan* and so
+as unlocked. A locked business cannot reach General settings, so one with no currency cannot start
+Checkout until staff set it. The Python runtime (`apps/api`) and the OAuth callback do not yet
+consult the policy.

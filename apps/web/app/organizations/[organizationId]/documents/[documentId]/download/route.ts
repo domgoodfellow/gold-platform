@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/server';
 import { getDocumentUrl } from '@/lib/domain/documents/documents';
 import { DomainError } from '@/lib/domain/errors';
+import { requireOrganization } from '@/lib/route/organization';
 
 /**
  * Redirect to a freshly signed URL for one document. Minted at click time rather than served
@@ -12,7 +13,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ organizationId: string; documentId: string }> },
 ) {
-  const { documentId } = await params;
+  const { organizationId, documentId } = await params;
+  // Service access, not permission: a locked business's documents stay stored and unread.
+  await requireOrganization(organizationId);
   const db = await getDb();
 
   try {

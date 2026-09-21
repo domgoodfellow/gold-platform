@@ -77,4 +77,4 @@ export type PlatformBillingProvider = {
 };
 
 /** Re-exported so only ./registry names an implementation (adapters.test.ts). */
-export { platformBillingProvider } from './registry';
+export { platformBillingEnvironment, platformBillingProvider } from './registry';

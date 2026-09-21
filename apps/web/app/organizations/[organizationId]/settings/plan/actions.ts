@@ -5,9 +5,10 @@ import { PlatformBillingCheckoutSchema } from '@gold/schemas';
 import { DomainError } from '@/lib/domain/errors';
 import { beginPlatformBillingCheckout } from '@/lib/domain/platform-billing/checkout';
 import { beginPlatformBillingPortalSession } from '@/lib/domain/platform-billing/portal';
-import { requireOrganization } from '@/lib/route/organization';
+import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 import { requestOrigin } from '@/lib/route/origin';
 
+// Both actions use the recovery guard: a locked business must be able to start checkout and open the portal.
 export type PlatformBillingActionState = { error: string | null };
 
 /**
@@ -26,7 +27,7 @@ export async function beginPlatformBillingCheckoutAction(
   const parsed = PlatformBillingCheckoutSchema.safeParse({ organizationId, planKey });
   if (!parsed.success) return { error: 'Choose a Plan to subscribe to.' };
 
-  const { db, organization } = await requireOrganization(organizationId);
+  const { db, organization } = await requireOrganizationForBillingRecovery(organizationId);
   if (!organization.currency) {
     return { error: 'Set this business’s currency in General settings before subscribing.' };
   }
@@ -59,7 +60,7 @@ export async function beginPlatformBillingPortalAction(
   formData: FormData,
 ): Promise<PlatformBillingActionState> {
   const organizationId = String(formData.get('organizationId') ?? '');
-  const { db } = await requireOrganization(organizationId);
+  const { db } = await requireOrganizationForBillingRecovery(organizationId);
   const origin = await requestOrigin();
 
   let url: string | undefined;

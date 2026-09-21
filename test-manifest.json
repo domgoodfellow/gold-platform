@@ -542,6 +542,14 @@
         "ui"
       ]
     },
+    "apps/web/tests/architecture/static/service-access-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "billing",
+        "tenancy",
+        "security"
+      ]
+    },
     "apps/web/tests/architecture/static/settings-configuration-center.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -1113,6 +1121,15 @@
       "note": "Also runs pure classification and redirect rules."
     },
     "apps/web/tests/integration/database/settings-configuration-authority.test.ts": {
+    "apps/web/tests/integration/database/service-access.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "tenancy",
+        "security"
+      ],
+      "note": "Webhook function called directly; no Stripe traffic. next/navigation and getDb are replaced so the route guard can be driven."
+    },
       "category": "database-integration",
       "concerns": [
         "settings",
@@ -1202,3 +1219,10 @@
     }
   }
 }
+    },
+    "apps/web/tests/unit/service-access.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "billing",
+        "tenancy"
+      ]

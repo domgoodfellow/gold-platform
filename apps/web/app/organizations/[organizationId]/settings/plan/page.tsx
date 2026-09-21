@@ -8,7 +8,7 @@ import { communicationsAccount } from '@/lib/domain/communications/credits';
 import { listProducts } from '@/lib/domain/commercial/catalogue';
 import { listOrganizationTerms } from '@/lib/domain/commercial/terms';
 import { listUsageEvents } from '@/lib/domain/commercial/usage';
-import { requireOrganization } from '@/lib/route/organization';
+import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 import { getPlanById, listPlanPrices } from '@/lib/domain/catalogue/plans';
 import {
   currentAddonAssignments,
@@ -40,7 +40,8 @@ export default async function PlanAndUsagePage({
   params,
 }: PageProps<'/organizations/[organizationId]/settings/plan'>) {
   const { organizationId } = await params;
-  const { db, organization } = await requireOrganization(organizationId);
+  // Recovery mode: this is where a locked business fixes its subscription, so it cannot be behind the guard that locks it out.
+  const { db, organization } = await requireOrganizationForBillingRecovery(organizationId);
 
   const [terms, products, usage, account, basePlanAssignment, addonAssignments, quotas] = await Promise.all([
     listOrganizationTerms(db, { organizationId }),

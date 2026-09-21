@@ -6,6 +6,7 @@ import { requireAccessToken } from '@/lib/api/client';
 import { changeCustomerStage } from '@/lib/api/crm';
 import { createCustomerStage, updateCustomerStage } from '@/lib/domain/customers/stages';
 import { DomainError } from '@/lib/domain/errors';
+import { requireOrganization } from '@/lib/route/organization';
 
 /**
  * CRM/Sales's own writes: naming the pipeline's stages, and moving a customer along it.
@@ -43,6 +44,7 @@ export async function createStageAction(
 ): Promise<FormState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   return attempt(organizationId, () =>
     createCustomerStage(db, {
@@ -59,6 +61,7 @@ export async function updateStageAction(
 ): Promise<FormState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   return attempt(organizationId, () =>
     updateCustomerStage(db, {
@@ -81,6 +84,7 @@ export async function changeCustomerStageAction(
 ): Promise<ChangeStageState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const customerId = String(formData.get('customerId') ?? '');
   const stageId = String(formData.get('stageId') ?? '');
 

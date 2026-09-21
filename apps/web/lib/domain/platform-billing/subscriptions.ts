@@ -69,6 +69,19 @@ export async function getOrganizationSubscription(
   return data ? toSubscription(data) : null;
 }
 
+/** Every cached subscription row for one organization — one per environment at most. Access resolution reads this rather than `getOrganizationSubscription`, whose single-row read cannot tell a sandbox row from a live one. */
+export async function listSubscriptionsForOrganization(
+  db: Db,
+  input: { organizationId: string },
+): Promise<OrganizationSubscription[]> {
+  const { data, error } = await db
+    .from('organization_platform_subscriptions')
+    .select(COLUMNS)
+    .eq('organization_id', input.organizationId);
+  if (error) throw new DomainError(error.message, 'platform_billing.subscription_read_failed');
+  return (data ?? []).map(toSubscription);
+}
+
 /** past_due/unpaid, for the platform staff console (Phase 5: "organizations requiring attention"). Staff-only by RLS on the underlying select — an ordinary member reading this sees only their own organization's row, never the list. */
 export async function listOrganizationsRequiringAttention(
   db: Db,

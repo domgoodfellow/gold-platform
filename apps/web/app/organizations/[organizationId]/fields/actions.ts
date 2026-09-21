@@ -8,6 +8,7 @@ import {
   updateFieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
 import { DomainError } from '@/lib/domain/errors';
+import { requireOrganization } from '@/lib/route/organization';
 
 /** Transport decoding only — whether the list of choices is well-formed is the domain layer's job. Both line endings, since Windows browsers send `\r\n`. */
 function optionsFromFormData(formData: FormData): string[] {
@@ -33,6 +34,7 @@ export async function createFieldAction(
 ): Promise<CreateFieldState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const entityType = String(formData.get('entityType') ?? '');
 
   try {
@@ -68,6 +70,7 @@ export async function updateFieldAction(
 ): Promise<UpdateFieldState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const kind = String(formData.get('kind') ?? '');
 
   if (!isKind(kind)) {

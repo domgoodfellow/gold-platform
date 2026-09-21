@@ -308,7 +308,7 @@ describe('the tenant-safe refusal survives being thrown by the layout, not a pag
     expect(organizationIdNotFound).toContain('OrganizationPageNotFound');
   });
 
-  it('the layout still calls requireOrganization itself, which is exactly what makes the ancestor boundary necessary', () => {
-    expect(layout).toContain('requireOrganization(');
+  it('the layout still proves membership itself (through the billing-recovery guard, which is the same membership proof), which is exactly what makes the ancestor boundary necessary', () => {
+    expect(layout).toContain('requireOrganizationForBillingRecovery(');
   });
 });

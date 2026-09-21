@@ -6,6 +6,7 @@ import { customValuesFromFormData } from '@/lib/custom-fields';
 import { createAsset } from '@/lib/domain/assets/assets';
 import { recordAssetReading } from '@/lib/domain/assets/readings';
 import { DomainError } from '@/lib/domain/errors';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type CreateAssetState = { error: string | null; created: boolean };
 export type RecordReadingState = { error: string | null };
@@ -16,6 +17,7 @@ export async function createAssetAction(
 ): Promise<CreateAssetState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     // Neither id is re-validated here: both references are composite, so one naming another
@@ -51,6 +53,7 @@ export async function recordReadingAction(
 ): Promise<RecordReadingState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await recordAssetReading(db, {

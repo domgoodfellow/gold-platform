@@ -13,6 +13,7 @@ import { recordCost, recordTime } from '@/lib/domain/work-items/consumption';
 import { updateWorkItem } from '@/lib/domain/work-items/work-items';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import type { UploadDocumentState } from '@/features/documents/upload-form';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type WorkItemActionState = { error: string | null };
 
@@ -41,6 +42,7 @@ export async function addChecklistItemAction(
 ): Promise<WorkItemActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const workItemId = String(formData.get('workItemId') ?? '');
 
   try {
@@ -64,6 +66,7 @@ export async function setChecklistItemDoneAction(
 ): Promise<WorkItemActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const workItemId = String(formData.get('workItemId') ?? '');
 
   try {
@@ -88,6 +91,7 @@ export async function recordTimeAction(
 ): Promise<WorkItemActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const workItemId = String(formData.get('workItemId') ?? '');
 
   try {
@@ -113,6 +117,7 @@ export async function recordCostAction(
 ): Promise<WorkItemActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const workItemId = String(formData.get('workItemId') ?? '');
 
   try {
@@ -150,6 +155,7 @@ export async function addPricedLineAction(
 ): Promise<WorkItemActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const workItemId = String(formData.get('workItemId') ?? '');
 
   try {
@@ -173,6 +179,7 @@ export async function removePricedLineAction(
 ): Promise<WorkItemActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const workItemId = String(formData.get('workItemId') ?? '');
 
   try {
@@ -192,6 +199,7 @@ export async function updateWorkItemAction(
 ): Promise<UpdateWorkItemState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const workItemId = String(formData.get('workItemId') ?? '');
 
   try {
@@ -231,6 +239,7 @@ export async function issueInvoiceAction(
 ): Promise<WorkItemActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const workItemId = String(formData.get('workItemId') ?? '');
 
   try {
@@ -254,6 +263,7 @@ export async function recordPaymentAction(
 ): Promise<WorkItemActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const workItemId = String(formData.get('workItemId') ?? '');
 
   try {
@@ -291,6 +301,7 @@ export async function requestCardPaymentAction(
 ): Promise<CardPaymentActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const workItemId = String(formData.get('workItemId') ?? '');
 
   try {
@@ -321,6 +332,7 @@ export async function uploadWorkItemDocumentAction(
 ): Promise<UploadDocumentState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const workItemId = String(formData.get('workItemId') ?? '');
   const file = formData.get('file');
 

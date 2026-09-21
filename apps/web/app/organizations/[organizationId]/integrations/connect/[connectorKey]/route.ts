@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { beginOAuth } from '@/lib/domain/integrations/oauth';
 import { OAUTH_NONCE_COOKIE } from '@/lib/domain/integrations/oauth-cookie';
+import { requireOrganization } from '@/lib/route/organization';
 
 /**
  * Start a vendor sign-in. Every check that matters — that this person may manage integrations for
@@ -15,6 +16,7 @@ export async function GET(
   { params }: RouteContext<'/organizations/[organizationId]/integrations/connect/[connectorKey]'>,
 ) {
   const { organizationId, connectorKey } = await params;
+  await requireOrganization(organizationId);
   const home = new URL(`/organizations/${organizationId}/integrations`, request.url);
   const connectionId = new URL(request.url).searchParams.get('connection') ?? undefined;
 

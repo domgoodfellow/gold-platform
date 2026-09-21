@@ -6,6 +6,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { disconnectConnection, recordConnection } from '@/lib/domain/integrations/connections';
 import { setAssistantAccess } from '@/lib/domain/integrations/assistant-grants';
 import { checkConnection } from '@/lib/domain/integrations/oauth';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type ConnectState = { error: string | null };
 
@@ -21,6 +22,7 @@ export async function connectCsvAction(
 ): Promise<ConnectState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   try {
     await recordConnection(db, {
@@ -45,6 +47,7 @@ export async function disconnectAction(
 ): Promise<DisconnectState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const connectionId = String(formData.get('connectionId') ?? '');
 
   try {
@@ -65,6 +68,7 @@ export type CheckState = { error: string | null; checked: boolean };
 export async function checkConnectionAction(_previous: CheckState, formData: FormData): Promise<CheckState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const connectionId = String(formData.get('connectionId') ?? '');
 
   try {
@@ -87,6 +91,7 @@ export type AccessState = { error: string | null };
 export async function setAssistantAccessAction(_previous: AccessState, formData: FormData): Promise<AccessState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const connectionId = String(formData.get('connectionId') ?? '');
   const resourceId = String(formData.get('resourceId') ?? '');
   const allowed = formData.get('allowed') === 'true';

@@ -10,6 +10,7 @@ import {
 } from '@/lib/domain/assistant/questions';
 import { DomainError } from '@/lib/domain/errors';
 import { resolveAgentViewing } from './agent-context';
+import { requireOrganization } from '@/lib/route/organization';
 
 /**
  * What an Agent action hands back. `runs` is the transcript of the conversation it touched,
@@ -39,6 +40,7 @@ export async function askAction(
 ): Promise<AskActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const conversationId = String(formData.get('conversationId') ?? '') || null;
   // Where the person is comes from the path, re-derived here against navigation's own areas — a
   // label the browser sent would be a sentence somebody else wrote into the prompt. The Configure
@@ -82,6 +84,7 @@ export async function openConversationAction(
   organizationId: string,
   conversationId: string,
 ): Promise<AskActionState> {
+  await requireOrganization(organizationId);
   const db = await getDb();
 
   try {
@@ -107,6 +110,7 @@ export async function decideAction(
 ): Promise<AskActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
 
   let state: AskActionState;
   try {

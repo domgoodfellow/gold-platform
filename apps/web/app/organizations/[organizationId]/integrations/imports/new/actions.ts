@@ -13,6 +13,7 @@ import {
   type MappingTarget,
 } from '@/lib/domain/integrations/mappings';
 import { beginImportRun, stageRows } from '@/lib/domain/integrations/import-runs';
+import { requireOrganization } from '@/lib/route/organization';
 
 export type UploadState = { error: string | null };
 
@@ -37,6 +38,7 @@ export async function uploadSourceAction(
 ): Promise<UploadState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const file = formData.get('file');
 
   if (!(file instanceof File)) {
@@ -69,6 +71,7 @@ function parseTarget(value: string): MappingTarget {
 export async function createMappingAndStageAction(formData: FormData): Promise<void> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
   const resourceId = String(formData.get('resourceId') ?? '');
   const headers = formData.getAll('header').map(String);
 
