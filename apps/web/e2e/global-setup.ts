@@ -16,6 +16,8 @@ import { listBookableTypes } from '../lib/domain/booking/booking';
 import { setTypeBookable } from '../lib/domain/work-items/types';
 import { listUsableModules, setModuleEnabled } from '../lib/domain/tenancy/modules';
 import { recordCommercialTerm } from '../lib/domain/commercial/terms';
+import { provisionOrganization } from '../lib/domain/platform/provision';
+import { bootstrapGoldInternalWorkspace, findGoldInternalOrganization } from '../lib/domain/tenancy/gold-internal';
 import { listCalls, recordCall } from '../lib/domain/reception/calls';
 import { createCallOutcome, listCallOutcomes } from '../lib/domain/reception/outcomes';
 
@@ -246,6 +248,29 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       statusId: firstJob.status.id,
       durationMinutes: 30,
     });
+  }
+
+  // GOLD's own operating workspace, for the specs that sign in as platform staff. `/platform/**`
+  // renders inside it, so staff with no GOLD Internal membership have nowhere to render. Idempotent:
+  // provisioned once, by the same two acts an operator uses (a staff-provisioned business, then the
+  // staff-only bootstrap door), and left alone when the fixture from a previous run is there.
+  const goldStaffDb = createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const goldStaffSignIn = await goldStaffDb.auth.signInWithPassword({ email: 'staff@gold.test', password: DEMO_PASSWORD });
+  if (goldStaffSignIn.error) {
+    throw new Error(`e2e/global-setup: could not sign in as platform staff (${goldStaffSignIn.error.message})`);
+  }
+  const staffOrganizations = await listMyOrganizations(goldStaffDb);
+  if (!(await findGoldInternalOrganization(goldStaffDb, staffOrganizations))) {
+    const goldOrganizationId = await provisionOrganization(goldStaffDb, {
+      ownerEmail: 'staff@gold.test',
+      name: 'GOLD',
+      displayName: 'GOLD staff',
+      timezone: 'Europe/Amsterdam',
+      currency: 'EUR',
+    });
+    await bootstrapGoldInternalWorkspace(goldStaffDb, { organizationId: goldOrganizationId });
   }
 
   const context: DemoContext = {

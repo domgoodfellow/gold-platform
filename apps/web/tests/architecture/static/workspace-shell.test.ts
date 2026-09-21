@@ -21,10 +21,8 @@ const workspaceHeader = readFileSync(`${WEB}/components/containers/workspace-hea
 const workspaceRightRail = readFileSync(`${WEB}/components/containers/workspace-right-rail.tsx`, 'utf8');
 const contextSwitcher = readFileSync(`${WEB}/components/containers/context-switcher.tsx`, 'utf8');
 const accountMenu = readFileSync(`${WEB}/components/containers/account-menu.tsx`, 'utf8');
-const organizationLayout = readFileSync(
-  `${WEB}/app/organizations/[organizationId]/layout.tsx`,
-  'utf8',
-);
+// The shell every organization page (and `/platform/**`, inside GOLD's own organization) renders in.
+const organizationLayout = readFileSync(`${WEB}/features/shell/organization-shell.tsx`, 'utf8');
 const platformLayout = readFileSync(`${WEB}/app/(platform)/platform/layout.tsx`, 'utf8');
 const workspaceShell = readFileSync(`${WEB}/components/containers/workspace-shell.tsx`, 'utf8');
 const pageHeader = readFileSync(`${WEB}/components/containers/page-header.tsx`, 'utf8');
@@ -34,7 +32,8 @@ const resourcesPage = readFileSync(
   'utf8',
 );
 const recordHeader = readFileSync(`${WEB}/components/containers/record-header.tsx`, 'utf8');
-const platformNavigation = readFileSync(`${WEB}/features/platform/platform-navigation.tsx`, 'utf8');
+const platformNavigation = readFileSync(`${WEB}/lib/platform-navigation.ts`, 'utf8');
+const shellProjection = readFileSync(`${WEB}/lib/shell.ts`, 'utf8');
 const tenantWorkspace = readFileSync(`${WEB}/features/platform/tenant-workspace.tsx`, 'utf8');
 const platformOrganizationOverview = readFileSync(
   `${WEB}/app/(platform)/platform/organizations/[organizationId]/page.tsx`,
@@ -199,21 +198,20 @@ describe('the Business phone header — compact controls wired to the right slot
     expect(contextBlock).toContain('organizations={switchable}');
     expect(organizationLayout).toMatch(/const switchable = myOrganizations\.map/);
     expect(contextBlock).not.toContain('platformStaff=');
-    // Platform Administration is offered by the same server-resolved fact the sidebar's switcher gets.
-    expect(contextBlock).toContain('platformAdministration={platformAdministration}');
   });
 });
 
-describe('the Platform route uses the unified workspace shell', () => {
+describe('the Platform route renders inside the one organization shell', () => {
   it('no longer lives beside generic header markup, and leaves every title to the page’s own PageHeader', () => {
     expect(existsSync(`${WEB}/components/site-header.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-header-title.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-header.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-shell.tsx`)).toBe(false);
+    expect(existsSync(`${WEB}/features/platform/platform-navigation.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/app/(platform)/platform/gold-bootstrap-form.tsx`)).toBe(false);
-    // No pathname → title table — every Platform page renders its own PageHeader.
-    expect(platformLayout).toContain('WorkspaceHeader');
-    expect(platformLayout).toContain('PlatformSidebar');
+    // Frame and header are the organization shell's; the platform layout composes neither.
+    expect(platformLayout).toContain('<OrganizationShell');
+    expect(platformLayout).not.toMatch(/WorkspaceHeader|WorkspaceShell|PlatformSidebar|PlatformNavBar/);
   });
 
   it('does not expose GOLD bootstrap as product UI', () => {
@@ -231,27 +229,16 @@ describe('the Platform route uses the unified workspace shell', () => {
     expect(platformLayout).not.toContain('<form');
   });
 
-  it('shows its trigger at every width — Platform has no phone bottom bar to hand navigation to instead', () => {
-    expect(platformLayout).toContain('navigationTrigger="md"');
+  it('gets its trigger, switcher and bottom bar from the one shell, at every width', () => {
+    expect(organizationLayout).toContain('navigationTrigger="md"');
+    expect(organizationLayout).toContain('CompactContextSwitcher');
+    expect(organizationLayout).toMatch(/bottomBar=\{/);
   });
 
-  it('renders no compact context switcher of its own — Platform reaches it through the Sidebar header at every width', () => {
-    expect(platformLayout).toContain('CompactContextSwitcher');
-  });
-
-  it('uses the shared workspace header for platform routes, with no title of its own', () => {
-    expect(platformLayout).toContain('<WorkspaceHeader');
-    expect(platformLayout).not.toMatch(/PlatformTrail|primary=|SiteHeader/);
-  });
-
-  it('keeps the two contexts’ navigation apart — neither shell inherits the other’s domain model', () => {
-    expect(platformLayout).not.toMatch(/\bAREAS\b|areaLabel|areasIn\(/);
+  it('keeps platform navigation out of the area registry — one projection combines them', () => {
+    expect(platformNavigation).not.toMatch(/AREAS|areaLabel|areasIn\(/);
     expect(organizationLayout).not.toMatch(/PLATFORM_NAV|PlatformNavigation/);
     expect(orgShell).not.toMatch(/AreaTrail|PlatformTrail/);
-  });
-
-  it('mounts no bottom bar — Platform keeps its Sidebar Sheet rather than a copy of the Business bottom bar', () => {
-    expect(platformLayout).toMatch(/bottomBar=\{/);
   });
 });
 
@@ -549,8 +536,8 @@ describe('Platform navigation highlights the most specific matching item, never 
   });
 
   it('picks the longest matching href so a Plan or Product detail route activates its own section', () => {
-    expect(platformNavigation).toContain('function activeHref');
-    expect(platformNavigation).toContain('item.href.length > best.href.length');
+    expect(shellProjection).toContain('export function activeItemKey');
+    expect(shellProjection).toContain('item.href.length > best.href.length');
   });
 });
 

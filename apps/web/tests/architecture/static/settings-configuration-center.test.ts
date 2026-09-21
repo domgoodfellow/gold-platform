@@ -31,8 +31,9 @@ describe('Settings, as the Configuration Center (source scan)', () => {
   });
 
   it('links the Settings-owned destinations from the map the hub renders', () => {
+    // Paths are declared once, on the configuration targets the map reads by key.
     const map = readFileSync(
-      fileURLToPath(new URL('../../../features/settings/settings-map.ts', import.meta.url)),
+      fileURLToPath(new URL('../../../lib/navigation.ts', import.meta.url)),
       'utf8',
     );
     expect(settings).toContain('offeredSections');

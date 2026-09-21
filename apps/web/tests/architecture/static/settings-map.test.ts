@@ -7,29 +7,25 @@ import {
   SETTINGS_SECTIONS,
   type SettingsEntry,
 } from '@/features/settings/settings-map';
-import { AREAS } from '@/lib/navigation';
+import { AREAS, CONFIG_TARGETS, configTarget, configTargetOffered } from '@/lib/navigation';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
 /**
  * Settings is the configuration map. What matters about it is that every door on it is a route
- * that exists, that it offers nothing the sidebar's own gates would hide, and that every
- * configuration-only area the sidebar dropped is still reachable from here — otherwise moving a
- * row out of the sidebar would have deleted a way in.
+ * that exists, that each door is offered by **configuration** permission and entitlement — never by
+ * the permission to operate the workspace it belongs to — and that every configuration-only area
+ * the sidebar dropped is still reachable from here.
  */
 
 const ROUTES = fileURLToPath(new URL('../../../app/organizations/[organizationId]', import.meta.url));
 const entries = SETTINGS_SECTIONS.flatMap((section) => section.entries);
 
-const everything = {
+const everythingEntitled = {
   enabledModules: new Set(['billing', 'integrations', 'reception', 'drafting']),
   featureAvailability: new Set(AREAS.flatMap((area) => area.featureKeys ?? [])),
-  capabilities: new Set<Capability>(AREAS.flatMap((area) => area.relevantCapabilities ?? [])),
 };
-const nothing = {
-  enabledModules: new Set<string>(),
-  featureAvailability: new Set<string>(),
-  capabilities: new Set<Capability>(),
-};
+const nothingEntitled = { enabledModules: new Set<string>(), featureAvailability: new Set<string>() };
+const allPermissions = new Set<Capability>(CONFIG_TARGETS.flatMap((target) => target.permission));
 
 describe('the Settings configuration map', () => {
   it('points every entry at a route that exists', () => {
@@ -59,37 +55,91 @@ describe('the Settings configuration map', () => {
     ]);
   });
 
+  it('is built from configuration targets: one path per key, declared once', () => {
+    for (const entry of entries) expect(entry.path).toBe(configTarget(entry.key).path);
+    expect(new Set(CONFIG_TARGETS.map((target) => target.key)).size).toBe(CONFIG_TARGETS.length);
+    // Every target is on the map, and none is a door nobody may open.
+    expect(CONFIG_TARGETS.map((target) => target.key).sort()).toEqual(entries.map((entry) => entry.key).sort());
+    for (const target of CONFIG_TARGETS) expect(target.permission.length, target.key).toBeGreaterThan(0);
+  });
+
   it('keeps every configuration-only area reachable, since none of them has a sidebar row any more', () => {
     for (const area of AREAS.filter((candidate) => candidate.sidebar === false)) {
       expect(
-        entries.some((entry) => entry.area === area.segment),
+        entries.some((entry) => entry.path.split(/[/#]/)[0] === area.segment),
         `${area.segment} left the sidebar and is not on the Settings map`,
       ).toBe(true);
     }
   });
 
-  it('names only areas that exist', () => {
-    for (const entry of entries) {
-      if (entry.area) expect(AREAS.some((area) => area.segment === entry.area), entry.key).toBe(true);
+  it('borrows only an entitlement from a workspace, never its operating permission', () => {
+    for (const target of CONFIG_TARGETS.filter((candidate) => candidate.entitledBy)) {
+      expect(AREAS.some((area) => area.segment === target.entitledBy), target.key).toBe(true);
+    }
+  });
+});
+
+describe('configuring is not operating', () => {
+  const callSetup = configTarget('call-setup');
+  const callsArea = AREAS.find((area) => area.segment === 'calls')!;
+
+  it('offers call setup to somebody who may configure but not place calls', () => {
+    expect(callsArea.relevantCapabilities).toEqual(['call.place']);
+    const configureOnly = { ...everythingEntitled, capabilities: new Set<Capability>(['field.manage']) };
+    expect(configTargetOffered(callSetup, configureOnly)).toBe(true);
+  });
+
+  it('does not offer it to somebody who may only place calls', () => {
+    const operateOnly = { ...everythingEntitled, capabilities: new Set<Capability>(['call.place']) };
+    expect(configTargetOffered(callSetup, operateOnly)).toBe(false);
+  });
+
+  it('does not conjure the entitlement from a broad role', () => {
+    const everyPermissionNoProduct = { ...nothingEntitled, capabilities: allPermissions };
+    expect(configTargetOffered(callSetup, everyPermissionNoProduct)).toBe(false);
+  });
+
+  it('gates every kernel entry on its own configuration permission, never on being a member', () => {
+    for (const key of ['general', 'branding', 'website', 'communications']) {
+      const target = configTarget(key);
+      expect(target.entitledBy, key).toBeUndefined();
+      expect(configTargetOffered(target, { ...nothingEntitled, capabilities: new Set() }), key).toBe(false);
+      expect(configTargetOffered(target, { ...nothingEntitled, capabilities: new Set<Capability>(['organization.manage']) }), key).toBe(true);
     }
   });
 
-  it('offers a kernel entry to everyone and a gated entry only where the sidebar’s own gates pass', () => {
-    const general = entries.find((entry) => entry.key === 'general') as SettingsEntry;
-    expect(entryOffered(general, nothing)).toBe(true);
+  it('keeps Setup kernel: reachable without the drafting module, by launching or asking for a draft', () => {
+    const setup = configTarget('setup');
+    expect(setup.entitledBy).toBeUndefined();
+    expect(configTargetOffered(setup, { ...nothingEntitled, capabilities: new Set<Capability>(['organization.manage']) })).toBe(true);
+    expect(configTargetOffered(setup, { ...nothingEntitled, capabilities: new Set<Capability>(['configuration.propose']) })).toBe(true);
+    expect(configTargetOffered(setup, { ...nothingEntitled, capabilities: new Set<Capability>(['call.place']) })).toBe(false);
+  });
+});
 
+describe('offered entries and sections', () => {
+  it('offers an entry only when it is entitled and the member may configure it', () => {
     const pricing = entries.find((entry) => entry.key === 'pricing') as SettingsEntry;
-    expect(entryOffered(pricing, everything)).toBe(true);
-    // Not entitled, and entitled but without the capability: both hide it.
-    expect(entryOffered(pricing, nothing)).toBe(false);
-    expect(entryOffered(pricing, { ...everything, capabilities: new Set() })).toBe(false);
-    expect(entryOffered(pricing, { ...everything, featureAvailability: new Set() })).toBe(false);
+    const permitted = { ...everythingEntitled, capabilities: new Set<Capability>(['price.manage']) };
+    expect(entryOffered(pricing, permitted)).toBe(true);
+    // Not entitled, and entitled but without the permission: both hide it.
+    expect(entryOffered(pricing, { ...nothingEntitled, capabilities: new Set<Capability>(['price.manage']) })).toBe(false);
+    expect(entryOffered(pricing, { ...everythingEntitled, capabilities: new Set() })).toBe(false);
+    expect(
+      entryOffered(pricing, { ...everythingEntitled, featureAvailability: new Set(), capabilities: new Set<Capability>(['price.manage']) }),
+    ).toBe(false);
+  });
+
+  it('offers a member with no configuration authority nothing, rather than a kernel free-for-all', () => {
+    expect(offeredSections({ ...everythingEntitled, capabilities: new Set() })).toEqual([]);
   });
 
   it('drops a section left with nothing to offer, rather than printing an empty heading', () => {
-    const shown = offeredSections(nothing).map((section) => section.key);
+    const shown = offeredSections({ ...nothingEntitled, capabilities: new Set<Capability>(['organization.manage']) }).map(
+      (section) => section.key,
+    );
+    expect(shown).toContain('business');
     expect(shown).not.toContain('pricing');
     expect(shown).not.toContain('people');
-    expect(shown).toContain('business');
   });
 });

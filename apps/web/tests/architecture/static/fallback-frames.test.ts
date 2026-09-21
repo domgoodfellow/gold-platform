@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { PLATFORM_NAV } from '@/features/platform/platform-navigation';
+import { PLATFORM_DESTINATIONS } from '@/lib/platform-navigation';
 import { inPlatformContext } from '@/lib/route/platform-context';
 
 /**
@@ -86,7 +86,7 @@ describe('an organization that cannot be proven is never described', () => {
 describe('who owns which failure', () => {
   it('a non-member is caught by the ancestor boundary and gets the safe frame', () => {
     expect(read('app/organizations/not-found.tsx')).toContain('OrganizationUnavailable');
-    expect(read('app/organizations/[organizationId]/layout.tsx')).toContain('requireOrganizationForBillingRecovery(');
+    expect(read('features/shell/organization-shell.tsx')).toContain('requireOrganizationForBillingRecovery(');
   });
 
   it('a missing child beneath a proven membership renders inside the organization layout', () => {
@@ -139,45 +139,45 @@ describe('who owns which failure', () => {
   });
 });
 
-describe('the phone bar leads with the current context', () => {
+describe('the phone bar is one projection with a More menu', () => {
   const shell = read('app/organizations/[organizationId]/org-shell.tsx');
   const bar = shell.slice(shell.indexOf('export function OrgNavBar('), shell.indexOf('export function SetupEntry'));
 
-  it('a business’s bar lists that business only — Platform is a different context with its own bar', () => {
-    expect(bar).toContain('visibleAreas(');
-    expect(bar).not.toMatch(/PlatformPhoneNavMenu|PLATFORM_NAV|inPlatform/);
-    const platform = read('app/(platform)/platform/layout.tsx');
-    expect(platform).toContain('<PlatformNavBar />');
-    expect(platform).not.toContain('OrgNavBar');
+  it('a business’s bar renders the projection it is given — it decides no eligibility of its own', () => {
+    expect(bar).toContain('projectPhone(sections)');
+    expect(bar).not.toMatch(/visibleAreas\(|areasIn\(|PlatformPhoneNavMenu|PLATFORM_NAV|inPlatform|capabilit/);
   });
 
-  it('Platform is offered only from server-resolved facts, and only through the switcher', () => {
-    const org = read('app/organizations/[organizationId]/layout.tsx');
-    expect(org).toContain('platformAdministrationAvailable({ staff, goldInternal })');
+  it('reaches Administration and Platform behind More rather than crowding the bar', () => {
+    expect(bar).toContain('More');
+    expect(bar).toContain('<MoreMenu');
+  });
+
+  it('Platform is offered only from server-resolved facts, inside the one shell', () => {
+    const org = read('features/shell/organization-shell.tsx');
+    expect(org).toContain('staff && gold ? await platformPermissions(db) : null');
     expect(org).not.toMatch(/platformStaff=|isGoldInternal=/);
   });
 
-  it('reads the Platform context from the path, and only /platform and beneath', () => {
+  it('reads the Platform namespace from the path, and only /platform and beneath', () => {
     expect(inPlatformContext('/platform')).toBe(true);
     expect(inPlatformContext('/platform/providers')).toBe(true);
     expect(inPlatformContext('/platformer')).toBe(false);
-    expect(inPlatformContext('/organizations/x/today')).toBe(false);
+    expect(inPlatformContext('/organizations/x/home')).toBe(false);
   });
 
-  it('PLATFORM_NAV is the one Platform navigation registry, and the phone bar maps it rather than copying it', () => {
-    expect(PLATFORM_NAV.length).toBeGreaterThan(3);
-    const nav = read('features/platform/platform-navigation.tsx');
-    const bar = nav.slice(nav.indexOf('export function PlatformNavBar'));
-    expect(bar).toContain('PLATFORM_NAV.map');
-    const literals = walk(`${WEB}/app`).concat(walk(`${WEB}/features`), walk(`${WEB}/components`))
-      .filter((path) => /(^|[^A-Z_])PLATFORM_NAV\s*=\s*\[/.test(readFileSync(path, 'utf8')));
-    expect(literals.map((path) => path.slice(WEB.length))).toEqual(['/features/platform/platform-navigation.tsx']);
+  it('PLATFORM_DESTINATIONS is the one Platform navigation registry, declared once', () => {
+    expect(PLATFORM_DESTINATIONS.length).toBeGreaterThan(3);
+    const literals = walk(`${WEB}/app`).concat(walk(`${WEB}/features`), walk(`${WEB}/components`), walk(`${WEB}/lib`))
+      .filter((path) => /PLATFORM_DESTINATIONS: [^=]*=\s*\[/.test(readFileSync(path, 'utf8')));
+    expect(literals.map((path) => path.slice(WEB.length))).toEqual(['/lib/platform-navigation.ts']);
   });
 });
 
 describe('the mobile sidebar trigger says what the layouts do', () => {
   it('Platform Context uses navigationTrigger="md", and the header comment agrees', () => {
-    expect(read('app/(platform)/platform/layout.tsx')).toContain('navigationTrigger="md"');
+    // Platform renders inside the one organization shell, which asks for the trigger from md up.
+    expect(read('features/shell/organization-shell.tsx')).toContain('navigationTrigger="md"');
     const header = read('components/containers/workspace-header.tsx');
     expect(header).toContain('Business *and*');
     expect(header).not.toMatch(/Platform, whose\s*\n\s*\*\s*`Sidebar` renders an off-canvas Sheet/);
@@ -186,7 +186,7 @@ describe('the mobile sidebar trigger says what the layouts do', () => {
   it('only shells with no bottom bar ask for the trigger at every width', () => {
     expect(read('features/account/personal-settings-shell.tsx')).toContain('navigationTrigger="always"');
     expect(read('features/account/global-fallback-shell.tsx')).toContain('navigationTrigger="always"');
-    expect(read('app/organizations/[organizationId]/layout.tsx')).toContain('navigationTrigger="md"');
+    expect(read('features/shell/organization-shell.tsx')).toContain('navigationTrigger="md"');
   });
 });
 

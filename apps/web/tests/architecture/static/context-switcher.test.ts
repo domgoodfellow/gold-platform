@@ -2,61 +2,55 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { deriveSwitcherView } from '@/components/containers/context-switcher';
-import { inPlatformContext, platformAdministrationAvailable } from '@/lib/route/platform-context';
+import { inPlatformContext } from '@/lib/route/platform-context';
 
 /**
- * A context switcher switches context. One identity, zero or more memberships, optional platform
- * authority, one current context — and no directory page between them.
+ * A context switcher switches organization. One identity, zero or more memberships, one current
+ * context — and no directory page between them. Platform is not an organization and is not a
+ * destination here: platform tools are a section of GOLD's own shell, projected from the person's
+ * platform permissions (`lib/shell.ts`).
  */
 
 const WEB = fileURLToPath(new URL('../../..', import.meta.url));
 const read = (path: string) => readFileSync(`${WEB}/${path}`, 'utf8');
 const switcher = read('components/containers/context-switcher.tsx');
 
-describe('Platform Administration is offered only where it can be entered', () => {
-  const gold = { id: 'gold' };
-
-  it('needs platform authority and a GOLD Internal membership, never one alone', () => {
-    expect(platformAdministrationAvailable({ staff: true, goldInternal: gold })).toBe(true);
-    expect(platformAdministrationAvailable({ staff: false, goldInternal: gold })).toBe(false);
-    expect(platformAdministrationAvailable({ staff: true, goldInternal: null })).toBe(false);
-    expect(platformAdministrationAvailable({ staff: false, goldInternal: undefined })).toBe(false);
-  });
-
-  it('reads the Platform context from the path, exactly as a business is read', () => {
+describe('the Platform namespace', () => {
+  it('reads the namespace from the path, exactly as a business is read', () => {
     expect(inPlatformContext('/platform')).toBe(true);
     expect(inPlatformContext('/platform/organizations/x')).toBe(true);
     expect(inPlatformContext('/platformer')).toBe(false);
-    expect(inPlatformContext('/organizations/x/today')).toBe(false);
+    expect(inPlatformContext('/organizations/x/home')).toBe(false);
   });
 });
 
 describe('the switcher', () => {
-  it('links straight to a business home and to /platform, and never through /organizations', () => {
+  it('links straight to a business home, never through /organizations, and offers no Platform destination', () => {
     expect(switcher).toContain('organizationHomeHref(organization.id, organization.operationalState)');
-    expect(switcher).toContain('href="/platform"');
     expect(switcher).not.toMatch(/\/organizations\?|All businesses|all=1/);
+    const executable = switcher.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(executable).not.toContain('/platform');
+    expect(executable).not.toMatch(/Platform Administration|platformAdministration|inPlatformContext/);
   });
 
-  it('keeps Platform apart from the businesses, and is the list of where else, never the current context', () => {
-    expect(switcher).toContain('platform ? (');
+  it('is the list of where else, never the current context', () => {
     expect(switcher).toContain('organization.id !== current.organizationId');
-    // Inside Platform the shell is GOLD's, so GOLD must be listed to get back to it.
-    expect(switcher).toContain('current.kind === \'business\' && !inPlatform');
   });
 
   it('is a plain label, not an empty menu, when there is nowhere else to go', () => {
     expect(switcher).toContain('!view.hasChoices');
-    expect(switcher).toContain('hasChoices: businesses.length > 0 || platform');
+    expect(switcher).toContain('hasChoices: businesses.length > 0');
   });
 
-  it('every shell hands it the platform fact, the two layouts that host Platform from server facts', () => {
-    expect(read('app/organizations/[organizationId]/layout.tsx')).toContain('platformAdministrationAvailable({ staff, goldInternal })');
-    // Personal settings and the fallback frame both take it from the one person-context read.
-    expect(read('lib/route/person-context.ts')).toContain('platformAdministrationAvailable({ staff, goldInternal })');
+  it('no shell hands it a platform fact: the one shell projects platform tools itself', () => {
+    const shell = read('features/shell/organization-shell.tsx');
+    expect(shell).not.toMatch(/platformAdministration/);
+    expect(read('lib/route/person-context.ts')).not.toMatch(/platformAdministration/);
     expect(read('features/account/personal-settings-shell.tsx')).toContain('loadPersonContext()');
     expect(read('features/account/global-fallback-shell.tsx')).toContain('loadPersonContext()');
-    expect(read('app/(platform)/platform/layout.tsx')).toMatch(/platformAdministration\s/);
+    // Both route trees render inside the one shell.
+    expect(read('app/organizations/[organizationId]/layout.tsx')).toContain('<OrganizationShell');
+    expect(read('app/(platform)/platform/layout.tsx')).toContain('<OrganizationShell');
   });
 });
 
@@ -99,28 +93,26 @@ describe('the last business is remembered, and only as a hint', () => {
   });
 });
 
-describe('moving between contexts', () => {
+describe('moving between organizations', () => {
   const gold = { id: 'gold', name: 'GOLD', role: 'Owner', operationalState: 'live' as const };
   const nextfund = { id: 'nf', name: 'NextFund', role: 'Owner', operationalState: 'live' as const };
   const current = { kind: 'business' as const, organizationId: 'gold', name: 'GOLD', role: 'Owner' };
 
-  it('from a business, offers the other businesses and Platform Administration, never the current one', () => {
-    const view = deriveSwitcherView(current, [gold, nextfund], true, '/organizations/gold/today');
+  it('offers the other businesses, never the current one', () => {
+    const view = deriveSwitcherView(current, [gold, nextfund]);
     expect(view.triggerName).toBe('GOLD');
     expect(view.businesses.map((org) => org.id)).toEqual(['nf']);
-    expect(view.platform).toBe(true);
+    expect(view).not.toHaveProperty('platform');
   });
 
-  it('from Platform Administration, names the context and lists every business, GOLD included, as the way back', () => {
-    const view = deriveSwitcherView(current, [gold, nextfund], true, '/platform/organizations');
-    expect(view.triggerName).toBe('Platform Administration');
-    expect(view.businesses.map((org) => org.id)).toEqual(['gold', 'nf']);
-    // Already there, so it is not offered as somewhere else to go.
-    expect(view.platform).toBe(false);
+  it('stays GOLD while an operator works in the platform namespace, because /platform renders inside GOLD', () => {
+    // The switcher takes no pathname: the current context is the organization the shell was built for.
+    const view = deriveSwitcherView(current, [gold, nextfund]);
+    expect(view.triggerName).toBe('GOLD');
+    expect(view.businesses.map((org) => org.id)).toEqual(['nf']);
   });
 
-  it('offers Platform Administration to nobody who was not given it', () => {
-    const view = deriveSwitcherView(current, [gold, nextfund], false, '/organizations/gold/today');
-    expect(view.platform).toBe(false);
+  it('has nowhere to go for a person with one organization', () => {
+    expect(deriveSwitcherView(current, [gold]).hasChoices).toBe(false);
   });
 });

@@ -162,7 +162,8 @@ export const MODULES = [
     label: 'Guided setup',
     description:
       'Describe the business in your own words and get a proposed setup back to read, change and apply. A business that would rather fill in each screen itself runs without it — and every one of those screens exists either way.',
-    // Its own area — unlike weather and maintenance, what it produces is a document argued with over several sittings, not a section of somebody else's page.
+    // An optional accelerator *inside* Setup, which is kernel. It owns no area: the Setup lifecycle (readiness, areas, launch, review) exists whether or not this is entitled.
+    outside: 'the Agent-assisted drafting section of Setup',
     configuredAt: { segment: 'setup' },
   },
   {
@@ -295,17 +296,83 @@ export const AREAS: readonly Area[] = [
   { segment: 'fields', label: 'Custom fields', group: 'settings', sidebar: false, relevantCapabilities: ['field.manage'] },
   { segment: 'roles', label: 'Team', group: 'settings', sidebar: false, relevantCapabilities: ['role.manage'] },
   // Setup is a lifecycle, not a permanent area: while SETUP lasts it is the one row `SetupEntry`
-  // draws above the areas, and once LIVE it recedes to the Settings map's "Setup & launch".
-  // No `featureKeys`: no canonical Feature maps to `module_key = 'drafting'` (`20260918000001`'s
-  // seed has no such runtime mapping) — a real gap, kept on the legacy module-only gate rather
-  // than inventing a catalogue identifier that doesn't exist yet.
-  { segment: 'setup', label: 'Setup', group: 'settings', module: 'drafting', sidebar: false, relevantCapabilities: ['configuration.propose'] },
+  // draws above the areas, and once LIVE it recedes to the Settings map's "Setup & launch". It is
+  // **kernel** — readiness, areas, launch and review exist for every business. Agent-assisted
+  // drafting is an optional section inside it (`drafting` module), never a condition of reaching it.
+  { segment: 'setup', label: 'Setup', group: 'settings', sidebar: false },
   // A business returns here to check a run or add a source, but connecting is configuring how
   // other workspaces get their data — so it is reached from Settings' Connections section.
   { segment: 'integrations', label: 'Integrations', group: 'settings', module: 'integrations', sidebar: false, relevantCapabilities: ['integration.manage'], featureKeys: ['app_connections', 'file_imports', 'data_mapping', 'scheduled_sync', 'triggers_actions', 'agent_tools'] },
   // Names no module — it's where the switches are, so a module able to hide it would lock a business out of its own account.
   { segment: 'settings', label: 'Settings', group: 'settings' },
 ] as const;
+
+/**
+ * A place a business is **configured**, as opposed to a place it is **operated**.
+ *
+ * The two are different questions with different answers. Operating Calls takes `call.place`;
+ * configuring what a call's outcome is called takes `field.manage`. A person may hold either
+ * without the other, so a configuration entry must never inherit its workspace's
+ * `relevantCapabilities` — it declares its own `permission`, and borrows only the workspace's
+ * *entitlement* (`entitledBy`, an area segment whose module/feature gate says the business has the
+ * thing at all). One definition per target: the Settings map, the Administration navigation and the
+ * Setup areas all read the path and the two requirements from here rather than restating them.
+ */
+export type ConfigTarget = {
+  key: string;
+  /** Path under `/organizations/{id}` — a route that exists, checked by `settings-map.test.ts`. */
+  path: string;
+  /** The area whose module/feature entitlement this needs. Absent means kernel: every business has it. */
+  entitledBy?: string;
+  /** Holding **any** of these lets a member configure it. Never empty — a target nobody may configure is a dead door. */
+  permission: readonly Capability[];
+};
+
+export const CONFIG_TARGETS: readonly ConfigTarget[] = [
+  { key: 'general', path: 'settings/general', permission: ['organization.manage'] },
+  { key: 'work-configuration', path: 'work/configuration', permission: ['field.manage'] },
+  { key: 'schedule-configuration', path: 'schedule/configuration', permission: ['field.manage'] },
+  { key: 'pricing', path: 'pricing', entitledBy: 'pricing', permission: ['price.manage'] },
+  { key: 'custom-fields', path: 'fields', permission: ['field.manage'] },
+  // Entitled through Calls, permitted through field.manage: configuring outcomes and stages is not making calls.
+  { key: 'call-setup', path: 'calls#setup', entitledBy: 'calls', permission: ['field.manage'] },
+  { key: 'team', path: 'roles', permission: ['role.manage'] },
+  { key: 'branding', path: 'settings/branding', permission: ['organization.manage'] },
+  { key: 'website', path: 'settings/website', permission: ['organization.manage'] },
+  { key: 'communications', path: 'settings/communications', permission: ['organization.manage'] },
+  { key: 'integrations', path: 'integrations', entitledBy: 'integrations', permission: ['integration.manage'] },
+  { key: 'features', path: 'settings/features', permission: ['feature.manage'] },
+  { key: 'plan', path: 'settings/plan', permission: ['billing.manage'] },
+  // Setup is kernel. Launching is `organization.manage`; asking for a drafted setup is
+  // `configuration.propose`; either makes the lifecycle worth entering. No module gate: the
+  // optional drafting section decides for itself whether to draw.
+  { key: 'setup', path: 'setup', permission: ['organization.manage', 'configuration.propose'] },
+];
+
+export type ConfigGate = {
+  enabledModules?: ReadonlySet<string>;
+  featureAvailability?: ReadonlySet<string>;
+  capabilities?: ReadonlySet<Capability>;
+};
+
+export function configTarget(key: string): ConfigTarget {
+  const target = CONFIG_TARGETS.find((candidate) => candidate.key === key);
+  if (!target) throw new Error(`No configuration target has the key "${key}".`);
+  return target;
+}
+
+/**
+ * Whether a member may be offered a configuration target: the business is entitled to what it
+ * configures **and** the member holds a configuration permission for it. Both, never either — a
+ * broad role does not conjure an entitlement, and an entitlement does not conjure a permission.
+ */
+export function configTargetOffered(target: ConfigTarget, gate: ConfigGate): boolean {
+  if (target.entitledBy) {
+    const area = AREAS.find((candidate) => candidate.segment === target.entitledBy);
+    if (!area || !areaEntitled(area, gate.enabledModules, gate.featureAvailability)) return false;
+  }
+  return !gate.capabilities || target.permission.some((capability) => gate.capabilities!.has(capability));
+}
 
 /** Whether `area` should appear in navigation for a caller with `capabilities` — the layer `areasIn`/`OrgNavBar` both apply on top of the module gate. Absent `relevantCapabilities` always passes; absent `capabilities` always passes (no gate to apply). */
 export function areaVisibleTo(area: Area, capabilities?: ReadonlySet<Capability>): boolean {

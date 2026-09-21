@@ -5,6 +5,30 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### One adaptive shell
+
+Platform Administration is no longer a shell of its own. Every organization page and every `/platform/**`
+page renders inside one organization shell (`OrganizationShell`), and what the sidebar, the collapsed rail, the
+tablet rail and the phone show is one projection (`projectShell`) of the organization's entitlements, the
+member's capabilities, whether the organization is GOLD's own, and the member's platform permissions. The
+sections are Home, the workspaces, Operations, **Administration** (Team, Connections, Plan & usage and Settings,
+each offered only to a member holding the authority for it) and, inside GOLD only and only with a platform
+permission, **Platform**. A GOLD salesperson sees GOLD as any business and no Platform; nobody sees Platform beside
+a customer's business. The context switcher lists organizations only. The phone bar carries Home and the first
+workspaces and puts everything else behind **More**, a sheet grouped as the sidebar is.
+
+`platform_staff` gains `capabilities` (organizations, catalogue, commercial, providers, health; default all, so no
+operator lost a door), and each `/platform/*` area's layout refuses a row that does not name it. The narrow-door
+functions still check staff membership only; making each door check a permission is recorded as the next slice
+(D59, I51).
+
+Settings entries are configuration targets that borrow a workspace's entitlement and declare their own
+configuration permission, so a member who may configure call outcomes (`field.manage`) reaches them without
+`call.place`, and a member with no configuration authority is offered no Settings row. Setup is kernel again: it no
+longer disappears when the drafting module is off, and Agent-assisted drafting is an optional section inside it.
+Creating a role can start from a preset (Administrator, Manager, Sales, Support, Dispatcher, Technician, Viewer);
+the saved role is an ordinary editable bundle of capabilities and records nothing about the preset.
+
 ### Files on an Agent question
 
 The composer has a paperclip. A person chooses up to three text, Markdown, CSV or JSON files of up to 1 MB

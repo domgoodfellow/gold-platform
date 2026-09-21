@@ -47,7 +47,9 @@ describe('platform control-plane scope boundaries', () => {
   it('guards all platform child routes in the shared layout', () => {
     const layout = source('app/(platform)/platform/layout.tsx');
     expect(layout).toContain('requireActor(db)');
-    expect(layout).toContain('isPlatformStaff(db)');
+    // Platform authority is the caller's own platform_staff row, read live; none means no /platform.
+    expect(layout).toContain('platformPermissions(db)');
+    expect(layout).toContain('permissions.size === 0');
     expect(layout).toContain("redirect('/organizations')");
   });
 });

@@ -4,11 +4,12 @@ import { describe, expect, it } from 'vitest';
 
 const WEB = fileURLToPath(new URL('../../..', import.meta.url));
 const ORG = `${WEB}/app/organizations/[organizationId]`;
+const read = (path: string) => readFileSync(`${WEB}/${path}`, 'utf8');
 
 describe('GOLD Internal operating context composition', () => {
-  const helper = readFileSync(`${WEB}/lib/domain/tenancy/gold-internal.ts`, 'utf8');
-  const layout = readFileSync(`${ORG}/layout.tsx`, 'utf8');
-  const shell = readFileSync(`${ORG}/org-shell.tsx`, 'utf8');
+  const helper = read('lib/domain/tenancy/gold-internal.ts');
+  const shell = read('features/shell/organization-shell.tsx');
+  const renderers = readFileSync(`${ORG}/org-shell.tsx`, 'utf8');
 
   it('identifies only current base-plan assignments for actual memberships, never a business name', () => {
     expect(helper).toContain('currentPlanAssignment');
@@ -20,26 +21,27 @@ describe('GOLD Internal operating context composition', () => {
   it('resolves GOLD only from the caller membership list and the gold_internal plan key', () => {
     expect(helper).toContain('findGoldInternalOrganization');
     expect(helper).toContain('for (const organization of organizations)');
-    expect(helper).toContain("plan?.key === 'gold_internal'");
     expect(helper).not.toContain("organization.name === 'GOLD'");
   });
 
-  it('offers Platform Administration through the switcher only — never as navigation inside GOLD', () => {
-    expect(layout).toContain('platformAdministrationAvailable({ staff, goldInternal })');
-    expect(layout).toContain('platformAdministration={platformAdministration}');
-    expect(shell).not.toMatch(/PLATFORM_NAV|PlatformPhoneNavMenu|GoldPlatformNav|isGoldInternal|platformStaff/);
-    expect(layout).not.toMatch(/isGoldInternal|platformStaff=/);
+  it('asks of the organization being drawn whether it is GOLD, by plan, never by the person', () => {
+    expect(helper).toContain('export async function isGoldInternalOrganization');
+    expect(shell).toContain('isGoldInternalOrganization(db, { organizationId })');
+    // Platform permissions are read only when both are true, and are null everywhere else.
+    expect(shell).toContain('staff && gold ? await platformPermissions(db) : null');
   });
 
-  it('gives Platform Administration its own sidebar and phone bar, reading the one PLATFORM_NAV registry', () => {
-    const platformLayout = readFileSync(`${WEB}/app/(platform)/platform/layout.tsx`, 'utf8');
-    const nav = readFileSync(`${WEB}/features/platform/platform-navigation.tsx`, 'utf8');
-    expect(platformLayout).toContain('PlatformSidebar');
-    expect(platformLayout).toContain('PlatformNavBar');
-    expect(platformLayout).not.toMatch(/OrgSidebar|OrgNavBar|AREAS/);
-    expect(nav).toContain('export function PlatformSidebar');
-    expect(nav).toContain('export function PlatformNavBar');
-    // The way back into GOLD or any other business is the switcher, present at every width.
-    expect(nav).toContain('<ContextSwitcher');
+  it('renders /platform inside the one organization shell — no second shell exists', () => {
+    const platformLayout = read('app/(platform)/platform/layout.tsx');
+    expect(platformLayout).toContain('<OrganizationShell organizationId={goldInternal.id}');
+    expect(platformLayout).not.toMatch(/PlatformSidebar|PlatformNavBar|WorkspaceShell/);
+    expect(() => read('features/platform/platform-navigation.tsx')).toThrow();
+  });
+
+  it('draws Platform only from the projection: no renderer branches on who somebody is', () => {
+    expect(renderers).not.toMatch(/PLATFORM_NAV|PlatformPhoneNavMenu|GoldPlatformNav|isGoldInternal|platformStaff|isPlatformStaff|isOwner|isAdmin/);
+    expect(shell).not.toMatch(/isOwner|isAdmin|role ===|role !==/);
+    const projection = read('lib/shell.ts').replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(projection).not.toMatch(/\.role\b|isOwner|isAdmin|isGold\b|isPlatformStaff|Owner|Admin['"]/);
   });
 });

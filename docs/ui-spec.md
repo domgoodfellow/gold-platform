@@ -110,15 +110,38 @@ was — segments, labels, groups, modules.
 **The sidebar is the desktop rendering of the IA, never its source.** Both renderings map the
 same `AREAS`; two lists that had to agree eventually would not.
 
-**One context at a time, and the phone bar lists that context only.** A business's bar (`OrgNavBar`)
-is Setup (while it applies) and the business's own areas. Platform Administration is another
-scope, not a section of GOLD's navigation: it has its own sidebar and its own phone bar
-(`PlatformSidebar`, `PlatformNavBar`, both reading `PLATFORM_NAV`, the one Platform registry), and
-the only door between contexts is the context switcher, in the sidebar header from `md` up and in
-the top bar below it. The switcher lists the businesses a person belongs to and, for platform
-staff with a GOLD Internal membership, Platform Administration beneath a rule; from inside
-Platform, GOLD and every other business are listed as the way back. The sidebar trigger is hidden
-below `md` because the bottom bar is the phone's navigation.
+**One shell, projected.** Organization context is the normal operating context. Every renderer —
+the desktop sidebar, its collapsed rail, the tablet rail, the phone bar and its More menu, the
+Settings map — draws the sections `projectShell` (`lib/shell.ts`) resolves from four independent
+facts: the organization's entitlements, the member's capabilities, whether the organization is
+GOLD's own, and the member's platform permissions. The sections are Home, the workspaces,
+Operations, **Administration** and, only inside GOLD and only with a platform permission,
+**Platform**; a section with nothing in it is not drawn. No renderer names a capability, a module or
+a role, and none is a second authorization system — hiding an item is courtesy and every page,
+domain function and policy behind it still refuses (I12).
+
+**Entitlement and permission are separate, and both are required.** A business without
+Communications has no calling workspace for its owner; a member without `call.place` does not
+operate calling in a business that has it. Administration is likewise one item at a time by the
+authority for that item — Team by `role.manage`, Connections by `integration.manage` (and the
+product), Plan & usage by `billing.manage`, Settings when anything at all is configurable by that
+member — never a section a role has or lacks. **Configuring is not operating**: a Settings entry is
+a `ConfigTarget` that borrows a workspace's entitlement and declares its own configuration
+permission, so `field.manage` reaches call outcomes without `call.place`. Setup is kernel;
+Agent-assisted drafting is an optional section inside it.
+
+**Platform is a scope drawn in GOLD's shell.** `/platform/**` is still the route namespace for
+global data, and it renders inside GOLD's own organization — `PLATFORM_DESTINATIONS` is the one
+registry of its destinations and what each takes (`platform_staff.capabilities`). A GOLD salesperson
+sees GOLD as any business and no Platform; a limited operator sees only the destinations their row
+names; nobody sees Platform beside a customer's business. The context switcher answers one question
+— *which organization am I operating?* — and offers no Platform entry.
+
+**The phone bar is Home, the first workspaces and More.** Frequent work is in the bar
+(`projectPhone`); everything else — the remaining workspaces, Operations, Administration and
+Platform — is behind **More**, a sheet grouped as the sidebar is. It is a rendering choice over the
+same projection, so the bar and More together are exactly what the desktop shows. The sidebar
+trigger is hidden below `md` because the bottom bar is the phone's navigation.
 
 **Five sections, ruled apart, in `AREA_GROUPS` order** — Work, Relationships, Operations, Tools,
 and Settings (unlabelled, one row). `navigation.test.ts` fails on an interleaved list: each
@@ -255,8 +278,8 @@ renders here, through a slot, so a page never draws its own.
 
 | | What | Which widths |
 |---|---|---|
-| Left | the sidebar trigger | `md` and up in Business and Platform Context, where a phone gets the bottom bar instead; every width in Personal settings and the fallback frame, whose only phone navigation is the sidebar sheet |
-| Left | the compact context switcher — the business's mark and name, opening the same menu the sidebar's own switcher does — nothing about Setup lives in this header at any width | below `md` only, Business and Platform Context — the sidebar says it above that |
+| Left | the sidebar trigger | `md` and up in the organization shell (which `/platform/**` renders inside), where a phone gets the bottom bar instead; every width in Personal settings and the fallback frame, whose only phone navigation is the sidebar sheet |
+| Left | the compact context switcher — the business's mark and name, opening the same menu the sidebar's own switcher does — nothing about Setup lives in this header at any width | below `md` only, in the organization shell — the sidebar says it above that |
 | Left, after the above | the breadcrumb trail — ancestors only, on a page that passes `crumbs` | all |
 | Right, before Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
 | Right, furthest | Agent | all — always the last control in the row |
@@ -286,12 +309,10 @@ tenant's words) and passes the way back as `PageHeader` crumbs; `RecordHeader` k
 props and renders the same `PageHeader`. Every page renders exactly one page identity.
 
 **Context switching belongs to the context switcher, and only to it.** One identity, zero or
-more memberships, optionally Platform Administration, and one current context. The menu's header
-is the current context and its list is *where else*: the other businesses, each linking straight
-to that business's own lifecycle entry, and — for staff holding a GOLD Internal membership —
-*Platform Administration*, apart from the businesses because it is a scope and not one. Inside
-Platform, GOLD is listed so it can be returned to. With nowhere else to go it is a label, not an
-empty menu. There is no directory page: `/organizations` only lands a sign-in (the business last
+more memberships, and one current context. The menu's header is the current context and its list
+is *where else*: the other businesses, each linking straight to that business's own lifecycle
+entry. Platform is not an organization and is not listed; inside `/platform/**` the current context
+is GOLD. With nowhere else to go it is a label, not an empty menu. There is no directory page: `/organizations` only lands a sign-in (the business last
 worked in, else the first) and founds a first business, and the old `?all=1` request is ignored.
 It does not manufacture a list or creation action without a server read behind it. **Sign out belongs to the account menu**, in the sidebar footer on desktop and in
 the compact header menu on a phone. Neither is an operating action or permanent page-header

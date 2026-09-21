@@ -1,49 +1,41 @@
 import { redirect } from 'next/navigation';
-import { CompactAccountMenu } from '@/components/containers/account-menu';
-import { CompactContextSwitcher } from '@/components/containers/context-switcher';
-import { WorkspaceHeader } from '@/components/containers/workspace-header';
-import { WorkspaceShell } from '@/components/containers/workspace-shell';
-import { BrandStyle } from '@/features/branding/brand-style';
-import { PlatformAgentRail } from '@/features/agent/platform-agent-rail';
-import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
+import { OrganizationShell } from '@/features/shell/organization-shell';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
-import { canAnswerPlatformQuestions } from '@/lib/domain/assistant/platform-questions';
-import { signOut } from '@/lib/domain/identity/credentials';
-import { isPlatformStaff } from '@/lib/domain/platform/tenants';
+import { platformPermissions } from '@/lib/domain/platform/permissions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import { PlatformNavBar, PlatformSidebar } from '@/features/platform/platform-navigation';
 
+/**
+ * `/platform/**` renders inside the ordinary organization shell — GOLD's own organization — rather
+ * than a shell of its own. It is a route namespace for **global** data (organizations, catalogue,
+ * providers, commercial); that data stays platform-scoped whichever frame draws it, and every read
+ * below still goes through a narrow door that checks `platform_staff` itself.
+ *
+ * This layout needs three things and refuses without them: a session, at least one platform
+ * permission, and a GOLD Internal membership to render inside. Which *part* of the platform a
+ * person reaches is checked per area (`requirePlatformArea`, in each area's own layout), so a
+ * limited operator is served only what their `platform_staff` row names.
+ */
 export default async function PlatformLayout({ children }: LayoutProps<'/platform'>) {
   const db = await getDb();
-  let email: string;
   try {
-    const actor = await requireActor(db);
-    const { data } = await db.auth.getUser();
-    email = data.user?.email ?? actor.id;
+    await requireActor(db);
   } catch (error) {
     if (error instanceof DomainError && error.code === 'auth.required') redirect('/login');
     throw error;
   }
 
-  const platformStaff = await isPlatformStaff(db);
-  if (!platformStaff) redirect('/organizations');
+  const permissions = await platformPermissions(db);
+  if (permissions.size === 0) redirect('/organizations');
 
   const myOrganizations = await listMyOrganizations(db);
   const goldInternal = await findGoldInternalOrganization(db, myOrganizations);
 
-  async function signOutAction() {
-    'use server';
-    const actionDb = await getDb();
-    await signOut(actionDb);
-    redirect('/login');
-  }
-
   if (!goldInternal) {
     console.error('GOLD Internal workspace invariant is not satisfied for platform route.', {
-      platformStaff,
+      permissions: [...permissions],
       membershipOrganizationIds: myOrganizations.map((organization) => organization.id),
     });
     throw new DomainError(
@@ -52,83 +44,9 @@ export default async function PlatformLayout({ children }: LayoutProps<'/platfor
     );
   }
 
-  const organization = myOrganizations.find((candidate) => candidate.id === goldInternal.id);
-  if (!organization) {
-    throw new DomainError('GOLD Internal membership was not available.', 'gold_internal.membership_required');
-  }
-
-  const [brand, canAnswerAgent] = await Promise.all([
-    getBrand(db, { organizationId: organization.id }),
-    canAnswerPlatformQuestions(),
-  ]);
-
-  const logo = brand.logoPath ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={logoUrl(db, brand.logoPath)} alt="" className="h-7 w-7 shrink-0 rounded object-contain" />
-  ) : null;
-  const mark = logo ?? (
-    <span
-      aria-hidden
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-foreground text-sm font-semibold text-background"
-    >
-      {organization.name.charAt(0).toUpperCase()}
-    </span>
-  );
-  const organizations = myOrganizations.map((org) => ({
-    id: org.id,
-    name: org.name,
-    role: org.role,
-    operationalState: org.operationalState,
-  }));
-
   return (
-    <div data-brand className="min-h-full">
-      <BrandStyle brand={brand} />
-      <WorkspaceShell
-        sidebar={
-          <PlatformSidebar
-            mark={mark}
-            current={{
-              kind: 'business',
-              organizationId: organization.id,
-              name: organization.name,
-              role: organization.role,
-            }}
-            organizations={organizations}
-            email={email}
-            signOutAction={signOutAction}
-          />
-        }
-        header={
-          <WorkspaceHeader
-            navigationTrigger="md"
-            context={
-              <div className="flex min-w-0 items-center gap-3 md:hidden">
-                <CompactContextSwitcher
-                  mark={mark}
-                  current={{
-                    kind: 'business',
-                    organizationId: organization.id,
-                    name: organization.name,
-                    role: organization.role,
-                  }}
-                  organizations={organizations}
-                  platformAdministration
-                />
-              </div>
-            }
-            beforeActions={
-              <div className="md:hidden">
-                <CompactAccountMenu email={email} signOutAction={signOutAction} />
-              </div>
-            }
-          />
-        }
-        bottomBar={<PlatformNavBar />}
-        agent={<PlatformAgentRail canAnswer={canAnswerAgent} />}
-      >
-        {children}
-      </WorkspaceShell>
-    </div>
+    <OrganizationShell organizationId={goldInternal.id} agent="platform">
+      {children}
+    </OrganizationShell>
   );
 }

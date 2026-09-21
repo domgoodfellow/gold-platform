@@ -1,5 +1,4 @@
-import { areaEntitled, areaVisibleTo, AREAS, type Area } from '@/lib/navigation';
-import type { Capability } from '@/lib/domain/tenancy/capabilities';
+import { configTarget, configTargetOffered, type ConfigGate } from '@/lib/navigation';
 
 /**
  * The configuration map: every place a business is configured, grouped by the concern it answers
@@ -7,18 +6,20 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  * it, and so anything that later needs to point at "where is X configured" (guided setup, the
  * Agent) targets a `key` here instead of a hand-typed URL.
  *
- * An entry that belongs to a workspace or module names it in `area`, and is then offered only when
- * that area is entitled and relevant to the caller — the same two predicates the sidebar uses, so
- * the map can never offer a door the sidebar would have hidden. Kernel entries name no area.
+ * **An entry carries only words.** Where it goes and who may be offered it are a `ConfigTarget`
+ * (`lib/navigation.ts`), found by the entry's `key`: its path, the entitlement it needs and the
+ * *configuration* permission it needs. Configuring is not operating — a role may configure call
+ * outcomes without being allowed to place a call — so the map never inherits a workspace's own
+ * `relevantCapabilities`. The Administration navigation reads the same targets, so the two cannot
+ * offer different doors.
  */
 export type SettingsEntry = {
+  /** Also the `ConfigTarget` key. */
   key: string;
   title: string;
   description: string;
-  /** Path under `/organizations/{id}` — a route that exists, checked by `settings-map.test.ts`. */
+  /** Path under `/organizations/{id}` — read from the target, never restated here. */
   path: string;
-  /** The area whose module/capability gate decides whether this entry is offered. */
-  area?: string;
 };
 
 export type SettingsSection = {
@@ -27,181 +28,97 @@ export type SettingsSection = {
   entries: readonly SettingsEntry[];
 };
 
+function entry(key: string, title: string, description: string): SettingsEntry {
+  return { key, title, description, path: configTarget(key).path };
+}
+
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   {
     key: 'business',
     title: 'Business',
     entries: [
-      {
-        key: 'general',
-        title: 'General',
-        description: 'Business name, public address, timezone, currency, and the buffer between jobs.',
-        path: 'settings/general',
-      },
+      entry('general', 'General', 'Business name, public address, timezone, currency, and the buffer between jobs.'),
     ],
   },
   {
     key: 'work',
     title: 'Work & scheduling',
     entries: [
-      {
-        key: 'work-configuration',
-        title: 'Kinds of work',
-        description: 'The kinds of work this business does, their stages, and the checklists that come with them.',
-        path: 'work/configuration',
-      },
-      {
-        key: 'schedule-configuration',
-        title: 'Working hours',
-        description: 'When this business works, and how long a slot needs to be.',
-        path: 'schedule/configuration',
-      },
+      entry('work-configuration', 'Kinds of work', 'The kinds of work this business does, their stages, and the checklists that come with them.'),
+      entry('schedule-configuration', 'Working hours', 'When this business works, and how long a slot needs to be.'),
     ],
   },
   {
     key: 'pricing',
     title: 'Services & pricing',
     entries: [
-      {
-        key: 'pricing',
-        title: 'Pricing',
-        description: 'The price book, quote and invoice wording, and how this business gets paid.',
-        path: 'pricing',
-        area: 'pricing',
-      },
+      entry('pricing', 'Pricing', 'The price book, quote and invoice wording, and how this business gets paid.'),
     ],
   },
   {
     key: 'data',
     title: 'Customers & data',
     entries: [
-      {
-        key: 'custom-fields',
-        title: 'Custom fields',
-        description: 'The extra details this business records about its customers, jobs and places.',
-        path: 'fields',
-        area: 'fields',
-      },
-      {
-        key: 'call-setup',
-        title: 'Calls and sales stages',
-        description: 'The words this business uses for how a call went, and the stages a relationship moves through.',
-        path: 'calls#setup',
-        area: 'calls',
-      },
+      entry('custom-fields', 'Custom fields', 'The extra details this business records about its customers, jobs and places.'),
+      entry('call-setup', 'Calls and sales stages', 'The words this business uses for how a call went, and the stages a relationship moves through.'),
     ],
   },
   {
     key: 'people',
     title: 'People & access',
     entries: [
-      {
-        key: 'team',
-        title: 'Team',
-        description: 'Who works here, and what each role is allowed to do.',
-        path: 'roles',
-        area: 'roles',
-      },
+      entry('team', 'Team', 'Who works here, and what each role is allowed to do.'),
     ],
   },
   {
     key: 'brand',
     title: 'Brand & public presence',
     entries: [
-      {
-        key: 'branding',
-        title: 'Branding',
-        description: 'Logo, colours, and the public booking page.',
-        path: 'settings/branding',
-      },
-      {
-        key: 'website',
-        title: 'Website',
-        description: 'Homepage publishing and the public communication profile.',
-        path: 'settings/website',
-      },
+      entry('branding', 'Branding', 'Logo, colours, and the public booking page.'),
+      entry('website', 'Website', 'Homepage publishing and the public communication profile.'),
     ],
   },
   {
     key: 'connections',
     title: 'Connections',
     entries: [
-      {
-        key: 'communications',
-        title: 'Phone and email',
-        description: 'The phone numbers and email address this business sends from.',
-        path: 'settings/communications',
-      },
-      {
-        key: 'integrations',
-        title: 'Apps and files',
-        description: 'The outside apps this business connects, and the data it brings in.',
-        path: 'integrations',
-        area: 'integrations',
-      },
+      entry('communications', 'Phone and email', 'The phone numbers and email address this business sends from.'),
+      entry('integrations', 'Apps and files', 'The outside apps this business connects, and the data it brings in.'),
     ],
   },
   {
     key: 'products',
     title: 'Products & features',
     entries: [
-      {
-        key: 'features',
-        title: 'Features',
-        description: 'What this business has switched on, and what each one still needs.',
-        path: 'settings/features',
-      },
+      entry('features', 'Features', 'What this business has switched on, and what each one still needs.'),
     ],
   },
   {
     key: 'plan',
     title: 'Plan & usage',
     entries: [
-      {
-        key: 'plan',
-        title: 'Plan & usage',
-        description: 'The current plan, what it includes, usage, and commercial status.',
-        path: 'settings/plan',
-      },
+      entry('plan', 'Plan & usage', 'The current plan, what it includes, usage, and commercial status.'),
     ],
   },
   {
     key: 'setup',
     title: 'Setup & launch',
     entries: [
-      {
-        key: 'setup',
-        title: 'Setup',
-        // The page replaces this with a sentence that follows the lifecycle; kept so the entry is complete.
-        description: 'What setup covers, and what is finished.',
-        path: 'setup',
-        area: 'setup',
-      },
+      // The page replaces this with a sentence that follows the lifecycle; kept so the entry is complete.
+      entry('setup', 'Setup', 'What setup covers, and what is finished.'),
     ],
   },
 ];
 
-type Gate = {
-  enabledModules: ReadonlySet<string>;
-  featureAvailability: ReadonlySet<string>;
-  capabilities: ReadonlySet<Capability>;
-};
-
-/** Whether an entry is offered — the sidebar's own two predicates, so the map cannot disagree with it. */
-export function entryOffered(entry: SettingsEntry, gate: Gate): boolean {
-  if (!entry.area) return true;
-  const area: Area | undefined = AREAS.find((candidate) => candidate.segment === entry.area);
-  if (!area) return false;
-  return (
-    areaEntitled(area, gate.enabledModules, gate.featureAvailability) &&
-    areaVisibleTo(area, gate.capabilities)
-  );
+/** Whether an entry is offered: the business is entitled to it and the member may configure it. */
+export function entryOffered(candidate: SettingsEntry, gate: ConfigGate): boolean {
+  return configTargetOffered(configTarget(candidate.key), gate);
 }
 
 /** The sections with only the offered entries, dropping a section left with none. */
-export function offeredSections(gate: Gate): SettingsSection[] {
+export function offeredSections(gate: ConfigGate): SettingsSection[] {
   return SETTINGS_SECTIONS.map((section) => ({
     ...section,
-    entries: section.entries.filter((entry) => entryOffered(entry, gate)),
+    entries: section.entries.filter((candidate) => entryOffered(candidate, gate)),
   })).filter((section) => section.entries.length > 0);
 }

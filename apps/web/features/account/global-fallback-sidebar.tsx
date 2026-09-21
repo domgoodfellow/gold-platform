@@ -13,13 +13,11 @@ export function GlobalFallbackSidebar({
   email,
   signOutAction,
   businesses,
-  platformAdministration,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   email: string;
   signOutAction: () => Promise<void>;
   businesses: SwitchableOrganization[];
-  platformAdministration: boolean;
 }) {
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -28,7 +26,6 @@ export function GlobalFallbackSidebar({
           mark={GOLD_MARK}
           current={{ kind: 'global' }}
           organizations={businesses}
-          platformAdministration={platformAdministration}
         />
       </SidebarHeader>
       <SidebarContent />

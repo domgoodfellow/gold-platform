@@ -35,14 +35,12 @@ export function PersonalSettingsSidebar({
   email,
   signOutAction,
   businesses,
-  platformAdministration,
   back,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   email: string;
   signOutAction: () => Promise<void>;
   businesses: SwitchableOrganization[];
-  platformAdministration: boolean;
   back: { organizationId: string; name: string; href: string } | null;
 }) {
   const pathname = usePathname();
@@ -54,7 +52,6 @@ export function PersonalSettingsSidebar({
           mark={GOLD_MARK}
           current={{ kind: 'account' }}
           organizations={businesses}
-          platformAdministration={platformAdministration}
         />
       </SidebarHeader>
       <SidebarContent>

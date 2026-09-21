@@ -1151,6 +1151,8 @@ realtime voice agents; QuickBooks or bank integrations; and NextFund's own migra
 
 ### D45 — Platform Context and Organization Context are two independently-true facts, and platform authority stops being a Postgres role a session had to choose
 
+> **Amended by D59.** The data and authorization boundary this record draws stands. Its *interface* consequence — a Platform shell and phone bar of their own, and Platform Administration as a context-switcher destination — is replaced by one adaptive shell in which `/platform/**` renders inside GOLD's own organization for an operator whose staff row names the permission.
+
 **Decision.** "Platform Context" and "Organization Context" are the two names for where a caller
 is acting — restating D28/D42 under words that also name what changed. GOLD dogfoods the
 Organization Context path exactly as any other business does (D42; no exemption of any kind);
@@ -1673,3 +1675,49 @@ job billing, and Documents are attached to a customer, location, asset or job wi
 organization-level collection to list. Quick Create waits on create flows a link can reach — every
 create form today is a sheet opened from its own page. Communications keeps the `/calls` route
 until the call-domain work lands.
+
+### D59 — One adaptive shell: entitlement and permission are separate, platform authority is a set of permissions, and roles are editable bundles
+
+**Decision.** D45 separated Platform from a business as a *context* with its own sidebar. That
+overcorrected the interface while being right about the data. The interface is now one shell:
+organization context is the normal operating context, and `/platform/**` — still the route
+namespace for global data — renders inside GOLD's own organization. What a person sees is a
+projection (`projectShell`, `lib/shell.ts`) of four separate facts: the organization's
+entitlements, the member's capabilities, whether the organization is GOLD's own, and the member's
+platform permissions. It is resolved once and drawn by every renderer, so a breakpoint, a role name
+or a component cannot hold a second rule.
+
+**Entitlement and permission are separate and both required.** A business without a product has no
+workspace for it whatever its roles hold; a member without a capability does not operate a
+workspace the business has. **Configuring is not operating**: a Settings entry is a `ConfigTarget`
+that borrows a workspace's *entitlement* and declares its own *configuration* permission
+(`field.manage` for call outcomes, `call.place` for calls). Administration is drawn one item at a
+time by the authority for that item — there is no Administration section a role has or lacks.
+Setup is kernel; Agent-assisted drafting is an optional accelerator inside it, and losing the
+`drafting` module does not remove the lifecycle.
+
+**Platform authority is a set of permissions on a `platform_staff` row** (`capabilities`, default
+all five, so no existing operator lost a door): organizations, catalogue, commercial, providers,
+health. Membership of GOLD is not platform authority; a GOLD salesperson uses GOLD as any business
+and sees no Platform. Platform is offered only inside GOLD's own organization — never beside a
+customer's business — and the context switcher answers only *which organization am I operating?*.
+
+**Roles are editable permission bundles.** A role is a row of an organization's own capabilities,
+already creatable and editable per organization. `ROLE_PRESETS` are templates copied at creation:
+a saved role records nothing about the preset it began as, and behaviour asks about capabilities,
+never a role's name.
+
+**What is not done, and the risk it leaves.** The narrow-door functions
+(`record_provider_rate`, `begin_provider_binding`, the catalogue writers and the rest) still call
+`app.require_platform_staff()`, which asks *is this person staff*, not *which part*. So a limited
+operator is narrowed by navigation and by a server-side refusal on each `/platform/*` area's layout,
+not by each database door, and a hand-made server-action POST or PostgREST call by a staff member
+is not narrowed at all. Staff rows are written by hand by GOLD (D28), so the exposure is a trusted
+colleague exceeding their intended scope, not an outsider — but it is real, and it is why this is
+recorded. Making each door check a permission, and each `actions.ts` guard its area, is the next
+bounded slice. Phone and desktop cannot disagree (one projection); Platform destinations that share
+a permission share an area layout.
+
+**Holds.** `shell-projection.test.ts` (the persona matrix), `adaptive-shell.test.ts` (no renderer
+decides; every platform area refuses; Setup is kernel), `settings-map.test.ts` (configuring is not
+operating), `platform-permissions.test.ts` (the row, read live, never self-issued).

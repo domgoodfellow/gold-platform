@@ -26,7 +26,7 @@ export async function PersonalSettingsShell({
   returnOrganizationId?: string;
   children: (person: { email: string; hasPassword: boolean }) => ReactNode;
 }) {
-  const { email, hasPassword, organizations: myOrganizations, platformAdministration } = await loadPersonContext();
+  const { email, hasPassword, organizations: myOrganizations } = await loadPersonContext();
   const origin = returnOrganizationId
     ? myOrganizations.find((organization) => organization.id === returnOrganizationId)
     : undefined;
@@ -42,7 +42,6 @@ export async function PersonalSettingsShell({
     <PersonalSettingsSidebar
       email={email}
       signOutAction={signOutAction}
-      platformAdministration={platformAdministration}
       businesses={myOrganizations.map((org) => ({
         id: org.id,
         name: org.name,

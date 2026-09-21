@@ -564,7 +564,7 @@ describe('a switch leads to its inputs', () => {
     // Setup is a lifecycle state, so its shell treatment must disappear once a business is Live,
     // on its own, with nothing left to remember to turn off. Source scan for the same reason
     // `layout.test.ts` gives: nothing here renders in a harness this repository runs.
-    const layout = readFileSync(`${ROUTES}/layout.tsx`, 'utf8');
+    const layout = readFileSync(fileURLToPath(new URL('../../../features/shell/organization-shell.tsx', import.meta.url)), 'utf8');
     const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
 
     expect(layout, 'the shell never asks whether this business is still in setup').toContain(
@@ -677,19 +677,15 @@ describe('an area hidden from the sidebar', () => {
     // `areasIn` is built from, so a change to eligibility (the module gate, the canonical
     // Feature gate, or the capability layer) cannot update one renderer and miss the other.
     const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
-    const navigation = readFileSync(fileURLToPath(new URL('../../../lib/navigation.ts', import.meta.url)), 'utf8');
+    const projection = readFileSync(fileURLToPath(new URL('../../../lib/shell.ts', import.meta.url)), 'utf8');
 
-    expect(navigation, 'visibleAreas (which both areasIn and OrgNavBar call) should filter on sidebar').toContain(
-      'area.sidebar !== false',
-    );
-    expect(shell, 'OrgNavBar should call the shared visibleAreas function rather than filtering AREAS itself').toContain(
-      'visibleAreas(',
-    );
-    expect(shell, 'OrgNavBar should not keep its own competing eligibility filter').not.toMatch(
-      /AREAS\.filter/,
-    );
-    // Both renderers still map the one imported `AREAS`/`areasIn`/`visibleAreas` — not a locally declared list.
-    expect(shell).toContain("from '@/lib/navigation'");
+    // Every renderer draws the one projection; eligibility (the sidebar flag, entitlement, the
+    // capability layer, the configuration targets, platform authority) is decided in `projectShell`.
+    expect(projection, 'projectShell should filter on the sidebar flag').toContain('area.sidebar !== false');
+    expect(shell, 'the desktop rendering should take the projection, not filter AREAS itself').toContain('sections: ShellSection[]');
+    expect(shell, 'the phone bar should take the same projection').toContain('projectPhone(sections)');
+    expect(shell, 'no renderer keeps its own eligibility filter').not.toMatch(/AREAS[.]filter|visibleAreas[(]|areasIn[(]/);
+    expect(shell).toContain("from '@/lib/shell'");
   });
 });
 
@@ -725,7 +721,7 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
   });
 
   it('still gets its SETUP-only shell treatment, and no second row in Configuration', () => {
-    const layout = readFileSync(`${ROUTES}/layout.tsx`, 'utf8');
+    const layout = readFileSync(fileURLToPath(new URL('../../../features/shell/organization-shell.tsx', import.meta.url)), 'utf8');
     expect(layout).toContain('setup={setup}');
 
     // `OrgNav` — the ordinary Configuration-group renderer — is generic over `AREAS`/`areasIn`

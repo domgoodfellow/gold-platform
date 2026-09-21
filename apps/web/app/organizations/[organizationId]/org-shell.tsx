@@ -15,51 +15,52 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@gold/ui/components/sidebar';
+import { MoreMenu } from '@/components/containers/more-menu';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import {
   BarChart3,
+  Blocks,
+  Building2,
   CalendarDays,
+  CircleDollarSign,
   ClipboardList,
-  Layers,
+  CreditCard,
+  Gauge,
   Home,
+  Landmark,
+  Layers,
+  LayoutDashboard,
+  ListChecks,
   MapPin,
   Package,
   Phone,
+  Plug,
   Settings,
-  ListChecks,
+  TriangleAlert,
+  UserCog,
   Users,
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import {
-  AREA_GROUPS,
-  areaHref,
-  areasIn,
-  currentSegment,
-  visibleAreas,
-  type Area,
-} from '@/lib/navigation';
-import type { Capability } from '@/lib/domain/tenancy/capabilities';
+import { areaHref, currentSegment } from '@/lib/navigation';
+import { activeItemKey, projectPhone, type NavItem, type ShellSection } from '@/lib/shell';
 
 /**
- * The two pieces of the shell that need to know which area is on screen. Client components
- * because a layout can't read its own pathname server-side. Both read the same three facts the
- * layout resolves once and passes down — legacy module keys, the canonical resolver's available
- * Feature keys, and this role's capabilities — through the one shared `visibleAreas`/`areasIn`
- * predicate, so desktop and mobile can never disagree about what a caller can see. Most of the
- * kernel and general-purpose areas still show themselves to every member regardless of
- * capability (I12): `Area.relevantCapabilities` is the narrow, feature-specific exception, and a
- * business's own module/entitlement shape (not a permission) is what the other two axes decide.
+ * The shell's renderers. They decide nothing: every item they draw comes from one projection
+ * (`projectShell`), which the layout resolves once from the organization's entitlements, the
+ * member's permissions and — in GOLD's own organization only — their platform authority, and hands
+ * to the desktop sidebar, the collapsed rail and the phone bar alike. There is no eligibility rule
+ * here, so a breakpoint cannot disagree with another about what a person may reach.
  */
 
 /**
  * One icon per area, keyed by segment rather than declared on `Area` itself — icon choice is how
  * the shell draws the IA, not part of what the IA is (`navigation.ts` stays segments, labels,
- * groups, modules). `navigation.test.ts` asserts every `AREAS` entry has one here, so a new area
- * without an icon fails at the gate rather than rendering blank in the rail.
+ * groups, modules). `navigation.test.ts` asserts every sidebar `AREAS` entry has one here, so a new
+ * area without an icon fails at the gate rather than rendering blank in the rail.
  */
 export const AREA_ICONS: Record<string, LucideIcon> = {
   home: Home,
@@ -76,134 +77,112 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   settings: Settings,
 };
 
+/** Every item the projection can produce: the areas, the administration items, and the platform destinations. */
+export const NAV_ICONS: Record<string, LucideIcon> = {
+  ...AREA_ICONS,
+  team: UserCog,
+  connections: Plug,
+  plan: CreditCard,
+  'platform-overview': LayoutDashboard,
+  'platform-organizations': Building2,
+  'platform-catalog': Package,
+  'platform-plans': Landmark,
+  'platform-meters': Gauge,
+  'platform-connectors': Blocks,
+  'platform-pricing': CircleDollarSign,
+  'platform-billing': CreditCard,
+  'platform-providers': Plug,
+  'platform-failures': TriangleAlert,
+};
+
 /**
- * The tablet and desktop rendering: `Sidebar`'s own grouped-menu vocabulary, one `SidebarGroup`
- * per `AREA_GROUPS` entry in order — work first and Settings last (D23 — never reach
- * today's work through settings). Collapse-to-icon, the tooltip that appears while collapsed,
- * and the `md`-and-up-only rendering are all `Sidebar`'s own, not reimplemented here. `OrgNavBar`
- * below is the phone rendering of the same list. One `AREAS`, two presentations, so they cannot
- * drift.
+ * The tablet and desktop rendering: `Sidebar`'s own grouped-menu vocabulary, one `SidebarGroup` per
+ * projected section in order — Home, the workspaces, Operations, Administration, and (only inside
+ * GOLD, only with platform authority) Platform. Collapse-to-icon, the tooltip that appears while
+ * collapsed, and the `md`-and-up-only rendering are all `Sidebar`'s own, not reimplemented here.
  */
-export function OrgNav({
-  organizationId,
-  enabledModules,
-  capabilities,
-  featureAvailability,
-}: {
-  organizationId: string;
-  enabledModules: string[];
-  /** Which areas this role's capabilities make relevant — layered on top of the module/feature gate (I12). */
-  capabilities: Capability[];
-  /** Canonical Feature keys this business is currently entitled to, active and implemented for — `availableFeatureKeys(organizationResolvedFeatureStates(...))`, resolved once by the layout. */
-  featureAvailability: string[];
-}) {
-  const segment = currentSegment(usePathname());
-  const enabled = new Set(enabledModules);
-  const capabilitySet = new Set(capabilities);
-  const featureSet = new Set(featureAvailability);
+export function OrgNav({ sections }: { sections: ShellSection[] }) {
+  const active = activeItemKey(sections, usePathname());
 
   return (
     <nav aria-label="This business">
-      {AREA_GROUPS.map((group) => {
-        const areas = areasIn(group.key, enabled, capabilitySet, featureSet);
-        // A business with every module in a section switched off has no section. Rendering the
-        // heading anyway would name a part of the application that is not there for them.
-        if (areas.length === 0) return null;
-
-        return (
-          <SidebarGroup key={group.key}>
-            {group.label ? <SidebarGroupLabel>{group.label}</SidebarGroupLabel> : null}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {areas.map((area) => {
-                  const Icon = AREA_ICONS[area.segment];
-                  const current = area.segment === segment;
-                  return (
-                    <SidebarMenuItem key={area.segment}>
-                      <SidebarMenuButton asChild isActive={current} tooltip={area.label}>
-                        <Link href={areaHref(organizationId, area.segment)} aria-current={current ? 'page' : undefined}>
-                          {Icon ? <Icon aria-hidden /> : null}
-                          <span>{area.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        );
-      })}
+      {sections.map((section) => (
+        <SidebarGroup key={section.key}>
+          {section.label ? <SidebarGroupLabel>{section.label}</SidebarGroupLabel> : null}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {section.items.map((item) => {
+                const Icon = NAV_ICONS[item.key];
+                const current = item.key === active;
+                return (
+                  <SidebarMenuItem key={item.key}>
+                    <SidebarMenuButton asChild isActive={current} tooltip={item.label}>
+                      <Link href={item.href} aria-current={current ? 'page' : undefined}>
+                        {Icon ? <Icon aria-hidden /> : null}
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      ))}
     </nav>
   );
 }
 
 export type { SwitchableOrganization };
 
+const PHONE_ROW = 'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm';
+
 /** A single row in the phone bar — plain Tailwind, not `Sidebar`'s vocabulary, since this list never collapses and never sits inside a `Sidebar` at all (see `OrgNavBar`). */
-function PhoneNavLink({
-  organizationId,
-  area,
-  current,
-}: {
-  organizationId: string;
-  area: Area;
-  current: boolean;
-}) {
-  const Icon = AREA_ICONS[area.segment];
+function PhoneNavLink({ item, current }: { item: NavItem; current: boolean }) {
+  const Icon = NAV_ICONS[item.key];
 
   return (
     <Link
-      href={areaHref(organizationId, area.segment)}
+      href={item.href}
       aria-current={current ? 'page' : undefined}
-      aria-label={area.label}
-      title={area.label}
-      className={cx(
-        FOCUS_RING,
-        'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm',
-        current ? 'bg-foreground font-medium text-background' : 'hover:bg-hover',
-      )}
+      aria-label={item.label}
+      title={item.label}
+      className={cx(FOCUS_RING, PHONE_ROW, current ? 'bg-foreground font-medium text-background' : 'hover:bg-hover')}
     >
       {Icon ? <Icon aria-hidden size={18} className="shrink-0" /> : null}
-      <span className="min-w-0">{area.label}</span>
+      <span className="min-w-0">{item.label}</span>
     </Link>
   );
 }
 
 /**
- * The phone rendering of the same `AREAS` list — a fixed bar along the bottom that scrolls
- * sideways rather than collapsing into a drawer (`ui-spec.md` §2 says why: a drawer needs
- * state, a toggle, a focus trap and an escape key to be correct, and a bar needs none of it).
+ * The phone rendering of the same projection: a fixed bar with Home, the first workspaces and one
+ * **More** button, which opens everything else — the remaining workspaces, Operations,
+ * Administration and Platform — in a sheet, grouped exactly as the desktop sidebar groups them.
+ * Frequent work is one thumb away; the less frequent is understandable and never crowds it, however
+ * many sections a member's authority produces. It is a rendering choice over `projectPhone`, not a
+ * second eligibility rule.
  *
- * It lists this business's places and nothing else: Platform Administration is a different
- * scope, reached through the context switcher in the header, and has its own bar
- * (`PlatformNavBar`) — never a doorway inside a business's navigation.
+ * It lists this business's places and nothing else. Platform items appear here only where the
+ * projection produced them — GOLD's own organization, for an operator holding the permission —
+ * behind More, never in the bar.
  *
- * It renders outside `Sidebar` entirely, never inside it: shadcn's own mobile rendering below
- * `md` is an off-canvas sheet, which is exactly the drawer this bar exists to avoid. `AppShell`
- * places it as a sibling of `SidebarInset`, and no trigger anywhere reaches the sidebar's sheet
- * below `md`, so that sheet mounts closed and renders nothing at that width — this bar is what a
- * phone actually sees.
+ * It renders outside `Sidebar` entirely, never inside it: shadcn's own mobile rendering below `md`
+ * is an off-canvas sheet no trigger reaches, so it mounts closed and this bar is what a phone
+ * actually sees. When the current page belongs to something behind More, More is the current item.
  */
 export function OrgNavBar({
   organizationId,
-  enabledModules,
-  capabilities,
-  featureAvailability,
+  sections,
   setup = false,
 }: {
   organizationId: string;
-  enabledModules: string[];
-  capabilities: Capability[];
-  /** Same resolved set `OrgNav` receives — one shared predicate (`visibleAreas`), so the two can't drift. */
-  featureAvailability: string[];
+  sections: ShellSection[];
   /** True only while the business is in SETUP — the layout decides, and it leaves the bar the moment the business is LIVE. */
   setup?: boolean;
 }) {
-  const segment = currentSegment(usePathname());
-  const enabled = new Set(enabledModules);
-  const capabilitySet = new Set(capabilities);
-  const featureSet = new Set(featureAvailability);
+  const active = activeItemKey(sections, usePathname());
+  const { primary, more } = projectPhone(sections);
 
   return (
     <nav
@@ -216,15 +195,24 @@ export function OrgNavBar({
             <SetupNavLink organizationId={organizationId} />
           </li>
         ) : null}
-        {visibleAreas(enabled, capabilitySet, featureSet).map((area) => (
-          <li key={area.segment} className="shrink-0">
-            <PhoneNavLink
-              organizationId={organizationId}
-              area={area}
-              current={area.segment === segment}
-            />
+        {primary.map((item) => (
+          <li key={item.key} className="shrink-0">
+            <PhoneNavLink item={item} current={item.key === active} />
           </li>
         ))}
+        {more.length > 0 ? (
+          <li className="shrink-0">
+            <MoreMenu
+              sections={more}
+              activeKey={active}
+              triggerClassName={PHONE_ROW}
+              renderIcon={(key) => {
+                const Icon = NAV_ICONS[key];
+                return Icon ? <Icon aria-hidden size={18} className="shrink-0" /> : null;
+              }}
+            />
+          </li>
+        ) : null}
       </ul>
     </nav>
   );
@@ -273,11 +261,7 @@ export function SetupNavLink({ organizationId }: { organizationId: string }) {
     <Link
       href={areaHref(organizationId, 'setup')}
       aria-current={current ? 'page' : undefined}
-      className={cx(
-        FOCUS_RING,
-        'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm',
-        current ? 'bg-foreground font-medium text-background' : 'hover:bg-hover',
-      )}
+      className={cx(FOCUS_RING, PHONE_ROW, current ? 'bg-foreground font-medium text-background' : 'hover:bg-hover')}
     >
       <ListChecks aria-hidden size={18} className="shrink-0" />
       <span className="min-w-0">Setup</span>
@@ -287,10 +271,9 @@ export function SetupNavLink({ organizationId }: { organizationId: string }) {
 
 /**
  * The whole operator sidebar: identity and context switching in the header, Setup (while it
- * applies) and the grouped area list in the content, the account menu in the footer. It holds
- * this business's places only — Platform Administration is another context, entered from the
- * switcher. `collapsible="icon"` and everything collapse-related is `Sidebar`'s own state, shared
- * with the platform console rather than a second, `localStorage`-backed implementation beside it.
+ * applies) and the projected sections in the content, the account menu in the footer.
+ * `collapsible="icon"` and everything collapse-related is `Sidebar`'s own state, shared with every
+ * other workspace shell rather than a second, `localStorage`-backed implementation beside it.
  */
 export function OrgSidebar({
   organizationId,
@@ -298,10 +281,7 @@ export function OrgSidebar({
   name,
   role,
   organizations,
-  platformAdministration,
-  enabledModules,
-  capabilities,
-  featureAvailability,
+  sections,
   setup,
   email,
   signOutAction,
@@ -312,11 +292,7 @@ export function OrgSidebar({
   name: string;
   role: string;
   organizations: SwitchableOrganization[];
-  /** The switcher offers Platform Administration (`platformAdministrationAvailable`). */
-  platformAdministration: boolean;
-  enabledModules: string[];
-  capabilities: Capability[];
-  featureAvailability: string[];
+  sections: ShellSection[];
   /** True only while the business is in SETUP — the layout decides, from `operationalState`. */
   setup?: boolean;
   email: string;
@@ -329,17 +305,11 @@ export function OrgSidebar({
           mark={mark}
           current={{ kind: 'business', organizationId, name, role }}
           organizations={organizations}
-          platformAdministration={platformAdministration}
         />
       </SidebarHeader>
       <SidebarContent>
         {setup ? <SetupEntry organizationId={organizationId} /> : null}
-        <OrgNav
-          organizationId={organizationId}
-          enabledModules={enabledModules}
-          capabilities={capabilities}
-          featureAvailability={featureAvailability}
-        />
+        <OrgNav sections={sections} />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
       <SidebarRail />
@@ -359,7 +329,6 @@ export function LockedOrgSidebar({
   name,
   role,
   organizations,
-  platformAdministration,
   email,
   signOutAction,
   ...props
@@ -369,7 +338,6 @@ export function LockedOrgSidebar({
   name: string;
   role: string;
   organizations: SwitchableOrganization[];
-  platformAdministration: boolean;
   email: string;
   signOutAction: () => Promise<void>;
 } & React.ComponentProps<typeof Sidebar>) {
@@ -382,7 +350,6 @@ export function LockedOrgSidebar({
           mark={mark}
           current={{ kind: 'business', organizationId, name, role }}
           organizations={organizations}
-          platformAdministration={platformAdministration}
         />
       </SidebarHeader>
       <SidebarContent>

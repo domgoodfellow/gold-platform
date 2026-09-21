@@ -69,6 +69,8 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
     await page.goto(`${orgHref}/settings/features`);
     await page.getByRole('button', { name: 'More actions for Assets' }).click();
     await page.getByRole('menuitem', { name: 'Enable feature' }).click();
+    // Wait for the server action to land before leaving the page, or navigating away cancels it.
+    await expect(page.getByText('disabled', { exact: true })).toHaveCount(0, { timeout: 15_000 });
 
     await page.goto(`${orgHref}/home`);
     await expect(page.getByRole('link', { name: 'Assets', exact: true }).first()).toBeVisible();

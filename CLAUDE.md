@@ -136,7 +136,7 @@ apps/
       (marketing)/  GOLD's own site, in GOLD's voice
       (auth)/       sign in, sign up
       (public)/     book/{slug}, portal/{token} — a tenant's customers, a tenant's words
-      (platform)/   the staff console (D45). Shared Sidebar, separate platform navigation model
+      (platform)/   /platform/** — global data, drawn inside GOLD's own organization shell (D45, D59)
       organizations/ the operator shell. Deliberately UNGROUPED — see below
     features/       product-capability presentation and interaction — see its README
     components/     generic composed app controls and containers
@@ -177,10 +177,11 @@ docs/
   anonymous caller may open, by path, and a group does not change a path.
 - `organizations/` is ungrouped because `navigation.test.ts` scans `[organizationId]/` for areas,
   and a group folder would hide its children from that scan.
-- **Platform Context** (`(platform)/`) and **Organization Context** (`organizations/`) are the two
-  names for where a caller is acting. GOLD holds no exemption in either (D42, D45) — the same
-  identity can hold platform authority and an organization membership at once and switch between
-  them, and `platform_staff` is a table checked live, never a role a session had to choose (D45).
+- **Organization context is the normal operating context, and there is one shell.** What a person
+  sees is projected by `projectShell` from the organization's entitlements, the member's
+  capabilities and — in GOLD's own organization only — their `platform_staff.capabilities`. Platform
+  *data* is still global and `/platform/**` is still its route namespace; only the frame is shared.
+  GOLD holds no exemption (D42, D45), and `platform_staff` is a table checked live (D45, D59).
 
 ## Rules that hold in every change
 
@@ -374,7 +375,10 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | Never | Because | Held by |
 |---|---|---|
 | A page container centred with `mx-auto` and no `w-full` | An auto side margin cancels flex stretch, so the box shrinks to its own text — which is how every surface outside the shell shipped | `layout.test.ts`, a source scan; jsdom computes no layout, so nothing that renders could have caught it |
-| Platform Administration navigation inside a business's sidebar or phone bar | Platform is a scope, not a section of GOLD: one identity holds both and moves between them, and a business's navigation lists that business's places only (D45) | `PlatformSidebar` and `PlatformNavBar` are Platform's own; the context switcher is the only door in both directions; `navigation.test.ts` and `gold-internal-workspace.test.ts` scan `org-shell.tsx` for the tree |
+| Platform items in a customer's business, or for somebody whose staff row does not name them | Platform is a scope: membership of GOLD is not platform authority, and the control plane never sits beside a tenant's own work (D45, D59) | `projectShell` takes `platform` as an input that is `null` unless the organization is GOLD's own and the caller is staff (`organization-shell.tsx`); `shell-projection.test.ts`; `adaptive-shell.test.ts` proves each `/platform/*` area's layout refuses a row that does not name it |
+| A renderer, a role name or a breakpoint deciding what somebody may reach | Entitlement and permission are separate, both required, and resolved once; a second rule per breakpoint is how phone and desktop disagree (D59) | `org-shell.tsx` and `more-menu.tsx` name no capability, module or role; `adaptive-shell.test.ts` |
+| A Settings entry inheriting its workspace's operating capability | Configuring is not operating: `field.manage` configures call outcomes, `call.place` makes calls (D59) | `ConfigTarget.permission`; `settings-map.test.ts` |
+| Setup gated on the drafting module | Setup is kernel; Agent-assisted drafting is an optional accelerator inside it (D59) | `setup` has no module or capability on its `AREAS` row; `adaptive-shell.test.ts` |
 | A permanent sidebar row for configuration, or an Ask row | A row is a place somebody works; configuring how another workspace behaves is reached from Settings, and the Agent is a rail on every workspace | `Area.sidebar: false` on Pricing, Custom fields, Team, Integrations and Setup; `settings-map.test.ts` fails if one is left unreachable; `navigation.test.ts` fails on an `ask` area |
 | A shell action in the list of areas | *Leave this business* is not somewhere to go, and a list holding both makes sixteen areas look like eighteen | Switch business and Sign out live in the header; `navigation.test.ts` fails on an `AREAS` entry with no route behind it |
 | GOLD's header on a tenant's public page | `SiteShell` says GOLD twice. On `/book/{slug}` that is our wordmark on somebody else's shop front (D20) | `public-profile.test.ts` scans `app/(public)/` for it, beside the sentences it already refuses |
@@ -410,6 +414,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | Payments, and whose account holds the money | D26, D27, D33 |
 | Platform staff, provisioning, the two doors | D28, D29 |
 | Platform Context, Organization Context, one identity holding both, the `Admin` rename, invitations, support sessions, the package layer | D45 |
+| One adaptive shell, platform permissions, configuration against operating permission, roles as bundles and presets | D59 |
 | Automation, and the switch that leads to its inputs | D11, D30, D31 |
 | The onboarding proposal | D32 |
 | The AI tool loop | D34 |

@@ -51,7 +51,6 @@ export async function GlobalFallbackShell({ children }: { children: (recovery: R
         <GlobalFallbackSidebar
           email={person.email}
           signOutAction={signOutAction}
-          platformAdministration={person.platformAdministration}
           businesses={person.organizations.map((org) => ({
             id: org.id,
             name: org.name,

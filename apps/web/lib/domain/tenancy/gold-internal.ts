@@ -32,6 +32,22 @@ export async function findGoldInternalOrganization(
   return matches[0] ?? null;
 }
 
+/**
+ * Whether **this** organization is GOLD's own operating workspace — the one place platform tools may
+ * appear inside a business's shell. Decided by its current base Plan, exactly as
+ * `findGoldInternalOrganization` does, and asked of one organization so the shell does not walk
+ * every membership to answer it. Never by name, and never because the caller has platform authority.
+ */
+export async function isGoldInternalOrganization(
+  db: Db,
+  input: { organizationId: string },
+): Promise<boolean> {
+  const assignment = await currentPlanAssignment(db, { organizationId: input.organizationId });
+  if (!assignment) return false;
+  const plan = await getPlanById(db, assignment.planId);
+  return plan?.key === 'gold_internal';
+}
+
 export async function bootstrapGoldInternalWorkspace(
   db: Db,
   input: { organizationId: string },

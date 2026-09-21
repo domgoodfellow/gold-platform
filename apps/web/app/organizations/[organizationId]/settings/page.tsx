@@ -1,5 +1,6 @@
 import { areaLabel } from '@/lib/navigation';
 import { PageHeader } from '@/components/containers/page-header';
+import { EmptyState } from '@/components/containers/section';
 import { SettingsIndex } from '@/features/settings/settings-index';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { offeredSections } from '@/features/settings/settings-map';
@@ -43,11 +44,15 @@ export default async function SettingsPage({
         title={areaLabel('settings')}
         description={`Where ${organization.name} is configured. Changes here apply to this business, not to your personal account.`}
       />
-      <SettingsIndex
-        organizationId={organizationId}
-        sections={sections}
-        describe={(key) => (key === 'setup' ? setupSentence : undefined)}
-      />
+      {sections.length === 0 ? (
+        <EmptyState>Your role, {organization.role}, does not configure anything in this business.</EmptyState>
+      ) : (
+        <SettingsIndex
+          organizationId={organizationId}
+          sections={sections}
+          describe={(key) => (key === 'setup' ? setupSentence : undefined)}
+        />
+      )}
     </SettingsPageFrame>
   );
 }

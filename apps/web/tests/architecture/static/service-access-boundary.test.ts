@@ -36,7 +36,7 @@ const actionFiles = [
 
 // The billing-recovery guard's complete list of users.
 const RECOVERY_USERS = [
-  'app/organizations/[organizationId]/layout.tsx',
+  'features/shell/organization-shell.tsx',
   'app/organizations/[organizationId]/settings/plan/page.tsx',
   'app/organizations/[organizationId]/settings/plan/actions.ts',
   'app/organizations/[organizationId]/settings/plan/locked/page.tsx',

@@ -232,8 +232,9 @@ describe('the routing decision stays where it can be tested', () => {
   });
 
   it('/platform still refuses a caller with no platform authority', () => {
-    expect(platformLayout).toContain('const platformStaff = await isPlatformStaff(db)');
-    expect(platformLayout).toContain("if (!platformStaff) redirect('/organizations')");
+    // Platform authority is the caller's own staff row, read live; without a permission there is no /platform.
+    expect(platformLayout).toContain('const permissions = await platformPermissions(db)');
+    expect(platformLayout).toContain("if (permissions.size === 0) redirect('/organizations')");
   });
 });
 
@@ -296,7 +297,7 @@ describe('the tenant-safe refusal survives being thrown by the layout, not a pag
     'utf8',
   );
   const layout = readFileSync(
-    fileURLToPath(new URL('../../../app/organizations/[organizationId]/layout.tsx', import.meta.url)),
+    fileURLToPath(new URL('../../../features/shell/organization-shell.tsx', import.meta.url)),
     'utf8',
   );
 

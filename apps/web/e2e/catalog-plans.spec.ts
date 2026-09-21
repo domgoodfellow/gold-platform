@@ -18,7 +18,7 @@ test.describe('platform catalog', () => {
     await page.goto('/platform/catalog');
     await expect(page.getByRole('heading', { name: 'Catalog', level: 1 })).toBeVisible();
     for (const label of ['CRM', 'Communications', 'Operations', 'Financial Operations', 'Automation', 'Insights', 'Customer Experience']) {
-      await expect(page.getByText(label, { exact: true })).toBeVisible();
+      await expect(page.locator('main').getByText(label, { exact: true }).first()).toBeVisible();
     }
   });
 

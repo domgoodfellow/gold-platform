@@ -5055,16 +5055,19 @@ export type Database = {
       }
       platform_staff: {
         Row: {
+          capabilities: string[]
           created_at: string
           name: string
           user_id: string
         }
         Insert: {
+          capabilities?: string[]
           created_at?: string
           name: string
           user_id: string
         }
         Update: {
+          capabilities?: string[]
           created_at?: string
           name?: string
           user_id?: string

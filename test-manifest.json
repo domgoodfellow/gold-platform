@@ -221,6 +221,13 @@
         "navigation"
       ]
     },
+    "apps/web/e2e/adaptive-shell.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "navigation",
+        "security"
+      ]
+    },
     "apps/web/e2e/automation.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [
@@ -395,6 +402,13 @@
         "ui"
       ],
       "note": "Also runs a pure entity resolver."
+    },
+    "apps/web/tests/architecture/static/adaptive-shell.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "ui",
+        "security"
+      ]
     },
     "apps/web/tests/architecture/static/organization-home.test.ts": {
       "category": "architecture-static",
@@ -992,6 +1006,13 @@
       ],
       "note": "Also contains a source scan."
     },
+    "apps/web/tests/integration/database/platform-permissions.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "platform",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/platform-staff.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1230,6 +1251,13 @@
       "concerns": [
         "pricing",
         "margins"
+      ]
+    },
+    "apps/web/tests/unit/shell-projection.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "ui",
+        "security"
       ]
     },
     "apps/web/tests/unit/landing.test.ts": {

@@ -5,7 +5,6 @@ import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import { listMyOrganizations, type Organization } from '@/lib/domain/tenancy/organizations';
-import { platformAdministrationAvailable } from '@/lib/route/platform-context';
 
 /**
  * What is safe to know about the signed-in person without any one organization: who they are and
@@ -21,7 +20,6 @@ export type PersonContext = {
   organizations: Organization[];
   staff: boolean;
   goldInternal: { id: string } | null;
-  platformAdministration: boolean;
 };
 
 export async function loadPersonContext(): Promise<PersonContext> {
@@ -53,6 +51,5 @@ export async function loadPersonContext(): Promise<PersonContext> {
     organizations,
     staff,
     goldInternal,
-    platformAdministration: platformAdministrationAvailable({ staff, goldInternal }),
   };
 }
