@@ -2,10 +2,25 @@
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
-import { askQuestion, decideOnAction } from '@/lib/domain/assistant/questions';
+import {
+  askQuestion,
+  decideOnAction,
+  listAgentConversationRuns,
+  type AgentRun,
+} from '@/lib/domain/assistant/questions';
 import { DomainError } from '@/lib/domain/errors';
 
-export type AskActionState = { error: string | null };
+/**
+ * What an Agent action hands back. `runs` is the transcript of the conversation it touched,
+ * re-read after the write, so the rail shows the new turn without waiting on a layout refresh and
+ * without any route having to be the one that revalidates (a question can be asked from any
+ * organization page).
+ */
+export type AskActionState = {
+  error: string | null;
+  conversationId?: string;
+  runs?: AgentRun[];
+};
 
 /**
  * One write, and it is a question.
@@ -13,6 +28,9 @@ export type AskActionState = { error: string | null };
  * Nothing here decides anything, which is the ordinary rule and worth restating on this screen
  * in particular: the tempting thing to add is a check on what the answer said before showing it,
  * and that would be this route forming an opinion about a business's own data.
+ *
+ * An empty `conversationId` is a New chat: the domain layer creates the conversation from this
+ * first question and the caller learns its id from the result.
  */
 export async function askAction(
   _previous: AskActionState,
@@ -20,20 +38,53 @@ export async function askAction(
 ): Promise<AskActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
+  const conversationId = String(formData.get('conversationId') ?? '') || null;
 
+  let state: AskActionState;
   try {
-    await askQuestion(db, {
+    const run = await askQuestion(db, {
       organizationId,
+      conversationId,
       question: String(formData.get('question') ?? ''),
     });
+    state = {
+      error: null,
+      conversationId: run.conversationId,
+      runs: await listAgentConversationRuns(db, {
+        organizationId,
+        conversationId: run.conversationId,
+      }),
+    };
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;
   }
 
-  // The Agent rail is mounted by the organization layout, so its history is refreshed there.
+  // The Agent rail is mounted by the organization layout, so its History list (order and titles)
+  // is refreshed there, on whichever page the question was asked from.
   revalidatePath(`/organizations/${organizationId}`, 'layout');
-  return { error: null };
+  return state;
+}
+
+/**
+ * Open another conversation on demand. Only the transcript of the one asked for is read —
+ * History lists titles and the shell loads a single transcript, never all of them. A conversation
+ * the caller cannot read comes back empty, by policy, and is reported as unavailable.
+ */
+export async function openConversationAction(
+  organizationId: string,
+  conversationId: string,
+): Promise<AskActionState> {
+  const db = await getDb();
+
+  try {
+    const runs = await listAgentConversationRuns(db, { organizationId, conversationId });
+    if (runs.length === 0) return { error: 'That conversation is not available.' };
+    return { error: null, conversationId, runs };
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
 }
 
 /**
@@ -50,11 +101,20 @@ export async function decideAction(
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
 
+  let state: AskActionState;
   try {
-    await decideOnAction(db, {
+    const run = await decideOnAction(db, {
       runId: String(formData.get('runId') ?? ''),
       carryOut: formData.get('decision') === 'carry-out',
     });
+    state = {
+      error: null,
+      conversationId: run.conversationId,
+      runs: await listAgentConversationRuns(db, {
+        organizationId,
+        conversationId: run.conversationId,
+      }),
+    };
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;
@@ -62,5 +122,5 @@ export async function decideAction(
 
   // The Agent rail is mounted by the organization layout, so its history is refreshed there.
   revalidatePath(`/organizations/${organizationId}`, 'layout');
-  return { error: null };
+  return state;
 }

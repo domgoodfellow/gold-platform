@@ -79,6 +79,17 @@ function registeredTools(): string[] {
   return [...source.matchAll(/function="([a-z_]+)"/g)].map((match) => match[1]);
 }
 
+/** The conversation a run is filed under — a run cannot exist outside one, and only its asker can start it. */
+async function conversationFor(business: Pick<Business, 'db' | 'organizationId' | 'userId'>): Promise<string> {
+  const { data, error } = await business.db
+    .from('agent_conversations')
+    .insert({ organization_id: business.organizationId, created_by: business.userId, title: 'A conversation' })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
 /** A business with one job that is running late and one that is not. */
 async function newBusiness(label: string): Promise<Business> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -342,6 +353,7 @@ describe('a run is recorded, and only its asker may read it', () => {
       .from('agent_runs')
       .insert({
         organization_id: business.organizationId,
+        conversation_id: await conversationFor(business),
         question,
         answer: outcome === 'answered' ? 'Two jobs ran past their window.' : '',
         outcome,
@@ -369,7 +381,10 @@ describe('a run is recorded, and only its asker may read it', () => {
       // The tenant it belongs to and the person who asked. Nothing to `work_items`, nothing to
       // `customers`, and nothing to a tool — the same absence `automation_runs` keeps against
       // its rule, so a record of what was asked cannot start reporting what is true today.
-      expect(rows.map((row) => row.target).sort()).toEqual(['organizations', 'users']);
+      // Plus the conversation it is filed under, which is structure rather than a record of
+      // anything it read — the key carries the asker and the business, so a run cannot be filed
+      // under somebody else's conversation.
+      expect(rows.map((row) => row.target).sort()).toEqual(['agent_conversations', 'organizations', 'users']);
     } finally {
       await client.end();
     }
@@ -440,10 +455,28 @@ describe('a run is recorded, and only its asker may read it', () => {
     const mute = anonClient();
     await mute.auth.signInWithPassword({ email, password });
 
+    // The conversation goes in over a direct connection: the claim here is that *this role* may
+    // not record a run, and a mute member who could not even start a conversation would be a
+    // refusal from an earlier door than the one under test.
+    const admin2 = new Client({ connectionString: CONNECTION });
+    await admin2.connect();
+    let muteConversation: string;
+    try {
+      const { rows } = await admin2.query(
+        `insert into public.agent_conversations (organization_id, created_by, title)
+         values ($1, $2, 'Mute') returning id`,
+        [clinic.organizationId, created.user.id],
+      );
+      muteConversation = rows[0].id;
+    } finally {
+      await admin2.end();
+    }
+
     const { error } = await mute
       .from('agent_runs')
       .insert({
         organization_id: clinic.organizationId,
+        conversation_id: muteConversation,
         question: 'What is late today?',
         answer: 'Something.',
         outcome: 'answered',
@@ -474,6 +507,7 @@ describe('a write is proposed, and a person decides (D34)', () => {
       .from('agent_runs')
       .insert({
         organization_id: business.organizationId,
+        conversation_id: await conversationFor(business),
         question: 'Anything I should move?',
         answer: 'That job overran. I would move it to tomorrow morning.',
         outcome: 'answered',
@@ -602,6 +636,7 @@ describe('a write is proposed, and a person decides (D34)', () => {
       .from('agent_runs')
       .insert({
         organization_id: yard.organizationId,
+        conversation_id: await conversationFor(yard),
         question: 'Move the excavator job.',
         answer: 'I would move it to tomorrow.',
         outcome: 'answered',

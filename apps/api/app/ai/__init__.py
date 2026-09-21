@@ -90,6 +90,20 @@ class Exchange:
 
 
 @dataclass(frozen=True)
+class PriorTurn:
+    """One earlier question in the same conversation, and the words that answered it.
+
+    **Text only, and only what was finished.** No tool call and no row a tool returned: a result
+    was readable to somebody at the moment it came back, and carrying it into a later request
+    would be a second copy of tenant data travelling somewhere its own policies do not follow. What
+    the model said about those rows is what a person read, and is all a follow-up needs.
+    """
+
+    question: str
+    answer: str
+
+
+@dataclass(frozen=True)
 class Tool:
     """A tool as a provider is told about it.
 
@@ -119,6 +133,7 @@ class AnsweringProvider(Protocol):
         tools: tuple[Tool, ...],
         history: tuple["Exchange", ...],
         context: str = "",
+        prior_turns: tuple["PriorTurn", ...] = (),
     ) -> Turn:
         """The next turn, given everything that has happened so far.
 
@@ -131,6 +146,10 @@ class AnsweringProvider(Protocol):
         business's own zone. It is deliberately separate from the question rather than glued to
         the front of it: the question is what somebody typed and is recorded as such, and an
         implementation that caches a stable prompt prefix needs to know which half is which.
+
+        `prior_turns` are the earlier questions and answers of the *same* conversation, oldest
+        first, already bounded by `app.ai.loop`. They precede `question` in the transcript; a
+        provider renders them as it renders any earlier exchange and decides nothing about them.
 
         Raises on a provider that is unreachable, unconfigured or failing. An empty `Turn` is
         the other answer: the provider worked and produced nothing to act on.

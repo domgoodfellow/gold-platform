@@ -21,7 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.ai import AnsweringProvider, Exchange, Tool, ToolCall, ToolResult, Turn
+from app.ai import AnsweringProvider, Exchange, PriorTurn, Tool, ToolCall, ToolResult, Turn
 from app.ai.actions import ACTIONS, action_named
 from app.ai.tools import TOOLS, tool_named
 from app.core.caller import ToolFailed, call_tool
@@ -31,6 +31,35 @@ from app.core.config import AssistantSettings
 # more than a handful of turns is a model going in circles rather than a hard question -- and an
 # uncapped loop against a metered provider is a bill nobody agreed to.
 MAX_TURNS = 6
+
+# **What an earlier part of the same conversation may cost.** Bounded here as well as by
+# `apps/web`, which builds it: this runtime cannot assume its caller was careful, and a request
+# that grew without limit is a bill that grew without limit. The numbers are
+# `lib/domain/assistant/questions.ts`'s, restated because the two runtimes share no code.
+MAX_PRIOR_TURNS = 10
+MAX_PRIOR_ANSWER_CHARS = 3_000
+MAX_PRIOR_CHARS = 12_000
+
+
+def bound_prior_turns(turns: tuple[PriorTurn, ...]) -> tuple[PriorTurn, ...]:
+    """The most recent turns that fit, oldest first.
+
+    Walks from the newest backwards and stops at the first that does not fit, so what is kept is
+    always an unbroken run ending at the latest exchange -- a gap in the middle of a conversation
+    would be a model answering a question that refers to something it was never shown.
+    """
+    kept: list[PriorTurn] = []
+    used = 0
+    for turn in reversed(turns[-MAX_PRIOR_TURNS:]):
+        answer_text = turn.answer
+        if len(answer_text) > MAX_PRIOR_ANSWER_CHARS:
+            answer_text = answer_text[: MAX_PRIOR_ANSWER_CHARS - 1] + "…"
+        cost = len(turn.question) + len(answer_text)
+        if used + cost > MAX_PRIOR_CHARS:
+            break
+        used += cost
+        kept.append(PriorTurn(question=turn.question, answer=answer_text))
+    return tuple(reversed(kept))
 
 
 @dataclass(frozen=True)
@@ -146,6 +175,7 @@ def answer(
     token: str,
     organization_id: str,
     context: str = "",
+    prior_turns: tuple[PriorTurn, ...] = (),
     tools: tuple[Tool, ...] = TOOLS,
     actions: tuple[Tool, ...] = ACTIONS,
 ) -> Answer:
@@ -157,6 +187,7 @@ def answer(
     It is application state rather than anything a tenant said, which is the line that decides
     what this platform may put into a prompt at all.
     """
+    prior_turns = bound_prior_turns(prior_turns)
     history: list[Exchange] = []
     performed: list[ToolRecord] = []
 
@@ -171,6 +202,7 @@ def answer(
                 tools=tools + actions,
                 history=tuple(history),
                 context=context,
+                prior_turns=prior_turns,
             )
         except Exception as failure:  # noqa: BLE001 - the provider's own words, recorded
             return Answer(outcome="failed", detail=str(failure), tools=performed)

@@ -18,10 +18,17 @@ from __future__ import annotations
 
 import inspect
 
-from app.ai import Exchange, Tool, ToolCall, Turn
+from app.ai import Exchange, PriorTurn, Tool, ToolCall, Turn
 from app.ai import loop as loop_module
 from app.ai.actions import ACTIONS, action_named
-from app.ai.loop import MAX_TURNS, answer
+from app.ai.loop import (
+    MAX_PRIOR_ANSWER_CHARS,
+    MAX_PRIOR_CHARS,
+    MAX_PRIOR_TURNS,
+    MAX_TURNS,
+    answer,
+    bound_prior_turns,
+)
 from app.ai.tools import TOOLS, tool_named
 from app.core import caller
 from app.core.caller import ToolFailed
@@ -47,6 +54,7 @@ class Scripted:
         tools: tuple[Tool, ...],
         history: tuple[Exchange, ...],
         context: str = "",
+        prior_turns: tuple[PriorTurn, ...] = (),
     ) -> Turn:
         self.seen.append((question, history))
         if not self.turns:
@@ -355,7 +363,7 @@ def test_the_context_reaches_the_provider() -> None:
         name = "watching"
         seen = ""
 
-        def next_turn(self, *, question, tools, history, context="") -> Turn:
+        def next_turn(self, *, question, tools, history, context="", prior_turns=()) -> Turn:
             Watching.seen = context
             return Turn(text="Noted.")
 
@@ -370,3 +378,61 @@ def test_the_context_reaches_the_provider() -> None:
 
     # A model has no clock, and "tomorrow" is the most ordinary word an operator will use.
     assert "Brisbane" in Watching.seen
+
+
+class Recording:
+    name = "recording"
+
+    def __init__(self) -> None:
+        self.prior: tuple[PriorTurn, ...] = ()
+
+    def next_turn(self, *, question, tools, history, context="", prior_turns=()) -> Turn:
+        self.prior = prior_turns
+        return Turn(text="Noted.")
+
+
+def test_earlier_turns_of_the_conversation_reach_the_provider_in_order() -> None:
+    provider = Recording()
+    earlier = (
+        PriorTurn(question="What is late?", answer="Two jobs."),
+        PriorTurn(question="Which two?", answer="Fenwick Road and the yard."),
+    )
+
+    answer(SETTINGS, provider, organization_id=ORG, question="Move the first", token="t", prior_turns=earlier)
+
+    assert provider.prior == earlier
+
+
+def test_no_earlier_turns_means_none_are_sent() -> None:
+    provider = Recording()
+
+    answer(SETTINGS, provider, organization_id=ORG, question="What is late?", token="t")
+
+    assert provider.prior == ()
+
+
+def test_earlier_turns_are_bounded_by_count_keeping_the_newest() -> None:
+    turns = tuple(PriorTurn(question=f"q{n}", answer=f"a{n}") for n in range(MAX_PRIOR_TURNS + 5))
+
+    kept = bound_prior_turns(turns)
+
+    assert len(kept) == MAX_PRIOR_TURNS
+    assert kept[-1] == turns[-1]
+    assert kept[0] == turns[5]
+
+
+def test_earlier_turns_are_bounded_by_size_and_stay_one_unbroken_run() -> None:
+    big = "x" * MAX_PRIOR_ANSWER_CHARS
+    turns = tuple(PriorTurn(question="q" * 1_000, answer=big) for _ in range(MAX_PRIOR_TURNS))
+
+    kept = bound_prior_turns(turns)
+
+    assert sum(len(t.question) + len(t.answer) for t in kept) <= MAX_PRIOR_CHARS
+    assert 0 < len(kept) < MAX_PRIOR_TURNS
+
+
+def test_one_enormous_answer_is_shortened_rather_than_dropping_the_conversation() -> None:
+    kept = bound_prior_turns((PriorTurn(question="What happened?", answer="y" * 50_000),))
+
+    assert len(kept) == 1
+    assert len(kept[0].answer) == MAX_PRIOR_ANSWER_CHARS

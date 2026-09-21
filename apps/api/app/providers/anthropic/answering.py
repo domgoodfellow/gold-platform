@@ -22,7 +22,7 @@ from typing import Any
 
 import anthropic
 
-from app.ai import Exchange, Tool, ToolCall, Turn
+from app.ai import Exchange, PriorTurn, Tool, ToolCall, Turn
 
 MODEL = "claude-opus-5"
 
@@ -76,8 +76,14 @@ def anthropic_provider(*, api_key: str):
             tools: tuple[Tool, ...],
             history: tuple[Exchange, ...],
             context: str = "",
+            prior_turns: tuple[PriorTurn, ...] = (),
         ) -> Turn:
-            messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
+            # Earlier turns of this conversation first, as the plain words each side said.
+            messages: list[dict[str, Any]] = []
+            for prior in prior_turns:
+                messages.append({"role": "user", "content": prior.question})
+                messages.append({"role": "assistant", "content": prior.answer})
+            messages.append({"role": "user", "content": question})
 
             for exchange in history:
                 messages.append({"role": "assistant", "content": _content(exchange)})

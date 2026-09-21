@@ -27,6 +27,7 @@ export function goldApiAnsweringProvider(config: { baseUrl: string }): Answering
         },
         body: JSON.stringify({
           question: input.question,
+          history: input.priorTurns,
           organization_id: input.organizationId,
           context: input.context,
         }),

@@ -607,7 +607,12 @@ pick the value of is no protection. **RLS decides, and a model is never asked wh
 the loop fills the id in and drops one the model supplies.
 **Load-bearing.** This axis has no Postgres role, and that absence is the security model. A run is
 readable by the person who asked and nobody else, and it records tool calls as a name, arguments
-and a row count — never rows. The loop writes nothing; an intended action is recorded as pending
+and a row count — never rows. **A conversation is the same boundary one level up:** runs belong to
+an `agent_conversations` row readable only by its starter, a run cannot be filed under anybody
+else's (a composite key carrying the asker and the business), and a follow-up sends the answering
+side only the earlier *finished* questions and answers of that one conversation — text, never tool
+rows — bounded by turn count and size in both runtimes. A New chat is nothing until its first
+question, and its title is that question shortened, never a second model call. The loop writes nothing; an intended action is recorded as pending
 and performed only when a person presses the button, mapped through a whitelist on the executing
 side.
 

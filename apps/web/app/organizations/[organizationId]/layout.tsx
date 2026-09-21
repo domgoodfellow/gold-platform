@@ -19,7 +19,11 @@ import { CompactContextSwitcher } from '@/components/containers/context-switcher
 import { WorkspaceHeader } from '@/components/containers/workspace-header';
 import { WorkspaceShell } from '@/components/containers/workspace-shell';
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
-import { canAnswerQuestions, listAgentRuns } from '@/lib/domain/assistant/questions';
+import {
+  canAnswerQuestions,
+  listAgentConversationRuns,
+  listAgentConversationSummaries,
+} from '@/lib/domain/assistant/questions';
 
 /**
  * The operator shell: persistent navigation across one business's areas. Not the authorization
@@ -38,14 +42,26 @@ export default async function OrganizationLayout({
 }: LayoutProps<'/organizations/[organizationId]'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  const [featureStates, myOrganizations, staff, { data: userData }, agentRuns, canAnswer] = await Promise.all([
+  const [featureStates, myOrganizations, staff, { data: userData }, conversations, canAnswer] = await Promise.all([
     organizationResolvedFeatureStates(db, { organizationId }),
     listMyOrganizations(db),
     isPlatformStaff(db),
     db.auth.getUser(),
-    listAgentRuns(db, { organizationId }),
+    listAgentConversationSummaries(db, { organizationId }),
     canAnswerQuestions(),
   ]);
+  // The shell loads a bounded list of titles and one transcript — the most recent conversation.
+  // Any other transcript is fetched when somebody opens it from History.
+  const latestConversation = conversations[0];
+  const initialConversation = latestConversation
+    ? {
+        id: latestConversation.id,
+        runs: await listAgentConversationRuns(db, {
+          organizationId,
+          conversationId: latestConversation.id,
+        }),
+      }
+    : null;
   // The shell's navigation gate, resolved once for both desktop and mobile (`OrgSidebar`/`OrgNav`
   // and `OrgNavBar` share the one `visibleAreas`/`areasIn` predicate in `lib/navigation.ts`).
   // `enabledModules` still answers the legacy module-key question — for the kernel and for an
@@ -181,7 +197,8 @@ export default async function OrganizationLayout({
             organizationName={organization.name}
             canAnswer={canAnswer}
             mayAsk={organization.capabilities.includes('assistant.ask')}
-            runs={agentRuns}
+            conversations={conversations}
+            initialConversation={initialConversation}
           />
         }
       >

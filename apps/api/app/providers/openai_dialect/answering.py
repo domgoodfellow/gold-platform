@@ -30,7 +30,7 @@ from typing import Any
 
 import httpx
 
-from app.ai import Exchange, Tool, ToolCall, Turn
+from app.ai import Exchange, PriorTurn, Tool, ToolCall, Turn
 
 MAX_TOKENS = 8_000
 
@@ -82,12 +82,16 @@ def dialect_provider(*, base_url: str, model: str, api_key: str | None, name: st
             tools: tuple[Tool, ...],
             history: tuple[Exchange, ...],
             context: str = "",
+            prior_turns: tuple[PriorTurn, ...] = (),
         ) -> Turn:
             messages: list[dict[str, Any]] = [{"role": "system", "content": PUBLIC_SYSTEM if context.startswith("PUBLIC WEBSITE DEPLOYMENT\n") else SYSTEM}]
             # Its own message rather than glued to the question, so what the person typed stays
             # what the person typed.
             if context:
                 messages.append({"role": "system", "content": context})
+            for prior in prior_turns:
+                messages.append({"role": "user", "content": prior.question})
+                messages.append({"role": "assistant", "content": prior.answer})
             messages.append({"role": "user", "content": question})
 
             for exchange in history:

@@ -4,6 +4,7 @@ type Json = Database['public']['Tables']['agent_runs']['Insert']['tools'];
 import {
   answeringProvider,
   type AnswerOutcome,
+  type PriorTurn,
   type ProposedAction,
   type ToolCallRecord,
 } from '@/lib/adapters/answering';
@@ -13,7 +14,8 @@ import { executorFor, reasonActionCannotRun } from './actions';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
 
 /**
- * Asking the system a question, and the record of having asked. The domain layer owns the flow;
+ * Asking the system a question, and the record of having asked — grouped into conversations, each
+ * readable only by the person who started it (D34). The domain layer owns the flow;
  * the capability owns the answering — nothing here knows there's a loop, a model, or a second
  * deployment. Nothing here reads or writes business data: a question is answered by tools
  * running under the asking person's own token (D34), so this function could not widen what
@@ -29,6 +31,8 @@ export type ActionOutcome = 'pending' | 'done' | 'declined' | 'failed';
 
 export type AgentRun = {
   id: string;
+  /** The conversation this question was asked in. */
+  conversationId: string;
   question: string;
   /** The finished words. Empty unless it was answered. */
   answer: string;
@@ -47,7 +51,63 @@ export type AgentRun = {
   actionDetail: string | null;
 };
 
+/** A thread as History lists it. The transcript is a separate read, loaded when somebody opens it. */
+export type AgentConversationSummary = {
+  id: string;
+  title: string;
+  createdAt: string;
+  lastActivityAt: string;
+};
+
 const QUESTION_MAX = 2000;
+
+/** What History lists and the shell loads up front — older conversations are not fetched until asked for. */
+export const CONVERSATION_LIST_LIMIT = 30;
+/** One transcript never loads more than this many runs. */
+export const CONVERSATION_RUN_LIMIT = 50;
+
+export const TITLE_MAX = 60;
+
+/**
+ * A title is the first question, whitespace collapsed and shortened — never a second model call to
+ * name what somebody just typed. Counts code points, so a cut cannot split an emoji. The backfill
+ * in `20260929000008` applies the same rule in SQL to the runs that already existed.
+ */
+export function deriveConversationTitle(question: string): string {
+  const text = question.replace(/\s+/g, ' ').trim();
+  const characters = Array.from(text);
+  return characters.length > TITLE_MAX ? `${characters.slice(0, TITLE_MAX - 1).join('')}…` : text;
+}
+
+/**
+ * How much of a conversation's past an answering request may carry. Bounded twice on purpose —
+ * here, and again in `apps/api/app/ai/loop.py`, which cannot assume its caller was careful. The
+ * numbers are restated there because the two runtimes share no code.
+ */
+export const CONTEXT_MAX_TURNS = 10;
+export const CONTEXT_MAX_ANSWER_CHARS = 3_000;
+export const CONTEXT_MAX_CHARS = 12_000;
+
+/**
+ * The most recent turns that fit, oldest first. Walks from the newest and stops at the first that
+ * does not fit, so what is kept is one unbroken run ending at the latest exchange — a gap in the
+ * middle would have the model answering a question that refers to something it was never shown.
+ */
+export function boundPriorTurns(turns: PriorTurn[]): PriorTurn[] {
+  const kept: PriorTurn[] = [];
+  let used = 0;
+  for (const turn of turns.slice(-CONTEXT_MAX_TURNS).reverse()) {
+    const answer =
+      turn.answer.length > CONTEXT_MAX_ANSWER_CHARS
+        ? `${turn.answer.slice(0, CONTEXT_MAX_ANSWER_CHARS - 1)}…`
+        : turn.answer;
+    const cost = turn.question.length + answer.length;
+    if (used + cost > CONTEXT_MAX_CHARS) break;
+    used += cost;
+    kept.unshift({ question: turn.question, answer });
+  }
+  return kept;
+}
 
 const OUTCOMES: AnswerOutcome[] = ['answered', 'unanswered', 'failed'];
 
@@ -57,6 +117,7 @@ function isOutcome(value: string): value is AnswerOutcome {
 
 function toRun(row: {
   id: string;
+  conversation_id: string;
   question: string;
   answer: string;
   outcome: string;
@@ -70,6 +131,7 @@ function toRun(row: {
 }): AgentRun {
   return {
     id: row.id,
+    conversationId: row.conversation_id,
     question: row.question,
     answer: row.answer,
     outcome: isOutcome(row.outcome) ? row.outcome : 'failed',
@@ -90,30 +152,110 @@ function isActionOutcome(value: string | null): value is ActionOutcome {
 }
 
 const COLUMNS =
-  'id, question, answer, outcome, detail, tools, answered_by, occurred_at, proposed_action, action_outcome, action_detail';
+  'id, conversation_id, question, answer, outcome, detail, tools, answered_by, occurred_at, proposed_action, action_outcome, action_detail';
 
 /** Lets a screen say "this deployment can't answer" rather than rendering a box that fails (D31). */
 export async function canAnswerQuestions(): Promise<boolean> {
   return (await answeringProvider()) !== null;
 }
 
-/** Only ever mine, by policy (`agent_runs_select` narrows to `created_by = auth.uid()`) — an answer holds whatever its asker could see, so no `.eq('created_by', ...)` is added here, to avoid suggesting the boundary lives in this function. */
-export async function listAgentRuns(
+const CONVERSATION_COLUMNS = 'id, title, created_at, last_activity_at';
+
+function toSummary(row: {
+  id: string;
+  title: string;
+  created_at: string;
+  last_activity_at: string;
+}): AgentConversationSummary {
+  return { id: row.id, title: row.title, createdAt: row.created_at, lastActivityAt: row.last_activity_at };
+}
+
+/**
+ * My conversations in this business, most recently active first, bounded. Only ever mine, by
+ * policy (`agent_conversations_select` narrows to `created_by = auth.uid()`) — an answer holds
+ * whatever its asker could see, so no `.eq('created_by', ...)` is added here, to avoid suggesting
+ * the boundary lives in this function.
+ */
+export async function listAgentConversationSummaries(
   db: Db,
-  input: { organizationId: string },
+  input: { organizationId: string; limit?: number },
+): Promise<AgentConversationSummary[]> {
+  const { data, error } = await db
+    .from('agent_conversations')
+    .select(CONVERSATION_COLUMNS)
+    .eq('organization_id', input.organizationId)
+    .order('last_activity_at', { ascending: false })
+    .limit(input.limit ?? CONVERSATION_LIST_LIMIT);
+
+  if (error) {
+    throw new DomainError(error.message, 'assistant.list_failed');
+  }
+
+  return (data ?? []).map(toSummary);
+}
+
+/** One of my conversations, or null — somebody else's, another business's and a missing one all look alike, by policy. */
+export async function getAgentConversation(
+  db: Db,
+  input: { organizationId: string; conversationId: string },
+): Promise<AgentConversationSummary | null> {
+  const { data, error } = await db
+    .from('agent_conversations')
+    .select(CONVERSATION_COLUMNS)
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.conversationId)
+    .maybeSingle();
+
+  if (error) {
+    throw new DomainError(error.message, 'assistant.list_failed');
+  }
+
+  return data ? toSummary(data) : null;
+}
+
+/** One conversation's runs, newest first and bounded — the caller reverses for a transcript. Empty for a conversation the caller cannot read. */
+export async function listAgentConversationRuns(
+  db: Db,
+  input: { organizationId: string; conversationId: string },
 ): Promise<AgentRun[]> {
   const { data, error } = await db
     .from('agent_runs')
     .select(COLUMNS)
     .eq('organization_id', input.organizationId)
+    .eq('conversation_id', input.conversationId)
     .order('occurred_at', { ascending: false })
-    .limit(50);
+    .limit(CONVERSATION_RUN_LIMIT);
 
   if (error) {
     throw new DomainError(error.message, 'assistant.list_failed');
   }
 
   return (data ?? []).map(toRun);
+}
+
+/**
+ * What the answering side is told about the conversation so far: the finished questions and
+ * answers of this conversation and no other, bounded. A failed or unanswered run has no finished
+ * answer to carry, and tool calls are never included — see `PriorTurn`.
+ */
+async function priorTurnsOf(
+  db: Db,
+  input: { organizationId: string; conversationId: string },
+): Promise<PriorTurn[]> {
+  const { data, error } = await db
+    .from('agent_runs')
+    .select('question, answer')
+    .eq('organization_id', input.organizationId)
+    .eq('conversation_id', input.conversationId)
+    .eq('outcome', 'answered')
+    .order('occurred_at', { ascending: false })
+    .limit(CONTEXT_MAX_TURNS);
+
+  if (error) {
+    throw new DomainError(error.message, 'assistant.list_failed');
+  }
+
+  return boundPriorTurns((data ?? []).reverse());
 }
 
 /**
@@ -124,7 +266,7 @@ export async function listAgentRuns(
  */
 export async function askQuestion(
   db: Db,
-  input: { organizationId: string; question: string },
+  input: { organizationId: string; question: string; conversationId?: string | null },
 ): Promise<AgentRun> {
   const actor = await requireActor(db);
 
@@ -167,6 +309,23 @@ export async function askQuestion(
     throw new DomainError('Sign in to continue.', 'auth.required');
   }
 
+  // Checked before anything is spent: a conversation that is not mine, or not in this business,
+  // reads as absent, and asking into it would send the model a thread nobody may read.
+  let priorTurns: PriorTurn[] = [];
+  if (input.conversationId) {
+    const existing = await getAgentConversation(db, {
+      organizationId: input.organizationId,
+      conversationId: input.conversationId,
+    });
+    if (!existing) {
+      throw new DomainError('That conversation is not available.', 'assistant.conversation_not_found');
+    }
+    priorTurns = await priorTurnsOf(db, {
+      organizationId: input.organizationId,
+      conversationId: existing.id,
+    });
+  }
+
   let outcome: AnswerOutcome = 'failed';
   let text = '';
   let detail: string | null = null;
@@ -178,6 +337,7 @@ export async function askQuestion(
   try {
     const answer = await provider.answer({
       question,
+      priorTurns,
       token,
       organizationId: input.organizationId,
       // I9, not a convenience — the model has no clock, so `Intl` (not Date arithmetic) resolves the business's own today in its own zone.
@@ -200,10 +360,30 @@ export async function askQuestion(
     detail = failure instanceof Error ? failure.message : 'the assistant could not answer';
   }
 
+  // A New chat is nothing until its first question has been answered or refused — created here,
+  // after the answering, so a request that never got as far as asking leaves nothing behind.
+  let conversationId = input.conversationId ?? null;
+  if (!conversationId) {
+    const created = await db
+      .from('agent_conversations')
+      .insert({
+        organization_id: input.organizationId,
+        created_by: actor.id,
+        title: deriveConversationTitle(question),
+      })
+      .select('id')
+      .single();
+    if (created.error) {
+      throw new DomainError(created.error.message, 'assistant.record_failed');
+    }
+    conversationId = created.data.id;
+  }
+
   const { data, error } = await db
     .from('agent_runs')
     .insert({
       organization_id: input.organizationId,
+      conversation_id: conversationId,
       question,
       answer: text,
       outcome,

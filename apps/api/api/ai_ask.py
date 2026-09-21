@@ -26,10 +26,26 @@ import json
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler
 
+from app.ai import PriorTurn
 from app.ai.loop import answer
 from app.ai.registry import answering_provider, unconfigured_reason
 from app.auth import AuthError, require_caller
 from app.core.config import load_assistant_settings
+
+
+def _prior_turns(raw: object) -> tuple[PriorTurn, ...]:
+    """Well-formed `{question, answer}` pairs, and nothing else a body might carry."""
+    if not isinstance(raw, list):
+        return ()
+    return tuple(
+        PriorTurn(question=item["question"], answer=item["answer"])
+        for item in raw
+        if isinstance(item, dict)
+        and isinstance(item.get("question"), str)
+        and isinstance(item.get("answer"), str)
+        and item["question"].strip()
+        and item["answer"].strip()
+    )
 
 
 class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
@@ -81,6 +97,9 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             # holding the organization already; asking Postgres for it here would be this
             # runtime reading business state outside a tool.
             context=(body.get("context") or "").strip(),
+            # Earlier turns of the one conversation `apps/web` read for this caller. Text only;
+            # the loop bounds it again rather than trusting how carefully it was built.
+            prior_turns=_prior_turns(body.get("history")),
         )
 
         # **The run is not written here.** `apps/web` writes it, under the same session that

@@ -344,6 +344,13 @@
       ],
       "note": "I15 import and vocabulary scan. The payment_webhook grant checks now live in payment-webhook-role.test.ts."
     },
+    "apps/web/tests/architecture/static/agent-conversations.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "ai",
+        "ui"
+      ]
+    },
     "apps/web/tests/architecture/static/auth-boundary.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -626,6 +633,15 @@
         "providers"
       ],
       "note": "The browser softphone token boundary (browserTelephoneToken) had no test."
+    },
+    "apps/web/tests/integration/database/agent-conversations.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "ai",
+        "security",
+        "tenancy"
+      ],
+      "note": "Fakes fetch for the assistant URL only; also reads the migration for its backfill."
     },
     "apps/web/tests/integration/database/ai-tools.test.ts": {
       "category": "database-integration",
@@ -1155,6 +1171,13 @@
       "category": "database-integration",
       "concerns": [
         "work"
+      ]
+    },
+    "apps/web/tests/unit/agent-conversations.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "ai",
+        "security"
       ]
     },
     "apps/web/tests/unit/capability-selector.test.ts": {

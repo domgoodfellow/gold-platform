@@ -34,6 +34,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_conversations: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          last_activity_at: string
+          organization_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          last_activity_at?: string
+          organization_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          last_activity_at?: string
+          organization_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_runs: {
         Row: {
           action_detail: string | null
@@ -41,6 +83,7 @@ export type Database = {
           action_taken_at: string | null
           answer: string
           answered_by: string
+          conversation_id: string
           created_by: string
           detail: string | null
           id: string
@@ -57,6 +100,7 @@ export type Database = {
           action_taken_at?: string | null
           answer?: string
           answered_by: string
+          conversation_id: string
           created_by: string
           detail?: string | null
           id?: string
@@ -73,6 +117,7 @@ export type Database = {
           action_taken_at?: string | null
           answer?: string
           answered_by?: string
+          conversation_id?: string
           created_by?: string
           detail?: string | null
           id?: string
@@ -84,6 +129,13 @@ export type Database = {
           tools?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "agent_runs_conversation_fkey"
+            columns: ["organization_id", "created_by", "conversation_id"]
+            isOneToOne: false
+            referencedRelation: "agent_conversations"
+            referencedColumns: ["organization_id", "created_by", "id"]
+          },
           {
             foreignKeyName: "agent_runs_organization_id_fkey"
             columns: ["organization_id"]

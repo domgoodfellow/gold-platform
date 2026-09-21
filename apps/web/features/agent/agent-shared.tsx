@@ -1,13 +1,20 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@gold/ui/components/item';
 import { Empty, EmptyContent, EmptyDescription, EmptyMedia, EmptyTitle } from '@gold/ui/components/empty';
+import { Popover, PopoverContent, PopoverTrigger } from '@gold/ui/components/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
-import { Bot, MessagesSquare, Radar } from 'lucide-react';
-import { ButtonLink } from '@/components/controls/button';
+import { Bot, History, MessagesSquare, Plus, Radar } from 'lucide-react';
+import { cx } from '@/components/class-names';
+import { Button, ButtonLink } from '@/components/controls/button';
 import { ErrorText } from '@/components/controls/inputs';
-import { ACTION_LABELS, type AgentRun } from '@/lib/domain/assistant/questions';
+import {
+  ACTION_LABELS,
+  type AgentConversationSummary,
+  type AgentRun,
+} from '@/lib/domain/assistant/questions';
+import { formatRecent } from './recent-time';
 
 /**
  * The Agent presentation grammar, shared by Tenant scope and Platform scope alike (constraints.md
@@ -35,8 +42,76 @@ export function AgentContextList({ items }: { items: { title: string; descriptio
   );
 }
 
+/**
+ * The strip under the Chat / Context / Activity tabs: History on the left, New chat on the right.
+ * Presentation only — which conversation is current, and what opening or starting one does, is
+ * the scope's to say. `currentId` is null for a New chat that has not sent its first question.
+ */
+export function AgentChatToolbar({
+  conversations,
+  currentId,
+  onOpen,
+  onNewChat,
+}: {
+  conversations: AgentConversationSummary[];
+  currentId: string | null;
+  onOpen: (conversationId: string) => void;
+  onNewChat: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="flex shrink-0 items-center justify-between px-4 pt-3">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" tone="secondary" size="small" className="gap-1.5">
+            <History aria-hidden size={14} />
+            History
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-72 p-1">
+          {conversations.length === 0 ? (
+            <p className="px-2 py-3 text-sm text-muted">No conversations yet.</p>
+          ) : (
+            <ul className="flex max-h-80 flex-col gap-0.5 overflow-y-auto">
+              {conversations.map((conversation) => {
+                const current = conversation.id === currentId;
+                return (
+                  <li key={conversation.id}>
+                    <button
+                      type="button"
+                      aria-current={current ? 'true' : undefined}
+                      onClick={() => {
+                        setOpen(false);
+                        onOpen(conversation.id);
+                      }}
+                      className={cx(
+                        'flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-hover',
+                        current && 'bg-selected',
+                      )}
+                    >
+                      <span className="w-full truncate font-medium">{conversation.title}</span>
+                      <span className="text-xs text-muted">{formatRecent(conversation.lastActivityAt)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </PopoverContent>
+      </Popover>
+
+      <Button type="button" tone="secondary" size="small" className="gap-1.5" onClick={onNewChat}>
+        <Plus aria-hidden size={14} />
+        New chat
+      </Button>
+    </div>
+  );
+}
+
 /** The tool timeline — each run's own tool calls, never the rows they read (D34). Shared as-is:
- * an `AgentRun`'s `tools` shape carries nothing organization- or platform-specific. */
+ * an `AgentRun`'s `tools` shape carries nothing organization- or platform-specific. Pass it one
+ * conversation's runs, not everything a person has ever asked. */
 export function AgentActivityList({ runs }: { runs: AgentRun[] }) {
   const calls = runs.flatMap((run) => run.tools.map((call) => ({ runId: run.id, occurredAt: run.occurredAt, ...call })));
 

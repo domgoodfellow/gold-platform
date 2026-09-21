@@ -5,6 +5,25 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Agent conversations, History and New chat
+
+The Agent is now a conversation rather than a list of unrelated questions. `agent_conversations` (one
+business, one starter, a title, created and last-activity times) owns `agent_runs` through a new required
+`conversation_id`; both are readable only by whoever started the conversation, as `agent_runs` always was, and
+a run cannot be filed under anybody else's conversation. The runs that already existed were not welded into one
+invented thread: each became a conversation of its own, titled by its question and dated by the run, with its
+question, answer and tool facts untouched. A New chat stays an unsaved empty state until its first question is
+sent, which creates the conversation and titles it from that question with no second model call; later
+questions append. A follow-up now carries the earlier finished questions and answers of that same conversation
+to the answering side, as text only (never tool rows, never another conversation), bounded to ten turns and
+12,000 characters in `apps/web` and again in `apps/api`; no chat library was added and the
+answering adapter is the same one. The shell loads thirty conversation titles and the latest transcript; any other transcript
+loads when opened from History. In Chat, a toolbar under the tabs offers History (a popover, most recent
+first, current one marked) and New chat (focuses the composer); Activity shows the tool calls of the
+conversation on screen. A question or a decision on any organization page returns its conversation to the
+rail directly instead of depending on one route's revalidation. Platform Agent is unchanged and still
+unavailable: it shares the presentation, not the tenant conversation model.
+
 ### One context at a time, a smaller sidebar, and Settings as the configuration map
 
 Ask is no longer a destination: the Agent rail on every workspace replaced it, `/ask` redirects to Today,

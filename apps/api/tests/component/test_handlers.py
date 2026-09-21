@@ -356,3 +356,25 @@ class TestPublicChat:
         assert len(sink.calls) == 1
         assert sink.calls[0][1]["token"] == ""        # no signed-in person stands behind a public visitor
         assert sink.calls[0][1]["tools"] == ()        # and no database tool is offered
+
+
+# --- the assistant's request body: earlier turns are text pairs, and nothing else gets through ----
+
+
+class TestAssistantHistory:
+    def test_keeps_well_formed_pairs_in_order(self) -> None:
+        turns = ai_ask._prior_turns([{"question": "a?", "answer": "A"}, {"question": "b?", "answer": "B"}])
+
+        assert [(t.question, t.answer) for t in turns] == [("a?", "A"), ("b?", "B")]
+
+    @pytest.mark.parametrize(
+        "raw",
+        [None, "text", {"question": "a?", "answer": "A"}, [1, "x", None], [{"question": "a?"}], [{"question": "", "answer": "A"}], [{"question": "a?", "answer": 7}]],
+    )
+    def test_drops_anything_that_is_not_a_question_and_an_answer(self, raw) -> None:
+        assert ai_ask._prior_turns(raw) == ()
+
+    def test_never_forwards_extra_fields_such_as_tool_rows(self, monkeypatch) -> None:
+        turns = ai_ask._prior_turns([{"question": "a?", "answer": "A", "tools": [{"rows": 3}], "rows": [{"secret": 1}]}])
+
+        assert [vars(t) for t in turns] == [{"question": "a?", "answer": "A"}]

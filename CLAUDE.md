@@ -322,6 +322,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | Asking the model which business | A value a model chooses is no protection; RLS decides, and it reads the caller's own JWT | The loop fills the id in and drops one a model supplies |
 | A `volatile` tool | Postgres refuses a write inside a non-volatile function at execution rather than at creation | `ai-tools.test.ts` reads `provolatile` for every registered name |
 | Rows in `agent_runs` | That table's policies are not the ones protecting the original | It records a name, its arguments and a row count |
+| A conversation readable by anyone but its starter, or history from another conversation sent with a question | An answer holds whatever its asker could see, and a thread is a set of answers (D34, I48) | `agent_conversations_select` is creator-only; a run's composite key carries the asker; `agent-conversations.test.ts` |
 | A write performed by the loop | A person presses the button, and a name the loop invents must fail closed | The whitelist lives in `apps/web`; an action carries no Postgres function; `agent_runs_update` freezes a decided action |
 | A reschedule that omits the resource | `scheduleWorkItem` reads an absent resource as *nobody assigned*, so moving a job silently takes the person off it | The executor passes it |
 | A vendor's tool-runner | A second loop the day a business answers with its own model, and an `agent_runs` row that means two things | `app/ai/loop.py` owns iteration, dispatch, the cap and the record |

@@ -34,8 +34,20 @@ export type Answer = {
   action: ProposedAction | null;
 };
 
+/**
+ * An earlier question in the same conversation and the words that answered it. Text only —
+ * never a tool result or a row, which were readable to their asker at that moment and must not
+ * travel into a later request (D34).
+ */
+export type PriorTurn = {
+  question: string;
+  answer: string;
+};
+
 export type AnsweringRequest = {
   question: string;
+  /** Earlier finished turns of this same conversation, oldest first, already bounded. Empty for the first question. */
+  priorTurns: PriorTurn[];
   /** Never given to the model — the loop fills it in; RLS is the real boundary (D34). */
   organizationId: string;
   /** The caller's own access token — identity reaches the database as their JWT (D17). */
