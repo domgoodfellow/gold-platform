@@ -200,7 +200,7 @@ describe('the composer', () => {
   });
 
   it('keeps role refusal, pending and error behaviour', () => {
-    expect(tenantRail).toContain('disabled={!mayAsk}');
+    expect(tenantRail).toContain('disabled={!mayAsk || !canAnswer}');
     expect(tenantRail).toContain("'Your role cannot ask questions here.'");
     expect(composer).toContain("{pending ? 'Sending…' : 'Send'}");
     expect(composer).toContain('disabled={disabled || pending || uploading}');
@@ -208,8 +208,13 @@ describe('the composer', () => {
     expect(tenantRail).toContain('role="alert"');
   });
 
-  it('keeps AgentUnavailable in place of the whole conversation when the deployment cannot answer', () => {
-    expect(tenantRail).toMatch(/if \(!canAnswer\) \{\s*return \(\s*<AgentPanelFrame>\s*<AgentUnavailable \/>/);
+  it('when the deployment cannot answer, keeps the whole conversation and switches only asking off', () => {
+    // The placeholder that hid History, the composer and the paperclip is what made the panel look
+    // empty on a machine with no assistant configured. It is no longer reachable from a business.
+    expect(code(tenantRail)).not.toContain('<AgentUnavailable');
+    expect(tenantRail).toContain('disabled={!mayAsk || !canAnswer}');
+    expect(tenantRail).toContain('Agent is currently unavailable, so questions cannot be sent right now.');
+    expect(tenantRail.indexOf('<AgentConversationHeader')).toBeGreaterThan(-1);
   });
 
   it('names the conversation it asks into, and the page it was asked from', () => {

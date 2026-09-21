@@ -14,7 +14,6 @@ import {
   AgentPanelFrame,
   AgentToolPopover,
   AgentTranscript,
-  AgentUnavailable,
   type ComposerAttachment,
 } from './agent-shared';
 import { resolveAgentViewing } from './agent-context';
@@ -223,14 +222,6 @@ function TenantAgentPanel({
     composer.current?.focus();
   }
 
-  if (!canAnswer) {
-    return (
-      <AgentPanelFrame>
-        <AgentUnavailable />
-      </AgentPanelFrame>
-    );
-  }
-
   const title = shown
     ? (conversations.find((conversation) => conversation.id === shown.id)?.title ??
       deriveConversationTitle(shown.runs.at(-1)?.question ?? 'New chat'))
@@ -281,6 +272,15 @@ function TenantAgentPanel({
         </div>
       )}
 
+      {!canAnswer ? (
+        // The conversation stays: History, past transcripts and the composer are all still there.
+        // Only asking is off, and the panel says so where the person would type. A business is not
+        // told why (GOLD's own AI provider is not its concern).
+        <p role="status" className="shrink-0 px-4 pb-2 text-sm text-muted">
+          Agent is currently unavailable, so questions cannot be sent right now.
+        </p>
+      ) : null}
+
       {askError ? (
         <p role="alert" className="shrink-0 px-4 pb-2 text-sm text-danger">
           {askError}
@@ -290,13 +290,19 @@ function TenantAgentPanel({
       <AgentComposer
         formAction={askFormAction}
         textareaRef={composer}
-        disabled={!mayAsk}
+        disabled={!mayAsk || !canAnswer}
         pending={asking}
         attachments={drafts}
         canAttach={drafts.filter((file) => file.state !== 'error').length < ATTACHMENTS_PER_QUESTION}
         onPickFiles={pickFiles}
         onRemoveAttachment={removeDraft}
-        placeholder={mayAsk ? 'Ask about this business…' : 'Your role cannot ask questions here.'}
+        placeholder={
+          !canAnswer
+            ? 'Agent is currently unavailable.'
+            : mayAsk
+              ? 'Ask about this business…'
+              : 'Your role cannot ask questions here.'
+        }
         hiddenFields={
           <>
             <input type="hidden" name="organizationId" value={organizationId} />
