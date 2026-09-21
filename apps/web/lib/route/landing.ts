@@ -11,11 +11,12 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 /**
  * Where `/organizations` sends somebody, decided from two independent facts about one identity:
  * platform authority and real organization membership. Platform authority does not invent GOLD
- * membership; when the membership exists, GOLD is the operating workspace. Without it, `/platform`
- * is still the global route namespace and renders the bootstrap-required state.
+ * membership; when the membership exists, GOLD is the operating workspace and Platform is a
+ * sub-scope of it. Without it there is no canonical Platform address, so `/platform` — the legacy
+ * entry, and the one place still named — renders the bootstrap-required state.
  *
  * This is where a *sign-in* lands, never how somebody switches context: that is the context
- * switcher, which links straight to a business or to `/platform`. There is no directory outcome:
+ * switcher, which links straight to a business. There is no directory outcome:
  * the only page `/organizations` still renders is the one that founds a first business.
  */
 export type OrganizationsLanding =
@@ -58,6 +59,8 @@ export function resolveOrganizationsLanding(input: {
 export function destinationFor(landing: OrganizationsLanding): string {
   switch (landing.kind) {
     case 'platform':
+      // Staff with no GOLD Internal membership: there is no canonical address to compute, so this is
+      // the legacy entry, which explains what is missing rather than 404ing.
       return '/platform';
     case 'enter':
       return organizationHomeHref(landing.organizationId, landing.operationalState);

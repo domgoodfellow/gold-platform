@@ -2,7 +2,9 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { deriveSwitcherView } from '@/components/containers/context-switcher';
-import { inPlatformContext } from '@/lib/route/platform-context';
+import { organizationIdFromPath } from '@/lib/route/platform-context';
+import { platformHref, platformSubpath } from '@/lib/platform-navigation';
+import { inPlatformScope } from '@/lib/shell';
 
 /**
  * A context switcher switches organization. One identity, zero or more memberships, one current
@@ -15,12 +17,23 @@ const WEB = fileURLToPath(new URL('../../..', import.meta.url));
 const read = (path: string) => readFileSync(`${WEB}/${path}`, 'utf8');
 const switcher = read('components/containers/context-switcher.tsx');
 
-describe('the Platform namespace', () => {
-  it('reads the namespace from the path, exactly as a business is read', () => {
-    expect(inPlatformContext('/platform')).toBe(true);
-    expect(inPlatformContext('/platform/organizations/x')).toBe(true);
-    expect(inPlatformContext('/platformer')).toBe(false);
-    expect(inPlatformContext('/organizations/x/home')).toBe(false);
+const GOLD = '11111111-1111-4111-8111-111111111111';
+
+describe('the Platform sub-scope', () => {
+  it('is a path beneath GOLD’s own organization, read from the path exactly as a business is read', () => {
+    expect(organizationIdFromPath(platformHref(GOLD, 'providers'))).toBe(GOLD);
+    expect(platformSubpath(platformHref(GOLD))).toBe('');
+    expect(platformSubpath(platformHref(GOLD, 'catalog/plans/base'))).toBe('catalog/plans/base');
+    expect(platformSubpath(`${platformHref(GOLD, 'providers')}?tab=accounts`)).toBe('providers');
+    expect(inPlatformScope(platformHref(GOLD, 'organizations'))).toBe(true);
+  });
+
+  it('is not the old /platform namespace, nor anything that merely resembles it', () => {
+    expect(inPlatformScope('/platform')).toBe(false);
+    expect(inPlatformScope('/platform/providers')).toBe(false);
+    expect(inPlatformScope(`/organizations/${GOLD}/home`)).toBe(false);
+    expect(inPlatformScope(`/organizations/${GOLD}/platformer`)).toBe(false);
+    expect(inPlatformScope(`/organizations/not-an-id/platform`)).toBe(false);
   });
 });
 
@@ -30,7 +43,9 @@ describe('the switcher', () => {
     expect(switcher).not.toMatch(/\/organizations\?|All businesses|all=1/);
     const executable = switcher.replace(/\/\*[\s\S]*?\*\//g, '');
     expect(executable).not.toContain('/platform');
-    expect(executable).not.toMatch(/Platform Administration|platformAdministration|inPlatformContext/);
+    expect(executable).not.toMatch(/Platform Administration|platformAdministration|inPlatformContext|Global tools/);
+    // The current context is the organization the shell was built for, never something read off the path.
+    expect(executable).not.toMatch(/usePathname|inPlatformScope|platformSubpath/);
   });
 
   it('is the list of where else, never the current context', () => {
@@ -48,9 +63,9 @@ describe('the switcher', () => {
     expect(read('lib/route/person-context.ts')).not.toMatch(/platformAdministration/);
     expect(read('features/account/personal-settings-shell.tsx')).toContain('loadPersonContext()');
     expect(read('features/account/global-fallback-shell.tsx')).toContain('loadPersonContext()');
-    // Both route trees render inside the one shell.
+    // One shell, drawn once by the organization layout. Platform is beneath it and draws no frame of its own.
     expect(read('app/organizations/[organizationId]/layout.tsx')).toContain('<OrganizationShell');
-    expect(read('app/(platform)/platform/layout.tsx')).toContain('<OrganizationShell');
+    expect(read('app/organizations/[organizationId]/platform/layout.tsx')).not.toMatch(/OrganizationShell|<Sidebar|WorkspaceShell/);
   });
 });
 

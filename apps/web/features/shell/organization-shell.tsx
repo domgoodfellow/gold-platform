@@ -22,6 +22,8 @@ import { WorkspaceHeader } from '@/components/containers/workspace-header';
 import { WorkspaceShell } from '@/components/containers/workspace-shell';
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
 import { PlatformAgentRail } from '@/features/agent/platform-agent-rail';
+import { RouteAwareAgent } from '@/features/agent/route-aware-agent';
+import { platformHref } from '@/lib/platform-navigation';
 import { canAnswerPlatformQuestions } from '@/lib/domain/assistant/platform-questions';
 import {
   canAnswerQuestions,
@@ -30,9 +32,10 @@ import {
 } from '@/lib/domain/assistant/questions';
 
 /**
- * The one application shell, for one organization. Both `/organizations/{id}/**` and `/platform/**`
- * render inside it — `/platform` inside GOLD's own organization — so a person meets one recognisable
- * frame whatever they are doing, and moves between businesses with the context switcher alone.
+ * The one application shell, for one organization. Everything beneath `/organizations/{id}` renders
+ * inside it — Platform Administration included, which is `/organizations/{goldId}/platform`, a
+ * privileged sub-scope of GOLD's own organization — so a person meets one recognisable frame
+ * whatever they are doing, and moves between businesses with the context switcher alone.
  *
  * Not the authorization boundary: every page still calls `requireOrganization` (or its platform
  * guard) itself, since Next can reuse a layout across client navigations without re-rendering it.
@@ -52,28 +55,24 @@ import {
  */
 export async function OrganizationShell({
   organizationId,
-  agent = 'organization',
   children,
 }: {
   organizationId: string;
-  /** Which assistant the rail offers. `/platform/**` asks platform questions; everywhere else asks about the business. */
-  agent?: 'organization' | 'platform';
   children: ReactNode;
 }) {
   const { db, organization, access } = await requireOrganizationForBillingRecovery(organizationId);
   const locked = !access.permitted;
   // A locked business runs none of the workspace reads below — no feature resolution and no
   // Agent transcript — because none of it is drawn.
-  const [featureStates, myOrganizations, staff, { data: userData }, conversations, canAnswer, gold, canAnswerPlatform] =
+  const [featureStates, myOrganizations, staff, { data: userData }, conversations, canAnswer, gold] =
     await Promise.all([
       locked ? Promise.resolve([]) : organizationResolvedFeatureStates(db, { organizationId }),
       listMyOrganizations(db),
       isPlatformStaff(db),
       db.auth.getUser(),
-      locked || agent === 'platform' ? Promise.resolve([]) : listAgentConversationSummaries(db, { organizationId }),
+      locked ? Promise.resolve([]) : listAgentConversationSummaries(db, { organizationId }),
       canAnswerQuestions(),
       isGoldInternalOrganization(db, { organizationId }),
-      agent === 'platform' ? canAnswerPlatformQuestions() : Promise.resolve(false),
     ]);
   // The shell loads a bounded list of titles and one transcript — the most recent conversation.
   // Any other transcript is fetched when somebody opens it from History.
@@ -91,6 +90,10 @@ export async function OrganizationShell({
   // Platform authority is read only for GOLD's own organization, and only for staff. Everywhere
   // else it is `null`, so the projection cannot produce a Platform section beside a customer's work.
   const platform = staff && gold ? await platformPermissions(db) : null;
+  // The Platform Agent exists only where Platform does. Both Agents are built here and one is
+  // mounted, by route (`RouteAwareAgent`): the shell cannot know the path, and neither Agent may
+  // borrow the other's scope.
+  const canAnswerPlatform = platform && platform.size > 0 ? await canAnswerPlatformQuestions() : false;
   const sections = projectShell({
     organizationId,
     enabledModules: activeModuleKeys(featureStates),
@@ -217,18 +220,28 @@ export async function OrganizationShell({
           locked ? undefined : <OrgNavBar organizationId={organizationId} sections={sections} setup={setup} />
         }
         agent={
-          locked ? null : agent === 'platform' ? (
-            <PlatformAgentRail canAnswer={canAnswerPlatform} />
-          ) : (
-            <TenantAgentRail
-              organizationId={organizationId}
-              organizationName={organization.name}
-              timezone={organization.timezone}
-              canAnswer={canAnswer}
-              mayAsk={organization.capabilities.includes('assistant.ask')}
-              canManageConnections={organization.capabilities.includes('integration.manage')}
-              conversations={conversations}
-              initialConversation={initialConversation}
+          locked ? null : (
+            <RouteAwareAgent
+              organization={
+                <TenantAgentRail
+                  organizationId={organizationId}
+                  organizationName={organization.name}
+                  timezone={organization.timezone}
+                  canAnswer={canAnswer}
+                  mayAsk={organization.capabilities.includes('assistant.ask')}
+                  canManageConnections={organization.capabilities.includes('integration.manage')}
+                  conversations={conversations}
+                  initialConversation={initialConversation}
+                />
+              }
+              platform={
+                platform && platform.size > 0 ? (
+                  <PlatformAgentRail
+                    canAnswer={canAnswerPlatform}
+                    configureHref={platformHref(organizationId, 'providers')}
+                  />
+                ) : null
+              }
             />
           )
         }

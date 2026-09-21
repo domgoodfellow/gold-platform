@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { STAFF_STORAGE_STATE } from './helpers';
+import { platformUrl, STAFF_STORAGE_STATE } from './helpers';
 
 test.use({ storageState: STAFF_STORAGE_STATE });
 
@@ -14,7 +14,7 @@ test.use({ storageState: STAFF_STORAGE_STATE });
 test('opens a product from the list, edits it on its own page, and the edit persists', async ({
   page,
 }) => {
-  await page.goto('/platform/catalog/products');
+  await page.goto(platformUrl('catalog/products'));
   const row = page.getByRole('link', { name: 'Ask' });
   await expect(row).toBeVisible();
 

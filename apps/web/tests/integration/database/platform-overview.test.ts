@@ -144,7 +144,7 @@ describe('the platform overview', () => {
 
 describe('the platform route', () => {
   const source = readFileSync(
-    resolve(import.meta.dirname, '..', '..', '..', 'app/(platform)/platform/page.tsx'),
+    resolve(import.meta.dirname, '..', '..', '..', 'app/organizations/[organizationId]/platform/page.tsx'),
     'utf8',
   );
 

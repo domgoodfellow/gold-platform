@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -313,14 +313,22 @@ describe('Platform Agent has no organization-backed shortcut', () => {
     expect(source).not.toMatch(/import /);
     expect(source).not.toContain('askQuestion');
     expect(source).not.toContain('agent_conversations');
-    expect(code(platformRail)).toContain('<AgentUnavailable configureHref="/platform/providers" />');
+    expect(code(platformRail)).toContain('<AgentUnavailable configureHref={configureHref} />');
   });
 
-  it('the platform layout is not handed a tenant’s conversations', () => {
-    const platformLayout = `${WEB}/app/(platform)/platform/layout.tsx`;
-    expect(existsSync(platformLayout)).toBe(true);
-    const source = readFileSync(platformLayout, 'utf8');
-    expect(source).not.toMatch(/listAgentConversation|TenantAgentRail/);
+  it('the shell hands the Platform Agent no organization and no conversation, and mounts one Agent by route', () => {
+    const shell = code(read('features/shell/organization-shell.tsx'));
+    const platformElement = shell.slice(shell.indexOf('<PlatformAgentRail'), shell.indexOf('/>', shell.indexOf('<PlatformAgentRail')));
+    expect(platformElement).toContain("platformHref(organizationId, 'providers')");
+    expect(platformElement).not.toMatch(/conversation|organizationName|timezone|mayAsk/i);
+    // Built only for an operator inside GOLD's own organization; everywhere else the tenant Agent is the only one.
+    expect(shell).toMatch(/platform && platform\.size > 0 \? \(\s*<PlatformAgentRail/);
+
+    const host = code(read('features/agent/route-aware-agent.tsx'));
+    expect(host).toContain('inPlatformScope(pathname)');
+    // A choice between two elements, never both: two mounted rails would race to register the one panel.
+    expect(host).toMatch(/\? platform : organization/);
+    expect(host).not.toMatch(/<TenantAgentRail|<PlatformAgentRail|listAgentConversation/);
   });
 });
 

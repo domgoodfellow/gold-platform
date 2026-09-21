@@ -136,8 +136,9 @@ apps/
       (marketing)/  GOLD's own site, in GOLD's voice
       (auth)/       sign in, sign up
       (public)/     book/{slug}, portal/{token} — a tenant's customers, a tenant's words
-      (platform)/   /platform/** — global data, drawn inside GOLD's own organization shell (D45, D59)
-      organizations/ the operator shell. Deliberately UNGROUPED — see below
+      organizations/ the operator shell. Deliberately UNGROUPED — see below. Platform Administration is
+                    organizations/[organizationId]/platform/, a sub-scope of GOLD's own organization (D60)
+      platform/     the old /platform address: a redirect to the nested one, and nothing else
     features/       product-capability presentation and interaction — see its README
     components/     generic composed app controls and containers
     lib/domain/     the business rules. Nothing in app/ or features/ decides anything
@@ -180,8 +181,9 @@ docs/
 - **Organization context is the normal operating context, and there is one shell.** What a person
   sees is projected by `projectShell` from the organization's entitlements, the member's
   capabilities and — in GOLD's own organization only — their `platform_staff.capabilities`. Platform
-  *data* is still global and `/platform/**` is still its route namespace; only the frame is shared.
-  GOLD holds no exemption (D42, D45), and `platform_staff` is a table checked live (D45, D59).
+  Administration is `/organizations/{goldId}/platform/**`; the address names the context an operator
+  is working in and never who owns the data, which stays platform-scoped (D60). GOLD holds no
+  exemption (D42, D45), and `platform_staff` is a table checked live (D45, D59).
 
 ## Rules that hold in every change
 
@@ -375,7 +377,10 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | Never | Because | Held by |
 |---|---|---|
 | A page container centred with `mx-auto` and no `w-full` | An auto side margin cancels flex stretch, so the box shrinks to its own text — which is how every surface outside the shell shipped | `layout.test.ts`, a source scan; jsdom computes no layout, so nothing that renders could have caught it |
-| Platform items in a customer's business, or for somebody whose staff row does not name them | Platform is a scope: membership of GOLD is not platform authority, and the control plane never sits beside a tenant's own work (D45, D59) | `projectShell` takes `platform` as an input that is `null` unless the organization is GOLD's own and the caller is staff (`organization-shell.tsx`); `shell-projection.test.ts`; `adaptive-shell.test.ts` proves each `/platform/*` area's layout refuses a row that does not name it |
+| Platform items in a customer's business, or for somebody whose staff row does not name them | Platform is a scope: membership of GOLD is not platform authority, and the control plane never sits beside a tenant's own work (D45, D59) | `projectShell` takes `platform` as an input that is `null` unless the organization is GOLD's own and the caller is staff (`organization-shell.tsx`); `shell-projection.test.ts`; `adaptive-shell.test.ts` proves each Platform area's layout, and each page, refuses a row that does not name it |
+| A Platform address spelled by hand, or Platform data filtered by the organization in its URL | The address names the context an operator is in, never who owns the records; a hand-written `/platform/...` link is the old namespace coming back (D60) | `platformHref` is the one way to write one; `adaptive-shell.test.ts` finds any other, and `platform-control-plane.test.ts` refuses any use of `goldId` but a link |
+| Any organization but GOLD's own serving Platform, however trusted the caller | Staff may bring a tenant into existence and never reach into one (I21); membership of a business is not Platform authority | `requirePlatformScope`: GOLD's own Plan, then membership, then a live `platform_staff` permission, in that order; `adaptive-shell.test.ts` |
+| A page of a workspace drawn as its peer | Work, Schedule, Resources, Locations and Assets are pages of Operations; five rows beside Customers say the opposite (D60) | `Area.parent`, read by `projectShell`; `navigation.test.ts` checks every parent is a real workspace in the same section |
 | A renderer, a role name or a breakpoint deciding what somebody may reach | Entitlement and permission are separate, both required, and resolved once; a second rule per breakpoint is how phone and desktop disagree (D59) | `org-shell.tsx` and `more-menu.tsx` name no capability, module or role; `adaptive-shell.test.ts` |
 | A Settings entry inheriting its workspace's operating capability | Configuring is not operating: `field.manage` configures call outcomes, `call.place` makes calls (D59) | `ConfigTarget.permission`; `settings-map.test.ts` |
 | Setup gated on the drafting module | Setup is kernel; Agent-assisted drafting is an optional accelerator inside it (D59) | `setup` has no module or capability on its `AREAS` row; `adaptive-shell.test.ts` |

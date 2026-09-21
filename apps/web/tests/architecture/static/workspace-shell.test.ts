@@ -21,9 +21,11 @@ const workspaceHeader = readFileSync(`${WEB}/components/containers/workspace-hea
 const workspaceRightRail = readFileSync(`${WEB}/components/containers/workspace-right-rail.tsx`, 'utf8');
 const contextSwitcher = readFileSync(`${WEB}/components/containers/context-switcher.tsx`, 'utf8');
 const accountMenu = readFileSync(`${WEB}/components/containers/account-menu.tsx`, 'utf8');
-// The shell every organization page (and `/platform/**`, inside GOLD's own organization) renders in.
+// The shell every organization page renders in — Platform included, which is a sub-scope of GOLD's own organization.
 const organizationLayout = readFileSync(`${WEB}/features/shell/organization-shell.tsx`, 'utf8');
-const platformLayout = readFileSync(`${WEB}/app/(platform)/platform/layout.tsx`, 'utf8');
+const organizationLayoutRoute = readFileSync(`${WEB}/app/organizations/[organizationId]/layout.tsx`, 'utf8');
+const platformLayout = readFileSync(`${WEB}/app/organizations/[organizationId]/platform/layout.tsx`, 'utf8');
+const legacyPlatformEntry = readFileSync(`${WEB}/app/platform/[[...path]]/page.tsx`, 'utf8');
 const workspaceShell = readFileSync(`${WEB}/components/containers/workspace-shell.tsx`, 'utf8');
 const pageHeader = readFileSync(`${WEB}/components/containers/page-header.tsx`, 'utf8');
 const orgShell = readFileSync(`${WEB}/app/organizations/[organizationId]/org-shell.tsx`, 'utf8');
@@ -36,10 +38,10 @@ const platformNavigation = readFileSync(`${WEB}/lib/platform-navigation.ts`, 'ut
 const shellProjection = readFileSync(`${WEB}/lib/shell.ts`, 'utf8');
 const tenantWorkspace = readFileSync(`${WEB}/features/platform/tenant-workspace.tsx`, 'utf8');
 const platformOrganizationOverview = readFileSync(
-  `${WEB}/app/(platform)/platform/organizations/[organizationId]/page.tsx`,
+  `${WEB}/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/page.tsx`,
   'utf8',
 );
-const platformCatalogPage = readFileSync(`${WEB}/app/(platform)/platform/catalog/page.tsx`, 'utf8');
+const platformCatalogPage = readFileSync(`${WEB}/app/organizations/[organizationId]/platform/catalog/page.tsx`, 'utf8');
 const platformOverview = readFileSync(`${WEB}/features/platform/platform-overview.tsx`, 'utf8');
 
 describe('WorkspaceHeader is the global bar, not a page header', () => {
@@ -208,10 +210,10 @@ describe('the Platform route renders inside the one organization shell', () => {
     expect(existsSync(`${WEB}/features/platform/platform-header.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-shell.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-navigation.tsx`)).toBe(false);
-    expect(existsSync(`${WEB}/app/(platform)/platform/gold-bootstrap-form.tsx`)).toBe(false);
-    // Frame and header are the organization shell's; the platform layout composes neither.
-    expect(platformLayout).toContain('<OrganizationShell');
-    expect(platformLayout).not.toMatch(/WorkspaceHeader|WorkspaceShell|PlatformSidebar|PlatformNavBar/);
+    expect(existsSync(`${WEB}/app/(platform)`)).toBe(false);
+    // Frame and header are the organization layout's; the platform layout beneath it is only the door.
+    expect(organizationLayoutRoute).toContain('<OrganizationShell');
+    expect(platformLayout).not.toMatch(/OrganizationShell|WorkspaceHeader|WorkspaceShell|PlatformSidebar|PlatformNavBar/);
   });
 
   it('does not expose GOLD bootstrap as product UI', () => {
@@ -223,10 +225,12 @@ describe('the Platform route renders inside the one organization shell', () => {
   });
 
   it('fails a missing GOLD invariant as server configuration, without a UUID form', () => {
-    expect(platformLayout).toContain('gold_internal.configuration_required');
-    expect(platformLayout).toContain('console.error');
-    expect(platformLayout).toContain('membershipOrganizationIds');
-    expect(platformLayout).not.toContain('<form');
+    // Nested Platform routes refuse a non-GOLD organization with notFound(); the one place that can
+    // say GOLD's own workspace is missing is the legacy entry, which resolves it from memberships.
+    expect(legacyPlatformEntry).toContain('gold_internal.configuration_required');
+    expect(legacyPlatformEntry).toContain('console.error');
+    expect(legacyPlatformEntry).toContain('membershipOrganizationIds');
+    expect(legacyPlatformEntry).not.toContain('<form');
   });
 
   it('gets its trigger, switcher and bottom bar from the one shell, at every width', () => {
@@ -431,7 +435,7 @@ describe('the page-header contract — the page, not the workspace header, owns 
 
     // A page's identity is its PageHeader, a RecordHeader-based header component, or a feature
     // that renders one (Home, the customer record). A pure redirect renders nothing at all.
-    const identity = /<PageHeader|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard/;
+    const identity = /<PageHeader|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview/;
     for (const page of pages) {
       const source = readFileSync(page, 'utf8');
       const label = page.slice(root.length);
@@ -522,7 +526,7 @@ describe('Platform pages render their own PageHeader', () => {
 
   it('the legacy flat SKU list reads as "Line items" under Catalog, never a second "Products"', () => {
     const productsPage = readFileSync(
-      `${WEB}/app/(platform)/platform/catalog/products/page.tsx`,
+      `${WEB}/app/organizations/[organizationId]/platform/catalog/products/page.tsx`,
       'utf8',
     );
     expect(productsPage).toContain("title=\"Line items\"");
@@ -532,12 +536,13 @@ describe('Platform pages render their own PageHeader', () => {
 
 describe('Platform navigation highlights the most specific matching item, never two at once', () => {
   it('renamed the Catalog root away from "Products" — Products is the legacy line-item list one level in', () => {
-    expect(platformNavigation).toContain("label: 'Catalog', href: '/platform/catalog'");
+    expect(platformNavigation).toContain("label: 'Catalog', path: 'catalog'");
   });
 
   it('picks the longest matching href so a Plan or Product detail route activates its own section', () => {
     expect(shellProjection).toContain('export function activeItemKey');
-    expect(shellProjection).toContain('item.href.length > best.href.length');
+    // `>=`, so a page beats a parent that shares its address (a Platform group opens its first page).
+    expect(shellProjection).toContain('item.href.length >= best.href.length');
   });
 });
 
@@ -599,7 +604,7 @@ describe('Personal settings shares the authenticated shell — no standalone isl
 
 describe('the Catalog family grid uses the shared Progress primitive, not a hand-built bar', () => {
   it('imports Progress from packages/ui rather than a styled div pair', () => {
-    const catalogPage = readFileSync(`${WEB}/app/(platform)/platform/catalog/page.tsx`, 'utf8');
+    const catalogPage = readFileSync(`${WEB}/app/organizations/[organizationId]/platform/catalog/page.tsx`, 'utf8');
     expect(catalogPage).toContain("from '@gold/ui/components/progress'");
     expect(catalogPage).toContain('<Progress value={coverage}');
     expect(catalogPage).not.toContain('h-1.5 w-full overflow-hidden rounded-full bg-muted');

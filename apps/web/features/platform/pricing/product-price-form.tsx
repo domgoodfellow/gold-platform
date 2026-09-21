@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
-import { PRICE_INITIAL, recordProductPriceAction } from '@/app/(platform)/platform/pricing/actions';
+import { PRICE_INITIAL, recordProductPriceAction } from '@/app/organizations/[organizationId]/platform/pricing/actions';
 
 export function ProductPriceForm({ products }: { products: { value: string; label: string }[] }) {
   const [state, action, pending] = useActionState(recordProductPriceAction, PRICE_INITIAL);

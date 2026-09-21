@@ -17,26 +17,88 @@ const code = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace
 describe('hiding a navigation item is never the security boundary', () => {
   it('every platform area refuses, on the server, a person whose staff row does not name it', () => {
     // One layout per area, calling the guard with the permission the registry assigns that path.
-    const segments = [...new Set(PLATFORM_DESTINATIONS.map((destination) => destination.href.split('/')[2]).filter(Boolean))];
+    const segments = [...new Set(PLATFORM_DESTINATIONS.map((destination) => destination.path.split('/')[0]).filter(Boolean))];
     expect(segments.sort()).toEqual(['billing', 'catalog', 'failures', 'integrations', 'organizations', 'pricing', 'providers']);
     for (const segment of segments) {
-      const layout = `app/(platform)/platform/${segment}/layout.tsx`;
+      const layout = `app/organizations/[organizationId]/platform/${segment}/layout.tsx`;
       expect(existsSync(`${WEB}/${layout}`), `${segment} has no guard layout`).toBe(true);
-      expect(read(layout), layout).toContain(`requirePlatformArea('${platformRouteRequires(`/platform/${segment}`)}')`);
+      expect(read(layout), layout).toContain(`requirePlatformArea(organizationId, '${platformRouteRequires(segment)}')`);
+    }
+  });
+
+  it('every platform page asks for its own area, with the permission the registry assigns its path', () => {
+    // A layout is not re-rendered on every client navigation and renders beside its page, so the page
+    // guards itself (I12) exactly as an organization page does. The catch-all only throws notFound().
+    const root = `${WEB}/app/organizations/[organizationId]/platform`;
+    const pages: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) walk(`${dir}/${entry.name}`);
+        else if (entry.name === 'page.tsx') pages.push(`${dir}/${entry.name}`);
+      }
+    };
+    walk(root);
+    expect(pages.length).toBeGreaterThan(20);
+    for (const page of pages) {
+      const subpath = page.slice(root.length + 1).replace(/\/?page\.tsx$/, '').replace('[targetOrganizationId]', 'x');
+      if (subpath.startsWith('[...unmatched]')) continue;
+      const cap = platformRouteRequires(subpath);
+      const source = readFileSync(page, 'utf8');
+      // The overview is the front door and names its own landing option; every other page is the plain call.
+      expect(source, page.slice(WEB.length)).toMatch(new RegExp(`requirePlatformArea\\((goldId|organizationId), '${cap}'`));
     }
   });
 
   it('the front door sends a limited operator to the first place they may go, not to a 404', () => {
-    expect(read('app/(platform)/platform/page.tsx')).toContain("requirePlatformArea('platform.health', { landing: true })");
+    expect(read('app/organizations/[organizationId]/platform/page.tsx')).toContain(
+      "requirePlatformArea(goldId, 'platform.health', { landing: true })",
+    );
     const guard = read('lib/route/platform.ts');
     expect(guard).toContain('notFound()');
     expect(guard).toContain('platformDestinationsFor(permissions)[0]');
   });
 
-  it('the platform layout requires a live platform row and never trusts a claim or the URL', () => {
-    const layout = code(read('app/(platform)/platform/layout.tsx'));
-    expect(layout).toContain('platformPermissions(db)');
-    expect(layout).not.toMatch(/user_metadata|app_metadata|jwt|role\s*===/);
+  it('the platform scope proves GOLD’s own organization, membership and a live platform row — never a claim or the URL alone', () => {
+    const layout = code(read('app/organizations/[organizationId]/platform/layout.tsx'));
+    expect(layout).toContain('requirePlatformScope(organizationId)');
+    const guard = code(read('lib/route/platform.ts'));
+    // The three facts, in the order a refusal is cheapest: membership, identity, authority.
+    expect(guard).toContain('requireOrganizationForBillingRecovery(organizationId)');
+    expect(guard).toContain('isGoldInternalOrganization(db, { organizationId })');
+    expect(guard).toContain('platformPermissions(db)');
+    expect(guard.indexOf('requireOrganizationForBillingRecovery(')).toBeLessThan(guard.indexOf('isGoldInternalOrganization('));
+    expect(guard.indexOf('isGoldInternalOrganization(')).toBeLessThan(guard.indexOf('platformPermissions(db)'));
+    expect(guard).not.toMatch(/user_metadata|app_metadata|jwt|role\s*===/);
+  });
+
+  it('the old /platform address is a redirect that owns no page and reads its target from GOLD’s Plan, not the URL', () => {
+    const legacy = code(read('app/platform/[[...path]]/page.tsx'));
+    expect(legacy).toContain('findGoldInternalOrganization(');
+    expect(legacy).toContain('platformHref(goldInternal.id');
+    expect(legacy).not.toMatch(/<[A-Z]/);
+    expect(readdirSync(`${WEB}/app/platform`)).toEqual(['[[...path]]']);
+    expect(existsSync(`${WEB}/app/(platform)`)).toBe(false);
+  });
+
+  it('no application source spells a /platform address by hand: the registry is the one way to write one', () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name === 'node_modules' || entry.name === '.next' || entry.name === 'tests') continue;
+        const path = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(path);
+        else if (/\.tsx?$/.test(entry.name) && /['"`]\/platform(['"`/?]|$)/m.test(code(readFileSync(path, 'utf8')))) offenders.push(path.slice(WEB.length));
+      }
+    };
+    for (const root of ['app', 'features', 'lib', 'components']) walk(`${WEB}/${root}`);
+    // The legacy entry and the three places that name it: the redirect itself, where staff with no
+    // GOLD membership are sent, and the crawler policy that keeps the old address out of an index.
+    expect(offenders.sort()).toEqual([
+      '/app/organizations/page.tsx',
+      '/app/platform/[[...path]]/page.tsx',
+      '/app/robots.ts',
+      '/lib/route/landing.ts',
+    ]);
   });
 
   it('every organization page still calls requireOrganization for itself — a layout is never the guard', () => {
@@ -52,7 +114,7 @@ describe('hiding a navigation item is never the security boundary', () => {
     const unguarded = pages.filter((page) => {
       const source = readFileSync(page, 'utf8');
       // A page may delegate to a guard, redirect, or answer notFound(); what it may not do is read data unguarded.
-      return !/require(Organization|OrganizationForBillingRecovery)\(|redirect\(|notFound\(\)/.test(source);
+      return !/require(Organization|OrganizationForBillingRecovery|PlatformArea)\(|redirect\(|notFound\(\)/.test(source);
     });
     expect(unguarded.map((page) => page.slice(WEB.length))).toEqual([]);
   });
@@ -90,7 +152,7 @@ describe('the projection is the only eligibility rule', () => {
 
   it('draws every section from the same list on desktop, tablet and phone', () => {
     expect(renderers).toContain('export function OrgNav({ sections }');
-    expect(renderers).toContain('projectPhone(sections)');
+    expect(renderers).toContain('projectPhone(sections, { platformActive })');
     expect(renderers).toContain('<MoreMenu');
   });
 });

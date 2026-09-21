@@ -1151,7 +1151,7 @@ realtime voice agents; QuickBooks or bank integrations; and NextFund's own migra
 
 ### D45 — Platform Context and Organization Context are two independently-true facts, and platform authority stops being a Postgres role a session had to choose
 
-> **Amended by D59.** The data and authorization boundary this record draws stands. Its *interface* consequence — a Platform shell and phone bar of their own, and Platform Administration as a context-switcher destination — is replaced by one adaptive shell in which `/platform/**` renders inside GOLD's own organization for an operator whose staff row names the permission.
+> **Amended by D59 and D60.** The data and authorization boundary this record draws stands. Its *interface* consequence — a Platform shell and phone bar of their own, and Platform Administration as a context-switcher destination — is replaced by one adaptive shell in which `/platform/**` renders inside GOLD's own organization for an operator whose staff row names the permission. D60 nests it: `/organizations/{goldId}/platform/**`.
 
 **Decision.** "Platform Context" and "Organization Context" are the two names for where a caller
 is acting — restating D28/D42 under words that also name what changed. GOLD dogfoods the
@@ -1678,6 +1678,8 @@ until the call-domain work lands.
 
 ### D59 — One adaptive shell: entitlement and permission are separate, platform authority is a set of permissions, and roles are editable bundles
 
+> **Amended by D60.** The address is now `/organizations/{goldId}/platform/**`, not `/platform/**`, and each Platform page guards itself as well as its area's layout. Everything else here stands.
+
 **Decision.** D45 separated Platform from a business as a *context* with its own sidebar. That
 overcorrected the interface while being right about the data. The interface is now one shell:
 organization context is the normal operating context, and `/platform/**` — still the route
@@ -1721,3 +1723,52 @@ a permission share an area layout.
 **Holds.** `shell-projection.test.ts` (the persona matrix), `adaptive-shell.test.ts` (no renderer
 decides; every platform area refuses; Setup is kernel), `settings-map.test.ts` (configuring is not
 operating), `platform-permissions.test.ts` (the row, read live, never self-issued).
+
+### D60 — Platform is a sub-scope of GOLD's own organization; a URL names a context, never an owner
+
+**Decision.** There are three scopes: a **person** (`/settings/account/**`), an **organization**
+(`/organizations/{id}/**`), and **Platform Administration**, which is
+`/organizations/{goldId}/platform/**` — available only while operating GOLD's own organization, and
+only to somebody holding a platform permission. It is not another tenant and no longer a route
+tree of its own. There is one canonical tree; `/platform/**` survives only as a redirect
+(`app/platform/[[...path]]/page.tsx`) that resolves GOLD's organization from the caller's
+memberships and GOLD's current Plan — never from the URL — and keeps the path and query.
+
+**A URL names a context, not who owns the data.** Providers, catalogue, plans, billing and rates
+are the same platform-scoped records they always were. Nothing below `/platform` filters by the
+organization in the address, and `goldId` in those pages is spelled into links and passed to a
+component that spells links, nothing else. `platform-control-plane.test.ts` reads the source and
+refuses any other use.
+
+**Three facts, proven for every Platform request** (`requirePlatformScope`): the organization is
+GOLD's own (its Plan says so, not its name), the caller is a member of it, and the caller holds at
+least one platform permission. The organization layout, each area's layout and each page ask for
+themselves — a layout is not re-rendered on every client navigation and renders beside its page.
+Any other organization, staff or not, answers `notFound()`. Finer permissions per area are exactly
+what D59 built and are unchanged; this adds none.
+
+**The switcher answers one question.** Which organization am I operating? While inside Platform the
+answer is still GOLD. Platform is shown by the sidebar section, the page's own heading and its
+breadcrumb, never by pretending the context changed. It is a section beneath GOLD's own workspaces,
+not a replacement for them; on a phone the bar presents Platform while the address is inside it and
+the business's own places otherwise.
+
+**Plan ≠ Product ≠ Workspace ≠ Page.** A Plan or Add-on grants capabilities; a Product groups the
+customer-facing capability; a workspace is where an operator uses it; a page is one task inside a
+workspace. Only the last two are navigation. `Area.parent` makes a page a child of its workspace:
+Work, Schedule, Resources, Locations and Assets are pages of **Operations**, which has an overview
+of its own. Their routes did not move, so no address changes to say which workspace a page belongs
+to.
+
+**Holds.** `adaptive-shell.test.ts` (the three-fact guard in order, every page names its
+permission, no hand-spelled `/platform` address, one legacy entry), `context-switcher.test.ts` (the
+switcher reads no path), `shell-projection.test.ts` (nesting, active branch, both phone scopes),
+`navigation.test.ts` (parents are real workspaces), `agent-conversations.test.ts` (one Agent
+mounted by route, the Platform Agent handed no organization or conversation).
+
+**Not built, and why.** Quick Create: every create form today is a sheet opened from its own page,
+so a menu of them could only be decoration until a link can open one. Library: Documents belong to a
+customer, location, asset or job and the agent's files are private to their asker, so there is no
+organization-level collection to list. Financials, Communications sub-pages, Website & Portal and
+the rest of the target page maps are vocabulary until a real surface exists. Communications keeps
+its `/calls` route.

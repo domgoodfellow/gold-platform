@@ -12,7 +12,13 @@ import { describe, expect, it } from 'vitest';
  * "missing" and "not yours" answers would stop being the same. This walks every page inside a
  * business and fails the one that reads without asking.
  *
- * **The one exception is a page that reads nothing**: a redirect to the screen that moved. It
+ * **The Platform pages are held to their own guard, not this one.** They sit beneath GOLD's
+ * organization but are not a business's operational screens: each must call `requirePlatformArea`,
+ * which proves the organization is GOLD's own, the caller a member and the caller platform staff
+ * (`adaptive-shell.test.ts` checks the permission each one names).
+ *
+ * **The one exception is a page that reads nothing**: a redirect to the screen that moved, or an
+ * unmatched-address catch-all that only throws `notFound()`. It
  * holds no database handle and no domain import, so there is nothing for the guard to protect,
  * and the page it redirects to runs the guard itself.
  */
@@ -42,9 +48,11 @@ describe('every page inside a business asks for the membership itself', () => {
     const unguarded = all
       .filter((file) => {
         const source = readFileSync(file, 'utf8');
-        if (source.includes('requireOrganization')) return false;
+        if (source.includes('requireOrganization') || source.includes('requirePlatformArea(')) return false;
         const pureRedirect = /\bredirect\(/.test(source) && !READS_DATA.test(source);
-        return !pureRedirect;
+        // The unmatched-address catch-all only throws notFound(), so the segment's own boundary renders.
+        const catchAll = /^\s*notFound\(\);/m.test(source) && !READS_DATA.test(source);
+        return !pureRedirect && !catchAll;
       })
       .map(rel);
 

@@ -48,6 +48,8 @@ export type DemoContext = {
   assetId: string;
   workItemId: string;
   bookingSlug: string;
+  /** GOLD's own organization — the context every Platform address is nested under. */
+  goldOrganizationId: string;
 };
 
 function refuseAnythingButLocalhost(url: string): void {
@@ -250,8 +252,8 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     });
   }
 
-  // GOLD's own operating workspace, for the specs that sign in as platform staff. `/platform/**`
-  // renders inside it, so staff with no GOLD Internal membership have nowhere to render. Idempotent:
+  // GOLD's own operating workspace, for the specs that sign in as platform staff. Platform
+  // (`/organizations/{goldId}/platform/**`) renders inside it, so staff with no GOLD Internal membership have nowhere to render. Idempotent:
   // provisioned once, by the same two acts an operator uses (a staff-provisioned business, then the
   // staff-only bootstrap door), and left alone when the fixture from a previous run is there.
   const goldStaffDb = createClient(SUPABASE_URL, ANON_KEY, {
@@ -262,8 +264,9 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     throw new Error(`e2e/global-setup: could not sign in as platform staff (${goldStaffSignIn.error.message})`);
   }
   const staffOrganizations = await listMyOrganizations(goldStaffDb);
-  if (!(await findGoldInternalOrganization(goldStaffDb, staffOrganizations))) {
-    const goldOrganizationId = await provisionOrganization(goldStaffDb, {
+  let goldOrganizationId = (await findGoldInternalOrganization(goldStaffDb, staffOrganizations))?.id ?? null;
+  if (!goldOrganizationId) {
+    goldOrganizationId = await provisionOrganization(goldStaffDb, {
       ownerEmail: 'staff@gold.test',
       name: 'GOLD',
       displayName: 'GOLD staff',
@@ -281,6 +284,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     assetId,
     workItemId,
     bookingSlug,
+    goldOrganizationId,
   };
   writeFileSync(CONTEXT_FILE, JSON.stringify(context, null, 2));
 

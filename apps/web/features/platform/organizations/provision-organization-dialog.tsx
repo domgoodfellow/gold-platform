@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/containers/dialog';
-import { ProvisionForm } from '@/app/(platform)/platform/provision-form';
+import { ProvisionForm } from '@/app/organizations/[organizationId]/platform/provision-form';
 
 export function ProvisionOrganizationDialog() {
   return (

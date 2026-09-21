@@ -18,7 +18,7 @@ import {
   updateCatalogModuleAction,
   updateCatalogProductAction,
   type FormState,
-} from '@/app/(platform)/platform/catalog/families/[familyKey]/actions';
+} from '@/app/organizations/[organizationId]/platform/catalog/families/[familyKey]/actions';
 
 const INITIAL: FormState = { error: null, updated: false };
 

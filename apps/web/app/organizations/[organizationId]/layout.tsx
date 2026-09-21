@@ -2,8 +2,8 @@ import { OrganizationShell } from '@/features/shell/organization-shell';
 
 /**
  * The operator shell for one business. Every organization page renders inside `OrganizationShell`,
- * the same frame `/platform/**` renders inside for GOLD's own organization; see it for what the
- * shell projects and why it is not the authorization boundary.
+ * Platform Administration (`platform/`, beneath GOLD's own organization) included; see it for what
+ * the shell projects and why it is not the authorization boundary.
  */
 export default async function OrganizationLayout({
   params,

@@ -33,14 +33,14 @@ paragraph in D23.
 | Operator shell | a business's own staff | full IA, three renderings (§2) | `app/organizations/[organizationId]/` |
 | Public booking | a stranger with no account | none — one linear flow | `app/(public)/book/[slug]/` |
 | Customer portal | one customer of one business | none — a single page of their own things | `app/(public)/portal/[token]/` |
-| Platform tools | GOLD staff operating from the GOLD Internal workspace | Platform section inside the ordinary GOLD sidebar | `app/(platform)/platform/` |
+| Platform tools | GOLD staff operating from the GOLD Internal workspace | Platform section inside the ordinary GOLD sidebar | `app/organizations/[organizationId]/platform/` (only for GOLD's own organization) |
 | Auth | anybody | GOLD's own header and footer (`SiteShell`) | `app/(auth)/` |
 
 Three consequences that are easy to undo.
 
 **The operator shell has one workspace frame.** The tenant model comes from
 `lib/navigation.ts`; the global Platform section comes from
-`features/platform/platform-navigation.tsx` and appears only for platform staff inside GOLD
+`lib/platform-navigation.ts` and appears only for platform staff inside GOLD
 Internal. Public, portal and auth surfaces remain flows or single-purpose pages. A customer must
 never meet a business-configuration concept or a Platform section.
 
@@ -114,9 +114,11 @@ same `AREAS`; two lists that had to agree eventually would not.
 the desktop sidebar, its collapsed rail, the tablet rail, the phone bar and its More menu, the
 Settings map — draws the sections `projectShell` (`lib/shell.ts`) resolves from four independent
 facts: the organization's entitlements, the member's capabilities, whether the organization is
-GOLD's own, and the member's platform permissions. The sections are Home, the workspaces,
-Operations, **Administration** and, only inside GOLD and only with a platform permission,
-**Platform**; a section with nothing in it is not drawn. No renderer names a capability, a module or
+GOLD's own, and the member's platform permissions. The sections are Home, **Workspaces**
+(a workspace with several pages holds them beneath it, so Operations opens onto Work, Schedule,
+Resources, Locations and Assets rather than five rows beside Customers), **Platform** — only inside
+GOLD and only with a platform permission — and **Administration**, set apart at the foot; a
+section with nothing in it is not drawn. No renderer names a capability, a module or
 a role, and none is a second authorization system — hiding an item is courtesy and every page,
 domain function and policy behind it still refuses (I12).
 
@@ -130,12 +132,24 @@ a `ConfigTarget` that borrows a workspace's entitlement and declares its own con
 permission, so `field.manage` reaches call outcomes without `call.place`. Setup is kernel;
 Agent-assisted drafting is an optional section inside it.
 
-**Platform is a scope drawn in GOLD's shell.** `/platform/**` is still the route namespace for
-global data, and it renders inside GOLD's own organization — `PLATFORM_DESTINATIONS` is the one
-registry of its destinations and what each takes (`platform_staff.capabilities`). A GOLD salesperson
-sees GOLD as any business and no Platform; a limited operator sees only the destinations their row
-names; nobody sees Platform beside a customer's business. The context switcher answers one question
-— *which organization am I operating?* — and offers no Platform entry.
+**Platform is a sub-scope of GOLD's own organization** (D60). There are three scopes — a person
+(`/settings/account`), an organization (`/organizations/{id}`) and Platform
+(`/organizations/{goldId}/platform`) — and the address says which one somebody is working in; it
+says nothing about who owns the records on the page. Providers, catalogue and billing stay
+platform-scoped whatever the address. `PLATFORM_DESTINATIONS` is the one registry of its
+destinations, what each takes (`platform_staff.capabilities`) and how the sidebar nests them:
+Catalog holds Plans & Add-ons, Meters and Integrations, Commercial holds Pricing and Billing, and
+Infrastructure holds Providers and Failures. Platform is a section beneath GOLD's own workspaces,
+never a replacement for them, and while somebody is inside it every group is open. A GOLD
+salesperson sees GOLD as any business and no Platform; a limited operator sees only the
+destinations their row names; nobody sees Platform beside a customer's business. The context
+switcher answers one question — *which organization am I operating?* — and offers no Platform
+entry, because inside Platform the answer is still GOLD.
+
+**A Plan, a Product, a workspace and a page are four different things.** A Plan or Add-on grants
+capabilities; a Product groups the customer-facing capability; a workspace is where an operator
+uses it; a page is one task inside that workspace. Only the last two are navigation, and nothing in
+the sidebar is named for a Plan.
 
 **The phone bar is Home, the first workspaces and More.** Frequent work is in the bar
 (`projectPhone`); everything else — the remaining workspaces, Operations, Administration and
@@ -278,7 +292,7 @@ renders here, through a slot, so a page never draws its own.
 
 | | What | Which widths |
 |---|---|---|
-| Left | the sidebar trigger | `md` and up in the organization shell (which `/platform/**` renders inside), where a phone gets the bottom bar instead; every width in Personal settings and the fallback frame, whose only phone navigation is the sidebar sheet |
+| Left | the sidebar trigger | `md` and up in the organization shell (which Platform renders inside), where a phone gets the bottom bar instead; every width in Personal settings and the fallback frame, whose only phone navigation is the sidebar sheet |
 | Left | the compact context switcher — the business's mark and name, opening the same menu the sidebar's own switcher does — nothing about Setup lives in this header at any width | below `md` only, in the organization shell — the sidebar says it above that |
 | Left, after the above | the breadcrumb trail — ancestors only, on a page that passes `crumbs` | all |
 | Right, before Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
@@ -311,7 +325,7 @@ props and renders the same `PageHeader`. Every page renders exactly one page ide
 **Context switching belongs to the context switcher, and only to it.** One identity, zero or
 more memberships, and one current context. The menu's header is the current context and its list
 is *where else*: the other businesses, each linking straight to that business's own lifecycle
-entry. Platform is not an organization and is not listed; inside `/platform/**` the current context
+entry. Platform is not an organization and is not listed; inside Platform the current context
 is GOLD. With nowhere else to go it is a label, not an empty menu. There is no directory page: `/organizations` only lands a sign-in (the business last
 worked in, else the first) and founds a first business, and the old `?all=1` request is ignored.
 It does not manufacture a list or creation action without a server read behind it. **Sign out belongs to the account menu**, in the sidebar footer on desktop and in
@@ -320,9 +334,11 @@ command.
 
 **GOLD staff operate GOLD through its ordinary organization workspace when they are real members
 of it.** The current `gold_internal` base Plan identifies that workspace, never its name. Platform
-Administration remains a separate control-plane context; it is available in the switcher, and a
-desktop GOLD Internal sidebar may compose shortcuts to it for platform staff. Neither authority
-substitutes for the other, and the phone bar remains organization-only.
+Administration is a sub-scope of that same organization (D60), reached from the Platform section of
+its sidebar, not from the switcher. Neither authority substitutes for the other. On a phone the bar
+presents Platform while the address is inside it — a way back to Home and the Platform
+destinations, with the pages under Catalog, Commercial and Infrastructure and GOLD's own workspaces
+behind More — and the business's own places otherwise.
 
 **The application canvas has three modes.** `AppPage` owns `fluid` (the default), `form` and
 `reading`. Operational and collection pages are `fluid`: header, local navigation, toolbar and
@@ -655,7 +671,7 @@ feature — there is no warning role, and adding one is a design decision, not c
 `not-found.tsx` is the public/marketing 404 and stays so — Next renders it for any address that
 matches no route, outside every segment layout, so a segment that wants a frame must own a catch-all
 page that throws `notFound()` from inside its layout. Three do: `[organizationId]/[...unmatched]`
-(the real organization shell surrounds the missing page), `platform/[...unmatched]` (Platform
+(the real organization shell surrounds the missing page), `[organizationId]/platform/[...unmatched]` (Platform
 context is kept) and `settings/[[...unmatched]]` (Personal settings renders its own shell, since no
 layout above it does). What may be drawn depends on what is proven. **A proven membership** (the
 layout rendered) keeps its shell. **An organization that cannot be proven** — missing and not-yours

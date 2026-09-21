@@ -31,11 +31,13 @@ describe('GOLD Internal operating context composition', () => {
     expect(shell).toContain('staff && gold ? await platformPermissions(db) : null');
   });
 
-  it('renders /platform inside the one organization shell — no second shell exists', () => {
-    const platformLayout = read('app/(platform)/platform/layout.tsx');
-    expect(platformLayout).toContain('<OrganizationShell organizationId={goldInternal.id}');
-    expect(platformLayout).not.toMatch(/PlatformSidebar|PlatformNavBar|WorkspaceShell/);
+  it('renders Platform beneath the one organization shell — no second shell exists', () => {
+    // The organization layout draws the shell; the Platform layout beneath it is only the door.
+    expect(read('app/organizations/[organizationId]/layout.tsx')).toContain('<OrganizationShell');
+    const platformLayout = read('app/organizations/[organizationId]/platform/layout.tsx');
+    expect(platformLayout).not.toMatch(/OrganizationShell|PlatformSidebar|PlatformNavBar|WorkspaceShell/);
     expect(() => read('features/platform/platform-navigation.tsx')).toThrow();
+    expect(() => read('app/(platform)/platform/layout.tsx')).toThrow();
   });
 
   it('draws Platform only from the projection: no renderer branches on who somebody is', () => {

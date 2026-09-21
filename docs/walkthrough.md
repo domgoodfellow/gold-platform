@@ -284,7 +284,7 @@ pages, public auth context and attribution remain M16 work.
 
 ## The other side: the platform console
 
-`/platform` is the first screen built for the people who run GOLD — reachable only by being
+Platform Administration is the first screen built for the people who run GOLD — reachable only by being
 listed in a table, not by clicking, and checked live rather than minted at log-in (D45).
 
 1. **Sign up a third account** at `/sign-up`, normally.
@@ -292,8 +292,10 @@ listed in a table, not by clicking, and checked live rather than minted at log-i
    name edited at the top — raises if the address matches no user.
 3. **Reload — no need to log out and back in.** `app.is_platform_staff()` reads the
    `platform_staff` table live, on every request; there is no claim minted at sign-in to go stale.
-   Open the context switcher (top of the sidebar) on any business this account already belongs to
-   and a new **Platform** entry has appeared alongside it — one account, two contexts, at once.
+   Platform is a section of GOLD's own organization, so this account also needs to be a member of it
+   (`pnpm demo` does not set that up; the e2e setup does). Open GOLD's organization and a **Platform**
+   section appears in its sidebar, at `/organizations/{goldId}/platform`; the old `/platform` address
+   redirects there, and says what is missing if the account has no GOLD membership.
 
 `/platform` provides a separate platform Sidebar for Overview, Organizations, Products,
 Modules, Meters, Pricing, Providers and Failures. Organization detail exposes that tenant's

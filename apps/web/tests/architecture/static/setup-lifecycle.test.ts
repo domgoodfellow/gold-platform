@@ -20,7 +20,7 @@ const SETUP_ACTIONS = read('../../../app/organizations/[organizationId]/setup/ac
 const COCKPIT = read('../../../features/setup/setup-cockpit.tsx');
 const SHELL = read('../../../app/organizations/[organizationId]/org-shell.tsx');
 const LAYOUT = read('../../../features/shell/organization-shell.tsx');
-const PLATFORM_LAYOUT = read('../../../app/(platform)/platform/layout.tsx');
+const PLATFORM_LAYOUT = read('../../../app/organizations/[organizationId]/platform/layout.tsx');
 const HOME_FEATURE = read('../../../features/home/home-dashboard.tsx');
 const CREATE_ACTION = read('../../../app/organizations/actions.ts');
 const NAVIGATION = read('../../../lib/navigation.ts');
@@ -139,7 +139,8 @@ describe('the shell — one lifecycle treatment at every width, gone at LIVE', (
 
   it('gives a phone a path to Setup as the bottom bar’s own item, only while a progress value exists', () => {
     const bar = SHELL.slice(SHELL.indexOf('export function OrgNavBar('), SHELL.indexOf('export function SetupEntry'));
-    expect(bar).toMatch(/\{setup \? \(\s*<li[^>]*>\s*<SetupNavLink/);
+    // Only in a business: inside Platform the bar is about Platform, so the lifecycle row steps aside.
+    expect(bar).toMatch(/\{setup && !platformActive \? \(\s*<li[^>]*>\s*<SetupNavLink/);
     expect(SHELL).toContain('export function SetupNavLink');
   });
 

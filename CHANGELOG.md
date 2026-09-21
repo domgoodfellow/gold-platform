@@ -5,6 +5,30 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Platform inside GOLD, and Operations as one workspace
+
+Platform Administration now lives at `/organizations/{goldId}/platform`, beneath GOLD's own organization,
+instead of a route tree of its own. The address says which context somebody is working in; it does not say who
+owns the records on the page, so providers, catalogue and billing are the same platform-scoped data they were.
+Every Platform request now proves three things — the organization is GOLD's own, the caller is a member of it, and
+the caller holds a platform permission — and every page asks for itself, not only its area's layout. Another
+organization's Platform address is a 404 even for staff. The old `/platform/...` address still works as a redirect
+that keeps the path and query, and nothing in the application writes one any more.
+
+The context switcher no longer has anything Platform to say: inside Platform it still reads GOLD. Platform is a
+section of the sidebar beneath GOLD's own workspaces, grouped as Catalog (Plans & Add-ons, Meters, Integrations),
+Commercial (Pricing, Billing) and Infrastructure (Providers, Failures), and every group is open while somebody is
+inside it. On a phone the bar presents Platform while the address is inside it, with the Catalog, Commercial and
+Infrastructure pages behind More, and the business's own places otherwise. The right-hand Agent follows the
+address too: the Platform Agent inside Platform, the organization's own Agent everywhere else, never both.
+
+Work, Schedule, Resources, Locations and Assets are now pages of **Operations**, which has an overview of its own
+(what is recorded, what is scheduled today, and how many resources, locations and assets there are). Their
+addresses did not change. The sidebar heads its list *Workspaces* and sets Administration apart at the foot.
+
+Quick Create and a Library were left out: no create form can be opened by a link yet, and documents have no
+organization-level collection (D60).
+
 ### One adaptive shell
 
 Platform Administration is no longer a shell of its own. Every organization page and every `/platform/**`

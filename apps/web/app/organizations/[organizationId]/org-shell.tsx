@@ -11,22 +11,29 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from '@gold/ui/components/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@gold/ui/components/collapsible';
 import { MoreMenu } from '@/components/containers/more-menu';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   BarChart3,
   Blocks,
   Building2,
   CalendarDays,
+  ChevronRight,
   CircleDollarSign,
   ClipboardList,
+  Coins,
   CreditCard,
   Gauge,
   Home,
@@ -38,15 +45,24 @@ import {
   Package,
   Phone,
   Plug,
+  Server,
   Settings,
   TriangleAlert,
   UserCog,
   Users,
+  Wrench,
   Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { areaHref, currentSegment } from '@/lib/navigation';
-import { activeItemKey, projectPhone, type NavItem, type ShellSection } from '@/lib/shell';
+import {
+  activeItemKey,
+  inPlatformScope,
+  itemContains,
+  projectPhone,
+  type NavItem,
+  type ShellSection,
+} from '@/lib/shell';
 
 /**
  * The shell's renderers. They decide nothing: every item they draw comes from one projection
@@ -65,6 +81,7 @@ import { activeItemKey, projectPhone, type NavItem, type ShellSection } from '@/
 export const AREA_ICONS: Record<string, LucideIcon> = {
   home: Home,
   work: ClipboardList,
+  operations: Wrench,
   schedule: CalendarDays,
   customers: Users,
   calls: Phone,
@@ -93,38 +110,103 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   'platform-billing': CreditCard,
   'platform-providers': Plug,
   'platform-failures': TriangleAlert,
+  'platform-group-commercial': Coins,
+  'platform-group-infrastructure': Server,
 };
 
 /**
- * The tablet and desktop rendering: `Sidebar`'s own grouped-menu vocabulary, one `SidebarGroup` per
- * projected section in order — Home, the workspaces, Operations, Administration, and (only inside
- * GOLD, only with platform authority) Platform. Collapse-to-icon, the tooltip that appears while
- * collapsed, and the `md`-and-up-only rendering are all `Sidebar`'s own, not reimplemented here.
+ * One row of the sidebar. A leaf is a link. A row with pages is a link **and** a disclosure: the
+ * row goes to the workspace's own overview (or, for a Platform heading that has no page of its own,
+ * to its first page) so the collapsed icon rail — which cannot show children — still reaches
+ * somewhere real, and the chevron beside it opens the pages. The branch a person is inside is open,
+ * and opens itself when they navigate into it from elsewhere; otherwise it stays as they left it.
+ * Platform is the exception that opens every group at once while somebody is inside it.
  */
-export function OrgNav({ sections }: { sections: ShellSection[] }) {
-  const active = activeItemKey(sections, usePathname());
+function NavRow({ item, active, expanded }: { item: NavItem; active: string | null; expanded: boolean }) {
+  const Icon = NAV_ICONS[item.key];
+  const current = item.key === active;
+  // `expanded` is Platform's own rule: while somebody is working inside it, every Platform group is
+  // open, so the whole control plane is in view rather than one group of it.
+  const inside = itemContains(item, active) || expanded;
+  const [open, setOpen] = useState(inside);
+  // Opens on the render that moves the person inside, not in an effect after it: the branch is
+  // never drawn closed for a frame first. Leaving does not close it — that is theirs to do.
+  const [wasInside, setWasInside] = useState(inside);
+  if (inside !== wasInside) {
+    setWasInside(inside);
+    if (inside) setOpen(true);
+  }
+
+  const link = (
+    <SidebarMenuButton asChild isActive={current} tooltip={item.label}>
+      <Link href={item.href} aria-current={current ? 'page' : undefined}>
+        {Icon ? <Icon aria-hidden /> : null}
+        <span>{item.label}</span>
+      </Link>
+    </SidebarMenuButton>
+  );
+
+  if (!item.children) return <SidebarMenuItem>{link}</SidebarMenuItem>;
 
   return (
-    <nav aria-label="This business">
+    <Collapsible asChild open={open} onOpenChange={setOpen}>
+      <SidebarMenuItem>
+        {link}
+        <CollapsibleTrigger asChild>
+          <SidebarMenuAction
+            aria-label={`${open ? 'Collapse' : 'Expand'} ${item.label}`}
+            className="data-[state=open]:rotate-90"
+          >
+            <ChevronRight aria-hidden />
+          </SidebarMenuAction>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {item.children.map((child) => {
+              const childCurrent = child.key === active;
+              return (
+                <SidebarMenuSubItem key={child.key}>
+                  <SidebarMenuSubButton asChild isActive={childCurrent}>
+                    <Link href={child.href} aria-current={childCurrent ? 'page' : undefined}>
+                      <span>{child.label}</span>
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              );
+            })}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
+}
+
+/**
+ * The tablet and desktop rendering: `Sidebar`'s own grouped-menu vocabulary, one `SidebarGroup` per
+ * projected section in order — Home, Workspaces, (only inside GOLD, only with platform authority)
+ * Platform, and Administration last, set apart at the foot of the list. Platform is an extra
+ * section beneath GOLD's own workspaces, never a replacement for them. Collapse-to-icon, the
+ * tooltip that appears while collapsed, and the `md`-and-up-only rendering are all `Sidebar`'s
+ * own, not reimplemented here.
+ */
+export function OrgNav({ sections }: { sections: ShellSection[] }) {
+  const pathname = usePathname();
+  const active = activeItemKey(sections, pathname);
+  const platformActive = inPlatformScope(pathname);
+
+  return (
+    <nav aria-label="This business" className="flex flex-1 flex-col">
       {sections.map((section) => (
-        <SidebarGroup key={section.key}>
+        <SidebarGroup
+          key={section.key}
+          className={section.key === 'administration' ? 'mt-auto border-t border-sidebar-border' : undefined}
+        >
           {section.label ? <SidebarGroupLabel>{section.label}</SidebarGroupLabel> : null}
           <SidebarGroupContent>
             <SidebarMenu>
-              {section.items.map((item) => {
-                const Icon = NAV_ICONS[item.key];
-                const current = item.key === active;
-                return (
-                  <SidebarMenuItem key={item.key}>
-                    <SidebarMenuButton asChild isActive={current} tooltip={item.label}>
-                      <Link href={item.href} aria-current={current ? 'page' : undefined}>
-                        {Icon ? <Icon aria-hidden /> : null}
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {section.items.map((item) => (
+                <NavRow key={item.key} item={item} active={active} expanded={section.key === 'platform' && platformActive} />
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -181,16 +263,19 @@ export function OrgNavBar({
   /** True only while the business is in SETUP — the layout decides, and it leaves the bar the moment the business is LIVE. */
   setup?: boolean;
 }) {
-  const active = activeItemKey(sections, usePathname());
-  const { primary, more } = projectPhone(sections);
+  const pathname = usePathname();
+  const active = activeItemKey(sections, pathname);
+  const platformActive = inPlatformScope(pathname);
+  const { primary, more } = projectPhone(sections, { platformActive });
 
   return (
     <nav
-      aria-label="This business"
+      aria-label={platformActive ? 'Platform' : 'This business'}
       className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background md:hidden"
     >
       <ul className="flex gap-1 overflow-x-auto p-2">
-        {setup ? (
+        {/* Setup is this business's own lifecycle; inside Platform the bar is about Platform. */}
+        {setup && !platformActive ? (
           <li className="shrink-0">
             <SetupNavLink organizationId={organizationId} />
           </li>

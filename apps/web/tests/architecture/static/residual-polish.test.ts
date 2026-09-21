@@ -141,7 +141,7 @@ describe('an empty state describes state; it duplicates no create control', () =
 
 describe('the shell asks one question — is this business in SETUP — and runs no readiness query', () => {
   const orgLayout = read(`${WEB}/features/shell/organization-shell.tsx`);
-  const platformLayout = read(`${WEB}/app/(platform)/platform/layout.tsx`);
+  const platformLayout = read(`${WEB}/app/organizations/[organizationId]/platform/layout.tsx`);
   const shell = read(`${WEB}/app/organizations/[organizationId]/org-shell.tsx`);
 
   it('neither layout computes the Setup overview', () => {

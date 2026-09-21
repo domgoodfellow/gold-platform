@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { SidebarInset, SidebarProvider } from '@gold/ui/components/sidebar';
 import { cx } from '../class-names';
 import { PAGE_PADDING } from './workspace-geometry';
@@ -33,9 +33,13 @@ export function AppShell({
 }) {
   return (
     <SidebarProvider>
-      {sidebar}
+      {/* `sidebar`, `header` and `bottomBar` are elements the calling layout created on the server. When
+          the payload is large enough to stream in more than one piece they arrive as lazy siblings, which
+          trips React's dev key check exactly as `agent` does in `WorkspaceShell`; a keyed wrapper is the
+          same answer, and changes nothing that renders. */}
+      <Fragment key="sidebar">{sidebar}</Fragment>
       <SidebarInset className="min-w-0">
-        {header}
+        <Fragment key="header">{header}</Fragment>
         {/* Beneath the workspace header, beside the page: the page drawer lives here, so it starts
             under the header and the page stays visible next to it. */}
         <div className="flex min-w-0 flex-1">
@@ -45,7 +49,7 @@ export function AppShell({
           <PagePanel />
         </div>
       </SidebarInset>
-      {bottomBar}
+      <Fragment key="bottom-bar">{bottomBar}</Fragment>
     </SidebarProvider>
   );
 }

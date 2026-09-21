@@ -217,7 +217,7 @@ describe('the routing decision stays where it can be tested', () => {
     'utf8',
   );
   const platformLayout = readFileSync(
-    fileURLToPath(new URL('../../../app/(platform)/platform/layout.tsx', import.meta.url)),
+    fileURLToPath(new URL('../../../app/platform/[[...path]]/page.tsx', import.meta.url)),
     'utf8',
   );
 

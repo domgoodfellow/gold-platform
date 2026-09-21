@@ -32,7 +32,7 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
  * D23 still governs the part that matters: work comes first and Settings last, and an operator
  * must never reach today's work by going through settings.
  */
-export type AreaGroup = 'home' | 'workspaces' | 'operations' | 'settings';
+export type AreaGroup = 'home' | 'workspaces' | 'settings';
 
 /**
  * The sections, in the order the sidebar draws them. One list, so the ordering rule D23 states
@@ -43,11 +43,9 @@ export type AreaGroup = 'home' | 'workspaces' | 'operations' | 'settings';
 export const AREA_GROUPS = [
   // Home is one row set apart, and the answer to "what matters right now".
   { key: 'home', label: null },
-  // Where an operator does a kind of work. Unlabelled: a heading over the main list would name a
-  // taxonomy the rows already are.
-  { key: 'workspaces', label: null },
-  // What the work is done with, and where — real areas that are not one of the workspaces above.
-  { key: 'operations', label: 'Operations' },
+  // Where an operator does a kind of work: each row is a workspace, and a workspace with several
+  // pages holds them as children (`Area.parent`) rather than as peers.
+  { key: 'workspaces', label: 'Workspaces' },
   { key: 'settings', label: null },
 ] as const satisfies readonly { key: AreaGroup; label: string | null }[];
 
@@ -225,6 +223,14 @@ export type Area = {
   label: string;
   /** Which sidebar section (D23). */
   group: AreaGroup;
+  /**
+   * The workspace this area is a **page** of — the `segment` of another area. An area with no
+   * parent is a workspace (or Home, or a settings area); one with a parent is one view inside it,
+   * drawn beneath it in the sidebar and never as a peer. The route does not change: `/work` is
+   * still `/work`, so no address moves to say which workspace a page belongs to.
+   * `navigation.test.ts` checks the parent exists, is itself a workspace, and sits in the same group.
+   */
+  parent?: string;
   /** The module this area belongs to, or absent for the kernel. A business without a named module doesn't see its entry — not capability gating (I12), just a fact that it isn't part of that business. */
   module?: ModuleKey;
   /**
@@ -271,8 +277,14 @@ export const AREAS: readonly Area[] = [
   { segment: 'home', label: 'Home', group: 'home' },
 
   { segment: 'customers', label: 'Customers', group: 'workspaces' },
-  { segment: 'work', label: 'Work', group: 'workspaces' },
-  { segment: 'schedule', label: 'Schedule', group: 'workspaces' },
+  // The workspace where work is planned and done. Its overview is a real page; Work, Schedule,
+  // Resources, Locations and Assets are its pages. All kernel, except Assets, which is a module.
+  { segment: 'operations', label: 'Operations', group: 'workspaces' },
+  { segment: 'work', label: 'Work', group: 'workspaces', parent: 'operations' },
+  { segment: 'schedule', label: 'Schedule', group: 'workspaces', parent: 'operations' },
+  { segment: 'resources', label: 'Resources', group: 'workspaces', parent: 'operations' },
+  { segment: 'locations', label: 'Locations', group: 'workspaces', parent: 'operations' },
+  { segment: 'assets', label: 'Assets', group: 'workspaces', parent: 'operations', module: 'assets', featureKeys: ['assets'] },
   // Communications is the workspace; Calls is the one channel implemented in it. The route is
   // still `calls` — canonicalising it to /communications/calls waits for the call-domain work.
   // The specific Communications/Voice features this surface is — not `pipeline`/`configurable_stages`/
@@ -284,10 +296,6 @@ export const AREAS: readonly Area[] = [
   { segment: 'automations', label: 'Automation', group: 'workspaces', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
   // Deep analytics: saved dashboards and reports. Workspace-local numbers stay in their workspace.
   { segment: 'insights', label: 'Insights', group: 'workspaces', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
-
-  { segment: 'resources', label: 'Resources', group: 'operations' },
-  { segment: 'locations', label: 'Locations', group: 'operations' },
-  { segment: 'assets', label: 'Assets', group: 'operations', module: 'assets', featureKeys: ['assets'] },
 
   // Configuration, not places somebody works: each is a real, directly addressable route with its
   // module and capability gating unchanged, found from the Settings map (`sidebar: false`).

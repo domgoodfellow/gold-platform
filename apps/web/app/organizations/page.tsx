@@ -25,7 +25,7 @@ async function signOutAction() {
 /**
  * Where a sign-in lands, and where somebody with no business yet founds their first. It is not a
  * directory of businesses and not how anyone switches context — the context switcher links
- * straight to a business or to `/platform`. Anyone with a business is sent into it, so what this
+ * straight to a business. Anyone with a business is sent into it, so what this
  * page renders is only the founding form.
  */
 export default async function OrganizationsPage() {
@@ -59,8 +59,9 @@ export default async function OrganizationsPage() {
     lastOrganizationId: await readLastOrganizationId(),
   });
 
-  // It cannot loop with the redirect on `/platform`, which sends a non-staff caller here: that
-  // redirect fires on `!staff`, this one only on zero organizations, and one answer cannot
+  // Staff who hold no GOLD Internal membership have no canonical Platform address to be sent to, so
+  // they meet the legacy entry, which says why. It cannot loop with that entry, which sends a
+  // non-staff caller here: that fires on `!staff`, this only on `staff`, and one answer cannot
   // satisfy both.
   if (landing.kind === 'platform') {
     redirect('/platform');

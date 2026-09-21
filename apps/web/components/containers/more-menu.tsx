@@ -62,7 +62,7 @@ export function MoreMenu({
         </SheetHeader>
         <div className="flex flex-col gap-4 px-4">
           {sections.map((section) => (
-            <section key={section.key} aria-label={section.label ?? 'Workspaces'}>
+            <section key={`${section.key}:${section.label ?? ''}`} aria-label={section.label ?? 'Workspaces'}>
               {section.label ? (
                 <h3 className="mb-1 px-1 text-xs font-medium uppercase tracking-wide text-subtle">{section.label}</h3>
               ) : null}

@@ -11,14 +11,14 @@ import { AgentEmptyConversation, AgentPanelFrame, AgentUnavailable } from './age
  * reachable from it. Answering capability comes from `canAnswerPlatformQuestions`, which is
  * honestly `false` until a platform-scoped answering endpoint exists (see that function's own
  * comment) — so this renders the real "Agent unavailable" surface, pointed at
- * `/platform/providers`, rather than a composer with nothing behind it.
+ * the Providers page (`configureHref`), rather than a composer with nothing behind it.
  *
- * `canAnswer` comes from `canAnswerPlatformQuestions()`, read in `platform/layout.tsx` exactly as
+ * `canAnswer` comes from `canAnswerPlatformQuestions()`, read by the organization shell exactly as
  * `TenantAgentRail` reads `canAnswerQuestions()` — always `false` today, so the panel is always the
  * unavailable surface in practice. The other branch is where a platform-scoped conversation lands
  * the moment one exists, without this component needing to change shape again.
  */
-export function PlatformAgentRail({ canAnswer }: { canAnswer: boolean }) {
+export function PlatformAgentRail({ canAnswer, configureHref }: { canAnswer: boolean; configureHref: string }) {
   const content = useMemo(
     () => (
       <AgentPanelFrame>
@@ -28,11 +28,11 @@ export function PlatformAgentRail({ canAnswer }: { canAnswer: boolean }) {
             description="Organization lifecycle, catalogue and plan state, meters, pricing, provider status, recorded failures."
           />
         ) : (
-          <AgentUnavailable configureHref="/platform/providers" />
+          <AgentUnavailable configureHref={configureHref} />
         )}
       </AgentPanelFrame>
     ),
-    [canAnswer],
+    [canAnswer, configureHref],
   );
 
   useAgentContent(content);

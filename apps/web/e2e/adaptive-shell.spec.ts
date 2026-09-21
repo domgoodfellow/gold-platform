@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { COLLEAGUE_STORAGE_STATE, loadDemoContext, OWNER_STORAGE_STATE, STAFF_STORAGE_STATE } from './helpers';
+import { COLLEAGUE_STORAGE_STATE, loadDemoContext, OWNER_STORAGE_STATE, platformUrl, STAFF_STORAGE_STATE } from './helpers';
 
 /**
  * The one adaptive shell, in a browser. What each person sees is a projection of the
@@ -25,11 +25,22 @@ test.describe('a tenant owner', () => {
     await expect(nav.getByRole('link', { name: 'Organizations', exact: true })).toHaveCount(0);
   });
 
-  test('is refused the platform when the URL is typed', async ({ page }) => {
-    const response = await page.goto('/platform/providers');
-    // Not staff: sent back to their own business rather than served, or refused outright.
-    expect(page.url()).not.toContain('/platform/providers');
-    expect(response?.status() ?? 200).toBeLessThan(500);
+  test('is refused the platform when either address is typed', async ({ page }) => {
+    // The old address: not staff, so sent back to their own business rather than served.
+    const legacy = await page.goto('/platform/providers');
+    expect(page.url()).not.toContain('/platform');
+    expect(legacy?.status() ?? 200).toBeLessThan(500);
+
+    // The canonical address under GOLD's organization, which they are not a member of: a 404.
+    expect((await page.goto(platformUrl('providers')))?.status()).toBe(404);
+
+    // And under their own business: the shell has already streamed, so the status stays 200, but what
+    // renders is the plain not-found page inside their own frame — no Platform content, no Platform nav.
+    const { organizationId } = loadDemoContext();
+    await page.goto(`/organizations/${organizationId}/platform/providers`);
+    await expect(page.getByRole('heading', { name: 'This page does not exist' })).toBeVisible();
+    await expect(page.getByText('Infrastructure GOLD operates')).toHaveCount(0);
+    await expect(sidebar(page).getByText('Platform', { exact: true })).toHaveCount(0);
   });
 
   test('on a phone reaches Administration behind More, not in the bar', async ({ page }) => {
@@ -71,28 +82,37 @@ test.describe('GOLD platform staff', () => {
   test.use({ storageState: STAFF_STORAGE_STATE });
 
   test('reach the platform through GOLD’s own shell, in the one sidebar', async ({ page }) => {
-    await page.goto('/platform');
+    await page.goto(platformUrl());
     const nav = sidebar(page);
     await expect(nav.getByText('Platform', { exact: true })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Organizations', exact: true })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Providers', exact: true })).toBeVisible();
-    // The same shell: GOLD's own workspaces are in it, beside Platform, not in a second frame.
+    // The same shell: GOLD's own workspaces are in it, beside Platform, not replaced by it.
     await expect(nav.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Operations', exact: true })).toBeVisible();
   });
 
-  test('are not offered Platform Administration as somewhere to switch to', async ({ page }) => {
-    await page.goto('/platform');
+  test('the old /platform address lands on the canonical one, path and query kept', async ({ page }) => {
+    await page.goto('/platform/providers/twilio?tab=accounts');
+    await expect(page).toHaveURL(new RegExp(`/organizations/${loadDemoContext().goldOrganizationId}/platform/providers/twilio\\?tab=accounts`));
+  });
+
+  test('are not offered Platform Administration as somewhere to switch to, and GOLD stays the context', async ({ page }) => {
+    await page.goto(platformUrl('providers'));
     await expect(page.getByText('Platform Administration')).toHaveCount(0);
     await expect(page.getByText('Global tools')).toHaveCount(0);
+    await expect(page.locator('[data-slot="sidebar-container"]').getByText('GOLD', { exact: true }).first()).toBeVisible();
   });
 
-  test('on a phone, reach Platform behind More', async ({ page }) => {
+  test('on a phone, are shown Platform as the active scope, with Home to get back', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/platform');
-    const bar = page.locator('nav[aria-label="This business"].fixed');
+    await page.goto(platformUrl());
+    const bar = page.locator('nav[aria-label="Platform"].fixed');
+    await expect(bar.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
+    await expect(bar.getByRole('link', { name: 'Organizations', exact: true })).toBeVisible();
     await bar.getByRole('button', { name: 'More' }).click();
     const sheet = page.getByRole('dialog');
-    await expect(sheet.getByText('Platform', { exact: true })).toBeVisible();
+    await expect(sheet.getByText('Infrastructure', { exact: true })).toBeVisible();
     await expect(sheet.getByRole('link', { name: 'Providers', exact: true })).toBeVisible();
   });
 });

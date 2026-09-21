@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { AREAS } from '@/lib/navigation';
 import {
   activeItemKey,
+  inPlatformScope,
+  itemContains,
   projectedItems,
   projectPhone,
   projectShell,
@@ -12,6 +14,7 @@ import { PLATFORM_CAPABILITIES, type PlatformCapability } from '@/lib/domain/pla
 import {
   PLATFORM_DESTINATIONS,
   platformDestinationsFor,
+  platformHref,
   platformRouteRequires,
 } from '@/lib/platform-navigation';
 import { ALL_CAPABILITIES, type Capability } from '@/lib/domain/tenancy/capabilities';
@@ -41,8 +44,13 @@ function project(
   });
 }
 
+/** Every item in a section, a workspace followed by its pages — the order the sidebar draws them. */
 const keys = (sections: ShellSection[], section?: string) =>
-  (section ? sections.filter((entry) => entry.key === section) : sections).flatMap((entry) => entry.items.map((item) => item.key));
+  projectedItems(section ? sections.filter((entry) => entry.key === section) : sections).map((item) => item.key);
+
+/** Only what is drawn at the top level, so a nested page cannot pass for a workspace. */
+const topLevel = (sections: ShellSection[], section: string) =>
+  sections.filter((entry) => entry.key === section).flatMap((entry) => entry.items.map((item) => item.key));
 
 const preset = (key: string) => ROLE_PRESETS.find((candidate) => candidate.key === key)!.capabilities;
 const allPlatform = new Set<PlatformCapability>(PLATFORM_CAPABILITIES);
@@ -52,8 +60,14 @@ describe('GOLD owner who is also a platform operator', () => {
 
   it('sees the business workspaces GOLD is entitled to', () => {
     expect(keys(sections, 'home')).toEqual(['home']);
-    expect(keys(sections, 'workspaces')).toEqual(['customers', 'work', 'schedule', 'calls', 'automations', 'insights']);
-    expect(keys(sections, 'operations')).toEqual(['resources', 'locations', 'assets']);
+    expect(topLevel(sections, 'workspaces')).toEqual(['customers', 'operations', 'calls', 'automations', 'insights']);
+    // Work, Schedule, Resources, Locations and Assets are pages of Operations, not peers of Customers.
+    expect(keys(sections, 'workspaces')).toEqual([
+      'customers', 'operations', 'work', 'schedule', 'resources', 'locations', 'assets', 'calls', 'automations', 'insights',
+    ]);
+    expect(sections.flatMap((section) => section.items).find((item) => item.key === 'operations')?.children?.map((page) => page.key)).toEqual([
+      'work', 'schedule', 'resources', 'locations', 'assets',
+    ]);
   });
 
   it('sees organization administration, item by item', () => {
@@ -61,11 +75,39 @@ describe('GOLD owner who is also a platform operator', () => {
   });
 
   it('sees every authorized Platform destination, and only through the projection', () => {
-    expect(keys(sections, 'platform')).toEqual(PLATFORM_DESTINATIONS.map((destination) => `platform-${destination.key}`));
+    const destinations = keys(sections, 'platform').filter((key) => !key.startsWith('platform-group-'));
+    expect(destinations).toEqual(PLATFORM_DESTINATIONS.map((destination) => `platform-${destination.key}`).sort((a, b) => destinations.indexOf(a) - destinations.indexOf(b)));
+    expect(destinations.sort()).toEqual(PLATFORM_DESTINATIONS.map((destination) => `platform-${destination.key}`).sort());
   });
 
-  it('draws sections in one fixed order: Home, workspaces, Operations, Administration, Platform', () => {
-    expect(sections.map((section) => section.key)).toEqual(['home', 'workspaces', 'operations', 'administration', 'platform']);
+  it('nests Platform as Catalog, Commercial and Infrastructure, beneath the same GOLD workspaces', () => {
+    expect(topLevel(sections, 'platform')).toEqual([
+      'platform-overview',
+      'platform-organizations',
+      'platform-catalog',
+      'platform-group-commercial',
+      'platform-group-infrastructure',
+    ]);
+    expect(keys(sections, 'platform')).toEqual([
+      'platform-overview',
+      'platform-organizations',
+      'platform-catalog',
+      'platform-plans',
+      'platform-meters',
+      'platform-connectors',
+      'platform-group-commercial',
+      'platform-pricing',
+      'platform-billing',
+      'platform-group-infrastructure',
+      'platform-providers',
+      'platform-failures',
+    ]);
+    // Platform is an added section: GOLD's own workspaces are all still there.
+    expect(keys(sections, 'workspaces')).toContain('customers');
+  });
+
+  it('draws sections in one fixed order: Home, Workspaces, Platform, Administration', () => {
+    expect(sections.map((section) => section.key)).toEqual(['home', 'workspaces', 'platform', 'administration']);
   });
 });
 
@@ -73,7 +115,9 @@ describe('GOLD sales member in the same organization', () => {
   const sections = project(preset('sales'), { platform: null });
 
   it('uses GOLD as an ordinary business: sales, customers and calls', () => {
-    expect(keys(sections, 'workspaces')).toEqual(['customers', 'work', 'schedule', 'calls', 'insights']);
+    expect(keys(sections, 'workspaces')).toEqual([
+      'customers', 'operations', 'work', 'schedule', 'resources', 'locations', 'assets', 'calls', 'insights',
+    ]);
   });
 
   it('sees no Platform and no administration they hold no authority for', () => {
@@ -96,10 +140,10 @@ describe('GOLD sales member in the same organization', () => {
 describe('a platform member with limited platform permissions', () => {
   it('sees only the destinations their permissions reach', () => {
     const providersOnly = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.providers']) });
-    expect(keys(providersOnly, 'platform')).toEqual(['platform-providers']);
+    expect(keys(providersOnly, 'platform')).toEqual(['platform-group-infrastructure', 'platform-providers']);
 
     const commercial = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.commercial']) });
-    expect(keys(commercial, 'platform')).toEqual(['platform-pricing', 'platform-billing']);
+    expect(keys(commercial, 'platform')).toEqual(['platform-group-commercial', 'platform-pricing', 'platform-billing']);
 
     const catalogue = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.catalogue']) });
     expect(keys(catalogue, 'platform')).toEqual(['platform-catalog', 'platform-plans', 'platform-meters', 'platform-connectors']);
@@ -126,7 +170,7 @@ describe('tenant owner or administrator', () => {
 
   it('never sees GOLD Platform controls, however many capabilities they hold', () => {
     expect(keys(sections, 'platform')).toEqual([]);
-    expect(projectedItems(sections).some((item) => item.href.startsWith('/platform'))).toBe(false);
+    expect(projectedItems(sections).some((item) => item.href.includes('/platform'))).toBe(false);
   });
 
   it('a preset administrator holds the same reach as the founding role', () => {
@@ -138,8 +182,7 @@ describe('tenant ordinary member', () => {
   const technician = project(preset('technician'));
 
   it('sees the operational workspaces their business has, and nothing administrative', () => {
-    expect(keys(technician, 'workspaces')).toEqual(['customers', 'work', 'schedule']);
-    expect(keys(technician, 'operations')).toEqual(['resources', 'locations', 'assets']);
+    expect(keys(technician, 'workspaces')).toEqual(['customers', 'operations', 'work', 'schedule', 'resources', 'locations', 'assets']);
     expect(keys(technician, 'administration')).toEqual([]);
     expect(keys(technician, 'platform')).toEqual([]);
   });
@@ -147,7 +190,7 @@ describe('tenant ordinary member', () => {
   it('a viewer with no capability at all still gets the kernel, and no administration', () => {
     const viewer = project(preset('viewer'));
     expect(keys(viewer, 'home')).toEqual(['home']);
-    expect(keys(viewer, 'workspaces')).toEqual(['customers', 'work', 'schedule']);
+    expect(keys(viewer, 'workspaces')).toEqual(['customers', 'operations', 'work', 'schedule', 'resources', 'locations', 'assets']);
     expect(keys(viewer, 'administration')).toEqual([]);
   });
 });
@@ -171,8 +214,8 @@ describe('configuration-only authority', () => {
 describe('entitlement absent', () => {
   it('a broad role does not conjure a workspace the business does not have', () => {
     const sections = project(ALL_CAPABILITIES, { enabledModules: new Set(), featureAvailability: new Set() });
-    expect(keys(sections, 'workspaces')).toEqual(['customers', 'work', 'schedule']);
-    expect(keys(sections, 'operations')).toEqual(['resources', 'locations']);
+    // Assets is a module: without it Operations has the rest of its pages, and no more.
+    expect(keys(sections, 'workspaces')).toEqual(['customers', 'operations', 'work', 'schedule', 'resources', 'locations']);
     // Connections is a product too: no Integrations entitlement, no item — Team and Plan remain.
     expect(keys(sections, 'administration')).toEqual(['team', 'plan', 'settings']);
   });
@@ -188,15 +231,50 @@ describe('entitlement absent', () => {
 describe('the phone renders the same projection', () => {
   const sections = project(ALL_CAPABILITIES, { platform: allPlatform });
   const { primary, more } = projectPhone(sections);
+  /** A heading is a disclosure with no page of its own; the phone lists the pages beneath it. */
+  const pagesOf = (items: { key: string; heading?: boolean }[]) => items.filter((item) => !item.heading).map((item) => item.key).sort();
 
-  it('carries Home and the first workspaces in the bar, and everything else behind More', () => {
+  it('in a business carries Home and the first workspace pages in the bar, and everything else behind More', () => {
+    // A workspace with pages contributes its pages, so Work and Schedule stay one tap away.
     expect(primary.map((item) => item.key)).toEqual(['home', 'customers', 'work', 'schedule']);
-    expect(more.map((section) => section.key)).toEqual(['workspaces', 'operations', 'administration', 'platform']);
+    expect(more.map((section) => section.label)).toEqual([
+      'Workspaces', 'Operations', 'Platform', 'Catalog', 'Commercial', 'Infrastructure', 'Administration',
+    ]);
+    expect(more[0].items.map((item) => item.key)).toEqual(['calls', 'automations', 'insights']);
+    expect(more[1].items.map((item) => item.key)).toEqual(['operations', 'resources', 'locations', 'assets']);
+    expect(more[1].items[0].label).toBe('Overview');
   });
 
   it('loses and adds nothing: the bar and More together are exactly the desktop projection', () => {
-    const phone = [...primary, ...more.flatMap((section) => section.items)].map((item) => item.key).sort();
-    expect(phone).toEqual(projectedItems(sections).map((item) => item.key).sort());
+    const phone = pagesOf([...primary, ...more.flatMap((section) => section.items)]);
+    expect(phone).toEqual(pagesOf(projectedItems(sections)));
+  });
+
+  it('inside Platform presents Platform: a way back to Home, the Platform destinations, and the rest behind More', () => {
+    const platform = projectPhone(sections, { platformActive: true });
+    expect(platform.primary.map((item) => item.key)).toEqual([
+      'home',
+      'platform-overview',
+      'platform-organizations',
+      'platform-catalog',
+      'platform-group-commercial',
+      'platform-group-infrastructure',
+    ]);
+    // Platform's own pages lead More; GOLD's workspaces follow. Ten Platform destinations and every workspace never share the bar.
+    expect(platform.more.map((section) => section.label)).toEqual([
+      'Catalog', 'Commercial', 'Infrastructure', 'Workspaces', 'Operations', 'Administration',
+    ]);
+    const phone = pagesOf([...platform.primary, ...platform.more.flatMap((section) => section.items)]);
+    expect(phone).toEqual(pagesOf(projectedItems(sections)));
+  });
+
+  it('is the ordinary business bar when the person is not in Platform, even with Platform authority', () => {
+    expect(projectPhone(sections, { platformActive: false }).primary.map((item) => item.key)).toEqual(primary.map((item) => item.key));
+  });
+
+  it('falls back to the business bar when there is no Platform to present', () => {
+    const noPlatform = project(ALL_CAPABILITIES, { platform: null });
+    expect(projectPhone(noPlatform, { platformActive: true }).primary.map((item) => item.key)).toEqual(['home', 'customers', 'work', 'schedule']);
   });
 
   it('never puts Administration or Platform in the bar, however few workspaces there are', () => {
@@ -204,7 +282,7 @@ describe('the phone renders the same projection', () => {
     expect(tiny.primary.every((item) => item.section === 'home' || item.section === 'workspaces')).toBe(true);
   });
 
-  it('has no More at all for somebody with nothing beyond the bar', () => {
+  it('leaves only the rest of Operations behind More for somebody with the kernel and nothing else', () => {
     const minimal = projectShell({
       organizationId: ORG,
       enabledModules: new Set(),
@@ -212,8 +290,10 @@ describe('the phone renders the same projection', () => {
       capabilities: new Set(),
       platform: null,
     }).filter((section) => section.key === 'home' || section.key === 'workspaces');
-    // Three workspaces and Home fit the bar exactly.
-    expect(projectPhone(minimal).more).toEqual([]);
+    const { more: rest } = projectPhone(minimal);
+    expect(rest.map((section) => [section.label, section.items.map((item) => item.key)])).toEqual([
+      ['Operations', ['operations', 'resources', 'locations']],
+    ]);
   });
 });
 
@@ -225,10 +305,38 @@ describe('the current item', () => {
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/general`)).toBe('settings');
     expect(activeItemKey(sections, `/organizations/${ORG}/work/abc`)).toBe('work');
     expect(activeItemKey(sections, `/organizations/${ORG}/roles`)).toBe('team');
-    expect(activeItemKey(sections, '/platform/catalog/plans/base')).toBe('platform-plans');
-    expect(activeItemKey(sections, '/platform/catalog')).toBe('platform-catalog');
-    expect(activeItemKey(sections, '/platform')).toBe('platform-overview');
-    expect(activeItemKey(sections, '/platform/organizations/x/usage')).toBe('platform-organizations');
+    expect(activeItemKey(sections, platformHref(ORG, 'catalog/plans/base'))).toBe('platform-plans');
+    expect(activeItemKey(sections, platformHref(ORG, 'catalog'))).toBe('platform-catalog');
+    expect(activeItemKey(sections, platformHref(ORG))).toBe('platform-overview');
+    expect(activeItemKey(sections, platformHref(ORG, 'organizations/x/usage'))).toBe('platform-organizations');
+  });
+
+  it('a page of a workspace activates itself and opens its workspace, and the workspace overview only itself', () => {
+    const items = sections.flatMap((section) => section.items);
+    const operations = items.find((item) => item.key === 'operations')!;
+    for (const page of ['work', 'schedule', 'resources', 'locations', 'assets']) {
+      const active = activeItemKey(sections, `/organizations/${ORG}/${page}`);
+      expect(active).toBe(page);
+      expect(itemContains(operations, active)).toBe(true);
+    }
+    expect(activeItemKey(sections, `/organizations/${ORG}/operations`)).toBe('operations');
+    expect(itemContains(items.find((item) => item.key === 'customers')!, 'work')).toBe(false);
+  });
+
+  it('inside Platform the group holding the current page is the one that is open, and a heading yields to its first page', () => {
+    const platformItems = sections.find((section) => section.key === 'platform')!.items;
+    const commercial = platformItems.find((item) => item.key === 'platform-group-commercial')!;
+    const infrastructure = platformItems.find((item) => item.key === 'platform-group-infrastructure')!;
+    const active = activeItemKey(sections, platformHref(ORG, 'pricing'));
+    expect(active).toBe('platform-pricing');
+    expect(itemContains(commercial, active)).toBe(true);
+    expect(itemContains(infrastructure, active)).toBe(false);
+    // The Overview is the root of the whole Platform tree and marks itself only, never a page beneath it.
+    expect(activeItemKey(sections, platformHref(ORG, 'providers/twilio'))).toBe('platform-providers');
+  });
+
+  it('marks nothing on a Platform address when the person has no Platform in their projection', () => {
+    expect(activeItemKey(project(ALL_CAPABILITIES, { platform: null }), platformHref(ORG, 'providers'))).toBeNull();
   });
 
   it('marks nothing for a page the person’s projection does not list', () => {
@@ -238,19 +346,28 @@ describe('the current item', () => {
 
 describe('platform routes and their permission', () => {
   it('a path takes the permission of its longest registered prefix', () => {
-    expect(platformRouteRequires('/platform')).toBe('platform.health');
-    expect(platformRouteRequires('/platform/failures')).toBe('platform.health');
-    expect(platformRouteRequires('/platform/organizations')).toBe('platform.organizations');
-    expect(platformRouteRequires('/platform/organizations/abc/providers')).toBe('platform.organizations');
-    expect(platformRouteRequires('/platform/catalog/plans/base')).toBe('platform.catalogue');
-    expect(platformRouteRequires('/platform/integrations/new')).toBe('platform.catalogue');
-    expect(platformRouteRequires('/platform/pricing')).toBe('platform.commercial');
-    expect(platformRouteRequires('/platform/billing')).toBe('platform.commercial');
-    expect(platformRouteRequires('/platform/providers/twilio/configure')).toBe('platform.providers');
+    // Paths are read beneath the platform root: `platformHref(id, path)` is the only way to spell one.
+    expect(platformRouteRequires('')).toBe('platform.health');
+    expect(platformRouteRequires('failures')).toBe('platform.health');
+    expect(platformRouteRequires('organizations')).toBe('platform.organizations');
+    expect(platformRouteRequires('organizations/abc/providers')).toBe('platform.organizations');
+    expect(platformRouteRequires('catalog/plans/base')).toBe('platform.catalogue');
+    expect(platformRouteRequires('integrations/new')).toBe('platform.catalogue');
+    expect(platformRouteRequires('pricing')).toBe('platform.commercial');
+    expect(platformRouteRequires('billing')).toBe('platform.commercial');
+    expect(platformRouteRequires('providers/twilio/configure')).toBe('platform.providers');
   });
 
   it('refuses a path nobody classified, rather than serving it', () => {
-    expect(platformRouteRequires('/platform/something-new')).toBe('platform.health');
+    expect(platformRouteRequires('something-new')).toBe('platform.health');
+  });
+
+  it('spells every Platform address under the organization the operator is working in, and recognises only those', () => {
+    const gold = '11111111-1111-4111-8111-111111111111';
+    expect(platformHref(gold)).toBe(`/organizations/${gold}/platform`);
+    expect(platformHref(gold, 'catalog/plans')).toBe(`/organizations/${gold}/platform/catalog/plans`);
+    expect(inPlatformScope(platformHref(gold, 'billing'))).toBe(true);
+    expect(inPlatformScope('/platform/billing')).toBe(false);
   });
 
   it('every permission reaches at least one destination, so none is a permission that opens nothing', () => {

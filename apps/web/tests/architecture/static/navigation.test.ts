@@ -43,6 +43,9 @@ function routeSegmentsOnDisk(): string[] {
     // belongs to Customers. Nothing like that exists at this level today, and the filter is
     // here so that adding one does not read as a missing navigation entry.
     .filter((entry) => !entry.name.startsWith('[') && !entry.name.startsWith('_'))
+    // `platform` is a scope, not an area: Platform Administration, available only inside GOLD's own
+    // organization. It has its own registry (`lib/platform-navigation.ts`) and its own guard.
+    .filter((entry) => entry.name !== 'platform')
     .filter((entry) => existsSync(`${ROUTES}/${entry.name}/page.tsx`))
     .map((entry) => entry.name)
     .sort();
@@ -120,6 +123,31 @@ describe('the operator shell navigation', () => {
     expect(order[order.length - 1]).toBe('settings');
   });
 
+  it('makes a page of a workspace a child, never a peer: every parent is a real workspace in the same group', () => {
+    // `Area.parent` is what stops Work, Schedule, Resources, Locations and Assets being five peers
+    // of Customers. A parent is itself a workspace (no parent of its own), so nesting is one level,
+    // and it lives in the same sidebar section as its pages.
+    for (const area of AREAS.filter((entry) => entry.parent)) {
+      const parent = AREAS.find((entry) => entry.segment === area.parent);
+      expect(parent, `"${area.segment}" names a parent, "${area.parent}", that is not an area`).toBeDefined();
+      expect(parent!.parent, `"${area.parent}" is a page itself, so nesting is two levels deep`).toBeUndefined();
+      expect(parent!.group).toBe(area.group);
+      expect(parent!.sidebar).not.toBe(false);
+    }
+  });
+
+  it('gives Operations Work, Schedule, Resources, Locations and Assets as its pages, and an overview of its own', () => {
+    expect(AREAS.filter((area) => area.parent === 'operations').map((area) => area.segment)).toEqual([
+      'work', 'schedule', 'resources', 'locations', 'assets',
+    ]);
+    expect(AREAS.find((area) => area.segment === 'operations')?.parent).toBeUndefined();
+    expect(existsSync(`${ROUTES}/operations/page.tsx`)).toBe(true);
+    // The existing routes stay canonical: no address moved to say which workspace a page belongs to.
+    for (const segment of ['work', 'schedule', 'resources', 'locations', 'assets']) {
+      expect(existsSync(`${ROUTES}/${segment}/page.tsx`)).toBe(true);
+    }
+  });
+
   it('leads with the area an operator opens the application for', () => {
     // Not alphabetisation and not an accident: D23 designs the phone rendering around one
     // action, and this is the area that answers it.
@@ -156,8 +184,7 @@ describe('the operator shell navigation', () => {
     const inSidebar = AREAS.filter((area) => area.sidebar !== false).map((area) => area.segment);
     expect(inSidebar).toEqual([
       'home',
-      'customers', 'work', 'schedule', 'calls', 'automations', 'insights',
-      'resources', 'locations', 'assets',
+      'customers', 'operations', 'work', 'schedule', 'resources', 'locations', 'assets', 'calls', 'automations', 'insights',
       'settings',
     ]);
     for (const segment of ['pricing', 'fields', 'roles', 'integrations', 'setup']) {
@@ -249,7 +276,7 @@ describe('modules', () => {
   });
 
   it('shows an area once its module is on', () => {
-    const shown = areasIn('operations', new Set(['assets']));
+    const shown = areasIn('workspaces', new Set(['assets']));
     expect(shown.map((area) => area.segment)).toContain('assets');
 
     const withAutomations = areasIn('workspaces', new Set(['automations']));
@@ -683,7 +710,7 @@ describe('an area hidden from the sidebar', () => {
     // capability layer, the configuration targets, platform authority) is decided in `projectShell`.
     expect(projection, 'projectShell should filter on the sidebar flag').toContain('area.sidebar !== false');
     expect(shell, 'the desktop rendering should take the projection, not filter AREAS itself').toContain('sections: ShellSection[]');
-    expect(shell, 'the phone bar should take the same projection').toContain('projectPhone(sections)');
+    expect(shell, 'the phone bar should take the same projection').toContain('projectPhone(sections, { platformActive })');
     expect(shell, 'no renderer keeps its own eligibility filter').not.toMatch(/AREAS[.]filter|visibleAreas[(]|areasIn[(]/);
     expect(shell).toContain("from '@/lib/shell'");
   });

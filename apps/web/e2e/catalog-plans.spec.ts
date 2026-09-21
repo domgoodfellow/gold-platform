@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { OWNER_STORAGE_STATE, STAFF_STORAGE_STATE } from './helpers';
+import { OWNER_STORAGE_STATE, platformUrl, STAFF_STORAGE_STATE } from './helpers';
 
 /**
  * The canonical Product -> Module -> Feature catalogue and Plans/Add-ons above it
@@ -15,7 +15,7 @@ test.describe('platform catalog', () => {
   test.use({ storageState: STAFF_STORAGE_STATE });
 
   test('shows the seven canonical Products on the landing page', async ({ page }) => {
-    await page.goto('/platform/catalog');
+    await page.goto(platformUrl('catalog'));
     await expect(page.getByRole('heading', { name: 'Catalog', level: 1 })).toBeVisible();
     for (const label of ['CRM', 'Communications', 'Operations', 'Financial Operations', 'Automation', 'Insights', 'Customer Experience']) {
       await expect(page.locator('main').getByText(label, { exact: true }).first()).toBeVisible();
@@ -23,7 +23,7 @@ test.describe('platform catalog', () => {
   });
 
   test('opens the Communications Product detail and its Modules & Features tab', async ({ page }) => {
-    await page.goto('/platform/catalog/families/communications');
+    await page.goto(platformUrl('catalog/families/communications'));
     await expect(page.getByRole('heading', { name: 'Communications', level: 1 })).toBeVisible();
 
     await page.getByRole('tab', { name: 'Modules & Features' }).click();
@@ -33,11 +33,11 @@ test.describe('platform catalog', () => {
   });
 
   test('shows GOLD Internal in Plans & Add-ons, non-billable, with entitlements and quotas', async ({ page }) => {
-    await page.goto('/platform/catalog/plans');
+    await page.goto(platformUrl('catalog/plans'));
     await expect(page.getByRole('heading', { name: 'Plans & Add-ons', level: 1 })).toBeVisible();
     await expect(page.getByText('GOLD Internal').first()).toBeVisible();
 
-    await page.goto('/platform/catalog/plans/gold_internal');
+    await page.goto(platformUrl('catalog/plans/gold_internal'));
     await expect(page.getByRole('heading', { name: 'GOLD Internal', level: 1 })).toBeVisible();
     await expect(page.getByText('Non-billable').first()).toBeVisible();
 

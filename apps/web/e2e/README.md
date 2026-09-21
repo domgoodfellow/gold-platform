@@ -70,7 +70,7 @@ GitHub is recorded in `docs/testing.md`, not here.
 
 ## GOLD's own workspace
 
-`/platform/**` renders inside GOLD's own organization, so the staff specs need one. `global-setup.ts`
+Platform (`/organizations/{goldId}/platform/**`) renders inside GOLD's own organization, so the staff specs need one. `global-setup.ts`
 provisions it (a staff-provisioned business, then the staff-only bootstrap door) if it is not there.
 That makes the e2e database unsuitable for the database integration suite, whose
 `gold-bootstrap.test.ts` expects no GOLD Internal organization to exist: run `pnpm db:reset` before

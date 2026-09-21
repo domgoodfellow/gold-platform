@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { platformHref } from '@/lib/platform-navigation';
 import { AppPage } from '@/components/containers/app-page';
 import { SectionHeading } from '@/components/containers/section';
 import { PageHeader } from '@/components/containers/page-header';
@@ -8,14 +9,20 @@ import { Widget, WidgetGrid } from '@/components/display/widget';
 import type { PlatformOverview as PlatformOverviewData } from '@/lib/domain/platform/overview';
 
 /**
- * `/platform`'s landing screen. An area dashboard in the `ui-spec.md` §2b sense — the same
+ * The Platform overview, the landing screen. An area dashboard in the `ui-spec.md` §2b sense — the same
  * `Widget`/`WidgetGrid` vocabulary Today uses, not the tenant-configured `dashboards` in
  * `lib/domain/reporting/`. Four numbers and one table, all read straight off `PlatformOverview`
  * (`lib/domain/platform/overview.ts`) with no arithmetic performed here — see
  * `docs/constraints.md`'s "Decided, not yet built" table for what was deliberately left off this
  * screen and why.
  */
-export function PlatformOverview({ organizations, failures, catalogue, rates }: PlatformOverviewData) {
+export function PlatformOverview({
+  goldId,
+  organizations,
+  failures,
+  catalogue,
+  rates,
+}: PlatformOverviewData & { goldId: string }) {
   const totalFailures = failures.operational + failures.providerReconciliation;
 
   return (
@@ -27,25 +34,25 @@ export function PlatformOverview({ organizations, failures, catalogue, rates }: 
           title="Organizations"
           value={organizations.total}
           note={organizations.total === 0 ? undefined : `${organizations.live} live · ${organizations.settingUp} setting up`}
-          href="/platform/organizations"
+          href={platformHref(goldId, 'organizations')}
         />
         <Widget
           title="Attention"
           value={totalFailures}
           note={totalFailures === 0 ? 'Nothing needs attention.' : `${failures.operational} operational · ${failures.providerReconciliation} provider reconciliation`}
-          href="/platform/failures"
+          href={platformHref(goldId, 'failures')}
         />
         <Widget
           title="Catalog"
           value={catalogue.products}
           note={`Sellable products · ${catalogue.meters} meter${catalogue.meters === 1 ? '' : 's'} defined`}
-          href="/platform/catalog/products"
+          href={platformHref(goldId, 'catalog/products')}
         />
         <Widget
           title="Rate cards"
           value={rates.retail}
           note={`Retail rates recorded · ${rates.provider} provider rate${rates.provider === 1 ? '' : 's'}`}
-          href="/platform/pricing"
+          href={platformHref(goldId, 'pricing')}
         />
       </WidgetGrid>
 
@@ -62,7 +69,7 @@ export function PlatformOverview({ organizations, failures, catalogue, rates }: 
                 header: 'Organization',
                 emphasis: 'primary',
                 cell: (tenant) => (
-                  <Link className="font-medium underline underline-offset-4" href={`/platform/organizations/${tenant.id}`}>
+                  <Link className="font-medium underline underline-offset-4" href={platformHref(goldId, `organizations/${tenant.id}`)}>
                     {tenant.name}
                   </Link>
                 ),
