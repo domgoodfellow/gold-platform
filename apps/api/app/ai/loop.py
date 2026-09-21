@@ -21,7 +21,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.ai import AnsweringProvider, Exchange, PriorTurn, Tool, ToolCall, ToolResult, Turn
+from app.ai import (
+    AnsweringProvider,
+    AttachedText,
+    Exchange,
+    PriorTurn,
+    Tool,
+    ToolCall,
+    ToolResult,
+    Turn,
+)
 from app.ai.actions import ACTIONS, action_named
 from app.ai.tools import TOOLS, tool_named
 from app.core.caller import ToolFailed, call_tool
@@ -39,6 +48,48 @@ MAX_TURNS = 6
 MAX_PRIOR_TURNS = 10
 MAX_PRIOR_ANSWER_CHARS = 3_000
 MAX_PRIOR_CHARS = 12_000
+
+
+# **Files sent with a question**, bounded here for the same reason. `apps/web` has already read
+# them as text and cut them; this is the second line, and the one that holds if the first is bypassed.
+MAX_ATTACHMENTS = 3
+MAX_ATTACHMENT_CHARS = 20_000
+MAX_ATTACHMENTS_CHARS = 40_000
+MAX_ATTACHMENT_NAME = 120
+
+
+def bound_attachments(files: tuple[AttachedText, ...]) -> tuple[AttachedText, ...]:
+    """At most a few files, each shortened, and all of them within one budget."""
+    kept: list[AttachedText] = []
+    remaining = MAX_ATTACHMENTS_CHARS
+    for file in files[:MAX_ATTACHMENTS]:
+        allowed = max(0, min(MAX_ATTACHMENT_CHARS, remaining))
+        text = file.text[:allowed]
+        remaining -= len(text)
+        kept.append(
+            AttachedText(
+                # A name is quoted into a prompt, so it carries nothing but its own characters.
+                name="".join(c for c in file.name if c.isprintable() and c not in '"<>')[:MAX_ATTACHMENT_NAME],
+                mime_type=file.mime_type[:80],
+                text=text,
+                truncated=file.truncated or len(text) < len(file.text),
+            )
+        )
+    return tuple(kept)
+
+
+def render_attachments(files: tuple[AttachedText, ...]) -> str:
+    """The files as quoted material, for a provider to place after the question.
+
+    Each is fenced in an `<attachment>` element so a model can tell what the person typed from what
+    they handed over, and a closing tag inside a file cannot end the fence early.
+    """
+    parts = []
+    for file in files:
+        body = file.text.replace("</attachment", "<\\/attachment")
+        note = " (shortened)" if file.truncated else ""
+        parts.append(f'<attachment name="{file.name}" type="{file.mime_type}"{note}>\n{body}\n</attachment>')
+    return "\n\n".join(parts)
 
 
 def bound_prior_turns(turns: tuple[PriorTurn, ...]) -> tuple[PriorTurn, ...]:
@@ -176,6 +227,7 @@ def answer(
     organization_id: str,
     context: str = "",
     prior_turns: tuple[PriorTurn, ...] = (),
+    attachments: tuple[AttachedText, ...] = (),
     tools: tuple[Tool, ...] = TOOLS,
     actions: tuple[Tool, ...] = ACTIONS,
 ) -> Answer:
@@ -188,6 +240,7 @@ def answer(
     what this platform may put into a prompt at all.
     """
     prior_turns = bound_prior_turns(prior_turns)
+    attachments = bound_attachments(attachments)
     history: list[Exchange] = []
     performed: list[ToolRecord] = []
 
@@ -203,6 +256,7 @@ def answer(
                 history=tuple(history),
                 context=context,
                 prior_turns=prior_turns,
+                attachments=attachments,
             )
         except Exception as failure:  # noqa: BLE001 - the provider's own words, recorded
             return Answer(outcome="failed", detail=str(failure), tools=performed)

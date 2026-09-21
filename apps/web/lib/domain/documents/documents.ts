@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
@@ -101,7 +100,7 @@ export async function uploadDocument(
   }
 
   // A random segment, not the document id — the id doesn't exist until the row is written, and the row is written second.
-  const path = `${input.organizationId}/${randomUUID()}/${safeKeySegment(fileName)}`;
+  const path = `${input.organizationId}/${globalThis.crypto.randomUUID()}/${safeKeySegment(fileName)}`;
 
   const { error: uploadError } = await db.storage
     .from(BUCKET)

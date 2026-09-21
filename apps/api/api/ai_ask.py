@@ -26,7 +26,7 @@ import json
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler
 
-from app.ai import PriorTurn
+from app.ai import AttachedText, PriorTurn
 from app.ai.loop import answer
 from app.ai.registry import answering_provider, unconfigured_reason
 from app.auth import AuthError, require_caller
@@ -45,6 +45,25 @@ def _prior_turns(raw: object) -> tuple[PriorTurn, ...]:
         and isinstance(item.get("answer"), str)
         and item["question"].strip()
         and item["answer"].strip()
+    )
+
+
+def _attachments(raw: object) -> tuple[AttachedText, ...]:
+    """Well-formed `{name, mimeType, text}` files; anything else in a body is dropped."""
+    if not isinstance(raw, list):
+        return ()
+    return tuple(
+        AttachedText(
+            name=item["name"],
+            mime_type=item["mimeType"],
+            text=item["text"],
+            truncated=item.get("truncated") is True,
+        )
+        for item in raw
+        if isinstance(item, dict)
+        and isinstance(item.get("name"), str)
+        and isinstance(item.get("mimeType"), str)
+        and isinstance(item.get("text"), str)
     )
 
 
@@ -100,6 +119,7 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             # Earlier turns of the one conversation `apps/web` read for this caller. Text only;
             # the loop bounds it again rather than trusting how carefully it was built.
             prior_turns=_prior_turns(body.get("history")),
+            attachments=_attachments(body.get("attachments")),
         )
 
         # **The run is not written here.** `apps/web` writes it, under the same session that

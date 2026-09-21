@@ -76,6 +76,59 @@ export type Database = {
           },
         ]
       }
+      agent_run_documents: {
+        Row: {
+          created_at: string
+          created_by: string
+          document_id: string
+          organization_id: string
+          run_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          document_id: string
+          organization_id: string
+          run_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          document_id?: string
+          organization_id?: string
+          run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_run_documents_document_fkey"
+            columns: ["organization_id", "created_by", "document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["organization_id", "agent_user_id", "id"]
+          },
+          {
+            foreignKeyName: "agent_run_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_run_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_run_documents_run_fkey"
+            columns: ["organization_id", "created_by", "run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["organization_id", "created_by", "id"]
+          },
+        ]
+      }
       agent_runs: {
         Row: {
           action_detail: string | null
@@ -1658,6 +1711,7 @@ export type Database = {
       }
       documents: {
         Row: {
+          agent_user_id: string | null
           asset_id: string | null
           created_at: string
           created_by: string
@@ -1672,6 +1726,7 @@ export type Database = {
           work_item_id: string | null
         }
         Insert: {
+          agent_user_id?: string | null
           asset_id?: string | null
           created_at?: string
           created_by: string
@@ -1686,6 +1741,7 @@ export type Database = {
           work_item_id?: string | null
         }
         Update: {
+          agent_user_id?: string | null
           asset_id?: string | null
           created_at?: string
           created_by?: string

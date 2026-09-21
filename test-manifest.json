@@ -642,6 +642,15 @@
       ],
       "note": "The browser softphone token boundary (browserTelephoneToken) had no test."
     },
+    "apps/web/tests/integration/database/agent-attachments.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "ai",
+        "security",
+        "tenancy"
+      ],
+      "note": "Fakes fetch for the assistant URL only."
+    },
     "apps/web/tests/integration/database/agent-conversations.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1112,15 +1121,6 @@
         "scheduling"
       ]
     },
-    "apps/web/tests/integration/database/session-identity.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "auth",
-        "identity"
-      ],
-      "note": "Also runs pure classification and redirect rules."
-    },
-    "apps/web/tests/integration/database/settings-configuration-authority.test.ts": {
     "apps/web/tests/integration/database/service-access.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1130,6 +1130,15 @@
       ],
       "note": "Webhook function called directly; no Stripe traffic. next/navigation and getDb are replaced so the route guard can be driven."
     },
+    "apps/web/tests/integration/database/session-identity.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "auth",
+        "identity"
+      ],
+      "note": "Also runs pure classification and redirect rules."
+    },
+    "apps/web/tests/integration/database/settings-configuration-authority.test.ts": {
       "category": "database-integration",
       "concerns": [
         "settings",
@@ -1190,6 +1199,13 @@
         "work"
       ]
     },
+    "apps/web/tests/unit/agent-attachments.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "ai",
+        "security"
+      ]
+    },
     "apps/web/tests/unit/agent-conversations.test.ts": {
       "category": "unit",
       "concerns": [
@@ -1216,9 +1232,6 @@
         "routing",
         "lifecycle"
       ]
-    }
-  }
-}
     },
     "apps/web/tests/unit/service-access.test.ts": {
       "category": "unit",
@@ -1226,3 +1239,6 @@
         "billing",
         "tenancy"
       ]
+    }
+  }
+}

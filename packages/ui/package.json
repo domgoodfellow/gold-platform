@@ -6,6 +6,7 @@
   "exports": {
     "./components/accordion": "./src/components/accordion.tsx",
     "./components/alert": "./src/components/alert.tsx",
+    "./components/attachment": "./src/components/attachment.tsx",
     "./components/avatar": "./src/components/avatar.tsx",
     "./components/badge": "./src/components/badge.tsx",
     "./components/breadcrumb": "./src/components/breadcrumb.tsx",

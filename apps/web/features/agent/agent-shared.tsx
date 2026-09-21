@@ -1,7 +1,17 @@
 'use client';
 
-import { useState, type FormEvent, type ReactNode, type RefObject } from 'react';
+import { useRef, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 import { Empty, EmptyContent, EmptyDescription, EmptyMedia, EmptyTitle } from '@gold/ui/components/empty';
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+} from '@gold/ui/components/attachment';
 import { Bubble, BubbleContent } from '@gold/ui/components/bubble';
 import { Marker, MarkerContent, MarkerIcon } from '@gold/ui/components/marker';
 import { Message, MessageContent } from '@gold/ui/components/message';
@@ -14,15 +24,18 @@ import {
   MessageScrollerViewport,
 } from '@gold/ui/components/message-scroller';
 import { Popover, PopoverContent, PopoverTrigger } from '@gold/ui/components/popover';
-import { Bot, Check, History, LoaderCircle, Plus, Search, TriangleAlert } from 'lucide-react';
+import { Bot, Check, FileText, History, LoaderCircle, Paperclip, Plus, Search, TriangleAlert, X } from 'lucide-react';
 import { cx } from '@/components/class-names';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { TextArea } from '@/components/controls/inputs';
 import {
   ACTION_LABELS,
+  type AgentAttachment,
   type AgentConversationSummary,
   type AgentRun,
 } from '@/lib/domain/assistant/questions';
+import { ATTACHMENT_ACCEPT } from '@/lib/domain/assistant/attachment-rules';
+import { attachmentDescription, formatBytes } from './attachment-view';
 import { runEvents, type RunEvent } from './run-events';
 import { formatRecent } from './recent-time';
 
@@ -193,7 +206,7 @@ export function AgentTranscript({
 }: {
   conversationId: string | null;
   runs: AgentRun[];
-  pendingQuestion: string | null;
+  pendingQuestion: { text: string; attachments: AgentAttachment[] } | null;
   decideFormAction: (formData: FormData) => void;
   decidePending: boolean;
   decideError: string | null;
@@ -223,7 +236,7 @@ export function AgentTranscript({
             {pendingQuestion ? (
               <>
                 <MessageScrollerItem messageId="pending-question" scrollAnchor>
-                  <QuestionMessage text={pendingQuestion} />
+                  <QuestionMessage text={pendingQuestion.text} attachments={pendingQuestion.attachments} />
                 </MessageScrollerItem>
                 <MessageScrollerItem messageId="pending-answer">
                   <Marker role="status">
@@ -241,10 +254,30 @@ export function AgentTranscript({
   );
 }
 
-function QuestionMessage({ text }: { text: string }) {
+/**
+ * A sent question, and the files it was sent with beside it. The files are the record of what was
+ * handed over — the same cards the composer showed, without the controls — so a reopened
+ * conversation reads as it did.
+ */
+function QuestionMessage({ text, attachments }: { text: string; attachments: AgentAttachment[] }) {
   return (
     <Message align="end">
       <MessageContent>
+        {attachments.length > 0 ? (
+          <AttachmentGroup className="max-w-[90%] justify-end">
+            {attachments.map((attachment) => (
+              <Attachment key={attachment.id} size="sm">
+                <AttachmentMedia><FileText /></AttachmentMedia>
+                <AttachmentContent>
+                  <AttachmentTitle>{attachment.fileName}</AttachmentTitle>
+                  <AttachmentDescription>
+                    {attachmentDescription(attachment.mimeType, attachment.sizeBytes)}
+                  </AttachmentDescription>
+                </AttachmentContent>
+              </Attachment>
+            ))}
+          </AttachmentGroup>
+        ) : null}
         <Bubble variant="secondary" align="end" className="max-w-[90%]">
           <BubbleContent className="whitespace-pre-wrap">{text}</BubbleContent>
         </Bubble>
@@ -271,7 +304,7 @@ function TurnItems({
   return (
     <>
       <MessageScrollerItem messageId={`${run.id}:question`} scrollAnchor>
-        <QuestionMessage text={run.question} />
+        <QuestionMessage text={run.question} attachments={run.attachments} />
       </MessageScrollerItem>
 
       <MessageScrollerItem messageId={`${run.id}:response`} className="flex flex-col gap-2">
@@ -348,11 +381,76 @@ function EventMarker({ event }: { event: RunEvent }) {
 /** The most the composer grows before it scrolls inside itself. */
 const COMPOSER_MAX_HEIGHT = 160;
 
+/** One file the person has picked and not yet sent, at whatever stage it has reached. */
+export type ComposerAttachment = {
+  key: string;
+  name: string;
+  sizeBytes: number;
+  mimeType: string;
+  state: 'uploading' | 'done' | 'error';
+  /** Set once the file is stored; what the question is sent with. */
+  documentId?: string;
+  /** In words a person can act on, when `state` is `error`. */
+  error?: string;
+};
+
 /**
- * The fixed composer: the textarea above, a utility toolbar beneath it. Enter sends and
- * Shift+Enter adds a line; the textarea grows to a bound and then scrolls. `tools` is the left of
- * the toolbar (Context, Configure — and, the day it exists, Attachment); Send is the right.
- * There is no attachment button here because nothing yet accepts an attachment.
+ * The files waiting to be sent, above the textarea: a card each, with where it has got to and a
+ * way to take it back. They wrap rather than scroll, so at the rail's narrowest none is hidden.
+ */
+function ComposerAttachments({
+  attachments,
+  onRemove,
+}: {
+  attachments: ComposerAttachment[];
+  onRemove: (key: string) => void;
+}) {
+  return (
+    <AttachmentGroup aria-label="Attached files">
+      {attachments.map((file) => (
+        <Attachment key={file.key} size="sm" state={file.state} className="max-w-full">
+          <AttachmentMedia>
+            {file.state === 'uploading' ? (
+              <LoaderCircle className="animate-spin" />
+            ) : file.state === 'error' ? (
+              <TriangleAlert />
+            ) : (
+              <FileText />
+            )}
+          </AttachmentMedia>
+          <AttachmentContent>
+            <AttachmentTitle>{file.name}</AttachmentTitle>
+            <AttachmentDescription role={file.state === 'error' ? 'alert' : undefined}>
+              {file.state === 'uploading'
+                ? `Uploading… ${formatBytes(file.sizeBytes)}`
+                : file.state === 'error'
+                  ? (file.error ?? 'Could not attach that file.')
+                  : attachmentDescription(file.mimeType, file.sizeBytes)}
+            </AttachmentDescription>
+          </AttachmentContent>
+          <AttachmentActions>
+            <AttachmentAction
+              type="button"
+              aria-label={file.state === 'uploading' ? `Cancel ${file.name}` : `Remove ${file.name}`}
+              onClick={() => onRemove(file.key)}
+            >
+              <X aria-hidden />
+            </AttachmentAction>
+          </AttachmentActions>
+        </Attachment>
+      ))}
+    </AttachmentGroup>
+  );
+}
+
+/**
+ * The fixed composer: the files waiting above, the textarea, and a utility toolbar beneath it.
+ * Enter sends and Shift+Enter adds a line; the textarea grows to a bound and then scrolls. The
+ * paperclip is first on the left, then `tools` (Context, Configure); Send is the right.
+ *
+ * The file input has no `name`, on purpose: a file is uploaded by its own action the moment it is
+ * chosen, and the question carries only the ids of files already stored — the form must never
+ * submit the bytes a second time.
  */
 export function AgentComposer({
   formAction,
@@ -362,6 +460,10 @@ export function AgentComposer({
   pending,
   placeholder,
   tools,
+  attachments,
+  canAttach,
+  onPickFiles,
+  onRemoveAttachment,
 }: {
   formAction: (formData: FormData) => void;
   hiddenFields: ReactNode;
@@ -370,7 +472,16 @@ export function AgentComposer({
   pending: boolean;
   placeholder: string;
   tools: ReactNode;
+  attachments: ComposerAttachment[];
+  /** False when nothing more can be attached (the limit is reached). */
+  canAttach: boolean;
+  onPickFiles: (files: File[]) => void;
+  onRemoveAttachment: (key: string) => void;
 }) {
+  const picker = useRef<HTMLInputElement>(null);
+  // A question is not sent while a file is still on its way: it would go without it.
+  const uploading = attachments.some((file) => file.state === 'uploading');
+
   function grow(element: HTMLTextAreaElement) {
     element.style.height = 'auto';
     element.style.height = `${Math.min(element.scrollHeight, COMPOSER_MAX_HEIGHT)}px`;
@@ -384,6 +495,14 @@ export function AgentComposer({
       className="flex shrink-0 flex-col gap-2 border-t border-border p-3"
     >
       {hiddenFields}
+      {attachments.map((file) =>
+        file.state === 'done' && file.documentId ? (
+          <input key={file.key} type="hidden" name="documentId" value={file.documentId} />
+        ) : null,
+      )}
+      {attachments.length > 0 ? (
+        <ComposerAttachments attachments={attachments} onRemove={onRemoveAttachment} />
+      ) : null}
       <TextArea
         ref={textareaRef}
         name="question"
@@ -399,12 +518,38 @@ export function AgentComposer({
         onKeyDown={(event) => {
           if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
           event.preventDefault();
-          if (!pending && event.currentTarget.value.trim()) event.currentTarget.form?.requestSubmit();
+          if (!pending && !uploading && event.currentTarget.value.trim()) event.currentTarget.form?.requestSubmit();
+        }}
+      />
+      <input
+        ref={picker}
+        type="file"
+        multiple
+        hidden
+        tabIndex={-1}
+        accept={ATTACHMENT_ACCEPT}
+        onChange={(event) => {
+          onPickFiles(Array.from(event.currentTarget.files ?? []));
+          // So choosing the same file again is a choice.
+          event.currentTarget.value = '';
         }}
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">{tools}</div>
-        <Button type="submit" size="small" disabled={disabled || pending} className="ml-auto">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            tone="secondary"
+            size="small"
+            aria-label="Attach files"
+            title="Attach files"
+            disabled={disabled || !canAttach}
+            onClick={() => picker.current?.click()}
+          >
+            <Paperclip aria-hidden size={14} />
+          </Button>
+          {tools}
+        </div>
+        <Button type="submit" size="small" disabled={disabled || pending || uploading} className="ml-auto">
           {pending ? 'Sending…' : 'Send'}
         </Button>
       </div>

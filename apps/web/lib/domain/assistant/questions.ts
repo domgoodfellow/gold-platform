@@ -12,6 +12,12 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { executorFor, reasonActionCannotRun } from './actions';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
+import {
+  linkAttachmentsToRun,
+  listAttachmentsByRun,
+  readAttachmentsForQuestion,
+  type AgentAttachment,
+} from './attachments';
 
 /**
  * Asking the system a question, and the record of having asked — grouped into conversations, each
@@ -28,6 +34,8 @@ export { ACTION_LABELS } from './actions';
 
 /** `pending` is a real state somebody is looking at, hence four words rather than three. */
 export type ActionOutcome = 'pending' | 'done' | 'declined' | 'failed';
+
+export type { AgentAttachment };
 
 export type AgentRun = {
   id: string;
@@ -49,6 +57,8 @@ export type AgentRun = {
   actionOutcome: ActionOutcome | null;
   /** The refusal, in the words of whoever refused (I25). */
   actionDetail: string | null;
+  /** The files this question was sent with, so a reopened conversation shows them again. */
+  attachments: AgentAttachment[];
 };
 
 /** A thread as History lists it. The transcript is a separate read, loaded when somebody opens it. */
@@ -162,6 +172,8 @@ function toRun(row: {
     proposedAction: (row.proposed_action ?? null) as ProposedAction | null,
     actionOutcome: isActionOutcome(row.action_outcome) ? row.action_outcome : null,
     actionDetail: row.action_detail,
+    // Filled in by the reads that list a transcript; a single row read never knows.
+    attachments: [],
   };
 }
 
@@ -250,7 +262,12 @@ export async function listAgentConversationRuns(
     throw new DomainError(error.message, 'assistant.list_failed');
   }
 
-  return (data ?? []).map(toRun);
+  const runs = (data ?? []).map(toRun);
+  const attachments = await listAttachmentsByRun(db, {
+    organizationId: input.organizationId,
+    runIds: runs.map((run) => run.id),
+  });
+  return runs.map((run) => ({ ...run, attachments: attachments.get(run.id) ?? [] }));
 }
 
 /**
@@ -292,6 +309,8 @@ export async function askQuestion(
     conversationId?: string | null;
     /** Where the person is, if the caller knows. Left out, nothing about it is sent. */
     viewing?: Viewing | null;
+    /** Agent files, already uploaded, to send with this question. */
+    documentIds?: string[];
   },
 ): Promise<AgentRun> {
   const actor = await requireActor(db);
@@ -352,6 +371,13 @@ export async function askQuestion(
     });
   }
 
+  // The files are read before anything is spent, for the same reason: one that is gone, sent
+  // already, or not text refuses the whole question rather than being quietly left out.
+  const sending = await readAttachmentsForQuestion(db, {
+    organizationId: input.organizationId,
+    documentIds: input.documentIds ?? [],
+  });
+
   let outcome: AnswerOutcome = 'failed';
   let text = '';
   let detail: string | null = null;
@@ -364,6 +390,7 @@ export async function askQuestion(
     const answer = await provider.answer({
       question,
       priorTurns,
+      attachments: sending.texts,
       token,
       organizationId: input.organizationId,
       // I9, not a convenience — the model has no clock, so `Intl` (not Date arithmetic) resolves the business's own today in its own zone.
@@ -432,7 +459,14 @@ export async function askQuestion(
     throw new DomainError(error.message, 'assistant.record_failed');
   }
 
-  return toRun(data);
+  await linkAttachmentsToRun(db, {
+    organizationId: input.organizationId,
+    userId: actor.id,
+    runId: data.id,
+    documentIds: sending.attachments.map((attachment) => attachment.id),
+  });
+
+  return { ...toRun(data), attachments: sending.attachments };
 }
 
 /**

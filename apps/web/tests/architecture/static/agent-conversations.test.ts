@@ -152,15 +152,58 @@ describe('the composer', () => {
     expect(composer.indexOf('{tools}')).toBeLessThan(composer.indexOf('Send'));
   });
 
-  it('carries no dead Attachment control — nothing accepts an attachment yet', () => {
-    expect(code(shared + tenantRail)).not.toMatch(/Attach|Paperclip/);
+  it('has a paperclip only because the whole path behind it exists', () => {
+    // Choose → upload privately → card with its state → sent with the question → persisted → shown again.
+    expect(composer).toContain('<Paperclip');
+    expect(composer).toContain('aria-label="Attach files"');
+    expect(tenantRail).toContain('uploadAttachmentAction(body)');
+    expect(actions).toContain('uploadAgentAttachment(db');
+    expect(code(questions)).toContain('readAttachmentsForQuestion(db');
+    expect(code(questions)).toContain('linkAttachmentsToRun(db');
+    expect(code(questions)).toContain('listAttachmentsByRun(db');
+    expect(shared).toContain('attachments={run.attachments}');
+  });
+
+  it('shows the files above the textarea, and lets a person take one back before sending', () => {
+    expect(composer.indexOf('<ComposerAttachments')).toBeLessThan(composer.indexOf('<TextArea'));
+    expect(shared).toContain('Cancel ${file.name}');
+    expect(shared).toContain('Remove ${file.name}');
+    expect(tenantRail).toContain('removeAttachmentAction(organizationId');
+  });
+
+  it('never submits file bytes with the question: the picker has no name, and the question carries ids', () => {
+    const start = composer.indexOf('ref={picker}');
+    const picker = composer.slice(start, composer.indexOf('/>', start));
+    expect(picker).toContain('type="file"');
+    expect(picker).not.toMatch(/\bname=/);
+    expect(composer).toContain('name="documentId"');
+  });
+
+  it('will not send while a file is still uploading', () => {
+    expect(composer).toContain("const uploading = attachments.some((file) => file.state === 'uploading');");
+    expect(composer).toContain('disabled={disabled || pending || uploading}');
+  });
+
+  it('keeps the cards inside a 320px rail: they wrap, and never scroll sideways', () => {
+    const group = readFileSync(`${UI}/src/components/attachment.tsx`, 'utf8');
+    expect(code(group)).toContain('flex min-w-0 flex-wrap gap-2');
+    expect(code(group)).not.toMatch(/overflow-x-auto|snap-x/);
+    expect(shared).toContain('className="max-w-full"');
+  });
+
+  it('accepts only what the Agent can read, and asks the browser for the same', () => {
+    expect(composer).toContain('accept={ATTACHMENT_ACCEPT}');
+    const rules = read('lib/domain/assistant/attachment-rules.ts');
+    expect(rules).toContain("csv: 'text/csv'");
+    const types = rules.slice(rules.indexOf('const TYPES'), rules.indexOf('};', rules.indexOf('const TYPES')));
+    expect(types).not.toMatch(/pdf|png|jpe?g|docx/);
   });
 
   it('keeps role refusal, pending and error behaviour', () => {
     expect(tenantRail).toContain('disabled={!mayAsk}');
     expect(tenantRail).toContain("'Your role cannot ask questions here.'");
     expect(composer).toContain("{pending ? 'Sending…' : 'Send'}");
-    expect(composer).toContain('disabled={disabled || pending}');
+    expect(composer).toContain('disabled={disabled || pending || uploading}');
     expect(tenantRail).toContain('{askError}');
     expect(tenantRail).toContain('role="alert"');
   });
@@ -245,7 +288,7 @@ describe('a question’s result reaches the rail from any page', () => {
   });
 
   it('shows the question at once with a Thinking note until it is answered', () => {
-    expect(tenantRail).toContain('setPendingQuestion(String(formData.get(\'question\') ?? \'\').trim())');
+    expect(tenantRail).toContain("setPendingQuestion({ text: String(formData.get('question') ?? '').trim(), attachments: sending })");
     expect(tenantRail).toContain('setPendingQuestion(null)');
   });
 });
@@ -281,14 +324,14 @@ describe('the chat components live in @gold/ui, on GOLD’s roles', () => {
   const manifest = JSON.parse(readFileSync(`${UI}/package.json`, 'utf8')) as { exports: Record<string, string> };
 
   it('exports Message, Bubble, Message Scroller and Marker as subpaths, never a barrel', () => {
-    for (const name of ['message', 'bubble', 'message-scroller', 'marker']) {
+    for (const name of ['message', 'bubble', 'message-scroller', 'marker', 'attachment']) {
       expect(manifest.exports[`./components/${name}`]).toBe(`./src/components/${name}.tsx`);
     }
     expect(Object.keys(manifest.exports)).not.toContain('.');
   });
 
   it('uses no demo blue, no muted surface, and no reactions or avatars', () => {
-    for (const name of ['message', 'bubble', 'message-scroller', 'marker']) {
+    for (const name of ['message', 'bubble', 'message-scroller', 'marker', 'attachment']) {
       const source = ui(name);
       expect(source).not.toMatch(/bg-muted(?![-\w])|blue-|oklch\(from var\(--primary\)/);
     }

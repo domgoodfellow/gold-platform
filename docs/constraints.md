@@ -612,7 +612,13 @@ an `agent_conversations` row readable only by its starter, a run cannot be filed
 else's (a composite key carrying the asker and the business), and a follow-up sends the answering
 side only the earlier *finished* questions and answers of that one conversation — text, never tool
 rows — bounded by turn count and size in both runtimes. A New chat is nothing until its first
-question, and its title is that question shortened, never a second model call. The loop writes nothing; an intended action is recorded as pending
+question, and its title is that question shortened, never a second model call. **A file attached
+to a question is a Document, owned by the person and not by a record:** the same private bucket and
+table, in an `agent/<person>/` namespace that only its owner can read, list or sign — the rest of the
+business's documents stay the whole business's. What a model receives of one is text, and only
+text: no PDF or image reader exists here, so the supported set is exactly text, Markdown, CSV and
+JSON, checked as bytes and not by the browser's word, bounded, and sent with the turn it belongs to
+only. Widening the set means adding the reader that consumes the new type in the same change. The loop writes nothing; an intended action is recorded as pending
 and performed only when a person presses the button, mapped through a whitelist on the executing
 side.
 

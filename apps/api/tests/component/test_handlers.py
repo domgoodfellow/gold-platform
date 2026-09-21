@@ -378,3 +378,17 @@ class TestAssistantHistory:
         turns = ai_ask._prior_turns([{"question": "a?", "answer": "A", "tools": [{"rows": 3}], "rows": [{"secret": 1}]}])
 
         assert [vars(t) for t in turns] == [{"question": "a?", "answer": "A"}]
+
+
+class TestAssistantAttachments:
+    def test_keeps_well_formed_files(self) -> None:
+        files = ai_ask._attachments([{"name": "a.csv", "mimeType": "text/csv", "text": "x", "truncated": True}])
+
+        assert [(f.name, f.mime_type, f.text, f.truncated) for f in files] == [("a.csv", "text/csv", "x", True)]
+
+    @pytest.mark.parametrize(
+        "raw",
+        [None, "text", {"name": "a"}, [1, None], [{"name": "a.txt"}], [{"name": "a", "mimeType": "t", "text": 5}]],
+    )
+    def test_drops_anything_that_is_not_a_named_text_file(self, raw) -> None:
+        assert ai_ask._attachments(raw) == ()

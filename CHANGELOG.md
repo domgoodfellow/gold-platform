@@ -5,10 +5,25 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Files on an Agent question
+
+The composer has a paperclip. A person chooses up to three text, Markdown, CSV or JSON files of up to 1 MB
+each; each is uploaded privately and shown as an `Attachment` card (`Attachment` is the fifth shadcn chat
+component in `@gold/ui`, on GOLD's roles) with its state above the textarea, and can be cancelled or removed
+until the question is sent. On send the files' text goes to the answering side with that question, the
+association is recorded, and the same cards appear beside the question when the conversation is reopened.
+The file is a Document, not a new store: `documents` gains a fifth owner, the asker, and an
+`agent/<person>/` namespace in the same private bucket that only that person can read, list or sign, so a
+colleague sharing the business sees nothing of it and the business's ordinary documents stay as open as
+they were. `agent_run_documents` records which question a file was sent with, keyed on the asker on both
+sides. Only text is supported because nothing here reads a PDF or an image; the type is checked from the
+bytes, not the browser's label, and text is bounded and quoted as material, never instructions, in both
+runtimes. A file is sent with its own question only; later questions in the conversation do not carry it.
+The Server Action body limit is now 2 MB.
+
 ### Commercial service access for an organization
 
 A business on a billable GOLD Plan now needs a serviceable subscription (`active` or `trialing`) to open any operational page, server action or route handler; without one it lands on a locked screen in its own shell, with Plan & usage, checkout and the billing portal still open. GOLD Internal and a business with no Plan are never locked. Nothing is stored or deleted: the answer is derived from the Plan and the cached subscription by one resolver, which Platform → Billing and the organization overview also read. D57, I50.
-
 
 ### One page frame for the organization workspace
 

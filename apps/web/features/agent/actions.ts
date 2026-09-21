@@ -9,6 +9,11 @@ import {
   type AgentRun,
 } from '@/lib/domain/assistant/questions';
 import { DomainError } from '@/lib/domain/errors';
+import {
+  removeAgentAttachment,
+  uploadAgentAttachment,
+  type AgentAttachment,
+} from '@/lib/domain/assistant/attachments';
 import { resolveAgentViewing } from './agent-context';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -45,6 +50,7 @@ export async function askAction(
   // Where the person is comes from the path, re-derived here against navigation's own areas — a
   // label the browser sent would be a sentence somebody else wrote into the prompt. The Configure
   // popover's switch can withhold the open record; it can never add anything.
+  const documentIds = formData.getAll('documentId').map(String).filter(Boolean);
   const viewing = resolveAgentViewing(String(formData.get('pathname') ?? ''));
   if (formData.get('includeRecord') !== 'on') viewing.recordId = null;
 
@@ -54,6 +60,7 @@ export async function askAction(
       organizationId,
       conversationId,
       viewing,
+      documentIds,
       question: String(formData.get('question') ?? ''),
     });
     state = {
@@ -91,6 +98,46 @@ export async function openConversationAction(
     const runs = await listAgentConversationRuns(db, { organizationId, conversationId });
     if (runs.length === 0) return { error: 'That conversation is not available.' };
     return { error: null, conversationId, runs };
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+}
+
+export type AttachmentActionState = { error: string | null; attachment?: AgentAttachment };
+
+/**
+ * Store one file for the composer, privately and as the asker's own. Nothing is asked of the model
+ * and nothing is sent anywhere: the file waits, unsent, until a question carries it.
+ */
+export async function uploadAttachmentAction(formData: FormData): Promise<AttachmentActionState> {
+  await requireOrganization(String(formData.get('organizationId') ?? ''));
+  const db = await getDb();
+  const file = formData.get('file');
+  if (!(file instanceof File)) return { error: 'Choose a file first.' };
+
+  try {
+    const attachment = await uploadAgentAttachment(db, {
+      organizationId: String(formData.get('organizationId') ?? ''),
+      file,
+    });
+    return { error: null, attachment };
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+}
+
+/** Take back a file that has not been sent. One that has been sent stays: it is part of a question. */
+export async function removeAttachmentAction(
+  organizationId: string,
+  documentId: string,
+): Promise<{ error: string | null }> {
+  await requireOrganization(organizationId);
+  const db = await getDb();
+  try {
+    await removeAgentAttachment(db, { organizationId, documentId });
+    return { error: null };
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;

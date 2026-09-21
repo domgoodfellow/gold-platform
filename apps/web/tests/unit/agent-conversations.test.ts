@@ -147,6 +147,7 @@ describe('runEvents — the concise notes in a conversation', () => {
     proposedAction: null,
     actionOutcome: null,
     actionDetail: null,
+    attachments: [],
   };
   const call = (rows: number, error = '') => ({ tool: 'work_at_risk', arguments: {}, rows, error });
 

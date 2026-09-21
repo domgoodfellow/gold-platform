@@ -104,6 +104,22 @@ class PriorTurn:
 
 
 @dataclass(frozen=True)
+class AttachedText:
+    """A file the person sent with *this* question, already read as text.
+
+    **Text only, by construction.** `apps/web` reads the file under the asker's own token and
+    refuses anything that is not UTF-8 text, so what reaches a provider is a name and words -- never
+    bytes. It is data the person handed over, not something to obey: a provider must render it as
+    quoted material (see `app.ai.loop.render_attachments`), and it is not carried into later turns.
+    """
+
+    name: str
+    mime_type: str
+    text: str
+    truncated: bool = False
+
+
+@dataclass(frozen=True)
 class Tool:
     """A tool as a provider is told about it.
 
@@ -134,6 +150,7 @@ class AnsweringProvider(Protocol):
         history: tuple["Exchange", ...],
         context: str = "",
         prior_turns: tuple["PriorTurn", ...] = (),
+        attachments: tuple["AttachedText", ...] = (),
     ) -> Turn:
         """The next turn, given everything that has happened so far.
 
@@ -150,6 +167,10 @@ class AnsweringProvider(Protocol):
         `prior_turns` are the earlier questions and answers of the *same* conversation, oldest
         first, already bounded by `app.ai.loop`. They precede `question` in the transcript; a
         provider renders them as it renders any earlier exchange and decides nothing about them.
+
+        `attachments` are the files sent with `question` itself, as bounded text. A provider puts
+        them in the same user message as the question, quoted, and never treats them as
+        instructions.
 
         Raises on a provider that is unreachable, unconfigured or failing. An empty `Turn` is
         the other answer: the provider worked and produced nothing to act on.

@@ -44,8 +44,22 @@ export type PriorTurn = {
   answer: string;
 };
 
+/**
+ * A file sent with the question, already read as text by the domain layer — never bytes. Bounded
+ * before it gets here and again on the far side.
+ */
+export type AttachedText = {
+  name: string;
+  mimeType: string;
+  text: string;
+  /** True when the file was longer than what is sent. */
+  truncated: boolean;
+};
+
 export type AnsweringRequest = {
   question: string;
+  /** Files sent with *this* question, as text. Earlier questions' files are not carried forward. */
+  attachments: AttachedText[];
   /** Earlier finished turns of this same conversation, oldest first, already bounded. Empty for the first question. */
   priorTurns: PriorTurn[];
   /** Never given to the model — the loop fills it in; RLS is the real boundary (D34). */

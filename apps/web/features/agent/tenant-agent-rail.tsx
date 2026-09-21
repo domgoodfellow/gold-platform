@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useMemo, useRef, useState, useTransition } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { usePathname } from 'next/navigation';
 import { Checkbox } from '@gold/ui/components/checkbox';
 import { SlidersHorizontal, Info } from 'lucide-react';
@@ -15,10 +15,16 @@ import {
   AgentToolPopover,
   AgentTranscript,
   AgentUnavailable,
+  type ComposerAttachment,
 } from './agent-shared';
 import { resolveAgentViewing } from './agent-context';
 import {
+  ATTACHMENTS_PER_QUESTION,
+  validateAttachment,
+} from '@/lib/domain/assistant/attachment-rules';
+import {
   deriveConversationTitle,
+  type AgentAttachment,
   type AgentConversationSummary,
   type AgentRun,
 } from '@/lib/domain/assistant/questions';
@@ -26,6 +32,8 @@ import {
   askAction,
   decideAction,
   openConversationAction,
+  removeAttachmentAction,
+  uploadAttachmentAction,
   type AskActionState,
 } from './actions';
 
@@ -78,7 +86,16 @@ function TenantAgentPanel({
   const [view, setView] = useState<View>({ kind: 'default' });
   const [askError, setAskError] = useState<string | null>(null);
   const [decideError, setDecideError] = useState<string | null>(null);
-  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+  const [pendingQuestion, setPendingQuestion] = useState<{ text: string; attachments: AgentAttachment[] } | null>(null);
+  // Files chosen and not yet sent. They belong to the person, not to a conversation, so they stay
+  // put across New chat and History and go with the next question.
+  const [drafts, setDrafts] = useState<ComposerAttachment[]>([]);
+  const draftsRef = useRef(drafts);
+  useEffect(() => {
+    draftsRef.current = drafts;
+  }, [drafts]);
+  // Files taken back while still uploading: whatever arrives for them is deleted, never shown.
+  const cancelled = useRef(new Set<string>());
   // A runtime control for the next questions, not a stored setting: whether the record open on
   // the page is named to the Agent. Durable configuration stays in Settings.
   const [includeRecord, setIncludeRecord] = useState(true);
@@ -106,12 +123,17 @@ function TenantAgentPanel({
 
   const [, askFormAction, asking] = useActionState(
     async (previous: AskActionState, formData: FormData) => {
-      // Shown at once, with a Thinking note beneath it, until the answer is recorded.
-      setPendingQuestion(String(formData.get('question') ?? '').trim());
+      // Shown at once, with its files and a Thinking note beneath it, until the answer is recorded.
+      const sending: AgentAttachment[] = draftsRef.current
+        .filter((file) => file.state === 'done' && file.documentId)
+        .map((file) => ({ id: file.documentId!, fileName: file.name, mimeType: file.mimeType, sizeBytes: file.sizeBytes }));
+      setPendingQuestion({ text: String(formData.get('question') ?? '').trim(), attachments: sending });
       setAskError(null);
       try {
         const result = await askAction(previous, formData);
         apply(result, setAskError);
+        // Sent: the files are part of the question now. If it was refused they stay, ready to try again.
+        if (!result.error) setDrafts([]);
         return result;
       } finally {
         setPendingQuestion(null);
@@ -135,6 +157,63 @@ function TenantAgentPanel({
       const result = await openConversationAction(organizationId, conversationId);
       apply(result, setAskError);
     });
+  }
+
+  function patchDraft(key: string, patch: Partial<ComposerAttachment>) {
+    setDrafts((current) => current.map((file) => (file.key === key ? { ...file, ...patch } : file)));
+  }
+
+  /** Each file is checked here, at once, and again by the server — the browser is not the boundary. */
+  function pickFiles(files: File[]) {
+    let room = ATTACHMENTS_PER_QUESTION - draftsRef.current.filter((file) => file.state !== 'error').length;
+
+    for (const file of files) {
+      const key = crypto.randomUUID();
+      const base = { key, name: file.name, sizeBytes: file.size, mimeType: file.type };
+      const checked = validateAttachment(file);
+
+      if (checked.error !== null || room <= 0) {
+        const error = checked.error ?? `Attach at most ${ATTACHMENTS_PER_QUESTION} files to one question.`;
+        setDrafts((current) => [...current, { ...base, state: 'error', error }]);
+        continue;
+      }
+
+      room -= 1;
+      setDrafts((current) => [...current, { ...base, mimeType: checked.mimeType, state: 'uploading' }]);
+
+      const body = new FormData();
+      body.set('organizationId', organizationId);
+      body.set('file', file);
+      void uploadAttachmentAction(body)
+        .catch(() => ({ error: 'Could not upload that file. Try again.', attachment: undefined }))
+        .then((result) => {
+          if (cancelled.current.delete(key)) {
+            // Taken back while it was on its way: it arrived anyway, so it is deleted again.
+            if (result.attachment) void removeAttachmentAction(organizationId, result.attachment.id);
+            return;
+          }
+          if (result.error || !result.attachment) {
+            patchDraft(key, { state: 'error', error: result.error ?? 'Could not attach that file.' });
+            return;
+          }
+          patchDraft(key, {
+            state: 'done',
+            documentId: result.attachment.id,
+            name: result.attachment.fileName,
+            mimeType: result.attachment.mimeType,
+            sizeBytes: result.attachment.sizeBytes,
+          });
+        });
+    }
+  }
+
+  /** Cancel an upload, or take back a stored file that has not been sent. */
+  function removeDraft(key: string) {
+    const file = draftsRef.current.find((candidate) => candidate.key === key);
+    if (!file) return;
+    setDrafts((current) => current.filter((candidate) => candidate.key !== key));
+    if (file.state === 'uploading') cancelled.current.add(key);
+    if (file.state === 'done' && file.documentId) void removeAttachmentAction(organizationId, file.documentId);
   }
 
   function newChat() {
@@ -213,6 +292,10 @@ function TenantAgentPanel({
         textareaRef={composer}
         disabled={!mayAsk}
         pending={asking}
+        attachments={drafts}
+        canAttach={drafts.filter((file) => file.state !== 'error').length < ATTACHMENTS_PER_QUESTION}
+        onPickFiles={pickFiles}
+        onRemoveAttachment={removeDraft}
         placeholder={mayAsk ? 'Ask about this business…' : 'Your role cannot ask questions here.'}
         hiddenFields={
           <>
