@@ -1,7 +1,7 @@
 import { FieldSet, FieldLegend, FieldGroup } from '@gold/ui/components/field';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { Hint } from '@/components/controls/inputs';
-import { EntityFieldsConfiguration } from '@/features/fields/entity-fields-configuration';
+import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';
 import { StageSettingsSheet } from '@/features/crm/sales/stage-settings-sheet';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { CustomerStage } from '@/lib/domain/customers/stages';

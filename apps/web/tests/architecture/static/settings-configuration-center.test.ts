@@ -110,7 +110,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     expect(page).not.toContain('redirect(');
     expect(
       readFileSync(
-        fileURLToPath(new URL('../../../features/fields/entity-fields-configuration.tsx', import.meta.url)),
+        fileURLToPath(new URL('../../../features/custom-fields/configuration/entity-fields-configuration.tsx', import.meta.url)),
         'utf8',
       ),
     ).toContain('CreateFieldSheet');
@@ -172,7 +172,7 @@ describe('contextual Configure, generalized from Work â€” the same componen
     },
     customers: {
       page: 'customers/page.tsx',
-      component: 'features/customers/configuration/customer-configuration.tsx',
+      component: 'features/crm/customers/customer-configuration.tsx',
       import: 'CustomerConfiguration',
     },
     schedule: {

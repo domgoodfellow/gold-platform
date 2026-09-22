@@ -36,6 +36,7 @@ describe('CRM and Voice feature boundaries', () => {
     expect(calls).toContain("@/features/communications/voice/voice-settings-sheet");
     expect(customers).toContain("@/features/crm/customers/customer-table");
     expect(customers).toContain("@/features/crm/customers/create-customer-sheet");
+    expect(customers).toContain("@/features/crm/customers/customer-configuration");
     expect(detail).toContain("@/features/crm/customers/customer-detail");
     expect(pipeline).toContain("@/features/crm/sales/pipeline-board");
 

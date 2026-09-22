@@ -123,7 +123,7 @@ describe('an empty state describes state; it duplicates no create control', () =
   });
 
   it('the field list in a Configure drawer shows its create control once, beside the count', () => {
-    const fields = read(`${WEB}/features/fields/entity-fields-configuration.tsx`);
+    const fields = read(`${WEB}/features/custom-fields/configuration/entity-fields-configuration.tsx`);
     expect(fields.match(/\{create\}/g)).toHaveLength(1);
     expect(fields).toContain('No custom fields for');
     expect(fields).not.toMatch(/No custom fields[^`]*(Add|Create|New)\b/);

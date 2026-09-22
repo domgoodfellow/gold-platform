@@ -1,5 +1,5 @@
 import { FieldSet, FieldLegend, FieldGroup } from '@gold/ui/components/field';
-import { EntityFieldsConfiguration } from '@/features/fields/entity-fields-configuration';
+import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 
 export type ResourceConfigurationData = {

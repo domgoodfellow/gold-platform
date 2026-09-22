@@ -1,8 +1,10 @@
 'use client';
 
-import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
-import { useActionState, useEffect, useState } from 'react';
+import { CheckboxField } from '@/components/controls/checkbox-field';
+import { FormActions, FormError, FormField } from '@/components/controls/form';
+import { useActionState, useEffect, useId, useState } from 'react';
 import {
   FIELD_KINDS,
   FIELD_KIND_LABELS,
@@ -16,7 +18,7 @@ import {
   updateFieldAction,
   type CreateFieldState,
   type UpdateFieldState,
-} from './actions';
+} from '@/app/organizations/[organizationId]/fields/actions';
 
 const INITIAL: CreateFieldState = { error: null, created: false };
 const EDIT_INITIAL: UpdateFieldState = { error: null, updated: false };
@@ -32,21 +34,23 @@ const EDIT_INITIAL: UpdateFieldState = { error: null, updated: false };
  * The order somebody types is the order the dropdown offers, because `options` is an array and
  * arrays keep their order. That is the same promise `position` makes about the form itself.
  */
-export function OptionsInput({ name, defaultValue }: { name: string; defaultValue?: string[] }) {
+export function OptionsInput({ id, name, defaultValue }: { id: string; name: string; defaultValue?: string[] }) {
   return (
-    <div className="flex flex-col gap-1">
-      <TextArea
-        name={name}
-        rows={4}
-        defaultValue={defaultValue?.join('\n')}
-        placeholder={'One choice per line, e.g.\nStandard\nPriority'}
-        aria-label="Choices"
-      />
-      <Hint>
-        One per line, in the order they should appear. Removing one leaves it on records that
-        already have it.
-      </Hint>
-    </div>
+    <FormField
+      id={id}
+      label="Choices"
+      hint="One per line, in the order they should appear. Removing one leaves it on records that already have it."
+    >
+      {(field) => (
+        <TextArea
+          {...field}
+          name={name}
+          rows={4}
+          defaultValue={defaultValue?.join('\n')}
+          placeholder={'One choice per line, e.g.\nStandard\nPriority'}
+        />
+      )}
+    </FormField>
   );
 }
 
@@ -72,58 +76,74 @@ export function CreateFieldForm({
     if (state.created) onCreated?.();
   }, [state.created, onCreated]);
 
+  const formId = useId();
+  const labelId = `${formId}-label`;
+  const keyId = `${formId}-key`;
+  const kindId = `${formId}-kind`;
+  const optionsId = `${formId}-options`;
+  const requiredId = `${formId}-required`;
+
   return (
     <form action={formAction} className="flex flex-col gap-4 px-4 pb-4">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="entityType" value={entityType} />
 
       <div className="flex flex-col gap-3">
-        <TextInput
-          name="label"
-          type="text"
-          required
-          maxLength={100}
-          placeholder="Label, e.g. VAT number"
-          aria-label="Label"
-          className="flex-1"
-        />
-        <TextInput
-          name="key"
-          type="text"
-          required
-          maxLength={63}
-          pattern="[a-z][a-z0-9_]*"
-          placeholder="Key, e.g. vat_number"
-          aria-label="Key"
-          title="Starts with a letter; lowercase letters, numbers and underscores only."
-          className="flex-1"
-        />
-        <SelectInput
-          name="kind"
-          value={kind}
-          onChange={(event) => setKind(event.target.value as FieldKind)}
-          aria-label="Type"
-        >
-          {FIELD_KINDS.map((option) => (
-            <option key={option} value={option}>
-              {FIELD_KIND_LABELS[option]}
-            </option>
-          ))}
-        </SelectInput>
+        <FormField id={labelId} label="Label">
+          {(field) => (
+            <TextInput
+              {...field}
+              name="label"
+              type="text"
+              required
+              maxLength={100}
+              placeholder="e.g. VAT number"
+            />
+          )}
+        </FormField>
+        <FormField id={keyId} label="Key">
+          {(field) => (
+            <TextInput
+              {...field}
+              name="key"
+              type="text"
+              required
+              maxLength={63}
+              pattern="[a-z][a-z0-9_]*"
+              placeholder="e.g. vat_number"
+              title="Starts with a letter; lowercase letters, numbers and underscores only."
+            />
+          )}
+        </FormField>
+        <FormField id={kindId} label="Type">
+          {(field) => (
+            <SelectInput
+              {...field}
+              name="kind"
+              value={kind}
+              onChange={(event) => setKind(event.target.value as FieldKind)}
+            >
+              {FIELD_KINDS.map((option) => (
+                <option key={option} value={option}>
+                  {FIELD_KIND_LABELS[option]}
+                </option>
+              ))}
+            </SelectInput>
+          )}
+        </FormField>
       </div>
 
-      {offersOptions(kind) ? <OptionsInput name="options" /> : null}
+      {offersOptions(kind) ? <OptionsInput id={optionsId} name="options" /> : null}
 
-      <label className="flex w-fit items-center gap-2 text-sm">
-        <input name="required" type="checkbox" />
-        Required
-      </label>
+      <CheckboxField id={requiredId} name="required" label="Required" />
 
-      <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? 'Adding…' : 'Add field'}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending} className="w-fit">
+          {pending ? 'Adding…' : 'Add field'}
+        </Button>
+      </FormActions>
 
-      <ErrorText role="alert">{state.error}</ErrorText>
+      <FormError>{state.error}</FormError>
     </form>
   );
 }
@@ -166,6 +186,10 @@ export function EditFieldForm({
     if (state.updated) onUpdated?.();
   }, [state.updated, onUpdated]);
 
+  const formId = useId();
+  const optionsId = `${formId}-options`;
+  const requiredId = `${formId}-required`;
+
   return (
     <form action={formAction} className="flex flex-wrap items-center gap-2 py-2">
       <input type="hidden" name="organizationId" value={organizationId} />
@@ -197,21 +221,18 @@ export function EditFieldForm({
       <code className="text-xs text-subtle">
         {definition.key} · {FIELD_KIND_LABELS[definition.kind]}
       </code>
-      <label className="flex items-center gap-1 text-sm">
-        <input name="required" type="checkbox" defaultChecked={definition.required} />
-        Required
-      </label>
+      <CheckboxField id={requiredId} name="required" label="Required" defaultChecked={definition.required} />
       <Button type="submit" disabled={pending} tone="secondary" size="tiny">
         Save
       </Button>
 
       {offersOptions(definition.kind) ? (
         <div className="w-full">
-          <OptionsInput name="options" defaultValue={definition.options} />
+          <OptionsInput id={optionsId} name="options" defaultValue={definition.options} />
         </div>
       ) : null}
 
-      <ErrorText role="alert" className="w-full">{state.error}</ErrorText>
+      <FormError className="w-full">{state.error}</FormError>
     </form>
   );
 }

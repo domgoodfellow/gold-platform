@@ -6,8 +6,8 @@ import {
   type CustomFieldEntity,
   type FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
-import { CreateFieldSheet } from '@/app/organizations/[organizationId]/fields/create-field-sheet';
-import { EditFieldSheet } from '@/app/organizations/[organizationId]/fields/edit-field-sheet';
+import { CreateFieldSheet } from './create-field-sheet';
+import { EditFieldSheet } from './edit-field-sheet';
 
 export type EntityFieldsConfigurationData = {
   organizationId: string;

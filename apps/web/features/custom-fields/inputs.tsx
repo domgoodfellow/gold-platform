@@ -1,6 +1,11 @@
 'use client';
 
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { useId } from 'react';
+import { Checkbox } from '@gold/ui/components/checkbox';
+import { FieldSet, FieldLegend } from '@gold/ui/components/field';
+import { SelectInput, TextInput, FieldLabel } from '@/components/controls/inputs';
+import { CheckboxField } from '@/components/controls/checkbox-field';
+import { FormField } from '@/components/controls/form';
 import {
   CUSTOM_FIELD_PREFIX,
   type CustomValues,
@@ -40,115 +45,101 @@ export function CustomFieldInputs({
 }) {
   return (
     <>
-      {definitions.map((definition) => {
-        const name = `${CUSTOM_FIELD_PREFIX}${definition.key}`;
-        const value = values?.[definition.key];
-
-        if (definition.kind === 'boolean') {
-          return (
-            <label key={definition.id} className="flex w-fit items-center gap-2 text-sm">
-              <input name={name} type="checkbox" defaultChecked={value === true} />
-              {definition.label}
-            </label>
-          );
-        }
-
-        if (definition.kind === 'select') {
-          // **An empty option first, and it is not decoration.** A dropdown with no blank
-          // preselects its first choice, so every row would silently carry the first option
-          // whether or not anybody looked at the field — the platform answering on the
-          // business's behalf, which is the thing it may not do. A required field still has
-          // the blank; the browser refuses to submit it, which is the honest version.
-          //
-          // A stored value the field no longer offers is added back as its own option, so
-          // editing a row keeps what it holds instead of quietly changing it to something
-          // else. It reads as-is, because the business's own word is what was stored.
-          const stored = typeof value === 'string' ? value : undefined;
-          const choices =
-            stored !== undefined && !definition.options.includes(stored)
-              ? [...definition.options, stored]
-              : definition.options;
-
-          return (
-            <SelectInput
-              key={definition.id}
-              name={name}
-              required={definition.required}
-              defaultValue={stored ?? ''}
-              aria-label={definition.label}
-              className="flex-1"
-            >
-              <option value="">
-                {definition.required ? definition.label : `${definition.label} (optional)`}
-              </option>
-              {choices.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </SelectInput>
-          );
-        }
-
-        if (definition.kind === 'multi_select') {
-          const stored = Array.isArray(value) ? value : [];
-          const choices = [
-            ...definition.options,
-            ...stored.filter((option) => !definition.options.includes(option)),
-          ];
-
-          // No `required` on the boxes. HTML applies it to each one individually, so a group
-          // of four required checkboxes means *tick all four* — the opposite of the rule.
-          // `parseCustom` refuses an empty required list, which is where that rule lives.
-          return (
-            <fieldset key={definition.id} className="flex flex-col gap-1">
-              {/* A legend rather than `FieldLabel`, which renders a `<label>`. A label points
-                  at one control and these are several — the group's name is a legend, and a
-                  screen reader reads it before each box because of it. */}
-              <legend className="text-sm font-medium">
-                {definition.required ? definition.label : `${definition.label} (optional)`}
-              </legend>
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                {choices.map((option) => (
-                  <label key={option} className="flex items-center gap-2 text-sm">
-                    <input
-                      name={name}
-                      type="checkbox"
-                      value={option}
-                      defaultChecked={stored.includes(option)}
-                    />
-                    {option}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          );
-        }
-
-        return (
-          <TextInput
-            key={definition.id}
-            name={name}
-            type={
-              definition.kind === 'number'
-                ? 'number'
-                : definition.kind === 'date'
-                  ? 'date'
-                  : 'text'
-            }
-            step={definition.kind === 'number' ? 'any' : undefined}
-            required={definition.required}
-            defaultValue={value === undefined ? undefined : String(value)}
-            // A date input renders its own placeholder and ignores this one, so the label has
-            // to reach a screen reader through `aria-label` alone — which it already did.
-            placeholder={
-              definition.required ? definition.label : `${definition.label} (optional)`
-            }
-            aria-label={definition.label}
-            className="flex-1"
-          />
-        );
-      })}
+      {definitions.map((definition) => (
+        <CustomFieldInput key={definition.id} definition={definition} value={values?.[definition.key]} />
+      ))}
     </>
+  );
+}
+
+function CustomFieldInput({
+  definition,
+  value,
+}: {
+  definition: FieldDefinition;
+  value: CustomValues[string] | undefined;
+}) {
+  const id = useId();
+  const name = `${CUSTOM_FIELD_PREFIX}${definition.key}`;
+
+  if (definition.kind === 'boolean') {
+    return <CheckboxField id={id} name={name} label={definition.label} defaultChecked={value === true} />;
+  }
+
+  if (definition.kind === 'select') {
+    // **An empty option first, and it is not decoration.** A dropdown with no blank preselects
+    // its first choice, so every row would silently carry the first option whether or not
+    // anybody looked at the field — the platform answering on the business's behalf, which is
+    // the thing it may not do. A required field still has the blank; the browser refuses to
+    // submit it, which is the honest version.
+    //
+    // A stored value the field no longer offers is added back as its own option, so editing a
+    // row keeps what it holds instead of quietly changing it to something else. It reads
+    // as-is, because the business's own word is what was stored.
+    const stored = typeof value === 'string' ? value : undefined;
+    const choices =
+      stored !== undefined && !definition.options.includes(stored) ? [...definition.options, stored] : definition.options;
+
+    return (
+      <FormField id={id} label={definition.label} optional={!definition.required}>
+        {(field) => (
+          <SelectInput {...field} name={name} required={definition.required} defaultValue={stored ?? ''}>
+            <option value="">
+              {definition.required ? definition.label : `${definition.label} (optional)`}
+            </option>
+            {choices.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </SelectInput>
+        )}
+      </FormField>
+    );
+  }
+
+  if (definition.kind === 'multi_select') {
+    const stored = Array.isArray(value) ? value : [];
+    const choices = [...definition.options, ...stored.filter((option) => !definition.options.includes(option))];
+
+    return (
+      <FieldSet className="gap-1">
+        {/* A legend, not `FieldLabel` — a label points at one control and these are several. */}
+        <FieldLegend variant="label">
+          {definition.required ? definition.label : `${definition.label} (optional)`}
+        </FieldLegend>
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          {choices.map((option, index) => {
+            const optionId = `${id}-${index}`;
+            return (
+              <div key={option} className="flex items-center gap-2">
+                {/* No `required` on any box. HTML applies it to each one individually, so a
+                    group of four required checkboxes would mean *tick all four* — the opposite
+                    of the rule. `parseCustom` refuses an empty required list instead. */}
+                <Checkbox id={optionId} name={name} value={option} defaultChecked={stored.includes(option)} />
+                <FieldLabel htmlFor={optionId} className="font-normal">
+                  {option}
+                </FieldLabel>
+              </div>
+            );
+          })}
+        </div>
+      </FieldSet>
+    );
+  }
+
+  return (
+    <FormField id={id} label={definition.label} optional={!definition.required}>
+      {(field) => (
+        <TextInput
+          {...field}
+          name={name}
+          type={definition.kind === 'number' ? 'number' : definition.kind === 'date' ? 'date' : 'text'}
+          step={definition.kind === 'number' ? 'any' : undefined}
+          required={definition.required}
+          defaultValue={value === undefined ? undefined : String(value)}
+        />
+      )}
+    </FormField>
   );
 }

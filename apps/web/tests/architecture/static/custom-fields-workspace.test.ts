@@ -5,6 +5,7 @@ import { CUSTOM_FIELD_ENTITIES } from '@/lib/domain/fields/field-definitions';
 import { resolveFieldEntity } from '@/app/organizations/[organizationId]/fields/field-entities';
 
 const FIELDS = fileURLToPath(new URL('../../../app/organizations/[organizationId]/fields', import.meta.url));
+const CUSTOM_FIELDS = fileURLToPath(new URL('../../../features/custom-fields/configuration', import.meta.url));
 
 describe('Custom Fields entity views are URL-backed', () => {
   it('defaults invalid or absent entities to Customers and accepts the domain vocabulary', () => {
@@ -22,13 +23,10 @@ describe('Custom Fields entity views are URL-backed', () => {
 });
 
 describe('Custom Fields uses bounded Sheets', () => {
-  const configuration = readFileSync(
-    fileURLToPath(new URL('../../../features/fields/entity-fields-configuration.tsx', import.meta.url)),
-    'utf8',
-  );
-  const createSheet = readFileSync(`${FIELDS}/create-field-sheet.tsx`, 'utf8');
-  const editSheet = readFileSync(`${FIELDS}/edit-field-sheet.tsx`, 'utf8');
-  const form = readFileSync(`${FIELDS}/create-field-form.tsx`, 'utf8');
+  const configuration = readFileSync(`${CUSTOM_FIELDS}/entity-fields-configuration.tsx`, 'utf8');
+  const createSheet = readFileSync(`${CUSTOM_FIELDS}/create-field-sheet.tsx`, 'utf8');
+  const editSheet = readFileSync(`${CUSTOM_FIELDS}/edit-field-sheet.tsx`, 'utf8');
+  const form = readFileSync(`${CUSTOM_FIELDS}/field-form.tsx`, 'utf8');
 
   it('renders a compact table with one New field trigger, never an inline editor stack', () => {
     expect(configuration).toContain('DataTable');
@@ -57,5 +55,38 @@ describe('Custom Fields uses bounded Sheets', () => {
     expect(actions).toContain('updated: true');
     expect(createSheet).toContain('onCreated={() => setOpen(false)}');
     expect(editSheet).toContain('onUpdated={() => setOpen(false)}');
+  });
+});
+
+describe('Custom Fields boundary: features/custom-fields owns presentation, the route owns its Server Actions', () => {
+  const page = readFileSync(`${FIELDS}/page.tsx`, 'utf8');
+  const nav = readFileSync(`${CUSTOM_FIELDS}/field-entity-nav.tsx`, 'utf8');
+  const form = readFileSync(`${CUSTOM_FIELDS}/field-form.tsx`, 'utf8');
+
+  it('keeps the route thin: composition only, no field editor implementation', () => {
+    expect(page).not.toContain('DataTable');
+    expect(page).not.toContain('<form');
+    expect(page).toContain('FieldEntityNav');
+    expect(page).toContain('EntityFieldsConfiguration');
+  });
+
+  it('has no field-entity-tabs.tsx left behind by the ViewNav migration', () => {
+    expect(() => readFileSync(`${FIELDS}/field-entity-tabs.tsx`, 'utf8')).toThrow();
+  });
+
+  it('renders entity navigation as a server-safe ViewNav, not a client tab controller', () => {
+    expect(nav).not.toContain("'use client'");
+    expect(nav).toContain('ViewNav');
+    expect(nav).not.toContain('usePathname');
+    expect(nav).not.toContain('useRouter');
+  });
+
+  it('reaches its Server Actions from the route it does not own, never a copy of its own', () => {
+    expect(form).toContain("from '@/app/organizations/[organizationId]/fields/actions'");
+  });
+
+  it('keeps actions.ts, field-entities.ts and page.tsx route-owned', () => {
+    expect(() => readFileSync(`${FIELDS}/actions.ts`, 'utf8')).not.toThrow();
+    expect(() => readFileSync(`${FIELDS}/field-entities.ts`, 'utf8')).not.toThrow();
   });
 });

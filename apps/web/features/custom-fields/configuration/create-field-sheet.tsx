@@ -15,7 +15,7 @@ import {
   CUSTOM_FIELD_ENTITY_LABELS,
   type CustomFieldEntity,
 } from '@/lib/domain/fields/field-definitions';
-import { CreateFieldForm } from './create-field-form';
+import { CreateFieldForm } from './field-form';
 
 /** One bounded creation surface, scoped to its host entity. */
 export function CreateFieldSheet({

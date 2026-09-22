@@ -4,7 +4,7 @@ import { Hint } from '@/components/controls/inputs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { FieldSet, FieldLegend, FieldGroup } from '@gold/ui/components/field';
 import { Item, ItemContent, ItemGroup, ItemTitle } from '@gold/ui/components/item';
-import { EntityFieldsConfiguration } from '@/features/fields/entity-fields-configuration';
+import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';

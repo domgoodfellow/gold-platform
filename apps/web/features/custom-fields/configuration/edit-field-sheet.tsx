@@ -16,7 +16,7 @@ import {
   FIELD_KIND_LABELS,
   type FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
-import { EditFieldForm } from './create-field-form';
+import { EditFieldForm } from './field-form';
 
 /** Identity is metadata, never a disabled control: key, kind and entity cannot be changed. */
 export function EditFieldSheet({

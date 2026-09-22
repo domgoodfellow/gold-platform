@@ -26,7 +26,7 @@ Current boundaries:
 |---|---|
 | `automations/` | Rule, condition, action and message-template UI |
 | `reporting/` | Report navigation, filters, results, dashboards and management forms |
-| `custom-fields/` | Rendering and collecting tenant-defined fields across supported entities |
+| `custom-fields/` | Rendering and collecting tenant-defined field values across supported entities, and — in `custom-fields/configuration/` — defining those fields: the entity-scoped list, its create/edit Sheets and forms, and the URL-backed entity nav. One component, every host that configures fields (Settings' own Data & automation page and every entity's own Configure rail) |
 | `documents/` | Listing, uploading and presenting documents attached to any entity `DOCUMENT_ENTITIES` allows |
 | `timeline/` | Rendering a record's own history — the interpretive work stays in `lib/domain/timeline/` |
 | `public-profile/` | Editing and rendering a business's public identity |
@@ -35,7 +35,7 @@ Current boundaries:
 | `locale/` | Timezone and currency controls used by organization-facing workflows |
 | `today/` | The lifecycle-aware operational cockpit and its expanded views |
 | `work/` | Work boards, job records, checklists, consumption, pricing and billing interactions |
-| `crm/customers/` | Customer list, create and edit interaction, and the customer detail screen's own presentation |
+| `crm/customers/` | Customer list, create and edit interaction, the customer detail screen's own presentation, and the customer's Configure panel — its custom-field configuration (hosting `custom-fields/configuration/`) and, where Sales is on, its pipeline-stage configuration (hosting `crm/sales/stage-settings-sheet.tsx`) |
 | `crm/sales/` | The canonical Pipeline board, its per-card stage control, and stage-vocabulary settings |
 | `communications/voice/` | Call history, call wrap-up, outbound identity and outcome-vocabulary settings |
 

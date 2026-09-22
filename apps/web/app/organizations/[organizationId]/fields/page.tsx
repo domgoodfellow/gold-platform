@@ -1,14 +1,10 @@
-import { Hint } from '@/components/controls/inputs';
 import { areaLabel } from '@/lib/navigation';
 import { PageHeader } from '@/components/containers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
-import {
-  CUSTOM_FIELD_ENTITY_LABELS,
-  listFieldDefinitions,
-} from '@/lib/domain/fields/field-definitions';
-import { EntityFieldsConfiguration } from '@/features/fields/entity-fields-configuration';
+import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';
+import { FieldEntityNav } from '@/features/custom-fields/configuration/field-entity-nav';
 import { resolveFieldEntity } from './field-entities';
-import { FieldEntityTabs } from './field-entity-tabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,22 +24,14 @@ export default async function FieldsPage({
   return (
     <>
       <PageHeader title={areaLabel('fields')} description="What this business records beyond the platform&rsquo;s own fields." />
-      <div>
-        <FieldEntityTabs entityType={entityType} />
-      </div>
-      <section className="mt-6">
-        <h2 className="text-base font-semibold">{CUSTOM_FIELD_ENTITY_LABELS[entityType]}</h2>
-        <Hint className="mt-1">Extra information recorded on {CUSTOM_FIELD_ENTITY_LABELS[entityType].toLowerCase()}.</Hint>
-        <div className="mt-4">
-          <EntityFieldsConfiguration
-            organizationId={organizationId}
-            entityType={entityType}
-            role={organization.role}
-            mayConfigure={mayManage}
-            definitions={definitions}
-          />
-        </div>
-      </section>
+      <FieldEntityNav organizationId={organizationId} entityType={entityType} />
+      <EntityFieldsConfiguration
+        organizationId={organizationId}
+        entityType={entityType}
+        role={organization.role}
+        mayConfigure={mayManage}
+        definitions={definitions}
+      />
     </>
   );
 }

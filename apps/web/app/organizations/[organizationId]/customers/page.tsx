@@ -7,7 +7,7 @@ import {
   CreateCustomerSheetProvider,
   CreateCustomerTrigger,
 } from '@/features/crm/customers/create-customer-sheet';
-import { CustomerConfiguration } from '@/features/customers/configuration/customer-configuration';
+import { CustomerConfiguration } from '@/features/crm/customers/customer-configuration';
 import { CustomerListToolbar } from '@/features/crm/customers/customer-list-toolbar';
 import { CustomerTable } from '@/features/crm/customers/customer-table';
 import { listCustomers } from '@/lib/domain/customers/customers';
