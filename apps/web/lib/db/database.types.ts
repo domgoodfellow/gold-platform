@@ -4154,6 +4154,7 @@ export type Database = {
           display_order: number
           id: string
           key: string
+          kind: string
           label: string
           lifecycle: string
           sale_status: string
@@ -4164,6 +4165,7 @@ export type Database = {
           display_order?: number
           id?: string
           key: string
+          kind?: string
           label: string
           lifecycle?: string
           sale_status?: string
@@ -4174,6 +4176,7 @@ export type Database = {
           display_order?: number
           id?: string
           key?: string
+          kind?: string
           label?: string
           lifecycle?: string
           sale_status?: string

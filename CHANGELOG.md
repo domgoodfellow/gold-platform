@@ -5,6 +5,24 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### The Gild Products, and a sidebar that nests any Product
+
+The catalogue's Products are now the eight Gild Products — Sales, Service, Comms, Finance, Agents, Automations,
+Field and Studio — and reporting is no longer one of them: it is the shared *Gild Workspace*, a row of a different
+kind that every Product reuses. Products were renamed in place, so every Plan grant, override and mapping kept its
+meaning; Ask moved to Agents on runtime evidence, Service exists with planned features only, and no organization
+lost a capability. Platform → Catalog → Products shows the eight, with the shared Workspace set apart.
+
+The sidebar follows: *Workspaces* holds one row per Product that has something to open (Gild Sales, Comms,
+Automations, Field), a Product with several real pages expands and one with a single page is a plain row, and
+*Shared* holds Insights. Operations is now Gild Field; Automations' Rules, Messages and Activity are three routes
+instead of tabs, and Customers and Pipeline are pages of Gild Sales with no second tab strip over them. The old
+`?view=` addresses still land on the pages that replaced them. Service, Finance, Agents and Studio have no row
+because nothing yet lives behind one.
+
+Platform reads a failed staff lookup as an error, not as "no permissions": a database that was behind the
+`platform_staff.capabilities` migration used to make the whole Platform section quietly disappear.
+
 ### Platform inside GOLD, and Operations as one workspace
 
 Platform Administration now lives at `/organizations/{goldId}/platform`, beneath GOLD's own organization,

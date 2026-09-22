@@ -1,5 +1,6 @@
 import {
   AREAS,
+  WORKSPACES,
   areaEntitled,
   areaHref,
   areaVisibleTo,
@@ -37,12 +38,13 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  * Communications has no calling workspace for its owner, and a member without `call.place` does not
  * operate calling in a business that has it.
  *
- * The shape is a hierarchy: a **workspace** is where an operator uses a capability, and its
- * **pages** are the views inside it (`Area.parent`). A Plan grants capabilities, a Product groups
- * them, a workspace is where they are used and a page is one task in it — four different things,
- * and only the last two are navigation.
+ * The shape is a hierarchy: a **workspace** is where an operator uses a Product (`WORKSPACES`), and
+ * its **pages** are the areas that name it (`Area.workspace`). A Plan grants capabilities, a Product
+ * groups them, a workspace is where they are used and a page is one task in it — four different
+ * things, and only the last two are navigation. One real page makes the workspace a plain row;
+ * several make it an expandable one; a workspace with no real page has no row at all.
  */
-export type ShellSectionKey = 'home' | 'workspaces' | 'platform' | 'administration';
+export type ShellSectionKey = 'home' | 'workspaces' | 'shared' | 'platform' | 'administration';
 
 export type NavItem = {
   /** Unique across the whole projection; also the icon key. */
@@ -58,6 +60,8 @@ export type NavItem = {
   children?: NavItem[];
   /** Matches only its own address, not everything beneath it: the Platform overview is the root of a whole tree. */
   exact?: boolean;
+  /** Kept in the phone bar's primary slots when there is room — the frequent work, however the sidebar nests it. */
+  phone?: boolean;
   /**
    * A heading that has no page of its own: its `href` is its first page's, so the collapsed rail has
    * somewhere to go, and the phone's More menu does not list it a second time as an overview.
@@ -91,12 +95,19 @@ export type ShellInput = {
 const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
   home: null,
   workspaces: 'Workspaces',
+  shared: 'Shared',
   platform: 'Platform',
   administration: 'Administration',
 };
 
 function areaItem(organizationId: string, area: Area, section: ShellSectionKey): NavItem {
-  return { key: area.segment, label: area.label, href: areaHref(organizationId, area.segment), section };
+  return {
+    key: area.segment,
+    label: area.label,
+    href: areaHref(organizationId, area.segment),
+    section,
+    ...(area.phone ? { phone: true } : {}),
+  };
 }
 
 /**
@@ -113,10 +124,9 @@ const ADMINISTRATION_ITEMS: readonly { key: string; label: string; target: strin
 
 /**
  * The Platform section, from the one registry: the destinations the caller's permissions reach,
- * nested as the registry says — Catalog holds its own pages, and Commercial and Infrastructure are
- * headings that open their first page. A heading none of whose pages the caller reaches is not
- * drawn, and a group that stands for pages opens the first of them, so it is a link as well as a
- * disclosure.
+ * nested as the registry says: Catalog, Commercial and Infrastructure are headings that open their
+ * first page. A heading none of whose pages the caller reaches is not drawn, and a heading opens the
+ * first of its pages, so it is a link as well as a disclosure.
  */
 function projectPlatform(organizationId: string, permissions: ReadonlySet<PlatformCapability>): NavItem[] {
   const destinations = platformDestinationsFor(permissions);
@@ -131,7 +141,6 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
   const items: NavItem[] = [];
   const groupsDrawn = new Set<string>();
   for (const destination of destinations) {
-    if (destination.under === 'catalog') continue;
     if (destination.under) {
       if (groupsDrawn.has(destination.under)) continue;
       groupsDrawn.add(destination.under);
@@ -147,8 +156,7 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
       });
       continue;
     }
-    const pages = destinations.filter((candidate) => candidate.under === destination.key).map(item);
-    items.push(pages.length > 0 ? { ...item(destination), children: pages } : item(destination));
+    items.push(item(destination));
   }
   return items;
 }
@@ -162,18 +170,27 @@ export function projectShell(input: ShellInput): ShellSection[] {
     areaEntitled(area, enabledModules, featureAvailability) &&
     areaVisibleTo(area, capabilities);
 
-  // A workspace is an area with no parent; its pages are the areas naming it, each still gated by
-  // its own module and capability, so a business without Assets has an Operations without that page.
-  const inGroup = (group: Area['group']) =>
-    AREAS.filter((area) => area.group === group && !area.parent && operable(area));
+  const inGroup = (group: Area['group']) => AREAS.filter((area) => area.group === group && operable(area));
 
-  const workspaceItem = (area: Area): NavItem => {
-    const item = areaItem(organizationId, area, 'workspaces');
-    const pages = AREAS.filter((page) => page.parent === area.segment && operable(page)).map((page) =>
-      areaItem(organizationId, page, 'workspaces'),
-    );
-    return pages.length > 0 ? { ...item, children: pages } : item;
-  };
+  // A workspace is a Product with pages: each page still gated by its own module and capability, so
+  // a business without Assets has a Field without that page. What the rows are is decided by how
+  // many pages are real — none, no row; one, a plain row; several, an expandable one. Never a
+  // dropdown of one, and never a row for a Product with nothing behind it.
+  const workspaceItems = (): NavItem[] =>
+    WORKSPACES.flatMap((workspace) => {
+      const pages = AREAS.filter((area) => area.workspace === workspace.key && operable(area)).map((area) =>
+        areaItem(organizationId, area, 'workspaces'),
+      );
+      if (pages.length === 0) return [];
+      const row: NavItem = {
+        key: `workspace-${workspace.key}`,
+        label: workspace.label,
+        href: pages[0].href,
+        section: 'workspaces',
+      };
+      if (pages.length === 1) return [{ ...row, ...(pages[0].phone ? { phone: true } : {}) }];
+      return [{ ...row, heading: true, children: pages }];
+    });
 
   const administration: NavItem[] = [];
   for (const item of ADMINISTRATION_ITEMS) {
@@ -195,7 +212,8 @@ export function projectShell(input: ShellInput): ShellSection[] {
 
   const sections: ShellSection[] = [
     { key: 'home', label: SECTION_LABELS.home, items: inGroup('home').map((area) => areaItem(organizationId, area, 'home')) },
-    { key: 'workspaces', label: SECTION_LABELS.workspaces, items: inGroup('workspaces').map(workspaceItem) },
+    { key: 'workspaces', label: SECTION_LABELS.workspaces, items: workspaceItems() },
+    { key: 'shared', label: SECTION_LABELS.shared, items: inGroup('shared').map((area) => areaItem(organizationId, area, 'shared')) },
     { key: 'platform', label: SECTION_LABELS.platform, items: platformItems },
     { key: 'administration', label: SECTION_LABELS.administration, items: administration },
   ];
@@ -247,9 +265,10 @@ export const PHONE_PRIMARY_WORKSPACES = 3;
  * which items a thumb reaches first, never a second eligibility rule — every item still comes from
  * `projectShell`.
  *
- * **In a business:** Home, then the first workspace *pages* in the order the projection lists
- * them (a workspace with pages contributes its pages, so Work and Schedule stay one tap away),
- * everything else behind one More menu, grouped as the desktop groups it.
+ * **In a business:** Home, then the workspace pages marked `phone` (Customers, Work, Schedule) in
+ * the order the projection lists them — a workspace with pages contributes its pages, so the
+ * frequent work stays one tap away however the sidebar nests it — and everything else behind one
+ * More menu, grouped as the desktop groups it.
  *
  * **In Platform:** the bar carries a way back to Home and the Platform destinations; the pages
  * under Catalog, Commercial and Infrastructure and all of GOLD's own workspaces sit behind More.
@@ -268,7 +287,7 @@ export function projectPhone(
   }
 
   const workspaces = sections.find((section) => section.key === 'workspaces')?.items ?? [];
-  const pages = workspaces.flatMap((item) => item.children ?? [item]);
+  const pages = workspaces.flatMap((item) => item.children ?? [item]).filter((item) => item.phone);
   const primary = [...home, ...pages.slice(0, PHONE_PRIMARY_WORKSPACES)];
   return { primary, more: phoneMore(sections, new Set(primary.map((item) => item.key)), false) };
 }

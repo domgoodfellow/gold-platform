@@ -1,27 +1,27 @@
+import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/containers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
-import { listAutomationRules, listAutomationRuns } from '@/lib/domain/automation/rules';
+import { listAutomationRules } from '@/lib/domain/automation/rules';
 import { reviewAutomationRules } from '@/lib/domain/automation/review';
-import { listMessageDeliveries, listMessageTemplates } from '@/lib/domain/automation/templates';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
-import { areaLabel } from '@/lib/navigation';
-import { AutomationsViewTabs } from '@/features/automations/workspace/view-tabs';
+import { areaHref, areaLabel } from '@/lib/navigation';
 import { resolveAutomationsView } from '@/features/automations/workspace/views';
 import { RulesTable } from '@/features/automations/rules/rules-table';
 import { NewAutomationSheet } from '@/features/automations/rules/new-automation-sheet';
-import { MessagesView } from '@/features/automations/templates/messages-view';
-import { ActivityView } from '@/features/automations/activity/activity-view';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * The Automations workspace. Rules this business writes: when something happens, if a job looks
- * a certain way, do this. Three URL-backed sibling views — Rules, Messages, Activity — rather
- * than one page opening every rule as a complete editor at once, which is what stopped scaling
- * past a handful. A rule is a complex entity and gets its own detail route
- * (`/automations/[ruleId]`); creating one, or adding a condition, action or message, is bounded
- * enough for a Sheet.
+ * Rules, the first page of the Automations workspace. When something happens, if a job looks a
+ * certain way, do this. Messages and Activity are the workspace's other pages and are routes of
+ * their own (`automations/messages`, `automations/activity`); the sidebar is their one navigation,
+ * so this page carries no tab strip over the same three. A rule is a complex entity and gets its own
+ * detail route (`/automations/[ruleId]`); creating one, or adding a condition, action or message, is
+ * bounded enough for a Sheet.
+ *
+ * The old `?view=messages` and `?view=activity` addresses still resolve, to the pages that replaced
+ * them, so a bookmark or an email link is not a dead end.
  */
 export default async function AutomationsPage({
   params,
@@ -29,53 +29,12 @@ export default async function AutomationsPage({
 }: PageProps<'/organizations/[organizationId]/automations'>) {
   const { organizationId } = await params;
   const query = await searchParams;
-  const rawView = Array.isArray(query.view) ? query.view[0] : query.view;
-  const view = resolveAutomationsView(rawView);
+  const view = resolveAutomationsView(Array.isArray(query.view) ? query.view[0] : query.view);
+  if (view === 'messages') redirect(areaHref(organizationId, 'automation-messages'));
+  if (view === 'activity') redirect(areaHref(organizationId, 'automation-activity'));
 
   const { db, organization } = await requireOrganization(organizationId);
   const mayManage = organization.capabilities.includes('automation.manage');
-
-  const templates = await listMessageTemplates(db, { organizationId });
-
-  return (
-    <>
-      <PageHeader
-        title={areaLabel('automations')}
-        description={
-          view === 'rules'
-            ? 'A rule watches for something happening, checks whether the job looks the way you describe, and then does something. Every condition has to hold — two rules is how you say “or”.'
-            : undefined
-        }
-        actions={view === 'rules' && mayManage ? <NewAutomationSheet organizationId={organizationId} /> : null}
-      />
-      <AutomationsViewTabs view={view} messageCount={templates.length} />
-
-      {view === 'rules' ? (
-        <RulesView organizationId={organizationId} mayManage={mayManage} />
-      ) : null}
-
-      {view === 'messages' ? (
-        <MessagesView
-          organizationId={organizationId}
-          templates={templates}
-          mayManage={mayManage}
-          role={organization.role}
-        />
-      ) : null}
-
-      {view === 'activity' ? <AutomationsActivityView organizationId={organizationId} /> : null}
-    </>
-  );
-}
-
-async function RulesView({
-  organizationId,
-  mayManage,
-}: {
-  organizationId: string;
-  mayManage: boolean;
-}) {
-  const { db } = await requireOrganization(organizationId);
 
   const [rules, types] = await Promise.all([
     listAutomationRules(db, { organizationId }),
@@ -101,18 +60,12 @@ async function RulesView({
 
   return (
     <>
+      <PageHeader
+        title={areaLabel('automations')}
+        description="A rule watches for something happening, checks whether the job looks the way you describe, and then does something. Every condition has to hold — two rules is how you say “or”."
+        actions={mayManage ? <NewAutomationSheet organizationId={organizationId} /> : null}
+      />
       <RulesTable organizationId={organizationId} rules={rules} warnings={warnings} mayManage={mayManage} />
     </>
   );
-}
-
-async function AutomationsActivityView({ organizationId }: { organizationId: string }) {
-  const { db } = await requireOrganization(organizationId);
-
-  const [runs, deliveries] = await Promise.all([
-    listAutomationRuns(db, { organizationId, limit: 50 }),
-    listMessageDeliveries(db, { organizationId, limit: 50 }),
-  ]);
-
-  return <ActivityView runs={runs} deliveries={deliveries} />;
 }

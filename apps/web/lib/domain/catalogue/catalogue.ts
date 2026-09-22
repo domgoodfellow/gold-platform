@@ -6,8 +6,8 @@ import { DomainError } from '@/lib/domain/errors';
  *
  * Distinct from `lib/domain/commercial/catalogue.ts`, which stays exactly what it was —
  * `platform_products`, GOLD's flat sellable-line-item vocabulary, load-bearing in historical
- * terms. This file is the layer above it: seven locked Products, their Modules, and a curated,
- * truthfully-stated set of Features. A Feature may reference a legacy `platform_products`/
+ * terms. This file is the layer above it: the eight locked Gild Products and the shared Gild
+ * Workspace beneath them, their Modules, and a curated, truthfully-stated set of Features. A Feature may reference a legacy `platform_products`/
  * `MODULES` key through a runtime mapping without either older system changing shape.
  */
 
@@ -16,18 +16,25 @@ export type ImplementationState = 'planned' | 'partial' | 'available';
 export type PackagingDefault = 'core' | 'included' | 'optional' | 'add_on';
 export type SaleStatus = 'active' | 'unlisted' | 'archived';
 
-export type CatalogProductKey =
-  | 'crm'
-  | 'communications'
-  | 'operations'
-  | 'financial_operations'
-  | 'automation'
-  | 'insights'
-  | 'customer_experience';
+/** The eight customer-facing Gild Products, in the order a customer meets them. */
+export const GILD_PRODUCT_KEYS = ['sales', 'service', 'comms', 'finance', 'agents', 'automations', 'field', 'studio'] as const;
+
+export type GildProductKey = (typeof GILD_PRODUCT_KEYS)[number];
+
+/**
+ * Every key a catalogue Product row may hold: the eight Products, and `workspace`, the shared
+ * capability (reporting, dashboards, activity) that every Product reuses and no customer buys as a
+ * Product. The database enforces the same list (`platform_catalog_products_key_check`).
+ */
+export type CatalogProductKey = GildProductKey | 'workspace';
+
+/** `product` for the eight; `workspace` for the shared capability beneath them. */
+export type CatalogProductKind = 'product' | 'workspace';
 
 export type CatalogProduct = {
   id: string;
   key: CatalogProductKey;
+  kind: CatalogProductKind;
   label: string;
   description: string;
   lifecycle: Lifecycle;
@@ -77,6 +84,7 @@ export type FeatureDependency = {
 function toProduct(row: {
   id: string;
   key: string;
+  kind: string;
   label: string;
   description: string;
   lifecycle: string;
@@ -86,6 +94,7 @@ function toProduct(row: {
   return {
     id: row.id,
     key: row.key as CatalogProductKey,
+    kind: row.kind as CatalogProductKind,
     label: row.label,
     description: row.description,
     lifecycle: row.lifecycle as Lifecycle,
@@ -146,7 +155,7 @@ function toFeature(row: {
   };
 }
 
-const PRODUCT_COLUMNS = 'id, key, label, description, lifecycle, sale_status, display_order';
+const PRODUCT_COLUMNS = 'id, key, kind, label, description, lifecycle, sale_status, display_order';
 const MODULE_COLUMNS = 'id, product_id, key, label, description, display_order';
 const FEATURE_COLUMNS =
   'id, module_id, key, label, description, lifecycle, implementation_state, packaging_default, sale_status, metered, ai_powered, meter_ids, provider_capabilities, display_order';

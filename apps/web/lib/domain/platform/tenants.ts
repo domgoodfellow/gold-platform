@@ -164,10 +164,15 @@ export async function isPlatformStaff(db: Db): Promise<boolean> {
   const { data } = await db.auth.getUser();
   if (!data.user) return false;
 
-  const { data: rows } = await db
+  const { data: rows, error } = await db
     .from('platform_staff')
     .select('user_id')
     .eq('user_id', data.user.id);
+
+  // Same rule as `platformPermissions`: a failed read is never the answer "not staff".
+  if (error) {
+    throw new DomainError(`Platform staff could not be read: ${error.message}`, 'platform.staff_unreadable');
+  }
 
   return (rows ?? []).length > 0;
 }

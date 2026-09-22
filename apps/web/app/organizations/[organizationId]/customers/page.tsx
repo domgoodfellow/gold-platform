@@ -9,7 +9,6 @@ import {
 } from '@/features/crm/customers/create-customer-sheet';
 import { CustomerConfiguration } from '@/features/customers/configuration/customer-configuration';
 import { CustomerListToolbar } from '@/features/crm/customers/customer-list-toolbar';
-import { CustomersViewNav } from '@/features/crm/customers/customers-view-nav';
 import { CustomerTable } from '@/features/crm/customers/customer-table';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
@@ -114,7 +113,6 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
             />
           </ConfigureRegistrar>
         ) : null}
-        {salesEnabled ? <CustomersViewNav organizationId={organizationId} current="list" /> : null}
         <CustomerListToolbar organizationId={organizationId} stages={visibleStages} search={search} stage={stage} />
 
         <div className="mt-4">

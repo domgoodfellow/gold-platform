@@ -13,7 +13,7 @@ import { listPlanProductGrants, listPlans } from '@/lib/domain/catalogue/plans';
 export const dynamic = 'force-dynamic';
 
 /**
- * The canonical Product landing page — seven Products, browsed as cards rather than a dense
+ * The canonical Product landing page — the eight Gild Products and the shared Workspace, browsed as cards rather than a dense
  * table. `platform_products` (GOLD's flat sellable-line-item catalogue) stays reachable from
  * "Catalog" -> "Line items" in the platform nav, one click deeper, as advanced/debug information.
  */
@@ -51,9 +51,61 @@ export default async function CatalogPage({ params }: PageProps<'/organizations/
     for (const key of keys) plansByProductKey.set(key, (plansByProductKey.get(key) ?? 0) + 1);
   }
 
+  const renderProduct = (product: (typeof products)[number]) => {
+        const moduleCount = modulesByProduct.get(product.id) ?? 0;
+        const featureCounts = featuresByProduct.get(product.id) ?? { total: 0, available: 0 };
+        const coverage = featureCounts.total > 0 ? Math.round((featureCounts.available / featureCounts.total) * 100) : null;
+        const planCount = plansByProductKey.get(product.key) ?? 0;
+
+        return (
+          <Card key={product.id}>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle>{product.label}</CardTitle>
+                {product.lifecycle !== 'stable' ? <Badge>{product.lifecycle}</Badge> : null}
+              </div>
+              <CardDescription>{product.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <dl className="grid grid-cols-3 gap-2 text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground">Modules</dt>
+                  <dd className="font-medium">{moduleCount}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Features</dt>
+                  <dd className="font-medium">{featureCounts.total}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Plans</dt>
+                  <dd className="font-medium">{planCount}</dd>
+                </div>
+              </dl>
+
+              {coverage !== null ? (
+                <div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Implementation</span>
+                    <span>{coverage}%</span>
+                  </div>
+                  <Progress value={coverage} className="mt-1" />
+                </div>
+              ) : null}
+
+              <Link
+                href={platformHref(goldId, `catalog/families/${product.key}`)}
+                className="mt-1 text-sm font-medium underline underline-offset-4"
+              >
+                Open
+              </Link>
+            </CardContent>
+          </Card>
+        );
+  };
+
   return (
     <AppPage>
-      <PageHeader title="Catalog" description="What GOLD sells, as a customer would recognize it: seven Products, each a coherent set of Modules and Features. Internal keys and legacy runtime mappings live one click deeper." />
+      <PageHeader title="Products" crumbs={[{ label: 'Catalog' }]} description="What Gild offers, as a customer would recognize it: eight Products, each a coherent set of Modules and Features. The shared Workspace beneath them is listed last and is not one a business buys. Internal keys and legacy runtime mappings live one click deeper." />
 
       <div className="flex flex-wrap gap-3 text-sm">
         <Link href={platformHref(goldId, 'catalog/plans')} className="underline underline-offset-4">
@@ -74,57 +126,15 @@ export default async function CatalogPage({ params }: PageProps<'/organizations/
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {products.map((product) => {
-          const moduleCount = modulesByProduct.get(product.id) ?? 0;
-          const featureCounts = featuresByProduct.get(product.id) ?? { total: 0, available: 0 };
-          const coverage = featureCounts.total > 0 ? Math.round((featureCounts.available / featureCounts.total) * 100) : null;
-          const planCount = plansByProductKey.get(product.key) ?? 0;
+        {products.filter((product) => product.kind === 'product').map(renderProduct)}
+      </div>
 
-          return (
-            <Card key={product.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle>{product.label}</CardTitle>
-                  {product.lifecycle !== 'stable' ? <Badge>{product.lifecycle}</Badge> : null}
-                </div>
-                <CardDescription>{product.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <dl className="grid grid-cols-3 gap-2 text-sm">
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Modules</dt>
-                    <dd className="font-medium">{moduleCount}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Features</dt>
-                    <dd className="font-medium">{featureCounts.total}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Plans</dt>
-                    <dd className="font-medium">{planCount}</dd>
-                  </div>
-                </dl>
-
-                {coverage !== null ? (
-                  <div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Implementation</span>
-                      <span>{coverage}%</span>
-                    </div>
-                    <Progress value={coverage} className="mt-1" />
-                  </div>
-                ) : null}
-
-                <Link
-                  href={platformHref(goldId, `catalog/families/${product.key}`)}
-                  className="mt-1 text-sm font-medium underline underline-offset-4"
-                >
-                  Open
-                </Link>
-              </CardContent>
-            </Card>
-          );
-        })}
+      <h2 className="mt-10 text-lg font-semibold">Shared workspace</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Capability every Product reuses. A Plan may grant it, but it is not a Product a business buys, and it has no operating workspace of its own.
+      </p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {products.filter((product) => product.kind === 'workspace').map(renderProduct)}
       </div>
     </AppPage>
   );

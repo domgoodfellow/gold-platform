@@ -32,7 +32,27 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
  * D23 still governs the part that matters: work comes first and Settings last, and an operator
  * must never reach today's work by going through settings.
  */
-export type AreaGroup = 'home' | 'workspaces' | 'settings';
+export type AreaGroup = 'home' | 'workspaces' | 'shared' | 'settings';
+
+/**
+ * The customer-facing Products that have a real operating surface today — the rows of the
+ * *Workspaces* section — and only those. A Product with no useful surface (Service, Finance,
+ * Agents, Studio) has no row: navigation never leads to an empty placeholder, and the catalogue is
+ * where a planned Product is shown as planned. Each key is a canonical Product key
+ * (`platform_catalog_products.key`, D46/D60), which `navigation.test.ts` checks.
+ *
+ * A workspace is *where an operator uses* a Product; the pages inside it are `Area.workspace`. One
+ * page makes the workspace a plain row, several make it an expandable one — a dropdown holds only
+ * real, reachable pages. Plan ≠ Product ≠ Module ≠ Feature ≠ Workspace ≠ Page.
+ */
+export const WORKSPACES = [
+  { key: 'sales', label: 'Gild Sales' },
+  { key: 'comms', label: 'Gild Comms' },
+  { key: 'automations', label: 'Gild Automations' },
+  { key: 'field', label: 'Gild Field' },
+] as const;
+
+export type WorkspaceKey = (typeof WORKSPACES)[number]['key'];
 
 /**
  * The sections, in the order the sidebar draws them. One list, so the ordering rule D23 states
@@ -43,9 +63,11 @@ export type AreaGroup = 'home' | 'workspaces' | 'settings';
 export const AREA_GROUPS = [
   // Home is one row set apart, and the answer to "what matters right now".
   { key: 'home', label: null },
-  // Where an operator does a kind of work: each row is a workspace, and a workspace with several
-  // pages holds them as children (`Area.parent`) rather than as peers.
+  // Where an operator does a kind of work: each row is a Product's workspace, and a workspace with
+  // several pages holds them as children (`Area.workspace`) rather than as peers.
   { key: 'workspaces', label: 'Workspaces' },
+  // Horizontal surfaces every Product reuses (Gild Workspace): not a Product, so not under a Product.
+  { key: 'shared', label: 'Shared' },
   { key: 'settings', label: null },
 ] as const satisfies readonly { key: AreaGroup; label: string | null }[];
 
@@ -224,13 +246,20 @@ export type Area = {
   /** Which sidebar section (D23). */
   group: AreaGroup;
   /**
-   * The workspace this area is a **page** of — the `segment` of another area. An area with no
-   * parent is a workspace (or Home, or a settings area); one with a parent is one view inside it,
-   * drawn beneath it in the sidebar and never as a peer. The route does not change: `/work` is
-   * still `/work`, so no address moves to say which workspace a page belongs to.
-   * `navigation.test.ts` checks the parent exists, is itself a workspace, and sits in the same group.
+   * The Product workspace this area is a **page** of (`WORKSPACES`). A page is drawn beneath its
+   * workspace, never as a peer of it, and a workspace with one page is a plain row. Home, the
+   * shared surfaces and configuration areas belong to none. The route does not change to say which
+   * workspace a page belongs to: `/work` is still `/work`.
    */
-  parent?: string;
+  workspace?: WorkspaceKey;
+  /**
+   * Where the page lives beneath the organization when that is not just its `segment` — a page of a
+   * larger route (`customers/pipeline`). `segment` stays the unique key, the icon key and the name
+   * `areaLabel` reads; the first path part is the directory `navigation.test.ts` finds the page in.
+   */
+  route?: string;
+  /** Carried in the phone bar's primary slots when the bar has room (Customers, Work, Schedule): the frequent work stays one tap away however the sidebar nests it. */
+  phone?: boolean;
   /** The module this area belongs to, or absent for the kernel. A business without a named module doesn't see its entry — not capability gating (I12), just a fact that it isn't part of that business. */
   module?: ModuleKey;
   /**
@@ -276,26 +305,33 @@ export const AREAS: readonly Area[] = [
   // Leads because D23 says the action an operator's phone is designed around is "what do I do next".
   { segment: 'home', label: 'Home', group: 'home' },
 
-  { segment: 'customers', label: 'Customers', group: 'workspaces' },
-  // The workspace where work is planned and done. Its overview is a real page; Work, Schedule,
-  // Resources, Locations and Assets are its pages. All kernel, except Assets, which is a module.
-  { segment: 'operations', label: 'Operations', group: 'workspaces' },
-  { segment: 'work', label: 'Work', group: 'workspaces', parent: 'operations' },
-  { segment: 'schedule', label: 'Schedule', group: 'workspaces', parent: 'operations' },
-  { segment: 'resources', label: 'Resources', group: 'workspaces', parent: 'operations' },
-  { segment: 'locations', label: 'Locations', group: 'workspaces', parent: 'operations' },
-  { segment: 'assets', label: 'Assets', group: 'workspaces', parent: 'operations', module: 'assets', featureKeys: ['assets'] },
-  // Communications is the workspace; Calls is the one channel implemented in it. The route is
-  // still `calls` — canonicalising it to /communications/calls waits for the call-domain work.
-  // The specific Communications/Voice features this surface is — not `pipeline`/`configurable_stages`/
-  // `qualification_state`, which also map to the `reception` module key but back the CRM pipeline
-  // (Customers), a different surface entirely (D46's many-to-many seam, and the reason `featureKeys`
-  // exists rather than gating on `module` alone).
-  { segment: 'calls', label: 'Communications', group: 'workspaces', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
-  // A workspace, not a setting: building, reviewing and observing rules is ongoing work.
-  { segment: 'automations', label: 'Automation', group: 'workspaces', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
-  // Deep analytics: saved dashboards and reports. Workspace-local numbers stay in their workspace.
-  { segment: 'insights', label: 'Insights', group: 'workspaces', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
+  // Gild Sales. Customers is the kernel; the Pipeline is the CRM stages view, offered where the
+  // business has it (the reception module). Two real pages make Sales expandable; one, a plain row.
+  { segment: 'customers', label: 'Customers', group: 'workspaces', workspace: 'sales', phone: true },
+  { segment: 'pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'sales', route: 'customers/pipeline', module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
+  // Gild Comms. Calls is the one channel implemented; SMS, email and an inbox are not pages until
+  // they exist. The route is still `calls`. The specific Voice features this surface is — not the
+  // pipeline features that share the `reception` module key (D46's many-to-many seam, and the
+  // reason `featureKeys` exists rather than gating on `module` alone).
+  { segment: 'calls', label: 'Calls', group: 'workspaces', workspace: 'comms', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
+  // Gild Automations: building, reviewing and observing rules is ongoing work, so it is a
+  // workspace. Rules, Messages and Activity are three pages of it, each its own route — the sidebar
+  // is the one navigation for them, and the page carries no second tab strip over the same three.
+  { segment: 'automations', label: 'Rules', group: 'workspaces', workspace: 'automations', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  { segment: 'automation-messages', label: 'Messages', group: 'workspaces', workspace: 'automations', route: 'automations/messages', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  { segment: 'automation-activity', label: 'Activity', group: 'workspaces', workspace: 'automations', route: 'automations/activity', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  // Gild Field: what work is being done, where, when and with what. Its overview is a real page;
+  // Work, Schedule, Resources, Locations and Assets are its pages. All kernel except Assets, a module.
+  { segment: 'field', label: 'Overview', group: 'workspaces', workspace: 'field' },
+  { segment: 'work', label: 'Work', group: 'workspaces', workspace: 'field', phone: true },
+  { segment: 'schedule', label: 'Schedule', group: 'workspaces', workspace: 'field', phone: true },
+  { segment: 'resources', label: 'Resources', group: 'workspaces', workspace: 'field' },
+  { segment: 'locations', label: 'Locations', group: 'workspaces', workspace: 'field' },
+  { segment: 'assets', label: 'Assets', group: 'workspaces', workspace: 'field', module: 'assets', featureKeys: ['assets'] },
+
+  // Shared, not a Product's: dashboards and reports over one reporting aggregate that every Product
+  // reuses (Gild Workspace). Workspace-local numbers stay in their own workspace.
+  { segment: 'insights', label: 'Insights', group: 'shared', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
 
   // Configuration, not places somebody works: each is a real, directly addressable route with its
   // module and capability gating unchanged, found from the Settings map (`sidebar: false`).
@@ -465,7 +501,8 @@ export function areasIn(
 }
 
 export function areaHref(organizationId: string, segment: string): string {
-  return `/organizations/${organizationId}/${segment}`;
+  const route = AREAS.find((area) => area.segment === segment)?.route ?? segment;
+  return `/organizations/${organizationId}/${route}`;
 }
 
 /**
@@ -509,6 +546,13 @@ export function currentSegment(pathname: string): string | null {
  * drift. Throws on an unknown segment: a page naming an area that does not exist is a build
  * mistake, not a runtime case to render around.
  */
+/** A workspace's name, for the heading of its overview page — the one place an area's page is titled by its Product. */
+export function workspaceLabel(key: WorkspaceKey): string {
+  const workspace = WORKSPACES.find((candidate) => candidate.key === key);
+  if (!workspace) throw new Error(`No workspace has the key "${key}".`);
+  return workspace.label;
+}
+
 export function areaLabel(segment: string): string {
   const area = AREAS.find((candidate) => candidate.segment === segment);
   if (!area) throw new Error(`No area has the segment "${segment}".`);

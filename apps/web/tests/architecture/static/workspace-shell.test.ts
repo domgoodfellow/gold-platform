@@ -530,13 +530,15 @@ describe('Platform pages render their own PageHeader', () => {
       'utf8',
     );
     expect(productsPage).toContain("title=\"Line items\"");
-    expect(platformNavigation).not.toMatch(/label:\s*'Products'/);
+    // The nav's Products is the catalogue landing (the Gild Products), a different page from that list.
+    expect(platformNavigation).toContain("label: 'Products', path: 'catalog'");
   });
 });
 
 describe('Platform navigation highlights the most specific matching item, never two at once', () => {
-  it('renamed the Catalog root away from "Products" — Products is the legacy line-item list one level in', () => {
-    expect(platformNavigation).toContain("label: 'Catalog', path: 'catalog'");
+  it('names the catalogue landing Products, under a Catalog heading — the legacy line-item list is one level in', () => {
+    expect(platformNavigation).toContain("label: 'Products', path: 'catalog'");
+    expect(platformNavigation).toContain("{ key: 'catalog', label: 'Catalog' }");
   });
 
   it('picks the longest matching href so a Plan or Product detail route activates its own section', () => {

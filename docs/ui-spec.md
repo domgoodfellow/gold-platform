@@ -115,8 +115,9 @@ the desktop sidebar, its collapsed rail, the tablet rail, the phone bar and its 
 Settings map — draws the sections `projectShell` (`lib/shell.ts`) resolves from four independent
 facts: the organization's entitlements, the member's capabilities, whether the organization is
 GOLD's own, and the member's platform permissions. The sections are Home, **Workspaces**
-(a workspace with several pages holds them beneath it, so Operations opens onto Work, Schedule,
-Resources, Locations and Assets rather than five rows beside Customers), **Platform** — only inside
+(each a Gild Product with a real surface — a workspace with several pages holds them beneath it,
+so Gild Field opens onto Overview, Work, Schedule, Resources, Locations and Assets rather than six
+rows beside Customers), **Shared** (what every Product reuses: Insights), **Platform** — only inside
 GOLD and only with a platform permission — and **Administration**, set apart at the foot; a
 section with nothing in it is not drawn. No renderer names a capability, a module or
 a role, and none is a second authorization system — hiding an item is courtesy and every page,
@@ -152,13 +153,13 @@ uses it; a page is one task inside that workspace. Only the last two are navigat
 the sidebar is named for a Plan.
 
 **The phone bar is Home, the first workspaces and More.** Frequent work is in the bar
-(`projectPhone`); everything else — the remaining workspaces, Operations, Administration and
+(`projectPhone`); everything else — the remaining workspace pages, Shared, Administration and
 Platform — is behind **More**, a sheet grouped as the sidebar is. It is a rendering choice over the
 same projection, so the bar and More together are exactly what the desktop shows. The sidebar
 trigger is hidden below `md` because the bottom bar is the phone's navigation.
 
-**Five sections, ruled apart, in `AREA_GROUPS` order** — Work, Relationships, Operations, Tools,
-and Settings (unlabelled, one row). `navigation.test.ts` fails on an interleaved list: each
+**Sections, ruled apart, in `AREA_GROUPS` order** — Home, Workspaces, Shared and Settings
+(unlabelled, one row). `navigation.test.ts` fails on an interleaved list: each
 section must be one unbroken run, and an operator must never reach today's work by going through
 settings (D23).
 
@@ -172,8 +173,8 @@ modules — so no section is named for one. These are named for what an operator
 | Section | Holds | Why |
 |---|---|---|
 | (Home) | Home | What matters in this business right now — set apart, first |
-| (Workspaces) | Customers, Work, Schedule, Communications, Automation, Insights | Where an operator does a kind of work; no heading, because the rows are the taxonomy |
-| Operations | Resources, Locations, Assets | What the work is done with, and where |
+| Workspaces | Gild Sales (Customers, Pipeline), Gild Comms (Calls), Gild Automations (Rules, Messages, Activity), Gild Field (Overview, Work, Schedule, Resources, Locations, Assets) | Where an operator uses a Product. One real page is a plain row; several are an expandable one; a Product with no surface has no row |
+| Shared | Insights | Cross-Product analytics over the one reporting aggregate; not a Product |
 | (Settings) | Settings | Where the business is configured — set apart by the rule above it |
 
 **The operating model.** An organization is *Home*, its *workspaces*, and *Settings*. A workspace
@@ -185,11 +186,15 @@ workspace of its own — the deep, cross-workspace one: `/insights` is saved das
 link into it; the report builder never sits in a rail. *Agent* is the workspace-global assistant
 rail, and is none of these.
 
-**Operator workspaces are not the commercial catalogue.** A row is a place somebody works. A Plan
-grants Features that may compose into several rows, and one row may compose Features from several
-catalogue Modules — there is no one-to-one, and no row per SKU (D25, D46). The sellable name of a
-Product (*Customer Experience*) and the operator's name for the place (*Website & Portal*) may
-differ.
+**Workspaces are the Gild Products; they are not Plans or SKUs.** A row is where an operator uses
+one of the eight Products (D61) — Sales, Service, Comms, Finance, Agents, Automations, Field,
+Studio — and only those with a real surface get one. A Plan grants Features that may compose into
+several rows, and there is no row per SKU (D25, D46). **One grain per navigation:** a sidebar
+child is a major page of a Product, and a `ViewNav` is for views inside one page; the same three
+names are never both. **A dropdown holds only real, reachable pages** — never *coming soon*.
+GildOps is the company, Gild Platform the control plane (D60), Gild Admin organization
+administration, and Gild Workspace the shared substrate (Home, Documents, reporting, dashboards,
+activity, the Agent shell, the page-support rail): none of them is a Product.
 
 **Where each concern lives.**
 

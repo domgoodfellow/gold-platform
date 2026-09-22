@@ -13,19 +13,19 @@ import { listResources } from '@/lib/domain/resources/resources';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
-import { areaAvailable, areaHref, areaLabel } from '@/lib/navigation';
+import { areaAvailable, areaHref, areaLabel, workspaceLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Operations: the overview of the workspace whose pages are Work, Schedule, Resources, Locations
+ * Gild Field: the overview of the workspace whose pages are Work, Schedule, Resources, Locations
  * and Assets. Every figure is a count some domain read already owns, one per page, and each links
  * to it — nothing is totalled here and nothing is a target, a rate or a trend. A page the
  * organization does not have (Assets without its module) is not drawn and not queried, decided by
  * the same predicate that decides the sidebar's own list of pages.
  */
-export default async function OperationsPage({ params }: PageProps<'/organizations/[organizationId]/operations'>) {
+export default async function FieldPage({ params }: PageProps<'/organizations/[organizationId]/field'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
   const date = todayInZone(organization.timezone);
@@ -66,11 +66,11 @@ export default async function OperationsPage({ params }: PageProps<'/organizatio
   return (
     <AppPage>
       <PageHeader
-        title={areaLabel('operations')}
+        title={workspaceLabel('field')}
         description="Where work is planned and done: the jobs, when they happen, and what they are done with and where."
       />
       {empty ? (
-        <EmptyState>Nothing has been recorded in Operations yet.</EmptyState>
+        <EmptyState>Nothing has been recorded in Gild Field yet.</EmptyState>
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           {kpis.map((kpi) => (

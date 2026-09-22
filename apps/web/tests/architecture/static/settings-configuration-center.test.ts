@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
  */
 
 const ROUTES = fileURLToPath(new URL('../../../app/organizations/[organizationId]', import.meta.url));
+const WEB_FEATURES = fileURLToPath(new URL('../../../features', import.meta.url));
 const WEB_ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 
 describe('Settings, as the Configuration Center (source scan)', () => {
@@ -82,15 +83,19 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     expect(page).not.toContain('redirect(');
   });
 
-  it('/automations is canonical and renders the automation workspace â€” Rules, Messages and Activity as URL-backed sibling views, and a rule as its own detail route', () => {
+  it('/automations is canonical: Rules, Messages and Activity are three pages of Gild Automations, and a rule is its own detail route', () => {
     const page = readFileSync(`${ROUTES}/automations/page.tsx`, 'utf8');
-    expect(page).toContain('AutomationsViewTabs');
     expect(page).toContain('RulesTable');
     expect(page).toContain('NewAutomationSheet');
-    expect(page).toContain('MessagesView');
-    expect(page).toContain('ActivityView');
-    expect(page).not.toContain('redirect(');
+    // The sidebar is the one navigation for the three: no tab strip over the same routes.
+    expect(page).not.toMatch(/AutomationsViewTabs|MessagesView|ActivityView/);
+    expect(existsSync(`${WEB_FEATURES}/automations/workspace/view-tabs.tsx`)).toBe(false);
+    // The old ?view= addresses still land somewhere: on the pages that replaced them.
+    expect(page).toContain("redirect(areaHref(organizationId, 'automation-messages'))");
+    expect(page).toContain("redirect(areaHref(organizationId, 'automation-activity'))");
     expect(page).not.toContain('AutomationRuleCard');
+    expect(readFileSync(`${ROUTES}/automations/messages/page.tsx`, 'utf8')).toContain('MessagesView');
+    expect(readFileSync(`${ROUTES}/automations/activity/page.tsx`, 'utf8')).toContain('ActivityView');
 
     const detail = readFileSync(`${ROUTES}/automations/[ruleId]/page.tsx`, 'utf8');
     expect(detail).toContain('RuleHeading');

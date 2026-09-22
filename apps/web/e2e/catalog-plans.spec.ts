@@ -14,17 +14,17 @@ import { OWNER_STORAGE_STATE, platformUrl, STAFF_STORAGE_STATE } from './helpers
 test.describe('platform catalog', () => {
   test.use({ storageState: STAFF_STORAGE_STATE });
 
-  test('shows the seven canonical Products on the landing page', async ({ page }) => {
+  test('shows the eight Gild Products on the landing page', async ({ page }) => {
     await page.goto(platformUrl('catalog'));
-    await expect(page.getByRole('heading', { name: 'Catalog', level: 1 })).toBeVisible();
-    for (const label of ['CRM', 'Communications', 'Operations', 'Financial Operations', 'Automation', 'Insights', 'Customer Experience']) {
+    await expect(page.getByRole('heading', { name: 'Products', level: 1 })).toBeVisible();
+    for (const label of ['Gild Sales', 'Gild Service', 'Gild Comms', 'Gild Finance', 'Gild Agents', 'Gild Automations', 'Gild Field', 'Gild Studio']) {
       await expect(page.locator('main').getByText(label, { exact: true }).first()).toBeVisible();
     }
   });
 
   test('opens the Communications Product detail and its Modules & Features tab', async ({ page }) => {
-    await page.goto(platformUrl('catalog/families/communications'));
-    await expect(page.getByRole('heading', { name: 'Communications', level: 1 })).toBeVisible();
+    await page.goto(platformUrl('catalog/families/comms'));
+    await expect(page.getByRole('heading', { name: 'Gild Comms', level: 1 })).toBeVisible();
 
     await page.getByRole('tab', { name: 'Modules & Features' }).click();
     await expect(page.getByText('Voice', { exact: true }).first()).toBeVisible();

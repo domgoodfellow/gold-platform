@@ -39,7 +39,7 @@ export function EditProductSheet({ product }: { product: CatalogProduct }) {
         <PageDrawerHeader>
           <PageDrawerTitle>Edit {product.label}</PageDrawerTitle>
           <PageDrawerDescription>
-            Presentation only. The key ({product.key}) is locked — the seven Products are fixed.
+            Presentation only. The key ({product.key}) is locked — the Gild Products are fixed.
           </PageDrawerDescription>
         </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">

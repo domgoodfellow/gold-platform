@@ -32,13 +32,15 @@ describe('sibling views are navigation, not page actions', () => {
     expect(read(`${UI}/tab-styles.ts`)).toContain('aria-[current=page]:border-accent');
   });
 
-  it('Customers List and Pipeline render the same navigation, and the header carries no Pipeline link', () => {
+  it('Customers and Pipeline are pages of Gild Sales in the sidebar, so neither repeats them as a tab strip', () => {
+    // One navigation grain: a sidebar child is a page of a Product, and a ViewNav is for views inside
+    // one page. Customers and Pipeline are the former, so the strip that used to say the same thing
+    // over the same two routes is gone (Automations' Rules, Messages and Activity likewise).
     const list = read(`${ORG}/customers/page.tsx`);
     const pipeline = read(`${ORG}/customers/pipeline/page.tsx`);
-    expect(list).toContain('<CustomersViewNav organizationId={organizationId} current="list" />');
-    expect(pipeline).toContain('<CustomersViewNav organizationId={organizationId} current="pipeline" />');
+    for (const page of [list, pipeline]) expect(page).not.toMatch(/ViewNav|ViewTabs/);
+    expect(() => read(`${WEB}/features/crm/customers/customers-view-nav.tsx`)).toThrow();
     expect(code(list)).not.toMatch(/<Link\b/);
-    expect(read(`${WEB}/features/crm/customers/customers-view-nav.tsx`)).toContain('/pipeline');
   });
 
   it('Team renders ViewNav for Members, Invitations and Roles, with nothing but views in it', () => {

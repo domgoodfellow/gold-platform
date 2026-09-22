@@ -742,6 +742,13 @@
         "catalogue"
       ]
     },
+    "apps/web/tests/integration/database/gild-taxonomy.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "catalogue"
+      ]
+    },
     "apps/web/tests/integration/database/checklist-templates.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1257,6 +1264,12 @@
       "category": "unit",
       "concerns": [
         "ui",
+        "security"
+      ]
+    },
+    "apps/web/tests/unit/platform-permissions-read.test.ts": {
+      "category": "unit",
+      "concerns": [
         "security"
       ]
     },

@@ -1,6 +1,5 @@
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeader } from '@/components/containers/page-header';
-import { CustomersViewNav } from '@/features/crm/customers/customers-view-nav';
 import { EmptyState } from '@/components/containers/section';
 import { buildPipelineColumns, PipelineBoard } from '@/features/crm/sales/pipeline-board';
 import { CustomerStageControl } from '@/features/crm/sales/stage-control';
@@ -30,7 +29,7 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
   return (
     <AppPage>
       <PageHeader
-        title={areaLabel('customers')}
+        title={areaLabel('pipeline')}
         description="Where each relationship has got to."
         actions={
           reception ? (
@@ -39,7 +38,6 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
         }
       />
 
-      {reception ? <CustomersViewNav organizationId={organizationId} current="pipeline" /> : null}
 
       {!reception ? (
         <EmptyState className="mt-6">Switch Communications/Voice on to name a pipeline for this business.</EmptyState>

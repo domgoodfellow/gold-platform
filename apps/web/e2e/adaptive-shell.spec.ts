@@ -89,7 +89,7 @@ test.describe('GOLD platform staff', () => {
     await expect(nav.getByRole('link', { name: 'Providers', exact: true })).toBeVisible();
     // The same shell: GOLD's own workspaces are in it, beside Platform, not replaced by it.
     await expect(nav.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Operations', exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Gild Field', exact: true })).toBeVisible();
   });
 
   test('the old /platform address lands on the canonical one, path and query kept', async ({ page }) => {

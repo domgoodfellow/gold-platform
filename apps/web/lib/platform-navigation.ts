@@ -12,10 +12,11 @@ import type { PlatformCapability } from '@/lib/domain/platform/permissions';
  * it says nothing about who owns the data behind a page — providers, catalogue and billing stay
  * platform-scoped records that a nested route merely draws. Nothing here reads a role name.
  */
-export type PlatformGroupKey = 'commercial' | 'infrastructure';
+export type PlatformGroupKey = 'catalog' | 'commercial' | 'infrastructure';
 
-/** The sidebar groups that have no page of their own. Catalog is not one: it is a destination with children. */
+/** The sidebar groups: headings with no page of their own, each opening its first page. */
 export const PLATFORM_GROUPS: readonly { key: PlatformGroupKey; label: string }[] = [
+  { key: 'catalog', label: 'Catalog' },
   { key: 'commercial', label: 'Commercial' },
   { key: 'infrastructure', label: 'Infrastructure' },
 ];
@@ -27,14 +28,14 @@ export type PlatformDestination = {
   path: string;
   /** The one platform permission that reaches this destination. */
   requires: PlatformCapability;
-  /** Where the sidebar nests it: beneath the Catalog destination, or under a named group. Absent means top level. */
-  under?: 'catalog' | PlatformGroupKey;
+  /** The sidebar group it sits under. Absent means top level. */
+  under?: PlatformGroupKey;
 };
 
 export const PLATFORM_DESTINATIONS: readonly PlatformDestination[] = [
   { key: 'overview', label: 'Overview', path: '', requires: 'platform.health' },
   { key: 'organizations', label: 'Organizations', path: 'organizations', requires: 'platform.organizations' },
-  { key: 'catalog', label: 'Catalog', path: 'catalog', requires: 'platform.catalogue' },
+  { key: 'products', label: 'Products', path: 'catalog', requires: 'platform.catalogue', under: 'catalog' },
   { key: 'plans', label: 'Plans & Add-ons', path: 'catalog/plans', requires: 'platform.catalogue', under: 'catalog' },
   { key: 'meters', label: 'Meters', path: 'catalog/meters', requires: 'platform.catalogue', under: 'catalog' },
   { key: 'connectors', label: 'Integrations', path: 'integrations', requires: 'platform.catalogue', under: 'catalog' },

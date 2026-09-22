@@ -6,6 +6,7 @@ import {
   getCatalogProduct,
   listCatalogFeatures,
   listCatalogModules,
+  GILD_PRODUCT_KEYS,
   listCatalogProducts,
   listFeaturesByRuntimeMapping,
   updateCatalogProduct,
@@ -133,9 +134,16 @@ describe('the canonical catalogue', () => {
     expect(CATALOGUE_SURFACE_COVERAGE.map((entry) => entry.key).sort()).toEqual(expected);
   });
 
-  it('has exactly the seven locked Products, readable by anyone signed in', async () => {
-    const communications = await getCatalogProduct(stranger.db, 'communications');
-    expect(communications?.label).toBe('Communications');
+  it('has exactly the eight Gild Products, and the shared Workspace beneath them, readable by anyone signed in', async () => {
+    const products = await listCatalogProducts(stranger.db);
+    expect(products.filter((p) => p.kind === 'product').map((p) => p.key)).toEqual([...GILD_PRODUCT_KEYS]);
+    expect(products.filter((p) => p.kind === 'workspace').map((p) => p.key)).toEqual(['workspace']);
+    expect(products.map((p) => p.label)).toEqual(
+      expect.arrayContaining(['Gild Sales', 'Gild Service', 'Gild Comms', 'Gild Finance', 'Gild Agents', 'Gild Automations', 'Gild Field', 'Gild Studio']),
+    );
+
+    const communications = await getCatalogProduct(stranger.db, 'comms');
+    expect(communications?.label).toBe('Gild Comms');
 
     const modules = await listCatalogModules(stranger.db, { productId: communications!.id });
     expect(modules.map((m) => m.key)).toEqual(expect.arrayContaining(['voice', 'sms', 'email']));
@@ -163,7 +171,7 @@ describe('the canonical catalogue', () => {
   it('refuses a catalogue edit from a tenant and allows it from staff', async () => {
     await expect(
       updateCatalogProduct(stranger.db, {
-        key: 'crm',
+        key: 'sales',
         label: 'Hijacked',
         description: '',
         lifecycle: 'stable',
@@ -172,9 +180,9 @@ describe('the canonical catalogue', () => {
       }),
     ).rejects.toMatchObject({ code: 'catalogue.update_product_failed' });
 
-    const original = await getCatalogProduct(staff, 'crm');
+    const original = await getCatalogProduct(staff, 'sales');
     await updateCatalogProduct(staff, {
-      key: 'crm',
+      key: 'sales',
       label: original!.label,
       description: 'Edited by staff for this test.',
       lifecycle: 'stable',
@@ -182,7 +190,7 @@ describe('the canonical catalogue', () => {
       displayOrder: original!.displayOrder,
     });
 
-    const updated = await getCatalogProduct(stranger.db, 'crm');
+    const updated = await getCatalogProduct(stranger.db, 'sales');
     expect(updated?.description).toBe('Edited by staff for this test.');
   });
 });
@@ -217,7 +225,7 @@ describe('Plans and Add-ons', () => {
     const planKey = `resolve_${randomUUID().slice(0, 8)}`;
     const planId = await createPlan(staff, { key: planKey, kind: 'plan', label: 'Resolve test', description: '', billable: true });
 
-    await grantPlanProduct(staff, { planId, productKey: 'communications' });
+    await grantPlanProduct(staff, { planId, productKey: 'comms' });
 
     const voiceModule = (await listCatalogModules(staff)).find((m) => m.key === 'voice')!;
     const features = await listCatalogFeatures(staff, { moduleId: voiceModule.id });

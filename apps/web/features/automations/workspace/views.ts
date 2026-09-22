@@ -1,8 +1,6 @@
 /**
- * The Automations workspace's three sibling views, as a URL value rather than remembered state —
- * the same reasoning `?widget=` and `?dashboard=` already rest on (`ui-spec.md` §2b): a view that
- * survives a reload, arrives with the back button, and can be sent to somebody is a fact the
- * server can read, not a client component's memory.
+ * The Automations workspace's three pages. They are routes now; the old view query survives only so an old
+ * address can be sent to the page that replaced it.
  */
 export const AUTOMATIONS_VIEWS = ['rules', 'messages', 'activity'] as const;
 

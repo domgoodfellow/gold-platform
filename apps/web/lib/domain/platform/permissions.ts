@@ -1,4 +1,5 @@
 import type { Db } from '@/lib/db/types';
+import { DomainError } from '@/lib/domain/errors';
 
 /**
  * What a member of GOLD's staff may reach of the platform — the platform's own vocabulary, exactly
@@ -42,11 +43,21 @@ export async function platformPermissions(db: Db): Promise<ReadonlySet<PlatformC
   const { data } = await db.auth.getUser();
   if (!data.user) return new Set();
 
-  const { data: row } = await db
+  const { data: row, error } = await db
     .from('platform_staff')
     .select('capabilities')
     .eq('user_id', data.user.id)
     .maybeSingle();
+
+  // A failed read is not an authorization decision. A database that is behind the migration that
+  // added `capabilities` answers with an error, and treating that as "no permissions" made the whole
+  // Platform section vanish with nothing to say why. No row is a valid empty set; an error is an error.
+  if (error) {
+    throw new DomainError(
+      `Platform permissions could not be read: ${error.message}`,
+      'platform.permissions_unreadable',
+    );
+  }
 
   return new Set((row?.capabilities ?? []).filter(isPlatformCapability));
 }

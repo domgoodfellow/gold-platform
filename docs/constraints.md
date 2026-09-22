@@ -1772,3 +1772,54 @@ customer, location, asset or job and the agent's files are private to their aske
 organization-level collection to list. Financials, Communications sub-pages, Website & Portal and
 the rest of the target page maps are vocabulary until a real surface exists. Communications keeps
 its `/calls` route.
+
+### D61 — Gild Products are eight, the shared Workspace is not one of them, and a workspace row is only ever real pages
+
+**Decision.** Three internal layers and eight customer-facing Products, kept apart on purpose.
+
+- **GildOps** is the company and platform umbrella. It is not a Product.
+- **Gild Platform** is the privileged SaaS control plane (D60): Organizations, Catalog, Plans &
+  Add-ons, Pricing, Billing, Providers, Usage, Health.
+- **Gild Admin** is organization administration: Team, Roles, Connections, Features, Plan & usage,
+  Settings, Setup. It applies to every organization, GildOps included.
+- **Gild Workspace** is the shared substrate every Product reuses: Home, Documents, reporting
+  primitives, dashboards, activity, search, the Agent shell and the page-support rail.
+- **The Products** are Gild Sales, Service, Comms, Finance, Agents, Automations, Field and Studio.
+
+**Boundaries.** CRM is a module area inside Sales. A customer-service *case* is Service; the
+*channel* it is discussed on is Comms, and Voice is a module of Comms. Scheduling and field
+operations are modules of Field. Price book, quotes, invoices, payments and job economics are
+Finance, distinct from GildOps' own subscription and provider economics, which are Platform. An
+Agent is Agents; a rule is Automations, and an Automation may invoke an Agent. Website, booking,
+forms, the portal, brand, domains and marketing are Studio. Reporting is not a Product: each
+Product shows a dashboard, activity and reports over the one aggregate, and the cross-Product
+analytics page stays as the *Shared* Insights. Plan ≠ Product ≠ Module ≠ Feature ≠ Workspace ≠ Page.
+
+**The catalogue.** `platform_catalog_products` holds those eight rows (`kind = 'product'`) and one
+more, `workspace` (`kind = 'workspace'`). Reporting Features need a parent to be granted and
+resolved, and a parent that is not sellable has to be distinguishable from one that is — a column,
+not a ninth Product. Renames were in place, so every Plan grant, activation override and runtime
+mapping kept its id: crm→sales, communications→comms, operations→field, financial_operations→finance,
+automation→automations, customer_experience→studio, insights→workspace. The module holding Ask
+(`intelligence`) moved to Agents on runtime evidence, with the planned agent-tools Feature; Service
+was created with planned Features only and is `unlisted`. A Plan that granted the old Insights
+whole was given that module, and GOLD Internal was given the two new Products, so no organization
+lost a capability. The old keys are outside the check constraint and cannot be written again.
+
+**Navigation.** `WORKSPACES` lists the Products that have a real operating surface, and only those;
+`Area.workspace` names a page's Product. No real page, no row. One page, a plain row. Several, an
+expandable one that holds only real, reachable pages — never a placeholder, never *coming soon*.
+Sidebar children are the major pages of a Product; a `ViewNav` is for views inside one page, and the
+same set is never both (Automations' Rules, Messages and Activity are routes; Insights' Overview and
+Reports are views). Operators see product names — *Gild Field*, not *Operations*.
+
+**Not built, and why.** Service, Finance, Agents and Studio have no workspace row: Finance's price
+book is configuration reached from Settings (D59), Agents' only surface is the rail, and Studio's
+site, booking and portal are configured in Settings. No brand or repository rename: GOLD stays in
+identifiers and history, and only the Product labels and the catalogue changed.
+
+**Holds.** `gild-taxonomy.test.ts` (exactly eight, no old key, every Module has a home, Service is
+planned, no Plan lost reach), `navigation.test.ts` (every workspace is a Product, no row for a
+Product without a surface), `shell-projection.test.ts` (leaf against branch, one projection for the
+sidebar and the phone), `catalogue-plans.test.ts` (GOLD Internal still resolves every implemented
+Feature).

@@ -5,6 +5,7 @@ import {
   AREAS,
   AREA_GROUPS,
   MODULES,
+  WORKSPACES,
   areaHref,
   areaLabel,
   areasIn,
@@ -55,7 +56,7 @@ describe('the operator shell navigation', () => {
   it('points every entry at a route that exists', () => {
     for (const area of AREAS) {
       expect(
-        existsSync(`${ROUTES}/${area.segment}/page.tsx`),
+        existsSync(`${ROUTES}/${area.route ?? area.segment}/page.tsx`),
         `navigation names "${area.segment}", which has no page`,
       ).toBe(true);
     }
@@ -65,7 +66,8 @@ describe('the operator shell navigation', () => {
     // The direction that catches the real mistake. Adding a screen and forgetting the
     // navigation used to be invisible, because the index page listed areas by hand and
     // nothing compared the two lists.
-    expect([...AREAS].map((area) => area.segment).sort()).toEqual(routeSegmentsOnDisk());
+    // A page of a larger route (`customers/pipeline`) is found under the directory its route starts with.
+    expect([...new Set(AREAS.map((area) => (area.route ?? area.segment).split('/')[0]))].sort()).toEqual(routeSegmentsOnDisk());
   });
 
   it('gives every area a label and no two the same', () => {
@@ -123,25 +125,28 @@ describe('the operator shell navigation', () => {
     expect(order[order.length - 1]).toBe('settings');
   });
 
-  it('makes a page of a workspace a child, never a peer: every parent is a real workspace in the same group', () => {
-    // `Area.parent` is what stops Work, Schedule, Resources, Locations and Assets being five peers
-    // of Customers. A parent is itself a workspace (no parent of its own), so nesting is one level,
-    // and it lives in the same sidebar section as its pages.
-    for (const area of AREAS.filter((entry) => entry.parent)) {
-      const parent = AREAS.find((entry) => entry.segment === area.parent);
-      expect(parent, `"${area.segment}" names a parent, "${area.parent}", that is not an area`).toBeDefined();
-      expect(parent!.parent, `"${area.parent}" is a page itself, so nesting is two levels deep`).toBeUndefined();
-      expect(parent!.group).toBe(area.group);
-      expect(parent!.sidebar).not.toBe(false);
+  it('makes a page of a workspace a child, never a peer: every page names a real workspace', () => {
+    // `Area.workspace` is what stops Work, Schedule, Resources, Locations and Assets being five peers
+    // of Customers. A workspace is a Product with pages, so nesting is one level.
+    for (const area of AREAS.filter((entry) => entry.workspace)) {
+      expect(WORKSPACES.some((workspace) => workspace.key === area.workspace), `"${area.segment}" names a workspace that is not one`).toBe(true);
+      expect(area.group).toBe('workspaces');
+      expect(area.sidebar).not.toBe(false);
+    }
+    // Every workspace has a page, or it is a row with nothing behind it.
+    for (const workspace of WORKSPACES) {
+      expect(AREAS.some((area) => area.workspace === workspace.key), `${workspace.key} has no page`).toBe(true);
     }
   });
 
-  it('gives Operations Work, Schedule, Resources, Locations and Assets as its pages, and an overview of its own', () => {
-    expect(AREAS.filter((area) => area.parent === 'operations').map((area) => area.segment)).toEqual([
-      'work', 'schedule', 'resources', 'locations', 'assets',
+  it('gives Gild Field an overview, Work, Schedule, Resources, Locations and Assets as its pages', () => {
+    expect(AREAS.filter((area) => area.workspace === 'field').map((area) => area.segment)).toEqual([
+      'field', 'work', 'schedule', 'resources', 'locations', 'assets',
     ]);
-    expect(AREAS.find((area) => area.segment === 'operations')?.parent).toBeUndefined();
-    expect(existsSync(`${ROUTES}/operations/page.tsx`)).toBe(true);
+    expect(existsSync(`${ROUTES}/field/page.tsx`)).toBe(true);
+    // Customer-facing navigation no longer says Operations.
+    expect(AREAS.some((area) => area.label === 'Operations')).toBe(false);
+    expect(WORKSPACES.find((workspace) => workspace.key === 'field')?.label).toBe('Gild Field');
     // The existing routes stay canonical: no address moved to say which workspace a page belongs to.
     for (const segment of ['work', 'schedule', 'resources', 'locations', 'assets']) {
       expect(existsSync(`${ROUTES}/${segment}/page.tsx`)).toBe(true);
@@ -184,7 +189,9 @@ describe('the operator shell navigation', () => {
     const inSidebar = AREAS.filter((area) => area.sidebar !== false).map((area) => area.segment);
     expect(inSidebar).toEqual([
       'home',
-      'customers', 'operations', 'work', 'schedule', 'resources', 'locations', 'assets', 'calls', 'automations', 'insights',
+      'customers', 'pipeline', 'calls', 'automations', 'automation-messages', 'automation-activity',
+      'field', 'work', 'schedule', 'resources', 'locations', 'assets',
+      'insights',
       'settings',
     ]);
     for (const segment of ['pricing', 'fields', 'roles', 'integrations', 'setup']) {
@@ -439,28 +446,28 @@ describe('capability-relevance filtering (Slice E)', () => {
     const reports = AREAS.find((area) => area.segment === 'insights')!;
     expect(reports.relevantCapabilities).toBeDefined();
 
-    const shown = areasIn('workspaces', undefined, new Set());
+    const shown = areasIn('shared', undefined, new Set());
     expect(shown.map((area) => area.segment)).not.toContain('insights');
   });
 
   it('shows a feature-specific area to a role holding at least one of its relevant capabilities', () => {
-    const shown = areasIn('workspaces', undefined, new Set(['report.read']));
+    const shown = areasIn('shared', undefined, new Set(['report.read']));
     expect(shown.map((area) => area.segment)).toContain('insights');
   });
 
   it('layers on top of the module gate rather than replacing it', () => {
     // Entitled to reporting (module on) but the role itself lacks both report capabilities:
     // still hidden. Neither gate alone decides this — both must pass.
-    const moduleOnCapabilityOff = areasIn('workspaces', new Set(['reporting']), new Set());
+    const moduleOnCapabilityOff = areasIn('shared', new Set(['reporting']), new Set());
     expect(moduleOnCapabilityOff.map((area) => area.segment)).not.toContain('insights');
 
     // The reverse: the role could read reports, but the business never bought reporting.
-    const moduleOffCapabilityOn = areasIn('workspaces', new Set(), new Set(['report.read']));
+    const moduleOffCapabilityOn = areasIn('shared', new Set(), new Set(['report.read']));
     expect(moduleOffCapabilityOn.map((area) => area.segment)).not.toContain('insights');
   });
 
   it('passing no capabilities at all shows every area the module gate allows, same as before Slice E', () => {
-    const withModuleOnly = areasIn('workspaces', new Set(['reporting']));
+    const withModuleOnly = areasIn('shared', new Set(['reporting']));
     expect(withModuleOnly.map((area) => area.segment)).toContain('insights');
   });
 });
@@ -636,7 +643,7 @@ describe('a switch leads to its inputs', () => {
     const automations = MODULES.find((sold) => sold.key === 'automations')!;
     expect(moduleConfiguration('org-1', automations)).toEqual({
       href: '/organizations/org-1/automations',
-      label: 'Automation',
+      label: 'Rules',
     });
   });
 });
@@ -804,9 +811,11 @@ describe('the organization shell taxonomy', () => {
 
   it('names the workspaces in the operator’s words', () => {
     const labels = new Map(AREAS.map((area) => [area.segment, area.label]));
-    expect(labels.get('calls')).toBe('Communications');
-    expect(labels.get('automations')).toBe('Automation');
+    expect(labels.get('calls')).toBe('Calls');
+    expect(labels.get('automations')).toBe('Rules');
     expect(labels.get('insights')).toBe('Insights');
+    // The workspace rows are the Gild Products that have a surface, in the order a customer meets them.
+    expect(WORKSPACES.map((workspace) => workspace.label)).toEqual(['Gild Sales', 'Gild Comms', 'Gild Automations', 'Gild Field']);
   });
 
   it('adds no workspace whose surface does not exist yet', () => {
@@ -817,7 +826,12 @@ describe('the organization shell taxonomy', () => {
     }
     // And every workspace row has a page behind it — no placeholder route to satisfy a list.
     for (const area of inSidebar) {
-      expect(existsSync(`${ROUTES}/${area.segment}/page.tsx`)).toBe(true);
+      expect(existsSync(`${ROUTES}/${area.route ?? area.segment}/page.tsx`)).toBe(true);
+    }
+    // Nor a Product row with nothing behind it: Service, Finance, Agents and Studio have no operating
+    // surface yet, so none is a workspace. The catalogue is where a planned Product is shown.
+    for (const absent of ['service', 'finance', 'agents', 'studio']) {
+      expect(WORKSPACES.some((workspace) => workspace.key === absent), `${absent} has no operating surface yet`).toBe(false);
     }
   });
 
@@ -827,8 +841,8 @@ describe('the organization shell taxonomy', () => {
     expect(AREA_GROUPS.find((group) => group.key === 'settings')?.label).toBeNull();
   });
 
-  it('draws no more than one section heading, so the sidebar answers where to work rather than naming a taxonomy', () => {
-    expect(AREA_GROUPS.filter((group) => group.label !== null)).toHaveLength(1);
+  it('draws two section headings: where a Product is worked in, and what every Product shares', () => {
+    expect(AREA_GROUPS.filter((group) => group.label !== null).map((group) => group.key)).toEqual(['workspaces', 'shared']);
   });
 
   it('gives Insights a real Overview and Reports route, and nothing for the old paths', () => {
