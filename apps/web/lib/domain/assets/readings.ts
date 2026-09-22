@@ -57,6 +57,52 @@ export async function listAssetReadings(
 }
 
 /**
+ * The newest reading for each of several assets, in one query — what a list of assets wants to
+ * show beside each row, without asking the database once per asset.
+ *
+ * **One query, not a `DISTINCT ON`.** PostgREST's query builder has no way to ask Postgres for
+ * "the first row of each group" directly, and reaching for a raw SQL view or an RPC solely to
+ * get that shape would be a database migration this doesn't need: the readings are already
+ * ordered so that the first row seen for a given asset, in one pass, is its newest — the
+ * reduction happens here instead of in SQL. A deployment whose combined reading history for the
+ * visible assets exceeds PostgREST's own row cap (1000) could theoretically miss the latest
+ * reading for an asset near the end of that page; nothing here is close to that scale today, and
+ * the honest fix if it ever is would be a `DISTINCT ON` view, not a client-side workaround.
+ */
+export async function listLatestAssetReadings(
+  db: Db,
+  input: { organizationId: string; assetIds: string[] },
+): Promise<Map<string, AssetReading>> {
+  if (input.assetIds.length === 0) return new Map();
+
+  const { data, error } = await db
+    .from('asset_readings')
+    .select('id, asset_id, value, unit, read_at, created_at')
+    .eq('organization_id', input.organizationId)
+    .in('asset_id', input.assetIds)
+    .order('asset_id', { ascending: true })
+    .order('read_at', { ascending: false });
+
+  if (error) {
+    throw new DomainError(error.message, 'assets.readings_failed');
+  }
+
+  const latest = new Map<string, AssetReading>();
+  for (const row of data ?? []) {
+    // Sorted per asset, newest first — the first row this loop sees for an asset is its latest.
+    if (latest.has(row.asset_id)) continue;
+    latest.set(row.asset_id, {
+      id: row.id,
+      value: row.value,
+      unit: row.unit,
+      readAt: row.read_at,
+      createdAt: row.created_at,
+    });
+  }
+  return latest;
+}
+
+/**
  * Write down what the counter says.
  *
  * **The rules run inside this write**, in the trigger on the table, each in its own

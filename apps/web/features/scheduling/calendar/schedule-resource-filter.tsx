@@ -80,13 +80,10 @@ export function ScheduleResourceFilter({
           />
         </div>
 
-        {resources.length > 1 ? (
+        {resources.length > 1 && !showingAll ? (
           <div className="flex items-center gap-3 border-b border-border px-3 py-2 text-sm">
             <button type="button" className={cx(FOCUS_RING, 'rounded underline underline-offset-4')} onClick={() => navigate([])}>
-              Select all
-            </button>
-            <button type="button" className={cx(FOCUS_RING, 'rounded underline underline-offset-4')} onClick={() => navigate([])}>
-              Clear
+              Show all resources
             </button>
           </div>
         ) : null}

@@ -1,5 +1,6 @@
 import { EmptyState } from '@/components/containers/section';
 import type { ScheduleDay } from '@/lib/domain/scheduling/availability';
+import { clipWindow } from '@/lib/domain/scheduling/window';
 import { ScheduleEvent } from './schedule-event';
 
 /**
@@ -19,8 +20,17 @@ function formatDayHeader(date: string): string {
 
 function eventsFor(day: ScheduleDay) {
   return day.resources
-    .flatMap((entry) => entry.booked.map((booking) => ({ ...booking, resourceName: entry.resource.name })))
-    .sort((a, b) => a.window.startsAt.localeCompare(b.window.startsAt));
+    .flatMap((entry) =>
+      entry.booked.map((booking) => ({
+        ...booking,
+        resourceName: entry.resource.name,
+        // A booking that spans midnight is clipped to this column's own day — otherwise it
+        // sorts and reads by the previous day's start time even on the day it only continues
+        // into.
+        displayWindow: clipWindow(booking.window, day.within) ?? booking.window,
+      })),
+    )
+    .sort((a, b) => a.displayWindow.startsAt.localeCompare(b.displayWindow.startsAt));
 }
 
 export function WeekSchedule({
@@ -59,6 +69,7 @@ export function WeekSchedule({
                       workItemId={event.workItemId}
                       title={event.title}
                       window={event.window}
+                      displayWindow={event.displayWindow}
                       resourceName={event.resourceName}
                       timezone={timezone}
                       variant="row"

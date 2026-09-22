@@ -6,10 +6,8 @@ import { DomainError } from '@/lib/domain/errors';
 import { linkCustomerLocation, locateAddress, setLocationCoordinates } from '@/lib/domain/locations/locations';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import type { UploadDocumentState } from '@/features/documents/upload-form';
-import type { CoordinatesActionState } from '../actions';
+import type { CoordinatesActionState, LocationActionState } from '../actions';
 import { requireOrganization } from '@/lib/route/organization';
-
-export type LinkCustomerActionState = { error: string | null };
 
 function revalidate(organizationId: string, locationId: string) {
   revalidatePath(`/organizations/${organizationId}/locations/${locationId}`);
@@ -56,9 +54,9 @@ export async function locationCoordinatesAction(
 }
 
 export async function linkCustomerAction(
-  _previous: LinkCustomerActionState,
+  _previous: LocationActionState,
   formData: FormData,
-): Promise<LinkCustomerActionState> {
+): Promise<LocationActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
   await requireOrganization(organizationId);
@@ -75,13 +73,13 @@ export async function linkCustomerAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message };
+      return { error: error.message, created: false };
     }
     throw error;
   }
 
   revalidate(organizationId, locationId);
-  return { error: null };
+  return { error: null, created: true };
 }
 
 export async function uploadLocationDocumentAction(

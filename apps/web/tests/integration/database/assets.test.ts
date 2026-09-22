@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createAsset, listAssets } from '@/lib/domain/assets/assets';
+import { listLatestAssetReadings, recordAssetReading } from '@/lib/domain/assets/readings';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { createFieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { createLocation } from '@/lib/domain/locations/locations';
@@ -278,5 +279,63 @@ describe('assets', () => {
     for (const event of data!) {
       expect(event.actor_id).toBe(alice.userId);
     }
+  });
+});
+
+describe('listLatestAssetReadings — one query, not one per asset', () => {
+  let tenant: Tenant;
+  let secondAssetId: string;
+
+  beforeAll(async () => {
+    tenant = await newTenant('readings-alice');
+    secondAssetId = await createAsset(tenant.db, {
+      organizationId: tenant.organizationId,
+      name: 'Van 3',
+    });
+
+    // Several readings on the first asset, oldest to newest — only the newest should come back.
+    await recordAssetReading(tenant.db, { organizationId: tenant.organizationId, assetId: tenant.assetId, value: 100, unit: 'hours', readAt: '2026-01-01T00:00:00Z' });
+    await recordAssetReading(tenant.db, { organizationId: tenant.organizationId, assetId: tenant.assetId, value: 150, unit: 'hours', readAt: '2026-02-01T00:00:00Z' });
+    await recordAssetReading(tenant.db, { organizationId: tenant.organizationId, assetId: tenant.assetId, value: 200, unit: 'hours', readAt: '2026-03-01T00:00:00Z' });
+    // The second asset has exactly one reading.
+    await recordAssetReading(tenant.db, { organizationId: tenant.organizationId, assetId: secondAssetId, value: 42, unit: 'miles', readAt: '2026-01-15T00:00:00Z' });
+  });
+
+  it('returns the newest reading per asset, keyed by asset id', async () => {
+    const latest = await listLatestAssetReadings(tenant.db, {
+      organizationId: tenant.organizationId,
+      assetIds: [tenant.assetId, secondAssetId],
+    });
+
+    expect(latest.get(tenant.assetId)).toMatchObject({ value: 200, unit: 'hours' });
+    expect(latest.get(secondAssetId)).toMatchObject({ value: 42, unit: 'miles' });
+  });
+
+  it('omits an asset with no readings, rather than a null entry', async () => {
+    const noReadings = await createAsset(tenant.db, { organizationId: tenant.organizationId, name: 'Brand new van' });
+
+    const latest = await listLatestAssetReadings(tenant.db, {
+      organizationId: tenant.organizationId,
+      assetIds: [tenant.assetId, noReadings],
+    });
+
+    expect(latest.has(noReadings)).toBe(false);
+    expect(latest.get(tenant.assetId)).toMatchObject({ value: 200 });
+  });
+
+  it('returns an empty map for an empty asset id list, without reading the table', async () => {
+    expect(await listLatestAssetReadings(tenant.db, { organizationId: tenant.organizationId, assetIds: [] })).toEqual(new Map());
+  });
+
+  it('reads no other tenant’s reading, even by asset id', async () => {
+    const other = await newTenant('readings-bob');
+    await recordAssetReading(other.db, { organizationId: other.organizationId, assetId: other.assetId, value: 999, unit: 'hours' });
+
+    const latest = await listLatestAssetReadings(tenant.db, {
+      organizationId: tenant.organizationId,
+      assetIds: [other.assetId],
+    });
+
+    expect(latest.has(other.assetId)).toBe(false);
   });
 });

@@ -578,6 +578,14 @@
         "navigation"
       ]
     },
+    "apps/web/tests/architecture/static/locations-assets-workspace.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "locations",
+        "assets",
+        "navigation"
+      ]
+    },
     "apps/web/tests/architecture/static/settings-configuration-center.test.ts": {
       "category": "architecture-static",
       "concerns": [

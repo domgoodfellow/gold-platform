@@ -1,12 +1,13 @@
 'use client';
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useId, useState, type ReactNode } from 'react';
 import { PackagePlus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import {
   PageDrawer,
   PageDrawerContent,
   PageDrawerDescription,
+  PageDrawerFooter,
   PageDrawerHeader,
   PageDrawerTitle,
 } from '@/components/containers/page-drawer';
@@ -35,27 +36,39 @@ export function CreateAssetSheetProvider({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const formId = useId();
 
   return (
     <CreateAssetSheetContext.Provider value={() => setOpen(true)}>
       {children}
       <PageDrawer open={open} onOpenChange={setOpen}>
-        <PageDrawerContent>
-          <PageDrawerHeader>
+        <PageDrawerContent className="flex flex-col gap-0 p-0">
+          <PageDrawerHeader className="border-b border-border">
             <PageDrawerTitle>New asset</PageDrawerTitle>
             <PageDrawerDescription>
               What work is about — machines, vehicles, properties, customer-owned equipment.
             </PageDrawerDescription>
           </PageDrawerHeader>
-          <div className="px-4 pb-4">
+          <div className="flex-1 overflow-y-auto p-4">
             <CreateAssetForm
               organizationId={organizationId}
               customers={customers}
               locations={locations}
               definitions={definitions}
               onCreated={() => setOpen(false)}
+              formId={formId}
+              onPendingChange={setPending}
             />
           </div>
+          <PageDrawerFooter className="flex-row justify-end border-t border-border">
+            <Button type="button" tone="secondary" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form={formId} disabled={pending}>
+              {pending ? 'Adding…' : 'Add asset'}
+            </Button>
+          </PageDrawerFooter>
         </PageDrawerContent>
       </PageDrawer>
     </CreateAssetSheetContext.Provider>

@@ -1,19 +1,17 @@
-import Link from 'next/link';
 import { Disclosure } from '@/components/containers/card';
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageHeader } from '@/components/containers/page-header';
-import { DataTable } from '@/components/display/table';
-import { CustomFieldValues } from '@/features/custom-fields/values';
 import { LocationConfiguration } from '@/features/locations/configuration/location-configuration';
+import { CreateLocationSheetProvider, CreateLocationTrigger } from '@/features/locations/create-location-sheet';
+import { LinkCustomerLocationForm } from '@/features/locations/link-customer-location-form';
+import { LocationTable } from '@/features/locations/location-table';
 import { geocodingProvider } from '@/lib/adapters/geocoding';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
-import { CreateLocationSheetProvider, CreateLocationTrigger } from './create-location-sheet';
-import { LinkCustomerForm, LocationCoordinatesForm } from './location-forms';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,96 +66,21 @@ export default async function LocationsPage({
         */}
         {mayAdd ? (
           <Disclosure summary="Link a customer to a location" className="mt-5">
-            <LinkCustomerForm
+            <LinkCustomerLocationForm
               organizationId={organizationId}
-              locations={locations}
               customers={customers}
+              locations={locations.map((location) => ({ id: location.id, label: location.label }))}
             />
           </Disclosure>
         ) : null}
 
         <div>
-          <DataTable
-            rows={locations}
-            rowKey={(location) => location.id}
-            empty="No locations yet."
-            // **Coordinates are the row action, which is what they always were.** They are
-            // derived from the address rather than part of it, so they belong beside the row
-            // rather than inside its line — and a place with none is an ordinary place. Nothing
-            // here nags and nothing is filled in on a business's behalf; what wants coordinates
-            // is weather, travel time and service areas, none of which a business must use.
-            actions={
-              mayAdd
-                ? (location) => (
-                    <LocationCoordinatesForm
-                      organizationId={organizationId}
-                      location={location}
-                      mayLookUp={geocoding !== null}
-                    />
-                  )
-                : undefined
-            }
-            columns={[
-              {
-                key: 'label',
-                header: 'Place',
-                emphasis: 'primary',
-                cell: (location) => (
-                  <Link
-                    href={`/organizations/${organizationId}/locations/${location.id}`}
-                    className="underline underline-offset-4"
-                  >
-                    {location.label}
-                  </Link>
-                ),
-              },
-              {
-                key: 'address',
-                header: 'Address',
-                cell: (location) => (
-                  <div className="flex flex-col">
-                    <span>{location.address}</span>
-                    {location.accessNotes ? (
-                      <span className="text-muted">{location.accessNotes}</span>
-                    ) : null}
-                  </div>
-                ),
-              },
-              {
-                key: 'customers',
-                header: 'Serves',
-                emphasis: 'secondary',
-                cell: (location) =>
-                  location.customers.length > 0
-                    ? location.customers.map((customer) => customer.name).join(', ')
-                    : null,
-              },
-              ...(!mayAdd
-                ? [
-                    {
-                      key: 'coordinates',
-                      header: 'Coordinates',
-                      emphasis: 'secondary' as const,
-                      cell: (location: (typeof locations)[number]) =>
-                        location.coordinates
-                          ? `${location.coordinates.latitude}, ${location.coordinates.longitude}`
-                          : null,
-                    },
-                  ]
-                : []),
-              ...(definitions.length > 0
-                ? [
-                    {
-                      key: 'custom',
-                      header: 'Details',
-                      emphasis: 'secondary' as const,
-                      cell: (location: (typeof locations)[number]) => (
-                        <CustomFieldValues definitions={definitions} custom={location.custom} />
-                      ),
-                    },
-                  ]
-                : []),
-            ]}
+          <LocationTable
+            organizationId={organizationId}
+            locations={locations}
+            definitions={definitions}
+            mayEdit={mayAdd}
+            mayLookUp={geocoding !== null}
           />
         </div>
       </CreateLocationSheetProvider>

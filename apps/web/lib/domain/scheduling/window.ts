@@ -74,6 +74,18 @@ export function overlaps(a: Window, b: Window): boolean {
   return a.startsAt < b.endsAt && b.startsAt < a.endsAt;
 }
 
+/**
+ * The overlap between a window and a bound, or `null` when they don't touch — a booking that
+ * spans a day boundary intersected against that one tenant calendar day, for display only. The
+ * canonical window this is clipped from stays the record truth; nothing here writes it back or
+ * feeds a second availability calculation.
+ */
+export function clipWindow(window: Window, bounds: Window): Window | null {
+  const startsAt = window.startsAt > bounds.startsAt ? window.startsAt : bounds.startsAt;
+  const endsAt = window.endsAt < bounds.endsAt ? window.endsAt : bounds.endsAt;
+  return startsAt < endsAt ? { startsAt, endsAt } : null;
+}
+
 /** No API answers this directly — derived by formatting the instant in the zone and reading the fields back as though they were UTC. */
 function offsetMs(instant: Date, timeZone: string): number {
   const parts = new Intl.DateTimeFormat('en-US', {

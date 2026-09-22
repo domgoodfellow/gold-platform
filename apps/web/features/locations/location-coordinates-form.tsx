@@ -1,137 +1,13 @@
 'use client';
 
-import { SectionHeading } from '@/components/containers/section';
-import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
-import { useActionState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { CustomFieldInputs } from '@/features/custom-fields/inputs';
-import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
+import { useActionState } from 'react';
 import type { Location } from '@/lib/domain/locations/locations';
 import {
-  createLocationAction,
-  linkCustomerAction,
   locationCoordinatesAction,
   type CoordinatesActionState,
-  type LocationActionState,
-} from './actions';
-
-const INITIAL: LocationActionState = { error: null, created: false };
-
-export function CreateLocationForm({
-  organizationId,
-  definitions,
-  onCreated,
-}: {
-  organizationId: string;
-  definitions: FieldDefinition[];
-  onCreated?: () => void;
-}) {
-  const [state, formAction, pending] = useActionState(createLocationAction, INITIAL);
-
-  useEffect(() => {
-    if (state.created) {
-      toast.success('Location added');
-      onCreated?.();
-    }
-  }, [state.created, onCreated]);
-
-  return (
-    <form action={formAction} className="mt-8 flex flex-col gap-3">
-      <input type="hidden" name="organizationId" value={organizationId} />
-
-      <SectionHeading>New location</SectionHeading>
-
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <TextInput
-          name="label"
-          type="text"
-          required
-          maxLength={200}
-          placeholder="Label, e.g. North depot"
-          aria-label="Label"
-          className="flex-1"
-        />
-        <TextInput
-          name="address"
-          type="text"
-          required
-          maxLength={500}
-          placeholder="Address"
-          aria-label="Address"
-          className="flex-1"
-        />
-      </div>
-
-      <TextArea
-        name="accessNotes"
-        rows={2}
-        maxLength={2000}
-        placeholder="Access notes (optional) — gate codes, key safe, who to ask for"
-        aria-label="Access notes"
-      />
-
-      <CustomFieldInputs definitions={definitions} />
-
-      <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? 'Adding…' : 'Add location'}
-      </Button>
-
-      <ErrorText role="alert">{state.error}</ErrorText>
-    </form>
-  );
-}
-
-export function LinkCustomerForm({
-  organizationId,
-  locations,
-  customers,
-}: {
-  organizationId: string;
-  locations: Location[];
-  customers: { id: string; name: string }[];
-}) {
-  const [state, formAction, pending] = useActionState(linkCustomerAction, INITIAL);
-
-  if (locations.length === 0 || customers.length === 0) {
-    return (
-      <Hint className="mt-8">
-        Add a customer and a location before linking them.
-      </Hint>
-    );
-  }
-
-  return (
-    <form action={formAction} className="mt-8 flex flex-col gap-3">
-      <input type="hidden" name="organizationId" value={organizationId} />
-
-      <SectionHeading>Serve a customer from a location</SectionHeading>
-
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <SelectInput name="customerId" aria-label="Customer" className="flex-1">
-          {customers.map((customer) => (
-            <option key={customer.id} value={customer.id}>
-              {customer.name}
-            </option>
-          ))}
-        </SelectInput>
-        <SelectInput name="locationId" aria-label="Location" className="flex-1">
-          {locations.map((location) => (
-            <option key={location.id} value={location.id}>
-              {location.label}
-            </option>
-          ))}
-        </SelectInput>
-      </div>
-
-      <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? 'Linking…' : 'Link'}
-      </Button>
-
-      <ErrorText role="alert">{state.error}</ErrorText>
-    </form>
-  );
-}
+} from '@/app/organizations/[organizationId]/locations/actions';
 
 const NO_COORDINATES: CoordinatesActionState = { error: null, suggested: null, notFound: false };
 
@@ -147,6 +23,10 @@ const NO_COORDINATES: CoordinatesActionState = { error: null, suggested: null, n
  * **A deployment with no lookup says so rather than showing nothing** (D31). Two empty boxes and
  * no explanation is the same silence a switch with no inputs produces: the person cannot tell
  * whether the feature is missing, broken, or theirs to fill in.
+ *
+ * One implementation, two hosts: the collection's row-level `LocationCoordinatesDrawer` and the
+ * detail page's own Overview section both render this, passing whichever route-owned `action`
+ * revalidates for their own context.
  */
 export function LocationCoordinatesForm({
   organizationId,

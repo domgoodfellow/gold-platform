@@ -1,71 +1,8 @@
 'use client';
 
-import { SectionHeading } from '@/components/containers/section';
-import { ErrorText, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
-import { useActionState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { CustomFieldInputs } from '@/features/custom-fields/inputs';
-import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
-import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
-import { createAssetAction, type CreateAssetState } from './actions';
-
-const INITIAL: CreateAssetState = { error: null, created: false };
-
-export function CreateAssetForm({
-  organizationId,
-  customers,
-  locations,
-  definitions,
-  onCreated,
-}: {
-  organizationId: string;
-  customers: SelectOption[];
-  locations: SelectOption[];
-  definitions: FieldDefinition[];
-  onCreated?: () => void;
-}) {
-  const [state, formAction, pending] = useActionState(createAssetAction, INITIAL);
-
-  useEffect(() => {
-    if (state.created) {
-      toast.success('Asset added');
-      onCreated?.();
-    }
-  }, [state.created, onCreated]);
-
-  return (
-    <form action={formAction} className="mt-8 flex flex-col gap-3">
-      <input type="hidden" name="organizationId" value={organizationId} />
-
-      <SectionHeading>New asset</SectionHeading>
-
-      <TextInput
-        name="name"
-        type="text"
-        required
-        maxLength={200}
-        placeholder="Name, e.g. Compressor A, or Unit 4 boiler"
-        aria-label="Name"
-      />
-
-      {/* Both optional: customer-owned equipment names its owner, the tenant's own plant
-          names nobody, and a portable machine sits nowhere in particular. */}
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <OptionalSelect name="customerId" label="Owned by" options={customers} />
-        <OptionalSelect name="locationId" label="Located at" options={locations} />
-      </div>
-
-      <CustomFieldInputs definitions={definitions} />
-
-      <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? 'Adding…' : 'Add asset'}
-      </Button>
-
-      <ErrorText role="alert">{state.error}</ErrorText>
-    </form>
-  );
-}
+import { useActionState } from 'react';
 
 /**
  * What the counter says today.

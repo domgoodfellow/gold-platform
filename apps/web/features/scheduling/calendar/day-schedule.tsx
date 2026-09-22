@@ -1,6 +1,6 @@
 import { EmptyState } from '@/components/containers/section';
 import type { ResourceSchedule } from '@/lib/domain/scheduling/availability';
-import { zonedTimeToInstant, type Window } from '@/lib/domain/scheduling/window';
+import { clipWindow, zonedTimeToInstant, type Window } from '@/lib/domain/scheduling/window';
 import { ScheduleEvent } from './schedule-event';
 
 /**
@@ -55,11 +55,18 @@ function formatHourLabel(instant: string, timeZone: string): string {
  * an anchor only when the business has actually said something (`showOpen`); an unconfigured
  * schedule's default "whole day" is not a claim worth drawing a 24-hour axis around, so an
  * otherwise-empty day falls through to the empty state instead.
+ *
+ * Bookings contribute their *display* window — clipped to this tenant calendar day — never the
+ * canonical one: a booking that spans midnight would otherwise pull the axis (and the day's own
+ * events) past the day it is being drawn for.
  */
-function computeAxisBounds(open: Window[], resources: ResourceSchedule[], showOpen: boolean): Window | null {
+function computeAxisBounds(open: Window[], resources: ResourceSchedule[], within: Window, showOpen: boolean): Window | null {
   const candidates: Window[] = showOpen ? [...open] : [];
   for (const entry of resources) {
-    for (const booking of entry.booked) candidates.push(booking.window);
+    for (const booking of entry.booked) {
+      const displayed = clipWindow(booking.window, within);
+      if (displayed) candidates.push(displayed);
+    }
   }
   if (candidates.length === 0) return null;
 
@@ -71,13 +78,16 @@ function computeAxisBounds(open: Window[], resources: ResourceSchedule[], showOp
 
 export function DaySchedule({
   organizationId,
+  within,
   open,
   resources,
   hasConfiguredHours,
   timezone,
 }: {
   organizationId: string;
-  /** This day's own open periods, from `ScheduleDay.open` — background context, never foreground (I6). */
+  /** This tenant calendar day's own bounds (`ScheduleDay.within`) — what a booking's display window is clipped to. */
+  within: Window;
+  /** This day's own open periods, from `ScheduleDay.open` — used only to decide whether there is anything to anchor an otherwise-empty day's axis to. */
   open: Window[];
   resources: ResourceSchedule[];
   /** Whether this business has configured opening hours anywhere at all — see `computeAxisBounds`. */
@@ -94,7 +104,7 @@ export function DaySchedule({
   }
 
   const showOpen = hasConfiguredHours;
-  const bounds = computeAxisBounds(open, resources, showOpen);
+  const bounds = computeAxisBounds(open, resources, within, showOpen);
 
   if (!bounds) {
     return (
@@ -121,7 +131,8 @@ export function DaySchedule({
   return (
     <div className="mt-6 overflow-x-auto">
       <p className="mb-2 text-xs text-muted">
-        Shaded time is open and advisory (I6) — the exclusion constraint decides at the moment of booking.
+        Shaded time is that resource&rsquo;s own free time, and advisory (I6) — the exclusion
+        constraint decides at the moment of booking.
       </p>
       <div className="flex" style={{ width: 'max-content' }}>
         <div className="w-14 shrink-0">
@@ -152,32 +163,38 @@ export function DaySchedule({
                 />
               ))}
 
-              {showOpen
-                ? open.map((window, index) => (
-                    <div
-                      key={index}
-                      aria-hidden
-                      className="absolute inset-x-0.5 rounded bg-hover"
-                      style={{ top: `${offsetPct(window.startsAt)}%`, height: `${heightPct(window.startsAt, window.endsAt)}%` }}
-                    />
-                  ))
-                : null}
-
-              {entry.booked.map((booking) => (
-                <ScheduleEvent
-                  key={booking.workItemId}
-                  organizationId={organizationId}
-                  workItemId={booking.workItemId}
-                  title={booking.title}
-                  window={booking.window}
-                  timezone={timezone}
-                  variant="block"
-                  style={{
-                    top: `${offsetPct(booking.window.startsAt)}%`,
-                    height: `${Math.max(heightPct(booking.window.startsAt, booking.window.endsAt), 2.5)}%`,
-                  }}
+              {entry.free.map((window, index) => (
+                <div
+                  key={index}
+                  aria-hidden
+                  className="absolute inset-x-0.5 rounded bg-hover"
+                  style={{ top: `${offsetPct(window.startsAt)}%`, height: `${heightPct(window.startsAt, window.endsAt)}%` }}
                 />
               ))}
+
+              {entry.booked.map((booking) => {
+                // The appointment as it appears on *this* day — a booking that spans midnight
+                // is clipped to the day's own bounds for geometry only; `booking.window` (the
+                // canonical, unclipped appointment) still reaches `ScheduleEvent` for its full
+                // description.
+                const displayed = clipWindow(booking.window, within) ?? booking.window;
+                return (
+                  <ScheduleEvent
+                    key={booking.workItemId}
+                    organizationId={organizationId}
+                    workItemId={booking.workItemId}
+                    title={booking.title}
+                    window={booking.window}
+                    displayWindow={displayed}
+                    timezone={timezone}
+                    variant="block"
+                    style={{
+                      top: `${offsetPct(displayed.startsAt)}%`,
+                      height: `${Math.max(heightPct(displayed.startsAt, displayed.endsAt), 2.5)}%`,
+                    }}
+                  />
+                );
+              })}
             </div>
           </div>
         ))}

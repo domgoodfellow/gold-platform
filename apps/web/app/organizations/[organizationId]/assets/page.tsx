@@ -1,20 +1,17 @@
-import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageHeader } from '@/components/containers/page-header';
-import { DataTable } from '@/components/display/table';
-import { CustomFieldValues } from '@/features/custom-fields/values';
 import { AssetConfiguration } from '@/features/assets/configuration/asset-configuration';
+import { AssetTable } from '@/features/assets/asset-table';
+import { CreateAssetSheetProvider, CreateAssetTrigger } from '@/features/assets/create-asset-sheet';
 import { listAssets } from '@/lib/domain/assets/assets';
-import { listAssetReadings } from '@/lib/domain/assets/readings';
+import { listLatestAssetReadings } from '@/lib/domain/assets/readings';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { recordReadingAction } from './actions';
-import { CreateAssetSheetProvider, CreateAssetTrigger } from './create-asset-sheet';
-import { RecordReadingForm } from './create-asset-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,21 +31,11 @@ export default async function AssetsPage({
   const mayAdd = organization.capabilities.includes('asset.create');
   const mayConfigure = organization.capabilities.includes('field.manage');
 
-  // The latest reading per asset, which is what somebody looking at the list wants — the rest of
-  // the log lives under the asset. One query per asset is honest at this size; a list that grows
-  // past a screenful is what would make this a join worth writing.
-  const readings = new Map(
-    await Promise.all(
-      assets.map(async (asset) => {
-        const own = await listAssetReadings(db, {
-          organizationId,
-          assetId: asset.id,
-          limit: 1,
-        });
-        return [asset.id, own[0] ?? null] as const;
-      }),
-    ),
-  );
+  // One query for every visible asset's newest reading, not one query per asset.
+  const latestReadings = await listLatestAssetReadings(db, {
+    organizationId,
+    assetIds: assets.map((asset) => asset.id),
+  });
 
   const customerOptions = customers.map((c) => ({ id: c.id, label: c.name }));
   const locationOptions = locations.map((l) => ({ id: l.id, label: l.label }));
@@ -86,81 +73,13 @@ export default async function AssetsPage({
           </ConfigureRegistrar>
         ) : null}
         <div>
-          <DataTable
-            rows={assets}
-            rowKey={(asset) => asset.id}
-            empty="No assets yet."
-            // **Recording a reading is the action a list of assets implies**, which is why it is
-            // the row action rather than a form under every entry. Nothing is assumed about what
-            // a counter counts — hours, miles, cycles — and a machine nobody meters has none.
-            actions={
-              mayAdd
-                ? (asset) => (
-                    <RecordReadingForm
-                      organizationId={organizationId}
-                      assetId={asset.id}
-                      assetName={asset.name}
-                      lastUnit={readings.get(asset.id)?.unit ?? ''}
-                      action={recordReadingAction}
-                    />
-                  )
-                : undefined
-            }
-            columns={[
-              {
-                key: 'name',
-                header: 'Asset',
-                emphasis: 'primary',
-                cell: (asset) => (
-                  <Link
-                    href={`/organizations/${organizationId}/assets/${asset.id}`}
-                    className="underline underline-offset-4"
-                  >
-                    {asset.name}
-                  </Link>
-                ),
-              },
-              {
-                key: 'where',
-                header: 'Whose, and where',
-                cell: (asset) =>
-                  [
-                    asset.customer ? `Owned by ${asset.customer.label}` : null,
-                    asset.location ? `at ${asset.location.label}` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ') || null,
-              },
-              {
-                key: 'reading',
-                header: 'Last read',
-                cell: (asset) => {
-                  const reading = readings.get(asset.id);
-                  if (!reading) return <span className="text-subtle">—</span>;
-                  return (
-                    <span className="tabular-nums">
-                      {reading.value} {reading.unit}
-                      <span className="text-muted">
-                        {' '}
-                        · {new Date(reading.readAt).toLocaleDateString('en-GB')}
-                      </span>
-                    </span>
-                  );
-                },
-              },
-              ...(definitions.length > 0
-                ? [
-                    {
-                      key: 'custom',
-                      header: 'Details',
-                      emphasis: 'secondary' as const,
-                      cell: (asset: (typeof assets)[number]) => (
-                        <CustomFieldValues definitions={definitions} custom={asset.custom} />
-                      ),
-                    },
-                  ]
-                : []),
-            ]}
+          <AssetTable
+            organizationId={organizationId}
+            assets={assets}
+            latestReadings={latestReadings}
+            definitions={definitions}
+            mayRecord={mayAdd}
+            recordReadingAction={recordReadingAction}
           />
         </div>
       </CreateAssetSheetProvider>

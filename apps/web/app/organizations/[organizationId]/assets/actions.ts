@@ -37,6 +37,8 @@ export async function createAssetAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/assets`);
+  // Field Overview counts Assets.
+  revalidatePath(`/organizations/${organizationId}/field`);
   return { error: null, created: true };
 }
 

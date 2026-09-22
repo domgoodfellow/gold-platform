@@ -38,6 +38,8 @@ export async function createLocationAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/locations`);
+  // Field Overview counts Locations.
+  revalidatePath(`/organizations/${organizationId}/field`);
   return { error: null, created: true };
 }
 
@@ -48,6 +50,7 @@ export async function linkCustomerAction(
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
   await requireOrganization(organizationId);
+  const locationId = String(formData.get('locationId') ?? '');
 
   try {
     // None of these three ids is re-validated here. The composite foreign keys make a row
@@ -56,7 +59,7 @@ export async function linkCustomerAction(
     await linkCustomerLocation(db, {
       organizationId,
       customerId: String(formData.get('customerId') ?? ''),
-      locationId: String(formData.get('locationId') ?? ''),
+      locationId,
     });
   } catch (error) {
     if (error instanceof DomainError) {
@@ -66,6 +69,8 @@ export async function linkCustomerAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/locations`);
+  // The linked location's own detail shows the same "Customers served" list.
+  revalidatePath(`/organizations/${organizationId}/locations/${locationId}`);
   return { error: null, created: true };
 }
 
@@ -114,10 +119,11 @@ export async function locationCoordinatesAction(
   // legitimate thing to say and needs no separate button.
   const latitude = String(formData.get('latitude') ?? '').trim();
   const longitude = String(formData.get('longitude') ?? '').trim();
+  const locationId = String(formData.get('locationId') ?? '');
 
   try {
     await setLocationCoordinates(await getDb(), {
-      id: String(formData.get('locationId') ?? ''),
+      id: locationId,
       latitude: latitude === '' ? null : Number(latitude),
       longitude: longitude === '' ? null : Number(longitude),
     });
@@ -129,5 +135,7 @@ export async function locationCoordinatesAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/locations`);
+  // The same coordinates also render on the location's own detail page.
+  revalidatePath(`/organizations/${organizationId}/locations/${locationId}`);
   return { error: null, suggested: null, notFound: false };
 }

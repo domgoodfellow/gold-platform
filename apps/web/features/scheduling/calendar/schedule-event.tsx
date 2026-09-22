@@ -14,6 +14,7 @@ export function ScheduleEvent({
   workItemId,
   title,
   window,
+  displayWindow,
   resourceName,
   timezone,
   variant = 'row',
@@ -22,15 +23,23 @@ export function ScheduleEvent({
   organizationId: string;
   workItemId: string;
   title: string;
+  /** The canonical appointment — record truth, and what the full description reads from. */
   window: Window;
+  /**
+   * What to show for *this* day, when it differs from `window` — a booking spanning midnight
+   * clipped to the tenant calendar day it is being drawn on, so the visible time never reads as
+   * the previous day's start. Defaults to `window` for every booking that doesn't cross a day.
+   */
+  displayWindow?: Window;
   /** Shown in Week's agenda row, where there is no per-resource column to say it instead. */
   resourceName?: string;
   timezone: string;
   variant?: 'row' | 'block';
   style?: CSSProperties;
 }) {
+  const shown = displayWindow ?? window;
   const time = new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit' }).format(
-    new Date(window.startsAt),
+    new Date(shown.startsAt),
   );
   const fullDescription = `${title}, ${formatWindow(window, timezone)}${resourceName ? `, ${resourceName}` : ''}`;
   const href = `/organizations/${organizationId}/work/${workItemId}`;

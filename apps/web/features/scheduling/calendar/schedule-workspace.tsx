@@ -55,6 +55,7 @@ export function ScheduleWorkspace({
       ) : (
         <DaySchedule
           organizationId={organizationId}
+          within={today.within}
           open={today.open}
           resources={today.resources}
           hasConfiguredHours={hasConfiguredHours}

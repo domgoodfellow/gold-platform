@@ -274,6 +274,40 @@ describe('Resources and Schedule/Work revalidate every surface Gild Field now sh
   });
 });
 
+describe('Day shades each Resource’s own free time, never the day’s shared open period', () => {
+  it('lane background comes from entry.free, not the day-wide open windows', () => {
+    const day = read(`${CALENDAR}/day-schedule.tsx`);
+    expect(day).toContain('entry.free.map(');
+    expect(day).not.toMatch(/\bopen\.map\(/);
+  });
+});
+
+describe('a booking spanning midnight is clipped to the day it is drawn on, for display only', () => {
+  it('Day and Week clip geometry/labels through clipWindow, while ScheduleEvent still gets the canonical window', () => {
+    const window = read(`${WEB}/lib/domain/scheduling/window.ts`);
+    expect(window).toContain('export function clipWindow(');
+
+    for (const file of ['day-schedule.tsx', 'week-schedule.tsx']) {
+      const source = read(`${CALENDAR}/${file}`);
+      expect(source, file).toContain('clipWindow(');
+      expect(source, file).toContain('displayWindow');
+    }
+
+    const event = read(`${CALENDAR}/schedule-event.tsx`);
+    expect(event).toContain('displayWindow');
+    // The full description still reads the canonical, unclipped window.
+    expect(event).toContain('formatWindow(window, timezone)');
+  });
+});
+
+describe('the resource filter offers one clear action, not two that do the same thing', () => {
+  it('has no duplicate Select all / Clear pair that both reset to showing everyone', () => {
+    const filter = read(`${CALENDAR}/schedule-resource-filter.tsx`);
+    expect(filter).not.toContain('Select all');
+    expect(filter.match(/navigate\(\[\]\)/g)).toHaveLength(1);
+  });
+});
+
 describe('field.manage stays the authority for opening hours — unchanged in this slice', () => {
   it('the database migration and the UI still agree on the capability', () => {
     const page = read(`${ROUTES}/schedule/page.tsx`);

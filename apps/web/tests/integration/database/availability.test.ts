@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { createResource } from '@/lib/domain/resources/resources';
 import { freeWindows, listSchedule } from '@/lib/domain/scheduling/availability';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
-import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
+import { clipWindow, todayInZone, zonedDayRange, zonedTimeToInstant } from '@/lib/domain/scheduling/window';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
@@ -172,6 +172,42 @@ describe('availability', () => {
         { minimumMinutes: 60 },
       ),
     ).toEqual([{ startsAt: '2026-09-15T10:00:00.000Z', endsAt: '2026-09-15T12:00:00.000Z' }]);
+  });
+
+  it('clips a booking that spans midnight to the day it is drawn on, for display only', () => {
+    const monday = zonedDayRange('2026-09-14', ZONE);
+    const tuesday = zonedDayRange('2026-09-15', ZONE);
+    // A booking starting late Monday and running past local midnight into Tuesday.
+    const spanning = {
+      startsAt: zonedTimeToInstant('2026-09-14', '23:00', ZONE),
+      endsAt: zonedTimeToInstant('2026-09-15', '01:00', ZONE),
+    };
+
+    expect(clipWindow(spanning, monday)).toEqual({ startsAt: spanning.startsAt, endsAt: monday.endsAt });
+    expect(clipWindow(spanning, tuesday)).toEqual({ startsAt: tuesday.startsAt, endsAt: spanning.endsAt });
+  });
+
+  it('clips a buffer that spans midnight the same way as an appointment', () => {
+    const monday = zonedDayRange('2026-09-14', ZONE);
+    // The appointment plus a tenant buffer running well past local midnight.
+    const occupied = {
+      startsAt: zonedTimeToInstant('2026-09-14', '23:30', ZONE),
+      endsAt: zonedTimeToInstant('2026-09-15', '01:30', ZONE),
+    };
+
+    expect(clipWindow(occupied, monday)).toEqual({ startsAt: occupied.startsAt, endsAt: monday.endsAt });
+  });
+
+  it('returns null for a window that does not touch the bound at all', () => {
+    const monday = zonedDayRange('2026-09-14', ZONE);
+    const wednesday = { startsAt: '2026-09-16T09:00:00.000Z', endsAt: '2026-09-16T10:00:00.000Z' };
+    expect(clipWindow(wednesday, monday)).toBeNull();
+  });
+
+  it('leaves a window entirely inside the bound unchanged', () => {
+    const monday = zonedDayRange('2026-09-14', ZONE);
+    const inside = { startsAt: '2026-09-14T09:00:00.000Z', endsAt: '2026-09-14T10:00:00.000Z' };
+    expect(clipWindow(inside, monday)).toEqual(inside);
   });
 
   it('reports a resource\'s day from the rows themselves, with no calendar table', async () => {
