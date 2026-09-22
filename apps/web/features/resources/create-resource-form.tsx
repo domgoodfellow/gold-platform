@@ -6,7 +6,10 @@ import { useActionState, useEffect, useId } from 'react';
 import { toast } from 'sonner';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
-import { createResourceAction, type CreateResourceState } from './actions';
+import {
+  createResourceAction,
+  type CreateResourceState,
+} from '@/app/organizations/[organizationId]/resources/actions';
 
 const INITIAL: CreateResourceState = { error: null, created: false };
 

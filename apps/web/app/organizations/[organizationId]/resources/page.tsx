@@ -1,15 +1,13 @@
-import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageHeader } from '@/components/containers/page-header';
-import { DataTable } from '@/components/display/table';
-import { CustomFieldValues } from '@/features/custom-fields/values';
 import { ResourceConfiguration } from '@/features/resources/configuration/resource-configuration';
+import { ResourceTable } from '@/features/resources/resource-table';
+import { CreateResourceSheetProvider, CreateResourceTrigger } from '@/features/resources/create-resource-sheet';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listResources } from '@/lib/domain/resources/resources';
 import { areaLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
-import { CreateResourceSheetProvider, CreateResourceTrigger } from './create-resource-sheet';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,37 +53,7 @@ export default async function ResourcesPage({
           </ConfigureRegistrar>
         ) : null}
         <div>
-          <DataTable
-            rows={resources}
-            rowKey={(resource) => resource.id}
-            empty="No resources yet."
-            columns={[
-              {
-                key: 'name',
-                header: 'Name',
-                emphasis: 'primary',
-                cell: (r) => (
-                  <Link
-                    href={`/organizations/${organizationId}/resources/${r.id}`}
-                    className="underline underline-offset-4"
-                  >
-                    {r.name}
-                  </Link>
-                ),
-              },
-              ...(definitions.length > 0
-                ? [
-                    {
-                      key: 'custom',
-                      header: 'Details',
-                      cell: (r: (typeof resources)[number]) => (
-                        <CustomFieldValues definitions={definitions} custom={r.custom} />
-                      ),
-                    },
-                  ]
-                : []),
-            ]}
-          />
+          <ResourceTable organizationId={organizationId} resources={resources} definitions={definitions} />
         </div>
       </CreateResourceSheetProvider>
     </AppPage>

@@ -164,3 +164,13 @@ export function isoDayOfWeek(date: string): number {
   const sundayFirst = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
   return sundayFirst === 0 ? 7 : sundayFirst;
 }
+
+/**
+ * A calendar date, `days` tenant-calendar days later (or earlier, for a negative count). Pure
+ * string arithmetic on the date, not an instant — a calendar day is a fact about the calendar,
+ * never about a zone, so nothing here touches `timeZone`.
+ */
+export function shiftDate(date: string, days: number): string {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}

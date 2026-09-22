@@ -570,6 +570,14 @@
         "security"
       ]
     },
+    "apps/web/tests/architecture/static/scheduling-workspace.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "scheduling",
+        "resources",
+        "navigation"
+      ]
+    },
     "apps/web/tests/architecture/static/settings-configuration-center.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -1135,6 +1143,12 @@
       "category": "database-integration",
       "concerns": [
         "resources"
+      ]
+    },
+    "apps/web/tests/integration/database/schedule-days.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling"
       ]
     },
     "apps/web/tests/integration/database/role-editing.test.ts": {

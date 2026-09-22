@@ -26,6 +26,7 @@ export function DatePicker({
   basePath,
   param = 'on',
   label = 'Choose a day',
+  extraParams,
 }: {
   /** ISO `yyyy-mm-dd`, read in the caller's own timezone — this control only ever displays it. */
   value: string;
@@ -34,6 +35,12 @@ export function DatePicker({
   /** The query parameter the picked day is written to. */
   param?: string;
   label?: string;
+  /**
+   * Other query state to carry over when a day is picked — a view, a set of filter ids. Written
+   * through exactly as given, one entry per array value: this control never learns what a key
+   * means, only that it is serializable.
+   */
+  extraParams?: Record<string, string | readonly string[]>;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -68,7 +75,12 @@ export function DatePicker({
           onSelect={(next) => {
             if (!next) return;
             setOpen(false);
-            router.push(`${basePath}?${param}=${isoDate(next)}`);
+            const params = new URLSearchParams();
+            for (const [key, entry] of Object.entries(extraParams ?? {})) {
+              for (const value of Array.isArray(entry) ? entry : [entry]) params.append(key, value as string);
+            }
+            params.set(param, isoDate(next));
+            router.push(`${basePath}?${params.toString()}`);
           }}
         />
       </PopoverContent>

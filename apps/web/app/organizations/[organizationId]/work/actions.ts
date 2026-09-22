@@ -77,6 +77,12 @@ export async function changeStatusAction(
   return { error: null };
 }
 
+/**
+ * Kept genuinely one action for scheduling and clearing: `formData.get('clear')` is the only
+ * branch, and both outcomes touch the same three surfaces below — Work (the record and its own
+ * detail page), Schedule (the resource that gained or lost a window) and Field (its "Scheduled
+ * today" count).
+ */
 export async function scheduleWorkItemAction(
   _previous: WorkActionState,
   formData: FormData,
@@ -110,5 +116,7 @@ export async function scheduleWorkItemAction(
   revalidatePath(
     `/organizations/${organizationId}/work/${String(formData.get('workItemId') ?? '')}`,
   );
+  revalidatePath(`/organizations/${organizationId}/schedule`);
+  revalidatePath(`/organizations/${organizationId}/field`);
   return { error: null };
 }

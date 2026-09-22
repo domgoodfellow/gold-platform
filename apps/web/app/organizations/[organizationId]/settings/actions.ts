@@ -8,10 +8,6 @@ import {
   disableOrganizationFeature,
   enableOrganizationFeature,
 } from '@/lib/domain/catalogue/organization-plans';
-import {
-  addOperatingHours,
-  removeOperatingHours,
-} from '@/lib/domain/scheduling/operating-hours';
 import { removeLogo, setBrand, uploadLogo } from '@/lib/domain/branding/brand';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { setPublicProfile } from '@/lib/domain/tenancy/profile';
@@ -44,53 +40,6 @@ export async function updateOrganizationAction(
 
   revalidatePath(`/organizations/${organizationId}/settings/general`);
   await invalidateGoldHomepageIfReferenced(db, organizationId);
-  return { error: null };
-}
-
-export async function addOperatingHoursAction(
-  _previous: SettingsActionState,
-  formData: FormData,
-): Promise<SettingsActionState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
-
-  try {
-    // The day arrives as a number. Nothing in the platform holds a word for a day, in any
-    // language — rendering one is this screen's problem and the reader's locale's business.
-    await addOperatingHours(db, {
-      organizationId,
-      dayOfWeek: Number(formData.get('dayOfWeek') ?? Number.NaN),
-      opensAt: String(formData.get('opensAt') ?? ''),
-      closesAt: String(formData.get('closesAt') ?? ''),
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
-    throw error;
-  }
-
-  revalidatePath(`/organizations/${organizationId}/schedule/configuration`);
-  revalidatePath(`/organizations/${organizationId}/schedule`);
-  return { error: null };
-}
-
-export async function removeOperatingHoursAction(
-  _previous: SettingsActionState,
-  formData: FormData,
-): Promise<SettingsActionState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
-
-  try {
-    await removeOperatingHours(db, { id: String(formData.get('id') ?? '') });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
-    throw error;
-  }
-
-  revalidatePath(`/organizations/${organizationId}/schedule/configuration`);
-  revalidatePath(`/organizations/${organizationId}/schedule`);
   return { error: null };
 }
 

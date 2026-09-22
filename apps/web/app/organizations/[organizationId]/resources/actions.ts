@@ -34,5 +34,8 @@ export async function createResourceAction(
   // `resources_insert` requires both membership and resource.create, so tampering produces
   // a refusal rather than a leak.
   revalidatePath(`/organizations/${organizationId}/resources`);
+  // A new resource is a new Schedule lane and a new Field count.
+  revalidatePath(`/organizations/${organizationId}/schedule`);
+  revalidatePath(`/organizations/${organizationId}/field`);
   return { error: null, created: true };
 }

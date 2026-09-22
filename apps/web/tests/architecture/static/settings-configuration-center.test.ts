@@ -220,9 +220,15 @@ describe('contextual Configure, generalized from Work â€” the same componen
   });
 
   it('Schedule swapped the raw date input for the shared Calendar/Popover DatePicker', () => {
+    // The control itself lives in Schedule's own feature-owned toolbar now, not the route.
     const schedulePage = readFileSync(`${ROUTES}/schedule/page.tsx`, 'utf8');
     expect(schedulePage).not.toContain('type="date"');
-    expect(schedulePage).toContain('DatePicker');
+    const toolbar = readFileSync(
+      fileURLToPath(new URL('../../../features/scheduling/calendar/schedule-toolbar.tsx', import.meta.url)),
+      'utf8',
+    );
+    expect(toolbar).not.toContain('type="date"');
+    expect(toolbar).toContain('DatePicker');
   });
 });
 
