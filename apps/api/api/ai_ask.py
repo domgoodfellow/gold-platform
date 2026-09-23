@@ -75,6 +75,20 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             self._reply(404, {"error": "not found"})
             return
 
+        # **The caller is proved before anything reaches Vault.** A GOLD-owned Provider Account
+        # credential must never be read on the strength of a request nobody has authenticated --
+        # resolving the runtime provider is itself a read (`read_provider_account_credential`),
+        # so it waits until here, exactly where every other read in this handler already waits.
+        try:
+            caller = require_caller(
+                self.headers,
+                supabase_url=settings.supabase_url,
+                supabase_publishable_key=settings.supabase_publishable_key,
+            )
+        except AuthError as failure:
+            self._reply(failure.status, {"error": failure.message})
+            return
+
         try:
             # An explicit assignment is authoritative and never fails over; a capability with
             # none keeps answering exactly as it always has (app.ai.runtime).
@@ -88,16 +102,6 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             # A deployment with no model. Said out loud rather than left as a silence, and in
             # the same words the settings screen uses (D31).
             self._reply(503, {"error": unconfigured_reason()})
-            return
-
-        try:
-            caller = require_caller(
-                self.headers,
-                supabase_url=settings.supabase_url,
-                supabase_publishable_key=settings.supabase_publishable_key,
-            )
-        except AuthError as failure:
-            self._reply(failure.status, {"error": failure.message})
             return
 
         length = int(self.headers.get("content-length") or 0)

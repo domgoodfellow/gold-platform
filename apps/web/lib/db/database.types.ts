@@ -3881,7 +3881,6 @@ export type Database = {
           model: string
           provider_account_id: string
           provider_service_id: string
-          settings: Json
           updated_at: string
           updated_by: string | null
         }
@@ -3890,7 +3889,6 @@ export type Database = {
           model: string
           provider_account_id: string
           provider_service_id: string
-          settings?: Json
           updated_at?: string
           updated_by?: string | null
         }
@@ -3899,7 +3897,6 @@ export type Database = {
           model?: string
           provider_account_id?: string
           provider_service_id?: string
-          settings?: Json
           updated_at?: string
           updated_by?: string | null
         }
@@ -7268,7 +7265,6 @@ export type Database = {
           provider_service_id: string
           provider_service_key: string
           provider_service_label: string
-          settings: Json
           updated_at: string
         }[]
       }
@@ -7385,7 +7381,6 @@ export type Database = {
           p_model: string
           p_provider_account_id: string
           p_provider_service_id: string
-          p_settings?: Json
         }
         Returns: undefined
       }

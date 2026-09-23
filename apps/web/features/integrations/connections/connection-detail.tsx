@@ -6,6 +6,7 @@ import { Badge, DefinitionList, Detail } from '@/components/display/data';
 import type { IntegrationConnection } from '@/lib/domain/integrations/connections';
 import type { Connector } from '@/lib/domain/integrations/connectors';
 import type { IntegrationResource } from '@/lib/domain/integrations/resources';
+import { ConnectorAppStrip } from '../catalogue/connector-app-strip';
 import { ConnectorIcon } from '../catalogue/connector-icon';
 import { AssistantAccessForm } from './connection-controls';
 
@@ -61,7 +62,10 @@ export function ConnectionDetail({
               <span>{name}</span>
             </div>
             {connector?.apps.length ? (
-              <span className="block text-sm text-muted">Reaches {connector.apps.map((app) => app.name).join(', ')}.</span>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="text-sm text-muted">Reaches:</span>
+                <ConnectorAppStrip apps={connector.apps} connectorKey={connector.key} />
+              </div>
             ) : null}
           </Detail>
           <Detail label="Account">{connection.accountLabel}</Detail>

@@ -286,7 +286,9 @@ class TestSignedInEndpoints:
     def _armed(self, monkeypatch, module, loader, command):
         monkeypatch.setattr(module, loader, lambda: SETTINGS)
         if module is ai_ask:
-            # The assistant checks that a model is configured before it looks at the caller.
+            # The caller is proved before this is ever reached (see the dedicated ordering test
+            # below); armed here only so the parametrized "no domain called" tests below can still
+            # exercise every endpoint uniformly.
             monkeypatch.setattr(module, "resolve_provider", lambda settings, *, capability: object())
         sink = Sink()
         monkeypatch.setattr(module, command, sink)
@@ -306,6 +308,50 @@ class TestSignedInEndpoints:
         monkeypatch.setattr(module, loader, lambda: None)
 
         assert call(module, "POST", headers={"authorization": "Bearer x"}, body=b"{}")[0] == 404
+
+
+class TestAiAskAuthenticatesBeforeReadingAnyCredential:
+    """`resolve_provider` reads a GOLD-owned Provider Account credential out of Vault
+    (`app.ai.runtime`). An unauthenticated caller must never cause that read -- proved directly,
+    not merely inferred from `sink.calls == []` on the loop's own `answer()`.
+    """
+
+    def _armed(self, monkeypatch):
+        monkeypatch.setattr(ai_ask, "load_assistant_settings", lambda: SETTINGS)
+        resolved: list[str] = []
+        monkeypatch.setattr(
+            ai_ask,
+            "resolve_provider",
+            lambda settings, *, capability: resolved.append(capability) or SimpleNamespace(name="test-model"),
+        )
+        return resolved
+
+    @pytest.mark.parametrize("authorization", [None, "", "Basic abc", "Bearer"])
+    def test_an_unauthenticated_request_never_resolves_the_runtime_provider(self, monkeypatch, authorization) -> None:
+        resolved = self._armed(monkeypatch)
+        headers = {} if authorization is None else {"authorization": authorization}
+
+        status, _ = call(ai_ask, "POST", headers=headers, body=b"{}")
+
+        assert status == 401
+        assert resolved == []
+
+    def test_an_authenticated_request_does_resolve_it(self, monkeypatch) -> None:
+        resolved = self._armed(monkeypatch)
+        # `require_caller`'s own correctness is `test_auth.py`'s subject; here it is a fixed
+        # caller so this test is only about this handler's ordering.
+        monkeypatch.setattr(ai_ask, "require_caller", lambda headers, **kw: SimpleNamespace(token="t"))
+        monkeypatch.setattr(ai_ask, "answer", Sink(result=SimpleNamespace(outcome="answered", text="", detail="", tools=[], action=None)))
+
+        status, _ = call(
+            ai_ask,
+            "POST",
+            headers={"authorization": "Bearer x"},
+            body=json.dumps({"question": "q", "organization_id": "o"}).encode(),
+        )
+
+        assert status == 200
+        assert resolved == ["operator_assistant"]
 
 
 # --- the public-site assistant: one shared key from apps/web, and any mismatch is a plain "not found" ----

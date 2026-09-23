@@ -38,14 +38,23 @@ describe('BrandMark is domain-agnostic', () => {
   });
 });
 
-describe('ConnectorIcon: uploaded logo wins, known connectors get a real mark or a recognizable colour, unknown ones fall back safely', () => {
+describe('ConnectorIcon: a built-in mark is authoritative, an upload only ever matters for a connector with no built-in identity', () => {
   const google = { key: 'google_workspace', name: 'Google Workspace' };
+  const custom = { key: 'some_private_erp', name: 'Custom ERP' };
   const unknown = { key: 'not_a_real_connector', name: 'Mystery App' };
   const csv = { key: 'csv', name: 'CSV / spreadsheet file' };
 
-  it('an uploaded logo (logoUrl) wins over the curated mark', () => {
-    const html = renderToStaticMarkup(createElement(ConnectorIcon, { connector: google, logoUrl: 'https://cdn.example.test/g.png' }));
+  it('a built-in connector renders its canonical mark even with a stale uploaded logoUrl on file', () => {
+    const html = renderToStaticMarkup(createElement(ConnectorIcon, { connector: google, logoUrl: 'https://cdn.example.test/old-g.png' }));
+    expect(html).not.toContain('<img');
+    expect(html).toContain('<svg');
+    expect(html).not.toContain('>G<');
+  });
+
+  it('a custom/private connector with no built-in identity still renders its uploaded logo', () => {
+    const html = renderToStaticMarkup(createElement(ConnectorIcon, { connector: custom, logoUrl: 'https://cdn.example.test/erp.png' }));
     expect(html).toContain('<img');
+    expect(html).toContain('erp.png');
   });
 
   it('a known connector gets its curated real mark with no upload', () => {

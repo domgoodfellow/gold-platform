@@ -32,7 +32,6 @@ export type AiRuntimeAssignment = {
   providerAccountId: string;
   providerAccountLabel: string;
   model: string;
-  settings: Record<string, unknown>;
   updatedAt: string;
 };
 
@@ -45,7 +44,6 @@ type Row = {
   provider_account_id: string;
   provider_account_label: string;
   model: string;
-  settings: unknown;
   updated_at: string;
 };
 
@@ -59,7 +57,6 @@ function fromRow(row: Row): AiRuntimeAssignment {
     providerAccountId: row.provider_account_id,
     providerAccountLabel: row.provider_account_label,
     model: row.model,
-    settings: (row.settings ?? {}) as Record<string, unknown>,
     updatedAt: row.updated_at,
   };
 }
@@ -88,7 +85,6 @@ export async function recordAiRuntimeAssignment(
     providerServiceId: string;
     providerAccountId: string;
     model: string;
-    settings?: Record<string, unknown>;
   },
 ): Promise<void> {
   const model = input.model.trim();
@@ -99,7 +95,6 @@ export async function recordAiRuntimeAssignment(
     p_provider_service_id: input.providerServiceId,
     p_provider_account_id: input.providerAccountId,
     p_model: model,
-    p_settings: (input.settings ?? {}) as never,
   });
   if (error) throw writeError(error);
 }

@@ -4,17 +4,23 @@ import { GENERATED_MARKS } from '@/features/platform/brand/marks.generated';
 import type { Connector } from '@/lib/domain/integrations/connectors';
 
 /**
- * A connector's identity: an uploaded logo wins over everything (`connector.iconRef` /
- * `connectorLogoUrl`, resolved by the caller into `logoUrl`); short of that, a curated real mark
- * (`GENERATED_MARKS`, checked-in static SVG data — see `scripts/brand-icons/extract.mjs`) gives a
- * built-in connector its actual identity before any admin ever uploads one; short of *that*, a
- * curated brand colour with a monogram; an uncatalogued key falls through to `BrandMark`'s own
- * generic tile.
+ * A connector's identity. **For a built-in connector, the canonical mark is authoritative over
+ * any stored `iconRef`** — a business cannot upload a replacement for it (the UI already refuses
+ * to offer that; this is rendering keeping the same promise). Only a connector this platform has
+ * *not* curated an identity for reads `logoUrl` at all, and only then does an uploaded logo win
+ * over the generic tile.
  *
- * **A mark's presence here is also the built-in signal.** `isBuiltInConnector` (below) is what
- * `LogoForm`'s caller checks to decide whether uploading a logo makes sense for a given
- * connector — a built-in identity is platform-owned and is never a business's to override
- * (constraints.md, "Built-in Provider/Connector/App... NO logo-upload UI").
+ * `GENERATED_MARKS` is checked-in static SVG data (`scripts/brand-icons/extract.mjs`); `BRAND_COLOR`
+ * is the fallback for a built-in connector this platform has not extracted a real mark for yet.
+ * Neither ever reads `connector.iconRef` — an old value stored there for a connector that has
+ * since become built-in is simply ignored, never deleted (a business's own upload history for a
+ * connector that later goes built-in is not this component's to erase).
+ *
+ * **A mark or a curated colour's presence here is also the built-in signal.**
+ * `isBuiltInConnector` (below) is what `LogoForm`'s caller checks to decide whether uploading a
+ * logo makes sense for a given connector (constraints.md, "Built-in Provider/Connector/App...
+ * NO logo-upload UI") — and now also what this component checks to decide whether `logoUrl` is
+ * even looked at.
  */
 const BRAND_COLOR: Record<string, string> = {
   google_business_profile: '#4285F4',
@@ -41,6 +47,8 @@ export function ConnectorIcon({
     return <BrandMark label={connector.name} src={logoUrl} background="#6b7280" icon={<FileSpreadsheet className="size-4" />} size={size} />;
   }
   const mark = GENERATED_MARKS[connector.key];
-  if (mark) return <BrandMark label={connector.name} src={logoUrl} mark={mark} size={size} />;
-  return <BrandMark label={connector.name} src={logoUrl} background={BRAND_COLOR[connector.key]} size={size} />;
+  if (mark) return <BrandMark label={connector.name} mark={mark} size={size} />;
+  if (connector.key in BRAND_COLOR) return <BrandMark label={connector.name} background={BRAND_COLOR[connector.key]} size={size} />;
+  // Not a curated built-in identity at all — the one case an uploaded logo is ever consulted.
+  return <BrandMark label={connector.name} src={logoUrl} size={size} />;
 }

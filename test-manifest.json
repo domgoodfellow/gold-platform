@@ -738,6 +738,15 @@
       ],
       "note": "Fakes fetch for the assistant URL only; also reads the migration for its backfill."
     },
+    "apps/web/tests/integration/database/ai-runtime-assignments.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "ai",
+        "providers",
+        "security"
+      ],
+      "note": "The table has no select grant to any role, staff included; overview/record/resolve are the only three doors."
+    },
     "apps/web/tests/integration/database/ai-tools.test.ts": {
       "category": "database-integration",
       "concerns": [
