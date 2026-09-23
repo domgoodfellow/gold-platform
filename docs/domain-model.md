@@ -72,6 +72,7 @@ Use `/verify <n>` to audit one. "The code appears to do the right thing" is not 
 | I52 | Platform Administration is served only inside GOLD's own organization, to a member of it who holds a platform permission — and its address names the context an operator is working in, never an owner of the records on the page. | `requirePlatformScope` (`lib/route/platform.ts`) proves, in order, membership (the caller's own read of the organization), that the organization is GOLD's own by its current base Plan and never its name (`isGoldInternalOrganization`), and a live `platform_staff` permission; any other organization — staff or not — answers `notFound()`. The organization's layout, each area's layout and every page ask for themselves (`adaptive-shell.test.ts` checks each names the permission the registry gives its path). Nothing under `/platform` filters a record by the organization in the address: providers, catalogue and billing are the platform-scoped rows they were, and `platform-control-plane.test.ts` reads the source and refuses any use of the route's organization but spelling a link. The old `/platform` address redirects to the canonical one, resolving GOLD from the caller's memberships and Plan rather than from the URL. **What this does not enforce:** the narrow-door functions still check `platform_staff` only, as I51 says. |
 | I53 | A failed read of who is platform staff is never the answer "not staff": no row is an empty set of permissions, a row is its capabilities, and an error is an error. | `platformPermissions` and `isPlatformStaff` throw a `DomainError` on a query error (`platform.permissions_unreadable`, `platform.staff_unreadable`); `platform-permissions-read.test.ts` pins the three answers apart. This exists because a database behind the migration that added `platform_staff.capabilities` made the whole Platform section vanish with no error to read. |
 | I54 | The customer-facing Product set is the eight Gild Products, the shared Workspace beneath them is not a Product, and no organization's effective entitlement changed when the catalogue was renamed. | `platform_catalog_products_key_check` allows exactly the eight keys and `workspace`, and `platform_catalog_products_workspace_kind` ties `kind = 'workspace'` to that one key (`gild-taxonomy.test.ts` tries every old key and fails). Products were renamed in place so every grant, override and runtime mapping kept its id; the one module that moved between Products was given to each Plan that held its old Product whole. `gild-taxonomy.test.ts` asserts a home for every Module, Service planned only, and GOLD Internal granting every Product; `catalogue-plans.test.ts` asserts it still resolves every implemented Feature. |
+| I55 | Provider, Provider Service, Connector, Connection and Resource are five distinct nouns that never collapse into each other; a Provider Service or a Connector app's mapping to a Catalog Feature is descriptive only and grants no Plan entitlement; and a service's `vendor_status` (upstream maturity) is never read as its `implementation_state` (what GOLD runs). | `platform_provider_services`, `platform_provider_service_features` and `platform_connector_app_features` hold no insert/update/delete grant to any role — `upsert_platform_provider_service`, `set_provider_service_feature`/`remove_provider_service_feature` and `set_connector_app_feature`/`remove_connector_app_feature` are the only doors, each `app.require_platform_staff()`-checked; neither mapping table carries a `plan_id`, `organization_id` or `granted_scope` column, so no query against them could express a grant even by accident. `provider-service-catalogue.test.ts` proves the RLS/FK boundaries and that no seeded Google Provider Service key collides with a seeded Connector key; `provider-connector-identity.test.ts` proves the same separation holds in the presentation layer (`ConnectorIcon` never reaches the Provider Service domain module and the reverse). |
 
 Invariants are added when a rule becomes load-bearing, not in anticipation. Each new one
 arrives with the slice that enforces it.
@@ -196,11 +197,38 @@ Provider ownership may be platform-managed or tenant-specific and must be explic
 the deepest current binding/resource/provisioning path; Resend is lighter. Automated health,
 drift detection and repair are still part of platform hardening.
 
+A **Provider Service** (`platform_provider_services`) is one capability a Provider exposes at a
+grain finer than the Provider itself — Google is a Provider; Gemini Interactions and Routes are
+two of its Services, each independently `implementation_state` (what GOLD runs) and
+`vendor_status` (the upstream service's own maturity, never collapsed into the first). A
+Connector's own child apps (`platform_connector_apps`) carry the identical two facts, at the
+same grain, for the outside-app axis. Either may map, descriptively only, to a Catalog Feature
+(`platform_provider_service_features`, `platform_connector_app_features`) to answer "what GOLD
+Feature can this external capability support" — never a Plan/entitlement grant, which stays
+`platform_plan_*_grants`'s alone. The five external nouns — Provider, Provider Service,
+Connector, Connection, Resource — are never collapsed into each other; see D55 and
+`provider-service-catalogue.test.ts`.
+
+The Locations Map (Slice 3.5) renders through MapLibre against a tenant-agnostic style URL
+(`mapConfig()`), never a Google Maps Provider Service — geocoding (an address to coordinates)
+and map rendering (coordinates to a picture) are two different capabilities behind two different
+adapters, and a Google routing/Places Provider Service's output is scheduling data or address
+data, not permission to draw Google's own map geometry on a different renderer.
+
 Intelligence is a horizontal runtime for model providers, routing, fallback, budgets, quotas,
 concurrency, metering, cost, health, audit, tools, safety and agents. Product-specific AI
 features stay inside their Products. GOLD Intelligence may package those features commercially;
 AI Receptionist is a Solution composed from Communications / Voice, Automation, CRM and the
 Intelligence runtime, not a new engine or Product.
+
+A domain caller asks for a capability (`draft_configuration`, today's one implemented example in
+`apps/web/lib/adapters/drafting`) never a vendor (`callClaude()`); which provider answers is the
+adapter registry's own choice, by environment, exactly as `lib/adapters/geocoding` and
+`lib/adapters/integrations` already work. Anthropic is the one AI Provider with real runtime
+behind it today (drafting, and the tool loop's own answering in `apps/api/app/providers/anthropic`);
+OpenAI and Gemini are catalogued Provider Services with `implementation_state = planned`
+throughout, not yet a second and third adapter. Normalizing all three behind one runtime/provider
+policy is deferred to its own AI runtime slice.
 
 Initially local-model bindings are Platform Context only. GOLD's internal organization may
 consume those capabilities through ordinary managed features. External tenant organizations may

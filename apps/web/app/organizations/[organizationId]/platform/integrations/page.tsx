@@ -7,7 +7,8 @@ import { ButtonLink } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { getDb } from '@/lib/db/server';
-import { connectorUsage, listConnectors } from '@/lib/domain/integrations/connectors';
+import { connectorLogoUrl, connectorUsage, listConnectors } from '@/lib/domain/integrations/connectors';
+import { ConnectorIcon } from '@/features/integrations/catalogue/connector-icon';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,15 @@ export default async function PlatformIntegrationsPage({ params }: PageProps<'/o
             header: 'Connector',
             emphasis: 'primary',
             cell: (connector) => (
-              <Link href={platformHref(goldId, `integrations/${connector.key}`)} className="font-medium underline-offset-4 hover:underline">
+              <Link
+                href={platformHref(goldId, `integrations/${connector.key}`)}
+                className="flex items-center gap-2 font-medium underline-offset-4 hover:underline"
+              >
+                <ConnectorIcon
+                  connector={connector}
+                  logoUrl={connector.iconRef ? connectorLogoUrl(db, connector.iconRef) : null}
+                  size="small"
+                />
                 {connector.name}
               </Link>
             ),

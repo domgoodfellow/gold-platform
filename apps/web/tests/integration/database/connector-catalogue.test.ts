@@ -188,7 +188,9 @@ describe('editing the catalogue as platform staff', () => {
 
   it('shows the apps inside a suite exactly as visibly as the connector', async () => {
     const google = await getConnector(tenant.db, 'google_workspace');
-    expect(google?.apps.map((app) => app.key)).toEqual(['drive', 'calendar', 'gmail', 'docs', 'sheets']);
+    // The suite grew substantially in the provider-service-catalogue slice (section 10); the
+    // first five keep their original relative order, proven exactly by provider-service-catalogue.test.ts.
+    expect(google?.apps.map((app) => app.key).slice(0, 5)).toEqual(['drive', 'calendar', 'gmail', 'docs', 'sheets']);
 
     await setConnectorApp(staff, { connectorKey: PRIVATE, key: 'inner', name: 'Inner', description: '', displayOrder: 1 });
     const hidden = await tenant.db.from('platform_connector_apps').select('key').eq('key', 'inner');

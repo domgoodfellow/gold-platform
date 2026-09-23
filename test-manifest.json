@@ -443,6 +443,15 @@
         "navigation"
       ]
     },
+    "apps/web/tests/architecture/static/provider-connector-identity.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "providers",
+        "integrations",
+        "ui",
+        "maps"
+      ]
+    },
     "apps/web/tests/architecture/static/integrations-browse.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -817,6 +826,14 @@
         "platform"
       ],
       "note": "Also contains source scans."
+    },
+    "apps/web/tests/integration/database/provider-service-catalogue.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "providers",
+        "integrations",
+        "platform"
+      ]
     },
     "apps/web/tests/integration/database/consumption.test.ts": {
       "category": "database-integration",

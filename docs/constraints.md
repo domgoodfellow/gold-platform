@@ -1567,6 +1567,12 @@ published catalogue arrive with the screens that call them. Rows arrive by seed.
 `csv_import` is renamed `file_imports`: it named one connector, and the capability is importing a
 file.
 
+**A fourth noun beside the three above.** A **provider service** (`platform_provider_services`)
+is one capability a provider exposes, finer-grained than the provider itself (Google is a
+provider; Gemini Interactions and Routes are two of its services) — see `docs/domain-model.md`'s
+Provider and Intelligence section. A connector's own child apps carry the identical two facts
+(`implementation_state`, `vendor_status`) at the same grain, never inherited from the connector.
+
 ### D56 — A tenant's OAuth credential is written by the API, read by the API, and never by a person
 
 **Decision.** A business connects an outside app (Google Workspace, Microsoft 365) by signing in

@@ -10,6 +10,7 @@ import {
   setConnectorApp,
   upsertConnector,
   uploadConnectorLogo,
+  type ConnectorApp,
   type ConnectorInput,
 } from '@/lib/domain/integrations/connectors';
 import { CONNECTOR_CATALOGUE_CACHE_TAG } from '@/lib/domain/integrations/published-cache';
@@ -91,6 +92,9 @@ export async function saveConnectorAppAction(_: ConnectorState, formData: FormDa
       name: text(formData, 'name'),
       description: text(formData, 'description'),
       displayOrder: Number(text(formData, 'displayOrder') || 0),
+      implementationState: text(formData, 'implementationState') as ConnectorApp['implementationState'],
+      vendorStatus: (text(formData, 'vendorStatus') || null) as ConnectorApp['vendorStatus'],
+      docsUrl: text(formData, 'docsUrl') || null,
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message, saved: false };

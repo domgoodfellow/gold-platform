@@ -3,7 +3,10 @@
 import { useActionState } from 'react';
 import { ConfirmSubmit } from '@/components/containers/dialog';
 import { ErrorText } from '@/components/controls/inputs';
-import { applyImportRunAction, type ApplyState } from './actions';
+import {
+  applyImportRunAction,
+  type ApplyState,
+} from '@/app/organizations/[organizationId]/integrations/imports/[runId]/actions';
 
 const APPLY_INITIAL: ApplyState = { error: null };
 

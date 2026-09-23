@@ -43,16 +43,18 @@ describe('the tenant Integrations screen owns no connector list', () => {
   });
 
   it('names a connector key in code only in the adapter registry and the CSV path', () => {
-    const card = read('features/integrations/connector-card.tsx');
+    const card = read('features/integrations/catalogue/connector-card.tsx');
     // csv is the one connector with a bespoke connect form; every other key comes from data.
     expect(card.match(/'[a-z0-9_]+'/g)?.filter((literal) => ['\'google_workspace\'', '\'hubspot\'', '\'notion\''].includes(literal)) ?? []).toEqual([]);
   });
 
   it('keeps the card grid and the section nav from forcing a horizontal page scroll', () => {
-    const page = read('app/organizations/[organizationId]/integrations/page.tsx');
+    const catalogue = read('features/integrations/catalogue/connector-catalogue.tsx');
     const nav = read('features/integrations/integrations-nav.tsx');
-    expect(page).toContain('sm:grid-cols-2'); // one column at phone width
-    expect(page).toContain('flex-wrap'); // chips wrap
-    expect(nav).toContain('overflow-x-auto'); // the section nav scrolls inside itself
+    expect(catalogue).toContain('sm:grid-cols-2'); // one column at phone width
+    expect(catalogue).toContain('flex-wrap'); // chips wrap
+    // The scroll guarantee now lives in the shared ViewNav/tab-styles, not spelled out per caller.
+    expect(nav).toContain('ViewNav');
+    expect(read('../../packages/ui/src/components/tab-styles.ts')).toContain('overflow-x-auto');
   });
 });

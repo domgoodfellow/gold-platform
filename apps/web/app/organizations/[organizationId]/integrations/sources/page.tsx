@@ -1,8 +1,7 @@
 import { PageHeader } from '@/components/containers/page-header';
 import { areaLabel } from '@/lib/navigation';
-import { ButtonLink } from '@/components/controls/button';
-import { DataTable } from '@/components/display/table';
-import { Badge } from '@/components/display/data';
+import { IntegrationsNav } from '@/features/integrations/integrations-nav';
+import { SourcesTable } from '@/features/integrations/sources/sources-table';
 import { listConnections } from '@/lib/domain/integrations/connections';
 import { listResources } from '@/lib/domain/integrations/resources';
 import { requireOrganization } from '@/lib/route/organization';
@@ -31,45 +30,9 @@ export default async function IntegrationSourcesPage({
         crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]}
         description="Every sheet, file or feed selected from a connection, across every connector."
       />
-
-      <div>
-        <DataTable
-          rows={resources}
-          rowKey={(resource) => resource.id}
-          empty="No data sources yet. Connect an app or upload a file to add one."
-          columns={[
-            { key: 'name', header: 'Resource', emphasis: 'primary', cell: (r) => r.displayName },
-            { key: 'type', header: 'Type', cell: (r) => r.resourceType.replace(/_/g, ' ') },
-            {
-              key: 'connection',
-              header: 'From',
-              cell: (r) => connectionLabel.get(r.connectionId) ?? '—',
-            },
-            {
-              key: 'status',
-              header: 'Status',
-              cell: (r) => (
-                <Badge tone={r.status === 'active' ? 'success' : 'neutral'}>
-                  {r.status.replace(/_/g, ' ')}
-                </Badge>
-              ),
-            },
-            {
-              key: 'actions',
-              header: 'Import',
-              emphasis: 'secondary',
-              cell: (r) => (
-                <ButtonLink
-                  href={`/organizations/${organizationId}/integrations/imports/new?resourceId=${r.id}`}
-                  tone="text"
-                  size="small"
-                >
-                  Import →
-                </ButtonLink>
-              ),
-            },
-          ]}
-        />
+      <IntegrationsNav organizationId={organizationId} current="sources" />
+      <div className="mt-6">
+        <SourcesTable organizationId={organizationId} resources={resources} connectionLabel={connectionLabel} />
       </div>
     </>
   );

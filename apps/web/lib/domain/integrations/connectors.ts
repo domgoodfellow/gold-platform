@@ -25,7 +25,21 @@ export type ConnectorAuthMethod = (typeof CONNECTOR_AUTH_METHODS)[number];
 export type ConnectorConnectionMethod = (typeof CONNECTOR_CONNECTION_METHODS)[number];
 export type ConnectorCapability = (typeof CONNECTOR_CAPABILITIES)[number];
 
-export type ConnectorApp = { key: string; name: string; description: string; displayOrder: number };
+export type ConnectorAppFeature = { featureId: string; featureKey: string; featureLabel: string };
+
+export type ConnectorApp = {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  displayOrder: number;
+  /** What GOLD runs for this one app — never inherited from the parent connector (section 11). */
+  implementationState: 'planned' | 'partial' | 'available';
+  vendorStatus: 'generally_available' | 'preview' | 'restricted' | 'legacy' | null;
+  docsUrl: string | null;
+  /** GOLD Features this app can support — descriptive, never an entitlement grant (section 4). */
+  features: ConnectorAppFeature[];
+};
 
 export type Connector = {
   id: string;
@@ -49,8 +63,14 @@ export type Connector = {
 
 export type ConnectorInput = Omit<Connector, 'id' | 'apps'>;
 
-const COLUMNS =
-  'id, key, name, description, category, suite, status, auth_method, connection_method, is_public, display_order, icon_ref, marketing_slug, marketing_summary, marketing_description, capabilities, platform_connector_apps(key, name, description, display_order)';
+const COLUMNS = `
+  id, key, name, description, category, suite, status, auth_method, connection_method, is_public,
+  display_order, icon_ref, marketing_slug, marketing_summary, marketing_description, capabilities,
+  platform_connector_apps (
+    id, key, name, description, display_order, implementation_state, vendor_status, docs_url,
+    platform_connector_app_features ( feature_id, platform_catalog_features ( id, key, label ) )
+  )
+`;
 
 type Row = {
   id: string;
@@ -69,7 +89,21 @@ type Row = {
   marketing_summary: string;
   marketing_description: string;
   capabilities: string[];
-  platform_connector_apps: { key: string; name: string; description: string; display_order: number }[] | null;
+  platform_connector_apps:
+    | {
+        id: string;
+        key: string;
+        name: string;
+        description: string;
+        display_order: number;
+        implementation_state: string;
+        vendor_status: string | null;
+        docs_url: string | null;
+        platform_connector_app_features:
+          | { feature_id: string; platform_catalog_features: { id: string; key: string; label: string } | null }[]
+          | null;
+      }[]
+    | null;
 };
 
 function fromRow(row: Row): Connector {
@@ -91,7 +125,25 @@ function fromRow(row: Row): Connector {
     marketingDescription: row.marketing_description,
     capabilities: row.capabilities as ConnectorCapability[],
     apps: (row.platform_connector_apps ?? [])
-      .map((app) => ({ key: app.key, name: app.name, description: app.description, displayOrder: app.display_order }))
+      .map((app) => ({
+        id: app.id,
+        key: app.key,
+        name: app.name,
+        description: app.description,
+        displayOrder: app.display_order,
+        implementationState: app.implementation_state as ConnectorApp['implementationState'],
+        vendorStatus: app.vendor_status as ConnectorApp['vendorStatus'],
+        docsUrl: app.docs_url,
+        features: (app.platform_connector_app_features ?? [])
+          .filter((entry): entry is typeof entry & { platform_catalog_features: NonNullable<typeof entry.platform_catalog_features> } =>
+            entry.platform_catalog_features !== null,
+          )
+          .map((entry) => ({
+            featureId: entry.platform_catalog_features.id,
+            featureKey: entry.platform_catalog_features.key,
+            featureLabel: entry.platform_catalog_features.label,
+          })),
+      }))
       .sort((a, b) => a.displayOrder - b.displayOrder),
   };
 }
@@ -180,7 +232,16 @@ export async function upsertConnector(db: Db, input: ConnectorInput): Promise<st
 
 export async function setConnectorApp(
   db: Db,
-  input: { connectorKey: string; key: string; name: string; description: string; displayOrder: number },
+  input: {
+    connectorKey: string;
+    key: string;
+    name: string;
+    description: string;
+    displayOrder: number;
+    implementationState?: ConnectorApp['implementationState'];
+    vendorStatus?: ConnectorApp['vendorStatus'];
+    docsUrl?: string | null;
+  },
 ): Promise<void> {
   if (!/^[a-z][a-z0-9_]{0,40}$/.test(input.key) || input.name.trim() === '') {
     throw new DomainError('An app needs a key (lowercase) and a name.', 'integrations.connector_invalid');
@@ -191,12 +252,34 @@ export async function setConnectorApp(
     p_name: input.name,
     p_description: input.description,
     p_display_order: input.displayOrder,
+    p_implementation_state: input.implementationState ?? 'planned',
+    p_vendor_status: input.vendorStatus ?? undefined,
+    p_docs_url: input.docsUrl ?? undefined,
   });
   if (error) throw forbidden(error, 'integrations.connector_write_failed');
 }
 
 export async function removeConnectorApp(db: Db, input: { connectorKey: string; key: string }): Promise<void> {
   const { error } = await db.rpc('remove_platform_connector_app', { p_connector_key: input.connectorKey, p_key: input.key });
+  if (error) throw forbidden(error, 'integrations.connector_write_failed');
+}
+
+/** Which GOLD Features a connector app can support — a description, never an entitlement grant (section 4). */
+export async function setConnectorAppFeature(db: Db, input: { connectorAppId: string; featureId: string; note?: string }): Promise<void> {
+  const { error } = await db.rpc('set_connector_app_feature', {
+    p_connector_app_id: input.connectorAppId,
+    p_feature_id: input.featureId,
+    p_relationship: 'supports',
+    p_note: input.note ?? '',
+  });
+  if (error) throw forbidden(error, 'integrations.connector_write_failed');
+}
+
+export async function removeConnectorAppFeature(db: Db, input: { connectorAppId: string; featureId: string }): Promise<void> {
+  const { error } = await db.rpc('remove_connector_app_feature', {
+    p_connector_app_id: input.connectorAppId,
+    p_feature_id: input.featureId,
+  });
   if (error) throw forbidden(error, 'integrations.connector_write_failed');
 }
 

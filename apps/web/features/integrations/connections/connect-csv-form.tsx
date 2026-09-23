@@ -3,7 +3,10 @@
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText } from '@/components/controls/inputs';
-import { connectCsvAction, type ConnectState } from './actions';
+import {
+  connectCsvAction,
+  type ConnectState,
+} from '@/app/organizations/[organizationId]/integrations/actions';
 
 const CONNECT_INITIAL: ConnectState = { error: null };
 

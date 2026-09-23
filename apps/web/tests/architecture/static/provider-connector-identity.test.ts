@@ -1,0 +1,172 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
+import { BrandMark } from '@/components/display/brand-mark';
+import { ConnectorIcon } from '@/features/integrations/catalogue/connector-icon';
+import { ConnectorAppIcon } from '@/features/integrations/catalogue/connector-app-icons';
+import { ProviderIcon } from '@/features/platform/providers/provider-icon';
+
+/**
+ * Brand identity (sections 24-26, 39, 55-56) and the four-noun boundary (section 1, 54) as source
+ * guards and rendered-markup checks — never a test against a real MapLibre instance or a literal
+ * SVG path, per the prompt's own instruction.
+ */
+
+const ROOT = join(__dirname, '..', '..', '..');
+const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
+
+describe('BrandMark is domain-agnostic', () => {
+  it('names no vendor, and knows nothing beyond a label, a colour, an image and an icon', () => {
+    const source = read('components/display/brand-mark.tsx');
+    for (const vendor of ['google', 'openai', 'anthropic', 'twilio', 'resend', 'slack', 'notion', 'hubspot']) {
+      expect(source.toLowerCase(), vendor).not.toContain(vendor);
+    }
+  });
+
+  it('renders an uploaded image at the highest precedence', () => {
+    const html = renderToStaticMarkup(createElement(BrandMark, { label: 'Acme', src: 'https://cdn.example.test/logo.png' }));
+    expect(html).toContain('<img');
+    expect(html).toContain('logo.png');
+  });
+
+  it('falls back to a monogram letter with no image and no icon', () => {
+    const html = renderToStaticMarkup(createElement(BrandMark, { label: 'Notion' }));
+    expect(html).not.toContain('<img');
+    expect(html).toContain('>N<');
+  });
+});
+
+describe('ConnectorIcon: uploaded logo wins, known connectors get a recognizable mark, unknown ones fall back safely', () => {
+  const google = { key: 'google_workspace', name: 'Google Workspace' };
+  const unknown = { key: 'not_a_real_connector', name: 'Mystery App' };
+  const csv = { key: 'csv', name: 'CSV / spreadsheet file' };
+
+  it('an uploaded logo (logoUrl) wins over the curated mark', () => {
+    const html = renderToStaticMarkup(createElement(ConnectorIcon, { connector: google, logoUrl: 'https://cdn.example.test/g.png' }));
+    expect(html).toContain('<img');
+  });
+
+  it('a known connector gets its curated brand colour with no upload', () => {
+    const html = renderToStaticMarkup(createElement(ConnectorIcon, { connector: google, logoUrl: null }));
+    expect(html).not.toContain('<img');
+    expect(html).toContain('#4285F4');
+  });
+
+  it('an uncatalogued connector key falls back to the generic tile, never a broken image', () => {
+    const html = renderToStaticMarkup(createElement(ConnectorIcon, { connector: unknown, logoUrl: null }));
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('undefined');
+  });
+
+  it('CSV gets a neutral spreadsheet mark, not a monogram', () => {
+    const html = renderToStaticMarkup(createElement(ConnectorIcon, { connector: csv, logoUrl: null }));
+    expect(html).not.toContain('>C<');
+    expect(html).toContain('#6b7280');
+  });
+
+  it('never hotlinks a vendor logo — no literal external host in the source', () => {
+    const source = read('features/integrations/catalogue/connector-icon.tsx');
+    expect(source).not.toMatch(/https?:\/\//);
+  });
+});
+
+describe('ConnectorAppIcon: a safe glyph for a known app key, a generic fallback for an unknown one', () => {
+  it('renders something for both a known and an unknown app key, never a broken image', () => {
+    const known = renderToStaticMarkup(createElement(ConnectorAppIcon, { appKey: 'calendar', label: 'Calendar' }));
+    const unknown = renderToStaticMarkup(createElement(ConnectorAppIcon, { appKey: 'not_a_real_app', label: 'Mystery' }));
+    expect(known).not.toContain('<img');
+    expect(unknown).not.toContain('<img');
+  });
+});
+
+describe('ProviderIcon is distinct from ConnectorIcon (section 1, 56)', () => {
+  it('resolves a known Provider key to a recognizable colour', () => {
+    const html = renderToStaticMarkup(createElement(ProviderIcon, { providerKey: 'anthropic', label: 'Anthropic' }));
+    expect(html).toContain('#D97757');
+  });
+
+  it('falls back safely for an unknown Provider key', () => {
+    const html = renderToStaticMarkup(createElement(ProviderIcon, { providerKey: 'not_a_real_provider', label: 'Mystery' }));
+    expect(html).not.toContain('undefined');
+  });
+
+  it('no Platform Provider screen renders ConnectorCard', () => {
+    for (const file of [
+      'app/organizations/[organizationId]/platform/providers/page.tsx',
+      'app/organizations/[organizationId]/platform/providers/[providerKey]/page.tsx',
+      'features/platform/providers/provider-detail.tsx',
+    ]) {
+      expect(read(file), file).not.toContain('ConnectorCard');
+    }
+  });
+
+  it('no tenant Integrations screen renders ProviderIcon or a Provider-only service', () => {
+    const catalogue = read('features/integrations/catalogue/connector-catalogue.tsx');
+    const connected = read('features/integrations/connections/connected-apps.tsx');
+    for (const source of [catalogue, connected]) {
+      expect(source).not.toContain('ProviderIcon');
+      expect(source).not.toContain('listProviderServices');
+    }
+    const page = read('app/organizations/[organizationId]/integrations/page.tsx');
+    expect(page).not.toContain('listProviderServices');
+    for (const providerOnly of ['Google Routes', 'OpenAI Responses', 'Gemini Interactions']) {
+      expect(page, providerOnly).not.toContain(providerOnly);
+    }
+  });
+});
+
+describe('the four external nouns stay apart in the UI layer (section 54, restated for presentation)', () => {
+  it('ConnectorIcon never imports the provider-service domain module', () => {
+    const source = read('features/integrations/catalogue/connector-icon.tsx');
+    expect(source).not.toContain('lib/domain/providers/services');
+  });
+
+  it('ProviderIcon never imports the connector domain module', () => {
+    const source = read('features/platform/providers/provider-icon.tsx');
+    expect(source).not.toContain('lib/domain/integrations/connectors');
+  });
+});
+
+describe('the MapLibre / Google Maps Provider Service boundary is untouched by this slice (section 8, 46, 60)', () => {
+  it('mapConfig() carries no coupling to Google Provider Services', () => {
+    const config = read('lib/adapters/maps/config.ts');
+    expect(config).not.toMatch(/google|provider_service|platform_provider_services/i);
+  });
+
+  it('LocationMap still renders no Google route/place geometry, and the renderer stays maplibre-gl alone', () => {
+    const mapModule = read('features/locations/map/location-map.tsx');
+    expect(mapModule).toContain("from 'maplibre-gl'");
+    expect(mapModule).not.toMatch(/google\.maps|@googlemaps|route.*polyline/i);
+
+    const packageJson = JSON.parse(read('package.json')) as { dependencies: Record<string, string> };
+    const mapLibs = Object.keys(packageJson.dependencies).filter((name) => /maplibre|mapbox|leaflet|react-map-gl|googlemaps/i.test(name));
+    expect(mapLibs).toEqual(['maplibre-gl']);
+  });
+
+  it('Google Routes/Route Optimization carry the display-restriction note in their seed, not scattered through UI', () => {
+    const migration = read('../../supabase/migrations/20261002000001_the_provider_service_catalogue.sql');
+    expect(migration).toContain('map_rendering');
+    expect(migration.toLowerCase()).toContain('display/attribution restrictions');
+
+    for (const uiFile of [
+      'features/platform/providers/provider-detail.tsx',
+      'features/integrations/catalogue/connector-catalogue.tsx',
+    ]) {
+      expect(read(uiFile), uiFile).not.toMatch(/attribution|display restriction/i);
+    }
+  });
+});
+
+describe('ChatGPT/GPT distribution direction stays out of the component layer too (section 16, 59)', () => {
+  it('no component renders a Create GPT / GPT Store control', () => {
+    for (const file of [
+      'features/platform/providers/provider-detail.tsx',
+      'app/organizations/[organizationId]/platform/providers/[providerKey]/page.tsx',
+    ]) {
+      const source = read(file);
+      expect(source, file).not.toMatch(/create gpt|gpt store|deploy gem/i);
+    }
+  });
+});

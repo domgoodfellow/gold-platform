@@ -4218,30 +4218,78 @@ export type Database = {
           },
         ]
       }
+      platform_connector_app_features: {
+        Row: {
+          connector_app_id: string
+          created_at: string
+          feature_id: string
+          note: string
+          relationship: string
+        }
+        Insert: {
+          connector_app_id: string
+          created_at?: string
+          feature_id: string
+          note?: string
+          relationship?: string
+        }
+        Update: {
+          connector_app_id?: string
+          created_at?: string
+          feature_id?: string
+          note?: string
+          relationship?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_connector_app_features_connector_app_id_fkey"
+            columns: ["connector_app_id"]
+            isOneToOne: false
+            referencedRelation: "platform_connector_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_connector_app_features_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_features"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_connector_apps: {
         Row: {
           connector_id: string
           description: string
           display_order: number
+          docs_url: string | null
           id: string
+          implementation_state: string
           key: string
           name: string
+          vendor_status: string | null
         }
         Insert: {
           connector_id: string
           description?: string
           display_order?: number
+          docs_url?: string | null
           id?: string
+          implementation_state?: string
           key: string
           name: string
+          vendor_status?: string | null
         }
         Update: {
           connector_id?: string
           description?: string
           display_order?: number
+          docs_url?: string | null
           id?: string
+          implementation_state?: string
           key?: string
           name?: string
+          vendor_status?: string | null
         }
         Relationships: [
           {
@@ -4889,6 +4937,107 @@ export type Database = {
           },
           {
             foreignKeyName: "platform_provider_rates_provider_key_fkey"
+            columns: ["provider_key"]
+            isOneToOne: false
+            referencedRelation: "platform_providers"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      platform_provider_service_features: {
+        Row: {
+          created_at: string
+          feature_id: string
+          note: string
+          provider_service_id: string
+          relationship: string
+        }
+        Insert: {
+          created_at?: string
+          feature_id: string
+          note?: string
+          provider_service_id: string
+          relationship?: string
+        }
+        Update: {
+          created_at?: string
+          feature_id?: string
+          note?: string
+          provider_service_id?: string
+          relationship?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_provider_service_features_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_provider_service_features_provider_service_id_fkey"
+            columns: ["provider_service_id"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_provider_services: {
+        Row: {
+          auth_mode: string
+          created_at: string
+          description: string
+          display_order: number
+          docs_url: string | null
+          family: string
+          id: string
+          implementation_state: string
+          key: string
+          kind: string
+          label: string
+          metadata: Json
+          provider_key: string
+          updated_at: string
+          vendor_status: string
+        }
+        Insert: {
+          auth_mode: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          docs_url?: string | null
+          family: string
+          id?: string
+          implementation_state: string
+          key: string
+          kind: string
+          label: string
+          metadata?: Json
+          provider_key: string
+          updated_at?: string
+          vendor_status: string
+        }
+        Update: {
+          auth_mode?: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          docs_url?: string | null
+          family?: string
+          id?: string
+          implementation_state?: string
+          key?: string
+          kind?: string
+          label?: string
+          metadata?: Json
+          provider_key?: string
+          updated_at?: string
+          vendor_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_provider_services_provider_key_fkey"
             columns: ["provider_key"]
             isOneToOne: false
             referencedRelation: "platform_providers"
@@ -7493,6 +7642,10 @@ export type Database = {
         Args: { p_assignment_id: string; p_organization_id: string }
         Returns: undefined
       }
+      remove_connector_app_feature: {
+        Args: { p_connector_app_id: string; p_feature_id: string }
+        Returns: undefined
+      }
       remove_operating_hours: { Args: { p_id: string }; Returns: undefined }
       remove_plan_quota: {
         Args: { p_allowance_key: string; p_plan_id: string }
@@ -7500,6 +7653,10 @@ export type Database = {
       }
       remove_platform_connector_app: {
         Args: { p_connector_key: string; p_key: string }
+        Returns: undefined
+      }
+      remove_provider_service_feature: {
+        Args: { p_feature_id: string; p_provider_service_id: string }
         Returns: undefined
       }
       remove_runtime_mapping: {
@@ -7581,6 +7738,15 @@ export type Database = {
         Args: { p_checklist_item_id: string; p_done: boolean }
         Returns: undefined
       }
+      set_connector_app_feature: {
+        Args: {
+          p_connector_app_id: string
+          p_feature_id: string
+          p_note?: string
+          p_relationship?: string
+        }
+        Returns: undefined
+      }
       set_default_provider_account: {
         Args: { p_account_id: string }
         Returns: undefined
@@ -7622,8 +7788,11 @@ export type Database = {
           p_connector_key: string
           p_description: string
           p_display_order: number
+          p_docs_url?: string
+          p_implementation_state?: string
           p_key: string
           p_name: string
+          p_vendor_status?: string
         }
         Returns: undefined
       }
@@ -7647,6 +7816,15 @@ export type Database = {
           p_organization_id: string
           p_resource_id: string
           p_status: string
+        }
+        Returns: undefined
+      }
+      set_provider_service_feature: {
+        Args: {
+          p_feature_id: string
+          p_note?: string
+          p_provider_service_id: string
+          p_relationship?: string
         }
         Returns: undefined
       }
@@ -7895,6 +8073,23 @@ export type Database = {
           p_name: string
           p_status: string
           p_suite: string
+        }
+        Returns: string
+      }
+      upsert_platform_provider_service: {
+        Args: {
+          p_auth_mode: string
+          p_description: string
+          p_display_order: number
+          p_docs_url: string
+          p_family: string
+          p_implementation_state: string
+          p_key: string
+          p_kind: string
+          p_label: string
+          p_metadata: Json
+          p_provider_key: string
+          p_vendor_status: string
         }
         Returns: string
       }

@@ -1,35 +1,27 @@
-import Link from 'next/link';
-import { cx, FOCUS_RING } from '@/components/class-names';
+import { ViewNav } from '@/components/containers/view-nav';
+
+export type IntegrationsView = 'connected' | 'browse' | 'sources' | 'imports';
 
 /**
- * The Integrations area's own sections. Connected and Browse are views of one page; Data sources
- * and Imports are their own routes, so this is plain links rather than client tabs.
+ * Integrations' four canonical views — Connected, Browse apps, Data sources, Imports — as one
+ * `ViewNav`, rendered consistently on all four. Connected and Browse are query-string views of
+ * the root route; Data sources and Imports are their own routes, so this is plain `<Link>`s
+ * either way (`ViewNav`'s own contract), not a client tab controller. A deep record or run keeps
+ * its own breadcrumb instead of repeating this nav — record grammar, not a fifth view.
  */
-export function IntegrationsNav({ organizationId, current }: { organizationId: string; current: 'connected' | 'browse' }) {
+export function IntegrationsNav({ organizationId, current }: { organizationId: string; current: IntegrationsView }) {
   const base = `/organizations/${organizationId}/integrations`;
-  const items = [
-    { key: 'connected', label: 'Connected', href: base },
-    { key: 'browse', label: 'Browse apps', href: `${base}?view=browse` },
-    { key: 'sources', label: 'Data sources', href: `${base}/sources` },
-    { key: 'imports', label: 'Imports', href: `${base}/imports` },
-  ] as const;
 
   return (
-    <nav aria-label="Integrations" className="mt-4 flex gap-1 overflow-x-auto border-b border-border">
-      {items.map((item) => (
-        <Link
-          key={item.key}
-          href={item.href}
-          aria-current={item.key === current ? 'page' : undefined}
-          className={cx(
-            'whitespace-nowrap border-b-2 px-3 py-2 text-sm',
-            FOCUS_RING,
-            item.key === current ? 'border-accent font-medium' : 'border-transparent text-muted hover:text-foreground',
-          )}
-        >
-          {item.label}
-        </Link>
-      ))}
-    </nav>
+    <ViewNav
+      label="Integrations views"
+      current={current}
+      views={[
+        { key: 'connected', label: 'Connected', href: base },
+        { key: 'browse', label: 'Browse apps', href: `${base}?view=browse` },
+        { key: 'sources', label: 'Data sources', href: `${base}/sources` },
+        { key: 'imports', label: 'Imports', href: `${base}/imports` },
+      ]}
+    />
   );
 }

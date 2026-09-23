@@ -11,16 +11,17 @@ import { listProviderRates, listProviders } from '@/lib/domain/commercial/catalo
 import { listProviderAccounts } from '@/lib/domain/providers/accounts';
 import { listProviderBindingSummary } from '@/lib/domain/providers/bindings';
 import { providerReadiness } from '@/lib/domain/providers/status';
+import { credentialEnvironmentState } from '@/lib/route/provider-environment';
 import { ReadinessBadge } from '@/features/platform/providers/health-badge';
+import { ProviderIcon } from '@/features/platform/providers/provider-icon';
 
 export const dynamic = 'force-dynamic';
 
-/** Deployment-level readiness for providers that have no account model yet. */
-function environmentState(key: string): 'configured' | 'not configured' | 'not implemented' {
-  if (key === 'anthropic') return process.env.ANTHROPIC_API_KEY ? 'configured' : 'not configured';
-  if (key === 'resend') return process.env.RESEND_API_KEY ? 'configured' : 'not configured';
-  return 'not implemented';
-}
+const ENVIRONMENT_LABEL: Record<string, string> = {
+  configured: 'configured',
+  not_configured: 'not configured',
+  not_implemented: 'not implemented',
+};
 
 export default async function ProvidersPage({ params }: PageProps<'/organizations/[organizationId]/platform/providers'>) {
   const { organizationId: goldId } = await params;
@@ -54,17 +55,15 @@ export default async function ProvidersPage({ params }: PageProps<'/organization
             key: 'provider',
             header: 'Provider',
             emphasis: 'primary',
-            cell: (provider) =>
-              provider.key === detailKey ? (
-                <Link href={platformHref(goldId, `providers/${provider.key}`)} className="font-medium underline-offset-4 hover:underline">
-                  {provider.label}
-                </Link>
-              ) : (
-                <div>
-                  <span className="font-medium">{provider.label}</span>
-                  <span className="block text-xs text-muted-foreground">{provider.key}</span>
-                </div>
-              ),
+            cell: (provider) => (
+              <Link
+                href={platformHref(goldId, `providers/${provider.key}`)}
+                className="flex items-center gap-2 font-medium underline-offset-4 hover:underline"
+              >
+                <ProviderIcon providerKey={provider.key} label={provider.label} size="small" />
+                {provider.label}
+              </Link>
+            ),
           },
           {
             key: 'status',
@@ -83,8 +82,8 @@ export default async function ProvidersPage({ params }: PageProps<'/organization
                   </div>
                 );
               }
-              const state = environmentState(provider.key);
-              return <Badge tone={state === 'configured' ? 'success' : 'neutral'}>{state}</Badge>;
+              const state = credentialEnvironmentState(provider.key);
+              return <Badge tone={state === 'configured' ? 'success' : 'neutral'}>{ENVIRONMENT_LABEL[state]}</Badge>;
             },
           },
           {

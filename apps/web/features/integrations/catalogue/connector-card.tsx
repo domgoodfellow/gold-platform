@@ -1,8 +1,9 @@
 import { Button, ButtonLink } from '@/components/controls/button';
 import { Card } from '@/components/containers/card';
 import { Badge } from '@/components/display/data';
-import { ConnectCsvForm } from '@/app/organizations/[organizationId]/integrations/connect-csv-form';
 import { isConnectable, type Connector } from '@/lib/domain/integrations/connectors';
+import { ConnectCsvForm } from '../connections/connect-csv-form';
+import { ConnectorIcon } from './connector-icon';
 
 const STATUS_LABEL = { planned: 'Planned', beta: 'Beta', live: 'Live' } as const;
 
@@ -29,10 +30,7 @@ export function ConnectorCard({
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex items-start gap-3">
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUrl} alt="" className="h-8 w-8 shrink-0 object-contain" />
-        ) : null}
+        <ConnectorIcon connector={connector} logoUrl={logoUrl} />
         <div className="min-w-0 flex-1">
           <p className="font-medium">{connector.name}</p>
           <p className="text-sm text-muted">{connector.description}</p>

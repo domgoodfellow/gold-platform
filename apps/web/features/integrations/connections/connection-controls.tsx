@@ -11,7 +11,7 @@ import {
   type AccessState,
   type CheckState,
   type DisconnectState,
-} from './actions';
+} from '@/app/organizations/[organizationId]/integrations/actions';
 
 const DISCONNECT_INITIAL: DisconnectState = { error: null };
 

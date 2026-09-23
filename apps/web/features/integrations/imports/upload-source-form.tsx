@@ -3,7 +3,10 @@
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText } from '@/components/controls/inputs';
-import { uploadSourceAction, type UploadState } from './actions';
+import {
+  uploadSourceAction,
+  type UploadState,
+} from '@/app/organizations/[organizationId]/integrations/imports/new/actions';
 
 const UPLOAD_INITIAL: UploadState = { error: null };
 
