@@ -182,18 +182,17 @@ describe('the latest-reading read is one query, not one per asset', () => {
   });
 });
 
-describe('no calendar/map dependency arrived with Locations coordinates', () => {
-  it('adds no map/tile library', () => {
+describe('no calendar dependency arrived with Locations coordinates', () => {
+  it('adds no calendar library', () => {
     const packageJson = read(`${WEB}/package.json`);
-    expect(packageJson).not.toMatch(/leaflet|mapbox|maplibre/i);
+    expect(packageJson).not.toMatch(/fullcalendar|react-big-calendar|daypilot|syncfusion/i);
   });
 
-  it('no Map tab or placeholder was added to Locations', () => {
-    const page = read(`${ROUTES}/locations/page.tsx`);
+  it('the deferred Map view was not stubbed here — no Map tab or placeholder on the record page', () => {
+    // Locations' own List/Map split landed as a later slice — see locations-map.test.ts. What
+    // this asserts is narrower and still holds: the detail page never grew a Map tab of its own.
     const detail = read(`${LOCATIONS}/location-detail.tsx`);
-    for (const source of [page, detail]) {
-      expect(source).not.toMatch(/>Map</);
-    }
+    expect(detail).not.toMatch(/>Map</);
   });
 });
 

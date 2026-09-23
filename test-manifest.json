@@ -586,6 +586,14 @@
         "navigation"
       ]
     },
+    "apps/web/tests/architecture/static/locations-map.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "locations",
+        "map",
+        "navigation"
+      ]
+    },
     "apps/web/tests/architecture/static/settings-configuration-center.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -1280,6 +1288,21 @@
       "concerns": [
         "pricing",
         "margins"
+      ]
+    },
+    "apps/web/tests/unit/location-search.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "locations",
+        "search"
+      ]
+    },
+    "apps/web/tests/unit/locations-view.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "locations",
+        "navigation",
+        "configuration"
       ]
     },
     "apps/web/tests/unit/shell-projection.test.ts": {

@@ -6,7 +6,11 @@ import { LocationConfiguration } from '@/features/locations/configuration/locati
 import { CreateLocationSheetProvider, CreateLocationTrigger } from '@/features/locations/create-location-sheet';
 import { LinkCustomerLocationForm } from '@/features/locations/link-customer-location-form';
 import { LocationTable } from '@/features/locations/location-table';
+import { LocationMapLoader } from '@/features/locations/map/location-map-loader';
+import { LocationsViewNav } from '@/features/locations/locations-view-nav';
+import { resolveLocationsView } from '@/features/locations/locations-view';
 import { geocodingProvider } from '@/lib/adapters/geocoding';
+import { mapConfig } from '@/lib/adapters/maps/config';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
@@ -17,8 +21,11 @@ export const dynamic = 'force-dynamic';
 
 export default async function LocationsPage({
   params,
+  searchParams,
 }: PageProps<'/organizations/[organizationId]/locations'>) {
   const { organizationId } = await params;
+  const query = await searchParams;
+  const view = resolveLocationsView(query.view);
   const { db, organization } = await requireOrganization(organizationId);
 
   const [locations, customers, definitions, geocoding] = await Promise.all([
@@ -30,6 +37,7 @@ export default async function LocationsPage({
 
   const mayAdd = organization.capabilities.includes('location.create');
   const mayConfigure = organization.capabilities.includes('field.manage');
+  const styleUrl = mapConfig()?.styleUrl ?? null;
 
   return (
     <AppPage>
@@ -58,31 +66,46 @@ export default async function LocationsPage({
             />
           </ConfigureRegistrar>
         ) : null}
-        {/*
-          Linking an existing customer to an existing place is a different act from creating
-          one, so it keeps its own inline disclosure rather than folding into the Sheet.
-          `customer_locations_insert` also requires location.create, so this is hidden on the
-          same condition as the create trigger above.
-        */}
-        {mayAdd ? (
-          <Disclosure summary="Link a customer to a location" className="mt-5">
-            <LinkCustomerLocationForm
-              organizationId={organizationId}
-              customers={customers}
-              locations={locations.map((location) => ({ id: location.id, label: location.label }))}
-            />
-          </Disclosure>
-        ) : null}
 
-        <div>
-          <LocationTable
+        <LocationsViewNav organizationId={organizationId} view={view} />
+
+        {view === 'list' ? (
+          <>
+            {/*
+              Linking an existing customer to an existing place is a different act from
+              creating one, so it keeps its own inline disclosure rather than folding into the
+              Sheet. `customer_locations_insert` also requires location.create, so this is
+              hidden on the same condition as the create trigger above.
+            */}
+            {mayAdd ? (
+              <Disclosure summary="Link a customer to a location" className="mt-3">
+                <LinkCustomerLocationForm
+                  organizationId={organizationId}
+                  customers={customers}
+                  locations={locations.map((location) => ({ id: location.id, label: location.label }))}
+                />
+              </Disclosure>
+            ) : null}
+
+            <div>
+              <LocationTable
+                organizationId={organizationId}
+                locations={locations}
+                definitions={definitions}
+                mayEdit={mayAdd}
+                mayLookUp={geocoding !== null}
+              />
+            </div>
+          </>
+        ) : (
+          <LocationMapLoader
             organizationId={organizationId}
             locations={locations}
-            definitions={definitions}
+            mapStyleUrl={styleUrl}
             mayEdit={mayAdd}
             mayLookUp={geocoding !== null}
           />
-        </div>
+        )}
       </CreateLocationSheetProvider>
     </AppPage>
   );
