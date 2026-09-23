@@ -246,7 +246,7 @@ describe('a credential goes in and never comes out', () => {
     expect(rows[0]).toEqual({ decrypted: false, secrets: false });
   });
 
-  it('gives the machine role no table grant and exactly two executes', async () => {
+  it('gives the machine role no table grant and exactly three executes', async () => {
     const tables = await pg.query(`select table_name from information_schema.role_table_grants where grantee = 'provider_operator'`);
     expect(tables.rows).toEqual([]);
 
@@ -256,9 +256,13 @@ describe('a credential goes in and never comes out', () => {
           and not has_function_privilege('authenticated', p.oid, 'execute')
         order by p.proname`,
     );
+    // `resolve_ai_runtime_assignment` joined the other two once apps/api needed to resolve which
+    // Provider Account answers an AI capability — the same machine role, one more narrow door,
+    // never a table grant.
     expect(functions.rows.map((row) => row.proname)).toEqual([
       'read_provider_account_credential',
       'record_provider_account_verification',
+      'resolve_ai_runtime_assignment',
     ]);
   });
 

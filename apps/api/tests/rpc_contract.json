@@ -120,6 +120,15 @@
         "p_account_id"
       ]
     },
+    "resolve_ai_runtime_assignment": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_capability"
+      ]
+    },
     "record_call_event": {
       "role": "voice_webhook",
       "callers": [

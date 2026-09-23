@@ -95,9 +95,10 @@ class ProviderOperationsSettings:
 
     **Separate from every other settings group, because the credential it reaches is the most
     sensitive one in this repository.** It signs a 60-second token for `provider_operator`, a
-    machine role holding no table grant and exactly two executes -- one of which returns a
-    decrypted credential. No human's session can call that function; only this runtime can, and
-    only after proving the caller is platform staff.
+    machine role holding no table grant and a small, narrow set of executes -- one of which
+    returns a decrypted credential and one of which resolves which account answers an AI
+    capability (`app.ai.runtime`). No human's session can call any of them; only this runtime
+    can, and only after proving the caller is platform staff.
     """
 
     supabase_url: str

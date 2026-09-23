@@ -3,6 +3,11 @@
 The default, and the only place in this runtime that names it. Everything above sees a
 transcript going in and a turn coming out.
 
+**Model is runtime configuration, not a constant here.** `app.ai.registry` supplies a fallback
+model for the unassigned/legacy-environment path; `app.ai.runtime` supplies whatever a runtime
+assignment names. Neither this module nor any other adapter hardcodes one -- a model changes far
+more often than the provider it belongs to.
+
 **The first vendor SDK in `apps/api`, and that is a deliberate exception rather than a drift.**
 Stripe is hand-rolled here because the whole integration is an HMAC and one HTTP call, and the
 SDK would have been more surface than substance. This is not that: content blocks, tool calls,
@@ -24,8 +29,6 @@ import anthropic
 
 from app.ai import AttachedText, Exchange, PriorTurn, Tool, ToolCall, Turn
 from app.ai.loop import render_attachments
-
-MODEL = "claude-opus-5"
 
 # Enough for an answer about a day's work with room to spare, and small enough to stay well
 # inside the SDK's own request timeout without streaming. Streaming is a second thing that can
@@ -66,11 +69,11 @@ def _content(exchange: Exchange) -> list[dict[str, Any]]:
     return blocks
 
 
-def anthropic_provider(*, api_key: str):
+def anthropic_provider(*, api_key: str, model: str):
     client = anthropic.Anthropic(api_key=api_key)
 
     class Provider:
-        name = MODEL
+        name = model
 
         def next_turn(
             self,
@@ -123,7 +126,7 @@ def anthropic_provider(*, api_key: str):
                 )
 
             response = client.messages.create(
-                model=MODEL,
+                model=model,
                 max_tokens=MAX_TOKENS,
                 thinking={"type": "adaptive"},
                 # The tools and the system prompt are byte-identical on every turn of every

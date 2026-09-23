@@ -4,7 +4,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { BrandMark } from '@/components/display/brand-mark';
-import { ConnectorIcon } from '@/features/integrations/catalogue/connector-icon';
+import { ConnectorIcon, isBuiltInConnector } from '@/features/integrations/catalogue/connector-icon';
 import { ConnectorAppIcon } from '@/features/integrations/catalogue/connector-app-icons';
 import { ProviderIcon } from '@/features/platform/providers/provider-icon';
 
@@ -38,7 +38,7 @@ describe('BrandMark is domain-agnostic', () => {
   });
 });
 
-describe('ConnectorIcon: uploaded logo wins, known connectors get a recognizable mark, unknown ones fall back safely', () => {
+describe('ConnectorIcon: uploaded logo wins, known connectors get a real mark or a recognizable colour, unknown ones fall back safely', () => {
   const google = { key: 'google_workspace', name: 'Google Workspace' };
   const unknown = { key: 'not_a_real_connector', name: 'Mystery App' };
   const csv = { key: 'csv', name: 'CSV / spreadsheet file' };
@@ -48,10 +48,11 @@ describe('ConnectorIcon: uploaded logo wins, known connectors get a recognizable
     expect(html).toContain('<img');
   });
 
-  it('a known connector gets its curated brand colour with no upload', () => {
+  it('a known connector gets its curated real mark with no upload', () => {
     const html = renderToStaticMarkup(createElement(ConnectorIcon, { connector: google, logoUrl: null }));
     expect(html).not.toContain('<img');
-    expect(html).toContain('#4285F4');
+    expect(html).toContain('<svg');
+    expect(html).not.toContain('>G<');
   });
 
   it('an uncatalogued connector key falls back to the generic tile, never a broken image', () => {
@@ -67,24 +68,40 @@ describe('ConnectorIcon: uploaded logo wins, known connectors get a recognizable
   });
 
   it('never hotlinks a vendor logo — no literal external host in the source', () => {
-    const source = read('features/integrations/catalogue/connector-icon.tsx');
-    expect(source).not.toMatch(/https?:\/\//);
+    for (const file of [
+      'features/integrations/catalogue/connector-icon.tsx',
+      'features/platform/providers/provider-icon.tsx',
+      'features/integrations/catalogue/connector-app-icons.tsx',
+      'features/platform/brand/marks.generated.ts',
+    ]) {
+      expect(read(file), file).not.toMatch(/https?:\/\//);
+    }
+  });
+
+  it('isBuiltInConnector is true for a curated key and false for an uncatalogued one', () => {
+    expect(isBuiltInConnector('google_workspace')).toBe(true);
+    expect(isBuiltInConnector('quickbooks')).toBe(true);
+    expect(isBuiltInConnector('not_a_real_connector')).toBe(false);
   });
 });
 
-describe('ConnectorAppIcon: a safe glyph for a known app key, a generic fallback for an unknown one', () => {
-  it('renders something for both a known and an unknown app key, never a broken image', () => {
-    const known = renderToStaticMarkup(createElement(ConnectorAppIcon, { appKey: 'calendar', label: 'Calendar' }));
+describe('ConnectorAppIcon: a real mark when curated, the parent connector when not, a generic glyph otherwise', () => {
+  it('renders something for a known app, a parent-connector fallback, and a fully unknown one — never a broken image', () => {
+    const known = renderToStaticMarkup(createElement(ConnectorAppIcon, { connectorKey: 'google_workspace', appKey: 'gmail', label: 'Gmail' }));
+    const parentOnly = renderToStaticMarkup(createElement(ConnectorAppIcon, { connectorKey: 'google_workspace', appKey: 'docs', label: 'Docs' }));
     const unknown = renderToStaticMarkup(createElement(ConnectorAppIcon, { appKey: 'not_a_real_app', label: 'Mystery' }));
-    expect(known).not.toContain('<img');
-    expect(unknown).not.toContain('<img');
+    for (const html of [known, parentOnly, unknown]) expect(html).not.toContain('<img');
+    expect(known).toContain('<svg');
+    // No mark of its own, but still the suite's real identity rather than a puzzle piece.
+    expect(parentOnly).toContain('<svg');
   });
 });
 
 describe('ProviderIcon is distinct from ConnectorIcon (section 1, 56)', () => {
-  it('resolves a known Provider key to a recognizable colour', () => {
+  it('resolves a known Provider key to its real mark', () => {
     const html = renderToStaticMarkup(createElement(ProviderIcon, { providerKey: 'anthropic', label: 'Anthropic' }));
-    expect(html).toContain('#D97757');
+    expect(html).toContain('<svg');
+    expect(html).not.toContain('>A<');
   });
 
   it('falls back safely for an unknown Provider key', () => {
@@ -114,6 +131,22 @@ describe('ProviderIcon is distinct from ConnectorIcon (section 1, 56)', () => {
     for (const providerOnly of ['Google Routes', 'OpenAI Responses', 'Gemini Interactions']) {
       expect(page, providerOnly).not.toContain(providerOnly);
     }
+  });
+});
+
+describe('built-in identity has no upload control; a custom connector still can', () => {
+  it('the connector editor never renders LogoForm inside the isBuiltInConnector branch, and does render it outside it', () => {
+    const source = read('app/organizations/[organizationId]/platform/integrations/[connectorKey]/page.tsx');
+    const conditional = source.indexOf('isBuiltInConnector(connector.key) ? (');
+    expect(conditional, 'expected a real ternary on isBuiltInConnector(connector.key)').toBeGreaterThan(-1);
+
+    // The built-in branch runs from the `? (` to its matching `) : (` — short enough that a fixed
+    // slice comfortably covers it without needing a bracket-matcher.
+    const builtInBranch = source.slice(conditional, conditional + 300);
+    expect(builtInBranch).not.toContain('<LogoForm');
+    expect(builtInBranch).toContain('Built-in connector');
+
+    expect((source.match(/<LogoForm/g) ?? []).length).toBeGreaterThan(0);
   });
 });
 

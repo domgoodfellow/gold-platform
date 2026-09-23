@@ -4,8 +4,8 @@ import json, os
 from http.server import BaseHTTPRequestHandler
 from app.ai.actions import PUBLIC_ACTIONS
 from app.ai.loop import answer
-from app.ai.registry import answering_provider
-from app.core.config import load_assistant_settings
+from app.ai.runtime import resolve_provider
+from app.core.config import load_assistant_settings, load_provider_operations_settings
 
 class handler(BaseHTTPRequestHandler):  # noqa: N801
     def do_POST(self) -> None:  # noqa: N802
@@ -13,7 +13,10 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801
         secret = os.environ.get('PUBLIC_CHAT_API_SECRET')
         if self.headers.get('x-gold-public-chat-key') != secret or not secret or settings is None:
             self._reply(404, {'error': 'not found'}); return
-        provider = answering_provider()
+        try:
+            provider = resolve_provider(load_provider_operations_settings(), capability='public_assistant')
+        except RuntimeError:
+            self._reply(503, {'error': 'public AI is unavailable'}); return
         if provider is None: self._reply(503, {'error': 'public AI is unavailable'}); return
         try:
             body=json.loads(self.rfile.read(int(self.headers.get('content-length') or 0)) or b'{}')

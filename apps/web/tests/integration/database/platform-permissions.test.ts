@@ -71,7 +71,7 @@ describe('platform permissions on the staff row', () => {
     await makeStaff(userId, ['platform.providers']);
     const permissions = await platformPermissions(db);
     expect([...permissions]).toEqual(['platform.providers']);
-    expect(platformDestinationsFor(permissions).map((destination) => destination.key)).toEqual(['providers']);
+    expect(platformDestinationsFor(permissions).map((destination) => destination.key)).toEqual(['providers', 'ai-runtime']);
   });
 
   it('reads a permission removed on the next request, not at the next sign-in', async () => {

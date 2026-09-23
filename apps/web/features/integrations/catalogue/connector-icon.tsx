@@ -1,34 +1,31 @@
 import { FileSpreadsheet } from 'lucide-react';
 import { BrandMark } from '@/components/display/brand-mark';
+import { GENERATED_MARKS } from '@/features/platform/brand/marks.generated';
 import type { Connector } from '@/lib/domain/integrations/connectors';
 
 /**
  * A connector's identity: an uploaded logo wins over everything (`connector.iconRef` /
- * `connectorLogoUrl`, resolved by the caller into `logoUrl`); short of that, a curated brand
- * colour with a monogram gives a seeded connector a recognizable mark before any admin ever
- * uploads one; an uncatalogued key falls through to `BrandMark`'s own generic tile.
+ * `connectorLogoUrl`, resolved by the caller into `logoUrl`); short of that, a curated real mark
+ * (`GENERATED_MARKS`, checked-in static SVG data — see `scripts/brand-icons/extract.mjs`) gives a
+ * built-in connector its actual identity before any admin ever uploads one; short of *that*, a
+ * curated brand colour with a monogram; an uncatalogued key falls through to `BrandMark`'s own
+ * generic tile.
  *
- * **No hand-encoded vendor logo paths.** Reaching for the exact multi-colour Google "G" or the
- * Slack pinwheel would mean carrying trademarked artwork this codebase does not license, for a
- * screen that only needs *recognizable*, not pixel-exact — a coloured monogram in the real brand
- * colour is the smallest maintainable option that still tells two connectors apart at a glance.
+ * **A mark's presence here is also the built-in signal.** `isBuiltInConnector` (below) is what
+ * `LogoForm`'s caller checks to decide whether uploading a logo makes sense for a given
+ * connector — a built-in identity is platform-owned and is never a business's to override
+ * (constraints.md, "Built-in Provider/Connector/App... NO logo-upload UI").
  */
 const BRAND_COLOR: Record<string, string> = {
-  google_workspace: '#4285F4',
   google_business_profile: '#4285F4',
-  google_ads: '#4285F4',
-  google_analytics: '#4285F4',
-  google_search_console: '#4285F4',
-  youtube: '#FF0000',
   microsoft_365: '#D83B01',
-  notion: '#000000',
-  slack: '#4A154B',
-  dropbox: '#0061FF',
-  hubspot: '#FF7A59',
-  salesforce: '#00A1E0',
   quickbooks: '#2CA01C',
-  shopify: '#95BF47',
 };
+
+/** Every connector key with a curated built-in identity — a mark today, a colour tomorrow. */
+export function isBuiltInConnector(connectorKey: string): boolean {
+  return connectorKey in GENERATED_MARKS || connectorKey in BRAND_COLOR;
+}
 
 export function ConnectorIcon({
   connector,
@@ -43,5 +40,7 @@ export function ConnectorIcon({
   if (connector.key === 'csv') {
     return <BrandMark label={connector.name} src={logoUrl} background="#6b7280" icon={<FileSpreadsheet className="size-4" />} size={size} />;
   }
+  const mark = GENERATED_MARKS[connector.key];
+  if (mark) return <BrandMark label={connector.name} src={logoUrl} mark={mark} size={size} />;
   return <BrandMark label={connector.name} src={logoUrl} background={BRAND_COLOR[connector.key]} size={size} />;
 }

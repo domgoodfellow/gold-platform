@@ -3875,6 +3875,51 @@ export type Database = {
           },
         ]
       }
+      platform_ai_runtime_assignments: {
+        Row: {
+          capability: string
+          model: string
+          provider_account_id: string
+          provider_service_id: string
+          settings: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          capability: string
+          model: string
+          provider_account_id: string
+          provider_service_id: string
+          settings?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          capability?: string
+          model?: string
+          provider_account_id?: string
+          provider_service_id?: string
+          settings?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_ai_runtime_assignments_provider_account_id_fkey"
+            columns: ["provider_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_ai_runtime_assignments_provider_service_id_fkey"
+            columns: ["provider_service_id"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_billing_checkout_sessions: {
         Row: {
           environment: string
@@ -7212,6 +7257,21 @@ export type Database = {
           feature_id: string
         }[]
       }
+      platform_ai_runtime_assignment_overview: {
+        Args: never
+        Returns: {
+          capability: string
+          model: string
+          provider_account_id: string
+          provider_account_label: string
+          provider_key: string
+          provider_service_id: string
+          provider_service_key: string
+          provider_service_label: string
+          settings: Json
+          updated_at: string
+        }[]
+      }
       platform_connector_usage: {
         Args: never
         Returns: {
@@ -7318,6 +7378,16 @@ export type Database = {
           provider_key: string
           secret: string
         }[]
+      }
+      record_ai_runtime_assignment: {
+        Args: {
+          p_capability: string
+          p_model: string
+          p_provider_account_id: string
+          p_provider_service_id: string
+          p_settings?: Json
+        }
+        Returns: undefined
       }
       record_call_event: {
         Args: {
@@ -7675,6 +7745,15 @@ export type Database = {
       replace_integration_resources: {
         Args: { p_connection_id: string; p_resources: Json }
         Returns: undefined
+      }
+      resolve_ai_runtime_assignment: {
+        Args: { p_capability: string }
+        Returns: {
+          model: string
+          provider_account_id: string
+          provider_key: string
+          provider_service_key: string
+        }[]
       }
       resolve_effective_outbound_identity: {
         Args: { p_organization_id: string }

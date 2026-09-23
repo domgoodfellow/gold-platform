@@ -287,7 +287,7 @@ class TestSignedInEndpoints:
         monkeypatch.setattr(module, loader, lambda: SETTINGS)
         if module is ai_ask:
             # The assistant checks that a model is configured before it looks at the caller.
-            monkeypatch.setattr(module, "answering_provider", lambda: object())
+            monkeypatch.setattr(module, "resolve_provider", lambda settings, *, capability: object())
         sink = Sink()
         monkeypatch.setattr(module, command, sink)
         return sink
@@ -321,7 +321,7 @@ class TestPublicChat:
         else:
             monkeypatch.setenv("PUBLIC_CHAT_API_SECRET", secret)
         monkeypatch.setattr(public_chat, "load_assistant_settings", lambda: settings)
-        monkeypatch.setattr(public_chat, "answering_provider", lambda: provider)
+        monkeypatch.setattr(public_chat, "resolve_provider", lambda settings, *, capability: provider)
         sink = Sink(result=SimpleNamespace(text="Hello.", action=None))
         monkeypatch.setattr(public_chat, "answer", sink)
         return sink

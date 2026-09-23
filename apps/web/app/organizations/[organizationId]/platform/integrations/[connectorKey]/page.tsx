@@ -9,7 +9,7 @@ import { Hint } from '@/components/controls/inputs';
 import { getDb } from '@/lib/db/server';
 import { connectorLogoUrl, getConnector } from '@/lib/domain/integrations/connectors';
 import { isConnectorImplemented } from '@/lib/adapters/integrations';
-import { ConnectorIcon } from '@/features/integrations/catalogue/connector-icon';
+import { ConnectorIcon, isBuiltInConnector } from '@/features/integrations/catalogue/connector-icon';
 import { AppForm, ConnectorForm, LogoForm, RemoveAppButton } from '@/features/platform/integrations/connector-form';
 
 export const dynamic = 'force-dynamic';
@@ -39,15 +39,24 @@ export default async function ConnectorPage({ params }: PageProps<'/organization
       ) : null}
 
       <Section className="mt-6">
-        <SectionHeading>Logo</SectionHeading>
-        {logoUrl ? (
+        <SectionHeading>Identity</SectionHeading>
+        {isBuiltInConnector(connector.key) ? (
+          <Hint className="mt-1 block">
+            Built-in connector — shown with GOLD&apos;s own curated brand mark. There is nothing to upload here.
+          </Hint>
+        ) : logoUrl ? (
           // A public, unsigned URL — a logo is on a page a stranger opens.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUrl} alt={`${connector.name} logo`} className="mt-2 h-12 w-auto" />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoUrl} alt={`${connector.name} logo`} className="mt-2 h-12 w-auto" />
+            <LogoForm connectorKey={connector.key} />
+          </>
         ) : (
-          <Hint className="mt-1 block">No logo yet — shown as a curated brand mark, or a generic tile.</Hint>
+          <>
+            <Hint className="mt-1 block">No logo yet — shown as a generic tile until one is uploaded.</Hint>
+            <LogoForm connectorKey={connector.key} />
+          </>
         )}
-        <LogoForm connectorKey={connector.key} />
       </Section>
 
       <Section className="mt-8">

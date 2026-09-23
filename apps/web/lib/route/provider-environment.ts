@@ -14,3 +14,12 @@ export function credentialEnvironmentState(providerKey: string): 'configured' | 
   if (providerKey === 'resend') return process.env.RESEND_API_KEY ? 'configured' : 'not_configured';
   return 'not_implemented';
 }
+
+/**
+ * Providers with the generic, API-key-only account model (`ProviderConfiguration`) rather than
+ * Twilio's own subaccount/binding one, or the environment-only path above. Route-owned for the
+ * same reason `credentialEnvironmentState` is: naming which providers this platform built account
+ * UI for is a fact about this deployment's routes, never something `lib/domain/` may say (I15).
+ * Named once so the Providers list and a Provider's own detail route agree.
+ */
+export const GENERIC_ACCOUNT_PROVIDER_KEYS = new Set(['openai', 'anthropic', 'google']);

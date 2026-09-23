@@ -28,9 +28,10 @@ from http.server import BaseHTTPRequestHandler
 
 from app.ai import AttachedText, PriorTurn
 from app.ai.loop import answer
-from app.ai.registry import answering_provider, unconfigured_reason
+from app.ai.registry import unconfigured_reason
+from app.ai.runtime import resolve_provider
 from app.auth import AuthError, require_caller
-from app.core.config import load_assistant_settings
+from app.core.config import load_assistant_settings, load_provider_operations_settings
 
 
 def _prior_turns(raw: object) -> tuple[PriorTurn, ...]:
@@ -74,7 +75,15 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             self._reply(404, {"error": "not found"})
             return
 
-        provider = answering_provider()
+        try:
+            # An explicit assignment is authoritative and never fails over; a capability with
+            # none keeps answering exactly as it always has (app.ai.runtime).
+            provider = resolve_provider(
+                load_provider_operations_settings(), capability="operator_assistant"
+            )
+        except RuntimeError as failure:
+            self._reply(503, {"error": str(failure)})
+            return
         if provider is None:
             # A deployment with no model. Said out loud rather than left as a silence, and in
             # the same words the settings screen uses (D31).

@@ -6,6 +6,11 @@ import { EmptyState, Section } from '@/components/containers/section';
 import type { Connector } from '@/lib/domain/integrations/connectors';
 import { ConnectorCard } from './connector-card';
 
+// A wide desktop canvas reaches three or four cards; a card never stretches taller than its own
+// content just to keep a row aligned. Not `sm:grid-cols-2` — that caps at two columns forever,
+// however wide the viewport, which is the exact limitation this replaces.
+const GRID = 'grid gap-3 grid-cols-[repeat(auto-fill,minmax(19rem,1fr))]';
+
 /**
  * Integrations → Browse: an app catalogue. With no search and no category chosen, connectors
  * group under the categories the catalogue itself carries (`connector.category`) — never a list
@@ -70,7 +75,7 @@ export function ConnectorCatalogue({
           {grouped.map((group) => (
             <div key={group.category}>
               <h3 className="mb-2 text-sm font-medium text-subtle">{group.category}</h3>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className={GRID}>
                 {group.items.map((connector) => (
                   <ConnectorCard
                     key={connector.key}
@@ -86,7 +91,7 @@ export function ConnectorCatalogue({
           ))}
         </div>
       ) : (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className={cx('mt-4', GRID)}>
           {connectors.map((connector) => (
             <ConnectorCard
               key={connector.key}

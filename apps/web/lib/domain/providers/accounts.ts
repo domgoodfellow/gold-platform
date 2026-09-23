@@ -1,4 +1,5 @@
 import type { Db } from '@/lib/db/types';
+import { requireAccessToken, callDomainCommand } from '@/lib/api/client';
 import { DomainError } from '@/lib/domain/errors';
 
 /**
@@ -159,6 +160,29 @@ export async function setProviderAccountStatus(
 export async function setDefaultProviderAccount(db: Db, input: { accountId: string }): Promise<void> {
   const { error } = await db.rpc('set_default_provider_account', { p_account_id: input.accountId });
   if (error) throw staffWriteError(error, 'change a provider account');
+}
+
+/**
+ * Asks the provider whether the stored credential works, for an account with no per-provider
+ * operations of its own (openai, anthropic, google today) — the generic counterpart to
+ * `telephony-accounts.ts`'s `verifyTelephonyAccount`, which needs its own file only because
+ * Twilio's capability offers more than `verify`. Every account, whatever the provider, is reached
+ * the same way: the caller's own token, forwarded to `apps/api`'s `/providers/operate`, which
+ * proves staff and reads the credential from Vault. This file never sees it.
+ */
+export async function verifyProviderAccount(db: Db, input: { accountId: string }): Promise<ProviderAccount> {
+  const account = await getProviderAccount(db, input.accountId);
+  if (!account) throw new DomainError('No such provider account.', 'providers.account_missing');
+  if (!account.credentialSetAt) throw new DomainError('Set a credential before verifying.', 'providers.credential_missing');
+
+  await callDomainCommand('/providers/operate', {
+    token: await requireAccessToken(db),
+    body: { account_id: account.id, operation: 'verify', arguments: {} },
+  });
+
+  const after = await getProviderAccount(db, input.accountId);
+  if (!after) throw new DomainError('No such provider account.', 'providers.account_missing');
+  return after;
 }
 
 /** One organization's standing with one provider, or the absence of any — staff only. */

@@ -21,4 +21,16 @@ def operations_for(provider_key: str) -> dict[str, Operation] | None:
         from app.providers.twilio.accounts import OPERATIONS
 
         return OPERATIONS
+    if provider_key == "openai":
+        from app.providers.openai.accounts import OPERATIONS
+
+        return OPERATIONS
+    if provider_key == "anthropic":
+        from app.providers.anthropic.accounts import OPERATIONS
+
+        return OPERATIONS
+    if provider_key == "google":
+        from app.providers.google.accounts import OPERATIONS
+
+        return OPERATIONS
     return None

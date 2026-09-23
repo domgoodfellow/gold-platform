@@ -110,6 +110,7 @@ describe('GOLD owner who is also a platform operator', () => {
       'platform-billing',
       'platform-group-infrastructure',
       'platform-providers',
+      'platform-ai-runtime',
       'platform-failures',
     ]);
     // Platform is an added section: GOLD's own workspaces are all still there.
@@ -151,7 +152,7 @@ describe('GOLD sales member in the same organization', () => {
 describe('a platform member with limited platform permissions', () => {
   it('sees only the destinations their permissions reach', () => {
     const providersOnly = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.providers']) });
-    expect(keys(providersOnly, 'platform')).toEqual(['platform-group-infrastructure', 'platform-providers']);
+    expect(keys(providersOnly, 'platform')).toEqual(['platform-group-infrastructure', 'platform-providers', 'platform-ai-runtime']);
 
     const commercial = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.commercial']) });
     expect(keys(commercial, 'platform')).toEqual(['platform-group-commercial', 'platform-pricing', 'platform-billing']);

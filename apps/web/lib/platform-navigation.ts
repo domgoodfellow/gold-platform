@@ -42,6 +42,7 @@ export const PLATFORM_DESTINATIONS: readonly PlatformDestination[] = [
   { key: 'pricing', label: 'Pricing', path: 'pricing', requires: 'platform.commercial', under: 'commercial' },
   { key: 'billing', label: 'Billing', path: 'billing', requires: 'platform.commercial', under: 'commercial' },
   { key: 'providers', label: 'Providers', path: 'providers', requires: 'platform.providers', under: 'infrastructure' },
+  { key: 'ai-runtime', label: 'AI Runtime', path: 'ai-runtime', requires: 'platform.providers', under: 'infrastructure' },
   { key: 'failures', label: 'Failures', path: 'failures', requires: 'platform.health', under: 'infrastructure' },
 ];
 

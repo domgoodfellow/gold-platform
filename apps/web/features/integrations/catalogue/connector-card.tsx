@@ -3,6 +3,7 @@ import { Card } from '@/components/containers/card';
 import { Badge } from '@/components/display/data';
 import { isConnectable, type Connector } from '@/lib/domain/integrations/connectors';
 import { ConnectCsvForm } from '../connections/connect-csv-form';
+import { ConnectorAppStrip } from './connector-app-strip';
 import { ConnectorIcon } from './connector-icon';
 
 const STATUS_LABEL = { planned: 'Planned', beta: 'Beta', live: 'Live' } as const;
@@ -28,25 +29,25 @@ export function ConnectorCard({
   const connectable = isConnectable(connector);
 
   return (
-    <Card className="flex flex-col gap-3">
+    <Card className="flex flex-col gap-2.5">
       <div className="flex items-start gap-3">
         <ConnectorIcon connector={connector} logoUrl={logoUrl} />
         <div className="min-w-0 flex-1">
-          <p className="font-medium">{connector.name}</p>
-          <p className="text-sm text-muted">{connector.description}</p>
-          <p className="mt-1 text-xs text-subtle">
-            {connector.suite ? `${connector.suite} · ` : ''}
-            {connector.category}
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-medium">{connector.name}</p>
+            <Badge tone={connector.status === 'live' ? 'success' : connector.status === 'beta' ? 'accent' : 'neutral'}>
+              {STATUS_LABEL[connector.status]}
+            </Badge>
+          </div>
+          <p className="line-clamp-2 text-sm text-muted">{connector.description}</p>
         </div>
-        <Badge tone={connector.status === 'live' ? 'success' : connector.status === 'beta' ? 'accent' : 'neutral'}>
-          {STATUS_LABEL[connector.status]}
-        </Badge>
       </div>
-      {connector.apps.length > 0 ? (
-        <p className="text-xs text-muted">Includes {connector.apps.map((app) => app.name).join(', ')}.</p>
-      ) : null}
-      <div className="flex justify-end">
+      {connector.apps.length > 0 ? <ConnectorAppStrip apps={connector.apps} connectorKey={connector.key} /> : null}
+      <div className="flex items-center justify-between gap-2 border-t border-border pt-2.5">
+        <p className="text-xs text-subtle">
+          {connector.suite ? `${connector.suite} · ` : ''}
+          {connector.category}
+        </p>
         {!connectable ? (
           <Button type="button" tone="secondary" size="small" disabled>
             {connector.status === 'planned' ? 'Coming soon' : 'Not available yet'}

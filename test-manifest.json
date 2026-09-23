@@ -118,6 +118,31 @@
         "security"
       ]
     },
+    "apps/api/tests/component/test_ai_runtime.py": {
+      "category": "python-component",
+      "concerns": [
+        "ai",
+        "providers",
+        "security"
+      ],
+      "note": "No-assignment falls back to the legacy default; an explicit assignment never fails over."
+    },
+    "apps/api/tests/component/test_openai_answering.py": {
+      "category": "python-component",
+      "concerns": [
+        "ai",
+        "providers"
+      ],
+      "note": "Translation against a mocked SDK boundary, mirroring the Anthropic/dialect adapters' shape."
+    },
+    "apps/api/tests/component/test_google_answering.py": {
+      "category": "python-component",
+      "concerns": [
+        "ai",
+        "providers"
+      ],
+      "note": "Translation against a mocked SDK boundary; Part/Content construction runs against the real installed SDK."
+    },
     "apps/api/tests/component/test_auth.py": {
       "category": "python-component",
       "concerns": [

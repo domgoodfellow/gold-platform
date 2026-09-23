@@ -35,6 +35,7 @@
     "three": "^0.180.0"
   },
   "devDependencies": {
+    "@iconify-json/logos": "^1.2.14",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

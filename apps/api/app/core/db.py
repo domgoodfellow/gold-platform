@@ -326,6 +326,37 @@ def read_provider_account_credential(
     return rows[0] if rows else None
 
 
+def resolve_ai_runtime_assignment(
+    settings: ProviderOperationsSettings,
+    *,
+    capability: str,
+) -> dict | None:
+    """The provider, service and account assigned to one AI capability, or `None` if unassigned.
+
+    Uses the same `provider_operator` role and token `read_provider_account_credential` does --
+    resolving an assignment is one step in the same trusted path, not a second axis (D45's
+    reasoning: a narrow role does one small job well, not several unrelated ones cheaply).
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=PROVIDER_ROLE, sub=PROVIDER_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/resolve_ai_runtime_assignment",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={"p_capability": capability},
+        timeout=10.0,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"resolve_ai_runtime_assignment failed: {response.status_code}")
+
+    rows = response.json()
+    return rows[0] if rows else None
+
+
 def record_provider_account_verification(
     settings: ProviderOperationsSettings,
     *,

@@ -26,6 +26,11 @@ import os
 
 from app.ai import AnsweringProvider
 
+# The model this deployment answers with when nothing has assigned one -- the legacy env-only
+# path `app.ai.runtime` falls back to when no `platform_ai_runtime_assignments` row exists for
+# the capability being asked. A runtime assignment overrides this; nothing here reads one.
+DEFAULT_ANTHROPIC_MODEL = "claude-opus-5"
+
 
 def answering_provider() -> AnsweringProvider | None:
     base_url = os.environ.get("ASSISTANT_BASE_URL")
@@ -51,7 +56,7 @@ def answering_provider() -> AnsweringProvider | None:
     if api_key:
         from app.providers.anthropic.answering import anthropic_provider
 
-        return anthropic_provider(api_key=api_key)
+        return anthropic_provider(api_key=api_key, model=DEFAULT_ANTHROPIC_MODEL)
 
     return None
 
