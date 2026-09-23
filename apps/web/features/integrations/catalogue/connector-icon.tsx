@@ -11,10 +11,12 @@ import type { Connector } from '@/lib/domain/integrations/connectors';
  * over the generic tile.
  *
  * `GENERATED_MARKS` is checked-in static SVG data (`scripts/brand-icons/extract.mjs`); `BRAND_COLOR`
- * is the fallback for a built-in connector this platform has not extracted a real mark for yet.
- * Neither ever reads `connector.iconRef` — an old value stored there for a connector that has
- * since become built-in is simply ignored, never deleted (a business's own upload history for a
- * connector that later goes built-in is not this component's to erase).
+ * is the fallback for a built-in connector this platform has not extracted a real mark for yet —
+ * today, only `google_business_profile`, which neither source package this platform draws from
+ * carries (checked directly, not assumed; see the generator script's own note). Neither ever reads
+ * `connector.iconRef` — an old value stored there for a connector that has since become built-in
+ * is simply ignored, never deleted (a business's own upload history for a connector that later
+ * goes built-in is not this component's to erase).
  *
  * **A mark or a curated colour's presence here is also the built-in signal.**
  * `isBuiltInConnector` (below) is what `LogoForm`'s caller checks to decide whether uploading a
@@ -24,8 +26,6 @@ import type { Connector } from '@/lib/domain/integrations/connectors';
  */
 const BRAND_COLOR: Record<string, string> = {
   google_business_profile: '#4285F4',
-  microsoft_365: '#D83B01',
-  quickbooks: '#2CA01C',
 };
 
 /** Every connector key with a curated built-in identity — a mark today, a colour tomorrow. */

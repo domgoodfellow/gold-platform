@@ -23,8 +23,8 @@ TOOLS = (
 
 
 class _FakeInteractions:
-    def __init__(self, result=None, error=None) -> None:
-        self._result = result
+    def __init__(self, results=None, error=None) -> None:
+        self._results = list(results or [])
         self._error = error
         self.calls: list[dict] = []
 
@@ -32,24 +32,29 @@ class _FakeInteractions:
         self.calls.append(kwargs)
         if self._error is not None:
             raise self._error
-        return self._result
+        # The last result repeats if a test calls create() more times than it queued -- most
+        # single-turn tests only ever queue one and never notice.
+        return self._results[len(self.calls) - 1] if len(self.calls) <= len(self._results) else self._results[-1]
 
 
 class _FakeClient:
-    def __init__(self, result=None, error=None) -> None:
-        self.interactions = _FakeInteractions(result, error)
+    def __init__(self, results=None, error=None) -> None:
+        self.interactions = _FakeInteractions(results, error)
 
 
-def _step(*, type=None, name=None, arguments=None, id=None):  # noqa: A002 - matches the vendor's own field name
-    return SimpleNamespace(type=type, name=name, arguments=arguments, id=id)
+def _step(*, type=None, name=None, arguments=None, id=None, dump=None):  # noqa: A002 - matches the vendor's own field name
+    step = SimpleNamespace(type=type, name=name, arguments=arguments, id=id)
+    step.model_dump = dump if dump is not None else (lambda: {"type": type, "name": name, "arguments": arguments, "id": id})
+    return step
 
 
 def _interaction(*, output_text="", steps=None, status=None, errors=None):
     return SimpleNamespace(output_text=output_text, steps=steps if steps is not None else [], status=status, errors=errors)
 
 
-def _install(monkeypatch, *, interaction=None, error=None):
-    fake = _FakeClient(result=interaction, error=error)
+def _install(monkeypatch, *, interaction=None, interactions=None, error=None):
+    results = interactions if interactions is not None else ([interaction] if interaction is not None else [])
+    fake = _FakeClient(results=results, error=error)
     monkeypatch.setattr(google_answering.genai, "Client", lambda api_key: fake)
     return fake
 
@@ -254,7 +259,7 @@ def test_a_cancelled_status_with_no_error_message_still_raises(monkeypatch) -> N
         provider.next_turn(question="What is late?", tools=(), history=())
 
 
-@pytest.mark.parametrize("status", [None, "completed", "in_progress", "requires_action"])
+@pytest.mark.parametrize("status", [None, "completed", "requires_action"])
 def test_ordinary_statuses_do_not_raise(monkeypatch, status) -> None:
     _install(monkeypatch, interaction=_interaction(output_text="fine", status=status))
     provider = gemini_provider(api_key="k", model="gemini-test")
@@ -262,3 +267,54 @@ def test_ordinary_statuses_do_not_raise(monkeypatch, status) -> None:
     turn = provider.next_turn(question="What is late?", tools=(), history=())
 
     assert turn.text == "fine"
+
+
+def test_an_in_progress_status_raises_rather_than_being_read_as_a_finished_turn(monkeypatch) -> None:
+    # A synchronous, non-streaming, non-backgrounded call that comes back in_progress has not
+    # actually finished -- reading a Turn out of it would risk a partial answer read as a complete
+    # one.
+    _install(monkeypatch, interaction=_interaction(output_text="partial", status="in_progress"))
+    provider = gemini_provider(api_key="k", model="gemini-test")
+
+    with pytest.raises(RuntimeError, match="in_progress"):
+        provider.next_turn(question="What is late?", tools=(), history=())
+
+
+def test_thought_and_function_call_steps_are_resent_verbatim_and_never_leak_into_turn_text(monkeypatch) -> None:
+    """The scenario the correction names directly: a thought step, a function_call, a
+    function_result, and a subsequent completed answer -- across two calls on the *same* provider
+    instance, exactly as `app.ai.loop` drives one within a single `answer()`.
+    """
+    thought_step = _step(type="thought", dump=lambda: {"type": "thought", "content": "secret reasoning nobody downstream should see"})
+    call_step = _step(type="function_call", id="call-1", name="work_at_risk", arguments={})
+
+    first = _interaction(steps=[thought_step, call_step], status="requires_action")
+    second = _interaction(output_text="Two jobs overran.", status="completed")
+    fake = _install(monkeypatch, interactions=[first, second])
+
+    provider = gemini_provider(api_key="k", model="gemini-test")
+
+    turn1 = provider.next_turn(question="What is late?", tools=TOOLS, history=())
+    assert turn1.calls == (ToolCall(name="work_at_risk", arguments={}, reference="call-1"),)
+    # The thought step's content must never reach anything this adapter hands back.
+    assert "secret reasoning" not in turn1.text
+    assert "secret reasoning" not in str(turn1)
+
+    history = (
+        Exchange(
+            turn=turn1,
+            results=(ToolResult(call=turn1.calls[0], rows=[{"a": 1}]),),
+        ),
+    )
+    turn2 = provider.next_turn(question="What is late?", tools=TOOLS, history=history)
+    assert turn2.text == "Two jobs overran."
+    assert "secret reasoning" not in turn2.text
+
+    sent = fake.interactions.calls[1]["input"]
+    # Resent verbatim -- the exact dump, not a GOLD reconstruction -- thought content included.
+    assert {"type": "thought", "content": "secret reasoning nobody downstream should see"} in sent
+    assert {"type": "function_call", "id": "call-1", "name": "work_at_risk", "arguments": {}} in sent
+    # The result is still GOLD's own construction; Gemini never produced it.
+    result_item = next(item for item in sent if item.get("type") == "function_result")
+    assert result_item["call_id"] == "call-1"
+    assert '"a": 1' in result_item["result"]

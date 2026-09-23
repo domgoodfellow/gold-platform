@@ -18,10 +18,11 @@ const logos = JSON.parse(readFileSync(logosPath, 'utf8'));
 const defaultWidth = logos.width ?? 24;
 const defaultHeight = logos.height ?? 24;
 
-// Our key -> the collection's key. Every entry here was confirmed present in the installed
-// @iconify-json/logos@1.2.14 data before being added — never guessed. Multicolour: each path in
-// `body` already carries its own `fill`.
-const FROM_LOGOS = {
+// Providers and Connectors — one identity per key, never shared with another entity. Every value
+// here was confirmed present in the installed @iconify-json/logos@1.2.14 or simple-icons@16.32.0
+// data before being added — never guessed. Multicolour marks (logos) already carry their own
+// `fill` per path; single-colour marks (simple-icons) get `hex` baked in at generation time below.
+const TOP_LEVEL_FROM_LOGOS = {
   // Providers (infrastructure GOLD operates)
   openai: 'openai-icon',
   anthropic: 'anthropic-icon',
@@ -44,60 +45,78 @@ const FROM_LOGOS = {
   hubspot: 'hubspot',
   salesforce: 'salesforce',
   shopify: 'shopify',
-
-  // Connector apps (Google Workspace / Microsoft 365 child apps)
-  gmail: 'google-gmail',
-  drive: 'google-drive',
-  calendar: 'google-calendar',
-  meet: 'google-meet',
-  keep: 'google-keep',
-  slides: 'slides',
-  teams: 'microsoft-teams',
 };
 
-// Confirmed present in the installed simple-icons@16.32.0 data before being added. Single-colour:
-// `hex` is baked into the generated path's own `fill` at generation time, so the shipped markup
-// still needs no runtime colouring logic.
-//
-// Microsoft Outlook and Excel are NOT here on purpose (see the "known gaps" note below) — neither
-// simple-icons nor @iconify-json/logos carries them, and this script refuses to guess a trademarked
-// shape from memory. Both fall back to the microsoft_365 parent mark at render time
-// (`connector-app-icons.tsx`), which is an honest degrade, not a silent one.
-const FROM_SIMPLE_ICONS = {
-  docs: 'siGoogledocs',
-  sheets: 'siGooglesheets',
-  forms: 'siGoogleforms',
-  chat: 'siGooglechat',
-  tasks: 'siGoogletasks',
+const TOP_LEVEL_FROM_SIMPLE_ICONS = {
+  quickbooks: 'siQuickbooks',
 };
 
-const marks = {};
-const missing = [];
+// `google_business_profile` is NOT here on purpose: neither @iconify-json/logos nor simple-icons
+// carries a Google Business Profile mark (checked directly against both installed packages'
+// contents, not assumed), and this script refuses to guess a trademarked shape from memory. It
+// keeps its curated colour + monogram fallback in `connector-icon.tsx` — an honest degrade, not a
+// silent one.
 
-for (const [ourKey, iconKey] of Object.entries(FROM_LOGOS)) {
-  const icon = logos.icons[iconKey];
-  if (!icon) {
-    missing.push(`@iconify-json/logos: ${ourKey} -> ${iconKey}`);
-    continue;
-  }
-  marks[ourKey] = {
-    viewBox: `0 0 ${icon.width ?? defaultWidth} ${icon.height ?? defaultHeight}`,
-    body: icon.body,
-  };
-}
+// Connector apps — **keyed by `${connectorKey}:${appKey}`, never by `appKey` alone.** Two
+// different suites seed the same app key for two different real apps (`google_workspace:calendar`
+// is Google Calendar; `microsoft_365:calendar` is a different product entirely), so a flat
+// `appKey`-only map would hand one suite's identity to the other's app by accident — which is
+// exactly the bug this shape exists to make impossible rather than merely unlikely.
+const APPS_FROM_LOGOS = {
+  'google_workspace:gmail': 'google-gmail',
+  'google_workspace:drive': 'google-drive',
+  'google_workspace:calendar': 'google-calendar',
+  'google_workspace:meet': 'google-meet',
+  'google_workspace:keep': 'google-keep',
+  'google_workspace:slides': 'slides',
+  'microsoft_365:teams': 'microsoft-teams',
+  'microsoft_365:onedrive': 'microsoft-onedrive',
+};
+
+const APPS_FROM_SIMPLE_ICONS = {
+  'google_workspace:docs': 'siGoogledocs',
+  'google_workspace:sheets': 'siGooglesheets',
+  'google_workspace:forms': 'siGoogleforms',
+  'google_workspace:chat': 'siGooglechat',
+  'google_workspace:tasks': 'siGoogletasks',
+};
+
+// Microsoft 365's `outlook` and `excel` apps have no entry here on purpose — neither source
+// package carries them (checked directly, not assumed). They fall back to the microsoft_365
+// parent mark at render time (`connector-app-icons.tsx`'s fallback order), which names a real fact
+// (this app belongs to that suite) rather than guessing at the app's own logo.
 
 const simpleIcons = await import('simple-icons');
-for (const [ourKey, slug] of Object.entries(FROM_SIMPLE_ICONS)) {
-  const icon = simpleIcons[slug];
-  if (!icon) {
-    missing.push(`simple-icons: ${ourKey} -> ${slug}`);
-    continue;
+const missing = [];
+
+function fromLogos(map) {
+  const out = {};
+  for (const [ourKey, iconKey] of Object.entries(map)) {
+    const icon = logos.icons[iconKey];
+    if (!icon) {
+      missing.push(`@iconify-json/logos: ${ourKey} -> ${iconKey}`);
+      continue;
+    }
+    out[ourKey] = { viewBox: `0 0 ${icon.width ?? defaultWidth} ${icon.height ?? defaultHeight}`, body: icon.body };
   }
-  marks[ourKey] = {
-    viewBox: '0 0 24 24',
-    body: `<path fill="#${icon.hex}" d="${icon.path}"/>`,
-  };
+  return out;
 }
+
+function fromSimpleIcons(map) {
+  const out = {};
+  for (const [ourKey, slug] of Object.entries(map)) {
+    const icon = simpleIcons[slug];
+    if (!icon) {
+      missing.push(`simple-icons: ${ourKey} -> ${slug}`);
+      continue;
+    }
+    out[ourKey] = { viewBox: '0 0 24 24', body: `<path fill="#${icon.hex}" d="${icon.path}"/>` };
+  }
+  return out;
+}
+
+const marks = { ...fromLogos(TOP_LEVEL_FROM_LOGOS), ...fromSimpleIcons(TOP_LEVEL_FROM_SIMPLE_ICONS) };
+const appMarks = { ...fromLogos(APPS_FROM_LOGOS), ...fromSimpleIcons(APPS_FROM_SIMPLE_ICONS) };
 
 if (missing.length > 0) {
   console.error('Missing from an installed collection (fix the WANTED lists or re-check coverage):');
@@ -113,14 +132,24 @@ const header = `// GENERATED FILE — do not hand-edit. Regenerate with:
 // endorsement by it. No runtime dependency on either package — this is inline SVG markup, checked
 // in.
 //
-// Known gaps, deliberate rather than silent: Microsoft Outlook and Excel have no entry here
-// because neither source package carries them; they render as the microsoft_365 parent mark
-// instead (see connector-app-icons.tsx's fallback order).
+// Known gaps, deliberate rather than silent: google_business_profile (no entry in either package)
+// keeps its curated colour + monogram fallback; microsoft_365's outlook and excel apps (same
+// reason) fall back to the microsoft_365 parent mark. Neither is guessed.
 
 export type GeneratedMark = { viewBox: string; body: string };
 
+/** Providers and Connectors — one identity per key. */
 export const GENERATED_MARKS: Record<string, GeneratedMark> = ${JSON.stringify(marks, null, 2)};
+
+/**
+ * Connector apps, keyed by \`\${connectorKey}:\${appKey}\` — never by \`appKey\` alone, because two
+ * suites seed the same app key for two different real apps (both seed a \`calendar\` app, and they
+ * are not the same product).
+ */
+export const GENERATED_APP_MARKS: Record<string, GeneratedMark> = ${JSON.stringify(appMarks, null, 2)};
 `;
 
 writeFileSync(outPath, header);
-console.log(`Wrote ${Object.keys(marks).length} marks to ${path.relative(process.cwd(), outPath)}`);
+console.log(
+  `Wrote ${Object.keys(marks).length} top-level marks and ${Object.keys(appMarks).length} app marks to ${path.relative(process.cwd(), outPath)}`,
+);

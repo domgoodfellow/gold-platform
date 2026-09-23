@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { BrandMark } from '@/components/display/brand-mark';
 import { ConnectorIcon, isBuiltInConnector } from '@/features/integrations/catalogue/connector-icon';
 import { ConnectorAppIcon } from '@/features/integrations/catalogue/connector-app-icons';
+import { GENERATED_APP_MARKS, GENERATED_MARKS } from '@/features/platform/brand/marks.generated';
 import { ProviderIcon } from '@/features/platform/providers/provider-icon';
 
 /**
@@ -94,15 +95,39 @@ describe('ConnectorIcon: a built-in mark is authoritative, an upload only ever m
   });
 });
 
-describe('ConnectorAppIcon: a real mark when curated, the parent connector when not, a generic glyph otherwise', () => {
+describe('ConnectorAppIcon: resolved by connectorKey + appKey together, never by appKey alone', () => {
   it('renders something for a known app, a parent-connector fallback, and a fully unknown one — never a broken image', () => {
     const known = renderToStaticMarkup(createElement(ConnectorAppIcon, { connectorKey: 'google_workspace', appKey: 'gmail', label: 'Gmail' }));
-    const parentOnly = renderToStaticMarkup(createElement(ConnectorAppIcon, { connectorKey: 'google_workspace', appKey: 'docs', label: 'Docs' }));
+    const parentOnly = renderToStaticMarkup(createElement(ConnectorAppIcon, { connectorKey: 'microsoft_365', appKey: 'outlook', label: 'Outlook' }));
     const unknown = renderToStaticMarkup(createElement(ConnectorAppIcon, { appKey: 'not_a_real_app', label: 'Mystery' }));
     for (const html of [known, parentOnly, unknown]) expect(html).not.toContain('<img');
     expect(known).toContain('<svg');
-    // No mark of its own, but still the suite's real identity rather than a puzzle piece.
+    // No mark of its own (outlook has none in either source package), but still the suite's real
+    // identity rather than a puzzle piece.
     expect(parentOnly).toContain('<svg');
+  });
+
+  it('two suites seeding the same app key resolve to two different identities, not one stolen from the other', () => {
+    // Both platform_connector_apps rows are real (20260929000003_the_connector_editor_and_support_view.sql
+    // seeds a `calendar` app for both google_workspace and microsoft_365) — this is the collision
+    // a flat appKey-only lookup would get wrong, proven directly rather than by inspecting source.
+    const googleCalendar = GENERATED_APP_MARKS['google_workspace:calendar'];
+    expect(googleCalendar, 'expected a curated google_workspace:calendar mark').toBeTruthy();
+
+    const googleHtml = renderToStaticMarkup(
+      createElement(ConnectorAppIcon, { connectorKey: 'google_workspace', appKey: 'calendar', label: 'Calendar' }),
+    );
+    const microsoftHtml = renderToStaticMarkup(
+      createElement(ConnectorAppIcon, { connectorKey: 'microsoft_365', appKey: 'calendar', label: 'Calendar' }),
+    );
+
+    // Google's own calendar mark renders for the Google Workspace app...
+    expect(googleHtml).toContain(googleCalendar.body);
+    // ...and Microsoft 365's calendar app never renders Google's mark — it has none of its own
+    // curated (checked directly), so it falls back to the microsoft_365 parent mark instead.
+    expect(microsoftHtml).not.toContain(googleCalendar.body);
+    expect(GENERATED_APP_MARKS['microsoft_365:calendar']).toBeUndefined();
+    expect(microsoftHtml).toContain(GENERATED_MARKS.microsoft_365.body);
   });
 });
 
