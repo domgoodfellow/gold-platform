@@ -176,7 +176,7 @@ describe('Setup is kernel and drafting is an optional accelerator inside it', ()
 
 describe('roles are editable bundles with optional templates', () => {
   it('a preset only fills the checklist; the saved role records nothing about it', () => {
-    const fields = read('app/organizations/[organizationId]/roles/role-editor-fields.tsx');
+    const fields = read('features/team/role-editor-fields.tsx');
     expect(fields).toContain('ROLE_PRESETS');
     expect(fields).not.toMatch(/name="preset"|name="presetKey"/);
     const domain = read('lib/domain/tenancy/roles.ts');
@@ -195,7 +195,7 @@ describe('roles are editable bundles with optional templates', () => {
     };
     for (const root of ['app', 'features', 'lib', 'components']) walk(`${WEB}/${root}`);
     expect(offenders.sort()).toEqual([
-      '/app/organizations/[organizationId]/roles/role-editor-fields.tsx',
+      '/features/team/role-editor-fields.tsx',
       '/lib/domain/tenancy/role-presets.ts',
     ]);
   });

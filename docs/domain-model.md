@@ -101,7 +101,7 @@ they are not permission to preserve ambiguous product language.
 
 | Concept | Meaning | Repository correspondence |
 |---|---|---|
-| Product | Customer-facing capability family: CRM, Communications, Operations, Financial Operations, Automation, Insights, or Customer Experience. | Built (`20260918000001`). `platform_catalog_products` — seven rows, locked by a key `CHECK` with no insert grant to any role, ever. Distinct from `platform_products` (D43's flat sellable-line-item catalogue), which is untouched and still the historical/billing record. |
+| Product | Customer-facing capability family: the eight Gild Products (D61) — Sales, Service, Comms, Finance, Agents, Automations, Field, Studio. | Built (`20260918000001`, renamed to the Gild taxonomy by `20261001000001` — see D61). `platform_catalog_products` holds the eight Product rows plus one `kind = 'workspace'` row (Gild Workspace, shared substrate, never a ninth Product), locked by a key `CHECK` with no insert grant to any role, ever. Distinct from `platform_products` (D43's flat sellable-line-item catalogue), which is untouched and still the historical/billing record. |
 | Module | Coherent functional area inside a Product, such as Communications / Voice. | Built. `platform_catalog_modules`, not locked in count — new evidence may add one. Distinct from `MODULES`/`organization_modules` (the runtime/billing axis, D25), which is untouched; a canonical Feature reaches a legacy `MODULES` key through a runtime mapping (below), never a rename. |
 | Feature | Concrete capability inside a Module, such as Recording or Transcription. | Built. `platform_catalog_features`, with four independent axes — `lifecycle`, `implementation_state` (planned/partial/available, never inflated), `packaging_default`, `sale_status` — plus `metered`/`ai_powered` flags and advisory `meter_ids`/`provider_capabilities`. `platform_catalog_feature_dependencies` records one Feature requiring another. |
 | Runtime mapping | The seam between a canonical Feature and what actually backs it. | Built. `platform_catalog_runtime_mappings` — many-to-many by design: one legacy `MODULES` key (e.g. `reception`) backs Features under more than one Product (Communications/Voice's calling Features and CRM/Sales' pipeline Features alike), and a Feature may carry more than one mapping kind (`module_key`, `product_key`, `capability_key`, `provider_key`, `kernel`). |
@@ -146,15 +146,28 @@ Subscription and broad Entitlements. There is no tenant-zero, magic slug or unme
 
 ## Product boundaries
 
+The eight Gild Products and what each owns (D61 is the canonical decision; renamed in place from
+the seven-Product taxonomy this table used to list — `crm`→Sales, `communications`→Comms,
+`operations`→Field, `financial_operations`→Finance, `automation`→Automations,
+`customer_experience`→Studio — with `insights` demoted to Gild Workspace, shared substrate rather
+than a Product, and Service/Agents added):
+
 | Product | Owns |
 |---|---|
-| CRM | Customers and contacts, sales, CRM configuration and CRM intelligence. |
-| Communications | Voice, SMS and Email. |
-| Operations | Work, Scheduling, Resources, Assets and Locations, plus dispatch policy. |
-| Financial Operations | Tenant pricing and Price Book, quotes, invoices, payments and job economics. This is separate from GOLD's own Plans, subscriptions and billing. |
-| Automation | Workflows, triggers, conditions, actions, AI actions, execution and human review. |
-| Insights | Dashboards, reports, analytics and Ask GOLD experiences. |
-| Customer Experience | Website, booking, portal, forms, public brand/assets and domains. Public pages project business context; they do not own it. |
+| Gild Sales | Customers and contacts, sales, CRM configuration and CRM intelligence. |
+| Gild Service | Planned; catalogued with Features only, `unlisted` — no operational surface yet. |
+| Gild Comms | Voice, SMS and Email. |
+| Gild Finance | Tenant pricing and Price Book, quotes, invoices, payments and job economics. This is separate from GOLD's own Plans, subscriptions and billing. Configured from Settings today; no dedicated workspace. |
+| Gild Agents | The Agent tool loop, its actions and drafting. Reached from the page-support rail only; no dedicated workspace. |
+| Gild Automations | Workflows, triggers, conditions, actions, AI actions, execution and human review. |
+| Gild Field | Work, Scheduling, Resources, Assets and Locations, plus dispatch policy. |
+| Gild Studio | Website, booking, portal, forms, public brand/assets and domains. Public pages project business context; they do not own it. Configured from Settings today; no dedicated workspace. |
+
+**Gild Workspace** is shared substrate, not a Product: Home, Documents, reporting/dashboards,
+activity and the page-support rail. A sidebar workspace row exists only for a Product with a real
+operational surface today — Sales, Comms, Automations and Field; Service, Finance, Agents and
+Studio are catalogued but reached from Settings or the rail, never a hollow workspace row built
+merely because the catalogue lists them.
 
 Business Offerings answer “what do we offer and how do we describe it?” and belong to shared
 BusinessOS context. Financial Operations' Price Book answers “what do we charge and under
@@ -194,8 +207,19 @@ capabilities: Twilio can provide telephony voice, number inventory and SMS; Rese
 email; Stripe can provide payments; an AI provider can provide model inference.
 
 Provider ownership may be platform-managed or tenant-specific and must be explicit. Twilio has
-the deepest current binding/resource/provisioning path; Resend is lighter. Automated health,
-drift detection and repair are still part of platform hardening.
+the deepest current binding/resource/provisioning path (subaccounts, organizations bound
+beneath it); Resend is lighter. OpenAI, Anthropic and Google share a third, generic **Provider
+Account** shape with neither — a label, a credential, verification and default status, and
+nothing per-organization beneath it (`platform_provider_accounts`, reused rather than
+duplicated per provider). Automated health, drift detection and repair are still part of
+platform hardening.
+
+An **AI Runtime assignment** (`platform_ai_runtime_assignments`) is the platform-global choice of
+which implemented Provider Service, Provider Account and model answers one current AI
+capability — `operator_assistant` or `public_assistant` today. Explicit beats implicit: an
+assignment is authoritative and a failure never falls back to another vendor; no assignment for a
+capability keeps that deployment's legacy environment-variable default. Assigning one is a
+platform-staff act through `record_ai_runtime_assignment`, never a tenant one.
 
 A **Provider Service** (`platform_provider_services`) is one capability a Provider exposes at a
 grain finer than the Provider itself — Google is a Provider; Gemini Interactions and Routes are
@@ -221,14 +245,15 @@ features stay inside their Products. GOLD Intelligence may package those feature
 AI Receptionist is a Solution composed from Communications / Voice, Automation, CRM and the
 Intelligence runtime, not a new engine or Product.
 
-A domain caller asks for a capability (`draft_configuration`, today's one implemented example in
-`apps/web/lib/adapters/drafting`) never a vendor (`callClaude()`); which provider answers is the
-adapter registry's own choice, by environment, exactly as `lib/adapters/geocoding` and
-`lib/adapters/integrations` already work. Anthropic is the one AI Provider with real runtime
-behind it today (drafting, and the tool loop's own answering in `apps/api/app/providers/anthropic`);
-OpenAI and Gemini are catalogued Provider Services with `implementation_state = planned`
-throughout, not yet a second and third adapter. Normalizing all three behind one runtime/provider
-policy is deferred to its own AI runtime slice.
+A domain caller asks for a capability, never a vendor. Two capabilities are managed by AI Runtime
+assignment (above): `operator_assistant` and `public_assistant`, each answered by whichever of the
+Anthropic, OpenAI or Gemini adapters (`apps/api/app/providers/{anthropic,openai,google}`) the
+current assignment names, through one shared tool loop (`apps/api/app/ai/loop.py`) — a provider
+adapter translates one turn and never authorizes tenant access, executes a business action, or
+owns the loop itself. `draft_configuration` (`apps/web/lib/adapters/drafting`) is a third,
+still-unmanaged capability: it remains Anthropic-only, chosen by environment variable exactly as
+`lib/adapters/geocoding` and `lib/adapters/integrations` work, not yet brought under AI Runtime
+assignment.
 
 Initially local-model bindings are Platform Context only. GOLD's internal organization may
 consume those capabilities through ordinary managed features. External tenant organizations may

@@ -12,7 +12,7 @@ import {
   brandPalette,
   contrastRatio,
 } from '@/lib/domain/branding/palette';
-import { removeLogoAction, updateBrandAction, uploadLogoAction, type BrandState } from './actions';
+import { removeLogoAction, updateBrandAction, uploadLogoAction, type BrandState } from '@/app/organizations/[organizationId]/settings/actions';
 import { ConfirmSubmit } from '@/components/containers/dialog';
 
 const INITIAL: BrandState = { error: null };

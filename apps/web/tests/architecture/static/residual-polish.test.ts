@@ -193,8 +193,8 @@ describe('no retired organization-directory language in the active UI', () => {
 
 describe('existing shared rules, applied', () => {
   it('Team’s header actions are the default size, like every other page’s', () => {
-    expect(read(`${WEB}/app/organizations/[organizationId]/roles/add-member-sheet.tsx`)).not.toMatch(/AddMemberSheetContext\);\s*return \(\s*<Button type="button" size=/);
-    expect(read(`${WEB}/app/organizations/[organizationId]/roles/create-role-sheet.tsx`)).not.toMatch(/<Button type="button" size="small">\s*<Plus/);
+    expect(read(`${WEB}/features/team/add-member-sheet.tsx`)).not.toMatch(/AddMemberSheetContext\);\s*return \(\s*<Button type="button" size=/);
+    expect(read(`${WEB}/features/team/create-role-sheet.tsx`)).not.toMatch(/<Button type="button" size="small">\s*<Plus/);
   });
 
   it('a small select clears its base vertical padding, or its text is clipped in a 28px box', () => {

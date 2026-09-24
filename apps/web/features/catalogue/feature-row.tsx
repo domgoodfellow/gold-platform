@@ -21,7 +21,7 @@ import {
 } from '@gold/ui/components/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import type { ResolvedFeatureState } from '@/lib/domain/catalogue/organization-plans';
-import { setFeatureActivationAction } from '../actions';
+import { setFeatureActivationAction } from '@/app/organizations/[organizationId]/settings/actions';
 
 const READINESS_LABEL: Record<ResolvedFeatureState['readiness'], string> = {
   ready: 'Ready',

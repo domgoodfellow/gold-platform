@@ -121,11 +121,11 @@ describe('M11 — a destructive action with nothing between it and the write', (
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/settings/actions.ts`,
-      forms: `${APP_ROOT}/organizations/[organizationId]/settings/settings-forms.tsx`,
+      forms: `${FEATURES_ROOT}/tenancy/organization-settings-form.tsx`,
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/settings/actions.ts`,
-      forms: `${APP_ROOT}/organizations/[organizationId]/settings/brand-forms.tsx`,
+      forms: `${FEATURES_ROOT}/branding/brand-forms.tsx`,
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/work/actions.ts`,

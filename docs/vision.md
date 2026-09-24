@@ -15,17 +15,21 @@ Every organization receives the shared Foundation: identity and membership, Cust
 Locations, Assets, Resources, Work Items, Documents/Files, Events/Timeline, custom fields,
 configuration, audit, notifications, usage and provider connections.
 
-Seven customer-facing Products build on it:
+Eight customer-facing Gild Products build on it (D61):
 
 | Product | Customer outcome |
 |---|---|
-| CRM | Know customers, contacts, relationships and sales context. |
-| Communications | Conduct and preserve Voice, SMS and Email conversations. |
-| Operations | Plan and perform work with Scheduling, Resources, Assets and Locations. |
-| Financial Operations | Price tenant work, quote, invoice, take payment and understand job economics. |
-| Automation | Turn events into reliable actions with review where judgment is required. |
-| Insights | Understand operations through dashboards, reports, analytics and Ask GOLD. |
-| Customer Experience | Publish the business and let customers book, submit forms and use a portal. |
+| Gild Sales | Know customers, contacts, relationships and sales context. |
+| Gild Service | Planned — no operational surface yet. |
+| Gild Comms | Conduct and preserve Voice, SMS and Email conversations. |
+| Gild Finance | Price tenant work, quote, invoice, take payment and understand job economics. |
+| Gild Agents | The Agent tool loop and drafting, reached from the page-support rail. |
+| Gild Automations | Turn events into reliable actions with review where judgment is required. |
+| Gild Field | Plan and perform work with Scheduling, Resources, Assets and Locations. |
+| Gild Studio | Publish the business and let customers book, submit forms and use a portal. |
+
+**Gild Workspace** — dashboards, reports, analytics and Ask GOLD — is shared substrate every
+Product sits on, not a ninth Product.
 
 Products contain Modules; Modules contain concrete Features. Plans package Products, Modules,
 Features, allowances and defaults. Add-ons extend them. Each organization's Subscription and

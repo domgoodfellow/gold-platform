@@ -25,7 +25,7 @@ import {
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { TenantWorkspaceHeader } from '@/features/platform/tenant-workspace';
 import { deriveOrganizationFeatureState, EntitlementStatus, FeatureStatusBadges } from '@/features/catalogue/feature-badges';
-import { AssignPlanSheet, RecordCommercialTermForm } from '../forms';
+import { AssignPlanSheet, RecordCommercialTermForm } from '@/features/platform/organizations/forms';
 
 export const dynamic = 'force-dynamic';
 

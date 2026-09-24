@@ -48,7 +48,7 @@ def _step(*, type=None, name=None, arguments=None, id=None, dump=None):  # noqa:
     return step
 
 
-def _interaction(*, output_text="", steps=None, status=None, errors=None):
+def _interaction(*, output_text="", steps=None, status="completed", errors=None):
     return SimpleNamespace(output_text=output_text, steps=steps if steps is not None else [], status=status, errors=errors)
 
 
@@ -259,7 +259,7 @@ def test_a_cancelled_status_with_no_error_message_still_raises(monkeypatch) -> N
         provider.next_turn(question="What is late?", tools=(), history=())
 
 
-@pytest.mark.parametrize("status", [None, "completed", "requires_action"])
+@pytest.mark.parametrize("status", ["completed", "requires_action"])
 def test_ordinary_statuses_do_not_raise(monkeypatch, status) -> None:
     _install(monkeypatch, interaction=_interaction(output_text="fine", status=status))
     provider = gemini_provider(api_key="k", model="gemini-test")

@@ -4,7 +4,7 @@ import { useActionState } from 'react';
 import { ErrorText } from '@/components/controls/inputs';
 import { ConfirmSubmit } from '@/components/containers/dialog';
 import type { PendingInvitation } from '@/lib/domain/tenancy/invitations';
-import { revokeInvitationAction, type RevokeInvitationState } from './actions';
+import { revokeInvitationAction, type RevokeInvitationState } from '@/app/organizations/[organizationId]/roles/actions';
 
 const INITIAL: RevokeInvitationState = { error: null };
 

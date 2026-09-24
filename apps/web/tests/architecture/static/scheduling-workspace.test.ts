@@ -217,11 +217,11 @@ describe('the operating-hours Server Actions moved to the Schedule configuration
     expect(scheduleActions).toContain(`revalidatePath(\`/organizations/\${organizationId}/schedule\`)`);
   });
 
-  it('settings-forms.tsx no longer defines the operating-hours forms', () => {
-    const settingsForms = read(`${ROUTES}/settings/settings-forms.tsx`);
-    expect(settingsForms).not.toContain('AddOperatingHoursForm');
-    expect(settingsForms).not.toContain('OperatingHoursRow');
-    expect(settingsForms).toContain('OrganizationSettingsForm');
+  it('the tenancy settings form no longer defines the operating-hours forms', () => {
+    const settingsForm = read(`${WEB}/features/tenancy/organization-settings-form.tsx`);
+    expect(settingsForm).not.toContain('AddOperatingHoursForm');
+    expect(settingsForm).not.toContain('OperatingHoursRow');
+    expect(settingsForm).toContain('OrganizationSettingsForm');
   });
 });
 

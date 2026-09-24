@@ -297,10 +297,11 @@ listed in a table, not by clicking, and checked live rather than minted at log-i
    section appears in its sidebar, at `/organizations/{goldId}/platform`; the old `/platform` address
    redirects there, and says what is missing if the account has no GOLD membership.
 
-`/platform` provides a separate platform Sidebar for Overview, Organizations, Products,
-Modules, Meters, Pricing, Providers and Failures. Organization detail exposes that tenant's
-commercial terms, provider bindings/resources, usage and support-session entry. These routes
-never enter the tenant `navigation.ts` model.
+`/organizations/{goldId}/platform` renders its own nested Platform sidebar — Overview,
+Organizations, Products, Modules, Meters, Pricing, Providers, AI Runtime and Failures — inside
+GOLD's ordinary organization shell; it is a section of that shell, not a separate one. Organization
+detail exposes that tenant's commercial terms, provider bindings/resources, usage and
+support-session entry. These routes never enter the tenant `navigation.ts` model.
 
 **Provision a business.** *Provision a business* asks the same four things as founding, plus
 whose business it is — that person must already have an account. Log in as that owner: they have

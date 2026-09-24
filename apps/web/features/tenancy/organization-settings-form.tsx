@@ -5,7 +5,7 @@ import { FormField } from '@/components/controls/form';
 import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
 import { CurrencyField, TimeZoneField } from '@/features/locale/locale-fields';
-import { updateOrganizationAction, type SettingsActionState } from './actions';
+import { updateOrganizationAction, type SettingsActionState } from '@/app/organizations/[organizationId]/settings/actions';
 
 const INITIAL: SettingsActionState = { error: null };
 

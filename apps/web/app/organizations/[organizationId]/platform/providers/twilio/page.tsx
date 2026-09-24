@@ -18,7 +18,7 @@ import { providerReadiness } from '@/lib/domain/providers/status';
 import { ReadinessBadge, TenantHealthBadge } from '@/features/platform/providers/health-badge';
 import { ReconcileControl } from '@/features/platform/providers/twilio-account-controls';
 import { TwilioConfiguration } from '@/features/platform/providers/twilio-configuration';
-import { ProvisionTwilioForm } from '../../organizations/[targetOrganizationId]/forms';
+import { ProvisionTwilioForm } from '@/features/platform/organizations/forms';
 
 export const dynamic = 'force-dynamic';
 

@@ -13,7 +13,7 @@ import {
   PageDrawerTrigger,
 } from '@/components/containers/page-drawer';
 import type { Role } from '@/lib/domain/tenancy/roles';
-import { updateRoleAction, type UpdateRoleState } from './actions';
+import { updateRoleAction, type UpdateRoleState } from '@/app/organizations/[organizationId]/roles/actions';
 import { RoleEditorFields } from './role-editor-fields';
 
 const INITIAL: UpdateRoleState = { error: null };

@@ -6,12 +6,12 @@ import { listPendingInvitations } from '@/lib/domain/tenancy/invitations';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireOrganization } from '@/lib/route/organization';
-import { AddMemberSheetProvider, AddMemberTrigger } from './add-member-sheet';
-import { CreateRoleSheet } from './create-role-sheet';
-import { InvitationsTable } from './invitations-table';
-import { MembersTable } from './members-table';
-import { RolesTable } from './roles-table';
-import { resolveTeamView, teamViewHref } from './team-views';
+import { AddMemberSheetProvider, AddMemberTrigger } from '@/features/team/add-member-sheet';
+import { CreateRoleSheet } from '@/features/team/create-role-sheet';
+import { InvitationsTable } from '@/features/team/invitations-table';
+import { MembersTable } from '@/features/team/members-table';
+import { RolesTable } from '@/features/team/roles-table';
+import { resolveTeamView, teamViewHref } from '@/features/team/team-views';
 
 export const dynamic = 'force-dynamic';
 

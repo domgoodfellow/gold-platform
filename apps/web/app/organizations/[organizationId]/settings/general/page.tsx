@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/containers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { requireOrganization } from '@/lib/route/organization';
-import { OrganizationSettingsForm } from '../settings-forms';
+import { OrganizationSettingsForm } from '@/features/tenancy/organization-settings-form';
 
 export const dynamic = 'force-dynamic';
 

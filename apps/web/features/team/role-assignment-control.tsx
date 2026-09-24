@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { ErrorText, SelectInput } from '@/components/controls/inputs';
 import type { Role } from '@/lib/domain/tenancy/roles';
-import { assignRoleAction, type AssignRoleState } from './actions';
+import { assignRoleAction, type AssignRoleState } from '@/app/organizations/[organizationId]/roles/actions';
 
 const INITIAL: AssignRoleState = { error: null };
 

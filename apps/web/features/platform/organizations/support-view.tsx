@@ -9,8 +9,8 @@ import type { SupportMember, SupportSession } from '@/lib/domain/platform/suppor
 import {
   endSupportSessionAction,
   startSupportSessionAction,
-} from './actions';
-import { SUPPORT_SESSION_INITIAL } from './action-states';
+} from '@/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/actions';
+import { SUPPORT_SESSION_INITIAL } from '@/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/action-states';
 
 /**
  * Support access, on screen. There is no button anywhere that reaches a tenant's own operating

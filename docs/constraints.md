@@ -1524,8 +1524,10 @@ after proving through RLS that the human asking is platform staff
 (`app/domains/providers/operations.py`). A function granted to `authenticated` would let a staff
 member read the secret from a browser console, which is why using a stored credential is not done
 in `apps/web`: that runtime holds no signing secret and must not (D14). `provider_operator` holds
-no table grant and exactly two executes — the reader and `record_provider_account_verification`,
-so that only the runtime that actually asked the provider can mark an account verified. It is the
+no table grant and a small, narrow set of executes — the reader, `record_provider_account_verification`,
+and (added for AI Runtime assignment, below) `resolve_ai_runtime_assignment` — so that only the
+runtime that actually asked the provider can mark an account verified, or resolve which account
+answers an AI capability. It is the
 fourth role on `SUPABASE_JWT_SECRET`'s legacy path; `app/core/db.py` says not to widen that path,
 and this widens it by one role deliberately, narrowly and on record. Retiring it is the same
 migration the other three wait on.
@@ -1699,7 +1701,11 @@ or a component cannot hold a second rule.
 workspace for it whatever its roles hold; a member without a capability does not operate a
 workspace the business has. **Configuring is not operating**: a Settings entry is a `ConfigTarget`
 that borrows a workspace's *entitlement* and declares its own *configuration* permission
-(`field.manage` for call outcomes, `call.place` for calls). Administration is drawn one item at a
+(`field.manage` for call outcomes, `call.place` for calls). `field.manage` is deliberately one
+capability for declaring the shape of how a business records and runs its work, not narrowly
+"Custom Fields": it is the same act whether the shape being declared is a custom field, a work item
+type or status, a call outcome, or an opening-hours entry (Schedule configuration), so all four use
+it rather than each growing its own single-purpose permission. Administration is drawn one item at a
 time by the authority for that item — there is no Administration section a role has or lacks.
 Setup is kernel; Agent-assisted drafting is an optional accelerator inside it, and losing the
 `drafting` module does not remove the lifecycle.
@@ -1829,3 +1835,33 @@ planned, no Plan lost reach), `navigation.test.ts` (every workspace is a Product
 Product without a surface), `shell-projection.test.ts` (leaf against branch, one projection for the
 sidebar and the phone), `catalogue-plans.test.ts` (GOLD Internal still resolves every implemented
 Feature).
+
+### D62 — A generic Provider Account serves an API-key-only provider; AI Runtime assignment is a platform-global policy over it
+
+**Decision.** `platform_provider_accounts` (D54) already fit a provider with no subaccount or
+per-organization scope beneath it — a label, a credential, verification and default status, and
+nothing else. OpenAI, Anthropic and Google (`GENERIC_ACCOUNT_PROVIDER_KEYS`) use it directly rather
+than growing a second table; Twilio keeps its own bespoke binding/resource path (D44), because it
+alone needs one. `provider_operator` gained a third execute, `resolve_ai_runtime_assignment`,
+alongside the two D54 already named — same role, same narrowness, no table grant added.
+
+**AI Runtime assignment** (`platform_ai_runtime_assignments`) is the platform-global choice of
+which implemented Provider Service, Provider Account and model answers one current AI capability —
+`operator_assistant` (`apps/api/api/ai_ask.py`) or `public_assistant` (`apps/api/api/public_chat.py`)
+today, never a tenant-scoped row. `record_ai_runtime_assignment` refuses a service the catalogue
+has not marked `implementation_state = 'available'`, a provider/account mismatch, an inactive
+account or one with no credential stored — verification is deliberately not required (a freshly
+stored credential is unverified by default; requiring a successful `verify()` first would make
+Verify a mandatory gate rather than diagnostic evidence a staff member reads before assigning).
+The table itself carries no select grant to any role, staff included — `record_ai_runtime_assignment`
+and `platform_ai_runtime_assignment_overview` are the only two doors, both staff-checked internally,
+matching D40's rule for narrow commercial doors.
+
+**Explicit beats implicit, and never fails over.** An assignment is authoritative; a failure
+(missing credential, a provider error) is a failed run, never a silent switch to another vendor.
+No assignment for a capability keeps that deployment's legacy environment-variable default
+(`app.ai.registry`) — the same graceful-degradation rule D31 already established.
+
+**Holds.** `ai-runtime-assignments.test.ts` (no direct select for any role; every validation
+refusal; `resolve_ai_runtime_assignment` is `provider_operator`-only); the Python adapter test
+suites for each provider (translation only, mocked SDK boundary).

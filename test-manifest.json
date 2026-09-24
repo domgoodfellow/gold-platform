@@ -435,6 +435,12 @@
         "security"
       ]
     },
+    "apps/web/tests/architecture/static/feature-ownership-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "ui"
+      ]
+    },
     "apps/web/tests/architecture/static/organization-home.test.ts": {
       "category": "architecture-static",
       "concerns": [

@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
-import { RECORD_DOMAIN_INITIAL, recordEmailDomainAction } from './actions';
+import { RECORD_DOMAIN_INITIAL, recordEmailDomainAction } from '@/app/organizations/[organizationId]/settings/communications/actions';
 
 /** A business naming its own sending domain. Nothing here proposes one. */
 export function AddEmailDomainForm({ organizationId }: { organizationId: string }) {

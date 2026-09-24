@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/controls/button';
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import type { Role } from '@/lib/domain/tenancy/roles';
-import { inviteMemberAction, type InviteMemberState } from './actions';
+import { inviteMemberAction, type InviteMemberState } from '@/app/organizations/[organizationId]/roles/actions';
 
 const INITIAL: InviteMemberState = { error: null, link: null };
 

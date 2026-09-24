@@ -2,8 +2,8 @@
 
 import { Button } from '@/components/controls/button';
 import { Card } from '@/components/containers/card';
-import { EmptyState, SectionHeading } from '@/components/containers/section';
-import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { EmptyState } from '@/components/containers/section';
+import { Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { useActionState, useState } from 'react';
 import {
   CAPABILITIES,
@@ -26,11 +26,10 @@ import type { ConfigurationProposal } from '@/lib/domain/configuration/proposals
 import {
   applyAction,
   discardAction,
-  launchAction,
-  proposeAction,
   reviseAction,
   type SetupActionState,
-} from './actions';
+} from '@/app/organizations/[organizationId]/setup/actions';
+import { Error, Section } from './setup-controls';
 
 const INITIAL: SetupActionState = { error: null };
 
@@ -44,95 +43,6 @@ const DAYS = [
   { value: 6, label: 'Saturday' },
   { value: 7, label: 'Sunday' },
 ];
-
-function Error({ state }: { state: SetupActionState }) {
-  if (!state.error) return null;
-  return (
-    <ErrorText role="alert" className="mt-1">
-      {state.error}
-    </ErrorText>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-6">
-      <h3 className="text-sm font-medium">{title}</h3>
-      <div className="mt-2 space-y-2">{children}</div>
-    </section>
-  );
-}
-
-/**
- * Describe the business, or answer what the last proposal asked.
- *
- * One box and nothing else. The alternative — a form with a field per thing the platform wants
- * to know — is the form this whole module exists to avoid: it asks a business to already know
- * what a status is before it can say what it does.
- */
-export function DescribeForm({
-  organizationId,
-  refining,
-  disabled,
-}: {
-  organizationId: string;
-  refining: boolean;
-  disabled: boolean;
-}) {
-  const [state, action, pending] = useActionState(proposeAction, INITIAL);
-
-  return (
-    <form action={action} className="mt-4 max-w-2xl">
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <input type="hidden" name="refine" value={refining ? 'yes' : 'no'} />
-
-      <label className="block text-sm" htmlFor="description">
-        {refining
-          ? 'Answer anything below, or say what to change. What you have already agreed to is kept.'
-          : 'Describe the business in your own words — the work it does, how a job goes from start to finish, what you charge for, when you are open.'}
-      </label>
-      <TextArea
-        id="description"
-        name="description"
-        rows={refining ? 4 : 8}
-        required
-        disabled={disabled}
-        size="small"
-        className="mt-2 w-full"
-      />
-
-      <Button
-        type="submit"
-        disabled={disabled || pending}
-        tone="secondary"
-        size="small"
-        className="mt-2"
-      >
-        {pending ? 'Drafting…' : refining ? 'Redraft' : 'Draft a setup'}
-      </Button>
-      <Error state={state} />
-    </form>
-  );
-}
-
-/**
- * The one deliberate action that moves a business from Setup to Live. `launchOrganization`
- * re-checks readiness itself immediately before writing, so this form cannot launch a business
- * past a blocker the page merely rendered a moment earlier.
- */
-export function LaunchForm({ organizationId }: { organizationId: string }) {
-  const [state, action, pending] = useActionState(launchAction, INITIAL);
-
-  return (
-    <form action={action}>
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <Button type="submit" disabled={pending}>
-        {pending ? 'Launching…' : 'Launch business'}
-      </Button>
-      <Error state={state} />
-    </form>
-  );
-}
 
 /** A row of text inputs with a remove button, used by four of the lists below. */
 function Row({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
@@ -856,39 +766,5 @@ export function ProposalReview({
       <Error state={applyState} />
       <Error state={discardState} />
     </div>
-  );
-}
-
-/**
- * What has been proposed before, and what happened to it.
- *
- * A failed apply is the row that earns this section. `configureBusiness` is not atomic, so a
- * failure leaves a business part-way configured — and the honest thing is to say which step
- * refused, in the words the database or the domain layer used, beside what the business turned
- * out to have afterwards.
- */
-export function ProposalHistory({ proposals }: { proposals: ConfigurationProposal[] }) {
-  if (proposals.length === 0) return null;
-
-  return (
-    <section className="mt-10 border-t border-border pt-4">
-      <SectionHeading>What has been proposed before</SectionHeading>
-      <ul className="mt-2 space-y-3">
-        {proposals.map((proposal) => (
-          <li key={proposal.id} className="text-sm">
-            <span className="text-subtle">
-              {new Date(proposal.createdAt).toLocaleString()} · {proposal.outcome} · drafted by{' '}
-              {proposal.draftedBy}
-            </span>
-            <p className="mt-1 max-w-2xl whitespace-pre-wrap opacity-80">{proposal.description}</p>
-            {proposal.detail && (
-              <ErrorText className="mt-1 max-w-2xl">
-                Stopped part-way: {proposal.detail}
-              </ErrorText>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }

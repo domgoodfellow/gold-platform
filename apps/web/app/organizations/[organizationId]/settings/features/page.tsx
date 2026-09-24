@@ -10,7 +10,7 @@ import {
 } from '@/lib/domain/catalogue/catalogue';
 import { organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganization } from '@/lib/route/organization';
-import { FeatureRow } from './feature-row';
+import { FeatureRow } from '@/features/catalogue/feature-row';
 
 export const dynamic = 'force-dynamic';
 

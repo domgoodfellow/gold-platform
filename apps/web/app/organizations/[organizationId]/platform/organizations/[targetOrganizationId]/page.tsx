@@ -9,7 +9,7 @@ import { getTenant } from '@/lib/domain/platform/tenants';
 import { activeSupportSession, listMembersForSupport } from '@/lib/domain/platform/support';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { TenantWorkspaceHeader } from '@/features/platform/tenant-workspace';
-import { SupportSessionBanner, SupportSessionOpener } from './support-view';
+import { SupportSessionBanner, SupportSessionOpener } from '@/features/platform/organizations/support-view';
 import { currentPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import { initializeGoldWorkspaceAction } from './actions';

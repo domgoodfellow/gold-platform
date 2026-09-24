@@ -15,7 +15,7 @@ import { listProviderBindings, listProviderResources } from '@/lib/domain/provid
 import { localHealth } from '@/lib/domain/providers/reconciliation';
 import { TenantHealthBadge } from '@/features/platform/providers/health-badge';
 import { TenantWorkspaceHeader } from '@/features/platform/tenant-workspace';
-import { ProvisionTwilioForm, RegisterPhoneNumberForm, SetResourceStatusForm } from '../forms';
+import { ProvisionTwilioForm, RegisterPhoneNumberForm, SetResourceStatusForm } from '@/features/platform/organizations/forms';
 
 export const dynamic = 'force-dynamic';
 

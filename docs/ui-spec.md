@@ -262,10 +262,6 @@ active entity's compact registry shows each field's label/key, type and required
 Edit field flows use responsive Sheets; the edit Sheet presents key, type and entity as immutable
 metadata while only label, required state, position and choices (where applicable) are editable.
 
-**The phone bar does not collapse into a drawer or a "More" menu.** A drawer needs state, a
-toggle, a focus trap and an escape key to be correct; a "More" menu would be a second place an
-area could live.
-
 **The desktop sidebar does collapse, to the tablet rail's own icon-only width.** Unlike a phone
 drawer this needs none of that machinery — nothing overlays, nothing traps focus, the column
 just narrows. `AppShell` uses `@gold/ui`'s `SidebarProvider`; the shared shadcn implementation
@@ -743,16 +739,18 @@ gaps belong to Product work, not new generic controls.
 
 `/platform/providers` is a list, not a settings table: each row says whether the provider is
 operational and why not, how many organizations depend on it, and how many are failing. A provider
-opens a detail workspace only when it has an account model to operate; today that is Twilio alone,
-and no other row pretends. The workspace is the standard grammar: one `PageHeader` with the
-provider's status in `meta`, **Configure** in `actions`, local tabs (Overview, Accounts,
-Organizations) as links, and the drawer from `ConfigureRegistrar`.
+opens a detail workspace only when it has an account model to operate. Twilio's is its own
+bespoke workspace (subaccounts, organizations bound beneath it); OpenAI, Anthropic and Google share
+one generic account workspace (`GENERIC_ACCOUNT_PROVIDER_KEYS`) with no subaccount or organization
+binding — a label, a credential, verification and default status, nothing else. A provider with
+neither model gets the plain services-only page.
 
-Configure renders `TwilioConfiguration` and so does the full route
-`/platform/providers/twilio/configure`; there is one set of fields, actions and validation. A
-credential field is write-only and says whether a value is stored. Disabling an account is
-confirmed in place and says what it does not touch. A tenant never sees any of this: it sees phone
-numbers, routing and recording in its own workspace.
+Twilio's Configure renders `TwilioConfiguration`, and so does its full route
+`/platform/providers/twilio/configure`; the generic providers render `ProviderConfiguration` the
+same way. Either shape has one set of fields, actions and validation regardless of whether it is
+reached from the drawer or the full route. A credential field is write-only and says whether a
+value is stored. Disabling an account is confirmed in place and says what it does not touch. A
+tenant never sees any of this: it sees phone numbers, routing and recording in its own workspace.
 
 ## 10. What this document does not decide
 

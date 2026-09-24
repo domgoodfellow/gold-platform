@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { resolveTeamView } from '@/app/organizations/[organizationId]/roles/team-views';
+import { resolveTeamView } from '@/features/team/team-views';
 
 /**
  * The Team workspace recomposition: one collection page with three URL-backed sibling views
@@ -17,6 +17,7 @@ import { resolveTeamView } from '@/app/organizations/[organizationId]/roles/team
  */
 
 const ROUTES = fileURLToPath(new URL('../../../app/organizations/[organizationId]/roles', import.meta.url));
+const FEATURES = fileURLToPath(new URL('../../../features/team', import.meta.url));
 
 describe('Team views are URL-backed', () => {
   it('absent or invalid resolves to Members; the other two resolve exactly', () => {
@@ -31,7 +32,7 @@ describe('Team views are URL-backed', () => {
 
 describe('Members is a collection, not an inline creation form', () => {
   const page = readFileSync(`${ROUTES}/page.tsx`, 'utf8');
-  const membersTable = readFileSync(`${ROUTES}/members-table.tsx`, 'utf8');
+  const membersTable = readFileSync(`${FEATURES}/members-table.tsx`, 'utf8');
 
   it('renders the members collection and keeps role assignment reachable inline', () => {
     expect(page).toContain('MembersTable');
@@ -45,7 +46,7 @@ describe('Members is a collection, not an inline creation form', () => {
 });
 
 describe('one Add Member Sheet exposes both existing operations', () => {
-  const sheet = readFileSync(`${ROUTES}/add-member-sheet.tsx`, 'utf8');
+  const sheet = readFileSync(`${FEATURES}/add-member-sheet.tsx`, 'utf8');
 
   it('hosts both invite-by-email and add-existing-account, defaulting to invite', () => {
     expect(sheet).toContain('InviteMemberForm');
@@ -60,7 +61,7 @@ describe('one Add Member Sheet exposes both existing operations', () => {
   });
 
   it('keeps the copyable invitation link visible after a successful invite', () => {
-    const inviteForm = readFileSync(`${ROUTES}/invite-member-form.tsx`, 'utf8');
+    const inviteForm = readFileSync(`${FEATURES}/invite-member-form.tsx`, 'utf8');
     expect(inviteForm).toContain('state.link');
     expect(inviteForm).toContain('Copy');
   });
@@ -75,8 +76,8 @@ describe('one Add Member Sheet exposes both existing operations', () => {
 });
 
 describe('Invitations is a collection with confirmed revocation', () => {
-  const invitationsTable = readFileSync(`${ROUTES}/invitations-table.tsx`, 'utf8');
-  const revokeDialog = readFileSync(`${ROUTES}/revoke-invitation-dialog.tsx`, 'utf8');
+  const invitationsTable = readFileSync(`${FEATURES}/invitations-table.tsx`, 'utf8');
+  const revokeDialog = readFileSync(`${FEATURES}/revoke-invitation-dialog.tsx`, 'utf8');
 
   it('renders pending invitations as a table', () => {
     expect(invitationsTable).toContain('DataTable');
@@ -89,10 +90,10 @@ describe('Invitations is a collection with confirmed revocation', () => {
 });
 
 describe('Roles is a compact collection, not a capability-form page', () => {
-  const rolesTable = readFileSync(`${ROUTES}/roles-table.tsx`, 'utf8');
-  const createSheet = readFileSync(`${ROUTES}/create-role-sheet.tsx`, 'utf8');
-  const editSheet = readFileSync(`${ROUTES}/edit-role-sheet.tsx`, 'utf8');
-  const editorFields = readFileSync(`${ROUTES}/role-editor-fields.tsx`, 'utf8');
+  const rolesTable = readFileSync(`${FEATURES}/roles-table.tsx`, 'utf8');
+  const createSheet = readFileSync(`${FEATURES}/create-role-sheet.tsx`, 'utf8');
+  const editSheet = readFileSync(`${FEATURES}/edit-role-sheet.tsx`, 'utf8');
+  const editorFields = readFileSync(`${FEATURES}/role-editor-fields.tsx`, 'utf8');
 
   it('summarizes permission count rather than rendering every capability as a badge', () => {
     expect(rolesTable).not.toContain('Badge');

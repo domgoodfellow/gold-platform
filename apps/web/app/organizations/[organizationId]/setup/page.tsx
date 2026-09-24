@@ -12,7 +12,10 @@ import {
 import { computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { requireOrganization } from '@/lib/route/organization';
-import { DescribeForm, LaunchForm, ProposalHistory, ProposalReview } from './setup-forms';
+import { DescribeForm } from '@/features/setup/describe-form';
+import { LaunchForm } from '@/features/setup/launch-form';
+import { ProposalHistory } from '@/features/setup/proposal-history';
+import { ProposalReview } from '@/features/setup/proposal-review';
 
 export const dynamic = 'force-dynamic';
 

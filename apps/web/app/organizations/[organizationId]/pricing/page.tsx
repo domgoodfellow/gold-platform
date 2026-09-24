@@ -10,8 +10,8 @@ import { listModuleSettings } from '@/lib/domain/tenancy/modules';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { requireOrganization } from '@/lib/route/organization';
-import { ChooseCurrencyForm, CreatePriceItemForm, EditPriceItemForm } from './price-forms';
-import { PaymentAccountRow } from './payment-account-row';
+import { ChooseCurrencyForm, CreatePriceItemForm, EditPriceItemForm } from '@/features/pricing/price-forms';
+import { PaymentAccountRow } from '@/features/pricing/payment-account-row';
 
 export const dynamic = 'force-dynamic';
 

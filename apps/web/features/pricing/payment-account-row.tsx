@@ -3,7 +3,7 @@
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
-import { disconnectPaymentAccountAction } from '../settings/actions';
+import { disconnectPaymentAccountAction } from '@/app/organizations/[organizationId]/settings/actions';
 
 /**
  * Where this business is paid.

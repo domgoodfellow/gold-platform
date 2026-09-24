@@ -9,7 +9,7 @@ import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { requireOrganization } from '@/lib/route/organization';
 import { updateProfileAction } from '../actions';
-import { BrandForm, LogoForm } from '../brand-forms';
+import { BrandForm, LogoForm } from '@/features/branding/brand-forms';
 
 export const dynamic = 'force-dynamic';
 

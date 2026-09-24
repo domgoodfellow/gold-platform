@@ -129,14 +129,14 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     expect(page).not.toContain('./pending-invitations');
     expect(page).not.toContain('<PendingInvitations');
 
-    const membersTable = readFileSync(`${ROUTES}/roles/members-table.tsx`, 'utf8');
+    const membersTable = readFileSync(`${WEB_FEATURES}/team/members-table.tsx`, 'utf8');
     expect(membersTable).toContain('RoleAssignmentControl');
 
-    const addMemberSheet = readFileSync(`${ROUTES}/roles/add-member-sheet.tsx`, 'utf8');
+    const addMemberSheet = readFileSync(`${WEB_FEATURES}/team/add-member-sheet.tsx`, 'utf8');
     expect(addMemberSheet).toContain('AddMemberForm');
     expect(addMemberSheet).toContain('InviteMemberForm');
 
-    const rolesTable = readFileSync(`${ROUTES}/roles/roles-table.tsx`, 'utf8');
+    const rolesTable = readFileSync(`${WEB_FEATURES}/team/roles-table.tsx`, 'utf8');
     expect(rolesTable).toContain('EditRoleSheet');
   });
 

@@ -4,7 +4,7 @@ import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/i
 import { Button } from '@/components/controls/button';
 import { useActionState, useEffect } from 'react';
 import type { Role } from '@/lib/domain/tenancy/roles';
-import { addMemberAction, type AddMemberState } from './actions';
+import { addMemberAction, type AddMemberState } from '@/app/organizations/[organizationId]/roles/actions';
 
 const INITIAL: AddMemberState = { error: null, created: false };
 

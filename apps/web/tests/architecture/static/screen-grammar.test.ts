@@ -93,7 +93,7 @@ describe('an empty collection explains state; it does not repeat the header’s 
       expect(read(`${ORG}/${file}`), file).not.toContain('emptyAction');
     }
     for (const table of ['members-table', 'invitations-table', 'roles-table']) {
-      expect(read(`${ORG}/roles/${table}.tsx`), table).not.toContain('emptyAction');
+      expect(read(`${WEB}/features/team/${table}.tsx`), table).not.toContain('emptyAction');
     }
   });
 

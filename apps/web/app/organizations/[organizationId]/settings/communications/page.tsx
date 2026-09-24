@@ -7,7 +7,7 @@ import { ButtonLink } from '@/components/controls/button';
 import { listProviderBindings, listProviderResources } from '@/lib/domain/providers/bindings';
 import { callingNumber } from '@/lib/domain/reception/telephony';
 import { requireOrganization } from '@/lib/route/organization';
-import { AddEmailDomainForm } from './forms';
+import { AddEmailDomainForm } from '@/features/communications/email-domain-form';
 
 export const dynamic = 'force-dynamic';
 

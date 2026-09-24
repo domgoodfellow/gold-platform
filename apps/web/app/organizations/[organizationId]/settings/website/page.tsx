@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/containers/page-header';
 import { areaLabel } from '@/lib/navigation';
 
 import { HomepageEditor } from '@/features/public-site/homepage-editor';
-import { CommunicationProfileForm } from './communication-profile-form';
+import { CommunicationProfileForm } from '@/features/communications/communication-profile-form';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { homepageEditorState } from '@/lib/domain/public-site/public-site';
 import { requireOrganization } from '@/lib/route/organization';

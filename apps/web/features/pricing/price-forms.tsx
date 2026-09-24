@@ -11,7 +11,7 @@ import {
   createPriceItemAction,
   updatePriceItemAction,
   type PriceItemState,
-} from './actions';
+} from '@/app/organizations/[organizationId]/pricing/actions';
 
 const INITIAL: PriceItemState = { error: null };
 /**
