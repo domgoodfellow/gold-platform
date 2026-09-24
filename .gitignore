@@ -60,3 +60,5 @@ apps/web/e2e/.demo-context.json
 apps/web/playwright-report/
 apps/web/test-results/
 apps/web/blob-report/
+
+.artifacts/
