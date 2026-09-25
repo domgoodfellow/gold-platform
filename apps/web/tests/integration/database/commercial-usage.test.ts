@@ -16,9 +16,8 @@ import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
  * The generalized usage ledger (D43, corrected): what a call cost GOLD, in the provider's own
  * currency, what it charged a tenant, in the tenant's own currency, and who may see which half.
  *
- * **The rate is written over a direct connection for the retail side**, exactly as
- * `communications.test.ts` already does — `communication_rates` has no application write path
- * at all, unchanged by this slice. **The provider side goes through the real staff door**,
+ * **The retail rate is written over a direct connection**, exactly as `communications.test.ts`
+ * does, into `platform_retail_rates`. **The provider side goes through the real staff door**,
  * `recordProviderRate`, since that one is new, and now names Twilio explicitly (D43's
  * provider/meter split) rather than leaving it implied by the meter.
  */
@@ -64,9 +63,9 @@ async function newTenant(label: string): Promise<Tenant> {
   const customerId = await createCustomer(db, { organizationId, name: 'A Caller' });
 
   // Opening credit, over the same direct connection communications.test.ts already uses — D40's
-  // purse has no application write path at all, unchanged by this slice.
+  // purse has no application write path at all.
   await pg.query(
-    `insert into public.communication_credits (organization_id, amount_minor, currency, reason, note)
+    `insert into public.organization_credits (organization_id, amount_minor, currency, reason, note)
      values ($1, 100000, $2, 'purchase', 'opening credit')`,
     [organizationId, CUSTOMER_CURRENCY],
   );
@@ -93,15 +92,25 @@ beforeAll(async () => {
   // reads across every organization by provider and meter alone. The only rows that could ever
   // exist there in a dev environment are this file's own, so removing them here restores the
   // precondition the first test needs — it is this suite's own residue, not another test's.
+  //
+  // A usage event now records the provider rate it was costed with, and that reference is a
+  // foreign key, so the rate cannot be deleted while an event still points at it. The events that
+  // do are this suite's own residue from that earlier run and go first.
+  await pg.query(
+    `delete from public.usage_events
+      where provider_rate_id in (
+        select id from public.platform_provider_rates
+         where provider_key = 'twilio' and meter_id = 'voice_minutes')`,
+  );
   await pg.query(
     `delete from public.platform_provider_rates where provider_key = 'twilio' and meter_id = 'voice_minutes'`,
   );
 
-  // Twenty minor units a minute, retail — communication_rates, unchanged by this slice.
+  // Twenty minor units a minute, retail.
   await pg.query(
-    `insert into public.communication_rates (currency, channel, unit_amount_minor)
-     values ($1, 'voice', 20)
-     on conflict (currency, channel) do update set unit_amount_minor = excluded.unit_amount_minor`,
+    `insert into public.platform_retail_rates (meter_id, currency, unit_amount_micros, source)
+     values ('voice_minutes', $1, 20000000, 'commercial-usage.test.ts')
+     on conflict do nothing`,
     [CUSTOMER_CURRENCY],
   );
 
@@ -145,10 +154,11 @@ describe('usage, cost and charge (D43)', () => {
 
     const summary = await organizationCommercialSummary(staff, { organizationId: tenant.organizationId });
     const row = summary.find((entry) => entry.meterId === 'voice_minutes');
-    // No provider rate recorded yet — unpriced reads as free, D40's own rule applied to cost.
-    // A cost of exactly zero needs no currency to be true, so the margin is the full charge.
+    // No provider rate recorded yet, so GOLD's cost is not known: it is not costed, which is not
+    // free. The retail charge stands, but a margin needs a cost, so none is reported.
     expect(row?.providerCostMinor).toBe(0);
-    expect(row?.marginMinor).toBe(40);
+    expect(row?.uncostedQuantity).toBe(2);
+    expect(row?.marginMinor).toBeNull();
   });
 
   it("records GOLD's own cost, from Twilio, once a provider rate exists — independently of the retail charge and in Twilio's own currency", async () => {

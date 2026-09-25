@@ -5,6 +5,19 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### One model for usage and pricing
+
+Calls, texts and email are now priced the same way every other billable thing is: by a dated price for what is
+measured (a minute of voice, a text segment, an email). The separate price list for reaching people is gone, and its
+prices were carried over unchanged, so nothing a business is charged today changes. Prices can now be scheduled to
+start on a future date, and never in the past.
+
+Every record of usage now says which capability produced it and, where there is one, which of the business's own numbers
+or sending domains carried it and which of GOLD's provider accounts billed for it, and it keeps the exact prices used so
+a later price change never rewrites what was charged. A carrier that reports the same finished call twice no longer bills
+it twice. Usage is now kept even when it cannot be priced (a business that has not set a currency, or a meter with no price): it shows as not priced instead of free, and nothing is lost. The credit a business has bought is now a plain purse of purchases and adjustments; what has been spent is read
+from the charges on its usage, so it exists in one place instead of two. See D65.
+
 ### A smaller, safer database surface
 
 A business could ask the platform whether *another* business had its public booking or card payments switched on

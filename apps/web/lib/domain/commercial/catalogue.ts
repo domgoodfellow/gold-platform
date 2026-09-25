@@ -209,7 +209,7 @@ export async function listProviderRates(
   return (data ?? []).map(toRate);
 }
 
-/** What GOLD charges. Readable by any signed-in member, matching `communication_rates_select`. No provider dimension — a business is charged one retail price per meter regardless of which vendor GOLD used. */
+/** What GOLD charges. Readable by a member of any business or by staff (D64). No provider dimension — a business is charged one retail price per meter regardless of which vendor GOLD used. */
 export async function listRetailRates(db: Db, input: { meterId?: string } = {}): Promise<Rate[]> {
   let query = db
     .from('platform_retail_rates')
@@ -267,7 +267,10 @@ export type RecordProviderRateInput = {
   note?: string;
 };
 
-export type RecordRetailRateInput = Omit<RecordProviderRateInput, 'providerKey'>;
+export type RecordRetailRateInput = Omit<RecordProviderRateInput, 'providerKey'> & {
+  /** When the price starts. Defaults to now; never in the past. */
+  effectiveFrom?: string;
+};
 
 /** Staff only — `public.record_provider_rate` refuses anyone not listed in `platform_staff`. */
 export async function recordProviderRate(db: Db, input: RecordProviderRateInput): Promise<string> {
@@ -302,6 +305,7 @@ export async function recordRetailRate(db: Db, input: RecordRetailRateInput): Pr
     p_source_url: input.sourceUrl,
     p_approval_state: input.approvalState ?? 'approved',
     p_note: input.note ?? '',
+    p_effective_from: input.effectiveFrom,
   });
 
   if (error) {

@@ -20,12 +20,10 @@ export default async function PricingPage({ params }: PageProps<'/organizations/
   const { organizationId: goldId } = await params;
   await requirePlatformArea(goldId, 'platform.commercial');
   const db = await getDb();
-  const [plans, providerRates, retailRates, meters, providers, products, productPrices, communications, costs] = await Promise.all([
+  const [plans, providerRates, retailRates, meters, providers, products, productPrices, costs] = await Promise.all([
     listPlans(db), listProviderRates(db), listRetailRates(db), listMeters(db), listProviders(db), listProducts(db), listProductPrices(db),
-    db.from('communication_rates').select('currency, channel, unit_amount_minor, updated_at'),
     db.from('platform_plan_cost_assumptions').select('plan_id, currency, provider_cost_minor, labour_cost_minor'),
   ]);
-  if (communications.error) throw new Error(communications.error.message);
   if (costs.error) throw new Error(costs.error.message);
   const prices = new Map(await Promise.all(plans.map(async (plan) => [plan.id, await listPlanPrices(db, plan.id)] as const)));
   const quotas = new Map(await Promise.all(plans.map(async (plan) => [plan.id, await listPlanQuotas(db, plan.id)] as const)));
@@ -41,7 +39,6 @@ export default async function PricingPage({ params }: PageProps<'/organizations/
     return { plan, monthly, annual, cost, allowance: (quotas.get(plan.id) ?? []).map((q) => `${q.includedQuantity.toLocaleString()} ${q.label.toLowerCase()}`).join(' · ') || '—', contribution: monthly && cost ? (monthly.amountMinor - cost.provider_cost_minor - cost.labour_cost_minor) / monthly.amountMinor : null };
   });
   const usage = [
-    ...(communications.data ?? []).map((r) => ({ id: `communication-${r.currency}-${r.channel}`, capability: r.channel === 'voice' ? 'Voice' : r.channel.toUpperCase(), price: `${money(r.unit_amount_minor, r.currency)} / ${r.channel === 'voice' ? 'minute' : 'segment'}`, currency: r.currency, source: 'Communication rates', effective: r.updated_at })),
     ...retailRates.map((r) => ({ id: r.id, capability: meterById.get(r.meterId)?.description ?? r.meterId, price: displayRate(r.unitAmountMicros, r.currency, meterById.get(r.meterId)?.unit ?? 'unit'), currency: r.currency, source: r.source, effective: r.effectiveFrom })),
   ];
   const internal = plans.find((plan) => plan.key === 'gold_internal');

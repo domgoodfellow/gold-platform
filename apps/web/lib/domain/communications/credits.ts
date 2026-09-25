@@ -15,50 +15,44 @@ import { DomainError } from '@/lib/domain/errors';
  * is why `market.md` needed one row corrected rather than its position rewritten.
  *
  * **Nothing here can add credit**, and that is deliberate rather than unfinished. No policy on
- * `communication_credits` permits an insert by anybody signed in, so a member topping up their
+ * `organization_credits` permits an insert by anybody signed in, so a member topping up their
  * own purse is impossible rather than merely ungranted. Money in arrives from a payment, through
  * a machine role, and that is the next slice.
  */
 
-export const CHANNELS = ['voice', 'sms', 'email'] as const;
+/**
+ * The meters that reaching somebody is measured in. A voice minute, a text segment and an email
+ * are three meters of the one economics model; this file knows which meter is which and owns no
+ * price, no rate table and no arithmetic about either.
+ */
+export const COMMUNICATION_METERS = ['voice_minutes', 'sms_segment', 'email_send'] as const;
 
-export type Channel = (typeof CHANNELS)[number];
+export type CommunicationMeter = (typeof COMMUNICATION_METERS)[number];
 
 /** Wording for the one screen that renders a statement. Describes the platform, not a tenant. */
-export const CHANNEL_LABELS: Record<Channel, string> = {
-  voice: 'Calls',
-  sms: 'Text messages',
-  email: 'Email',
-};
-
-export type CreditEntry = {
-  id: string;
-  /** Positive is money in, negative is money spent. Minor units of this business's currency. */
-  amountMinor: number;
-  currency: string;
-  reason: 'purchase' | 'usage' | 'adjustment';
-  channel: Channel | null;
-  note: string;
-  occurredAt: string;
+export const COMMUNICATION_METER_LABELS: Record<CommunicationMeter, string> = {
+  voice_minutes: 'Calls',
+  sms_segment: 'Text messages',
+  email_send: 'Email',
 };
 
 export type Rate = {
-  channel: Channel;
+  meterId: CommunicationMeter;
   currency: string;
-  /** What one unit costs: a minute of voice, one message otherwise. */
-  unitAmountMinor: number;
+  /** What one unit costs, in micro-minor units of the currency (I10). */
+  unitAmountMicros: number;
 };
 
-function isChannel(value: string | null): value is Channel {
-  return value !== null && (CHANNELS as readonly string[]).includes(value);
+function isCommunicationMeter(value: string): value is CommunicationMeter {
+  return (COMMUNICATION_METERS as readonly string[]).includes(value);
 }
 
 /**
  * What is left, in minor units.
  *
- * **One answer, and it is a sum rather than a column** (I4). There is no balance field anywhere
- * in the schema, for the same reason there is no stored invoice total: two places holding one
- * number disagree eventually, and then the answer is whichever was written last.
+ * **One answer, and it is a sum rather than a column** (I4). Credit bought, less every charge on
+ * a usage event, in the business's own currency; there is no balance field anywhere in the
+ * schema, for the same reason there is no stored invoice total.
  */
 export async function creditBalance(
   db: Db,
@@ -75,40 +69,15 @@ export async function creditBalance(
   return Number(data ?? 0);
 }
 
-/** The statement: what moved, newest first. */
-export async function listCreditEntries(
-  db: Db,
-  input: { organizationId: string; limit?: number },
-): Promise<CreditEntry[]> {
-  const { data, error } = await db
-    .from('communication_credits')
-    .select('id, amount_minor, currency, reason, channel, note, occurred_at')
-    .eq('organization_id', input.organizationId)
-    .order('occurred_at', { ascending: false })
-    .limit(input.limit ?? 100);
-
-  if (error) {
-    throw new DomainError(error.message, 'credits.list_failed');
-  }
-
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    amountMinor: Number(row.amount_minor),
-    currency: row.currency,
-    reason: row.reason as CreditEntry['reason'],
-    channel: isChannel(row.channel) ? row.channel : null,
-    note: row.note,
-    occurredAt: row.occurred_at,
-  }));
-}
-
 /**
- * What this deployment charges, in a business's own currency.
+ * What this deployment charges for reaching people, in a business's own currency.
+ *
+ * **The database resolves the rate** (`effective_retail_rates`), the same resolution a usage
+ * event is priced with; this only picks the meters that are communications.
  *
  * **Empty is a complete answer and the most common one.** A deployment that has priced nothing
  * charges nothing and draws nothing down, which is what makes credit opt-in rather than a thing
- * that stops every existing tenant working on the day it ships. The screen says so rather than
- * showing a balance nobody is spending.
+ * that stops every existing tenant working on the day it ships.
  */
 export async function listRates(
   db: Db,
@@ -116,22 +85,21 @@ export async function listRates(
 ): Promise<Rate[]> {
   if (!input.currency) return [];
 
-  const { data, error } = await db
-    .from('communication_rates')
-    .select('channel, currency, unit_amount_minor')
-    .eq('currency', input.currency.toUpperCase());
+  const { data, error } = await db.rpc('effective_retail_rates', {
+    p_currency: input.currency,
+  });
 
   if (error) {
     throw new DomainError(error.message, 'credits.rates_failed');
   }
 
   return (data ?? []).flatMap((row) =>
-    isChannel(row.channel)
+    isCommunicationMeter(row.meter_id)
       ? [
           {
-            channel: row.channel,
+            meterId: row.meter_id,
             currency: row.currency,
-            unitAmountMinor: Number(row.unit_amount_minor),
+            unitAmountMicros: Number(row.unit_amount_micros),
           },
         ]
       : [],
@@ -141,9 +109,9 @@ export async function listRates(
 /**
  * Everything the settings screen needs to say about money for reaching people.
  *
- * One call rather than three, because the three questions are only meaningful together: a
- * balance with no rate beside it does not say how long it lasts, and a rate with no balance does
- * not say whether anything can be spent.
+ * One call rather than two, because the two questions are only meaningful together: a balance
+ * with no rate beside it does not say how long it lasts, and a rate with no balance does not say
+ * whether anything can be spent.
  */
 export async function communicationsAccount(
   db: Db,

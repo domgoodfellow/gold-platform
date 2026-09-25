@@ -38,7 +38,6 @@ const COMMERCIAL = [
   'platform_plan_quotas',
   'platform_plan_prices',
   'platform_retail_rates',
-  'communication_rates',
 ] as const;
 
 const CONTROL_PLANE = [
@@ -146,7 +145,7 @@ describe('commercial configuration is for a member of some business or staff', (
   }
 
   it('is not vacuous: the tables the deny is proved on hold rows', async () => {
-    for (const table of ['platform_plans', 'platform_plan_product_grants', 'platform_plan_quotas', 'communication_rates', 'platform_retail_rates']) {
+    for (const table of ['platform_plans', 'platform_plan_product_grants', 'platform_plan_quotas', 'platform_retail_rates']) {
       expect(await realCount(table)).toBeGreaterThan(0);
     }
   });

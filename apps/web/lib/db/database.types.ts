@@ -1145,67 +1145,6 @@ export type Database = {
           },
         ]
       }
-      communication_credits: {
-        Row: {
-          amount_minor: number
-          call_id: string | null
-          channel: Database["public"]["Enums"]["communication_channel"] | null
-          created_by: string | null
-          currency: string
-          id: string
-          note: string
-          occurred_at: string
-          organization_id: string
-          reason: string
-        }
-        Insert: {
-          amount_minor: number
-          call_id?: string | null
-          channel?: Database["public"]["Enums"]["communication_channel"] | null
-          created_by?: string | null
-          currency: string
-          id?: string
-          note?: string
-          occurred_at?: string
-          organization_id: string
-          reason: string
-        }
-        Update: {
-          amount_minor?: number
-          call_id?: string | null
-          channel?: Database["public"]["Enums"]["communication_channel"] | null
-          created_by?: string | null
-          currency?: string
-          id?: string
-          note?: string
-          occurred_at?: string
-          organization_id?: string
-          reason?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "communication_credits_call_same_org"
-            columns: ["organization_id", "call_id"]
-            isOneToOne: false
-            referencedRelation: "calls"
-            referencedColumns: ["organization_id", "id"]
-          },
-          {
-            foreignKeyName: "communication_credits_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "communication_credits_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "platform_tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       communication_entries: {
         Row: {
           body: string
@@ -1246,30 +1185,6 @@ export type Database = {
             referencedColumns: ["organization_id", "id"]
           },
         ]
-      }
-      communication_rates: {
-        Row: {
-          channel: Database["public"]["Enums"]["communication_channel"]
-          currency: string
-          id: string
-          unit_amount_minor: number
-          updated_at: string
-        }
-        Insert: {
-          channel: Database["public"]["Enums"]["communication_channel"]
-          currency: string
-          id?: string
-          unit_amount_minor: number
-          updated_at?: string
-        }
-        Update: {
-          channel?: Database["public"]["Enums"]["communication_channel"]
-          currency?: string
-          id?: string
-          unit_amount_minor?: number
-          updated_at?: string
-        }
-        Relationships: []
       }
       communication_threads: {
         Row: {
@@ -2935,6 +2850,54 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_products"
             referencedColumns: ["key"]
+          },
+        ]
+      }
+      organization_credits: {
+        Row: {
+          amount_minor: number
+          created_by: string | null
+          currency: string
+          id: string
+          note: string
+          occurred_at: string
+          organization_id: string
+          reason: string
+        }
+        Insert: {
+          amount_minor: number
+          created_by?: string | null
+          currency: string
+          id?: string
+          note?: string
+          occurred_at?: string
+          organization_id: string
+          reason: string
+        }
+        Update: {
+          amount_minor?: number
+          created_by?: string | null
+          currency?: string
+          id?: string
+          note?: string
+          occurred_at?: string
+          organization_id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_credits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_credits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5856,47 +5819,95 @@ export type Database = {
       usage_events: {
         Row: {
           created_at: string
-          customer_charge_micros: number
-          customer_currency: string
+          customer_charge_micros: number | null
+          customer_currency: string | null
+          feature_id: string | null
+          fulfilled_through: string
           id: string
           meter_id: string
           note: string
           occurred_at: string
           organization_id: string
-          provider_cost_micros: number
+          provider_account_id: string | null
+          provider_binding_id: string | null
+          provider_cost_applicable: boolean
+          provider_cost_micros: number | null
           provider_currency: string | null
           provider_key: string
+          provider_rate_id: string | null
+          provider_resource_id: string | null
           quantity: number
+          reference: string | null
+          retail_rate_id: string | null
         }
         Insert: {
           created_at?: string
-          customer_charge_micros?: number
-          customer_currency: string
+          customer_charge_micros?: number | null
+          customer_currency?: string | null
+          feature_id?: string | null
+          fulfilled_through?: string
           id?: string
           meter_id: string
           note?: string
           occurred_at?: string
           organization_id: string
-          provider_cost_micros?: number
+          provider_account_id?: string | null
+          provider_binding_id?: string | null
+          provider_cost_applicable?: boolean
+          provider_cost_micros?: number | null
           provider_currency?: string | null
           provider_key: string
+          provider_rate_id?: string | null
+          provider_resource_id?: string | null
           quantity: number
+          reference?: string | null
+          retail_rate_id?: string | null
         }
         Update: {
           created_at?: string
-          customer_charge_micros?: number
-          customer_currency?: string
+          customer_charge_micros?: number | null
+          customer_currency?: string | null
+          feature_id?: string | null
+          fulfilled_through?: string
           id?: string
           meter_id?: string
           note?: string
           occurred_at?: string
           organization_id?: string
-          provider_cost_micros?: number
+          provider_account_id?: string | null
+          provider_binding_id?: string | null
+          provider_cost_applicable?: boolean
+          provider_cost_micros?: number | null
           provider_currency?: string | null
           provider_key?: string
+          provider_rate_id?: string | null
+          provider_resource_id?: string | null
           quantity?: number
+          reference?: string | null
+          retail_rate_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "usage_events_account_same_provider"
+            columns: ["provider_account_id", "provider_key"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_accounts"
+            referencedColumns: ["id", "provider_key"]
+          },
+          {
+            foreignKeyName: "usage_events_binding_same_org_and_provider"
+            columns: ["organization_id", "provider_binding_id", "provider_key"]
+            isOneToOne: false
+            referencedRelation: "organization_provider_bindings"
+            referencedColumns: ["organization_id", "id", "provider_key"]
+          },
+          {
+            foreignKeyName: "usage_events_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "platform_catalog_features"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "usage_events_meter_id_fkey"
             columns: ["meter_id"]
@@ -5924,6 +5935,36 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_providers"
             referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "usage_events_provider_rate_matches"
+            columns: [
+              "provider_rate_id",
+              "meter_id",
+              "provider_key",
+              "provider_currency",
+            ]
+            isOneToOne: false
+            referencedRelation: "platform_provider_rates"
+            referencedColumns: ["id", "meter_id", "provider_key", "currency"]
+          },
+          {
+            foreignKeyName: "usage_events_resource_same_org_and_binding"
+            columns: [
+              "organization_id",
+              "provider_binding_id",
+              "provider_resource_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "organization_provider_resources"
+            referencedColumns: ["organization_id", "binding_id", "id"]
+          },
+          {
+            foreignKeyName: "usage_events_retail_rate_matches"
+            columns: ["retail_rate_id", "meter_id", "customer_currency"]
+            isOneToOne: false
+            referencedRelation: "platform_retail_rates"
+            referencedColumns: ["id", "meter_id", "currency"]
           },
         ]
       }
@@ -7059,6 +7100,14 @@ export type Database = {
         Args: { p_connection_id: string; p_organization_id: string }
         Returns: undefined
       }
+      effective_retail_rates: {
+        Args: { p_at?: string; p_currency: string }
+        Returns: {
+          currency: string
+          meter_id: string
+          unit_amount_micros: number
+        }[]
+      }
       end_support_session: { Args: { p_id: string }; Returns: undefined }
       external_card_payment_availability: {
         Args: { p_invoice_id: string; p_provider: string }
@@ -7141,6 +7190,8 @@ export type Database = {
           provider_cost_minor: number
           provider_currency: string
           quantity: number
+          uncosted_quantity: number
+          unpriced_quantity: number
         }[]
       }
       organization_effective_entitlements: {
@@ -7215,17 +7266,21 @@ export type Database = {
       organization_usage_detail: {
         Args: { p_organization_id: string }
         Returns: {
+          awaiting_reconciliation: boolean
           customer_charge_micros: number
           customer_currency: string
           estimated_cost_micros: number
           estimated_currency: string
+          fulfilled_through: string
           meter_id: string
           occurred_at: string
           provider_key: string
+          provider_state: string
           quantity: number
           reconciled_at: string
           reconciled_cost_micros: number
           reconciled_currency: string
+          retail_state: string
           usage_event_id: string
         }[]
       }
@@ -7664,6 +7719,7 @@ export type Database = {
         Args: {
           p_approval_state?: string
           p_currency: string
+          p_effective_from?: string
           p_meter_id: string
           p_note?: string
           p_source: string
@@ -8167,7 +8223,7 @@ export type Database = {
       }
     }
     Enums: {
-      communication_channel: "voice" | "sms" | "email"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -8297,9 +8353,7 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {
-      communication_channel: ["voice", "sms", "email"],
-    },
+    Enums: {},
   },
 } as const
 

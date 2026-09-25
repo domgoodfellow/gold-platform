@@ -20,10 +20,13 @@ export type UsageEvent = {
   meterId: string;
   quantity: number;
   occurredAt: string;
-  /** What the tenant trades in — never GOLD's own cost, and never a provider's billing currency. */
-  customerCurrency: string;
-  /** The retail charge, in minor units — never GOLD's own cost. */
-  customerChargeMinor: number;
+  /** What the tenant trades in — never GOLD's own cost, and never a provider's billing currency. Null when the business has not said. */
+  customerCurrency: string | null;
+  /**
+   * The retail charge, in minor units — never GOLD's own cost. **Null means not priced**, which is
+   * not the same as a price of zero: the business has no currency, or the meter has no rate.
+   */
+  customerChargeMinor: number | null;
   note: string;
 };
 
@@ -48,14 +51,17 @@ export async function listUsageEvents(
     quantity: Number(row.quantity),
     occurredAt: row.occurred_at,
     customerCurrency: row.customer_currency,
-    customerChargeMinor: Math.round(Number(row.customer_charge_micros) / 1_000_000),
+    customerChargeMinor:
+      row.customer_charge_micros === null ? null : Math.round(Number(row.customer_charge_micros) / 1_000_000),
     note: row.note,
   }));
 }
 
 export type CommercialSummaryRow = {
   meterId: string;
-  customerCurrency: string;
+  /** Null for usage of a business that has not said what it trades in. */
+  customerCurrency: string | null;
+  /** Only what has been priced; usage that has not is counted in `unpricedQuantity`. */
   customerChargeMinor: number;
   /** Null when nothing has ever been priced for this group — no provider has billed GOLD yet. */
   providerCurrency: string | null;
@@ -64,9 +70,14 @@ export type CommercialSummaryRow = {
   /**
    * Null whenever `providerCurrency` and `customerCurrency` disagree and the cost is not exactly
    * zero — a real conversion is not built (D43), and this is honest about that rather than
-   * subtracting unlike currencies.
+   * subtracting unlike currencies. Also null while any of the group is not priced or not costed:
+   * a margin needs both.
    */
   marginMinor: number | null;
+  /** Quantity with no retail price yet. Not free: nothing has been charged for it. */
+  unpricedQuantity: number;
+  /** Quantity with no provider cost yet, awaiting a provider rate or a reconciliation. */
+  uncostedQuantity: number;
 };
 
 /**
@@ -102,6 +113,8 @@ export async function organizationCommercialSummary(
     providerCostMinor: Number(row.provider_cost_minor),
     quantity: Number(row.quantity),
     marginMinor: row.margin_minor === null ? null : Number(row.margin_minor),
+    unpricedQuantity: Number(row.unpriced_quantity),
+    uncostedQuantity: Number(row.uncosted_quantity),
   }));
 }
 
@@ -111,15 +124,24 @@ export type UsageEventDetail = {
   quantity: number;
   occurredAt: string;
   providerKey: string;
-  /** What GOLD first estimated this reading cost, and in what currency — never overwritten. */
-  estimatedCostMicros: number;
+  /** What GOLD first estimated this reading cost, and in what currency — never overwritten. Null when it was not costed. */
+  estimatedCostMicros: number | null;
   estimatedCurrency: string | null;
   /** The latest reconciliation against this reading, if any — null on both fields when none exists yet. */
   reconciledCostMicros: number | null;
   reconciledCurrency: string | null;
   reconciledAt: string | null;
-  customerCurrency: string;
-  customerChargeMinor: number;
+  customerCurrency: string | null;
+  /** Null means not priced, which is different from a price of zero — see `retailState`. */
+  customerChargeMinor: number | null;
+  /** Priced (a price of nothing included), or why it is not: no currency, or no rate. */
+  retailState: 'priced' | 'no_currency' | 'no_rate';
+  /** Costed by a provider rate, not costed yet, or carrying no provider cost at all. */
+  providerState: 'costed' | 'uncosted' | 'not_applicable';
+  /** How the usage was carried: the business's own binding, GOLD's account, or not recorded. */
+  fulfilledThrough: 'organization_binding' | 'platform_account' | 'unrecorded';
+  /** An applicable provider cost that no provider statement has confirmed yet. */
+  awaitingReconciliation: boolean;
 };
 
 /**
@@ -149,13 +171,18 @@ export async function organizationUsageDetail(
     quantity: Number(row.quantity),
     occurredAt: row.occurred_at,
     providerKey: row.provider_key,
-    estimatedCostMicros: Number(row.estimated_cost_micros),
+    estimatedCostMicros: row.estimated_cost_micros === null ? null : Number(row.estimated_cost_micros),
     estimatedCurrency: row.estimated_currency,
     reconciledCostMicros: row.reconciled_cost_micros === null ? null : Number(row.reconciled_cost_micros),
     reconciledCurrency: row.reconciled_currency,
     reconciledAt: row.reconciled_at,
     customerCurrency: row.customer_currency,
-    customerChargeMinor: Math.round(Number(row.customer_charge_micros) / 1_000_000),
+    customerChargeMinor:
+      row.customer_charge_micros === null ? null : Math.round(Number(row.customer_charge_micros) / 1_000_000),
+    retailState: row.retail_state as UsageEventDetail['retailState'],
+    providerState: row.provider_state as UsageEventDetail['providerState'],
+    fulfilledThrough: row.fulfilled_through as UsageEventDetail['fulfilledThrough'],
+    awaitingReconciliation: row.awaiting_reconciliation,
   }));
 }
 

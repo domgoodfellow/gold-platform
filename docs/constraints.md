@@ -752,16 +752,20 @@ Nobody can spend money they haven't already handed over.
 **Why not metering.** Count-the-minutes-bill-monthly is a utility company — invoices, arrears,
 dunning, credit risk — a different business from the one `market.md` describes, adopted to
 support one feature.
-**Load-bearing.** A balance is a sum of a ledger (`communication_credits`, append-only, signed),
-never a column (I4) — `public.credit_balance` is the one answer. The refusal lives where the
-spend starts: `open_call` asks `app.may_spend_on` before it writes a room, long before the carrier
-is asked. Nobody signed in may add credit — no policy on `communication_credits` permits an
-insert, for anyone, staff included (I21); money in arrives only through a payment via a machine
-role, the same shape `payment_webhook` already established.
-**A rate is GOLD's price, written by migration** — `communication_rates` carries no
-`organization_id` (outside I2 the way `platform_staff` is, not in breach of it), and there is no
-application write path. Nothing is seeded: with no rate for a channel, that channel costs nothing
-and refuses nothing, so every existing tenant keeps working unchanged.
+**Load-bearing.** A balance is a sum, never a column (I4): credit bought and adjusted
+(`organization_credits`, append-only, signed, holding nothing but money in) less every customer
+charge on a usage event, in the business's own currency. `public.credit_balance` is the one
+answer. The refusal lives where the spend starts: `open_call` asks `app.may_spend_on` for the
+`voice_minutes` meter before it writes a room, long before the carrier is asked. Nobody signed in
+may add credit — no policy on `organization_credits` permits an insert, for anyone, staff
+included (I21); money in arrives only through a payment via a machine role, the same shape
+`payment_webhook` already established.
+**A price is a retail rate for a meter.** Voice, SMS and email are the meters `voice_minutes`,
+`sms_segment` and `email_send`, priced in `platform_retail_rates` like every other meter:
+effective-dated, staff-written through `record_retail_rate` (D43), resolved by
+`app.retail_rate_at`. With no rate for a meter in the business's currency, that meter costs
+nothing and refuses nothing, so every existing tenant keeps working unchanged. Communications
+know which meter a channel is and own no price.
 **Not built here:** the purchase itself — a tenant paying GOLD is a charge on GOLD's own processor
 account, the opposite direction and a different code path from D27. Until it exists, a purse is
 filled by migration or not at all.
@@ -808,13 +812,12 @@ an entitlement is a term that covers now and never a flag. Neither is a stored t
   `SECURITY DEFINER` function checking `platform_staff` and granted `execute` to that role
   alone, the `provision_organization` shape rather than the `payment_webhook` one. The table
   itself still admits no insert from any role directly, staff included.
-- **A price is GOLD's.** No `organization_id` (outside I2 the way `communication_rates` and
-  `platform_staff` are), per currency, and nothing seeded — a module with no price costs
+- **A price is GOLD's.** No `organization_id` (outside I2 the way `platform_staff` is), per currency, and nothing seeded — a module with no price costs
   nothing and refuses nothing, so every existing tenant keeps working unchanged. **Amended by
   D43** in the same direction as the term itself: `platform_provider_rates` and
   `platform_retail_rates` are written through `public.record_provider_rate` /
   `public.record_retail_rate`, staff-only `SECURITY DEFINER` functions, rather than by
-  migration alone — `communication_rates` (D40) is untouched and still migration-only.
+  migration alone.
 - **No RLS policy reads any of this.** D25's rule survives the arrival of money: a module is
   navigation and billing, never authorization, and a lapsed subscription must never become an
   access control decision.
@@ -826,7 +829,7 @@ path, nothing to remember.
 
 **Rejected.** An `expires_at` column on `organization_modules`: it is the stored total I4 refuses,
 and updating it would lose the fact that the module was ever off — the same reason that table has
-no update policy today. Merging terms into `communication_credits`: a term is dated and a balance
+no update policy today. Merging terms into `organization_credits`: a term is dated and a balance
 is drawn down, and forcing a fixed subscription price into a balance rebuilds the metering utility
 D40 refused.
 
@@ -918,8 +921,7 @@ transcription, text-to-speech, AI tokens, email sends, and whatever a future pro
 
 **The catalogue, and a correction found writing the first provider bindings against it.**
 `platform_meters` (what can be metered) and `platform_products` (what GOLD sells, recurring: the
-base platform, one row per real module, a seat) are platform vocabulary, migration-written, like
-`communication_channel` was. Neither is authorization and neither is read by any policy.
+base platform, one row per real module, a seat) are platform vocabulary, migration-written. Neither is authorization and neither is read by any policy.
 These are the current persistence model: `platform_products` rows are sellable line items,
 not the canonical customer-facing Product families, and `organization_commercial_terms` are
 not yet Plans or Subscriptions. The target vocabulary and correspondence are authoritative in
@@ -933,12 +935,11 @@ Corrected: `platform_meters` carries no provider column at all, and a new table,
 A meter describes consumption; a provider is who answered it, for a given reading. This changes
 no historical usage's meaning — a row already saying `voice_minutes` still does.
 
-**Two rate cards, not one, and neither is `communication_rates`.** `platform_provider_rates` is
+**Two rate cards.** `platform_provider_rates` is
 what GOLD pays a named provider, keyed by `(provider, meter, currency, effective date)` now
 rather than by meter alone — the same correction one level down, since two providers pricing one
 meter needs two rows, not a table that can only hold one. `platform_retail_rates` is what GOLD
-charges, for every meter except voice, SMS and email, whose retail price stays
-`communication_rates` (D40) rather than being duplicated; it carries no provider dimension at
+charges, for every meter, voice, SMS and email included; it carries no provider dimension at
 all, because a business is charged one retail price per meter regardless of which vendor GOLD
 used underneath it. Both are append-only and effective-dated — "current" is the latest approved
 row at or before a moment, never an edited one — and both carry `unit_amount_micros`: millionths
@@ -1924,7 +1925,7 @@ upload has no connection, and an unreadable format is refused before it is store
   capability rows of `platform_catalog_runtime_mappings`.
 - **Commercial configuration**, for a member of some business or platform staff: `platform_plans`,
   the three plan grant tables, `platform_plan_quotas`, `platform_plan_prices`,
-  `platform_retail_rates` and `communication_rates`. A business is entitled to know what it is
+  `platform_retail_rates`. A business is entitled to know what it is
   offered and charged.
 - **Control plane**, staff only: `platform_providers`, `platform_provider_services`,
   `platform_provider_service_features`, `platform_connector_app_features`,
@@ -1945,3 +1946,52 @@ expose every column. They are a deliberate security boundary and not an oversigh
 **Holds.** `catalogue-visibility.test.ts` (each class from both sides against real row counts, and no
 `using (true)` policy beside another for the same role); `platform-billing.test.ts` (the door
 allows a billing manager and refuses another business, a signed-out caller and staff).
+
+### D65 — Usage is one model: a meter, an event that says how it was fulfilled, and two rates
+
+**Decision.** `platform_meters` says what is measured. `usage_events` is the one record of usage,
+written only by `app.record_usage`. An event names, where they apply, the catalogue feature that
+produced it, the business's provider binding and resource, the GOLD provider account that served
+it, and the two rate rows its amounts came from. Retail and provider rates are effective-dated and
+unique on their key with the moment, so the rate in force at any moment is one row and never a tie.
+
+**Usage exists whether or not it can be priced.** A provider carried it, so GOLD incurred it. A
+business with no currency, a meter with no retail rate, or a provider with no rate on file changes
+what can be charged and costed, never whether the usage is recorded. The customer charge, its
+currency and the provider cost are nullable: null is *not priced* / *not costed*, which is not
+zero; a rate of nothing prices the usage at nothing and says so by naming the rate row. A charge
+needs a currency, a rate row needs a charge, and usage that carries no provider cost says
+`provider_cost_applicable = false`. The staff readers (`organization_usage_detail`,
+`organization_commercial_summary`) report the state (`priced`, `no_currency`, `no_rate`; `costed`,
+`uncosted`, `not_applicable`; awaiting reconciliation) and withhold a margin until every event in
+a group has both a price and a cost.
+
+**Fulfilment is the event's fact, not the meter's.** The same meter can be carried by GOLD's own
+account for one business and by the business's own number, domain or connection for another, so
+how it was fulfilled belongs to the path that fulfilled it. `fulfilled_through` on the event is
+`organization_binding` (a binding is named, and only then), `platform_account` (GOLD's account
+served it, so naming one is refused as false provenance) or `unrecorded` (the reporter could not
+say, a gap that can be filled later). A row that says nothing is unrecorded.
+
+**History is written once.** An event snapshots what usage cost GOLD and what it charged the
+business, each in its own currency, and records which rate rows those came from. A later rate, or
+a reconciliation against a provider invoice, adds a row beside the event and never changes it; the
+rate rows an event used cannot be deleted from under it. A rate cannot be dated in the past: it is
+appended, never rewritten backwards.
+
+**Communications are consumers.** A call reports voice minutes with the capability
+(`outbound_calling` or `inbound_calling`), the number it used and the binding that carries it, and
+the call's id as the reference so a carrier retry cannot bill it twice. It is recorded whatever
+the business's pricing state. Spending is refused by `app.may_spend_on(organization, meter,
+units)`, which asks the retail rate for that meter. `organization_credits` keeps only what usage
+cannot say, purchases and adjustments, so what was spent has one record instead of two.
+
+**Known limits.** `app.charge_for_call` names the carrier as `twilio` in SQL: a call should reach
+its provider through the binding and service that fulfil the capability, not assume one. The link
+from a feature to its meters is still the `meter_ids` array on `platform_catalog_features`, which
+`record_usage` reads; it becomes a relation with the catalogue.
+
+**Holds.** `usage-economics.test.ts` (resolution by meter, currency and moment; provenance;
+tenant integrity; history preserved across rate changes; usage kept in every pricing state);
+`usage-boundary.test.ts` (`communication_rates` stays gone; only `app.record_usage` inserts a
+usage event; the composite keys; amounts stay nullable with no default).

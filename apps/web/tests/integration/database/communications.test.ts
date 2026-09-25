@@ -3,11 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createCustomer } from '@/lib/domain/customers/customers';
-import {
-  communicationsAccount,
-  creditBalance,
-  listCreditEntries,
-} from '@/lib/domain/communications/credits';
+import { communicationsAccount, creditBalance } from '@/lib/domain/communications/credits';
 import { recordCall } from '@/lib/domain/reception/calls';
 import { foundBusiness } from '@/tests/support/founding';
 
@@ -15,13 +11,13 @@ import { foundBusiness } from '@/tests/support/founding';
  * The communications engine: one purse, and a refusal that lives in the database.
  *
  * **The assertion that carries this slice is that a business cannot credit itself.** Everything
- * else here is arithmetic; that one is the reason no policy on `communication_credits` permits
+ * else here is arithmetic; that one is the reason no policy on `organization_credits` permits
  * an insert by anybody signed in. A capability withheld would be a capability somebody could
  * grant themselves through the roles screen.
  *
- * **The rate table is written over a direct connection**, the way `platform_staff` is in the
- * demo builder and for the same reason: no application path may write one, deliberately, so a
- * test that needed one through the application would be evidence the boundary had a hole.
+ * **A price is a retail rate for a meter** (`platform_retail_rates`), the same table every other
+ * meter is priced in. It is written over a direct connection here so this file does not depend on
+ * a staff session; `usage-economics.test.ts` proves the staff door and the resolution rules.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -31,8 +27,8 @@ const CONNECTION =
   process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
 // Currencies nobody else's test trades in, so pricing one cannot change what another suite sees.
-// `communication_rates` has no tenant to scope it by — that is the point of the table — so
-// isolation here is by currency rather than by organization.
+// A retail rate has no tenant to scope it by — that is the point of the table — so isolation here
+// is by currency rather than by organization.
 //
 // **The unpriced one must be a code no migration prices.** It was CAD until the launch commercial
 // snapshot deliberately seeded CAD voice and SMS rates; a real currency is only "unpriced" until
@@ -76,11 +72,11 @@ beforeAll(async () => {
   pg = new Client({ connectionString: CONNECTION });
   await pg.connect();
 
-  // Ten cents a minute, in a currency invented for this file.
+  // Ten minor units a minute, in a currency invented for this file.
   await pg.query(
-    `insert into public.communication_rates (currency, channel, unit_amount_minor)
-     values ($1, 'voice', 10)
-     on conflict (currency, channel) do update set unit_amount_minor = excluded.unit_amount_minor`,
+    `insert into public.platform_retail_rates (meter_id, currency, unit_amount_micros, source)
+     values ('voice_minutes', $1, 10000000, 'communications.test.ts')
+     on conflict do nothing`,
     [PRICED],
   );
 
@@ -102,7 +98,7 @@ describe('a purse', () => {
   it('cannot be topped up by the business holding it', async () => {
     // **The assertion this file exists for.** No policy permits the insert, so a member who
     // holds every capability their business can grant still cannot give themselves money.
-    const { error } = await priced.db.from('communication_credits').insert({
+    const { error } = await priced.db.from('organization_credits').insert({
       organization_id: priced.organizationId,
       amount_minor: 100_000,
       currency: PRICED,
@@ -116,7 +112,7 @@ describe('a purse', () => {
 
   it('is invisible to another business (I1)', async () => {
     await pg.query(
-      `insert into public.communication_credits
+      `insert into public.organization_credits
          (organization_id, amount_minor, currency, reason, note)
        values ($1, 5000, $2, 'purchase', 'opening credit')`,
       [priced.organizationId, PRICED],
@@ -128,13 +124,30 @@ describe('a purse', () => {
     expect(await creditBalance(unpriced.db, { organizationId: priced.organizationId })).toEqual(0);
   });
 
-  it('reads back as a statement anybody in the business can see', async () => {
-    const entries = await listCreditEntries(priced.db, {
-      organizationId: priced.organizationId,
-    });
-    expect(entries.length).toBeGreaterThan(0);
-    expect(entries[0].reason).toEqual('purchase');
-    expect(entries[0].currency).toEqual(PRICED);
+  it('reads back as a statement anybody in the business can see, and holds nothing but money in', async () => {
+    const { data, error } = await priced.db
+      .from('organization_credits')
+      .select('reason, currency, amount_minor')
+      .eq('organization_id', priced.organizationId);
+    expect(error).toBeNull();
+    expect(data?.length).toBeGreaterThan(0);
+    expect(data?.[0]).toMatchObject({ reason: 'purchase', currency: PRICED });
+  });
+
+  it('cannot be spent from as a ledger: usage is not a row in it', async () => {
+    // What was spent is the charge on each usage event. A `usage` row here would be a second
+    // copy of that number, so the table refuses to hold one.
+    const { error } = await pg
+      .query(
+        `insert into public.organization_credits (organization_id, amount_minor, currency, reason)
+         values ($1, -5, $2, 'usage')`,
+        [priced.organizationId, PRICED],
+      )
+      .then(
+        () => ({ error: null }),
+        (e: { code?: string }) => ({ error: e }),
+      );
+    expect(error).not.toBeNull();
   });
 });
 
@@ -156,8 +169,8 @@ describe('what a deployment charges', () => {
       currency: PRICED,
     });
     expect(account.priced).toBe(true);
-    expect(account.rates[0].unitAmountMinor).toEqual(10);
-    expect(account.rates[0].channel).toEqual('voice');
+    expect(account.rates[0].unitAmountMicros).toEqual(10_000_000);
+    expect(account.rates[0].meterId).toEqual('voice_minutes');
   });
 });
 
@@ -244,12 +257,20 @@ describe('what a finished call costs', () => {
     const after = await creditBalance(priced.db, { organizationId: priced.organizationId });
     expect(before - after).toEqual(20);
 
-    const [entry] = await listCreditEntries(priced.db, {
-      organizationId: priced.organizationId,
-    });
-    expect(entry.reason).toEqual('usage');
-    expect(entry.channel).toEqual('voice');
-    expect(entry.amountMinor).toEqual(-20);
+    // The spend is the charge on one usage event for two voice minutes, which is what the balance
+    // just fell by: there is no second ledger row to agree with it.
+    const { data: events } = await priced.db
+      .from('usage_events')
+      .select('meter_id, quantity, customer_charge_micros')
+      .eq('organization_id', priced.organizationId)
+      .eq('note', `call ${callId}`);
+    expect(events).toEqual([
+      { meter_id: 'voice_minutes', quantity: 2, customer_charge_micros: 20_000_000 },
+    ]);
+
+    // A carrier that delivers `completed` again does not bill the call again.
+    await pg.query('select app.charge_for_call($1, $2)', [callId, 90]);
+    expect(await creditBalance(priced.db, { organizationId: priced.organizationId })).toEqual(after);
   });
 
   it('charges nothing for a call nobody answered', async () => {

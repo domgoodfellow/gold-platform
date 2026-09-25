@@ -194,7 +194,7 @@ export default async function PlanAndUsagePage({
                 </span>
                 <span className="font-medium">{entry.meterId}</span>
                 <span>{entry.quantity}</span>
-                <span className="tabular-nums">{formatMinor(entry.customerChargeMinor, entry.customerCurrency)}</span>
+                <span className="tabular-nums">{entry.customerChargeMinor === null ? 'Not priced yet' : formatMinor(entry.customerChargeMinor, entry.customerCurrency)}</span>
               </div>
             ))}
           </DividedList>

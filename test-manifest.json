@@ -375,6 +375,14 @@
         "schema"
       ]
     },
+    "apps/web/tests/architecture/database/usage-boundary.test.ts": {
+      "category": "architecture-db",
+      "concerns": [
+        "commercial",
+        "security"
+      ],
+      "note": "communication_rates stays gone; only app.record_usage writes usage_events."
+    },
     "apps/web/tests/architecture/static/adapters.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -1348,6 +1356,15 @@
       ]
     },
     "apps/web/tests/integration/database/work-item-transitions.test.ts": {
+    "apps/web/tests/integration/database/usage-economics.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "billing",
+        "security"
+      ],
+      "note": "Retail-rate resolution, usage provenance and tenant integrity, historical cost, the recording door."
+    },
       "category": "database-integration",
       "concerns": [
         "work"
