@@ -587,8 +587,8 @@ closed to `'customer'` until a second one has a real caller — D7's "no seventh
 one axis over), `import_runs` (snapshots the mapping it used — I8, see I36 below), `import_staging_rows`
 (one reviewed source row, durable), `external_record_links` (the idempotency backbone — I37). The
 capability is `integration.manage`; `secret_id` on `integration_connections` is withheld from
-every grant and written only through `store_integration_secret`, the same Vault shape D44's
-`store_provider_secret` already uses (I34), reapplied to a tenant-writable table. CSV needs no
+every grant and written only by the `integration_operator` role through `store_integration_credential`
+(D56), the same Vault shape D44's `store_provider_secret` already uses (I34). CSV needs no
 vendor handshake and is the first working connector; Google Sheets and any OAuth-based connector
 land later as a `lib/adapters/` implementation, no schema change, per D44/I15's own reasoning
 about where a vendor's name may live. `tests/integration/database/integrations.test.ts` proves idempotency (re-importing
@@ -1913,3 +1913,35 @@ with a consumer's own ceiling applied beneath the organization's.
 beneath policy); `file-boundary.test.ts` (the file layer imports no consumer; no code names a `csv`
 connector); `connector-catalogue.test.ts` (no format is a connector); `integrations.test.ts` (an
 upload has no connection, and an unreadable format is refused before it is stored).
+
+### D64 — A platform table is vocabulary, commercial configuration or control plane, and reads follow the class
+
+**Decision.** Every platform table's read policy names one of three classes, and a booking visitor —
+`authenticated`, with no membership (D22) — is admitted only to the first.
+
+- **Vocabulary**, for any signed-in caller: `platform_meters`, `platform_products`,
+  `platform_catalog_products`, `_modules`, `_features`, `_feature_dependencies`, and the module and
+  capability rows of `platform_catalog_runtime_mappings`.
+- **Commercial configuration**, for a member of some business or platform staff: `platform_plans`,
+  the three plan grant tables, `platform_plan_quotas`, `platform_plan_prices`,
+  `platform_retail_rates` and `communication_rates`. A business is entitled to know what it is
+  offered and charged.
+- **Control plane**, staff only: `platform_providers`, `platform_provider_services`,
+  `platform_provider_service_features`, `platform_connector_app_features`,
+  `platform_plan_provider_prices`, and the `provider_key` rows of the runtime mapping table. D40's
+  rule that a business never learns who GOLD used applies to the vendor's name as much as to its cost.
+
+**The one tenant reader of the control plane** was checkout, which runs under the caller's own
+session (D14) and read the processor's price reference straight from `platform_plan_provider_prices`.
+It reads it through `plan_price_provider_reference` instead: `billing.manage` in the organization, a
+price that is approved and for a plan that may be sold, and nothing else. This supersedes the
+earlier reasoning that the table had to be readable because a staff-only policy would have broken
+checkout; the door keeps checkout working without the table.
+
+**Definer views stay definer.** `bookable_resources` and `resource_commitments` are the projection
+the external axis is given in place of a policy on `resources` and `work_items`, which would
+expose every column. They are a deliberate security boundary and not an oversight.
+
+**Holds.** `catalogue-visibility.test.ts` (each class from both sides against real row counts, and no
+`using (true)` policy beside another for the same role); `platform-billing.test.ts` (the door
+allows a billing manager and refuses another business, a signed-out caller and staff).

@@ -61,7 +61,7 @@ resolution, RLS across every table, `Customer`, `Location`, `Asset`, `Work Item`
 Enforces: **I1, I2, I3, I11, I12, I16, I17, I18**. `Event` ships with the first slice that writes
 state, because it can't be backfilled.
 
-- Every unique index and exclusion constraint leads with `tenant_id` (I2) — the colliding-rows
+- Every unique index and exclusion constraint leads with `organization_id` (I2) — the colliding-rows
   test exists to catch exactly this.
 - Custom fields land with their registry, not after it (D7, D18).
 - A membership must be exercisable by someone who isn't the founder, or the capability checks

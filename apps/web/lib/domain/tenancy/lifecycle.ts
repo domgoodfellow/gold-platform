@@ -44,7 +44,7 @@ export type Readiness = {
  * Settings — extended with a link and a severity, never a second calculation of the same gaps.
  *
  * **Which notes count as a blocker is asked of the database, not decided here.**
- * `app.organization_launch_blockers` is the one definition — the same function
+ * `organization_launch_blockers` is the one definition — the door over the same function
  * `launch_organization`'s own trigger enforces atomically — so this and the write path cannot
  * quietly drift into disagreeing about what stops a launch.
  */
@@ -253,7 +253,7 @@ async function launchBlockers(
  * Readiness is re-checked here, immediately before the write, for a fast and complete message —
  * blockers and warnings both, with links. **That check is a courtesy, not the guarantee.** The
  * guarantee is `organizations_check_launch_readiness`, a trigger on `operational_state` itself
- * that asks the same `app.organization_launch_blockers` this function's readiness check just
+ * that asks `app.organization_launch_blockers_unchecked`, the same answer this function's readiness check just
  * asked, atomically, inside the transition — so a caller who skips this function and invokes
  * `launch_organization` directly is refused by the database regardless, not merely by whichever
  * TypeScript happened to be in front of it (I12: hiding a control, or in this case a call, was

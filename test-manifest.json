@@ -342,6 +342,13 @@
         "records"
       ]
     },
+    "apps/web/tests/architecture/database/function-surface.test.ts": {
+      "category": "architecture-db",
+      "concerns": [
+        "security"
+      ],
+      "note": "No definer function in app is executable by PUBLIC; removed functions stay removed."
+    },
     "apps/web/tests/architecture/database/payment-webhook-role.test.ts": {
       "category": "architecture-db",
       "concerns": [
@@ -996,6 +1003,22 @@
         "pricing"
       ]
     },
+    "apps/web/tests/integration/database/launch-blockers-access.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "security",
+        "tenancy"
+      ],
+      "note": "Cross-tenant and external DENY cases for organization_launch_blockers."
+    },
+    "apps/web/tests/integration/database/catalogue-visibility.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "security",
+        "commercial"
+      ],
+      "note": "Which platform tables each kind of caller may read."
+    },
     "apps/web/tests/integration/database/lifecycle.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1225,6 +1248,14 @@
       "concerns": [
         "reporting"
       ]
+    },
+    "apps/web/tests/integration/database/resource-views-access.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "security",
+        "tenancy"
+      ],
+      "note": "DENY cases for the two definer booking views: another member, an unbound visitor, no session, filter widening."
     },
     "apps/web/tests/integration/database/resources.test.ts": {
       "category": "database-integration",

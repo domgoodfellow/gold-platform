@@ -224,16 +224,16 @@ describe('provisioning a Plan price with the billing provider', () => {
     expect(error).toBeTruthy();
   });
 
-  it('is readable by any signed-in caller — a price reference is not a secret, and checkout runs under the caller’s own session (D14)', async () => {
+  it('is readable by staff alone; a business reaches only the one reference checkout needs, through a door that checks billing.manage', async () => {
     const { priceId } = await seedProvisionedPlan();
 
     const staffRead = await staff.from('platform_plan_provider_prices').select('id').eq('plan_price_id', priceId);
     expect((staffRead.data ?? []).length).toBeGreaterThan(0);
 
+    // DENY: the table is no longer a tenant's to read, and what it still cannot do is write.
     const tenantRead = await tenant.db.from('platform_plan_provider_prices').select('id').eq('plan_price_id', priceId);
-    expect((tenantRead.data ?? []).length).toBeGreaterThan(0);
-
-    // What it grants nobody is a write — that stays staff-only, proven in the test above.
+    expect(tenantRead.error).toBeNull();
+    expect(tenantRead.data).toEqual([]);
     const forged = await tenant.db.from('platform_plan_provider_prices').insert({
       plan_price_id: priceId,
       environment: 'sandbox',
@@ -242,6 +242,38 @@ describe('provisioning a Plan price with the billing provider', () => {
       provisioned_by: tenant.userId,
     });
     expect(forged.error).toBeTruthy();
+
+    // ALLOW: the owner of a business holds billing.manage there.
+    const allowed = await tenant.db.rpc('plan_price_provider_reference', {
+      p_organization_id: tenant.organizationId,
+      p_plan_price_id: priceId,
+      p_environment: 'sandbox',
+    });
+    expect(allowed.error).toBeNull();
+    expect(allowed.data).toMatch(/^price_/);
+
+    // DENY: another business's owner naming this business, an anonymous caller, and staff, who
+    // are members of nothing, are each refused.
+    const other = await newTenant('billing-other');
+    const asks = [other.db, createClient(SUPABASE_URL, ANON_KEY), staff];
+    for (const client of asks) {
+      const refused = await client.rpc('plan_price_provider_reference', {
+        p_organization_id: tenant.organizationId,
+        p_plan_price_id: priceId,
+        p_environment: 'sandbox',
+      });
+      expect(refused.error?.code).toBe('42501');
+      expect(refused.data).toBeNull();
+    }
+
+    // A price that is not for sale yields nothing even to a billing manager.
+    const unknown = await tenant.db.rpc('plan_price_provider_reference', {
+      p_organization_id: tenant.organizationId,
+      p_plan_price_id: randomUUID(),
+      p_environment: 'sandbox',
+    });
+    expect(unknown.error).toBeNull();
+    expect(unknown.data).toBeNull();
   });
 });
 

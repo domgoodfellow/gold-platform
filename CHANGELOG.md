@@ -5,6 +5,20 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A smaller, safer database surface
+
+A business could ask the platform whether *another* business had its public booking or card payments switched on
+without anything behind them; now only that business's own members and platform staff can. Plans, prices and
+GOLD's rate cards are visible to people who belong to a business and no longer to a booking visitor, and the list of
+which outside providers GOLD uses, together with how its billing is wired to the payment processor, is visible to
+platform staff alone. Starting a subscription still works, through one narrow check that the person holds
+billing access.
+
+Behind the scenes eight database functions nothing called were removed (an older way to store a business's
+credential, an unused rate lookup, two catalogue mapping editors, three phone-number helpers built ahead of a
+softphone, and a superseded founding helper), the internal helper functions are no longer executable by default, three
+redundant indexes went, and `agent_run_documents` gained its natural key. No screen changed. See D64.
+
 ### A file is not a connection
 
 Browse apps listed *CSV / spreadsheet file* beside Google and HubSpot, and a business had to "connect" CSV before it

@@ -44,14 +44,21 @@ export async function beginPlatformBillingCheckout(
     throw new DomainError('Billing is not configured for this deployment.', 'platform_billing.not_configured');
   }
 
-  const { data: mapping, error: mappingError } = await db
-    .from('platform_plan_provider_prices')
-    .select('price_reference')
-    .eq('plan_price_id', price.id)
-    .eq('environment', provider.environment)
-    .maybeSingle();
-  if (mappingError) throw new DomainError(mappingError.message, 'platform_billing.price_lookup_failed');
-  if (!mapping) {
+  const { data: priceReference, error: mappingError } = await db.rpc('plan_price_provider_reference', {
+    p_organization_id: input.organizationId,
+    p_plan_price_id: price.id,
+    p_environment: provider.environment,
+  });
+  if (mappingError) {
+    if (mappingError.code === '42501') {
+      throw new DomainError(
+        'Only this business’s own billing manager can start a subscription.',
+        'platform_billing.forbidden',
+      );
+    }
+    throw new DomainError(mappingError.message, 'platform_billing.price_lookup_failed');
+  }
+  if (!priceReference) {
     throw new DomainError(
       `${plan.label} has not been provisioned with the billing provider yet — ask platform staff to provision this price.`,
       'platform_billing.price_not_provisioned',
@@ -100,7 +107,7 @@ export async function beginPlatformBillingCheckout(
   try {
     started = await provider.createCheckoutSession({
       customerId: customer.customerReference,
-      priceId: mapping.price_reference,
+      priceId: priceReference,
       requestId: session.id,
       organizationId: input.organizationId,
       successUrl: input.successUrl,

@@ -77,10 +77,8 @@ beforeAll(async () => {
   bob = await newTenant('cred-bob');
 
   connectionId = await recordConnection(alice.db, { organizationId: alice.organizationId, connectorKey: CONNECTOR, accountLabel: 'alice@example.test' });
-  // The tenant's own write-only door: it stores a credential and returns the connection id, nothing else.
-  const stored = await alice.db.rpc('store_integration_secret', { p_organization_id: alice.organizationId, p_connection_id: connectionId, p_secret: SECRET });
-  expect(stored.error).toBeNull();
-  expect(stored.data).toBe(connectionId);
+  // A credential is written by the machine role after the API has proved the caller (D56).
+  await asOperator(() => pg.query('select public.store_integration_credential($1, $2)', [connectionId, SECRET]));
 }, 90_000);
 
 afterAll(async () => {

@@ -81,10 +81,14 @@ afterAll(async () => {
 });
 
 describe('the provider-service catalogue', () => {
-  it('is readable by a tenant and by staff alike — platform vocabulary, not a secret', async () => {
+  it('is readable by staff alone — who GOLD uses is control-plane data, never a tenant’s to see (D64)', async () => {
+    const asStaff = await staff.from('platform_provider_services').select('provider_key, key').eq('provider_key', 'google');
+    expect(asStaff.error).toBeNull();
+    expect((asStaff.data ?? []).length).toBeGreaterThan(0);
+
     const asTenant = await tenant.db.from('platform_provider_services').select('provider_key, key').eq('provider_key', 'google');
     expect(asTenant.error).toBeNull();
-    expect((asTenant.data ?? []).length).toBeGreaterThan(0);
+    expect(asTenant.data).toEqual([]);
   });
 
   it('grants nobody a write on the catalogue or either mapping table', async () => {
@@ -113,8 +117,9 @@ describe('the provider-service catalogue', () => {
     const id = await upsertProviderService(staff, DRAFT);
     expect(id).toBeTruthy();
 
-    const seen = await listProviderServicesFor(tenant.db, TEST_PROVIDER);
+    const seen = await listProviderServicesFor(staff, TEST_PROVIDER);
     expect(seen.map((s) => s.key)).toContain(DRAFT.key);
+    expect(await listProviderServicesFor(tenant.db, TEST_PROVIDER)).toEqual([]);
   });
 
   it('keeps (provider_key, key) unique — a second upsert updates, never duplicates', async () => {

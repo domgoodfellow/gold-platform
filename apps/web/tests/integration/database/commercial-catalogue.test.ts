@@ -61,17 +61,19 @@ describe('the commercial catalogue (D43)', () => {
     await newAccountEmail('catalogue-witness');
   });
 
-  it('is readable vocabulary — meters, providers and products, to anyone signed in', async () => {
+  it('is readable vocabulary — meters and products to anyone signed in, providers to staff alone (D64)', async () => {
     const meters = await listMeters(stranger);
     expect(meters.map((meter) => meter.id)).toContain('voice_minutes');
     expect(meters.map((meter) => meter.id)).toContain('ai_tokens_input');
     // A meter is a capability, not a vendor (D43's correction) — it carries no provider field.
     expect(meters[0]).not.toHaveProperty('provider');
 
-    const providers = await listProviders(stranger);
+    // Who GOLD uses is not vocabulary: staff see it, a signed-in stranger sees nothing.
+    const providers = await listProviders(staff);
     expect(providers.map((provider) => provider.key)).toEqual(
       expect.arrayContaining(['deepgram', 'elevenlabs', 'anthropic', 'openai_compatible']),
     );
+    expect(await listProviders(stranger)).toEqual([]);
 
     const products = await listProducts(stranger);
     expect(products.map((product) => product.key)).toContain('module:billing');
@@ -129,12 +131,13 @@ describe('the commercial catalogue (D43)', () => {
     const providerRatesAsStranger = await listProviderRates(stranger, { meterId });
     expect(providerRatesAsStranger).toEqual([]);
 
-    // What GOLD charges: readable by anyone signed in — a business is entitled to know.
+    // What GOLD charges: a business is entitled to know, so a member of a business reads it (proved
+    // in catalogue-visibility.test.ts); a signed-in account that belongs to none does not (D64).
     const retailRatesAsStaff = await listRetailRates(staff, { meterId });
     expect(retailRatesAsStaff.some((rate) => rate.id === retailId)).toBe(true);
 
     const retailRatesAsTenant = await listRetailRates(stranger, { meterId });
-    expect(retailRatesAsTenant.some((rate) => rate.id === retailId)).toBe(true);
+    expect(retailRatesAsTenant).toEqual([]);
   });
 
   it('lets two providers price the same meter independently, without touching a business meter', async () => {

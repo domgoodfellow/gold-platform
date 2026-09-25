@@ -192,7 +192,7 @@ The full set is `docs/constraints.md`. These are the ones generated code breaks 
 - Business logic lives in the domain layer. Not a component, not a route handler, not a server
   action, not an AI tool. Callers call; they do not decide.
 - A second caller of an inline rule extracts it first, then calls it twice. Never copy it.
-- Every tenant-owned table carries `tenant_id`, has RLS keyed to it, and leads every unique index
+- Every tenant-owned table carries `organization_id`, has RLS keyed to it, and leads every unique index
   and every exclusion constraint with it (I2). This is the thing that has broken a prior repo.
 - No column, table, enum value or abstraction without a caller in the same change.
 - Nothing is hardcoded that a business might want different: statuses, terminology, prices, hours,
@@ -287,6 +287,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | A rate or a term written by a general table grant | D40's rule, restated: staff hold no `insert`/`update`/`delete` on any table. A rate or a term is a narrow `SECURITY DEFINER` function's job, checked and audited, never a grant somebody widens later | `platform_provider_rates`, `platform_retail_rates`, `organization_commercial_terms` hold no such grant for any role; `public.record_provider_rate`, `public.record_retail_rate`, `public.record_commercial_term` are the only doors — `execute`-granted to `authenticated`, each staff-checked internally by `app.require_platform_staff()` (D45) |
 | An RLS policy that reads entitlement | D25 surviving the arrival of money: a module is billing and navigation, never authorization, and a lapsed term must never become an access-control decision | No policy anywhere selects from `organization_commercial_terms`; the refusal is `app.check_module_entitlement`, a trigger |
 | GOLD's own provider cost, a reconciliation, or the margin either implies, reaching a tenant | A business is entitled to know what it is charged, never what it costs GOLD to serve it or who GOLD used | `platform_provider_rates` and `usage_cost_reconciliations` have no grant to `authenticated`; `usage_events`'s grant to `authenticated` omits `provider_key`/`provider_currency`/`provider_cost_micros`; `public.organization_commercial_summary` and `public.organization_usage_detail` are `security definer`, staff-checked internally, and never reachable through the withheld columns any other way (D45) |
+| A platform table readable by every signed-in caller by default | A booking visitor is `authenticated` (D22). A table is vocabulary, commercial configuration or control plane, and only vocabulary is for everybody (D64) | `catalogue-visibility.test.ts` proves each class from both sides against real row counts; the Stripe price mapping is reached only through `plan_price_provider_reference` |
 | A recorded amount below one minor unit | I10 | Only a *rate* (price per unit) carries micro-minor-unit precision; every disclosed total still rounds once, at render |
 | A second retail price for voice, SMS or email | `communication_rates` (D40) already answers it | `platform_retail_rates` holds no row for those three meters |
 | A provider named on a meter | Two providers may answer one meter (Deepgram or ElevenLabs, both `transcription_seconds`); a meter that named one could not express the second | `platform_meters` carries no provider column; `platform_provider_rates` is keyed by `(provider_key, meter_id, currency, effective_from)` |
@@ -383,6 +384,8 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | A caller deciding for itself whether a business opens on Setup or Today | SETUP is a lifecycle state with one default destination, and hand-built entry links are how two callers come to disagree about it (D53) | `organizationHomeHref` takes `operationalState` as a required argument; `landing.test.ts` and `setup-lifecycle.test.ts` fail on a caller that builds the entry URL itself |
 | A page that leans on its layout for authorization | Next reuses a layout across client-side navigations without re-rendering it, so the page would be trusting a cache (I12) | Every page calls `requireOrganization` for itself |
 | An anonymous session founding a business | `create_organization` is granted to `authenticated`, which a booking visitor also holds (D22) | The function's own guard; `tenancy.test.ts` and `provisioning.test.ts` each assert the message, and neither alone is the guarantee |
+| A `SECURITY DEFINER` function in `app` executable by `PUBLIC` or `anon` | A privileged function is granted to the roles that need it by name; the schema being unexposed is a fact that can change, and would open every one at once | `function-surface.test.ts` reads `pg_proc` and pins the short list a signed-in role may run |
+| A definer function that answers for an organization id without proving the caller belongs to it | A parameter the caller chose is no scope (D17); `organization_launch_blockers` once told any signed-in user another business's module and payment state | The public door checks membership or `is_platform_staff()` and calls an `app` core with no grant; `launch-blockers-access.test.ts` proves the cross-tenant, external and signed-out refusals |
 
 ### The interface
 
@@ -454,6 +457,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | Eight Gild Products, the shared Workspace, and when a sidebar row is real | D61 |
 | A generic Provider Account for an API-key-only provider, and AI Runtime assignment | D62 |
 | Files, imports and policy, against Connections | D63, D55 |
+| Which platform tables a member, a booking visitor and staff may each read | D64 |
 
 ## When you finish a change
 

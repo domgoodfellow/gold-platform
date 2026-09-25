@@ -112,8 +112,7 @@ once: log in as the staff account from *The other side* below, provision a busin
 first of your two sign-ups (`createBusinessAction`'s staff-facing counterpart on `/platform`),
 then sign in as them. Both doors write the same `organization.created` event — one flagged
 `provisioned`, one not — and hand you the same empty business described below. Founding access
-is recorded through `app.grant_founding_terms`; the retired
-`app.enable_default_modules` path is not part of the current flow.
+is recorded through `app.grant_founding_terms`.
 
 The provisioning form asks four things, each deliberate:
 

@@ -219,7 +219,7 @@ describe('the operator door (D29)', () => {
     // somebody's behalf at the moment of handover.
     //
     // **Asserted at this door precisely because it is the other one.** Both doors call
-    // `enable_default_modules`, so a change made for the person who signs up reaches the
+    // `grant_founding_terms`, so a change made for the person who signs up reaches the
     // business GOLD hands over as well — and if the two ever stopped agreeing, this line is
     // where it would show.
     expect(provisioned?.moduleKeys).toEqual(['billing', 'drafting']);

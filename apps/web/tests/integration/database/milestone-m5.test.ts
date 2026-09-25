@@ -196,7 +196,7 @@ describe('M5 — the platform side', () => {
     expect([tokyo?.currency, tokyo?.timezone]).toEqual(['JPY', 'Asia/Tokyo']);
 
     // What each has switched on — the milestone's own words, and the same list through either
-    // door, because both call `enable_default_modules`.
+    // door, because both call `grant_founding_terms`.
     expect(yard?.moduleKeys).toEqual(tokyo?.moduleKeys);
 
     // And when each last did anything. The yard was configured, so it has activity; the clinic

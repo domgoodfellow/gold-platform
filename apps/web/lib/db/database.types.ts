@@ -6747,15 +6747,6 @@ export type Database = {
         }
         Returns: string
       }
-      add_runtime_mapping: {
-        Args: {
-          p_feature_id: string
-          p_mapping_kind: string
-          p_mapping_value: string
-          p_note?: string
-        }
-        Returns: string
-      }
       add_type_checklist_item: {
         Args: {
           p_label: string
@@ -7254,6 +7245,14 @@ export type Database = {
           feature_id: string
         }[]
       }
+      plan_price_provider_reference: {
+        Args: {
+          p_environment: string
+          p_organization_id: string
+          p_plan_price_id: string
+        }
+        Returns: string
+      }
       platform_ai_runtime_assignment_overview: {
         Args: never
         Returns: {
@@ -7703,10 +7702,6 @@ export type Database = {
         }
         Returns: string
       }
-      release_phone_number_assignment: {
-        Args: { p_assignment_id: string; p_organization_id: string }
-        Returns: undefined
-      }
       remove_connector_app_feature: {
         Args: { p_connector_app_id: string; p_feature_id: string }
         Returns: undefined
@@ -7722,10 +7717,6 @@ export type Database = {
       }
       remove_provider_service_feature: {
         Args: { p_feature_id: string; p_provider_service_id: string }
-        Returns: undefined
-      }
-      remove_runtime_mapping: {
-        Args: { p_mapping_id: string }
         Returns: undefined
       }
       remove_type_checklist_item: { Args: { p_id: string }; Returns: undefined }
@@ -7753,10 +7744,6 @@ export type Database = {
       resolve_effective_outbound_identity: {
         Args: { p_organization_id: string }
         Returns: string
-      }
-      retail_rate_at: {
-        Args: { p_at?: string; p_currency: string; p_meter_id: string }
-        Returns: number
       }
       revoke_invitation: { Args: { p_id: string }; Returns: undefined }
       revoke_plan_module: {
@@ -7911,10 +7898,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      set_user_phone_number_preference: {
-        Args: { p_organization_id: string; p_phone_number_id: string }
-        Returns: undefined
-      }
       stage_import_rows: {
         Args: { p_organization_id: string; p_rows: Json; p_run_id: string }
         Returns: number
@@ -7926,14 +7909,6 @@ export type Database = {
       store_integration_credential: {
         Args: { p_connection_id: string; p_secret: string }
         Returns: undefined
-      }
-      store_integration_secret: {
-        Args: {
-          p_connection_id: string
-          p_organization_id: string
-          p_secret: string
-        }
-        Returns: string
       }
       store_provider_account_credential: {
         Args: { p_account_id: string; p_secret: string }
@@ -7964,16 +7939,6 @@ export type Database = {
           p_topic: string
         }
         Returns: undefined
-      }
-      sync_phone_number: {
-        Args: {
-          p_e164: string
-          p_label?: string
-          p_organization_id: string
-          p_provider_resource_id: string
-          p_status?: string
-        }
-        Returns: string
       }
       time_committed: {
         Args: {
