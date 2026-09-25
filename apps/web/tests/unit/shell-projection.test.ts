@@ -80,7 +80,7 @@ describe('GOLD owner who is also a platform operator', () => {
   });
 
   it('sees organization administration, item by item', () => {
-    expect(keys(sections, 'administration')).toEqual(['team', 'connections', 'plan', 'settings']);
+    expect(keys(sections, 'business')).toEqual(['team', 'connections', 'plan', 'settings']);
   });
 
   it('sees every authorized Platform destination, and only through the projection', () => {
@@ -117,8 +117,23 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(keys(sections, 'workspaces')).toContain('customers');
   });
 
-  it('draws sections in one fixed order: Home, Workspaces, Shared, Platform, Administration', () => {
-    expect(sections.map((section) => section.key)).toEqual(['home', 'workspaces', 'shared', 'platform', 'administration']);
+  it('labels its sections Home, Workspaces, Shared, Business, Platform', () => {
+    expect(sections.map((section) => section.label)).toEqual([null, 'Workspaces', 'Shared', 'Business', 'Platform']);
+  });
+
+  it('names the tenant destination Connections and the platform one Connectors, once each', () => {
+    const items = projectedItems(sections);
+    const label = (key: string) => items.find((item) => item.key === key)?.label;
+    expect(label('connections')).toBe('Connections');
+    expect(label('platform-connectors')).toBe('Connectors');
+    const labels = items.map((item) => item.label);
+    expect(labels.filter((name) => name === 'Connections')).toHaveLength(1);
+    expect(labels.filter((name) => name === 'Connectors')).toHaveLength(1);
+    expect(labels).not.toContain('Integrations');
+  });
+
+  it('draws sections in one fixed order: Home, Workspaces, Shared, Business, Platform', () => {
+    expect(sections.map((section) => section.key)).toEqual(['home', 'workspaces', 'shared', 'business', 'platform']);
   });
 });
 
@@ -134,9 +149,9 @@ describe('GOLD sales member in the same organization', () => {
 
   it('sees no Platform and no administration they hold no authority for', () => {
     expect(keys(sections, 'platform')).toEqual([]);
-    expect(keys(sections, 'administration')).toEqual([]);
+    expect(keys(sections, 'business')).toEqual([]);
     expect(sections.map((section) => section.key)).not.toContain('platform');
-    expect(sections.map((section) => section.key)).not.toContain('administration');
+    expect(sections.map((section) => section.key)).not.toContain('business');
   });
 
   it('does not see automation, which needs its own permission', () => {
@@ -164,7 +179,7 @@ describe('a platform member with limited platform permissions', () => {
   it('does not gain full platform administration, nor organization administration, from one permission', () => {
     const limited = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.organizations']) });
     expect(keys(limited, 'platform')).toEqual(['platform-organizations']);
-    expect(keys(limited, 'administration')).toEqual([]);
+    expect(keys(limited, 'business')).toEqual([]);
   });
 
   it('a person who holds no platform permission has an empty set, and so no Platform section', () => {
@@ -177,7 +192,7 @@ describe('tenant owner or administrator', () => {
 
   it('sees the tenant workspaces and the administration they hold authority for', () => {
     expect(keys(sections, 'workspaces')).toContain('customers');
-    expect(keys(sections, 'administration')).toEqual(['team', 'connections', 'plan', 'settings']);
+    expect(keys(sections, 'business')).toEqual(['team', 'connections', 'plan', 'settings']);
   });
 
   it('never sees GOLD Platform controls, however many capabilities they hold', () => {
@@ -195,7 +210,7 @@ describe('tenant ordinary member', () => {
 
   it('sees the operational workspaces their business has, and nothing administrative', () => {
     expect(keys(technician, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-field', 'field', 'work', 'schedule', 'resources', 'locations', 'assets']);
-    expect(keys(technician, 'administration')).toEqual([]);
+    expect(keys(technician, 'business')).toEqual([]);
     expect(keys(technician, 'platform')).toEqual([]);
   });
 
@@ -203,7 +218,7 @@ describe('tenant ordinary member', () => {
     const viewer = project(preset('viewer'));
     expect(keys(viewer, 'home')).toEqual(['home']);
     expect(keys(viewer, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-field', 'field', 'work', 'schedule', 'resources', 'locations', 'assets']);
-    expect(keys(viewer, 'administration')).toEqual([]);
+    expect(keys(viewer, 'business')).toEqual([]);
   });
 });
 
@@ -213,13 +228,13 @@ describe('configuration-only authority', () => {
     // Cannot place calls, so there is no calling workspace for them…
     expect(keys(configurer, 'workspaces')).not.toContain('calls');
     // …yet the configuration index is theirs, because they may configure.
-    expect(keys(configurer, 'administration')).toEqual(['settings']);
+    expect(keys(configurer, 'business')).toEqual(['settings']);
   });
 
   it('is offered exactly the administration items their own permissions name', () => {
-    expect(keys(project(['role.manage']), 'administration')).toEqual(['team', 'settings']);
-    expect(keys(project(['billing.manage']), 'administration')).toEqual(['plan', 'settings']);
-    expect(keys(project(['integration.manage']), 'administration')).toEqual(['connections', 'settings']);
+    expect(keys(project(['role.manage']), 'business')).toEqual(['team', 'settings']);
+    expect(keys(project(['billing.manage']), 'business')).toEqual(['plan', 'settings']);
+    expect(keys(project(['integration.manage']), 'business')).toEqual(['connections', 'settings']);
   });
 });
 
@@ -232,7 +247,7 @@ describe('entitlement absent', () => {
       'workspace-sales', 'workspace-field', 'field', 'work', 'schedule', 'resources', 'locations',
     ]);
     // Connections is a product too: no Integrations entitlement, no item — Team and Plan remain.
-    expect(keys(sections, 'administration')).toEqual(['team', 'plan', 'settings']);
+    expect(keys(sections, 'business')).toEqual(['team', 'plan', 'settings']);
   });
 
   it('the kernel — Home, Customers, Work, Schedule, Setup — never depends on a module', () => {
@@ -253,7 +268,7 @@ describe('the phone renders the same projection', () => {
     // A workspace with pages contributes its pages, so Work and Schedule stay one tap away.
     expect(primary.map((item) => item.key)).toEqual(['home', 'customers', 'work', 'schedule']);
     expect(more.map((section) => section.label)).toEqual([
-      'Workspaces', 'Gild Sales', 'Gild Automations', 'Gild Field', 'Shared', 'Platform', 'Catalog', 'Commercial', 'Infrastructure', 'Administration',
+      'Workspaces', 'Gild Sales', 'Gild Automations', 'Gild Field', 'Shared', 'Business', 'Platform', 'Catalog', 'Commercial', 'Infrastructure',
     ]);
     // Gild Comms is one page, so it is a plain item; a Product with several is a heading over its pages.
     expect(more[0].items.map((item) => item.key)).toEqual(['workspace-comms']);
@@ -280,7 +295,7 @@ describe('the phone renders the same projection', () => {
     ]);
     // Platform's own pages lead More; GOLD's workspaces follow. Ten Platform destinations and every workspace never share the bar.
     expect(platform.more.map((section) => section.label)).toEqual([
-      'Catalog', 'Commercial', 'Infrastructure', 'Workspaces', 'Gild Sales', 'Gild Automations', 'Gild Field', 'Shared', 'Administration',
+      'Catalog', 'Commercial', 'Infrastructure', 'Workspaces', 'Gild Sales', 'Gild Automations', 'Gild Field', 'Shared', 'Business',
     ]);
     const phone = pagesOf([...platform.primary, ...platform.more.flatMap((section) => section.items)]);
     expect(phone).toEqual(pagesOf(projectedItems(sections)));
@@ -295,7 +310,7 @@ describe('the phone renders the same projection', () => {
     expect(projectPhone(noPlatform, { platformActive: true }).primary.map((item) => item.key)).toEqual(['home', 'customers', 'work', 'schedule']);
   });
 
-  it('never puts Administration or Platform in the bar, however few workspaces there are', () => {
+  it('never puts Business or Platform in the bar, however few workspaces there are', () => {
     const tiny = projectPhone(project([], { enabledModules: new Set(), featureAvailability: new Set(), platform: allPlatform }));
     expect(tiny.primary.every((item) => item.section === 'home' || item.section === 'workspaces')).toBe(true);
   });

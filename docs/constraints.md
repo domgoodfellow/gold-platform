@@ -1151,7 +1151,8 @@ realtime voice agents; QuickBooks or bank integrations; and NextFund's own migra
 
 ### D45 — Platform Context and Organization Context are two independently-true facts, and platform authority stops being a Postgres role a session had to choose
 
-> **Amended by D59 and D60.** The data and authorization boundary this record draws stands. Its *interface* consequence — a Platform shell and phone bar of their own, and Platform Administration as a context-switcher destination — is replaced by one adaptive shell in which `/platform/**` renders inside GOLD's own organization for an operator whose staff row names the permission. D60 nests it: `/organizations/{goldId}/platform/**`.
+> **Amended by D59 and D60.** The data and authorization boundary this record draws stands. Its *interface* consequence — a Platform shell and phone bar of their own, and Platform Administration as a context-switcher destination — is replaced by one adaptive shell in which `/platform/**` renders inside GOLD's own organization for an operator whose staff row names the permission.
+ D60 nests it: `/organizations/{goldId}/platform/**`.
 
 **Decision.** "Platform Context" and "Organization Context" are the two names for where a caller
 is acting — restating D28/D42 under words that also name what changed. GOLD dogfoods the
@@ -1705,8 +1706,8 @@ that borrows a workspace's *entitlement* and declares its own *configuration* pe
 capability for declaring the shape of how a business records and runs its work, not narrowly
 "Custom Fields": it is the same act whether the shape being declared is a custom field, a work item
 type or status, a call outcome, or an opening-hours entry (Schedule configuration), so all four use
-it rather than each growing its own single-purpose permission. Administration is drawn one item at a
-time by the authority for that item — there is no Administration section a role has or lacks.
+it rather than each growing its own single-purpose permission. The Business section is drawn one item at a
+time by the authority for that item — there is no Business section a role has or lacks.
 Setup is kernel; Agent-assisted drafting is an optional accelerator inside it, and losing the
 `drafting` module does not remove the lifecycle.
 

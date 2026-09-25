@@ -3,7 +3,7 @@ import { ViewNav } from '@/components/containers/view-nav';
 export type IntegrationsView = 'connected' | 'browse' | 'sources' | 'imports';
 
 /**
- * Integrations' four canonical views — Connected, Browse apps, Data sources, Imports — as one
+ * Connections' four canonical views — Connected, Browse apps, Data sources, Imports — as one
  * `ViewNav`, rendered consistently on all four. Connected and Browse are query-string views of
  * the root route; Data sources and Imports are their own routes, so this is plain `<Link>`s
  * either way (`ViewNav`'s own contract), not a client tab controller. A deep record or run keeps
@@ -14,7 +14,7 @@ export function IntegrationsNav({ organizationId, current }: { organizationId: s
 
   return (
     <ViewNav
-      label="Integrations views"
+      label="Connections views"
       current={current}
       views={[
         { key: 'connected', label: 'Connected', href: base },

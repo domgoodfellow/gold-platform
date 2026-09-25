@@ -18,7 +18,7 @@ test.describe('a tenant owner', () => {
     const { organizationId } = loadDemoContext();
     await page.goto(`/organizations/${organizationId}/home`);
     const nav = sidebar(page);
-    await expect(nav.getByText('Administration', { exact: true })).toBeVisible();
+    await expect(nav.getByText('Business', { exact: true })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Team', exact: true })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Plan & usage', exact: true })).toBeVisible();
     await expect(nav.getByText('Platform', { exact: true })).toHaveCount(0);
@@ -43,7 +43,7 @@ test.describe('a tenant owner', () => {
     await expect(sidebar(page).getByText('Platform', { exact: true })).toHaveCount(0);
   });
 
-  test('on a phone reaches Administration behind More, not in the bar', async ({ page }) => {
+  test('on a phone reaches Business behind More, not in the bar', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/organizations/${organizationId}/home`);
@@ -51,7 +51,7 @@ test.describe('a tenant owner', () => {
     await expect(bar.getByRole('link', { name: 'Team', exact: true })).toHaveCount(0);
     await bar.getByRole('button', { name: 'More' }).click();
     const sheet = page.getByRole('dialog');
-    await expect(sheet.getByText('Administration', { exact: true })).toBeVisible();
+    await expect(sheet.getByText('Business', { exact: true })).toBeVisible();
     await expect(sheet.getByRole('link', { name: 'Team', exact: true })).toBeVisible();
     await expect(sheet.getByText('Platform', { exact: true })).toHaveCount(0);
   });

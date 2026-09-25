@@ -149,7 +149,7 @@ describe('the phone bar is one projection with a More menu', () => {
     expect(bar).not.toMatch(/visibleAreas\(|areasIn\(|PlatformPhoneNavMenu|PLATFORM_NAV|inPlatformContext|capabilit/);
   });
 
-  it('reaches Administration and Platform behind More rather than crowding the bar', () => {
+  it('reaches Business and Platform behind More rather than crowding the bar', () => {
     expect(bar).toContain('More');
     expect(bar).toContain('<MoreMenu');
   });

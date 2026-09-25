@@ -10,7 +10,7 @@ import { configTarget, configTargetOffered, type ConfigGate } from '@/lib/naviga
  * (`lib/navigation.ts`), found by the entry's `key`: its path, the entitlement it needs and the
  * *configuration* permission it needs. Configuring is not operating — a role may configure call
  * outcomes without being allowed to place a call — so the map never inherits a workspace's own
- * `relevantCapabilities`. The Administration navigation reads the same targets, so the two cannot
+ * `relevantCapabilities`. The Business navigation reads the same targets, so the two cannot
  * offer different doors.
  */
 export type SettingsEntry = {

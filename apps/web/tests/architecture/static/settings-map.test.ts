@@ -40,6 +40,10 @@ describe('the Settings configuration map', () => {
     expect(new Set(SETTINGS_SECTIONS.map((section) => section.key)).size).toBe(SETTINGS_SECTIONS.length);
   });
 
+  it('lists each destination once, so a grid and a list can never show a door twice', () => {
+    expect(new Set(entries.map((entry) => entry.path)).size).toBe(entries.length);
+  });
+
   it('organizes by business concern, in the documented order', () => {
     expect(SETTINGS_SECTIONS.map((section) => section.title)).toEqual([
       'Business',

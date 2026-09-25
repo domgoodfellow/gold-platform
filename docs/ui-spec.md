@@ -117,15 +117,17 @@ facts: the organization's entitlements, the member's capabilities, whether the o
 GOLD's own, and the member's platform permissions. The sections are Home, **Workspaces**
 (each a Gild Product with a real surface — a workspace with several pages holds them beneath it,
 so Gild Field opens onto Overview, Work, Schedule, Resources, Locations and Assets rather than six
-rows beside Customers), **Shared** (what every Product reuses: Insights), **Platform** — only inside
-GOLD and only with a platform permission — and **Administration**, set apart at the foot; a
-section with nothing in it is not drawn. No renderer names a capability, a module or
+rows beside Customers), **Shared** (what every Product reuses: Insights), **Business**
+(administration of the current organization: Team, Connections, Plan & usage, Settings) and
+**Platform** — only inside GOLD and only with a platform permission — last; a
+section with nothing in it is not drawn. Account, a person's own settings, is none of these and sits
+in the header's account menu. No renderer names a capability, a module or
 a role, and none is a second authorization system — hiding an item is courtesy and every page,
 domain function and policy behind it still refuses (I12).
 
 **Entitlement and permission are separate, and both are required.** A business without
 Communications has no calling workspace for its owner; a member without `call.place` does not
-operate calling in a business that has it. Administration is likewise one item at a time by the
+operate calling in a business that has it. Business is likewise one item at a time by the
 authority for that item — Team by `role.manage`, Connections by `integration.manage` (and the
 product), Plan & usage by `billing.manage`, Settings when anything at all is configurable by that
 member — never a section a role has or lacks. **Configuring is not operating**: a Settings entry is
@@ -139,7 +141,7 @@ Agent-assisted drafting is an optional section inside it.
 says nothing about who owns the records on the page. Providers, catalogue and billing stay
 platform-scoped whatever the address. `PLATFORM_DESTINATIONS` is the one registry of its
 destinations, what each takes (`platform_staff.capabilities`) and how the sidebar nests them:
-Catalog holds Plans & Add-ons, Meters and Integrations, Commercial holds Pricing and Billing, and
+Catalog holds Plans & Add-ons, Meters and Connectors, Commercial holds Pricing and Billing, and
 Infrastructure holds Providers and Failures. Platform is a section beneath GOLD's own workspaces,
 never a replacement for them, and while somebody is inside it every group is open. A GOLD
 salesperson sees GOLD as any business and no Platform; a limited operator sees only the
@@ -153,13 +155,13 @@ uses it; a page is one task inside that workspace. Only the last two are navigat
 the sidebar is named for a Plan.
 
 **The phone bar is Home, the first workspaces and More.** Frequent work is in the bar
-(`projectPhone`); everything else — the remaining workspace pages, Shared, Administration and
+(`projectPhone`); everything else — the remaining workspace pages, Shared, Business and
 Platform — is behind **More**, a sheet grouped as the sidebar is. It is a rendering choice over the
 same projection, so the bar and More together are exactly what the desktop shows. The sidebar
 trigger is hidden below `md` because the bottom bar is the phone's navigation.
 
-**Sections, ruled apart, in `AREA_GROUPS` order** — Home, Workspaces, Shared and Settings
-(unlabelled, one row). `navigation.test.ts` fails on an interleaved list: each
+**Sections, ruled apart, in `AREA_GROUPS` order** — Home, Workspaces, Shared, Business and
+Platform. `navigation.test.ts` fails on an interleaved list: each
 section must be one unbroken run, and an operator must never reach today's work by going through
 settings (D23).
 
@@ -616,6 +618,58 @@ heading.
 nine gets three, decided by the width there is rather than by a number somebody guessed.
 
 ---
+
+## 5b. Collections, and the three navigations
+
+**One word each.** A **Connection** is one organization's configured link to an outside system; a
+**Connector** is a type of outside system GOLD supports; a **Provider** is infrastructure GOLD
+itself operates. The tenant page is *Connections* (`/integrations`, the route unchanged); the
+Platform page is *Connectors*; Providers stay their own page.
+
+**Three navigation primitives, three questions, never one component.**
+
+| Primitive | Changes | Is | Example |
+|---|---|---|---|
+| `ViewModeSwitcher` | How the same records are drawn | Client state, remembered per browser; toggle buttons, not tabs | Table / List / Grid |
+| `ViewNav` | Which sibling subsurface is open | A URL each; links, never a client `Tabs` | Connected, Browse apps, Data sources, Imports |
+| Section navigation | Where you are inside one long page | Stacked sections, with anchors only when a page is long enough to want them | General, Fields, Defaults |
+
+No section-navigation component exists: nothing yet needs one, and none is built ahead of a page.
+
+**Configure is contextual configuration for the surface being viewed, and is stacked.** Its parts
+are vertical sections, not nested tabs, and it holds no miniature shell. Tabs are for mutually
+exclusive sibling views, which is what `ViewNav` is for. Customers' Configure is stacked; Work's
+Configure (`work-configuration.tsx`), Platform's family, plan and commercial pages, and the record
+detail pages still use `Tabs` and move when their surface is next touched.
+
+**`CollectionView` is the one primitive for a selectable presentation.** A page passes one
+rendering per presentation it supports and is never asked for all of them; the choice is kept in
+`localStorage` under one key per surface. Density (compact, comfortable) is a separate axis that
+joins beside it — never a value of it. `DataTable`'s automatic cards below a container width stay
+as they are. Settings is the first consumer (List, Grid); no other surface has been converted.
+
+**What each collection may be.** Entity collections take a representation for how a person browses
+them; ledgers, logs and analytical data stay tables, because a card per row throws away the
+columns being compared. This is a guide for later slices, not a list of what is built.
+
+| Collection | Presentations |
+|---|---|
+| Settings | list, grid |
+| Customers | table, list, grid; board is the Pipeline view |
+| Resources | table, list, grid |
+| Locations | list, map (map is its own `ViewNav` view) |
+| Assets | table, list, grid |
+| Team members | table, list |
+| Connections | list, grid |
+| Platform Connectors | table, list, grid |
+| Organizations (Platform) | table |
+| Automations | list |
+| Agents | none built |
+| Usage / metering | table only |
+| Billing records | table only |
+| Failures / logs | table only |
+| Import runs | table only |
+| Calls | table, list |
 
 ## 6. Action hierarchy
 

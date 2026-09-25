@@ -11,7 +11,7 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
  * or general-purpose area shows itself to any member and explains what their role can't do,
  * because the guard is the RLS policy and the sentence is the courtesy. `Area.relevantCapabilities`
  * is the narrow exception, added for a genuinely feature-specific area whose entire content is
- * behind one capability a role can lack (Insights, Automations' own settings, Integrations) — the
+ * behind one capability a role can lack (Insights, Automations' own settings, Connections) — the
  * sidebar hides a link nobody assigned this role could do anything behind, but direct navigation
  * to the route is still refused server-side by RLS regardless of what the sidebar shows, exactly
  * as before this field existed.
@@ -225,7 +225,7 @@ export const MODULES = [
   },
   {
     key: 'integrations',
-    label: 'Integrations',
+    label: 'Connections',
     description:
       'Connect GOLD to the apps and files a business already uses, and bring their data in. A business that enters everything by hand runs without this.',
     configuredAt: { segment: 'integrations' },
@@ -268,7 +268,7 @@ export type Area = {
    * addressable page — it simply is not one of the permanent rows a business scans every day
    * (Guided setup alone, while `operationalState === 'setup'` gives it its own elevated
    * treatment instead). A configuration-only area — Pricing, Custom fields, Team,
-   * Integrations, Setup — is reached from the Settings map rather than holding a permanent row;
+   * Connections, Setup — is reached from the Settings map rather than holding a permanent row;
    * a genuine workspace belongs in the sidebar. Absent (the default) means shown.
    */
   sidebar?: boolean;
@@ -346,7 +346,7 @@ export const AREAS: readonly Area[] = [
   { segment: 'setup', label: 'Setup', group: 'settings', sidebar: false },
   // A business returns here to check a run or add a source, but connecting is configuring how
   // other workspaces get their data — so it is reached from Settings' Connections section.
-  { segment: 'integrations', label: 'Integrations', group: 'settings', module: 'integrations', sidebar: false, relevantCapabilities: ['integration.manage'], featureKeys: ['app_connections', 'file_imports', 'data_mapping', 'scheduled_sync', 'triggers_actions', 'agent_tools'] },
+  { segment: 'integrations', label: 'Connections', group: 'settings', module: 'integrations', sidebar: false, relevantCapabilities: ['integration.manage'], featureKeys: ['app_connections', 'file_imports', 'data_mapping', 'scheduled_sync', 'triggers_actions', 'agent_tools'] },
   // Names no module — it's where the switches are, so a module able to hide it would lock a business out of its own account.
   { segment: 'settings', label: 'Settings', group: 'settings' },
 ] as const;
@@ -359,7 +359,7 @@ export const AREAS: readonly Area[] = [
  * without the other, so a configuration entry must never inherit its workspace's
  * `relevantCapabilities` — it declares its own `permission`, and borrows only the workspace's
  * *entitlement* (`entitledBy`, an area segment whose module/feature gate says the business has the
- * thing at all). One definition per target: the Settings map, the Administration navigation and the
+ * thing at all). One definition per target: the Settings map, the Business navigation and the
  * Setup areas all read the path and the two requirements from here rather than restating them.
  */
 export type ConfigTarget = {

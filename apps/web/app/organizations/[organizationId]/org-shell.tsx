@@ -97,7 +97,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   settings: Settings,
 };
 
-/** Every item the projection can produce: the areas, the administration items, and the platform destinations. */
+/** Every item the projection can produce: the areas, the business items, and the platform destinations. */
 export const NAV_ICONS: Record<string, LucideIcon> = {
   ...AREA_ICONS,
   // A workspace row is drawn with its Product's mark; its pages, in the phone sheet, with their own.
@@ -192,9 +192,9 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
 
 /**
  * The tablet and desktop rendering: `Sidebar`'s own grouped-menu vocabulary, one `SidebarGroup` per
- * projected section in order — Home, Workspaces, (only inside GOLD, only with platform authority)
- * Platform, and Administration last, set apart at the foot of the list. Platform is an extra
- * section beneath GOLD's own workspaces, never a replacement for them. Collapse-to-icon, the
+ * projected section in order — Home, Workspaces,
+ * Shared, Business, and (only inside GOLD, only with platform authority) Platform last. Platform is an extra
+ * section beneath the business's own, never a replacement for any of it. Collapse-to-icon, the
  * tooltip that appears while collapsed, and the `md`-and-up-only rendering are all `Sidebar`'s
  * own, not reimplemented here.
  */
@@ -208,7 +208,7 @@ export function OrgNav({ sections }: { sections: ShellSection[] }) {
       {sections.map((section) => (
         <SidebarGroup
           key={section.key}
-          className={section.key === 'administration' ? 'mt-auto border-t border-sidebar-border' : undefined}
+          className={section.key === 'business' ? 'border-t border-sidebar-border' : undefined}
         >
           {section.label ? <SidebarGroupLabel>{section.label}</SidebarGroupLabel> : null}
           <SidebarGroupContent>
@@ -249,7 +249,7 @@ function PhoneNavLink({ item, current }: { item: NavItem; current: boolean }) {
 /**
  * The phone rendering of the same projection: a fixed bar with Home, the first workspaces and one
  * **More** button, which opens everything else — the remaining workspaces, Operations,
- * Administration and Platform — in a sheet, grouped exactly as the desktop sidebar groups them.
+ * Business and Platform — in a sheet, grouped exactly as the desktop sidebar groups them.
  * Frequent work is one thumb away; the less frequent is understandable and never crowds it, however
  * many sections a member's authority produces. It is a rendering choice over `projectPhone`, not a
  * second eligibility rule.

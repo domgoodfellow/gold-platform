@@ -160,11 +160,15 @@ describe('the Settings hub', () => {
   });
 
   it('gives each destination one link — its title — and no row of identical Opens', () => {
-    const grid = index.slice(index.indexOf('section.entries.map'));
-    expect(grid.match(/<Link\b/g)).toHaveLength(1);
-    expect(grid).toContain('{entry.title}');
-    expect(grid).not.toMatch(/>\s*Open\s*</);
-    expect(grid).not.toMatch(/<Button|<input|<select/);
+    // Each presentation (list, grid) draws its entries with exactly one link.
+    const presentations = index.split('section.entries.map').slice(1);
+    expect(presentations).toHaveLength(2);
+    for (const presentation of presentations) {
+      expect(presentation.match(/<Link\b/g)).toHaveLength(1);
+      expect(presentation).toContain('{entry.title}');
+      expect(presentation).not.toMatch(/>\s*Open\s*</);
+      expect(presentation).not.toMatch(/<Button|<input|<select/);
+    }
   });
 });
 

@@ -29,7 +29,7 @@ export default async function ConnectorPage({ params }: PageProps<'/organization
     <AppPage>
       <PageHeader
         title={connector.name}
-        crumbs={[{ label: 'Integrations', href: platformHref(goldId, 'integrations') }]}
+        crumbs={[{ label: 'Connectors', href: platformHref(goldId, 'integrations') }]}
         meta={<ConnectorIcon connector={connector} logoUrl={logoUrl} size="large" />}
       />
       {connector.status !== 'planned' && !isConnectorImplemented(connector.key) ? (

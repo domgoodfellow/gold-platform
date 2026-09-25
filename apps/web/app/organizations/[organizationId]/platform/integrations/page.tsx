@@ -21,8 +21,8 @@ export default async function PlatformIntegrationsPage({ params }: PageProps<'/o
   return (
     <AppPage>
       <PageHeader
-        title="Integrations"
-        description="The outside apps a business may connect. This is the catalogue — who GOLD buys infrastructure from is under Providers."
+        title="Connectors"
+        description="The kinds of outside app GOLD supports, which a business then connects. Who GOLD buys infrastructure from is under Providers."
         actions={<ButtonLink href={platformHref(goldId, 'integrations/new')} size="small">New connector</ButtonLink>}
       />
       <DataTable

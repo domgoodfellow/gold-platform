@@ -44,7 +44,7 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  * things, and only the last two are navigation. One real page makes the workspace a plain row;
  * several make it an expandable one; a workspace with no real page has no row at all.
  */
-export type ShellSectionKey = 'home' | 'workspaces' | 'shared' | 'platform' | 'administration';
+export type ShellSectionKey = 'home' | 'workspaces' | 'shared' | 'business' | 'platform';
 
 export type NavItem = {
   /** Unique across the whole projection; also the icon key. */
@@ -96,8 +96,8 @@ const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
   home: null,
   workspaces: 'Workspaces',
   shared: 'Shared',
+  business: 'Business',
   platform: 'Platform',
-  administration: 'Administration',
 };
 
 function areaItem(organizationId: string, area: Area, section: ShellSectionKey): NavItem {
@@ -111,12 +111,12 @@ function areaItem(organizationId: string, area: Area, section: ShellSectionKey):
 }
 
 /**
- * The organization administration a member may reach, one item at a time by the authority for that
- * item — there is no Administration section a role either has or lacks. Each item is a
+ * The Business section: administration of the current organization a member may reach, one item at a
+ * time by the authority for that item — there is no Business section a role either has or lacks. Each item is a
  * configuration target (`CONFIG_TARGETS`), so it is offered by the same rule as its Settings entry.
  * Settings itself is the index of every target and is drawn when at least one is offered.
  */
-const ADMINISTRATION_ITEMS: readonly { key: string; label: string; target: string }[] = [
+const BUSINESS_ITEMS: readonly { key: string; label: string; target: string }[] = [
   { key: 'team', label: 'Team', target: 'team' },
   { key: 'connections', label: 'Connections', target: 'integrations' },
   { key: 'plan', label: 'Plan & usage', target: 'plan' },
@@ -192,20 +192,20 @@ export function projectShell(input: ShellInput): ShellSection[] {
       return [{ ...row, heading: true, children: pages }];
     });
 
-  const administration: NavItem[] = [];
-  for (const item of ADMINISTRATION_ITEMS) {
+  const business: NavItem[] = [];
+  for (const item of BUSINESS_ITEMS) {
     const target = configTarget(item.target);
     if (!configTargetOffered(target, gate)) continue;
-    administration.push({
+    business.push({
       key: item.key,
       label: item.label,
       href: `/organizations/${organizationId}/${target.path.split('#')[0]}`,
-      section: 'administration',
+      section: 'business',
     });
   }
   const settings = AREAS.find((area) => area.segment === 'settings')!;
   if (CONFIG_TARGETS.some((target) => configTargetOffered(target, gate))) {
-    administration.push(areaItem(organizationId, settings, 'administration'));
+    business.push(areaItem(organizationId, settings, 'business'));
   }
 
   const platformItems: NavItem[] = platform ? projectPlatform(organizationId, platform) : [];
@@ -214,8 +214,8 @@ export function projectShell(input: ShellInput): ShellSection[] {
     { key: 'home', label: SECTION_LABELS.home, items: inGroup('home').map((area) => areaItem(organizationId, area, 'home')) },
     { key: 'workspaces', label: SECTION_LABELS.workspaces, items: workspaceItems() },
     { key: 'shared', label: SECTION_LABELS.shared, items: inGroup('shared').map((area) => areaItem(organizationId, area, 'shared')) },
+    { key: 'business', label: SECTION_LABELS.business, items: business },
     { key: 'platform', label: SECTION_LABELS.platform, items: platformItems },
-    { key: 'administration', label: SECTION_LABELS.administration, items: administration },
   ];
 
   // A section with nothing in it is not drawn: naming a part of the product that is not there for

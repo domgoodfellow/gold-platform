@@ -687,6 +687,14 @@
         "ui"
       ]
     },
+    "apps/web/tests/component/collection-presentation.test.ts": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "accessibility",
+        "settings"
+      ]
+    },
     "apps/web/tests/component/ui-components.test.ts": {
       "category": "component",
       "concerns": [

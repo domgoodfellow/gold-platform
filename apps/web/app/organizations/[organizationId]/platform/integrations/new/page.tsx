@@ -11,7 +11,7 @@ export default async function NewConnectorPage({
   await requirePlatformArea(goldId, 'platform.catalogue');
   return (
     <AppPage>
-      <PageHeader title="New connector" crumbs={[{ label: 'Integrations', href: platformHref(goldId, 'integrations') }]} />
+      <PageHeader title="New connector" crumbs={[{ label: 'Connectors', href: platformHref(goldId, 'integrations') }]} />
       <ConnectorForm connector={null} />
     </AppPage>
   );
