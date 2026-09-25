@@ -3,11 +3,13 @@ import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { BUCKET as DOCUMENTS_BUCKET } from '@/lib/domain/documents/documents';
-import { parseCsv, type ParsedCsv } from '@/lib/domain/integrations/csv';
+import { checkFileIntake, storageKeySegment } from '@/lib/domain/files/intake';
+import { parseCsv, type ParsedCsv } from '@/lib/domain/files/parsers/csv';
 
 export type IntegrationResource = {
   id: string;
-  connectionId: string;
+  /** Null for an uploaded file: it belongs to no external system. */
+  connectionId: string | null;
   resourceType: string;
   displayName: string;
   externalId: string | null;
@@ -15,7 +17,6 @@ export type IntegrationResource = {
   createdAt: string;
 };
 
-const MAX_BYTES = 25 * 1024 * 1024;
 const DISPLAY_NAME_MAX = 200;
 
 export async function listResources(
@@ -50,53 +51,54 @@ export async function listResources(
 }
 
 /**
- * A CSV or XLSX file, uploaded and read once. Stored under the same `documents` bucket the rest
- * of the platform already uses — same tenant-prefixed path, same storage policy — just never
- * given a row in the `documents` table, since an import file is not attached to one of that
- * table's four owning entities (customer, location, asset, work item). `integration_resources`
+ * A file handed to the CRM import, stored and read once. It is an artifact, not a connection: the
+ * resource has no `connection_id`, and what may come in is `files/`'s question — the format
+ * registry says which formats the `crm_import` consumer reads, and policy says what this business
+ * admits. Stored under the same `documents` bucket the rest of the platform already uses — same
+ * tenant-prefixed path, same storage policy — just never given a row in the `documents` table,
+ * since an import file is not attached to one of that table's owning entities. `integration_resources`
  * is its owner instead.
  */
-export async function uploadCsvResource(
+export async function uploadImportFile(
   db: Db,
-  input: { organizationId: string; connectionId: string; file: File },
+  input: { organizationId: string; file: File },
 ): Promise<{ resourceId: string; parsed: ParsedCsv }> {
   await requireActor(db);
 
   const { file } = input;
 
-  if (file.size === 0) {
-    throw new DomainError('That file is empty.', 'integrations.file_empty');
-  }
-  if (file.size > MAX_BYTES) {
+  const checked = checkFileIntake(file, { consumer: 'crm_import' });
+  if (!checked.ok) {
     throw new DomainError(
-      `That file is larger than ${Math.floor(MAX_BYTES / (1024 * 1024))} MB.`,
-      'integrations.file_too_large',
+      checked.reason === 'unsupported' ? 'CRM import reads CSV files only.' : checked.message,
+      `integrations.file_${checked.reason}`,
     );
   }
+  const { artifact } = checked;
 
-  const text = await file.text();
-  const parsed = parseCsv(text);
+  const parsed = parseCsv(await file.text());
 
-  const path = `${input.organizationId}/imports/${randomUUID()}/${safeKeySegment(file.name)}`;
+  const path = `${input.organizationId}/imports/${randomUUID()}/${storageKeySegment(artifact.name, 'file.csv')}`;
 
   const { error: uploadError } = await db.storage
     .from(DOCUMENTS_BUCKET)
-    .upload(path, file, { contentType: file.type || 'text/csv', upsert: false });
+    .upload(path, file, { contentType: artifact.mimeType, upsert: false });
 
   if (uploadError) {
     throw new DomainError(uploadError.message, 'integrations.upload_failed');
   }
 
-  const displayName = file.name.trim().slice(0, DISPLAY_NAME_MAX) || 'Uploaded file';
+  const displayName = artifact.name.slice(0, DISPLAY_NAME_MAX) || 'Uploaded file';
 
   const { data, error } = await db.rpc('record_integration_resource', {
     p_organization_id: input.organizationId,
-    p_connection_id: input.connectionId,
-    p_resource_type: 'csv_upload',
+    // A file belongs to no external system; the table's own check is what allows the absence.
+    p_connection_id: null as unknown as string,
+    p_resource_type: 'file_upload',
     p_display_name: displayName,
     p_external_id: null as unknown as string,
     p_storage_path: path,
-    p_metadata: { headers: parsed.headers, totalRows: parsed.totalRows },
+    p_metadata: { format: artifact.format.id, headers: parsed.headers, totalRows: parsed.totalRows },
   });
 
   if (error) {
@@ -129,11 +131,11 @@ export async function getResourceStoragePath(
 }
 
 /**
- * Re-reads and re-parses a CSV resource's stored bytes — the mapping step's preview and the
+ * Re-reads and re-parses an imported file's stored bytes — the mapping step's preview and the
  * staging step's full read both call this rather than each downloading and parsing on their
  * own. Null for a resource with no stored file, or one whose file has gone missing.
  */
-export async function downloadCsvResource(
+export async function downloadImportFile(
   db: Db,
   input: { organizationId: string; resourceId: string },
 ): Promise<ParsedCsv | null> {
@@ -144,9 +146,4 @@ export async function downloadCsvResource(
   if (error || !blob) return null;
 
   return parseCsv(await blob.text());
-}
-
-function safeKeySegment(name: string): string {
-  const cleaned = name.replace(/[^A-Za-z0-9._-]/g, '_').replace(/^\.+/, '');
-  return cleaned.length > 0 ? cleaned : 'file.csv';
 }

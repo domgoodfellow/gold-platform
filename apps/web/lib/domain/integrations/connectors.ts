@@ -10,7 +10,7 @@ import { DomainError } from '@/lib/domain/errors';
 
 export const CONNECTOR_STATUSES = ['planned', 'beta', 'live'] as const;
 export const CONNECTOR_AUTH_METHODS = ['none', 'oauth2', 'api_key'] as const;
-export const CONNECTOR_CONNECTION_METHODS = ['native', 'mcp', 'automation', 'file', 'custom'] as const;
+export const CONNECTOR_CONNECTION_METHODS = ['native', 'mcp', 'automation', 'custom'] as const;
 export const CONNECTOR_CAPABILITIES = [
   'app_connections',
   'file_imports',

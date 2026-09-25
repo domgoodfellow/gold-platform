@@ -441,6 +441,12 @@
         "ui"
       ]
     },
+    "apps/web/tests/architecture/static/file-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "boundaries"
+      ]
+    },
     "apps/web/tests/architecture/static/organization-home.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -1353,6 +1359,12 @@
       "concerns": [
         "pricing",
         "margins"
+      ]
+    },
+    "apps/web/tests/unit/file-intake.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "security"
       ]
     },
     "apps/web/tests/unit/location-search.test.ts": {

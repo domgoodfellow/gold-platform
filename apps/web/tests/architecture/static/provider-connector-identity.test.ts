@@ -43,7 +43,6 @@ describe('ConnectorIcon: a built-in mark is authoritative, an upload only ever m
   const google = { key: 'google_workspace', name: 'Google Workspace' };
   const custom = { key: 'some_private_erp', name: 'Custom ERP' };
   const unknown = { key: 'not_a_real_connector', name: 'Mystery App' };
-  const csv = { key: 'csv', name: 'CSV / spreadsheet file' };
 
   it('a built-in connector renders its canonical mark even with a stale uploaded logoUrl on file', () => {
     const html = renderToStaticMarkup(createElement(ConnectorIcon, { connector: google, logoUrl: 'https://cdn.example.test/old-g.png' }));
@@ -69,12 +68,6 @@ describe('ConnectorIcon: a built-in mark is authoritative, an upload only ever m
     const html = renderToStaticMarkup(createElement(ConnectorIcon, { connector: unknown, logoUrl: null }));
     expect(html).not.toContain('<img');
     expect(html).not.toContain('undefined');
-  });
-
-  it('CSV gets a neutral spreadsheet mark, not a monogram', () => {
-    const html = renderToStaticMarkup(createElement(ConnectorIcon, { connector: csv, logoUrl: null }));
-    expect(html).not.toContain('>C<');
-    expect(html).toContain('#6b7280');
   });
 
   it('never hotlinks a vendor logo — no literal external host in the source', () => {

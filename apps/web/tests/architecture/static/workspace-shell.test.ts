@@ -658,6 +658,6 @@ describe('organization page composition', () => {
       `${WEB}/app/organizations/[organizationId]/integrations/imports/new/page.tsx`,
     );
     expect(newImport).toContain("organization.capabilities.includes('integration.manage')");
-    expect(newImport.indexOf('integration.manage')).toBeLessThan(newImport.indexOf('await downloadCsvResource'));
+    expect(newImport.indexOf('integration.manage')).toBeLessThan(newImport.indexOf('await downloadImportFile'));
   });
 });

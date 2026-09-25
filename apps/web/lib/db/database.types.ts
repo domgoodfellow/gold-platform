@@ -2367,7 +2367,7 @@ export type Database = {
       }
       integration_resources: {
         Row: {
-          connection_id: string
+          connection_id: string | null
           created_at: string
           display_name: string
           external_id: string | null
@@ -2380,7 +2380,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          connection_id: string
+          connection_id?: string | null
           created_at?: string
           display_name: string
           external_id?: string | null
@@ -2393,7 +2393,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          connection_id?: string
+          connection_id?: string | null
           created_at?: string
           display_name?: string
           external_id?: string | null

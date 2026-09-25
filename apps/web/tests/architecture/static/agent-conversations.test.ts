@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { formatsFor } from '@/lib/domain/files/formats';
 
 /**
  * The Agent panel is a conversation: source guards, like `workspace-shell.test.ts` — nothing here
@@ -193,10 +194,10 @@ describe('the composer', () => {
 
   it('accepts only what the Agent can read, and asks the browser for the same', () => {
     expect(composer).toContain('accept={ATTACHMENT_ACCEPT}');
-    const rules = read('lib/domain/assistant/attachment-rules.ts');
-    expect(rules).toContain("csv: 'text/csv'");
-    const types = rules.slice(rules.indexOf('const TYPES'), rules.indexOf('};', rules.indexOf('const TYPES')));
-    expect(types).not.toMatch(/pdf|png|jpe?g|docx/);
+    // The set is the file registry's `agent_attachment` consumer: text-shaped formats only.
+    const accepted = formatsFor('agent_attachment');
+    expect(accepted.map((format) => format.mimeType)).toContain('text/csv');
+    expect(accepted.map((format) => format.id).join()).not.toMatch(/pdf|png|jpe?g|docx/);
   });
 
   it('keeps role refusal, pending and error behaviour', () => {

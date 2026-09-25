@@ -1568,7 +1568,7 @@ published catalogue arrive with the screens that call them. Rows arrive by seed.
 **Capability vocabulary.** The Integrations area gates on `app_connections`, `file_imports`,
 `data_mapping`, `scheduled_sync`, `triggers_actions` and `agent_tools`, Features under CRM → Data.
 `csv_import` is renamed `file_imports`: it named one connector, and the capability is importing a
-file.
+file. The `csv` connector itself is gone (D63): a file is not a connection.
 
 **A fourth noun beside the three above.** A **provider service** (`platform_provider_services`)
 is one capability a provider exposes, finer-grained than the provider itself (Google is a
@@ -1866,3 +1866,50 @@ No assignment for a capability keeps that deployment's legacy environment-variab
 **Holds.** `ai-runtime-assignments.test.ts` (no direct select for any role; every validation
 refusal; `resolve_ai_runtime_assignment` is `provider_operator`-only); the Python adapter test
 suites for each provider (translation only, mocked SDK boundary).
+
+
+### D63 — A file is an artifact, not a connection; an import consumes it
+
+**Decision.** Four nouns, four owners. A **Connection** is a persistent relationship with an
+outside system: authorized, configured, synced, disconnected (D33, D55). A **File** is a discrete
+artifact handed to GOLD. An **Import** is a domain operation that consumes a file. A **parser** is a
+capability that reads one. Permission decides *who* may invoke the operation; **policy** decides
+*which artifacts, and how large*, an organization admits. None implies another.
+
+**What was wrong.** `csv` was seeded as a connector ("CSV / spreadsheet file", `auth_method = none`,
+`connection_method = file`) so an uploaded file had a `connection_id` to hang from, and a business
+had to "connect" CSV before it could import one. That modelled a format as a system, put it on
+Browse beside Google and HubSpot, and would have invited PDF, Markdown and Spreadsheet next.
+
+**What holds now.** `integration_resources.connection_id` is nullable, and
+`integration_resources_has_an_owner` requires a connection *or* a stored file. An uploaded file is a
+resource with no connection; `begin_import_run` names its source `file_upload`. The `csv` connector
+and `connection_method = 'file'` no longer exist. Google Drive is a Connection; a sheet retrieved
+through it is an artifact — provider authorization belongs to Connections and what comes back
+through it belongs here.
+
+**The file layer** is `apps/web/lib/domain/files/` and knows no consumer. `formats.ts` is the
+registry and keeps four claims apart — *recognized* (in the table), *parseable* (a reader exists),
+*uploadable* and *usable by* a consumer (both derived from the format's `consumers`, so they cannot
+disagree). Only CSV is usable by `crm_import`; CSV, JSON, text and Markdown by `agent_attachment`.
+PDF, DOCX, XLSX, images and the rest are recognized and nothing more, and a format joins a consumer
+in the change that adds the reader that consumer needs (D31). `policy.ts` holds
+`FileIngestionPolicy` (enabled, allowed categories, allowed MIME types, max size); `intake.ts` is the
+one validation — name, format, policy, size — that the CRM import and the Agent attachment both call,
+with a consumer's own ceiling applied beneath the organization's.
+
+**Not built, on purpose.**
+- No per-organization policy is stored: nothing edits one, so a column would have no caller. Callers
+  get `PLATFORM_FILE_POLICY`. When it is stored, its home is *Settings → Files & Data*, and the
+  value reaches `checkFileIntake` through the parameter that already exists.
+- No `files.*` capabilities. Import is gated by `integration.manage`, the Agent by `assistant.ask`,
+  and a record's documents by `document.create`; each is enforced in the database. Splitting a
+  `file.import` out of `integration.manage` means rewriting every import door and policy and is its
+  own change. Never a per-extension permission.
+- Record documents (`uploadDocument`: customer, location, asset, work item) still take any type and
+  are not yet under policy.
+
+**Holds.** `file-intake.test.ts` (the registry's four claims, policy against parser, consumer ceiling
+beneath policy); `file-boundary.test.ts` (the file layer imports no consumer; no code names a `csv`
+connector); `connector-catalogue.test.ts` (no format is a connector); `integrations.test.ts` (an
+upload has no connection, and an unreadable format is refused before it is stored).

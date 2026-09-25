@@ -17,6 +17,7 @@ const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const CONNECTION = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 const SUFFIX = randomUUID().slice(0, 6);
+const FIXTURE = `grants_${SUFFIX}`;
 
 type Tenant = { db: SupabaseClient; organizationId: string };
 
@@ -45,18 +46,25 @@ beforeAll(async () => {
   other = await newTenant('grants-other');
   pg = new Client({ connectionString: CONNECTION });
   await pg.connect();
+  await pg.query(
+    `insert into public.platform_connectors (key, name, category, status, auth_method, connection_method, is_public)
+     values ($1, 'Grants app', 'Testing', 'live', 'none', 'custom', true)`,
+    [FIXTURE],
+  );
 
-  connectionId = await recordConnection(owner.db, { organizationId: owner.organizationId, connectorKey: 'csv', accountLabel: 'Grants file' });
+  connectionId = await recordConnection(owner.db, { organizationId: owner.organizationId, connectorKey: FIXTURE, accountLabel: 'Grants file' });
   await pg.query("update public.integration_connections set status = 'active' where id = $1", [connectionId]);
   const inserted = await pg.query(
     `insert into public.integration_resources (organization_id, connection_id, resource_type, external_id, display_name)
-     values ($1, $2, 'csv_file', $3, 'Leads') returning id`,
+     values ($1, $2, 'sheet', $3, 'Leads') returning id`,
     [owner.organizationId, connectionId, `ext-${SUFFIX}`],
   );
   resourceId = inserted.rows[0].id;
 }, 60_000);
 
 afterAll(async () => {
+  await pg.query('delete from public.integration_connections where connector_key = $1', [FIXTURE]);
+  await pg.query('delete from public.platform_connectors where key = $1', [FIXTURE]);
   await pg.end();
 });
 

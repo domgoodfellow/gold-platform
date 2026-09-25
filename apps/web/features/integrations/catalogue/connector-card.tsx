@@ -2,7 +2,6 @@ import { Button, ButtonLink } from '@/components/controls/button';
 import { Card } from '@/components/containers/card';
 import { Badge } from '@/components/display/data';
 import { isConnectable, type Connector } from '@/lib/domain/integrations/connectors';
-import { ConnectCsvForm } from '../connections/connect-csv-form';
 import { ConnectorAppStrip } from './connector-app-strip';
 import { ConnectorIcon } from './connector-icon';
 
@@ -52,9 +51,7 @@ export function ConnectorCard({
           <Button type="button" tone="secondary" size="small" disabled>
             {connector.status === 'planned' ? 'Coming soon' : 'Not available yet'}
           </Button>
-        ) : !mayManage ? null : connector.key === 'csv' ? (
-          <ConnectCsvForm organizationId={organizationId} alreadyConnected={connected} />
-        ) : connected ? (
+        ) : !mayManage ? null : connected ? (
           <Button type="button" tone="primary" size="small" disabled>
             Connected
           </Button>

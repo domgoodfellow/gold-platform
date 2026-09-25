@@ -153,7 +153,7 @@ the index into them.
 | Custom fields | Track what the platform didn't think of | `features/custom-fields/**` | `/fields` | create/edit/order/required/choices | values render on all 5 supported entities | — | Complete for definition + display; **no filter/search anywhere** | Healthy boundary; deferral is explicit in code comments | P3 |
 | Documents | Keep a file with the record it belongs to | `features/documents/**` | embedded on Customer/Location/Asset/Work Item | — | upload/list | — | Complete for its 4 entities; Resource is correctly excluded (no domain relation) | Healthy | P3 |
 | Timeline | Reconstruct what happened | `features/timeline/**` | embedded on Customer/Work Item only | — | — | activity list | **Missing on Location and Asset** | Component exists, is not wired to two entities | **P1** |
-| Integrations (CSV import) | Bring existing data in without typing it twice | none (route-owned) | `/integrations/**` | mapping | connect, map, stage, review, apply | run history, connection detail | Complete, full lifecycle | Healthy | P3 |
+| Integrations and file import | Connect outside apps; bring existing data in from a file without typing it twice | none (route-owned) | `/integrations/**` | mapping | connect, upload, map, stage, review, apply | run history, connection detail | Complete, full lifecycle | Healthy | P3 |
 | Public Presence (Profile) | Say who the business is, publicly | `features/public-profile/**` | Settings → Public page | same | — | live preview link once a bookable type exists | Complete, independent of the booking module | Healthy — **hypothesis rejected** | P3 |
 | Branding | Look like the business, not the platform | `features/branding/**` | Settings → How this business looks | same | — | — | Complete, 3-role constraint respected | Healthy | P3 |
 | Website | Publish an approved public page | `features/public-site/**` | Settings → Website | same | edit, draft, preview, publish | revision history (implicit via draft/published state) | Complete for the typed section vocabulary that exists | Healthy | P3 |
@@ -325,8 +325,8 @@ entity most businesses touch daily.
   free-text query builder, no per-page audience list (the audience is a policy on the report,
   read through in a subquery by the dashboard). This is I4/I5's "no second calculation" reasoning
   applied one level up, working as designed.
-- **Integrations (CSV import)** has a complete lifecycle with a real screen at every stage —
-  connect, map (with custom fields available in the mapping target list), stage, review, apply,
+- **File import** (under Integrations) has a complete lifecycle with a real screen at every stage —
+  upload, map (with custom fields available in the mapping target list), stage, review, apply,
   and a run-history list distinct from the connection detail view.
 - **Platform vs Organization scope** is clean. The canonical and legacy catalogues coexist
   without merging; GOLD's own cost and margin are withheld from every tenant-facing function at

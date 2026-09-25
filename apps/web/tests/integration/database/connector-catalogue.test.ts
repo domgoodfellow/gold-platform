@@ -33,6 +33,8 @@ const admin = () =>
 
 const SUFFIX = randomUUID().slice(0, 6);
 const BETA = `beta_${SUFFIX}`;
+// Stays connectable for the whole file; BETA is demoted to planned partway through.
+const LIVE = `live_${SUFFIX}`;
 const PRIVATE = `private_${SUFFIX}`;
 const EDITED = `edited_${SUFFIX}`;
 
@@ -63,26 +65,28 @@ beforeAll(async () => {
   await pg.query(
     `insert into public.platform_connectors (key, name, category, status, auth_method, connection_method, is_public) values
        ($1, 'Beta app', 'Testing', 'beta', 'none', 'custom', true),
-       ($2, 'Private app', 'Testing', 'live', 'none', 'custom', false)`,
-    [BETA, PRIVATE],
+       ($2, 'Private app', 'Testing', 'live', 'none', 'custom', false),
+       ($3, 'Live app', 'Testing', 'live', 'none', 'custom', true)`,
+    [BETA, PRIVATE, LIVE],
   );
 }, 60_000);
 
 afterAll(async () => {
-  await pg.query('delete from public.integration_connections where connector_key = any($1)', [[BETA, PRIVATE, EDITED]]);
-  await pg.query('delete from public.platform_connectors where key = any($1)', [[BETA, PRIVATE, EDITED]]);
+  await pg.query('delete from public.integration_connections where connector_key = any($1)', [[BETA, PRIVATE, EDITED, LIVE]]);
+  await pg.query('delete from public.platform_connectors where key = any($1)', [[BETA, PRIVATE, EDITED, LIVE]]);
   await pg.end();
 });
 
 describe('the connector catalogue', () => {
-  it('seeds the named connectors as data, and marks only the one that runs as live', async () => {
+  it('seeds the named connectors as data, and none of them is a file format', async () => {
     const { data, error } = await tenant.db.from('platform_connectors').select('key, status').eq('is_public', true);
     expect(error).toBeNull();
     const byKey = new Map((data ?? []).map((row) => [row.key, row.status]));
-    for (const key of ['google_workspace', 'microsoft_365', 'notion', 'slack', 'hubspot', 'salesforce', 'quickbooks', 'shopify', 'dropbox', 'csv']) {
+    for (const key of ['google_workspace', 'microsoft_365', 'notion', 'slack', 'hubspot', 'salesforce', 'quickbooks', 'shopify', 'dropbox']) {
       expect(byKey.has(key), key).toBe(true);
     }
-    expect(byKey.get('csv')).toBe('live');
+    // A file is an artifact, not a connection (20261005000001): no format is ever a connector.
+    for (const key of ['csv', 'spreadsheet', 'xlsx', 'pdf', 'markdown']) expect(byKey.has(key), key).toBe(false);
     expect(byKey.get('google_workspace')).toBe('planned');
   });
 
@@ -203,11 +207,11 @@ describe('editing the catalogue as platform staff', () => {
 
 describe('support visibility of a business connections', () => {
   it('shows staff the metadata and never a credential, and refuses a business', async () => {
-    await recordConnection(tenant.db, { organizationId: tenant.organizationId, connectorKey: 'csv', accountLabel: 'Leads export' });
+    await recordConnection(tenant.db, { organizationId: tenant.organizationId, connectorKey: LIVE, accountLabel: 'Leads export' });
 
     const rows = await listOrganizationConnections(staff, { organizationId: tenant.organizationId });
-    const csv = rows.find((row) => row.connectorKey === 'csv');
-    expect(csv).toMatchObject({ connectorName: 'CSV / spreadsheet file', accountLabel: 'Leads export', hasCredential: false });
+    const csv = rows.find((row) => row.connectorKey === LIVE);
+    expect(csv).toMatchObject({ connectorName: 'Live app', accountLabel: 'Leads export', hasCredential: false });
     expect(Object.keys(csv ?? {}).some((key) => /secret|token|credential$/i.test(key) && key !== 'hasCredential')).toBe(false);
 
     await expect(listOrganizationConnections(tenant.db, { organizationId: tenant.organizationId })).rejects.toThrow(/platform staff/);
@@ -221,10 +225,10 @@ describe('support visibility of a business connections', () => {
 
 describe('platform usage of the catalogue', () => {
   it('shows staff counts per connector, and refuses a business', async () => {
-    await recordConnection(tenant.db, { organizationId: tenant.organizationId, connectorKey: 'csv', accountLabel: 'Usage export' });
+    await recordConnection(tenant.db, { organizationId: tenant.organizationId, connectorKey: LIVE, accountLabel: 'Usage export' });
     const usage = await connectorUsage(staff);
-    expect(usage.get('csv')?.organizations).toBeGreaterThanOrEqual(1);
-    expect(Object.keys(usage.get('csv') ?? {}).sort()).toEqual(['activeConnections', 'attentionConnections', 'organizations']);
+    expect(usage.get(LIVE)?.organizations).toBeGreaterThanOrEqual(1);
+    expect(Object.keys(usage.get(LIVE) ?? {}).sort()).toEqual(['activeConnections', 'attentionConnections', 'organizations']);
     await expect(connectorUsage(tenant.db)).rejects.toThrow(/platform staff/);
   });
 });

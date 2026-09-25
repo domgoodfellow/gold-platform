@@ -5,6 +5,18 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A file is not a connection
+
+Browse apps listed *CSV / spreadsheet file* beside Google and HubSpot, and a business had to "connect" CSV before it
+could import one. A file is an artifact somebody hands GOLD, not a relationship with an outside system, so the
+connector is gone and an upload is now a data source with no connection. Importing a CSV works as before — upload,
+map, review, apply — from Customers or the Imports view, without first connecting anything.
+
+Behind that is one shared place for the question "may this file come in?": a registry of the formats GOLD recognizes
+(CSV, JSON, text and Markdown are usable today; Excel, PDF, Word, PowerPoint and images are recognized and nothing
+more), an organization file policy (on/off, allowed kinds, size), and one check the CRM import and the Agent's
+attachments both use. Existing uploads were detached from their old connection and kept. See D63.
+
 ### The Gild Products, and a sidebar that nests any Product
 
 The catalogue's Products are now the eight Gild Products — Sales, Service, Comms, Finance, Agents, Automations,

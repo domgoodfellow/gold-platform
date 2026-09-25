@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { Client } from 'pg';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createCustomer, getCustomer } from '@/lib/domain/customers/customers';
 import { createFieldDefinition, listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
@@ -9,7 +10,7 @@ import {
   listConnections,
   recordConnection,
 } from '@/lib/domain/integrations/connections';
-import { listResources, uploadCsvResource } from '@/lib/domain/integrations/resources';
+import { listResources, uploadImportFile } from '@/lib/domain/integrations/resources';
 import { createMapping, suggestMapping, type MappingField } from '@/lib/domain/integrations/mappings';
 import {
   applyImportRun,
@@ -18,20 +19,27 @@ import {
   listStagingRows,
   stageRows,
 } from '@/lib/domain/integrations/import-runs';
-import { parseCsv } from '@/lib/domain/integrations/csv';
+import { parseCsv } from '@/lib/domain/files/parsers/csv';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
  * The vertical slice: CSV → mapping → staging → review → apply, proven against real Postgres.
  *
- * Google Sheets and every other connector reuse this exact engine (connections, resources,
- * mappings, runs, staging, external_record_links) unchanged — CSV differs only in how bytes
- * become rows, which is `lib/domain/integrations/csv.ts` alone.
+ * A file is an artifact, not a connection: the upload below has no connection at all. Google Sheets
+ * and every other connector reuse this exact engine (resources, mappings, runs, staging,
+ * external_record_links) unchanged — a file differs only in how bytes become rows, which is
+ * `lib/domain/files/parsers/` alone.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+const CONNECTION = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+
+// A connector that can be connected to, placed as the database owner does: the catalogue has no
+// write door yet, and no seeded connector is live.
+const FIXTURE_CONNECTOR = `fixture_${randomUUID().slice(0, 6)}`;
+let pg: Client;
 
 type Tenant = { db: SupabaseClient; userId: string; organizationId: string };
 
@@ -78,6 +86,12 @@ function keyedRows(rows: Record<string, string>[]): { key: string; raw: Record<s
   return rows.map((raw, index) => ({ key: `row-${index}`, raw }));
 }
 
+afterAll(async () => {
+  await pg.query('delete from public.integration_connections where connector_key = $1', [FIXTURE_CONNECTOR]);
+  await pg.query('delete from public.platform_connectors where key = $1', [FIXTURE_CONNECTOR]);
+  await pg.end();
+});
+
 describe('integrations: CSV import', () => {
   let aliceEmailFieldRows: string;
   let aliceMapping: MappingField[];
@@ -87,6 +101,13 @@ describe('integrations: CSV import', () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
     }
+    pg = new Client({ connectionString: CONNECTION });
+    await pg.connect();
+    await pg.query(
+      `insert into public.platform_connectors (key, name, category, status, auth_method, connection_method, is_public)
+       values ($1, 'Fixture app', 'Testing', 'live', 'none', 'custom', true)`,
+      [FIXTURE_CONNECTOR],
+    );
     alice = await newTenant('alice');
     bob = await newTenant('bob');
 
@@ -126,32 +147,35 @@ describe('integrations: CSV import', () => {
     ].join('\n');
   });
 
-  it('connects, uploads a CSV, and detects headers', async () => {
-    const connectionId = await recordConnection(alice.db, {
+  it('uploads a CSV with no connection, and detects headers', async () => {
+    const { resourceId, parsed } = await uploadImportFile(alice.db, {
       organizationId: alice.organizationId,
-      connectorKey: 'csv',
-      accountLabel: 'Uploaded files',
-    });
-
-    const connections = await listConnections(alice.db, { organizationId: alice.organizationId });
-    expect(connections.map((c) => c.id)).toContain(connectionId);
-    expect(connections.find((c) => c.id === connectionId)?.status).toBe('connecting');
-
-    const { resourceId, parsed } = await uploadCsvResource(alice.db, {
-      organizationId: alice.organizationId,
-      connectionId,
       file: csvFile(aliceEmailFieldRows),
     });
 
     expect(parsed.headers).toEqual(['name', 'email', 'phone', 'website', 'industry']);
     expect(parsed.totalRows).toBe(5);
 
-    const resources = await listResources(alice.db, { organizationId: alice.organizationId, connectionId });
-    expect(resources.map((r) => r.id)).toContain(resourceId);
+    // A file is not a connection: nothing was connected, and the resource names none.
+    const connections = await listConnections(alice.db, { organizationId: alice.organizationId });
+    expect(connections).toEqual([]);
+    const resources = await listResources(alice.db, { organizationId: alice.organizationId });
+    expect(resources.find((r) => r.id === resourceId)).toMatchObject({ connectionId: null, resourceType: 'file_upload' });
 
-    // Bob cannot see Alice's connection or resource at all (I1).
-    const bobConnections = await listConnections(bob.db, { organizationId: alice.organizationId });
-    expect(bobConnections).toEqual([]);
+    // Bob cannot see Alice's resource at all (I1).
+    expect(await listResources(bob.db, { organizationId: alice.organizationId })).toEqual([]);
+  });
+
+  it('refuses a file the CRM import cannot read, before storing it', async () => {
+    await expect(
+      uploadImportFile(alice.db, {
+        organizationId: alice.organizationId,
+        file: new File(['not a workbook'], 'leads.xlsx'),
+      }),
+    ).rejects.toMatchObject({ code: 'integrations.file_unsupported' });
+    await expect(
+      uploadImportFile(alice.db, { organizationId: alice.organizationId, file: csvFile('') }),
+    ).rejects.toMatchObject({ code: 'integrations.file_empty' });
   });
 
   it('suggests a mapping deterministically, without a model', async () => {
@@ -322,21 +346,23 @@ describe('integrations: CSV import', () => {
     await assignRole(bob.db, { membershipId: membership!.id, roleId: limited });
 
     await expect(
-      recordConnection(bob.db, { organizationId: bob.organizationId, connectorKey: 'csv' }),
+      recordConnection(bob.db, { organizationId: bob.organizationId, connectorKey: FIXTURE_CONNECTOR }),
+    ).rejects.toMatchObject({ code: 'integrations.forbidden' });
+    await expect(
+      uploadImportFile(bob.db, { organizationId: bob.organizationId, file: csvFile('name\nAnn\n') }),
     ).rejects.toMatchObject({ code: 'integrations.forbidden' });
   });
 
   it('disconnecting a connection never touches the customers it already imported (I1/I8)', async () => {
-    const connections = await listConnections(alice.db, { organizationId: alice.organizationId });
-    const connection = connections[0];
-
-    await disconnectConnection(alice.db, {
+    const connectionId = await recordConnection(alice.db, {
       organizationId: alice.organizationId,
-      connectionId: connection.id,
+      connectorKey: FIXTURE_CONNECTOR,
     });
 
+    await disconnectConnection(alice.db, { organizationId: alice.organizationId, connectionId });
+
     const after = await listConnections(alice.db, { organizationId: alice.organizationId });
-    expect(after.find((c) => c.id === connection.id)?.status).toBe('disconnected');
+    expect(after.find((c) => c.id === connectionId)?.status).toBe('disconnected');
 
     const carol = await getCustomer(alice.db, {
       organizationId: alice.organizationId,

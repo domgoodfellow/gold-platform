@@ -10,35 +10,6 @@ import { requireOrganization } from '@/lib/route/organization';
 
 export type ConnectState = { error: string | null };
 
-/**
- * CSV needs no vendor handshake — there is no account to authorize, so this writes the
- * connection directly rather than opening an OAuth flow. A future connector with a real vendor
- * (Google, HubSpot) replaces this call site's body with a redirect into that vendor's own
- * consent screen; the connection it eventually records is the same table, the same shape.
- */
-export async function connectCsvAction(
-  _previous: ConnectState,
-  formData: FormData,
-): Promise<ConnectState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
-
-  try {
-    await recordConnection(db, {
-      organizationId,
-      connectorKey: 'csv',
-      accountLabel: 'Uploaded files',
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
-    throw error;
-  }
-
-  revalidatePath(`/organizations/${organizationId}/integrations`);
-  return { error: null };
-}
-
 export type DisconnectState = { error: string | null };
 
 export async function disconnectAction(

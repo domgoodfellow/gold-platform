@@ -312,6 +312,16 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | A tenant selecting another organization's bound resource as its own | A number or a domain typed by hand must not let GOLD use somebody else's scope (D39) | `app.phone_number_owner`, `security definer`, checked inside `set_calling_number`; a number bound to a different organization is refused, one bound to nobody is unaffected |
 | A subaccount's own credential used to place a call | GOLD's master account can already address any subaccount by naming it in the request path (D39); a second credential per business is a second thing to rotate for no isolation gained | `telephonyProvider(actingAccountSid)` authenticates with GOLD's master token throughout; only the acting account in the URL path changes |
 
+### Files and imports
+
+| Never | Because | Held by |
+|---|---|---|
+| A file format as a connector (CSV, Spreadsheet, PDF, Markdown, a generic *File upload* card) | A Connection is a persistent relationship with an outside system; a file is an artifact, and Browse would say the two are one thing (D63) | `connector-catalogue.test.ts` fails on a seeded format; `platform_connectors_connection_method_check` has no `file` value; `file-boundary.test.ts` |
+| A connection made so an upload has somewhere to hang | An import consumes a file directly; Google Drive is a Connection, a sheet fetched through it is an artifact | `integration_resources_has_an_owner` allows no connection only for a stored file |
+| A consumer, a schema or a vendor in `lib/domain/files/` | Intake, format and policy are one boundary every consumer calls; the CRM importer, the Agent and a future Knowledge ingest each own what they do with a file | `file-boundary.test.ts` |
+| A format claimed as supported before its reader exists | *Recognized*, *parseable*, *uploadable* and *usable by* are four claims (D31) | `formats.ts` derives the last two from `consumers`; `file-intake.test.ts` |
+| A permission per file type (`enable_csv`, `enable_pdf`) | Which types an organization admits is policy, and who may act is capability; a per-extension permission fuses the two | `FileIngestionPolicy` in `policy.ts`; no such capability exists |
+
 ### Human authentication
 
 | Never | Because | Held by |
@@ -443,6 +453,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | A tenant's OAuth credential, the fifth machine role, one contract for two suites | D56 |
 | Eight Gild Products, the shared Workspace, and when a sidebar row is real | D61 |
 | A generic Provider Account for an API-key-only provider, and AI Runtime assignment | D62 |
+| Files, imports and policy, against Connections | D63, D55 |
 
 ## When you finish a change
 

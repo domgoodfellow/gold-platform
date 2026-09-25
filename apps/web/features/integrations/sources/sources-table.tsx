@@ -4,7 +4,7 @@ import { Badge } from '@/components/display/data';
 import type { IntegrationResource } from '@/lib/domain/integrations/resources';
 
 /**
- * Every Resource this business has selected, across every Connection — the distinction from
+ * Every Resource this business has selected, across every Connection, and every file it has uploaded — the distinction from
  * Imports staying exactly what it was: a Resource is a reachable thing (a sheet, a folder, a
  * mailbox), not automatically imported data. What was actually brought in lives on the Imports
  * view instead.
@@ -26,7 +26,7 @@ export function SourcesTable({
       columns={[
         { key: 'name', header: 'Resource', emphasis: 'primary', cell: (r) => r.displayName },
         { key: 'type', header: 'Type', cell: (r) => r.resourceType.replace(/_/g, ' ') },
-        { key: 'connection', header: 'From', cell: (r) => connectionLabel.get(r.connectionId) ?? '—' },
+        { key: 'connection', header: 'From', cell: (r) => (r.connectionId ? (connectionLabel.get(r.connectionId) ?? '—') : 'Uploaded file') },
         {
           key: 'status',
           header: 'Status',

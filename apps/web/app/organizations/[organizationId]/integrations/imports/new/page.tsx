@@ -5,7 +5,7 @@ import { areaLabel } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { suggestMapping } from '@/lib/domain/integrations/mappings';
-import { downloadCsvResource } from '@/lib/domain/integrations/resources';
+import { downloadImportFile } from '@/lib/domain/integrations/resources';
 import { requireOrganization } from '@/lib/route/organization';
 import { UploadSourceForm } from '@/features/integrations/imports/upload-source-form';
 import { MappingEditor } from '@/features/integrations/imports/mapping-editor';
@@ -44,7 +44,7 @@ export default async function NewImportPage({
     );
   }
 
-  const source = await downloadCsvResource(db, { organizationId, resourceId });
+  const source = await downloadImportFile(db, { organizationId, resourceId });
   if (!source) {
     return <Hint className="mt-6">That file is no longer available. Upload it again.</Hint>;
   }

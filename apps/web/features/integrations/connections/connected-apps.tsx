@@ -48,8 +48,6 @@ export function ConnectedApps({
   connectors: Connector[];
   organizationName: string;
 }) {
-  const connectedCsv = active.some((connection) => connection.connectorKey === 'csv');
-
   if (active.length === 0) {
     const available = connectors.filter((connector) => connector.status !== 'planned').slice(0, 4);
     return (
@@ -90,14 +88,7 @@ export function ConnectedApps({
       </WidgetGrid>
 
       <Section className="mt-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <SectionHeading>Connected</SectionHeading>
-          {mayManage && connectedCsv ? (
-            <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">
-              Import file
-            </ButtonLink>
-          ) : null}
-        </div>
+        <SectionHeading>Connected</SectionHeading>
           <DividedList className="mt-2">
             {active.map((connection) => {
               const connector = connectorByKey.get(connection.connectorKey);

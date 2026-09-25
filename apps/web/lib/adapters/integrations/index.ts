@@ -6,11 +6,10 @@
  * connector an admin marks `live` before its adapter exists is browsable and honestly not
  * connectable, instead of a Connect button that does nothing (D31).
  *
- * `csv` needs no handshake — there is no account to authorize — so it is implemented by
- * `lib/domain/integrations/csv.ts` and the import engine. An OAuth connector adds its key here in
- * the same change that adds its adapter in `apps/api/app/connectors/`.
+ * A connector is a persistent relationship with an outside system, so every one runs a handshake.
+ * A file is not a connector — see `lib/domain/files/`. An OAuth connector adds its key here in the
+ * same change that adds its adapter in `apps/api/app/connectors/`.
  */
-const NEEDS_NO_HANDSHAKE = new Set<string>(['csv']);
 
 /**
  * Connectors `apps/api` can complete a sign-in for (D56). They are connectable only where this
@@ -20,7 +19,7 @@ const NEEDS_NO_HANDSHAKE = new Set<string>(['csv']);
 const NEEDS_API = new Set<string>(['google_workspace', 'microsoft_365', 'hubspot', 'notion', 'slack', 'dropbox']);
 
 export function isConnectorImplemented(key: string): boolean {
-  return NEEDS_NO_HANDSHAKE.has(key) || (NEEDS_API.has(key) && Boolean(process.env.GOLD_API_URL));
+  return NEEDS_API.has(key) && Boolean(process.env.GOLD_API_URL);
 }
 
 /** Whether connecting means a vendor's own sign-in rather than a direct record. */

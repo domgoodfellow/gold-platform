@@ -3,8 +3,7 @@
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
-import { listConnections, recordConnection } from '@/lib/domain/integrations/connections';
-import { downloadCsvResource, uploadCsvResource } from '@/lib/domain/integrations/resources';
+import { downloadImportFile, uploadImportFile } from '@/lib/domain/integrations/resources';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import {
   createMapping,
@@ -16,21 +15,6 @@ import { beginImportRun, stageRows } from '@/lib/domain/integrations/import-runs
 import { requireOrganization } from '@/lib/route/organization';
 
 export type UploadState = { error: string | null };
-
-/** Finds this business's own CSV connection, or opens one — CSV has no vendor consent screen to wait on. */
-async function ensureCsvConnection(db: Awaited<ReturnType<typeof getDb>>, organizationId: string): Promise<string> {
-  const connections = await listConnections(db, { organizationId });
-  const existing = connections.find(
-    (connection) => connection.connectorKey === 'csv' && connection.status !== 'disconnected',
-  );
-  if (existing) return existing.id;
-
-  return recordConnection(db, {
-    organizationId,
-    connectorKey: 'csv',
-    accountLabel: 'Uploaded files',
-  });
-}
 
 export async function uploadSourceAction(
   _previous: UploadState,
@@ -47,8 +31,7 @@ export async function uploadSourceAction(
 
   let resourceId: string;
   try {
-    const connectionId = await ensureCsvConnection(db, organizationId);
-    const uploaded = await uploadCsvResource(db, { organizationId, connectionId, file });
+    const uploaded = await uploadImportFile(db, { organizationId, file });
     resourceId = uploaded.resourceId;
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
@@ -94,7 +77,7 @@ export async function createMappingAndStageAction(formData: FormData): Promise<v
 
     runId = await beginImportRun(db, { organizationId, mappingId });
 
-    const parsed = await downloadCsvResource(db, { organizationId, resourceId });
+    const parsed = await downloadImportFile(db, { organizationId, resourceId });
     if (!parsed) {
       throw new DomainError('That file is no longer available. Upload it again.', 'integrations.file_missing');
     }

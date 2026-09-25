@@ -1,20 +1,16 @@
+import { acceptFor, fileExtension } from '@/lib/domain/files/formats';
+import { checkFileIntake, safeFileName } from '@/lib/domain/files/intake';
+import { decodeText } from '@/lib/domain/files/parsers/text';
+
 /**
  * What an Agent attachment may be, as pure rules: no database, no storage, no Node — so the composer
- * can refuse a file at once and the server can refuse it again, from the same words. The reasoning
- * for the supported set, and for text only, is in `attachments.ts`.
+ * can refuse a file at once and the server can refuse it again, from the same words. The supported
+ * set is the file registry's `agent_attachment` consumer; the reasoning for text only is in
+ * `attachments.ts`.
  */
 
-/** Extension → the one MIME type stored for it. The browser's own `type` is a hint and is not trusted. */
-const TYPES: Record<string, string> = {
-  txt: 'text/plain',
-  md: 'text/markdown',
-  markdown: 'text/markdown',
-  csv: 'text/csv',
-  json: 'application/json',
-};
-
 /** For the file picker's `accept`. */
-export const ATTACHMENT_ACCEPT = Object.keys(TYPES).map((extension) => `.${extension}`).join(',');
+export const ATTACHMENT_ACCEPT = acceptFor('agent_attachment');
 
 /** A person-facing name for what is accepted. */
 export const ATTACHMENT_KINDS_LABEL = 'Text, Markdown, CSV or JSON';
@@ -25,8 +21,6 @@ export const ATTACHMENTS_PER_QUESTION = 3;
 /** How much of one file, and of all of them, reaches the model. Bounded again in `apps/api`. */
 export const ATTACHMENT_TEXT_MAX_CHARS = 20_000;
 export const ATTACHMENTS_TEXT_MAX_CHARS = 40_000;
-
-const NAME_MAX = 120;
 
 /** What the composer and a transcript show of a file. */
 export type AgentAttachment = {
@@ -45,29 +39,7 @@ export type AttachmentText = {
   truncated: boolean;
 };
 
-/**
- * A name that is safe to store, show and put in a prompt: no path, no control or direction-changing
- * character, whitespace collapsed, and shortened from the middle so the extension survives.
- */
-export function safeAttachmentName(name: string): string {
-  const base = name.split(/[\\/]/).pop() ?? '';
-  const cleaned = base
-    // Control characters and the bidirectional overrides that make `fdp.exe` read `exe.pdf`.
-    .replace(/[\u0000-\u001f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (Array.from(cleaned).length <= NAME_MAX) return cleaned;
-
-  const dot = cleaned.lastIndexOf('.');
-  const extension = dot > 0 ? cleaned.slice(dot) : '';
-  const stem = Array.from(cleaned.slice(0, dot > 0 ? dot : undefined));
-  return `${stem.slice(0, NAME_MAX - 1 - extension.length).join('')}…${extension}`;
-}
-
-export function attachmentExtension(name: string): string {
-  const dot = name.lastIndexOf('.');
-  return dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
-}
+export { safeFileName as safeAttachmentName, fileExtension as attachmentExtension };
 
 /**
  * The refusal for a file, before any byte is sent — or null, with the type it will be stored as.
@@ -78,31 +50,15 @@ export function validateAttachment(file: {
   name: string;
   size: number;
 }): { error: string } | { error: null; mimeType: string; fileName: string } {
-  const fileName = safeAttachmentName(file.name);
-  if (!fileName) return { error: 'That file has no name.' };
-
-  const mimeType = TYPES[attachmentExtension(fileName)];
-  if (!mimeType) return { error: `${ATTACHMENT_KINDS_LABEL} only. The Agent cannot read that kind of file yet.` };
-
-  if (file.size === 0) return { error: 'That file is empty.' };
-  if (file.size > ATTACHMENT_MAX_BYTES) {
-    return { error: `That file is larger than ${ATTACHMENT_MAX_BYTES / (1024 * 1024)} MB.` };
+  const checked = checkFileIntake(file, { consumer: 'agent_attachment', maxBytes: ATTACHMENT_MAX_BYTES });
+  if (checked.ok) return { error: null, mimeType: checked.artifact.mimeType, fileName: checked.artifact.name };
+  if (checked.reason === 'unsupported') {
+    return { error: `${ATTACHMENT_KINDS_LABEL} only. The Agent cannot read that kind of file yet.` };
   }
-  return { error: null, mimeType, fileName };
+  return { error: checked.message };
 }
 
-/**
- * The file's text, or null if the bytes are not text. A NUL byte or an invalid UTF-8 sequence means
- * the file is something else wearing a text extension, and it is refused rather than sent.
- */
-export function decodeText(bytes: Uint8Array): string | null {
-  if (bytes.includes(0)) return null;
-  try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/^\ufeff/, '');
-  } catch {
-    return null;
-  }
-}
+export { decodeText };
 
 /** Shortens each file, then the whole, keeping the first files whole rather than every file thin. */
 export function boundAttachmentTexts(files: AttachmentText[]): AttachmentText[] {

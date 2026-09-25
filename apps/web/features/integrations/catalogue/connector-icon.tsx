@@ -1,4 +1,3 @@
-import { FileSpreadsheet } from 'lucide-react';
 import { BrandMark } from '@/components/display/brand-mark';
 import { GENERATED_MARKS } from '@/features/platform/brand/marks.generated';
 import type { Connector } from '@/lib/domain/integrations/connectors';
@@ -43,9 +42,6 @@ export function ConnectorIcon({
   logoUrl: string | null;
   size?: 'small' | 'default' | 'large';
 }) {
-  if (connector.key === 'csv') {
-    return <BrandMark label={connector.name} src={logoUrl} background="#6b7280" icon={<FileSpreadsheet className="size-4" />} size={size} />;
-  }
   const mark = GENERATED_MARKS[connector.key];
   if (mark) return <BrandMark label={connector.name} mark={mark} size={size} />;
   if (connector.key in BRAND_COLOR) return <BrandMark label={connector.name} background={BRAND_COLOR[connector.key]} size={size} />;
