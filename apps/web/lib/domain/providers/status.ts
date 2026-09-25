@@ -32,9 +32,9 @@ export function providerReadiness(input: {
       ? {
           state: 'operational',
           summary: 'Running on the deployment’s own credential',
-          reasons: ['No GOLD account is recorded here yet.', ...fallback],
+          reasons: ['No GildOps account is recorded here yet.', ...fallback],
         }
-      : { state: 'not_configured', summary: 'Not configured', reasons: ['No GOLD account is recorded and this deployment holds no credential.'] };
+      : { state: 'not_configured', summary: 'Not configured', reasons: ['No GildOps account is recorded and this deployment holds no credential.'] };
   }
 
   const reasons: string[] = [];

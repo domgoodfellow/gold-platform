@@ -34,7 +34,7 @@ export async function beginPlatformBillingCheckout(
   const price = prices.find((p) => p.approvalState === 'approved' && p.currency === input.currency);
   if (!price) {
     throw new DomainError(
-      `GOLD has not priced ${plan.label} in ${input.currency}.`,
+      `GildOps has not priced ${plan.label} in ${input.currency}.`,
       'platform_billing.no_price_for_currency',
     );
   }

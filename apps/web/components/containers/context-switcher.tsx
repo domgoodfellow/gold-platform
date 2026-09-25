@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { PLATFORM_NAME } from '@/lib/brand';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import {
   DropdownMenu,
@@ -34,7 +35,7 @@ export type SwitchableOrganization = {
 export type SwitcherContext =
   | { kind: 'business'; organizationId: string; name: string; role: string }
   | { kind: 'account' }
-  /** The fallback frame: no organization is trusted, so the trigger names only GOLD. */
+  /** The fallback frame: no organization is trusted, so the trigger names only the platform. */
   | { kind: 'global' };
 
 type SwitcherProps = {
@@ -53,7 +54,7 @@ type SwitcherProps = {
  */
 export function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[]) {
   const triggerName =
-    current.kind === 'business' ? current.name : current.kind === 'global' ? 'GildOps' : 'Personal settings';
+    current.kind === 'business' ? current.name : current.kind === 'global' ? PLATFORM_NAME : 'Personal settings';
   const triggerRole =
     current.kind === 'business' ? current.role : current.kind === 'global' ? 'Choose where to work' : 'Your identity';
   const avatarInitial =

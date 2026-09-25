@@ -45,7 +45,7 @@ export default async function TenantIntegrations({ params }: PageProps<'/organiz
       <section className="mt-6">
         <SectionHeading>Connected apps</SectionHeading>
         <Hint className="mt-1 block">
-          A business&apos;s own authorizations to outside apps. Infrastructure GOLD runs for it is under Providers.
+          A business&apos;s own authorizations to outside apps. Infrastructure GildOps runs for it is under Providers.
         </Hint>
         <div className="mt-3">
           <DataTable

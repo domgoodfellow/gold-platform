@@ -46,7 +46,7 @@ export default async function ProvidersPage({ params }: PageProps<'/organization
       <PageHeader
         title="Providers"
         crumbs={[{ label: 'Infrastructure' }]}
-        description="Infrastructure GOLD operates to deliver capabilities: each provider’s readiness, the organizations that depend on it, and what needs attention. Credentials are never read or displayed here."
+        description="Infrastructure GildOps operates to deliver capabilities: each provider’s readiness, the organizations that depend on it, and what needs attention. Credentials are never read or displayed here."
       />
       <DataTable
         rows={providers}

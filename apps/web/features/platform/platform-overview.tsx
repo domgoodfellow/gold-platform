@@ -27,7 +27,7 @@ export function PlatformOverview({
 
   return (
     <AppPage>
-      <PageHeader title="Overview" description="The state of every business running on GOLD." />
+      <PageHeader title="Overview" description="The state of every business running on GildOps." />
 
       <WidgetGrid className="mt-6">
         <Widget

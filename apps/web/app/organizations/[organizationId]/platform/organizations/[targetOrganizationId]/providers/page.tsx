@@ -54,7 +54,7 @@ export default async function TenantProviders({ params }: PageProps<'/organizati
             </Link>
           </div>
           <DefinitionList>
-            <Detail label="Owned by GOLD account">
+            <Detail label="Owned by GildOps account">
               {standing?.bindingId ? (account ? account.label : 'Deployment credential (no account recorded)') : '—'}
             </Detail>
             <Detail label="Subaccount">{standing?.externalAccountId ?? '—'}</Detail>
@@ -68,7 +68,7 @@ export default async function TenantProviders({ params }: PageProps<'/organizati
             <div>
               <ProvisionTwilioForm organizationId={organizationId} />
               <p className="mt-1 text-sm text-muted">
-                {health === 'failed' ? 'Retrying resumes where it stopped and never creates a second subaccount.' : 'Provisions under the default GOLD account.'}
+                {health === 'failed' ? 'Retrying resumes where it stopped and never creates a second subaccount.' : 'Provisions under the default GildOps account.'}
               </p>
             </div>
           ) : null}

@@ -134,7 +134,7 @@ export function ReconcileControl({
         <Alert>
           <AlertTitle>Nothing needs attention</AlertTitle>
           <AlertDescription>
-            Every active subaccount GOLD expects exists, and the provider holds none GOLD does not know.
+            Every active subaccount GildOps expects exists, and the provider holds none GildOps does not know.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -155,9 +155,9 @@ export function ReconcileControl({
       ) : null}
       {state.unmanaged.length > 0 ? (
         <Alert>
-          <AlertTitle>Subaccounts GOLD has no record of</AlertTitle>
+          <AlertTitle>Subaccounts GildOps has no record of</AlertTitle>
           <AlertDescription>
-            <p>Reported only. GOLD does not adopt or close these; decide what each is at the provider.</p>
+            <p>Reported only. GildOps does not adopt or close these; decide what each is at the provider.</p>
             <ul className="mt-1 list-disc pl-4">
               {state.unmanaged.map((row) => (
                 <li key={row.sid}>

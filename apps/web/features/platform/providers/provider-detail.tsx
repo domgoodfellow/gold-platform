@@ -53,7 +53,7 @@ export function ProviderDetail({
                           {service.description ? <p className="text-sm text-muted">{service.description}</p> : null}
                           {service.features.length > 0 ? (
                             <p className="mt-1 text-xs text-subtle">
-                              Used by GOLD for: {service.features.map((feature) => feature.featureLabel).join(', ')}
+                              Used by GildOps for: {service.features.map((feature) => feature.featureLabel).join(', ')}
                             </p>
                           ) : null}
                           {typeof service.metadata.note === 'string' ? (

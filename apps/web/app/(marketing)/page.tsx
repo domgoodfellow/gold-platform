@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { HomepageRenderer } from '@/features/public-site/homepage-renderer';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { canonicalUrl } from '@/lib/seo/site';
+import { PLATFORM_NAME } from '@/lib/brand';
 import { getPublicDb } from '@/lib/db/public';
 import { PublicCommunicationWidget } from '@/features/communications/public-widget';
 
@@ -28,8 +29,8 @@ export default async function Home() {
   const structuredData = {
     '@context': 'https://schema.org',
     '@graph': [
-      { '@type': 'Organization', '@id': `${home}#organization`, name: site.profile.displayName, url: home },
-      { '@type': 'WebSite', '@id': `${home}#website`, name: site.profile.displayName, url: home, publisher: { '@id': `${home}#organization` } },
+      { '@type': 'Organization', '@id': `${home}#organization`, name: PLATFORM_NAME, url: home },
+      { '@type': 'WebSite', '@id': `${home}#website`, name: PLATFORM_NAME, url: home, publisher: { '@id': `${home}#organization` } },
       { '@type': 'WebPage', '@id': home, name: site.seoTitle, description: site.seoDescription, isPartOf: { '@id': `${home}#website` }, about: { '@id': `${home}#organization` } },
     ],
   };

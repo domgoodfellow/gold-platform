@@ -57,7 +57,7 @@ export function SupportSessionBanner({
         <AlertTitle>Platform Support View</AlertTitle>
         <AlertDescription>
           <p>
-            You opened this organization as GOLD staff{session.reason ? ` — “${session.reason}”` : ''}.
+            You opened this organization as GildOps staff{session.reason ? ` — “${session.reason}”` : ''}.
             This session ends {expires} unless you end it now.
           </p>
           <form action={formAction} className="mt-2">

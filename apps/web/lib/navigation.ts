@@ -227,7 +227,7 @@ export const MODULES = [
     key: 'integrations',
     label: 'Connections',
     description:
-      'Connect GOLD to the apps and files a business already uses, and bring their data in. A business that enters everything by hand runs without this.',
+      'Connect GildOps to the apps and files a business already uses, and bring their data in. A business that enters everything by hand runs without this.',
     configuredAt: { segment: 'integrations' },
   },
 ] as const satisfies readonly Module[];

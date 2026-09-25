@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { cx, FOCUS_RING } from '../class-names';
+import { PLATFORM_NAME } from '@/lib/brand';
 
 /**
  * GOLD's own chrome: a header and a footer around the pages that belong to GOLD rather than to a
@@ -21,7 +22,7 @@ import { cx, FOCUS_RING } from '../class-names';
 export function SiteShell({
   nav,
   action,
-  name = 'GildOps',
+  name = PLATFORM_NAME,
   logoUrl = null,
   footerLine = 'One system that runs your business.',
   children,

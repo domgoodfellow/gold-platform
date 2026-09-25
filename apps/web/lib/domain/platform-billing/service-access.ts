@@ -116,14 +116,14 @@ export async function getOrganizationServiceAccess(
 export function describeServiceAccess(access: ServiceAccess): string {
   switch (access.code) {
     case 'no_plan':
-      return 'No GOLD Plan is assigned, so no subscription is required.';
+      return 'No GildOps Plan is assigned, so no subscription is required.';
     case 'non_billable_plan':
       return 'On a non-billable Plan; no subscription is required.';
     case 'subscription_serviceable':
-      return `The GOLD subscription is ${access.subscriptionStatus}.`;
+      return `The GildOps subscription is ${access.subscriptionStatus}.`;
     case 'subscription_missing':
-      return 'No GOLD subscription is on record for this Plan.';
+      return 'No GildOps subscription is on record for this Plan.';
     case 'subscription_not_serviceable':
-      return `The GOLD subscription is ${(access.subscriptionStatus ?? '').replace('_', ' ')}, which does not currently include service.`;
+      return `The GildOps subscription is ${(access.subscriptionStatus ?? '').replace('_', ' ')}, which does not currently include service.`;
   }
 }

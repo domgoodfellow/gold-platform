@@ -4,6 +4,7 @@ import "./globals.css";
 import { TooltipProvider } from '@gold/ui/components/tooltip';
 import { Toaster } from '@gold/ui/components/sonner';
 import { siteUrl } from '@/lib/seo/site';
+import { PLATFORM_NAME } from '@/lib/brand';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,12 +18,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: siteUrl(),
-  title: 'GildOps | One operating system for your business',
+  title: `${PLATFORM_NAME} | One operating system for your business`,
   // Not `vision.md`'s "One engine. Many businesses." -- that's the platform's own architecture,
   // read by whoever builds it. A search result is read by the one business being sold to.
   description:
-    'GildOps replaces the spreadsheet, the shared calendar and the group chat holding your business together.',
-  applicationName: 'GildOps',
+    `${PLATFORM_NAME} replaces the spreadsheet, the shared calendar and the group chat holding your business together.`,
+  applicationName: PLATFORM_NAME,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

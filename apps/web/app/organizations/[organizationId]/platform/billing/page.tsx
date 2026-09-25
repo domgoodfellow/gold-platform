@@ -57,7 +57,7 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
 
   return (
     <AppPage>
-      <PageHeader title="Billing" description={<>GOLD’s own subscription book — organizations paying GOLD, never the other direction. Plans and prices are managed at{' '} <Link href={platformHref(goldId, 'catalog/plans')} className="underline underline-offset-4"> Catalog → Plans </Link> .</>} />
+      <PageHeader title="Billing" description={<>GildOps’s own subscription book — organizations paying GildOps, never the other direction. Plans and prices are managed at{' '} <Link href={platformHref(goldId, 'catalog/plans')} className="underline underline-offset-4"> Catalog → Plans </Link> .</>} />
 
       {!provider ? (
         <p className="mt-6 rounded border border-border bg-secondary p-4 text-sm text-muted-foreground">

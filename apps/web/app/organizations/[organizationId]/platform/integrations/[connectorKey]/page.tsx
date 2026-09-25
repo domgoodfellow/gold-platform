@@ -42,7 +42,7 @@ export default async function ConnectorPage({ params }: PageProps<'/organization
         <SectionHeading>Identity</SectionHeading>
         {isBuiltInConnector(connector.key) ? (
           <Hint className="mt-1 block">
-            Built-in connector — shown with GOLD&apos;s own curated brand mark. There is nothing to upload here.
+            Built-in connector — shown with GildOps&apos;s own curated brand mark. There is nothing to upload here.
           </Hint>
         ) : logoUrl ? (
           // A public, unsigned URL — a logo is on a page a stranger opens.
@@ -68,7 +68,7 @@ export default async function ConnectorPage({ params }: PageProps<'/organization
         <SectionHeading>Apps inside this connector</SectionHeading>
         <Hint className="mt-1 block">
           One authorization can reach several apps. These describe what it covers; they are not
-          separate connections — and each carries its own GOLD implementation state, never
+          separate connections — and each carries its own GildOps implementation state, never
           inherited from the connector above it.
         </Hint>
         {connector.apps.length === 0 ? (

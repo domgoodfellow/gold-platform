@@ -38,7 +38,7 @@ export function ProviderAccountForm({
       {account ? <input type="hidden" name="accountId" value={account.id} /> : null}
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="label">Account label</FieldLabel>
-        <TextInput id="label" name="label" required maxLength={120} defaultValue={account?.label ?? ''} placeholder="GOLD account" />
+        <TextInput id="label" name="label" required maxLength={120} defaultValue={account?.label ?? ''} placeholder="GildOps account" />
       </div>
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="secret">{account?.credentialSetAt ? 'Replace API key' : 'API key'}</FieldLabel>

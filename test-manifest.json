@@ -586,6 +586,13 @@
         "commercial"
       ]
     },
+    "apps/web/tests/architecture/static/platform-brand.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "marketing"
+      ],
+      "note": "Reads source and the seeding migration; renders nothing."
+    },
     "apps/web/tests/architecture/static/public-seo.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -1349,13 +1356,6 @@
       ],
       "note": "Also contains source scans."
     },
-    "apps/web/tests/integration/database/work-item-editing.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "work"
-      ]
-    },
-    "apps/web/tests/integration/database/work-item-transitions.test.ts": {
     "apps/web/tests/integration/database/usage-economics.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1365,6 +1365,13 @@
       ],
       "note": "Retail-rate resolution, usage provenance and tenant integrity, historical cost, the recording door."
     },
+    "apps/web/tests/integration/database/work-item-editing.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "work"
+      ]
+    },
+    "apps/web/tests/integration/database/work-item-transitions.test.ts": {
       "category": "database-integration",
       "concerns": [
         "work"

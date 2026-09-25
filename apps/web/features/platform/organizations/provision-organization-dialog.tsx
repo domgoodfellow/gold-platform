@@ -20,7 +20,7 @@ export function ProvisionOrganizationDialog() {
       <DialogContent className="w-[min(48rem,calc(100%-2rem))] max-w-none">
         <DialogHeader>
           <DialogTitle>Provision organization</DialogTitle>
-          <DialogDescription>Create the tenant and assign its existing GOLD account owner.</DialogDescription>
+          <DialogDescription>Create the tenant and assign its existing GildOps account owner.</DialogDescription>
         </DialogHeader>
         <ProvisionForm compact />
       </DialogContent>

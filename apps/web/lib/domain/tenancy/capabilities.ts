@@ -81,5 +81,5 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   /** Deactivating or reactivating an entitled feature, not entitlement itself — a tenant cannot self-entitle. */
   'feature.manage': 'Switch entitled features on or off for this business',
   /** GOLD → organization money (domain-model.md's own plane), never the Commerce capabilities this business collects from its own customers with. */
-  'billing.manage': 'Start or manage this business’s own subscription with GOLD',
+  'billing.manage': 'Start or manage this business’s own subscription with GildOps',
 };

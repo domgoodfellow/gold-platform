@@ -34,7 +34,7 @@ export function parseCsv(text: string): ParsedCsv {
 
   const headers = result.meta.fields ?? [];
   if (headers.length === 0) {
-    throw new DomainError('That file has no header row GOLD could read.', 'integrations.csv_no_headers');
+    throw new DomainError('That file has no header row GildOps could read.', 'integrations.csv_no_headers');
   }
 
   const totalRows = result.data.length;

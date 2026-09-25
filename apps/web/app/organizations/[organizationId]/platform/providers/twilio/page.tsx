@@ -64,7 +64,7 @@ export default async function TwilioProviderPage({ params, searchParams }: PageP
       <PageHeader
         title="Twilio"
         crumbs={[{ label: 'Infrastructure' }, { label: 'Providers', href: platformHref(goldId, 'providers') }]}
-        description="Telephony infrastructure GOLD operates for every organization: the parent account, the subaccount each organization runs inside, and the numbers beneath it."
+        description="Telephony infrastructure GildOps operates for every organization: the parent account, the subaccount each organization runs inside, and the numbers beneath it."
         meta={
           <span className="inline-flex items-center gap-2">
             <ReadinessBadge state={readiness.state} />
@@ -107,7 +107,7 @@ export default async function TwilioProviderPage({ params, searchParams }: PageP
           ) : null}
 
           <DefinitionList>
-            <Detail label="Default GOLD account">{primary ? `${primary.label} · ${primary.externalAccountId ?? 'no SID'}` : 'None recorded'}</Detail>
+            <Detail label="Default GildOps account">{primary ? `${primary.label} · ${primary.externalAccountId ?? 'no SID'}` : 'None recorded'}</Detail>
             <Detail label="Credential type">{primary?.credentialKind ?? '—'}</Detail>
             <Detail label="Last verified">{primary ? when(primary.lastVerifiedAt) : '—'}</Detail>
             <Detail label="Organizations with a subaccount">{bound.filter((row) => row.bindingStatus === 'active').length}</Detail>
@@ -139,7 +139,7 @@ export default async function TwilioProviderPage({ params, searchParams }: PageP
           <DataTable
             rows={accounts}
             rowKey={(account) => account.id}
-            empty="No GOLD account is recorded. Existing scopes use the deployment’s own credential."
+            empty="No GildOps account is recorded. Existing scopes use the deployment’s own credential."
             columns={[
               {
                 key: 'label',

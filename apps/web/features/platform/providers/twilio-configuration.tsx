@@ -25,7 +25,7 @@ export function TwilioConfiguration({ account }: { account?: ProviderAccount }) 
     return (
       <div className="flex flex-col gap-4">
         <div>
-          <GroupHeading>Add a GOLD account</GroupHeading>
+          <GroupHeading>Add a GildOps account</GroupHeading>
           <Hint>The parent account under which each organization’s own subaccount is created.</Hint>
         </div>
         <TwilioAccountForm kinds={kinds} />

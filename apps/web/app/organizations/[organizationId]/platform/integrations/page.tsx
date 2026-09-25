@@ -22,7 +22,7 @@ export default async function PlatformIntegrationsPage({ params }: PageProps<'/o
     <AppPage>
       <PageHeader
         title="Connectors"
-        description="The kinds of outside app GOLD supports, which a business then connects. Who GOLD buys infrastructure from is under Providers."
+        description="The kinds of outside app GildOps supports, which a business then connects. Who GildOps buys infrastructure from is under Providers."
         actions={<ButtonLink href={platformHref(goldId, 'integrations/new')} size="small">New connector</ButtonLink>}
       />
       <DataTable

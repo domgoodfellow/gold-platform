@@ -29,7 +29,7 @@ export function ProviderAccountSummary({ account }: { account: ProviderAccount |
           </Detail>
         </DefinitionList>
       ) : (
-        <p className="mt-2 text-sm text-muted">Not configured. Use Configure to add a GOLD account.</p>
+        <p className="mt-2 text-sm text-muted">Not configured. Use Configure to add a GildOps account.</p>
       )}
     </Section>
   );

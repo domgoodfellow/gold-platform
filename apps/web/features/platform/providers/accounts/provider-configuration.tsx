@@ -28,8 +28,8 @@ export function ProviderConfiguration({ providerKey, account }: { providerKey: s
     return (
       <div className="flex flex-col gap-4">
         <div>
-          <GroupHeading>Add a GOLD account</GroupHeading>
-          <Hint>The credential GOLD uses to answer through this provider.</Hint>
+          <GroupHeading>Add a GildOps account</GroupHeading>
+          <Hint>The credential GildOps uses to answer through this provider.</Hint>
         </div>
         <ProviderAccountForm providerKey={providerKey} />
       </div>

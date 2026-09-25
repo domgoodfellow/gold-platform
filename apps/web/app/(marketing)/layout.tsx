@@ -3,6 +3,7 @@ import { BrandStyle } from '@/features/branding/brand-style';
 import { MarketingShell } from '@/components/marketing/marketing-shell';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { getPublicDb } from '@/lib/db/public';
+import { PLATFORM_NAME } from '@/lib/brand';
 
 /**
  * Every page in this group inherits this layout's own fetch of the published homepage — brand,
@@ -15,7 +16,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getPublishedGoldHomepage();
   return {
-    openGraph: { type: 'website', siteName: site.profile.displayName, title: site.seoTitle, description: site.seoDescription, url: '/' },
+    openGraph: { type: 'website', siteName: PLATFORM_NAME, title: site.seoTitle, description: site.seoDescription, url: '/' },
     twitter: { card: 'summary', title: site.seoTitle, description: site.seoDescription },
   };
 }
@@ -36,7 +37,7 @@ export default async function MarketingLayout({ children }: LayoutProps<'/'>) {
     <div data-brand>
       <BrandStyle brand={site.brand} />
       <MarketingShell
-        name={site.profile.displayName}
+        name={PLATFORM_NAME}
         logoUrl={site.brand.logoPath ? getPublicDb().storage.from('brand').getPublicUrl(site.brand.logoPath).data.publicUrl : null}
         tagline={site.profile.tagline ?? 'Sales, operations and customer service in one connected system.'}
         contactEmail={site.profile.contactEmail}

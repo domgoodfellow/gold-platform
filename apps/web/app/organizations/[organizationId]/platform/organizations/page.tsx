@@ -25,7 +25,7 @@ export default async function PlatformOrganizationsPage({
     <AppPage>
       <PageHeader
         title="Organizations"
-        meta={`${total === 1 ? '1 organization' : `${total} organizations`} on GOLD`}
+        meta={`${total === 1 ? '1 organization' : `${total} organizations`} on GildOps`}
         actions={<ProvisionOrganizationDialog />}
       />
       <form method="get" role="search" className="relative max-w-md">
