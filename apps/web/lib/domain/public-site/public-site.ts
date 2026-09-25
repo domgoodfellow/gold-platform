@@ -40,7 +40,7 @@ function projection(value: unknown): PublicSiteProjection {
 export async function publishedGoldHomepage(db: Db): Promise<PublicSiteProjection> {
   const { data, error } = await db.rpc('published_gold_homepage');
   if (error) throw new DomainError(error.message, 'public_site.read_failed');
-  if (!data) throw new DomainError('No GOLD homepage has been published.', 'public_site.not_published');
+  if (!data) throw new DomainError('No GildOps homepage has been published.', 'public_site.not_published');
   return projection(data);
 }
 

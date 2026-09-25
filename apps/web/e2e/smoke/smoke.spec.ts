@@ -24,7 +24,7 @@ function account(): { email: string; password: string } {
   return { email, password };
 }
 
-// `/login`, not `/`: the front page renders the published GOLD homepage and answers 500 by design
+// `/login`, not `/`: the front page renders the published GildOps homepage and answers 500 by design
 // on a database where none has been published, which is a content state and not a dead app.
 test('the application answers', async ({ request }) => {
   const response = await request.get('/login');

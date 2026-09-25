@@ -36,12 +36,12 @@ export default async function LegacyPlatformRoute({ params, searchParams }: Page
   const myOrganizations = await listMyOrganizations(db);
   const goldInternal = await findGoldInternalOrganization(db, myOrganizations);
   if (!goldInternal) {
-    console.error('GOLD Internal workspace invariant is not satisfied for platform route.', {
+    console.error('The GildOps internal workspace invariant is not satisfied for platform route.', {
       permissions: [...permissions],
       membershipOrganizationIds: myOrganizations.map((organization) => organization.id),
     });
     throw new DomainError(
-      'GOLD Internal workspace is not configured for this platform operator.',
+      'The GildOps internal workspace is not configured for this platform operator.',
       'gold_internal.configuration_required',
     );
   }

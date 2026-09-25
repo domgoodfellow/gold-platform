@@ -392,7 +392,7 @@ async function main(): Promise<void> {
 
     await pg.query('insert into public.platform_staff (user_id, name) values ($1, $2)', [
       created.user.id,
-      'GOLD (demo)',
+      'GildOps (demo)',
     ]);
 
     const staff = createClient(SUPABASE_URL, ANON_KEY, {
@@ -412,7 +412,7 @@ async function main(): Promise<void> {
     }
 
     process.stdout.write(`\nOne password for everybody: ${DEMO_PASSWORD}\n\n`);
-    process.stdout.write(`GOLD staff  http://localhost:3000/platform\n`);
+    process.stdout.write(`GildOps staff  http://localhost:3000/platform\n`);
     process.stdout.write(`            ${staffEmail}\n\n`);
 
     for (const { business, organizationId } of stood) {

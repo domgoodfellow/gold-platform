@@ -147,7 +147,7 @@ The manifest is authoritative where a name and a category disagree.
 the page renders, that a real sign-in works, and that the shell behind it loads; the last two prove
 the app reaches Supabase Auth and Postgres. Locally it signs in as the demo owner; anywhere else it
 needs `SMOKE_EMAIL` and `SMOKE_PASSWORD` and fails, not skips, without them. `/` is deliberately not
-checked: it renders the published GOLD homepage and answers 500 on a database where none is published.
+checked: it renders the published GildOps homepage and answers 500 on a database where none is published.
 
 ## Where the suite is thin
 

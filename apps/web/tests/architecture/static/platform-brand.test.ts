@@ -20,21 +20,23 @@ function rendered(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
-// First-party surfaces: what GildOps says about itself, on its own chrome.
+// First-party surfaces: what GildOps says about itself. Whole directories, so a new screen is
+// covered the day it lands. `app/(public)` is a tenant's own surface and is guarded separately below.
 const FIRST_PARTY = [
-  'app/(marketing)',
-  'app/(auth)',
-  'app/layout.tsx',
-  'app/global-error.tsx',
-  'components/marketing',
-  'components/auth',
-  'components/containers/site-shell.tsx',
-  'components/containers/context-switcher.tsx',
+  'app',
+  'components',
+  'features',
   'lib/marketing',
   'lib/brand.ts',
   'lib/seo',
-  'features/account',
+  'lib/shell.ts',
+  'lib/domain/public-site',
+  'lib/adapters/email',
+  'scripts/demo',
 ];
+
+// "GOLD Internal" is the label of a seeded Plan: catalogue data, renamed by a migration or not at all.
+const PLAN_LABEL = /GOLD Internal/g;
 
 describe('the platform is named GildOps on its own surfaces', () => {
   it('names the platform once, as GildOps', () => {
@@ -43,7 +45,14 @@ describe('the platform is named GildOps on its own surfaces', () => {
 
   it('never renders the legacy name on a first-party public, auth or shell surface', () => {
     for (const file of FIRST_PARTY.flatMap(files)) {
-      expect(rendered(readFileSync(file, 'utf8')), `${file} renders GOLD`).not.toMatch(/\bGOLD\b/);
+      const text = rendered(readFileSync(file, 'utf8')).replace(PLAN_LABEL, '');
+      expect(text, `${file} renders GOLD`).not.toMatch(/\bGOLD\b/);
+    }
+  });
+
+  it('keeps the platform name off a tenant’s public pages', () => {
+    for (const file of files('app/(public)')) {
+      expect(readFileSync(file, 'utf8'), `${file} names the platform`).not.toMatch(/PLATFORM_NAME|@\/lib\/brand/);
     }
   });
 

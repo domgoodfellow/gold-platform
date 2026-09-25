@@ -27,7 +27,7 @@ export function resendPlatformEmailSender(config: {
       });
 
       if (!response.ok) {
-        throw new Error(`Sending GOLD's own email failed with status ${response.status}.`);
+        throw new Error(`Sending GildOps's own email failed with status ${response.status}.`);
       }
     },
   };

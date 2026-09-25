@@ -61,7 +61,7 @@ export async function bootstrapGoldInternalWorkspace(
   if (error) {
     if (error.code === '42501') {
       throw new DomainError(
-        'Only platform staff may initialize the GOLD operating workspace.',
+        'Only platform staff may initialize the GildOps operating workspace.',
         'gold_internal.bootstrap_forbidden',
       );
     }
