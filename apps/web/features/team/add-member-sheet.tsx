@@ -48,7 +48,7 @@ export function AddMemberSheetProvider({
           <PageDrawerHeader>
             <PageDrawerTitle>Add member</PageDrawerTitle>
             <PageDrawerDescription>
-              Invite somebody by email, or add somebody who already has a GOLD account.
+              Invite somebody by email, or add somebody who already has a GildOps account.
             </PageDrawerDescription>
           </PageDrawerHeader>
           <div className="flex flex-col gap-4 px-4 pb-4">

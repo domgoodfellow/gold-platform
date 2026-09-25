@@ -42,7 +42,6 @@ import {
   Landmark,
   Layers,
   LayoutDashboard,
-  ListChecks,
   MapPin,
   MessageSquare,
   Package,
@@ -57,7 +56,6 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import { areaHref, currentSegment } from '@/lib/navigation';
 import {
   activeItemKey,
   inPlatformScope,
@@ -96,7 +94,6 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   resources: Layers,
   insights: BarChart3,
   automations: Zap,
-  setup: ListChecks,
   settings: Settings,
 };
 
@@ -266,14 +263,10 @@ function PhoneNavLink({ item, current }: { item: NavItem; current: boolean }) {
  * actually sees. When the current page belongs to something behind More, More is the current item.
  */
 export function OrgNavBar({
-  organizationId,
   sections,
-  setup = false,
 }: {
-  organizationId: string;
   sections: ShellSection[];
   /** True only while the business is in SETUP — the layout decides, and it leaves the bar the moment the business is LIVE. */
-  setup?: boolean;
 }) {
   const pathname = usePathname();
   const active = activeItemKey(sections, pathname);
@@ -286,12 +279,6 @@ export function OrgNavBar({
       className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background md:hidden"
     >
       <ul className="flex gap-1 overflow-x-auto p-2">
-        {/* Setup is this business's own lifecycle; inside Platform the bar is about Platform. */}
-        {setup && !platformActive ? (
-          <li className="shrink-0">
-            <SetupNavLink organizationId={organizationId} />
-          </li>
-        ) : null}
         {primary.map((item) => (
           <li key={item.key} className="shrink-0">
             <PhoneNavLink item={item} current={item.key === active} />
@@ -323,49 +310,11 @@ export function OrgNavBar({
  * `operationalState === 'setup'`, so it is gone the moment the business is LIVE with nothing left
  * to remember to turn off. Same collapse-to-icon and tooltip behaviour as every other row.
  */
-export function SetupEntry({ organizationId }: { organizationId: string }) {
-  const current = currentSegment(usePathname()) === 'setup';
-
-  return (
-    <SidebarGroup>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            asChild
-            isActive={current}
-            tooltip="Setup"
-          >
-            <Link href={areaHref(organizationId, 'setup')} aria-current={current ? 'page' : undefined}>
-              <ListChecks aria-hidden />
-              <span>Setup</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    </SidebarGroup>
-  );
-}
-
 /**
  * The phone's rendering of the same lifecycle treatment: the first item in the bottom bar, only
  * while the business is in SETUP. It is the bar's own row, not a header badge, and `ui-spec.md` §2's
  * rule against a permanent extra bottom-bar destination holds because it disappears at Launch.
  */
-export function SetupNavLink({ organizationId }: { organizationId: string }) {
-  const current = currentSegment(usePathname()) === 'setup';
-
-  return (
-    <Link
-      href={areaHref(organizationId, 'setup')}
-      aria-current={current ? 'page' : undefined}
-      className={cx(FOCUS_RING, PHONE_ROW, current ? 'bg-foreground font-medium text-background' : 'hover:bg-hover')}
-    >
-      <ListChecks aria-hidden size={18} className="shrink-0" />
-      <span className="min-w-0">Setup</span>
-    </Link>
-  );
-}
-
 /**
  * The whole operator sidebar: identity and context switching in the header, Setup (while it
  * applies) and the projected sections in the content, the account menu in the footer.
@@ -379,7 +328,6 @@ export function OrgSidebar({
   role,
   organizations,
   sections,
-  setup,
   email,
   signOutAction,
   ...props
@@ -391,7 +339,6 @@ export function OrgSidebar({
   organizations: SwitchableOrganization[];
   sections: ShellSection[];
   /** True only while the business is in SETUP — the layout decides, from `operationalState`. */
-  setup?: boolean;
   email: string;
   signOutAction: () => Promise<void>;
 } & React.ComponentProps<typeof Sidebar>) {
@@ -405,7 +352,6 @@ export function OrgSidebar({
         />
       </SidebarHeader>
       <SidebarContent>
-        {setup ? <SetupEntry organizationId={organizationId} /> : null}
         <OrgNav sections={sections} />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>

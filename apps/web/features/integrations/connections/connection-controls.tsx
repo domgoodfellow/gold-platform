@@ -33,7 +33,7 @@ export function DisconnectForm({
         formId={formId}
         label="Disconnect"
         confirmLabel="Disconnect this connection?"
-        description="GOLD stops using it. Every customer already imported through it stays exactly as it is — nothing is deleted."
+        description="GildOps stops using it. Every customer already imported through it stays exactly as it is — nothing is deleted."
         tone="secondary"
         size="small"
         pending={pending}

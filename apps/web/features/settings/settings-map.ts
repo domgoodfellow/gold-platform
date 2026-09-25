@@ -100,14 +100,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
       entry('plan', 'Plan & usage', 'The current plan, what it includes, usage, and commercial status.'),
     ],
   },
-  {
-    key: 'setup',
-    title: 'Setup & launch',
-    entries: [
-      // The page replaces this with a sentence that follows the lifecycle; kept so the entry is complete.
-      entry('setup', 'Setup', 'What setup covers, and what is finished.'),
-    ],
-  },
 ];
 
 /** Whether an entry is offered: the business is entitled to it and the member may configure it. */

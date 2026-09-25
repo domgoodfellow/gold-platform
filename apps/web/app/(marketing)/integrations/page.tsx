@@ -7,12 +7,12 @@ import { getPublishedConnectors } from '@/lib/domain/integrations/published-cach
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Integrations · GOLD',
-  description: 'The tools GOLD connects to, and the ones on the way, organized by what they do for your business.',
+  title: 'Integrations · GildOps',
+  description: 'The tools GildOps connects to, and the ones on the way, organized by what they do for your business.',
   alternates: { canonical: '/integrations' },
   openGraph: {
-    title: 'Integrations · GOLD',
-    description: 'The tools GOLD connects to, and the ones on the way, organized by what they do for your business.',
+    title: 'Integrations · GildOps',
+    description: 'The tools GildOps connects to, and the ones on the way, organized by what they do for your business.',
     url: '/integrations',
   },
 };
@@ -30,7 +30,7 @@ export default async function IntegrationsPage() {
           Connects to the tools you already run on.
         </h1>
         <p className="max-w-xl text-lg leading-relaxed text-muted">
-          GOLD is built to connect rather than replace everything on day one.
+          GildOps is built to connect rather than replace everything on day one.
         </p>
       </div>
 

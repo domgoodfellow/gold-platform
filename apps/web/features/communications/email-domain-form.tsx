@@ -27,7 +27,7 @@ export function AddEmailDomainForm({ organizationId }: { organizationId: string 
         </Button>
       </div>
       <Hint className="mt-2">
-        GOLD sends on your behalf from one address until this domain is verified.
+        GildOps sends on your behalf from one address until this domain is verified.
       </Hint>
       {state.error ? <ErrorText>{state.error}</ErrorText> : null}
     </form>

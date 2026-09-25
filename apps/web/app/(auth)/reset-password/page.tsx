@@ -6,7 +6,7 @@ import { CredentialsForm } from '../credentials-form';
 import { getDb } from '@/lib/db/server';
 import { resetPasswordAction } from './actions';
 
-export const metadata = { title: 'Set a new password · GOLD' };
+export const metadata = { title: 'Set a new password · GildOps' };
 
 export const dynamic = 'force-dynamic';
 

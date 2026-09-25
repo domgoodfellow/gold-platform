@@ -17,12 +17,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: siteUrl(),
-  title: 'GOLD | One operating system for your business',
+  title: 'GildOps | One operating system for your business',
   // Not `vision.md`'s "One engine. Many businesses." -- that's the platform's own architecture,
   // read by whoever builds it. A search result is read by the one business being sold to.
   description:
-    'GOLD replaces the spreadsheet, the shared calendar and the group chat holding your business together.',
-  applicationName: 'GOLD',
+    'GildOps replaces the spreadsheet, the shared calendar and the group chat holding your business together.',
+  applicationName: 'GildOps',
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

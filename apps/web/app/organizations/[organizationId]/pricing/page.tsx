@@ -116,7 +116,7 @@ export default async function PricingPage({
         <Section id="getting-paid" className="mt-10 scroll-mt-6">
           <SectionHeading>Getting paid</SectionHeading>
           <Hint className="mt-1">
-            Card payments go directly to this business. GOLD never holds the money, and this
+            Card payments go directly to this business. GildOps never holds the money, and this
             business keeps its own account with the payment provider.
           </Hint>
           {provider ? (

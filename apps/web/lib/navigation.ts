@@ -509,11 +509,12 @@ export function areaHref(organizationId: string, segment: string): string {
  * "Enter this business" — the one canonical destination, for every caller whose job is switching
  * into an organization rather than linking to a specific area inside one. **The lifecycle state is
  * part of the answer and a required argument, so no caller can forget to ask:** a business still
- * in SETUP is entered through Setup, a LIVE one through Home (`AREAS[0]`). Direct navigation to
- * any other area is unaffected — SETUP is a lifecycle state, not a route prison.
+ * Every organization enters through Home (`AREAS[0]`). Setup state is surfaced contextually on
+ * Home rather than changing the organization's canonical destination.
  */
 export function organizationHomeHref(organizationId: string, operationalState: OperationalState): string {
-  return areaHref(organizationId, operationalState === 'setup' ? 'setup' : AREAS[0].segment);
+  void operationalState;
+  return areaHref(organizationId, AREAS[0].segment);
 }
 
 /** One function rather than a separate href and label lookup — a link with the wrong word on it is the same dead end as a link to the wrong place. */

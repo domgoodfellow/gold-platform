@@ -61,7 +61,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
 
   return (
     <AppPage>
-      <SupportRegistrar mode="activity" title="Work activity">
+      {types.length > 0 ? <SupportRegistrar mode="activity" title="Work activity">
         <WorkspaceActivity
           db={db}
           organizationId={organizationId}
@@ -69,8 +69,8 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
           scope="work"
           emptyMessage="No work activity yet."
         />
-      </SupportRegistrar>
-      {mayInsight ? (
+      </SupportRegistrar> : null}
+      {mayInsight && types.length > 0 ? (
         <SupportRegistrar
           mode="insights"
           title="Work insights"
@@ -80,7 +80,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
           <WorkInsights db={db} organizationId={organizationId} today={todayInZone(organization.timezone)} />
         </SupportRegistrar>
       ) : null}
-      {mayConfigure ? (
+      {mayConfigure && types.length > 0 ? (
         <ConfigureRegistrar
           title="Work configuration"
           settingsHref={`/organizations/${organizationId}/work/configuration${selectedType ? `?type=${selectedType.id}` : ''}`}
@@ -102,7 +102,12 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
           />
         </ConfigureRegistrar>
       ) : null}
-      <PageHeader title={areaLabel('work')} activity insights={mayInsight} configure={mayConfigure} />
+      <PageHeader
+        title={areaLabel('work')}
+        activity={types.length > 0}
+        insights={mayInsight && types.length > 0}
+        configure={mayConfigure && types.length > 0}
+      />
       <WorkList
         organizationId={organizationId}
         role={organization.role}

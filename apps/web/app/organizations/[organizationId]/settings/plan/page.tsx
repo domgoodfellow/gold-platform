@@ -74,8 +74,8 @@ export default async function PlanAndUsagePage({
     <SettingsPageFrame>
       <PageHeader title="Plan &amp; usage" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
       <Hint className="mt-1">
-        What this business is entitled to use right now, what GOLD has recorded selling it, and
-        what it has used. Nothing here is what any of it cost GOLD to provide.{' '}
+        What this business is entitled to use right now, what GildOps has recorded selling it, and
+        what it has used. Nothing here is what any of it cost GildOps to provide.{' '}
         <Link href={`/organizations/${organizationId}/settings/features`} className="underline underline-offset-4">
           Manage features →
         </Link>
@@ -132,7 +132,7 @@ export default async function PlanAndUsagePage({
           ) : (
             <EmptyState className="mt-2">
               {basePlan
-                ? `GOLD has not priced ${basePlan.label} in ${organization.currency ?? 'this business’s currency'} yet.`
+                ? `GildOps has not priced ${basePlan.label} in ${organization.currency ?? 'this business’s currency'} yet.`
                 : 'No Plan is assigned to subscribe to yet.'}
             </EmptyState>
           )}
@@ -181,7 +181,7 @@ export default async function PlanAndUsagePage({
       <Section className="mt-8">
         <SectionHeading>Usage</SectionHeading>
         <Hint className="mt-1">
-          What GOLD charged for what this business used. Recent activity, most recent first.
+          What GildOps charged for what this business used. Recent activity, most recent first.
         </Hint>
         {usage.length === 0 ? (
           <EmptyState className="mt-2">Nothing metered yet.</EmptyState>

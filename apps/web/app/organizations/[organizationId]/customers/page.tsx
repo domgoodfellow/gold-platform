@@ -53,6 +53,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
     search,
     stageId: stage === 'unstaged' ? null : stage || undefined,
   });
+  const emptyCollection = customers.total === 0 && !search && !stage;
 
   return (
     <AppPage>
@@ -60,7 +61,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
         <PageHeader
           title={areaLabel('customers')}
           description="People and businesses this organization works for."
-          actions={
+          actions={!emptyCollection ? (
             <>
               {mayImport ? (
                 <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="secondary">
@@ -69,10 +70,10 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
               ) : null}
               <CreateCustomerTrigger />
             </>
-          }
-          activity
-          insights={mayInsight}
-          configure={mayConfigure}
+          ) : undefined}
+          activity={!emptyCollection}
+          insights={mayInsight && !emptyCollection}
+          configure={mayConfigure && !emptyCollection}
         />
         <SupportRegistrar mode="activity" title="Customer activity">
           <WorkspaceActivity
@@ -113,9 +114,25 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
             />
           </ConfigureRegistrar>
         ) : null}
-        <CustomerListToolbar organizationId={organizationId} stages={visibleStages} search={search} stage={stage} />
-
-        <div className="mt-4">
+        {emptyCollection ? (
+          <section className="mt-6 rounded-lg border border-border bg-surface px-5 py-12 text-center" aria-labelledby="customers-empty-heading">
+            <h2 id="customers-empty-heading" className="text-base font-semibold">No customers yet</h2>
+            <p className="mx-auto mt-2 w-full max-w-lg text-sm text-muted">
+              Add a customer directly or bring existing customer records into this organization.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <CreateCustomerTrigger />
+              {mayImport ? (
+                <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="secondary">
+                  Import customers
+                </ButtonLink>
+              ) : null}
+            </div>
+          </section>
+        ) : (
+          <>
+          <CustomerListToolbar organizationId={organizationId} stages={visibleStages} search={search} stage={stage} />
+          <div className="mt-4">
           <CustomerTable
             organizationId={organizationId}
             customers={customers}
@@ -123,7 +140,9 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
             stages={visibleStages}
             empty={search || stage ? 'No customers match these filters.' : 'No customers yet.'}
           />
-        </div>
+          </div>
+          </>
+        )}
       </CreateCustomerSheetProvider>
     </AppPage>
   );

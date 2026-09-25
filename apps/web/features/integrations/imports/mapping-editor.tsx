@@ -39,7 +39,7 @@ export function MappingEditor({
   return (
     <>
       <Hint className="mt-2">
-        {totalRows} row{totalRows === 1 ? '' : 's'} detected. Each becomes a Customer. GOLD has
+        {totalRows} row{totalRows === 1 ? '' : 's'} detected. Each becomes a Customer. GildOps has
         guessed a mapping below — check it before continuing; nothing is written yet.
       </Hint>
       {error ? <ErrorText className="mt-2">{error}</ErrorText> : null}

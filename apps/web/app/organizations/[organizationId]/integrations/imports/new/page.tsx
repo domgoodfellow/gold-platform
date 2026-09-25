@@ -38,7 +38,7 @@ export default async function NewImportPage({
   if (typeof resourceId !== 'string') {
     return (
       <>
-        <PageHeader title="Import customers" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]} description="Upload a CSV export. GOLD reads the header row and shows you a mapping to review before anything is written." />
+        <PageHeader title="Import customers" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]} description="Upload a CSV export. GildOps reads the header row and shows you a mapping to review before anything is written." />
         <UploadSourceForm organizationId={organizationId} />
       </>
     );

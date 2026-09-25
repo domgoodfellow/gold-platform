@@ -31,13 +31,6 @@ export default async function SettingsPage({
     capabilities: new Set(organization.capabilities),
   });
 
-  // Setup is a lifecycle: while it lasts the entry says what is left to do, and afterwards it is
-  // a place to review what setup covered, never an invitation to launch again.
-  const setupSentence =
-    organization.operationalState === 'setup'
-      ? 'This business is still being set up. See what is finished and what blocks launch.'
-      : 'This business is live. Review or reconfigure what setup covered.';
-
   return (
     <SettingsPageFrame>
       <PageHeader
@@ -47,11 +40,7 @@ export default async function SettingsPage({
       {sections.length === 0 ? (
         <EmptyState>Your role, {organization.role}, does not configure anything in this business.</EmptyState>
       ) : (
-        <SettingsIndex
-          organizationId={organizationId}
-          sections={sections}
-          describe={(key) => (key === 'setup' ? setupSentence : undefined)}
-        />
+        <SettingsIndex organizationId={organizationId} sections={sections} />
       )}
     </SettingsPageFrame>
   );

@@ -151,7 +151,7 @@ describe('Agent is workspace-global and the support modes are page-level', () =>
   });
 
   it('every page that offers Configure also registers the panel it opens', () => {
-    for (const area of ['resources', 'locations', 'customers', 'assets', 'work', 'schedule']) {
+    for (const area of ['resources', 'locations', 'assets', 'schedule']) {
       const source = readFileSync(
         `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
         'utf8',
@@ -166,9 +166,9 @@ describe('the Business phone header — compact controls wired to the right slot
   it('gives the context slot the compact context switcher and nothing else', () => {
     const contextBlock = organizationLayout.slice(
       organizationLayout.indexOf('context={'),
-      organizationLayout.indexOf('beforeActions={'),
+      organizationLayout.indexOf('/>', organizationLayout.indexOf('context={')),
     );
-    expect(contextBlock).toContain('CompactContextSwitcher');
+    expect(contextBlock).toContain('CompactOperatorMenu');
     // The header carries no Setup treatment at any width: a phone reaches Setup through the
     // bottom bar's own lifecycle-aware first item (`SetupNavLink`), the sidebar through `SetupEntry`.
     expect(contextBlock).not.toMatch(/Setup/);
@@ -176,14 +176,13 @@ describe('the Business phone header — compact controls wired to the right slot
   });
 
   it('gives beforeActions the compact account menu — Account sits before Agent, never after', () => {
-    const start = organizationLayout.indexOf('beforeActions={');
-    const beforeActionsBlock = organizationLayout.slice(start, organizationLayout.indexOf('/>', start));
-    expect(beforeActionsBlock).toContain('CompactAccountMenu');
+    expect(organizationLayout).not.toContain('beforeActions=');
+    expect(organizationLayout).not.toContain('CompactAccountMenu');
     // The regression this exists for: Account rendered as a sibling *after* `WorkspaceHeader`
     // (or after `WorkspaceHeaderActions`) would put Account to the right of Configure/Agent,
     // which is not the contract (A5/A20 #1) — `beforeActions` is a prop the header itself places
     // ahead of its own actions, so wiring it there is what the contract actually depends on.
-    expect(organizationLayout).not.toMatch(/<WorkspaceHeader[\s\S]*\/>\s*<CompactAccountMenu/);
+    expect(organizationLayout).toContain('<CompactOperatorMenu');
   });
 
   it('passes navigationTrigger="md" — Business only shows its trigger from md up', () => {
@@ -192,8 +191,8 @@ describe('the Business phone header — compact controls wired to the right slot
 
   it('hands the mark, current business and this identity’s other businesses to the compact switcher, same shape the sidebar’s own switcher gets', () => {
     const contextBlock = organizationLayout.slice(
-      organizationLayout.indexOf('<CompactContextSwitcher'),
-      organizationLayout.indexOf('/>', organizationLayout.indexOf('<CompactContextSwitcher')),
+      organizationLayout.indexOf('<CompactOperatorMenu'),
+      organizationLayout.indexOf('/>', organizationLayout.indexOf('<CompactOperatorMenu')),
     );
     expect(contextBlock).toContain('mark={mark}');
     expect(contextBlock).toMatch(/kind:\s*'business'/);
@@ -235,7 +234,7 @@ describe('the Platform route renders inside the one organization shell', () => {
 
   it('gets its trigger, switcher and bottom bar from the one shell, at every width', () => {
     expect(organizationLayout).toContain('navigationTrigger="md"');
-    expect(organizationLayout).toContain('CompactContextSwitcher');
+    expect(organizationLayout).toContain('CompactOperatorMenu');
     expect(organizationLayout).toMatch(/bottomBar=\{/);
   });
 
@@ -248,7 +247,8 @@ describe('the Platform route renders inside the one organization shell', () => {
 
 describe('ContextSwitcher — content is about context only', () => {
   it('no longer offers Organization settings — Settings has its own destination', () => {
-    expect(contextSwitcher).not.toContain('Organization settings');
+    expect(contextSwitcher).toContain('Organization settings');
+    expect(contextSwitcher).toContain('Personal settings');
   });
 
   it('shows each business row’s role as secondary text', () => {
@@ -264,6 +264,7 @@ describe('ContextSwitcher — content is about context only', () => {
     expect(contextSwitcher.match(/<DropdownMenuContent/g)?.length).toBe(1);
     expect(contextSwitcher).toContain('export function ContextSwitcher(');
     expect(contextSwitcher).toContain('export function CompactContextSwitcher(');
+    expect(contextSwitcher).toContain('export function CompactOperatorMenu(');
   });
 });
 

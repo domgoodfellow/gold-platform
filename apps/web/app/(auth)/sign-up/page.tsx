@@ -5,7 +5,7 @@ import { CredentialsForm } from '../credentials-form';
 import { GoogleAuthButton } from '../google-auth-button';
 import { signUpAction } from './actions';
 
-export const metadata = { title: 'Create an account · GOLD' };
+export const metadata = { title: 'Create an account · GildOps' };
 
 export default function SignUpPage() {
   return (

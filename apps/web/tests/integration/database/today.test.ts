@@ -65,8 +65,9 @@ describe('Home, with nothing recorded yet', () => {
   it('renders one intentional state rather than silent zeroes', () => {
     const source = `${readFileSync(TODAY, 'utf8')}
 ${readFileSync(TODAY_FEATURE, 'utf8')}`;
-    expect(source).toContain('Nothing recorded yet');
-    expect(source).toMatch(/if \(!empty\)/);
+    expect(source).toContain('const operationalEmpty');
+    expect(source).toContain('kpis.length > 0');
+    expect(source).toContain('Nothing is scheduled today.');
   });
 });
 
@@ -74,13 +75,13 @@ describe('Home, structural composition (source scan)', () => {
   const source = `${readFileSync(TODAY, 'utf8')}
 ${readFileSync(TODAY_FEATURE, 'utf8')}`;
 
-  it('carries no setup chrome and computes no readiness of its own', () => {
+  it('surfaces the shared readiness model without mixing it into operational attention', () => {
     // A setup business is entered through Setup and the sidebar keeps one Setup row, so a notice,
     // a count or a readiness query here would be a second, competing setup affordance.
-    expect(source).not.toContain('computeReadiness');
-    expect(source).not.toContain('readinessWidget');
-    expect(source).not.toMatch(/Setup readiness|being set up|Continue setup|setupNotice|inSetup/);
-    expect(source).not.toMatch(/LaunchForm|Blocker'|Warning'/);
+    expect(source).toContain('computeSetupOverview');
+    expect(source).toContain('<OrganizationReadiness');
+    expect(source).toContain('readiness={readiness}');
+    expect(source).not.toContain('setupNotice');
   });
 
   it('never claims a business with zero blockers is complete or launched', () => {

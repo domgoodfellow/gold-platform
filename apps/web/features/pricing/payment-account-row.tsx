@@ -44,8 +44,8 @@ export function PaymentAccountRow({
           {accountId
             ? // The id, because an operator with two accounts needs to know which one this is.
               // It is not a secret: on its own it grants nothing.
-              `Card payments are collected into ${accountId} and paid out by ${provider} directly to this business. GOLD never holds the money.`
-            : `Connect an account with ${provider} to take card payments. The money goes straight to this business; GOLD never holds it, and this business keeps its own login.`}
+              `Card payments are collected into ${accountId} and paid out by ${provider} directly to this business. GildOps never holds the money.`
+            : `Connect an account with ${provider} to take card payments. The money goes straight to this business; GildOps never holds it, and this business keeps its own login.`}
         </Hint>
         <ErrorText role="alert" className="mt-1">{state.error}</ErrorText>
       </div>

@@ -60,10 +60,10 @@ export default async function SetupPage({
   return (
     <AppPage>
       <PageHeader
-        title={inSetup ? `Set up ${organization.name}` : 'Setup'}
+        title="Organization readiness"
         description={
           inSetup
-            ? 'Configure the business before it starts operating.'
+            ? `Complete the required setup for ${organization.name}.`
             : 'This business is live. These are the areas setup covers, for when one needs changing.'
         }
       />
@@ -87,10 +87,10 @@ export default async function SetupPage({
         ) : null}
 
         {draftingOn ? (
-          <Card as="section" aria-labelledby="setup-agent-heading">
+          <Card id="agent-setup" as="section" aria-labelledby="setup-agent-heading">
             <SectionHeading id="setup-agent-heading">Set up faster with Agent</SectionHeading>
             <Hint className="mt-1 max-w-2xl">
-              Describe how the business works. GOLD can draft configuration for you to read and
+              Describe how the business works. GildOps can draft configuration for you to read and
               change first — nothing takes effect until you apply it.
             </Hint>
 

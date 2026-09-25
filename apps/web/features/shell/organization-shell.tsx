@@ -16,8 +16,7 @@ import {
 } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 import { projectShell } from '@/lib/shell';
-import { CompactAccountMenu } from '@/components/containers/account-menu';
-import { CompactContextSwitcher } from '@/components/containers/context-switcher';
+import { CompactOperatorMenu } from '@/components/containers/context-switcher';
 import { WorkspaceHeader } from '@/components/containers/workspace-header';
 import { WorkspaceShell } from '@/components/containers/workspace-shell';
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
@@ -147,8 +146,6 @@ export async function OrganizationShell({
   // the phone bar's first item both read this and nothing else, so neither can outlive Launch. It
   // is the lifecycle fact already on the organization — the shell prints no progress, so it runs
   // no readiness query; the Setup page owns the count and `launchOrganization` the guard.
-  const setup = organization.operationalState === 'setup';
-
   const switchable = myOrganizations.map((org) => ({
     id: org.id,
     name: org.name,
@@ -174,7 +171,6 @@ export async function OrganizationShell({
       role={organization.role}
       organizations={switchable}
       sections={sections}
-      setup={setup}
       email={email}
       signOutAction={signOutAction}
     />
@@ -194,16 +190,13 @@ export async function OrganizationShell({
       navigationTrigger="md"
       context={
         <div className="flex min-w-0 items-center gap-3 md:hidden">
-          <CompactContextSwitcher
+          <CompactOperatorMenu
             mark={mark}
             current={{ kind: 'business', organizationId, name: organization.name, role: organization.role }}
             organizations={switchable}
+            email={email}
+            signOutAction={signOutAction}
           />
-        </div>
-      }
-      beforeActions={
-        <div className="md:hidden">
-          <CompactAccountMenu email={email} signOutAction={signOutAction} />
         </div>
       }
     />
@@ -217,7 +210,7 @@ export async function OrganizationShell({
         sidebar={sidebar}
         header={header}
         bottomBar={
-          locked ? undefined : <OrgNavBar organizationId={organizationId} sections={sections} setup={setup} />
+          locked ? undefined : <OrgNavBar sections={sections} />
         }
         agent={
           locked ? null : (

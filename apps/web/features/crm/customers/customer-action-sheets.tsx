@@ -28,7 +28,7 @@ export function CallCustomerSheet({ organizationId, customer }: { organizationId
     <PageDrawer>
       <PageDrawerTrigger asChild><Button type="button"><Phone aria-hidden /> Call</Button></PageDrawerTrigger>
       <PageDrawerContent>
-        <PageDrawerHeader><PageDrawerTitle>Call {customer.name}</PageDrawerTitle><PageDrawerDescription>Place a provider call, or record one made outside GOLD.</PageDrawerDescription></PageDrawerHeader>
+        <PageDrawerHeader><PageDrawerTitle>Call {customer.name}</PageDrawerTitle><PageDrawerDescription>Place a provider call, or record one made outside GildOps.</PageDrawerDescription></PageDrawerHeader>
         <div className="px-4 pb-4"><CallCustomerForm organizationId={organizationId} customerId={customer.id} phone={customer.phone} /></div>
       </PageDrawerContent>
     </PageDrawer>

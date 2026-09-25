@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { LegalDocument, type LegalSection } from '@/components/marketing/legal-document';
 
-const TITLE = 'Terms · GOLD';
-const DESCRIPTION = 'The terms for using the GOLD website.';
+const TITLE = 'Terms · GildOps';
+const DESCRIPTION = 'The terms for using the GildOps website.';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -34,7 +34,7 @@ const SECTIONS: LegalSection[] = [
     body: (
       <>
         <p>
-          The pages here describe GOLD to help you decide whether to talk to us. They are not an offer
+          The pages here describe GildOps to help you decide whether to talk to us. They are not an offer
           or a commitment about any particular feature, price or outcome; those are settled in a
           separate agreement if you become a customer.
         </p>
@@ -43,10 +43,10 @@ const SECTIONS: LegalSection[] = [
     ),
   },
   {
-    heading: 'Using GOLD as a customer',
+    heading: 'Using GildOps as a customer',
     body: (
       <p>
-        Using GOLD as a business is governed by the agreement between that business and GOLD, not by
+        Using GildOps as a business is governed by the agreement between that business and GildOps, not by
         this page.
         {/* LEGAL-REVIEW: the customer agreement, fees, service levels and acceptable-use terms.
             None is written or implied here. */}
@@ -58,7 +58,7 @@ const SECTIONS: LegalSection[] = [
     body: (
       <p>
         {/* LEGAL-REVIEW: ownership and permitted-use wording for the GOLD name, logo and content. */}
-        The GOLD name, logo and website content belong to GOLD. Please ask before reusing them.
+        The GildOps name, logo and website content belong to GildOps. Please ask before reusing them.
       </p>
     ),
   },
@@ -81,7 +81,7 @@ export default function TermsPage() {
   return (
     <LegalDocument
       title="Terms"
-      intro="The terms for using the GOLD website."
+      intro="The terms for using the GildOps website."
       sections={SECTIONS}
       pendingReview
     />

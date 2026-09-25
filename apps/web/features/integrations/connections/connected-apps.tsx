@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ButtonLink } from '@/components/controls/button';
-import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { DividedList, Section, SectionHeading } from '@/components/containers/section';
 import { Badge } from '@/components/display/data';
 import { Widget, WidgetGrid } from '@/components/display/widget';
 import type { IntegrationConnection } from '@/lib/domain/integrations/connections';
@@ -33,6 +33,8 @@ export function ConnectedApps({
   needsAttentionCount,
   mayManage,
   browseHref,
+  connectors,
+  organizationName,
 }: {
   organizationId: string;
   active: IntegrationConnection[];
@@ -43,8 +45,36 @@ export function ConnectedApps({
   needsAttentionCount: number;
   mayManage: boolean;
   browseHref: string;
+  connectors: Connector[];
+  organizationName: string;
 }) {
   const connectedCsv = active.some((connection) => connection.connectorKey === 'csv');
+
+  if (active.length === 0) {
+    const available = connectors.filter((connector) => connector.status !== 'planned').slice(0, 4);
+    return (
+      <section className="mt-6 rounded-lg border border-border bg-surface p-5" aria-labelledby="integrations-empty-heading">
+        <SectionHeading id="integrations-empty-heading">Connect systems to {organizationName}</SectionHeading>
+        <p className="mt-1 max-w-2xl text-sm text-muted">
+          Bring customer data and operational tools into one workspace. Start with an available connection below.
+        </p>
+        {available.length > 0 ? (
+          <DividedList className="mt-5 border-y border-border">
+            {available.map((connector) => (
+              <li key={connector.key} className="flex items-center gap-3 py-3">
+                <ConnectorIcon connector={connector} logoUrl={logoUrlByKey.get(connector.key) ?? null} />
+                <div className="min-w-0">
+                  <p className="font-medium">{connector.name}</p>
+                  <p className="text-sm text-muted">{connector.category}</p>
+                </div>
+              </li>
+            ))}
+          </DividedList>
+        ) : null}
+        <ButtonLink href={browseHref} tone="primary" className="mt-5">Browse integrations</ButtonLink>
+      </section>
+    );
+  }
 
   return (
     <>
@@ -68,11 +98,6 @@ export function ConnectedApps({
             </ButtonLink>
           ) : null}
         </div>
-        {active.length === 0 ? (
-          <EmptyState className="mt-2">
-            Nothing connected yet. <Link href={browseHref} className="underline underline-offset-4">Browse apps</Link>
-          </EmptyState>
-        ) : (
           <DividedList className="mt-2">
             {active.map((connection) => {
               const connector = connectorByKey.get(connection.connectorKey);
@@ -102,7 +127,6 @@ export function ConnectedApps({
               );
             })}
           </DividedList>
-        )}
       </Section>
     </>
   );

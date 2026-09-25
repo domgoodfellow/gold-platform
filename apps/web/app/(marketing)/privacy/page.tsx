@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { LegalDocument, type LegalSection } from '@/components/marketing/legal-document';
 
-const TITLE = 'Privacy · GOLD';
-const DESCRIPTION = 'What GOLD collects when you use this website or send us a message, and how it is used.';
+const TITLE = 'Privacy · GildOps';
+const DESCRIPTION = 'What GildOps collects when you use this website or send us a message, and how it is used.';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -23,9 +23,9 @@ const SECTIONS: LegalSection[] = [
     heading: 'What this page covers',
     body: (
       <p>
-        This page describes the personal information GOLD collects through this website — the
+        This page describes the personal information GildOps collects through this website — the
         marketing pages, the demo request form and the contact form. It does not describe how a
-        business that uses GOLD handles its own customers&rsquo; information; that business decides
+        business that uses GildOps handles its own customers&rsquo; information; that business decides
         what it collects and why.
       </p>
     ),
@@ -65,9 +65,9 @@ const SECTIONS: LegalSection[] = [
     heading: 'Who can see it',
     body: (
       <p>
-        Submissions are stored in GOLD&rsquo;s own workspace and are visible to GOLD staff who handle
+        Submissions are stored in GildOps&rsquo;s own workspace and are visible to GildOps staff who handle
         enquiries. The person submitting a form cannot read it back afterwards, and it is not
-        visible to any other business using GOLD.
+        visible to any other business using GildOps.
         {/* LEGAL-REVIEW: the categories of service provider that process this data on GOLD's
             behalf, and any transfers outside the visitor's country. */}
       </p>
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
   return (
     <LegalDocument
       title="Privacy"
-      intro="What GOLD collects when you use this website or send us a message, and how it is used."
+      intro="What GildOps collects when you use this website or send us a message, and how it is used."
       sections={SECTIONS}
       pendingReview
     />

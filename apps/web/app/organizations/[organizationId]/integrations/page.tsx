@@ -58,7 +58,7 @@ export default async function IntegrationsPage({
 
   return (
     <>
-      <PageHeader title={areaLabel('integrations')} description="Connect GOLD to the apps and files your organization already uses." />
+      <PageHeader title={areaLabel('integrations')} description="Connect GildOps to the apps and files your organization already uses." />
       <IntegrationsNav organizationId={organizationId} current={view} />
       {oauthError ? (
         <Hint className="mt-4 block" role="alert">
@@ -77,6 +77,8 @@ export default async function IntegrationsPage({
           needsAttentionCount={needsAttention.length}
           mayManage={mayManage}
           browseHref={browseHref({})}
+          connectors={connectors}
+          organizationName={organization.name}
         />
       ) : (
         <ConnectorCatalogue

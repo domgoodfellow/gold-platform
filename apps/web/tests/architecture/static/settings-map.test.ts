@@ -51,7 +51,6 @@ describe('the Settings configuration map', () => {
       'Connections',
       'Products & features',
       'Plan & usage',
-      'Setup & launch',
     ]);
   });
 
@@ -59,12 +58,12 @@ describe('the Settings configuration map', () => {
     for (const entry of entries) expect(entry.path).toBe(configTarget(entry.key).path);
     expect(new Set(CONFIG_TARGETS.map((target) => target.key)).size).toBe(CONFIG_TARGETS.length);
     // Every target is on the map, and none is a door nobody may open.
-    expect(CONFIG_TARGETS.map((target) => target.key).sort()).toEqual(entries.map((entry) => entry.key).sort());
+    expect(CONFIG_TARGETS.filter((target) => target.key !== 'setup').map((target) => target.key).sort()).toEqual(entries.map((entry) => entry.key).sort());
     for (const target of CONFIG_TARGETS) expect(target.permission.length, target.key).toBeGreaterThan(0);
   });
 
   it('keeps every configuration-only area reachable, since none of them has a sidebar row any more', () => {
-    for (const area of AREAS.filter((candidate) => candidate.sidebar === false)) {
+    for (const area of AREAS.filter((candidate) => candidate.sidebar === false && candidate.segment !== 'setup')) {
       expect(
         entries.some((entry) => entry.path.split(/[/#]/)[0] === area.segment),
         `${area.segment} left the sidebar and is not on the Settings map`,

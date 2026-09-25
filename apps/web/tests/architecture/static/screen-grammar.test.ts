@@ -57,7 +57,7 @@ describe('the page header owns the page’s actions; the toolbar owns search and
   it('Customers: Import, New customer and Configure (last) are header actions, Import a ButtonLink', () => {
     const page = read(`${ORG}/customers/page.tsx`);
     const header = page.slice(page.indexOf('<PageHeader'), page.indexOf('<ConfigureRegistrar'));
-    expect(header).toContain('configure={mayConfigure}');
+    expect(header).toContain('configure={mayConfigure && !emptyCollection}');
     expect(header.indexOf('<CreateCustomerTrigger />')).toBeLessThan(header.indexOf('configure='));
     expect(header.indexOf('Import')).toBeLessThan(header.indexOf('<CreateCustomerTrigger />'));
     expect(header).toContain('<ButtonLink');
@@ -173,9 +173,7 @@ describe('Setup owns progress; navigation only navigates', () => {
   const cockpit = read(`${WEB}/features/setup/setup-cockpit.tsx`);
 
   it('neither the sidebar row nor the phone bar item prints an x of y count', () => {
-    const entries = shell.slice(shell.indexOf('export function SetupEntry'), shell.indexOf('export function OrgSidebar'));
-    expect(entries).not.toMatch(/setup\.ready|setup\.total|SidebarMenuBadge| of \$\{/);
-    expect(entries).toContain('export function SetupNavLink');
+    expect(shell).not.toMatch(/SetupEntry|SetupNavLink/);
   });
 
   it('the count stays on the Setup page', () => {

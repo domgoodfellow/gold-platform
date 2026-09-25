@@ -5,7 +5,7 @@ import { CredentialsForm } from '../credentials-form';
 import { GoogleAuthButton } from '../google-auth-button';
 import { logInAction } from './actions';
 
-export const metadata = { title: 'Log in · GOLD' };
+export const metadata = { title: 'Log in · GildOps' };
 
 export default function LogInPage() {
   return (

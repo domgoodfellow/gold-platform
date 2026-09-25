@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import { Card } from '@/components/containers/card';
-import { SectionHeading } from '@/components/containers/section';
-import { Hint } from '@/components/controls/inputs';
+import { ChevronRight } from 'lucide-react';
+import { DividedList } from '@/components/containers/section';
 import { FOCUS_RING } from '@/components/class-names';
 import type { SettingsSection } from './settings-map';
 
@@ -31,25 +30,22 @@ export function SettingsIndex({
           >
             {section.title}
           </h2>
-          <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
+          <DividedList className="border-y border-border">
             {section.entries.map((entry) => (
-              <Card
-                key={entry.key}
-                as="div"
-                className="relative transition-colors hover:bg-hover has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-accent-text"
-              >
-                <SectionHeading>
+              <li key={entry.key} className="relative flex items-center gap-4 py-3 transition-colors hover:bg-hover">
+                <div className="min-w-0 flex-1">
                   <Link
                     href={`/organizations/${organizationId}/${entry.path}`}
-                    className={`${FOCUS_RING} rounded after:absolute after:inset-0`}
+                    className={`${FOCUS_RING} rounded font-medium after:absolute after:inset-0`}
                   >
                     {entry.title}
                   </Link>
-                </SectionHeading>
-                <Hint className="mt-1">{describe?.(entry.key) ?? entry.description}</Hint>
-              </Card>
+                  <p className="mt-0.5 text-sm text-muted">{describe?.(entry.key) ?? entry.description}</p>
+                </div>
+                <ChevronRight aria-hidden className="size-4 shrink-0 text-subtle" />
+              </li>
             ))}
-          </div>
+          </DividedList>
         </section>
       ))}
     </div>

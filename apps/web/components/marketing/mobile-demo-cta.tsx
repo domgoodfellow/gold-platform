@@ -11,7 +11,7 @@ export function MobileDemoCta() {
       className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-border bg-surface/95 p-3 backdrop-blur sm:hidden"
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >
-      <p className="min-w-0 truncate text-xs text-muted">See GOLD on your own business.</p>
+      <p className="min-w-0 truncate text-xs text-muted">See GildOps on your own business.</p>
       <ButtonLink href="/demo" tone="primary" size="small" className="shrink-0">
         Request a demo
       </ButtonLink>

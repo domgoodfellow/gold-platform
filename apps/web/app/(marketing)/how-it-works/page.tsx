@@ -3,12 +3,12 @@ import { CtaBand } from '@/components/marketing/cta-band';
 import { HOW_IT_WORKS_STEPS } from '@/lib/marketing/content';
 
 export const metadata: Metadata = {
-  title: 'How it works · GOLD',
-  description: 'How buying and setting up GOLD actually goes, from a first conversation to launch.',
+  title: 'How it works · GildOps',
+  description: 'How buying and setting up GildOps actually goes, from a first conversation to launch.',
   alternates: { canonical: '/how-it-works' },
   openGraph: {
-    title: 'How it works · GOLD',
-    description: 'How buying and setting up GOLD actually goes, from a first conversation to launch.',
+    title: 'How it works · GildOps',
+    description: 'How buying and setting up GildOps actually goes, from a first conversation to launch.',
     url: '/how-it-works',
   },
 };
@@ -22,7 +22,7 @@ export default function HowItWorksPage() {
           You review every step before it goes live.
         </h1>
         <p className="max-w-xl text-lg leading-relaxed text-muted">
-          Nothing in GOLD is switched on for your business without you seeing it configured first.
+          Nothing in GildOps is switched on for your business without you seeing it configured first.
         </p>
       </div>
 
@@ -38,7 +38,7 @@ export default function HowItWorksPage() {
 
       <CtaBand
         heading="Ready to see it against your own business?"
-        body="Request a demo and tell us how you run today — we'll show you the parts of GOLD that fit."
+        body="Request a demo and tell us how you run today — we'll show you the parts of GildOps that fit."
         secondaryHref="/pricing"
         secondaryLabel="See pricing"
       />

@@ -63,8 +63,8 @@ export const PRODUCTS: Product[] = [
     ],
     integrations: ['Twilio', 'Resend'],
     faq: [
-      { question: 'Does this replace our phone system?', answer: 'GOLD places and receives calls through Twilio and logs every one against the customer it concerns, so you keep a number and gain the history that used to live only in someone’s head.' },
-      { question: 'Can we keep our existing pipeline stages?', answer: 'Pipeline stages are configured by your team, not fixed by GOLD — you set them to match how you actually sell.' },
+      { question: 'Does this replace our phone system?', answer: 'GildOps places and receives calls through Twilio and logs every one against the customer it concerns, so you keep a number and gain the history that used to live only in someone’s head.' },
+      { question: 'Can we keep our existing pipeline stages?', answer: 'Pipeline stages are configured by your team, not fixed by GildOps — you set them to match how you actually sell.' },
       { question: 'Does the AI send messages on its own?', answer: 'No. AI can draft a reply or summarize a call; a person still decides what goes out.' },
     ],
   },
@@ -98,7 +98,7 @@ export const PRODUCTS: Product[] = [
     faq: [
       { question: 'Can we use our own pricing?', answer: 'Yes — quotes and invoices price from your own catalogue: your services, your rates, your hours.' },
       { question: 'What happens if two jobs need the same van or technician?', answer: 'Scheduling refuses the double-booking outright rather than letting two jobs land on one resource.' },
-      { question: 'Do we have to take payments through GOLD?', answer: 'Card payments run through Stripe under your own account; GOLD never holds the money.' },
+      { question: 'Do we have to take payments through GildOps?', answer: 'Card payments run through Stripe under your own account; GildOps never holds the money.' },
     ],
   },
   {
@@ -129,7 +129,7 @@ export const PRODUCTS: Product[] = [
     integrations: ['Twilio', 'Resend'],
     faq: [
       { question: 'Does the AI assistant talk to customers unsupervised?', answer: 'It answers what it’s configured to answer and hands off to a person for anything consequential — it does not act on a customer’s behalf.' },
-      { question: 'Will our number and email stay the same?', answer: 'Yes — GOLD connects the number and inbox you already use rather than issuing new ones.' },
+      { question: 'Will our number and email stay the same?', answer: 'Yes — GildOps connects the number and inbox you already use rather than issuing new ones.' },
     ],
   },
 ];
@@ -140,11 +140,11 @@ export function productBySlug(slug: string): Product | undefined {
 
 export const HOW_IT_WORKS_STEPS: { title: string; body: string }[] = [
   { title: 'Show us how the business works', body: 'A short conversation about the work you do today — the tools you use, and where they fall short.' },
-  { title: 'We configure your workspace', body: 'Your work types, pricing, hours and roles get set up in GOLD — not a template, your operation.' },
+  { title: 'We configure your workspace', body: 'Your work types, pricing, hours and roles get set up in GildOps — not a template, your operation.' },
   { title: 'Connect the tools you already use', body: 'Your phone number, inbox and payments connect to the workspace rather than being replaced by new ones.' },
-  { title: 'Test it with your team', body: 'Everyone who will use GOLD tries the real workflows before anything goes live.' },
+  { title: 'Test it with your team', body: 'Everyone who will use GildOps tries the real workflows before anything goes live.' },
   { title: 'Launch', body: 'You decide when it’s ready. Nothing goes live before you’ve reviewed it.' },
-  { title: 'Improve and expand over time', body: 'Turn on more of GOLD as the business needs it, without starting over.' },
+  { title: 'Improve and expand over time', body: 'Turn on more of GildOps as the business needs it, without starting over.' },
 ];
 
 export interface PricingPackage {
@@ -163,18 +163,18 @@ export const PRICING_FACTORS: { title: string; body: string }[] = [
   { title: 'Which products you switch on', body: 'Sales, Operations and Customer Service are priced and enabled independently — use one, or all three.' },
   { title: 'Team size', body: 'How many people need a seat in the workspace.' },
   { title: 'Usage', body: 'Call minutes, messages and email volume, billed at what they cost to carry.' },
-  { title: 'Managed setup', body: 'Whether GOLD configures the workspace for you or your team does it directly.' },
+  { title: 'Managed setup', body: 'Whether GildOps configures the workspace for you or your team does it directly.' },
   { title: 'Integrations', body: 'Which of your existing tools and channels need connecting.' },
 ];
 
 export const HOMEPAGE_FAQ: { question: string; answer: string }[] = [
-  { question: 'What is GOLD?', answer: 'GOLD is one connected system for running a service business — sales, operations and customer service in one place instead of several disconnected tools.' },
-  { question: 'Is GOLD a CRM?', answer: 'A CRM is part of it. GOLD also runs your scheduling, jobs, invoicing, payments and customer communication — the parts that happen after a lead becomes a customer.' },
-  { question: 'Does GOLD replace all our existing software?', answer: 'Not necessarily. GOLD connects to the phone, email and payment tools you already use rather than requiring you to abandon them on day one.' },
-  { question: 'What kinds of businesses fit GOLD?', answer: 'Service businesses that sell, schedule and deliver work — and need customer, communication and job information to stay in one place.' },
-  { question: 'Can GOLD integrate with software we already use?', answer: 'See /integrations for what’s connected today. GOLD is built to connect to the tools a business already runs on, not replace them wholesale.' },
+  { question: 'What is GildOps?', answer: 'GildOps is one connected system for running a service business — sales, operations and customer service in one place instead of several disconnected tools.' },
+  { question: 'Is GildOps a CRM?', answer: 'A CRM is part of it. GildOps also runs your scheduling, jobs, invoicing, payments and customer communication — the parts that happen after a lead becomes a customer.' },
+  { question: 'Does GildOps replace all our existing software?', answer: 'Not necessarily. GildOps connects to the phone, email and payment tools you already use rather than requiring you to abandon them on day one.' },
+  { question: 'What kinds of businesses fit GildOps?', answer: 'Service businesses that sell, schedule and deliver work — and need customer, communication and job information to stay in one place.' },
+  { question: 'Can GildOps integrate with software we already use?', answer: 'See /integrations for what’s connected today. GildOps is built to connect to the tools a business already runs on, not replace them wholesale.' },
   { question: 'How does implementation work?', answer: 'See how it works: a conversation about how you run today, a configured workspace, a review with your team, then launch on your own timeline.' },
   { question: 'Do we have to change our entire operation at once?', answer: 'No — Sales, Operations and Customer Service can be switched on separately, in the order that matters to your business.' },
-  { question: 'How does AI fit into GOLD?', answer: 'AI drafts, summarizes and assists across every product. It does not take consequential action or publish anything without a person reviewing it.' },
-  { question: 'What happens after I request a demo?', answer: 'Someone from GOLD follows up to understand how your business runs today and show you the parts of GOLD that fit it.' },
+  { question: 'How does AI fit into GildOps?', answer: 'AI drafts, summarizes and assists across every product. It does not take consequential action or publish anything without a person reviewing it.' },
+  { question: 'What happens after I request a demo?', answer: 'Someone from GildOps follows up to understand how your business runs today and show you the parts of GildOps that fit it.' },
 ];

@@ -3,12 +3,12 @@ import { DemoForm } from './demo-form';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Request a demo · GOLD',
-  description: 'Tell us about your business and we’ll show you the parts of GOLD that fit it.',
+  title: 'Request a demo · GildOps',
+  description: 'Tell us about your business and we’ll show you the parts of GildOps that fit it.',
   alternates: { canonical: '/demo' },
   openGraph: {
-    title: 'Request a demo · GOLD',
-    description: 'Tell us about your business and we’ll show you the parts of GOLD that fit it.',
+    title: 'Request a demo · GildOps',
+    description: 'Tell us about your business and we’ll show you the parts of GildOps that fit it.',
     url: '/demo',
   },
 };
@@ -21,9 +21,9 @@ export default function DemoPage() {
           Request a demo
         </h1>
         <p className="max-w-lg text-muted">
-          Tell us how your business runs today. We&rsquo;ll show you GOLD against it, configure a
+          Tell us how your business runs today. We&rsquo;ll show you GildOps against it, configure a
           workspace around it, and you review exactly what&rsquo;s been set up before anything
-          launches. Filling this in does not create an account or a business in GOLD.
+          launches. Filling this in does not create an account or a business in GildOps.
         </p>
       </div>
 

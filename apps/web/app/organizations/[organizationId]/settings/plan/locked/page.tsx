@@ -29,7 +29,7 @@ export default async function ServiceLockedPage({
     <AppPage>
       <PageHeader
         title="Your workspace is paused"
-        description="This business’s GOLD subscription does not currently include service, so its workspaces are closed. Nothing has been deleted or changed — everything is exactly as you left it and returns when the subscription is active again."
+        description="This business’s GildOps subscription does not currently include service, so its workspaces are closed. Nothing has been deleted or changed — everything is exactly as you left it and returns when the subscription is active again."
         actions={<ButtonLink href={`/organizations/${organizationId}/settings/plan`}>Go to Plan &amp; usage</ButtonLink>}
       />
       <Hint className="mt-4">{describeServiceAccess(access)}</Hint>

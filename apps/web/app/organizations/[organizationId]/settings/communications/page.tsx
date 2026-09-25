@@ -55,7 +55,7 @@ export default async function CommunicationsPage({
     <SettingsPageFrame>
       <PageHeader title="Communications" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
       <Hint className="mt-1">
-        The phone and email this business communicates through. Never what any of it costs GOLD,
+        The phone and email this business communicates through. Never what any of it costs GildOps,
         and never a secret. Apps a business connects itself are under Integrations.
       </Hint>
 
@@ -63,7 +63,7 @@ export default async function CommunicationsPage({
         <SectionHeading>Phone</SectionHeading>
         {!twilioBinding || twilioBinding.status !== 'active' ? (
           <EmptyState className="mt-2">
-            Not connected yet. GOLD sets this up — nothing to do here until it is.
+            Not connected yet. GildOps sets this up — nothing to do here until it is.
           </EmptyState>
         ) : (
           <>
@@ -94,7 +94,7 @@ export default async function CommunicationsPage({
       <Section className="mt-8">
         <SectionHeading>Email</SectionHeading>
         <Hint className="mt-1">
-          GOLD sends every automated message from one address until a domain of your own is
+          GildOps sends every automated message from one address until a domain of your own is
           verified beneath it.
         </Hint>
         {domains.length === 0 ? (

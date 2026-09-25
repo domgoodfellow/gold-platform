@@ -61,14 +61,19 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
       ) : null}
 
       {selectedType === null ? (
-        <EmptyState className="mt-6">
-          No kinds of work are configured.{' '}
+        <section className="mt-6 rounded-lg border border-border bg-surface px-5 py-10 text-center" aria-labelledby="work-empty-heading">
+          <SectionHeading id="work-empty-heading">No work types yet</SectionHeading>
+          <p className="mx-auto mt-2 w-full max-w-lg text-sm text-muted">
+            Define the kinds of work this organization delivers before adding jobs.
+          </p>
           {mayConfigure ? (
-            <Link href={configHref} className="underline underline-offset-4">
-              Configure Work
-            </Link>
-          ) : null}
-        </EmptyState>
+            <ButtonLink href={configHref} tone="primary" className="mt-4">
+              Configure work
+            </ButtonLink>
+          ) : (
+            <Hint className="mt-4">Your role, {role}, cannot configure work types.</Hint>
+          )}
+        </section>
       ) : (
         <>
           {mayAdd ? (
@@ -190,7 +195,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
         </>
       )}
 
-      {mayConfigure ? (
+      {mayConfigure && selectedType ? (
         <Hint className="mt-10">
           Kinds of work, statuses, allowed moves and checklists are configured in{' '}
           <Link href={configHref} className="underline underline-offset-4">

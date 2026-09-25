@@ -1,4 +1,6 @@
 import { HomeDashboard, type HomeData } from '@/features/home/home-dashboard';
+import { OrganizationReadiness } from '@/features/setup/organization-readiness';
+import { LaunchForm } from '@/features/setup/launch-form';
 import { listAutomationRuns } from '@/lib/domain/automation/rules';
 import { listMessageDeliveries } from '@/lib/domain/automation/templates';
 import {
@@ -16,6 +18,8 @@ import { listRecentActivity } from '@/lib/domain/timeline/timeline';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { areaAvailable } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
+import { computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +46,7 @@ export default async function HomePage({ params }: PageProps<'/organizations/[or
   const hasFinancials = has('insights') && capabilities.has('report.read');
   const period = periodFor('month', date);
 
-  const [schedule, workItems, customers, activity, calls, failedRuns, failedMessages, invoiced] = await Promise.all([
+  const [schedule, workItems, customers, activity, calls, failedRuns, failedMessages, invoiced, setupOverview, usableModules] = await Promise.all([
     listSchedule(db, { organizationId, within, on: { date, timeZone: organization.timezone } }),
     listWorkItems(db, { organizationId }),
     listCustomers(db, { organizationId, limit: 1 }),
@@ -53,6 +57,8 @@ export default async function HomePage({ params }: PageProps<'/organizations/[or
     hasFinancials
       ? listInvoicedAndIncurred(db, { organizationId, grouping: 'customer', period })
       : Promise.resolve(null),
+    organization.operationalState === 'setup' ? computeSetupOverview(db, { organizationId }) : Promise.resolve(null),
+    organization.operationalState === 'setup' ? listUsableModules(db, { organizationId }) : Promise.resolve(new Set<string>()),
   ]);
 
   const committed = schedule
@@ -80,5 +86,19 @@ export default async function HomePage({ params }: PageProps<'/organizations/[or
     activity,
   };
 
-  return <HomeDashboard data={data} />;
+  const readiness = setupOverview ? (
+    <OrganizationReadiness
+      organizationId={organizationId}
+      organizationName={organization.name}
+      overview={setupOverview}
+      agentAvailable={usableModules.has('drafting')}
+      finishAction={
+        setupOverview.blockers.length === 0 && capabilities.has('organization.manage') ? (
+          <LaunchForm organizationId={organizationId} />
+        ) : undefined
+      }
+    />
+  ) : null;
+
+  return <HomeDashboard data={data} readiness={readiness} />;
 }

@@ -3,12 +3,12 @@ import { CtaBand } from '@/components/marketing/cta-band';
 import { PRICING_PACKAGES, PRICING_FACTORS } from '@/lib/marketing/content';
 
 export const metadata: Metadata = {
-  title: 'Pricing · GOLD',
-  description: 'What each GOLD product includes, and what changes the cost of implementation.',
+  title: 'Pricing · GildOps',
+  description: 'What each GildOps product includes, and what changes the cost of implementation.',
   alternates: { canonical: '/pricing' },
   openGraph: {
-    title: 'Pricing · GOLD',
-    description: 'What each GOLD product includes, and what changes the cost of implementation.',
+    title: 'Pricing · GildOps',
+    description: 'What each GildOps product includes, and what changes the cost of implementation.',
     url: '/pricing',
   },
 };
@@ -22,7 +22,7 @@ export default function PricingPage() {
           Priced by product, not by guesswork.
         </h1>
         <p className="max-w-xl text-lg leading-relaxed text-muted">
-          GOLD is not one flat price. Sales, Operations and Customer Service are each switched on
+          GildOps is not one flat price. Sales, Operations and Customer Service are each switched on
           independently, and what a business pays depends on which of them it uses. A demo is
           where you get a real number for your business — this page is what shapes it.
         </p>

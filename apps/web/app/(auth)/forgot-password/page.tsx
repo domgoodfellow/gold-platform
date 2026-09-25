@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { CredentialsForm } from '../credentials-form';
 import { forgotPasswordAction } from './actions';
 
-export const metadata = { title: 'Forgotten password · GOLD' };
+export const metadata = { title: 'Forgotten password · GildOps' };
 
 export default function ForgotPasswordPage() {
   return (

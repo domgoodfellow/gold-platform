@@ -49,8 +49,9 @@ describe('Home', () => {
   });
 
   it('is an intentional page for an empty business rather than a wall of zeroes', () => {
-    expect(dashboard).toContain('Nothing recorded yet');
-    expect(dashboard).toMatch(/if \(!empty\)/);
+    expect(dashboard).toContain('const operationalEmpty');
+    expect(dashboard).toContain('kpis.length > 0');
+    expect(dashboard).toContain('Nothing is scheduled today.');
   });
 });
 

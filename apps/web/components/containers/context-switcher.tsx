@@ -12,10 +12,11 @@ import {
   DropdownMenuTrigger,
 } from '@gold/ui/components/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@gold/ui/components/sidebar';
-import { Building2, ChevronsUpDown } from 'lucide-react';
+import { Building2, ChevronsUpDown, LogOut, Settings, UserRound } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 import { organizationHomeHref } from '@/lib/navigation';
+import { personalSettingsHref } from '@/lib/route/personal-settings';
 
 export const GOLD_MARK = (
   <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-foreground text-sm font-bold text-background">
@@ -52,7 +53,7 @@ type SwitcherProps = {
  */
 export function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[]) {
   const triggerName =
-    current.kind === 'business' ? current.name : current.kind === 'global' ? 'GOLD' : 'Personal settings';
+    current.kind === 'business' ? current.name : current.kind === 'global' ? 'GildOps' : 'Personal settings';
   const triggerRole =
     current.kind === 'business' ? current.role : current.kind === 'global' ? 'Choose where to work' : 'Your identity';
   const avatarInitial =
@@ -66,11 +67,17 @@ export function deriveSwitcherView(current: SwitcherContext, organizations: Swit
 }
 
 function ContextSwitcherMenuContent({
+  current,
   triggerName,
   triggerRole,
   avatarInitial,
   businesses,
-}: SwitcherProps & ReturnType<typeof deriveSwitcherView>) {
+  email,
+  signOutAction,
+}: SwitcherProps & ReturnType<typeof deriveSwitcherView> & {
+  email?: string;
+  signOutAction?: () => Promise<void>;
+}) {
   return (
     <DropdownMenuContent side="bottom" align="start" className="w-64 min-w-64">
       <DropdownMenuLabel className="flex items-center gap-3 px-2 py-2">
@@ -100,6 +107,27 @@ function ContextSwitcherMenuContent({
               </Link>
             </DropdownMenuItem>
           ))}
+        </>
+      ) : null}
+
+      {current.kind === 'business' && email && signOutAction ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href={`/organizations/${current.organizationId}/settings`}>
+              <Settings />Organization settings
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={personalSettingsHref('profile', current.organizationId)}>
+              <UserRound />Personal settings
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="truncate px-2 text-xs font-normal text-muted">{email}</DropdownMenuLabel>
+          <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}>
+            <LogOut />Sign out
+          </DropdownMenuItem>
         </>
       ) : null}
 
@@ -192,6 +220,45 @@ export function CompactContextSwitcher({ mark, current, organizations }: Switche
         mark={mark}
         current={current}
         organizations={organizations}
+        {...view}
+      />
+    </DropdownMenu>
+  );
+}
+
+/** One phone control for business, role, switching, organization settings and account actions. */
+export function CompactOperatorMenu({
+  mark,
+  current,
+  organizations,
+  email,
+  signOutAction,
+}: SwitcherProps & { email: string; signOutAction: () => Promise<void> }) {
+  const view = deriveSwitcherView(current, organizations);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          tone="secondary"
+          size="small"
+          aria-label={`${view.triggerName}, ${view.triggerRole}. Open organization and account menu`}
+          className="min-w-0 gap-2 px-2"
+        >
+          <span aria-hidden className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded">
+            {mark}
+          </span>
+          <span className="max-w-32 truncate font-medium">{view.triggerName}</span>
+          <ChevronsUpDown aria-hidden size={14} className="shrink-0" />
+        </Button>
+      </DropdownMenuTrigger>
+      <ContextSwitcherMenuContent
+        mark={mark}
+        current={current}
+        organizations={organizations}
+        email={email}
+        signOutAction={signOutAction}
         {...view}
       />
     </DropdownMenu>

@@ -277,7 +277,7 @@ export async function launchOrganization(
 
   if (error) {
     if (error.code === '42501') {
-      throw new DomainError('Your role cannot launch this business.', 'organizations.launch_forbidden');
+      throw new DomainError('Your role cannot finish setup for this business.', 'organizations.launch_forbidden');
     }
     if (error.code === '23514') {
       throw new DomainError('This business is already live.', 'organizations.already_live');

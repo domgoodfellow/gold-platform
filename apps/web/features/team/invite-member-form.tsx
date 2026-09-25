@@ -55,7 +55,7 @@ export function InviteMemberForm({
 
       <Hint weight="subtle">
         They don&rsquo;t need an account yet. This creates a link that grants the role you
-        choose — send it yourself, or GOLD will try to email it for you.
+        choose — send it yourself, or GildOps will try to email it for you.
       </Hint>
 
       <div className="flex flex-col gap-2 sm:flex-row">

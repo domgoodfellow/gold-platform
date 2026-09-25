@@ -150,16 +150,16 @@ describe('the shell asks one question — is this business in SETUP — and runs
   });
 
   it('both derive it from the lifecycle fact already on the organization', () => {
-    expect(orgLayout).toContain("const setup = organization.operationalState === 'setup';");
+    expect(orgLayout).not.toContain("const setup = organization.operationalState === 'setup';");
     // Platform Administration is not a business and draws no lifecycle treatment.
     expect(platformLayout).not.toContain('operationalState === ');
   });
 
   it('the shell components take a boolean, and no count type or prop remains', () => {
     expect(code(shell)).not.toMatch(/SetupProgress|setup\.ready|setup\.total|ready:\s*number/);
-    expect(shell.match(/setup\?: boolean;/g)).toHaveLength(2);
-    expect(code(shell)).toContain('export function SetupEntry({ organizationId }: { organizationId: string })');
-    expect(code(shell)).toContain('export function SetupNavLink({ organizationId }: { organizationId: string })');
+    expect(shell).not.toMatch(/setup\?: boolean;/);
+    expect(code(shell)).not.toContain('export function SetupEntry');
+    expect(code(shell)).not.toContain('export function SetupNavLink');
   });
 
   it('the Setup page still computes and renders the real progress, and launch stays a domain guard', () => {

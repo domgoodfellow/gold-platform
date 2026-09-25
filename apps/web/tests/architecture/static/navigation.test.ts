@@ -211,9 +211,7 @@ describe('organizationHomeHref', () => {
   it('resolves to the first area, through areaHref', () => {
     expect(organizationHomeHref('org-1', 'live')).toBe(areaHref('org-1', AREAS[0].segment));
     expect(organizationHomeHref('org-1', 'live')).toBe('/organizations/org-1/home');
-    // SETUP is a lifecycle state with its own default destination — and only a default: Today
-    // and every other area stay reachable by direct navigation.
-    expect(organizationHomeHref('org-1', 'setup')).toBe('/organizations/org-1/setup');
+    expect(organizationHomeHref('org-1', 'setup')).toBe('/organizations/org-1/home');
   });
 });
 
@@ -601,12 +599,10 @@ describe('a switch leads to its inputs', () => {
     const layout = readFileSync(fileURLToPath(new URL('../../../features/shell/organization-shell.tsx', import.meta.url)), 'utf8');
     const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
 
-    expect(layout, 'the shell never asks whether this business is still in setup').toContain(
-      "operationalState === 'setup'",
-    );
-    expect(layout).toContain('setup={setup}');
-    expect(shell).toContain('export function SetupEntry');
-    expect(shell).toContain('export function SetupNavLink');
+    expect(layout).not.toContain("operationalState === 'setup'");
+    expect(layout).not.toContain('setup={setup}');
+    expect(shell).not.toContain('export function SetupEntry');
+    expect(shell).not.toContain('export function SetupNavLink');
     // One treatment, not several: the header badge this replaced must not come back.
     expect(shell).not.toContain('SetupBadge');
     expect(layout).not.toContain('SetupBadge');
@@ -756,7 +752,7 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
 
   it('still gets its SETUP-only shell treatment, and no second row in Configuration', () => {
     const layout = readFileSync(fileURLToPath(new URL('../../../features/shell/organization-shell.tsx', import.meta.url)), 'utf8');
-    expect(layout).toContain('setup={setup}');
+    expect(layout).not.toContain('setup={setup}');
 
     // `OrgNav` — the ordinary Configuration-group renderer — is generic over `AREAS`/`areasIn`
     // and must not special-case 'setup' itself; if it did, that would be the second,
@@ -769,12 +765,8 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
 
   it('gives Settings a path back to it, worded so Launch never sounds available again', () => {
     const settings = readFileSync(`${ROUTES}/settings/page.tsx`, 'utf8');
-    expect(SETTINGS_SECTIONS.find((section) => section.key === 'setup')?.entries[0].path).toBe('setup');
-    expect(settings, 'the Setup entry does not follow the lifecycle').toContain("key === 'setup' ? setupSentence");
-    expect(
-      settings,
-      'post-launch wording must not imply Launch can happen again',
-    ).toContain('This business is live. Review or reconfigure what setup covered.');
+    expect(SETTINGS_SECTIONS.find((section) => section.key === 'setup')).toBeUndefined();
+    expect(settings).not.toContain('setupSentence');
   });
 
   it('never renders Launch again on /setup once the business is LIVE', () => {

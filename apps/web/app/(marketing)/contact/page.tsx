@@ -5,8 +5,8 @@ import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { sendContactAction } from './actions';
 import { ContactForm } from './contact-form';
 
-const TITLE = 'Contact · GOLD';
-const DESCRIPTION = 'Send GOLD a question about sales, an existing account, billing or a partnership.';
+const TITLE = 'Contact · GildOps';
+const DESCRIPTION = 'Send GildOps a question about sales, an existing account, billing or a partnership.';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -31,7 +31,7 @@ export default async function ContactPage() {
           Questions? Send us a message.
         </h1>
         <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-          For a general question, an existing account, billing or a partnership. Looking to see GOLD
+          For a general question, an existing account, billing or a partnership. Looking to see GildOps
           on your own business? Request a demo instead.
         </p>
       </section>
@@ -63,8 +63,8 @@ export default async function ContactPage() {
       </div>
 
       <CtaBand
-        heading="Want to see GOLD on your business?"
-        body="Tell us how you run today and we’ll show you the parts of GOLD that fit it."
+        heading="Want to see GildOps on your business?"
+        body="Tell us how you run today and we’ll show you the parts of GildOps that fit it."
       />
     </div>
   );

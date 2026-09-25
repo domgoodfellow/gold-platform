@@ -7,10 +7,10 @@ import { productBySlug } from '@/lib/marketing/content';
 const product = productBySlug('customer-service')!;
 
 export const metadata: Metadata = {
-  title: `${product.name} · GOLD`,
+  title: `${product.name} · GildOps`,
   description: product.tagline,
   alternates: { canonical: '/customer-service' },
-  openGraph: { title: `${product.name} · GOLD`, description: product.tagline, url: '/customer-service' },
+  openGraph: { title: `${product.name} · GildOps`, description: product.tagline, url: '/customer-service' },
 };
 
 export default function CustomerServicePage() {

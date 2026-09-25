@@ -80,7 +80,7 @@ export function ConnectionDetail({
       <Section className="mt-8">
         <SectionHeading>Resources</SectionHeading>
         <Hint className="mt-1">
-          What GOLD can reach through this connection. Connecting does not let the assistant read any of it — turn that on for each resource.
+          What GildOps can reach through this connection. Connecting does not let the assistant read any of it — turn that on for each resource.
         </Hint>
         <div className="mt-3">
           <DataTable

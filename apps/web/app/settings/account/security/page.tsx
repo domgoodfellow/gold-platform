@@ -17,7 +17,7 @@ export default async function SecurityPage({ searchParams }: PageProps<'/setting
         <>
           <PageHeader
             title="Security & sign-in"
-            description="How you sign in. These settings protect your identity everywhere you use GOLD."
+            description="How you sign in. These settings protect your identity everywhere you use GildOps."
           />
           <Section>
             <SectionHeading>Password</SectionHeading>

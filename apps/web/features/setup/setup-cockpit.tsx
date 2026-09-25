@@ -50,7 +50,7 @@ function areaStatus(area: SetupArea): { label: string; icon?: ReactNode; tone: '
   }
   switch (area.importance) {
     case 'required':
-      return { label: 'Blocks launch', icon: <CircleAlert aria-hidden className="size-4" />, tone: 'accent' };
+      return { label: 'Required', icon: <CircleAlert aria-hidden className="size-4" />, tone: 'accent' };
     // The word carries the meaning; a dashed circle here read as a loading spinner.
     case 'recommended':
       return { label: 'Recommended', tone: 'neutral' };
@@ -112,12 +112,12 @@ export function LaunchReview({
 
   return (
     <Card as="section" aria-labelledby="setup-launch-heading">
-      <SectionHeading id="setup-launch-heading">Review &amp; launch</SectionHeading>
+      <SectionHeading id="setup-launch-heading">Finish setup</SectionHeading>
 
       {blocked ? (
         <>
           <p className="mt-1 text-sm">
-            {plural(overview.blockers.length, 'required area blocks', 'required areas block')} launch.
+            {plural(overview.blockers.length, 'required area must', 'required areas must')} be completed first.
           </p>
           <DividedList className="mt-2">
             {overview.blockers.map((area) => (
@@ -134,7 +134,7 @@ export function LaunchReview({
         </>
       ) : (
         <>
-          <p className="mt-1 text-sm">Nothing blocks launch.</p>
+          <p className="mt-1 text-sm">This organization is ready to operate.</p>
           <dl className="mt-3 grid max-w-md grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
             <dt className="text-muted">Required setup</dt>
             <dd>Complete</dd>
@@ -144,7 +144,7 @@ export function LaunchReview({
             <dd>{overview.optionalOpen === 0 ? 'None unfinished' : `${overview.optionalOpen} unfinished`}</dd>
           </dl>
           <Hint className="mt-3">
-            Launching makes Home the default workspace for this business. Every area above stays
+            Finishing setup makes Home the default workspace for this business. Every area above stays
             configurable from Settings.
           </Hint>
           <div className="mt-4">

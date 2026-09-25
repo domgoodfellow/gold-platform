@@ -68,7 +68,7 @@ export function ProductLanding({ product, preview }: { product: Product; preview
       <section className="grid gap-8 rounded-xl border border-border bg-surface p-6 sm:p-10 lg:grid-cols-3">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">Connected, not standalone</p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight">How {product.name} connects to the rest of GOLD</h2>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight">How {product.name} connects to the rest of GildOps</h2>
         </div>
         <div className="grid gap-6 text-sm leading-relaxed text-muted sm:grid-cols-2 lg:col-span-2">
           {product.connectsTo.map((point) => <p key={point}>{point}</p>)}
@@ -87,7 +87,7 @@ export function ProductLanding({ product, preview }: { product: Product; preview
 
       <CtaBand
         heading={`See ${product.name} on your own operation.`}
-        body={`Request a demo and we'll show you how ${product.name.toLowerCase()} would look in GOLD, using how your business actually works.`}
+        body={`Request a demo and we'll show you how ${product.name.toLowerCase()} would look in GildOps, using how your business actually works.`}
       />
     </div>
   );

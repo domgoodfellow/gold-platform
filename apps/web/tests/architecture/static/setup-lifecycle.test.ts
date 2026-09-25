@@ -26,11 +26,11 @@ const CREATE_ACTION = read('../../../app/organizations/actions.ts');
 const NAVIGATION = read('../../../lib/navigation.ts');
 
 describe('entry — one decision, made in one place', () => {
-  it('organizationHomeHref takes the lifecycle state and sends SETUP to Setup', () => {
+  it('organizationHomeHref keeps Home canonical while readiness is contextual', () => {
     expect(NAVIGATION).toMatch(
       /organizationHomeHref\(organizationId: string, operationalState: OperationalState\)/,
     );
-    expect(NAVIGATION).toContain("operationalState === 'setup' ? 'setup' : AREAS[0].segment");
+    expect(NAVIGATION).toContain('areaHref(organizationId, AREAS[0].segment)');
   });
 
   it('a newly created business enters through it, without asking whether drafting exists', () => {
@@ -66,7 +66,7 @@ describe('the cockpit — a map of existing configuration, not a second model', 
   });
 
   it('names importance and state in words, never by colour alone', () => {
-    for (const word of ['Ready', 'Blocks launch', 'Recommended', 'Optional']) {
+    for (const word of ['Ready', 'Required', 'Recommended', 'Optional']) {
       expect(COCKPIT).toContain(`'${word}'`);
     }
   });
@@ -90,8 +90,8 @@ describe('Launch — a review boundary, not a mystery button', () => {
     expect(COCKPIT).toContain('Required setup');
     expect(COCKPIT).toContain('Recommendations');
     expect(COCKPIT).toContain('Optional areas');
-    expect(COCKPIT).toContain('Launching makes Home the default workspace');
-    expect(COCKPIT.indexOf('Launching makes Home')).toBeLessThan(COCKPIT.indexOf('{launch}'));
+    expect(COCKPIT).toContain('Finishing setup makes Home the default workspace');
+    expect(COCKPIT.indexOf('Finishing setup makes Home')).toBeLessThan(COCKPIT.indexOf('{launch}'));
   });
 
   it('only offers Launch while SETUP, and the domain re-checks regardless of the page', () => {
@@ -131,17 +131,14 @@ describe('AI drafting — an accelerator the cockpit does not depend on', () => 
 
 describe('the shell — one lifecycle treatment at every width, gone at LIVE', () => {
   it('reads the lifecycle state once and hands both renderings the same progress', () => {
-    expect(LAYOUT).toContain("organization.operationalState === 'setup'");
-    expect(LAYOUT.match(/setup=\{setup\}/g) ?? []).toHaveLength(2);
+    expect(LAYOUT).not.toContain("organization.operationalState === 'setup'");
+    expect(LAYOUT).not.toContain('setup={setup}');
     // Platform Administration is not a business, so it has no lifecycle treatment at all.
     expect(PLATFORM_LAYOUT).not.toMatch(/SetupEntry|SetupNavLink|setup={/);
   });
 
   it('gives a phone a path to Setup as the bottom bar’s own item, only while a progress value exists', () => {
-    const bar = SHELL.slice(SHELL.indexOf('export function OrgNavBar('), SHELL.indexOf('export function SetupEntry'));
-    // Only in a business: inside Platform the bar is about Platform, so the lifecycle row steps aside.
-    expect(bar).toMatch(/\{setup && !platformActive \? \(\s*<li[^>]*>\s*<SetupNavLink/);
-    expect(SHELL).toContain('export function SetupNavLink');
+    expect(SHELL).not.toContain('SetupNavLink');
   });
 
   it('carries no Setup badge or header treatment, and no giant call to action', () => {
@@ -160,6 +157,7 @@ describe('Home — the operating cockpit, not a second onboarding dashboard', ()
   it('carries no setup chrome of its own — the sidebar row and Setup itself are the lifecycle', () => {
     // A setup business enters through Setup (`organizationHomeHref`), and the sidebar keeps one
     // row for it; a third sentence on Home would be the competing affordance this replaced.
-    expect(HOME_FEATURE).not.toMatch(/being set up|Continue setup|setupRemaining|inSetup|blockers|warnings/);
+    expect(HOME_FEATURE).toContain('readiness?: ReactNode');
+    expect(HOME_FEATURE).toContain('{readiness}');
   });
 });

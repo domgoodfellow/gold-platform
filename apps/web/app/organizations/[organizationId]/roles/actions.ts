@@ -141,8 +141,8 @@ export async function inviteMemberAction(
     try {
       await sender.send({
         to: parsed.data.email,
-        subject: "You've been invited to join a business on GOLD",
-        text: `You've been invited to join a business on GOLD. Open this link to accept:\n\n${link}\n\nIf you weren't expecting this, you can ignore it.`,
+        subject: "You've been invited to join a business on GildOps",
+        text: `You've been invited to join a business on GildOps. Open this link to accept:\n\n${link}\n\nIf you weren't expecting this, you can ignore it.`,
       });
     } catch {
       // Swallowed on purpose — the copyable link below is the fallback, not a second attempt.

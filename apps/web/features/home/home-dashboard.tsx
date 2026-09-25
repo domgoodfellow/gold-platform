@@ -71,24 +71,23 @@ function Panel({ title, href, hrefLabel, className, children }: { title: string;
  * the domain aggregate that owns it (see `app/organizations/[organizationId]/home/page.tsx`); a
  * block whose source is not available to this organization is not drawn at all.
  */
-export function HomeDashboard({ data }: { data: HomeData }) {
+export function HomeDashboard({ data, readiness }: { data: HomeData; readiness?: ReactNode }) {
   const { organizationId, timezone } = data;
   const href = (segment: string) => areaHref(organizationId, segment);
   const workHref = (id: string) => `${href('work')}/${id}`;
 
-  const empty =
+  const operationalEmpty =
     data.customers.total === 0 &&
     data.work.total === 0 &&
-    data.schedule.committed.length === 0 &&
-    data.activity.length === 0;
+    data.schedule.committed.length === 0;
 
   const kpis: Kpi[] = [];
-  if (!empty) {
+  if (!operationalEmpty) {
     kpis.push({ key: 'customers', label: areaLabel('customers'), value: data.customers.total, href: href('customers') });
     kpis.push({ key: 'work', label: areaLabel('work'), value: data.work.total, note: 'jobs recorded', href: href('work') });
     kpis.push({ key: 'schedule', label: 'Scheduled today', value: data.schedule.committed.length, href: href('schedule') });
   }
-  if (data.communications && (data.communications.today > 0 || !empty)) {
+  if (data.communications && (data.communications.today > 0 || !operationalEmpty)) {
     kpis.push({
       key: 'calls',
       label: 'Calls today',
@@ -127,25 +126,13 @@ export function HomeDashboard({ data }: { data: HomeData }) {
         description={<><time dateTime={data.date}>{formatBusinessDate(data.date)}</time> · {timezone}</>}
       />
 
-      {empty ? (
-        <Card as="section">
-          <SectionHeading>Nothing recorded yet</SectionHeading>
-          <p className="mt-1 text-sm text-muted">
-            Home fills in from what this business does: customers, work, appointments and what has happened to them.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            {['customers', 'work', 'schedule'].map((segment) => (
-              <Link key={segment} href={href(segment)} className={cx('rounded underline underline-offset-4', FOCUS_RING)}>
-                {areaLabel(segment)}
-              </Link>
-            ))}
-          </div>
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
+          {readiness}
+          {kpis.length > 0 ? (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {kpis.map((kpi) => <KpiCard key={kpi.key} kpi={kpi} />)}
           </div>
+          ) : null}
 
           <div className="grid gap-4 lg:grid-cols-3">
             <Panel title="Scheduled today" href={href('schedule')} hrefLabel="Open schedule" className="lg:col-span-2">
@@ -194,7 +181,6 @@ export function HomeDashboard({ data }: { data: HomeData }) {
             <ActivityList timeline={data.activity.slice(0, PREVIEW)} timezone={timezone} emptyMessage="No activity yet." />
           </Panel>
         </div>
-      )}
     </AppPage>
   );
 }

@@ -49,7 +49,7 @@ export default function GlobalError({
       >
         <main style={{ maxWidth: '32rem' }}>
           <h1 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>
-            GOLD did not load
+            GildOps did not load
           </h1>
           <p style={{ marginTop: '0.5rem', opacity: 0.7 }}>
             Something went wrong before any of your businesses could be read. Nothing was changed.

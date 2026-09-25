@@ -21,7 +21,7 @@ import { cx, FOCUS_RING } from '../class-names';
 export function SiteShell({
   nav,
   action,
-  name = 'GOLD',
+  name = 'GildOps',
   logoUrl = null,
   footerLine = 'One system that runs your business.',
   children,
