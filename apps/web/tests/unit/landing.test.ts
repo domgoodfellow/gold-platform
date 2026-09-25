@@ -86,23 +86,23 @@ describe('resolveOrganizationsLanding — several memberships never meet a direc
   });
 });
 
-describe('the one organization-entry decision — SETUP enters Setup, LIVE enters Home', () => {
+describe('the one organization-entry decision — every organization enters Home', () => {
   const one = (operationalState: 'setup' | 'live') => ({
     organizations: [{ id: 'org-1', operationalState }],
     staff: false,
   });
 
-  it('sends a business still in SETUP to Setup', () => {
+  it('sends a business still in SETUP to Home, where readiness is contextual', () => {
     const landing = resolveOrganizationsLanding(one('setup'));
     expect(landing).toEqual({ kind: 'enter', organizationId: 'org-1', operationalState: 'setup' });
-    expect(destinationFor(landing)).toBe('/organizations/org-1/setup');
+    expect(destinationFor(landing)).toBe('/organizations/org-1/home');
   });
 
   it('sends a LIVE business to Home', () => {
     expect(destinationFor(resolveOrganizationsLanding(one('live')))).toBe('/organizations/org-1/home');
   });
 
-  it('follows the preferred workspace’s own state, not the first business listed', () => {
+  it('follows the preferred workspace, not the first business listed', () => {
     const landing = resolveOrganizationsLanding({
       organizations: [
         { id: 'other', operationalState: 'live' },
@@ -111,6 +111,6 @@ describe('the one organization-entry decision — SETUP enters Setup, LIVE enter
       staff: true,
       preferredOrganizationId: 'gold-org',
     });
-    expect(destinationFor(landing)).toBe('/organizations/gold-org/setup');
+    expect(destinationFor(landing)).toBe('/organizations/gold-org/home');
   });
 });
