@@ -1,8 +1,9 @@
 'use client';
 
 import { FormError, FormField } from '@/components/controls/form';
-import { Hint, TextInput } from '@/components/controls/inputs';
+import { FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
+import Link from 'next/link';
 import { useActionState, type ReactNode } from 'react';
 
 /** `done` is for an action with nothing to navigate to afterwards — asking for a recovery link. */
@@ -23,6 +24,8 @@ type Props = {
   confirmPassword?: boolean;
   /** Shown once the action reports `done`. The one caller is the recovery request. */
   successMessage?: ReactNode;
+  /** Where somebody who has forgotten the password goes. Sits in the Password label row, at the right. */
+  recoveryHref?: string;
 };
 
 /**
@@ -44,6 +47,7 @@ export function CredentialsForm({
   passwordAutoComplete,
   confirmPassword = false,
   successMessage,
+  recoveryHref,
 }: Props) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
 
@@ -58,7 +62,19 @@ export function CredentialsForm({
         </FormField>
       ) : null}
 
-      {wantsPassword ? (
+      {wantsPassword && recoveryHref ? (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between gap-2">
+            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <Link href={recoveryHref} className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
+          <TextInput id="password" name="password" type="password" required autoComplete={passwordAutoComplete} />
+        </div>
+      ) : null}
+
+      {wantsPassword && !recoveryHref ? (
         <FormField id="password" label="Password">
           {(field) => (
             <TextInput {...field} name="password" type="password" required autoComplete={passwordAutoComplete} />

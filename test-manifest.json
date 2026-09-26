@@ -593,6 +593,13 @@
       ],
       "note": "Reads source and the seeding migration; renders nothing."
     },
+    "apps/web/tests/architecture/static/auth-screens.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "auth"
+      ],
+      "note": "Reads the credential screens' source; renders nothing."
+    },
     "apps/web/tests/architecture/static/public-seo.test.ts": {
       "category": "architecture-static",
       "concerns": [

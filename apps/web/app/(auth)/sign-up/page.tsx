@@ -1,6 +1,4 @@
-import { Hint } from '@/components/controls/inputs';
-import { PageHeading } from '@/components/containers/section';
-import Link from 'next/link';
+import { AuthDivider, AuthHeading, AuthSecondaryAction } from '../auth-parts';
 import { CredentialsForm } from '../credentials-form';
 import { GoogleAuthButton } from '../google-auth-button';
 import { signUpAction } from './actions';
@@ -10,7 +8,8 @@ export const metadata = { title: 'Create an account · GildOps' };
 export default function SignUpPage() {
   return (
     <>
-      <PageHeading>Create an account</PageHeading>
+      <AuthHeading title="Create an account" />
+
       <CredentialsForm
         action={signUpAction}
         fields="email-and-password"
@@ -20,14 +19,12 @@ export default function SignUpPage() {
         confirmPassword
       />
 
+      <AuthDivider />
       <GoogleAuthButton />
 
-      <Hint className="mt-6">
-        Already have one?{' '}
-        <Link href="/login" className="underline underline-offset-4">
-          Log in
-        </Link>
-      </Hint>
+      <AuthSecondaryAction prompt="Already have an account?" href="/login">
+        Log in
+      </AuthSecondaryAction>
     </>
   );
 }

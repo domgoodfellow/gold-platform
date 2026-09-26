@@ -1,6 +1,4 @@
-import { Hint } from '@/components/controls/inputs';
-import { PageHeading } from '@/components/containers/section';
-import Link from 'next/link';
+import { AuthHeading, AuthSecondaryAction } from '../auth-parts';
 import { redirect } from 'next/navigation';
 import { CredentialsForm } from '../credentials-form';
 import { getDb } from '@/lib/db/server';
@@ -30,8 +28,7 @@ export default async function ResetPasswordPage() {
 
   return (
     <>
-      <PageHeading>Set a new password</PageHeading>
-      <Hint className="mt-3">For {data.user.email}.</Hint>
+      <AuthHeading title="Set a new password">For {data.user.email}.</AuthHeading>
 
       <CredentialsForm
         action={resetPasswordAction}
@@ -42,11 +39,7 @@ export default async function ResetPasswordPage() {
         confirmPassword
       />
 
-      <Hint className="mt-6">
-        <Link href="/login" className="underline underline-offset-4">
-          Back to logging in
-        </Link>
-      </Hint>
+      <AuthSecondaryAction href="/login">Back to logging in</AuthSecondaryAction>
     </>
   );
 }

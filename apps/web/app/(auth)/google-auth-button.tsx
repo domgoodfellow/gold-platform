@@ -31,7 +31,7 @@ function GoogleMark() {
 
 export function GoogleAuthButton() {
   return (
-    <form action={signInWithGoogleAction} className="mt-4">
+    <form action={signInWithGoogleAction}>
       <Button type="submit" tone="secondary" className="w-full gap-2">
         <GoogleMark />
         Continue with Google

@@ -1,6 +1,4 @@
-import { Hint } from '@/components/controls/inputs';
-import { PageHeading } from '@/components/containers/section';
-import Link from 'next/link';
+import { AuthDivider, AuthHeading, AuthSecondaryAction } from '../auth-parts';
 import { CredentialsForm } from '../credentials-form';
 import { GoogleAuthButton } from '../google-auth-button';
 import { logInAction } from './actions';
@@ -10,7 +8,7 @@ export const metadata = { title: 'Log in · GildOps' };
 export default function LogInPage() {
   return (
     <>
-      <PageHeading>Log in</PageHeading>
+      <AuthHeading title="Log in" />
 
       <CredentialsForm
         action={logInAction}
@@ -18,28 +16,15 @@ export default function LogInPage() {
         submitLabel="Log in"
         pendingLabel="Logging in…"
         passwordAutoComplete="current-password"
+        recoveryHref="/forgot-password"
       />
 
+      <AuthDivider />
       <GoogleAuthButton />
 
-      <Hint className="mt-6">
-        <Link
-          href="/forgot-password"
-          className="underline underline-offset-4"
-        >
-          Forgot password?
-        </Link>
-      </Hint>
-
-      <Hint className="mt-2">
-        No account yet?{' '}
-        <Link
-          href="/sign-up"
-          className="underline underline-offset-4"
-        >
-          Create one
-        </Link>
-      </Hint>
+      <AuthSecondaryAction prompt="Don’t have an account?" href="/sign-up">
+        Create an account
+      </AuthSecondaryAction>
     </>
   );
 }
