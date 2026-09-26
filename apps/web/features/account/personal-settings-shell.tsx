@@ -1,13 +1,9 @@
 import type { ReactNode } from 'react';
-import { redirect } from 'next/navigation';
-import { WorkspaceHeader } from '@/components/containers/workspace-header';
-import { WorkspaceShell } from '@/components/containers/workspace-shell';
-import { AccountAgentRail } from '@/features/account/account-agent-rail';
-import { PersonalSettingsSidebar } from '@/features/account/personal-settings-sidebar';
+import { GlobalFallbackShell } from '@/features/account/global-fallback-shell';
+import { PersonalSettingsNav } from '@/features/account/personal-settings-nav';
+import { OrganizationShell } from '@/features/shell/organization-shell';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
-import { getDb } from '@/lib/db/server';
-import { signOut } from '@/lib/domain/identity/credentials';
-import { organizationHomeHref } from '@/lib/navigation';
+import { readLastOrganizationId } from '@/lib/route/landing';
 import { loadPersonContext } from '@/lib/route/person-context';
 
 /**
@@ -15,8 +11,15 @@ import { loadPersonContext } from '@/lib/route/person-context';
  * leaning on a layout, for the reason every organization page calls `requireOrganization` (I12);
  * it hands back what a section needs to render and takes the section as children.
  *
- * Personal settings is the signed-in person's own identity — it shares the shell and the Settings
- * frame every context uses, and owns nothing an organization does.
+ * **There is one shell, and Personal settings is a page inside it.** Where the person has a
+ * business in play — the `?org=` hint, else the business they last worked in — the page renders
+ * inside that business's own `OrganizationShell`, so the sidebar, header and Agent do not change
+ * when they open it. Where they have none, it renders in the account-only frame every
+ * organization-less screen uses. Either way what the page shows and writes is the person's own
+ * identity, read from `loadPersonContext`; the shell around it decides nothing about that.
+ *
+ * The business is a hint, never authority: it is honoured only if it is one of the caller's own
+ * memberships, and the shell it selects runs its own membership check again.
  */
 export async function PersonalSettingsShell({
   returnOrganizationId,
@@ -27,42 +30,22 @@ export async function PersonalSettingsShell({
   children: (person: { email: string; hasPassword: boolean }) => ReactNode;
 }) {
   const { email, hasPassword, organizations: myOrganizations } = await loadPersonContext();
-  const origin = returnOrganizationId
+  const hinted = returnOrganizationId
     ? myOrganizations.find((organization) => organization.id === returnOrganizationId)
     : undefined;
+  const lastId = hinted ? null : await readLastOrganizationId();
+  const origin = hinted ?? myOrganizations.find((organization) => organization.id === lastId);
 
-  async function signOutAction() {
-    'use server';
-    const db = await getDb();
-    await signOut(db);
-    redirect('/login');
-  }
-
-  const sidebar = (
-    <PersonalSettingsSidebar
-      email={email}
-      signOutAction={signOutAction}
-      businesses={myOrganizations.map((org) => ({
-        id: org.id,
-        name: org.name,
-        role: org.role,
-        operationalState: org.operationalState,
-      }))}
-      back={
-        origin
-          ? {
-              organizationId: origin.id,
-              name: origin.name,
-              href: organizationHomeHref(origin.id, origin.operationalState),
-            }
-          : null
-      }
-    />
+  const body = (
+    <SettingsPageFrame>
+      <PersonalSettingsNav
+        organizationId={origin?.id ?? null}
+        business={origin ? { name: origin.name, settingsHref: `/organizations/${origin.id}/settings` } : null}
+      />
+      {children({ email, hasPassword })}
+    </SettingsPageFrame>
   );
 
-  return (
-    <WorkspaceShell sidebar={sidebar} header={<WorkspaceHeader navigationTrigger="always" />} agent={<AccountAgentRail />}>
-      <SettingsPageFrame>{children({ email, hasPassword })}</SettingsPageFrame>
-    </WorkspaceShell>
-  );
+  if (origin) return <OrganizationShell organizationId={origin.id}>{body}</OrganizationShell>;
+  return <GlobalFallbackShell>{() => body}</GlobalFallbackShell>;
 }

@@ -6,8 +6,8 @@
 export const PERSONAL_SETTINGS_ROOT = '/settings/account';
 
 export const PERSONAL_SECTIONS = [
-  { key: 'profile', label: 'Profile', path: PERSONAL_SETTINGS_ROOT },
-  { key: 'security', label: 'Security & sign-in', path: `${PERSONAL_SETTINGS_ROOT}/security` },
+  { key: 'profile', label: 'Profile', description: 'The email you sign in with.', path: PERSONAL_SETTINGS_ROOT },
+  { key: 'security', label: 'Security & sign-in', description: 'Your password and how you sign in.', path: `${PERSONAL_SETTINGS_ROOT}/security` },
 ] as const;
 
 export type PersonalSection = (typeof PERSONAL_SECTIONS)[number]['key'];

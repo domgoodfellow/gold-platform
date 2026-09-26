@@ -569,15 +569,20 @@ describe('the tenant workspace header — Platform administering an organization
 
 describe('Personal settings shares the authenticated shell — no standalone island', () => {
   const shell = readFileSync(`${WEB}/features/account/personal-settings-shell.tsx`, 'utf8');
-  const contextSwitcherSource = readFileSync(`${WEB}/components/containers/context-switcher.tsx`, 'utf8');
-  const sidebar = readFileSync(`${WEB}/features/account/personal-settings-sidebar.tsx`, 'utf8');
   const profile = readFileSync(`${WEB}/app/settings/account/page.tsx`, 'utf8');
   const security = readFileSync(`${WEB}/app/settings/account/security/page.tsx`, 'utf8');
 
-  it('mounts WorkspaceShell inside the shared Settings frame rather than a bare <main>', () => {
-    expect(shell).toContain('<WorkspaceShell');
+  // The invariant: changing configuration scope must not create an unrelated application shell.
+  it('builds no shell of its own: it renders inside the business shell, or the account-only frame', () => {
+    expect(shell).toContain('<OrganizationShell');
+    expect(shell).toContain('<GlobalFallbackShell');
+    expect(shell).not.toMatch(/<WorkspaceShell|<Sidebar|WorkspaceHeader/);
+    expect(existsSync(`${WEB}/features/account/personal-settings-sidebar.tsx`)).toBe(false);
+  });
+
+  it('puts the page inside the shared Settings frame rather than a bare <main>', () => {
     expect(shell).toContain('<SettingsPageFrame>');
-    expect(shell).not.toMatch(/<main\b/);
+    expect(shell).not.toMatch(/<main/);
   });
 
   it('every page names itself with one PageHeader, not a title in the global header', () => {
@@ -588,20 +593,12 @@ describe('Personal settings shares the authenticated shell — no standalone isl
     }
   });
 
-  it('registers an Agent rail — every workspace keeps Agent as a furthest-right control', () => {
-    expect(shell).toContain('AccountAgentRail');
+  it('leaves the Agent rail to whichever shell it sits in', () => {
+    expect(shell).not.toContain('AccountAgentRail');
   });
 
-  it('has its own SwitcherContext kind, rather than borrowing "business" or "platform"', () => {
-    expect(contextSwitcherSource).toMatch(/\{\s*kind:\s*'account'\s*\}/);
-    expect(sidebar).toContain("kind: 'account'");
-  });
-
-  it('keeps ContextSwitcher as the only cross-context navigation, and lists personal sections only', () => {
-    expect(sidebar).toContain('ContextSwitcher');
-    expect(sidebar).toContain('PERSONAL_SECTIONS');
-    expect(sidebar).not.toContain('PlatformNavigation');
-    expect(sidebar).not.toMatch(/AREAS|areasIn\(/);
+  it('has no SwitcherContext of its own: the switcher names a business or the platform', () => {
+    expect(readFileSync(`${WEB}/components/containers/context-switcher.tsx`, 'utf8')).not.toMatch(/kind:s*'account'/);
   });
 });
 

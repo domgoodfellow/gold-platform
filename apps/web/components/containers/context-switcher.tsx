@@ -34,7 +34,6 @@ export type SwitchableOrganization = {
 
 export type SwitcherContext =
   | { kind: 'business'; organizationId: string; name: string; role: string }
-  | { kind: 'account' }
   /** The fallback frame: no organization is trusted, so the trigger names only the platform. */
   | { kind: 'global' };
 
@@ -54,11 +53,11 @@ type SwitcherProps = {
  */
 export function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[]) {
   const triggerName =
-    current.kind === 'business' ? current.name : current.kind === 'global' ? PLATFORM_NAME : 'Personal settings';
+    current.kind === 'business' ? current.name : PLATFORM_NAME;
   const triggerRole =
-    current.kind === 'business' ? current.role : current.kind === 'global' ? 'Choose where to work' : 'Your identity';
+    current.kind === 'business' ? current.role : 'Choose where to work';
   const avatarInitial =
-    current.kind === 'business' ? triggerName.charAt(0).toUpperCase() : current.kind === 'global' ? 'G' : 'A';
+    current.kind === 'business' ? triggerName.charAt(0).toUpperCase() : 'G';
   const businesses =
     current.kind === 'business'
       ? organizations.filter((organization) => organization.id !== current.organizationId)

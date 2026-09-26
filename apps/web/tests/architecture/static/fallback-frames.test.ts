@@ -187,25 +187,20 @@ describe('the mobile sidebar trigger says what the layouts do', () => {
   });
 
   it('only shells with no bottom bar ask for the trigger at every width', () => {
-    expect(read('features/account/personal-settings-shell.tsx')).toContain('navigationTrigger="always"');
     expect(read('features/account/global-fallback-shell.tsx')).toContain('navigationTrigger="always"');
     expect(read('features/shell/organization-shell.tsx')).toContain('navigationTrigger="md"');
   });
 });
 
 describe('Personal settings says it once', () => {
-  it('has no sidebar group label repeating the switcher, and no crumb repeating the sidebar', () => {
-    const sidebar = read('features/account/personal-settings-sidebar.tsx');
-    expect(code(sidebar)).not.toContain('SidebarGroupLabel');
+  it('draws no crumb repeating the sidebar', () => {
     for (const page of ['app/settings/account/page.tsx', 'app/settings/account/security/page.tsx']) {
       expect(read(page), page).not.toContain('crumbs=');
     }
   });
 
-  it('its sections carry icons like every other sidebar destination, presentation-only and keyed by section', () => {
-    const sidebar = read('features/account/personal-settings-sidebar.tsx');
-    expect(sidebar).toContain('SECTION_ICONS');
-    expect(sidebar).toContain('<Icon aria-hidden />');
+  it('keeps its sections presentation-free, named once for the nav and the Settings index', () => {
     expect(read('lib/route/personal-settings.ts')).not.toMatch(/lucide|Icon/);
+    expect(read('features/account/personal-settings-nav.tsx')).toContain('PERSONAL_SECTIONS');
   });
 });

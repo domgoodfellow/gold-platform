@@ -74,9 +74,15 @@ describe('scope stays honest in both directions', () => {
     }
   });
 
-  it('the Personal sidebar lists personal sections only, never an organization area', () => {
-    const sidebar = read('features/account/personal-settings-sidebar.tsx');
-    expect(sidebar).not.toMatch(/AREAS|areasIn\(/);
+  it('the Personal sections are listed in the business Settings index, from the one list', () => {
+    const index = read('features/settings/personal-settings-entries.tsx');
+    expect(index).toContain('PERSONAL_SECTIONS');
+    expect(index).toContain('personalSettingsHref(');
+    expect(read('app/organizations/[organizationId]/settings/page.tsx')).toContain('<PersonalSettingsEntries');
+  });
+
+  it('the shell marks Settings current on a Personal settings address', () => {
+    expect(read('lib/shell.ts')).toContain('PERSONAL_SETTINGS_ROOT');
   });
 
   it('the return business is checked against the callers own memberships, never trusted', () => {
