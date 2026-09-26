@@ -57,6 +57,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import {
+  ADMINISTRATION_SECTIONS,
   activeItemKey,
   inPlatformScope,
   itemContains,
@@ -204,23 +205,30 @@ export function OrgNav({ sections }: { sections: ShellSection[] }) {
   const active = activeItemKey(sections, pathname);
   const platformActive = inPlatformScope(pathname);
 
+  const group = (section: ShellSection, ruled: boolean) => (
+    <SidebarGroup key={section.key} className={ruled ? 'border-t border-sidebar-border' : undefined}>
+      {section.label ? <SidebarGroupLabel>{section.label}</SidebarGroupLabel> : null}
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {section.items.map((item) => (
+            <NavRow key={item.key} item={item} active={active} expanded={section.key === 'platform' && platformActive} />
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+  const operating = sections.filter((section) => !ADMINISTRATION_SECTIONS.has(section.key));
+  const administration = sections.filter((section) => ADMINISTRATION_SECTIONS.has(section.key));
+
   return (
     <nav aria-label="This business" className="flex flex-1 flex-col">
-      {sections.map((section) => (
-        <SidebarGroup
-          key={section.key}
-          className={section.key === 'business' ? 'border-t border-sidebar-border' : undefined}
-        >
-          {section.label ? <SidebarGroupLabel>{section.label}</SidebarGroupLabel> : null}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {section.items.map((item) => (
-                <NavRow key={item.key} item={item} active={active} expanded={section.key === 'platform' && platformActive} />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      ))}
+      {operating.map((section) => group(section, false))}
+      {/* Administration settles to the foot of the sidebar by layout, not by coordinates: the
+          auto margin takes whatever height the operating work leaves, so the highest authority
+          is always the furthest from the daily work and sits just above the account footer. */}
+      {administration.length > 0 ? (
+        <div className="mt-auto flex flex-col">{administration.map((section) => group(section, true))}</div>
+      ) : null}
     </nav>
   );
 }

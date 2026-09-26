@@ -98,8 +98,19 @@ const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
   home: null,
   workspaces: 'Workspaces',
   business: 'Business',
-  platform: 'Platform',
+  platform: 'Platform administration',
 };
+
+/**
+ * The scope hierarchy, top to bottom: routine operating work, then administration of this business,
+ * then administration of the platform. Not a count of permissions — a widening of what a click can
+ * change. `projectShell` returns sections in this order and a renderer settles the last two toward
+ * the bottom of the sidebar, so the highest authority is the furthest from the daily work.
+ */
+export const SHELL_SECTION_ORDER: readonly ShellSectionKey[] = ['home', 'workspaces', 'business', 'platform'];
+
+/** The sections that are administration rather than operating work: drawn as one block, at the foot. */
+export const ADMINISTRATION_SECTIONS: ReadonlySet<ShellSectionKey> = new Set(['business', 'platform']);
 
 function areaItem(organizationId: string, area: Area, section: ShellSectionKey): NavItem {
   return {

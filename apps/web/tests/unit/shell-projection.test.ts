@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { AREAS } from '@/lib/navigation';
 import {
+  ADMINISTRATION_SECTIONS,
+  SHELL_SECTION_ORDER,
   activeItemKey,
   inPlatformScope,
   itemContains,
@@ -119,8 +121,8 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(keys(sections, 'workspaces')).toContain('customers');
   });
 
-  it('labels its sections Home, Workspaces, Business, Platform', () => {
-    expect(sections.map((section) => section.label)).toEqual([null, 'Workspaces', 'Business', 'Platform']);
+  it('labels its sections Home, Workspaces, Business, Platform administration', () => {
+    expect(sections.map((section) => section.label)).toEqual([null, 'Workspaces', 'Business', 'Platform administration']);
   });
 
   it('names the tenant destination Connections and the platform one Connectors, once each', () => {
@@ -269,7 +271,7 @@ describe('the phone renders the same projection', () => {
     // A workspace with pages contributes its pages, so Work and Schedule stay one tap away.
     expect(primary.map((item) => item.key)).toEqual(['home', 'customers', 'work', 'schedule']);
     expect(more.map((section) => section.label)).toEqual([
-      'Workspaces', 'Gild Sales', 'Gild Automations', 'Gild Field', 'Business', 'Platform', 'Catalog', 'Commercial', 'Infrastructure',
+      'Workspaces', 'Gild Sales', 'Gild Automations', 'Gild Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
     ]);
     // Gild Comms and Gild Insights are one page each, so plain items; a workspace with several is a heading over its pages.
     expect(more[0].items.map((item) => item.key)).toEqual(['workspace-comms', 'workspace-insights']);
@@ -427,5 +429,67 @@ describe('role presets are templates, not personas', () => {
 
   it('carry no reference a saved role could keep: keys are unique and nothing branches on them', () => {
     expect(new Set(ROLE_PRESETS.map((candidate) => candidate.key)).size).toBe(ROLE_PRESETS.length);
+  });
+});
+
+describe('the permission gradient: operating work, then business administration, then platform', () => {
+  const partial = new Set<PlatformCapability>(['platform.catalogue']);
+  const personas: { name: string; sections: ShellSection[]; sectionKeys: string[]; platformTop: string[] }[] = [
+    { name: 'ordinary tenant member', sections: project(preset('technician')), sectionKeys: ['home', 'workspaces'], platformTop: [] },
+    { name: 'tenant administrator', sections: project(ALL_CAPABILITIES), sectionKeys: ['home', 'workspaces', 'business'], platformTop: [] },
+    // Same organization as the platform operator below, but no platform_staff permission: an ordinary business.
+    { name: 'GOLD member without platform permission', sections: project(preset('sales'), { platform: new Set() }), sectionKeys: ['home', 'workspaces'], platformTop: [] },
+    {
+      name: 'platform staff with partial permissions',
+      sections: project(ALL_CAPABILITIES, { platform: partial }),
+      sectionKeys: ['home', 'workspaces', 'business', 'platform'],
+      platformTop: ['platform-group-catalog'],
+    },
+    {
+      name: 'platform owner',
+      sections: project(ALL_CAPABILITIES, { platform: allPlatform }),
+      sectionKeys: ['home', 'workspaces', 'business', 'platform'],
+      platformTop: ['platform-overview', 'platform-organizations', 'platform-group-catalog', 'platform-group-commercial', 'platform-group-infrastructure'],
+    },
+  ];
+
+  for (const persona of personas) {
+    it(`${persona.name}: sees exactly their tiers, in scope order`, () => {
+      expect(persona.sections.map((section) => section.key)).toEqual(persona.sectionKeys);
+      // Relative hierarchy: whatever is present follows the one fixed order.
+      const positions = persona.sections.map((section) => SHELL_SECTION_ORDER.indexOf(section.key));
+      expect(positions).toEqual([...positions].sort((a, b) => a - b));
+      expect(topLevel(persona.sections, 'platform')).toEqual(persona.platformTop);
+    });
+
+    it(`${persona.name}: every administration item comes after every operating item`, () => {
+      const all = projectedItems(persona.sections);
+      const lastOperating = Math.max(-1, ...all.map((item, index) => (ADMINISTRATION_SECTIONS.has(item.section) ? -1 : index)));
+      const firstAdministration = all.findIndex((item) => ADMINISTRATION_SECTIONS.has(item.section));
+      if (firstAdministration !== -1) expect(firstAdministration).toBeGreaterThan(lastOperating);
+    });
+  }
+
+  it('platform administration is the last thing in the sidebar, after business administration', () => {
+    const sections = personas[4].sections;
+    expect(sections.at(-1)?.key).toBe('platform');
+    expect(sections.at(-2)?.key).toBe('business');
+  });
+
+  it('partial platform permissions reach only their own group, in registry order', () => {
+    const catalog = personas[3].sections.find((section) => section.key === 'platform')!.items[0];
+    expect(catalog.children?.map((page) => page.key)).toEqual(['platform-products', 'platform-plans', 'platform-meters', 'platform-connectors']);
+  });
+
+  it('a workspace with one reachable page is a plain row; with several, an expandable one', () => {
+    const rows = personas[1].sections.find((section) => section.key === 'workspaces')!.items;
+    for (const row of rows) expect(row.children === undefined || row.children.length > 1).toBe(true);
+  });
+
+  it('the phone carries the same items, with the administration tiers behind More in the same order', () => {
+    const { primary, more } = projectPhone(personas[4].sections);
+    expect(primary.every((item) => !ADMINISTRATION_SECTIONS.has(item.section))).toBe(true);
+    const order = more.map((section) => SHELL_SECTION_ORDER.indexOf(section.key));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 });

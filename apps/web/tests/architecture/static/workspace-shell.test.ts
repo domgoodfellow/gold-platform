@@ -658,3 +658,17 @@ describe('organization page composition', () => {
     expect(newImport.indexOf('integration.manage')).toBeLessThan(newImport.indexOf('await downloadImportFile'));
   });
 });
+
+describe('the sidebar settles administration at the foot', () => {
+  const orgShell = readFileSync(`${WEB}/app/organizations/[organizationId]/org-shell.tsx`, 'utf8');
+
+  it('draws Business and Platform administration as one block, pushed down by layout rather than coordinates', () => {
+    expect(orgShell).toContain('ADMINISTRATION_SECTIONS');
+    expect(orgShell).toMatch(/mt-auto flex flex-col/);
+    expect(orgShell).not.toMatch(/absolute|fixed bottom|top-\[/);
+  });
+
+  it('never offers Platform in the context switcher, which answers only which business', () => {
+    expect(readFileSync(`${WEB}/components/containers/context-switcher.tsx`, 'utf8')).not.toMatch(/platformHref|Platform administration/);
+  });
+});
