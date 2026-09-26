@@ -42,9 +42,10 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  * its **pages** are the areas that name it (`Area.workspace`). A Plan grants capabilities, a Product
  * groups them, a workspace is where they are used and a page is one task in it — four different
  * things, and only the last two are navigation. One real page makes the workspace a plain row;
- * several make it an expandable one; a workspace with no real page has no row at all.
+ * several make it an expandable one. A registered workspace with no reachable page has no row at
+ * all: registered is not visible.
  */
-export type ShellSectionKey = 'home' | 'workspaces' | 'shared' | 'business' | 'platform';
+export type ShellSectionKey = 'home' | 'workspaces' | 'business' | 'platform';
 
 export type NavItem = {
   /** Unique across the whole projection; also the icon key. */
@@ -95,7 +96,6 @@ export type ShellInput = {
 const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
   home: null,
   workspaces: 'Workspaces',
-  shared: 'Shared',
   business: 'Business',
   platform: 'Platform',
 };
@@ -213,7 +213,6 @@ export function projectShell(input: ShellInput): ShellSection[] {
   const sections: ShellSection[] = [
     { key: 'home', label: SECTION_LABELS.home, items: inGroup('home').map((area) => areaItem(organizationId, area, 'home')) },
     { key: 'workspaces', label: SECTION_LABELS.workspaces, items: workspaceItems() },
-    { key: 'shared', label: SECTION_LABELS.shared, items: inGroup('shared').map((area) => areaItem(organizationId, area, 'shared')) },
     { key: 'business', label: SECTION_LABELS.business, items: business },
     { key: 'platform', label: SECTION_LABELS.platform, items: platformItems },
   ];

@@ -105,6 +105,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   'workspace-comms': Phone,
   'workspace-automations': Zap,
   'workspace-field': Wrench,
+  'workspace-insights': BarChart3,
   team: UserCog,
   connections: Plug,
   plan: CreditCard,
@@ -193,7 +194,7 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
 /**
  * The tablet and desktop rendering: `Sidebar`'s own grouped-menu vocabulary, one `SidebarGroup` per
  * projected section in order — Home, Workspaces,
- * Shared, Business, and (only inside GOLD, only with platform authority) Platform last. Platform is an extra
+ * Business, and (only inside GOLD, only with platform authority) Platform last. Platform is an extra
  * section beneath the business's own, never a replacement for any of it. Collapse-to-icon, the
  * tooltip that appears while collapsed, and the `md`-and-up-only rendering are all `Sidebar`'s
  * own, not reimplemented here.

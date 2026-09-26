@@ -23,13 +23,13 @@ Eight customer-facing Gild Products build on it (D61):
 | Gild Service | Planned — no operational surface yet. |
 | Gild Comms | Conduct and preserve Voice, SMS and Email conversations. |
 | Gild Finance | Price tenant work, quote, invoice, take payment and understand job economics. |
-| Gild Agents | The Agent tool loop and drafting, reached from the page-support rail. |
+| Gild AI | Assistants and the Agent tool loop and drafting, reached from the page-support rail. |
 | Gild Automations | Turn events into reliable actions with review where judgment is required. |
 | Gild Field | Plan and perform work with Scheduling, Resources, Assets and Locations. |
 | Gild Studio | Publish the business and let customers book, submit forms and use a portal. |
 
-**Gild Workspace** — dashboards, reports, analytics and Ask GOLD — is shared substrate every
-Product sits on, not a ninth Product.
+**Gild Insights** — dashboards, reports and analytics — is the shared analytical workspace every
+Product reads from, and the Agent is a rail on all of them.
 
 Products contain Modules; Modules contain concrete Features. Plans package Products, Modules,
 Features, allowances and defaults. Add-ons extend them. Each organization's Subscription and

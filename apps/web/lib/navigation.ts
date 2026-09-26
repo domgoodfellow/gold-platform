@@ -32,24 +32,40 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
  * D23 still governs the part that matters: work comes first and Settings last, and an operator
  * must never reach today's work by going through settings.
  */
-export type AreaGroup = 'home' | 'workspaces' | 'shared' | 'settings';
+export type AreaGroup = 'home' | 'workspaces' | 'settings';
 
 /**
- * The customer-facing Products that have a real operating surface today — the rows of the
- * *Workspaces* section — and only those. A Product with no useful surface (Service, Finance,
- * Agents, Studio) has no row: navigation never leads to an empty placeholder, and the catalogue is
- * where a planned Product is shown as planned. Each key is a canonical Product key
- * (`platform_catalog_products.key`, D46/D60), which `navigation.test.ts` checks.
+ * The **registered** workspaces: the whole target taxonomy of one business, whether or not each has
+ * an operating surface yet. Registered is not visible. A workspace draws a row in the sidebar only
+ * when at least one page names it (`Area.workspace`) and that page is reachable to this person
+ * (`projectShell`), so Service, Finance, AI and Studio are registered here and absent from
+ * navigation until a real page arrives. Navigation never leads to an empty placeholder, and
+ * readiness is a fact about the pages, never a flag on the workspace or an entitlement.
  *
- * A workspace is *where an operator uses* a Product; the pages inside it are `Area.workspace`. One
- * page makes the workspace a plain row, several make it an expandable one — a dropdown holds only
- * real, reachable pages. Plan ≠ Product ≠ Module ≠ Feature ≠ Workspace ≠ Page.
+ * Product ≠ Module ≠ Feature ≠ Workspace ≠ Page. `product` is the catalogue row whose Features
+ * this workspace is the surface of (`platform_catalog_products.key`, D46/D61), which
+ * `gild-taxonomy.test.ts` checks. It is a separate word because the catalogue still names two of
+ * them `agents` and `workspace` (a rename is catalogue work, M12), and a workspace's name is not
+ * the catalogue's key.
+ *
+ * Insights is the shared analytical workspace — dashboards, reports, analytics — over the one
+ * reporting aggregate every other workspace reads. Home is not a workspace: it is the cross-workspace
+ * cockpit, and each workspace's own overview answers a narrower question (D66). Platform
+ * Administration is not here either: it is a scope of GOLD's own organization, never a workspace of
+ * a business (D45, D60).
+ *
+ * Order is the order a customer meets them.
  */
 export const WORKSPACES = [
-  { key: 'sales', label: 'Gild Sales' },
-  { key: 'comms', label: 'Gild Comms' },
-  { key: 'automations', label: 'Gild Automations' },
-  { key: 'field', label: 'Gild Field' },
+  { key: 'sales', label: 'Gild Sales', product: 'sales' },
+  { key: 'service', label: 'Gild Service', product: 'service' },
+  { key: 'comms', label: 'Gild Comms', product: 'comms' },
+  { key: 'finance', label: 'Gild Finance', product: 'finance' },
+  { key: 'ai', label: 'Gild AI', product: 'agents' },
+  { key: 'automations', label: 'Gild Automations', product: 'automations' },
+  { key: 'field', label: 'Gild Field', product: 'field' },
+  { key: 'studio', label: 'Gild Studio', product: 'studio' },
+  { key: 'insights', label: 'Gild Insights', product: 'workspace' },
 ] as const;
 
 export type WorkspaceKey = (typeof WORKSPACES)[number]['key'];
@@ -63,11 +79,9 @@ export type WorkspaceKey = (typeof WORKSPACES)[number]['key'];
 export const AREA_GROUPS = [
   // Home is one row set apart, and the answer to "what matters right now".
   { key: 'home', label: null },
-  // Where an operator does a kind of work: each row is a Product's workspace, and a workspace with
-  // several pages holds them as children (`Area.workspace`) rather than as peers.
+  // Where an operator does a kind of work: each row is a workspace, and a workspace with several
+  // pages holds them as children (`Area.workspace`) rather than as peers.
   { key: 'workspaces', label: 'Workspaces' },
-  // Horizontal surfaces every Product reuses (Gild Workspace): not a Product, so not under a Product.
-  { key: 'shared', label: 'Shared' },
   { key: 'settings', label: null },
 ] as const satisfies readonly { key: AreaGroup; label: string | null }[];
 
@@ -246,10 +260,12 @@ export type Area = {
   /** Which sidebar section (D23). */
   group: AreaGroup;
   /**
-   * The Product workspace this area is a **page** of (`WORKSPACES`). A page is drawn beneath its
-   * workspace, never as a peer of it, and a workspace with one page is a plain row. Home, the
-   * shared surfaces and configuration areas belong to none. The route does not change to say which
-   * workspace a page belongs to: `/work` is still `/work`.
+   * The workspace that **owns** this area (`WORKSPACES`). An owned page with a sidebar row is drawn
+   * beneath its workspace, never as a peer of it, and a workspace with one page is a plain row.
+   * An owned page with `sidebar: false` (Pricing, owned by Finance) has an owner and no row: it is
+   * reached from the Settings map. Home and the cross-cutting configuration areas (Custom fields,
+   * Team, Connections, Setup, Settings) belong to none. The route does not change to say which
+   * workspace owns a page: `/work` is still `/work`.
    */
   workspace?: WorkspaceKey;
   /**
@@ -329,14 +345,15 @@ export const AREAS: readonly Area[] = [
   { segment: 'locations', label: 'Locations', group: 'workspaces', workspace: 'field' },
   { segment: 'assets', label: 'Assets', group: 'workspaces', workspace: 'field', module: 'assets', featureKeys: ['assets'] },
 
-  // Shared, not a Product's: dashboards and reports over one reporting aggregate that every Product
-  // reuses (Gild Workspace). Workspace-local numbers stay in their own workspace.
-  { segment: 'insights', label: 'Insights', group: 'shared', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
+  // Gild Insights: dashboards and reports over the one reporting aggregate every workspace reads.
+  // Workspace-local numbers stay in their own workspace's overview; this is deliberate analysis.
+  { segment: 'insights', label: 'Insights', group: 'workspaces', workspace: 'insights', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
 
   // Configuration, not places somebody works: each is a real, directly addressable route with its
   // module and capability gating unchanged, found from the Settings map (`sidebar: false`).
   // Turning Pricing off also takes priced lines and the invoice off a job screen — see the work item route.
-  { segment: 'pricing', label: 'Pricing', group: 'settings', module: 'billing', sidebar: false, relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
+  // Owned by Gild Finance, which has no row until it has an operating surface of its own.
+  { segment: 'pricing', label: 'Pricing', group: 'settings', workspace: 'finance', module: 'billing', sidebar: false, relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
   { segment: 'fields', label: 'Custom fields', group: 'settings', sidebar: false, relevantCapabilities: ['field.manage'] },
   { segment: 'roles', label: 'Team', group: 'settings', sidebar: false, relevantCapabilities: ['role.manage'] },
   // Setup is a lifecycle, not a permanent area: while SETUP lasts it is the one row `SetupEntry`
@@ -364,6 +381,8 @@ export const AREAS: readonly Area[] = [
  */
 export type ConfigTarget = {
   key: string;
+  /** The workspace whose behaviour this configures, when it is one workspace's (`WORKSPACES`); absent for the organization as a whole. */
+  workspace?: WorkspaceKey;
   /** Path under `/organizations/{id}` — a route that exists, checked by `settings-map.test.ts`. */
   path: string;
   /** The area whose module/feature entitlement this needs. Absent means kernel: every business has it. */
@@ -374,16 +393,16 @@ export type ConfigTarget = {
 
 export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'general', path: 'settings/general', permission: ['organization.manage'] },
-  { key: 'work-configuration', path: 'work/configuration', permission: ['field.manage'] },
-  { key: 'schedule-configuration', path: 'schedule/configuration', permission: ['field.manage'] },
-  { key: 'pricing', path: 'pricing', entitledBy: 'pricing', permission: ['price.manage'] },
+  { key: 'work-configuration', workspace: 'field', path: 'work/configuration', permission: ['field.manage'] },
+  { key: 'schedule-configuration', workspace: 'field', path: 'schedule/configuration', permission: ['field.manage'] },
+  { key: 'pricing', workspace: 'finance', path: 'pricing', entitledBy: 'pricing', permission: ['price.manage'] },
   { key: 'custom-fields', path: 'fields', permission: ['field.manage'] },
   // Entitled through Calls, permitted through field.manage: configuring outcomes and stages is not making calls.
-  { key: 'call-setup', path: 'calls#setup', entitledBy: 'calls', permission: ['field.manage'] },
+  { key: 'call-setup', workspace: 'comms', path: 'calls#setup', entitledBy: 'calls', permission: ['field.manage'] },
   { key: 'team', path: 'roles', permission: ['role.manage'] },
-  { key: 'branding', path: 'settings/branding', permission: ['organization.manage'] },
-  { key: 'website', path: 'settings/website', permission: ['organization.manage'] },
-  { key: 'communications', path: 'settings/communications', permission: ['organization.manage'] },
+  { key: 'branding', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
+  { key: 'website', workspace: 'studio', path: 'settings/website', permission: ['organization.manage'] },
+  { key: 'communications', workspace: 'comms', path: 'settings/communications', permission: ['organization.manage'] },
   { key: 'integrations', path: 'integrations', entitledBy: 'integrations', permission: ['integration.manage'] },
   { key: 'features', path: 'settings/features', permission: ['feature.manage'] },
   { key: 'plan', path: 'settings/plan', permission: ['billing.manage'] },

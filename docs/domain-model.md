@@ -153,8 +153,8 @@ Subscription and broad Entitlements. There is no tenant-zero, magic slug or unme
 The eight Gild Products and what each owns (D61 is the canonical decision; renamed in place from
 the seven-Product taxonomy this table used to list — `crm`→Sales, `communications`→Comms,
 `operations`→Field, `financial_operations`→Finance, `automation`→Automations,
-`customer_experience`→Studio — with `insights` demoted to Gild Workspace, shared substrate rather
-than a Product, and Service/Agents added):
+`customer_experience`→Studio — with `insights` demoted to a shared catalogue row, and Service/Agents added; D66 names the
+operator-facing workspaces Gild AI for Agents and Gild Insights for the shared row):
 
 | Product | Owns |
 |---|---|
@@ -162,16 +162,16 @@ than a Product, and Service/Agents added):
 | Gild Service | Planned; catalogued with Features only, `unlisted` — no operational surface yet. |
 | Gild Comms | Voice, SMS and Email. |
 | Gild Finance | Tenant pricing and Price Book, quotes, invoices, payments and job economics. This is separate from GOLD's own Plans, subscriptions and billing. Configured from Settings today; no dedicated workspace. |
-| Gild Agents | The Agent tool loop, its actions and drafting. Reached from the page-support rail only; no dedicated workspace. |
+| Gild AI (catalogue key `agents`) | Intelligence: assistants, chatbots, knowledge, conversations, tools and actions, models and runtime, evaluations, AI usage. The Agent tool loop and drafting are one implementation inside it. Reached from the page-support rail only; no dedicated workspace yet. |
 | Gild Automations | Workflows, triggers, conditions, actions, AI actions, execution and human review. |
 | Gild Field | Work, Scheduling, Resources, Assets and Locations, plus dispatch policy. |
 | Gild Studio | Website, booking, portal, forms, public brand/assets and domains. Public pages project business context; they do not own it. Configured from Settings today; no dedicated workspace. |
 
-**Gild Workspace** is shared substrate, not a Product: Home, Documents, reporting/dashboards,
-activity and the page-support rail. A sidebar workspace row exists only for a Product with a real
-operational surface today — Sales, Comms, Automations and Field; Service, Finance, Agents and
-Studio are catalogued but reached from Settings or the rail, never a hollow workspace row built
-merely because the catalogue lists them.
+**Gild Insights** (catalogue key `workspace`) is the shared analytical workspace — dashboards,
+reports, analytics over the one reporting aggregate; Home, Documents and the page-support rail are
+shell. All nine are registered workspaces (D66); a sidebar row exists only for one with a real
+reachable page today — Sales, Comms, Automations, Field and Insights. Service, Finance, AI and
+Studio are registered and reached from Settings or the rail, never a hollow row.
 
 Business Offerings answer “what do we offer and how do we describe it?” and belong to shared
 BusinessOS context. Financial Operations' Price Book answers “what do we charge and under

@@ -1789,6 +1789,8 @@ its `/calls` route.
 
 ### D61 — Gild Products are eight, the shared Workspace is not one of them, and a workspace row is only ever real pages
 
+*Amended by D66: the workspace registry is nine and holds unbuilt ones, Agents is AI in the sidebar, and Gild Workspace is Gild Insights. The catalogue rows below keep their keys.*
+
 **Decision.** Three internal layers and eight customer-facing Products, kept apart on purpose.
 
 - **GildOps** is the company and platform umbrella. It is not a Product.
@@ -1820,7 +1822,7 @@ was created with planned Features only and is `unlisted`. A Plan that granted th
 whole was given that module, and GOLD Internal was given the two new Products, so no organization
 lost a capability. The old keys are outside the check constraint and cannot be written again.
 
-**Navigation.** `WORKSPACES` lists the Products that have a real operating surface, and only those;
+**Navigation.** *(Superseded by D66: `WORKSPACES` now registers all nine and a row is derived from pages.)* `WORKSPACES` listed the Products that had a real operating surface, and only those;
 `Area.workspace` names a page's Product. No real page, no row. One page, a plain row. Several, an
 expandable one that holds only real, reachable pages — never a placeholder, never *coming soon*.
 Sidebar children are the major pages of a Product; a `ViewNav` is for views inside one page, and the
@@ -1995,3 +1997,89 @@ from a feature to its meters is still the `meter_ids` array on `platform_catalog
 tenant integrity; history preserved across rate changes; usage kept in every pricing state);
 `usage-boundary.test.ts` (`communication_rates` stays gone; only `app.record_usage` inserts a
 usage event; the composite keys; amounts stay nullable with no default).
+
+### D66 — Nine registered workspaces; registered is not visible; Studio owns the form, the destination owns the record
+
+**Decision.** A business has nine workspaces: Gild Sales, Service, Comms, Finance, AI,
+Automations, Field, Studio and Insights, in `WORKSPACES` (`lib/navigation.ts`). Two D61 words are
+corrected. **Agents → AI**: the workspace is intelligence — assistants, chatbots, knowledge,
+conversations, tools, models and runtime, evaluations, usage — and an *agent* is one implementation
+inside it (the rail, `agent_runs`, the Agent module keep their names). **Gild Workspace → Gild
+Insights**: every Product is a workspace, so a workspace named *Workspace* is recursive; the shared
+analytical one is Dashboards, Reports and Analytics over the one reporting aggregate. D61's
+Product/Module/Feature/Workspace/Page distinction and its rule that a row is only ever real pages
+stand.
+
+**Registered is not visible.** The registry holds the whole target. A workspace draws a row when a
+page names it (`Area.workspace`) and that page is reachable to the person, by the module, feature
+and capability gates it already carries. Readiness is therefore a fact about pages: no flag on the
+workspace, and no entitlement standing in for "not built yet". Service, Finance, AI and Studio are
+registered and have no row. `Area.workspace` now means *owner*: Pricing names Finance and has
+`sidebar: false`, so it is owned and not drawn. `ConfigTarget.workspace` names the owner of a
+configuration entry the same way (branding and website → Studio, communications → Comms).
+
+**Home, Overview, Insights are three things.** Home is the cross-workspace cockpit (*what needs
+attention*). A workspace Overview is that function's own lens (*what matters in Sales*). Insights
+is deliberate cross-domain analysis (*which lead sources give the most profitable jobs* — Sales,
+Field and Finance, so none of them owns it). One reporting substrate with several lenses; no
+reporting engine per workspace. Insights leaves the *Shared* section and is a workspace row.
+
+**Ownership.** AI = intelligence, Comms = channels, Automations = orchestration, Studio = public
+surfaces, Insights = analysis. A communication belongs to Comms even when it belongs to a Service
+case; an AI assistant taking part in a conversation does not put Comms inside AI; AI may be an
+Automation action without Automations being part of AI. **Studio owns the form; the destination
+workspace owns what a submission becomes.** Platform Administration is a scope of GOLD's own
+organization (D60), not a tenant workspace.
+
+| Surface today | Owner | Kind | Route |
+|---|---|---|---|
+| customers, pipeline | Sales | workspace page | unchanged |
+| calls; call setup; `settings/communications` | Comms | page; configuration | unchanged |
+| pricing, quotes, invoices, payments, job economics | Finance | Pricing owned, not drawn; the rest live on the job screen | unchanged |
+| automations (Rules, Messages, Activity) | Automations | workspace pages | unchanged |
+| field, work, schedule, resources, locations, assets | Field | workspace pages | unchanged |
+| insights, reports | Insights | workspace page | unchanged |
+| the Agent rail, Setup drafting | AI | not an area (rail); Setup stays kernel | unchanged |
+| `settings/website`, `settings/branding`, `/book/{slug}`, `portal/{token}`, public intake, marketing routes | Studio | configuration and public | unchanged |
+| Home | none — cross-workspace | shell | unchanged |
+| custom fields, Team, Connections, Setup, Settings, Features, Plan & usage | none — cross-cutting configuration | configuration | unchanged |
+| `platform/**` | not a workspace — control plane | scope | unchanged |
+
+**Routes do not encode the hierarchy.** `/customers` does not become `/sales/customers`. A move is
+weighed against links, tests, bookmarks, the Agent's context, gates and public URLs first, and no
+route moved in this decision.
+
+**The migration boundary the next slices work to.**
+
+- *Studio — website.* Today one authority is database-backed (the GOLD homepage revision model in
+  `lib/domain/public-site`, edited from Studio's homepage editor) and another is TypeScript
+  (`lib/marketing`, the routes under `app/(marketing)`: sales, operations, customer-service,
+  how-it-works, integrations, pricing, contact, demo, privacy, terms). The target is one authority:
+  pages, navigation and legal copy as revisioned public-site content that Studio edits and the site
+  renders, with the constants gone. Two authorities for one site is the defect.
+- *Studio — Forms & Intake.* The demo and contact path is form → server action →
+  `lib/domain/public-intake` → `submit_public_inquiry` → a customer and a `customer.created` event.
+  It keeps working. The target is Studio form → Sales intake → contact → lead or pipeline entry, so a
+  demo request is first-class Sales work and not a customer row with metadata in an event. No lead
+  model exists to receive it yet; do not invent one inside Studio.
+- *Service.* A Case/Request is the object. Callback requests, complaints and change requests that
+  arrive as calls, work items or intake rows are what eventually feed it; none is built.
+- *AI.* Assistants, knowledge, conversations and evaluations under one workspace. Today: the rail,
+  agent conversations, attachments, drafting and the platform's AI runtime assignment (D62).
+- *Comms.* Inbox, SMS and Email join Voice; the channel and the delivery record stay Comms.
+- *Finance.* An overview and operating pages over `priceWorkItem`, invoices and payments, never a
+  second calculation (I4). Pricing stays reachable from Settings.
+- *Automations.* Rules, Messages and Activity are the existing pages of Workflows, Actions and
+  Runs & Review; nothing is renamed until those pages are.
+- *Overviews.* Each workspace's overview reads the one reporting aggregate; Home composes previews.
+
+**Holds.** `navigation.test.ts` (nine registered in order, the four without a page are named and
+draw nothing, Gild AI and Gild Insights are the names, every owned page names a real workspace,
+one section heading), `shell-projection.test.ts` (rows come from pages, Insights is a plain row),
+`gild-taxonomy.test.ts` (every workspace maps to a real catalogue row).
+
+**Known contradiction, not resolved here.** The catalogue still names its Product `agents` /
+*Gild Agents* and its shared row `workspace` / *Gild Workspace* (`platform_catalog_products`, keys
+locked by a check constraint). The registry maps to them through `WORKSPACES[].product`; renaming
+the rows is catalogue work for M12, with a migration, and no operator-facing sidebar text depends on
+it. D61's "Insights is not a ninth Product" is now a statement about the catalogue, not the sidebar.

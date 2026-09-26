@@ -5,6 +5,10 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Nine workspaces, named and registered
+
+The product now has one written-down list of nine workspaces: Sales, Service, Comms, Finance, AI, Automations, Field, Studio and Insights. "Agents" is now AI, and the shared "Workspace" is now Insights, which appears as a row beside the others instead of under its own "Shared" heading. Only workspaces with a real page draw a row, so Service, Finance, AI and Studio are listed but do not appear until they have something to open. Each existing page and settings entry now says which workspace owns it. No address changed, and nothing in the database changed. See D66.
+
 ### One model for usage and pricing
 
 Calls, texts and email are now priced the same way every other billable thing is: by a dated price for what is

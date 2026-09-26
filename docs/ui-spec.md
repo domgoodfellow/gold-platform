@@ -189,14 +189,14 @@ link into it; the report builder never sits in a rail. *Agent* is the workspace-
 rail, and is none of these.
 
 **Workspaces are the Gild Products; they are not Plans or SKUs.** A row is where an operator uses
-one of the eight Products (D61) — Sales, Service, Comms, Finance, Agents, Automations, Field,
-Studio — and only those with a real surface get one. A Plan grants Features that may compose into
+one of the nine registered workspaces (D66) — Sales, Service, Comms, Finance, AI, Automations, Field,
+Studio, Insights — and only those with a real surface get one. A Plan grants Features that may compose into
 several rows, and there is no row per SKU (D25, D46). **One grain per navigation:** a sidebar
 child is a major page of a Product, and a `ViewNav` is for views inside one page; the same three
 names are never both. **A dropdown holds only real, reachable pages** — never *coming soon*.
 GildOps is the company, Gild Platform the control plane (D60), Gild Admin organization
-administration, and Gild Workspace the shared substrate (Home, Documents, reporting, dashboards,
-activity, the Agent shell, the page-support rail): none of them is a Product.
+administration, and Home the cross-workspace cockpit, and the Agent shell and page-support rail shared shell: none
+of them is a workspace.
 
 **Where each concern lives.**
 
@@ -664,7 +664,7 @@ columns being compared. This is a guide for later slices, not a list of what is 
 | Platform Connectors | table, list, grid |
 | Organizations (Platform) | table |
 | Automations | list |
-| Agents | none built |
+| AI | none built |
 | Usage / metering | table only |
 | Billing records | table only |
 | Failures / logs | table only |

@@ -95,7 +95,7 @@ describe('the Gild Product set', () => {
   });
 
   it('has a Product for every navigation workspace, so the sidebar cannot name one the catalogue lacks', () => {
-    for (const workspace of WORKSPACES) expect(GILD_PRODUCT_KEYS as readonly string[]).toContain(workspace.key);
+    for (const workspace of WORKSPACES) expect([...GILD_PRODUCT_KEYS, 'workspace'] as readonly string[]).toContain(workspace.product);
   });
 });
 

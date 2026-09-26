@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AREAS,
   AREA_GROUPS,
+  CONFIG_TARGETS,
   MODULES,
   WORKSPACES,
   areaHref,
@@ -130,13 +131,55 @@ describe('the operator shell navigation', () => {
     // of Customers. A workspace is a Product with pages, so nesting is one level.
     for (const area of AREAS.filter((entry) => entry.workspace)) {
       expect(WORKSPACES.some((workspace) => workspace.key === area.workspace), `"${area.segment}" names a workspace that is not one`).toBe(true);
-      expect(area.group).toBe('workspaces');
-      expect(area.sidebar).not.toBe(false);
+      // Owned is not drawn: an owned area with no sidebar row (Pricing, owned by Finance) is configuration.
+      expect(area.group === 'workspaces', `"${area.segment}"`).toBe(area.sidebar !== false);
     }
-    // Every workspace has a page, or it is a row with nothing behind it.
+  });
+
+  it('registers every workspace and draws a row for only those with a page', () => {
+    // The registry is the target taxonomy in the customer's order; visibility is derived from pages,
+    // never a flag on the workspace and never an entitlement.
+    expect(WORKSPACES.map((workspace) => workspace.key)).toEqual([
+      'sales', 'service', 'comms', 'finance', 'ai', 'automations', 'field', 'studio', 'insights',
+    ]);
+    const withAPage = (key: string) => AREAS.some((area) => area.workspace === key && area.group === 'workspaces' && area.sidebar !== false);
+    expect(WORKSPACES.filter((workspace) => withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
+      'sales', 'comms', 'automations', 'field', 'insights',
+    ]);
+    // Registered, not yet visible. Delete a key here in the same change that gives it a real page.
+    expect(WORKSPACES.filter((workspace) => !withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
+      'service', 'finance', 'ai', 'studio',
+    ]);
+  });
+
+  it('names the product workspace Gild AI and the analytical one Gild Insights, never Agents or Workspace', () => {
+    const label = (key: string) => WORKSPACES.find((workspace) => workspace.key === key)?.label;
+    expect(label('ai')).toBe('Gild AI');
+    expect(label('insights')).toBe('Gild Insights');
     for (const workspace of WORKSPACES) {
-      expect(AREAS.some((area) => area.workspace === workspace.key), `${workspace.key} has no page`).toBe(true);
+      expect(workspace.key).not.toBe('agents');
+      expect(workspace.key).not.toBe('workspace');
+      expect(workspace.label).not.toMatch(/agents|workspace/i);
     }
+  });
+
+  it('gives every workspace an owner-side map: pages and configuration name the workspace that owns them', () => {
+    const owner = (segment: string) => AREAS.find((area) => area.segment === segment)?.workspace;
+    expect(['customers', 'pipeline'].map(owner)).toEqual(['sales', 'sales']);
+    expect(owner('calls')).toBe('comms');
+    expect(owner('pricing')).toBe('finance');
+    expect(owner('insights')).toBe('insights');
+    expect(['work', 'schedule', 'resources', 'locations', 'assets'].map(owner)).toEqual(Array(5).fill('field'));
+    // Home is the cross-workspace cockpit and the cross-cutting configuration areas are nobody's.
+    for (const shared of ['home', 'fields', 'roles', 'setup', 'integrations', 'settings']) {
+      expect(owner(shared), `${shared} belongs to no one workspace`).toBeUndefined();
+    }
+    const configOwner = (key: string) => CONFIG_TARGETS.find((target) => target.key === key)?.workspace;
+    expect(configOwner('branding')).toBe('studio');
+    expect(configOwner('website')).toBe('studio');
+    expect(configOwner('pricing')).toBe('finance');
+    expect(configOwner('communications')).toBe('comms');
+    expect(configOwner('team')).toBeUndefined();
   });
 
   it('gives Gild Field an overview, Work, Schedule, Resources, Locations and Assets as its pages', () => {
@@ -444,28 +487,28 @@ describe('capability-relevance filtering (Slice E)', () => {
     const reports = AREAS.find((area) => area.segment === 'insights')!;
     expect(reports.relevantCapabilities).toBeDefined();
 
-    const shown = areasIn('shared', undefined, new Set());
+    const shown = areasIn('workspaces', undefined, new Set());
     expect(shown.map((area) => area.segment)).not.toContain('insights');
   });
 
   it('shows a feature-specific area to a role holding at least one of its relevant capabilities', () => {
-    const shown = areasIn('shared', undefined, new Set(['report.read']));
+    const shown = areasIn('workspaces', undefined, new Set(['report.read']));
     expect(shown.map((area) => area.segment)).toContain('insights');
   });
 
   it('layers on top of the module gate rather than replacing it', () => {
     // Entitled to reporting (module on) but the role itself lacks both report capabilities:
     // still hidden. Neither gate alone decides this — both must pass.
-    const moduleOnCapabilityOff = areasIn('shared', new Set(['reporting']), new Set());
+    const moduleOnCapabilityOff = areasIn('workspaces', new Set(['reporting']), new Set());
     expect(moduleOnCapabilityOff.map((area) => area.segment)).not.toContain('insights');
 
     // The reverse: the role could read reports, but the business never bought reporting.
-    const moduleOffCapabilityOn = areasIn('shared', new Set(), new Set(['report.read']));
+    const moduleOffCapabilityOn = areasIn('workspaces', new Set(), new Set(['report.read']));
     expect(moduleOffCapabilityOn.map((area) => area.segment)).not.toContain('insights');
   });
 
   it('passing no capabilities at all shows every area the module gate allows, same as before Slice E', () => {
-    const withModuleOnly = areasIn('shared', new Set(['reporting']));
+    const withModuleOnly = areasIn('workspaces', new Set(['reporting']));
     expect(withModuleOnly.map((area) => area.segment)).toContain('insights');
   });
 });
@@ -806,8 +849,10 @@ describe('the organization shell taxonomy', () => {
     expect(labels.get('calls')).toBe('Calls');
     expect(labels.get('automations')).toBe('Rules');
     expect(labels.get('insights')).toBe('Insights');
-    // The workspace rows are the Gild Products that have a surface, in the order a customer meets them.
-    expect(WORKSPACES.map((workspace) => workspace.label)).toEqual(['Gild Sales', 'Gild Comms', 'Gild Automations', 'Gild Field']);
+    // Registered workspaces, in the order a customer meets them. Which of them draw a row is a fact about pages.
+    expect(WORKSPACES.map((workspace) => workspace.label)).toEqual([
+      'Gild Sales', 'Gild Service', 'Gild Comms', 'Gild Finance', 'Gild AI', 'Gild Automations', 'Gild Field', 'Gild Studio', 'Gild Insights',
+    ]);
   });
 
   it('adds no workspace whose surface does not exist yet', () => {
@@ -820,10 +865,10 @@ describe('the organization shell taxonomy', () => {
     for (const area of inSidebar) {
       expect(existsSync(`${ROUTES}/${area.route ?? area.segment}/page.tsx`)).toBe(true);
     }
-    // Nor a Product row with nothing behind it: Service, Finance, Agents and Studio have no operating
-    // surface yet, so none is a workspace. The catalogue is where a planned Product is shown.
-    for (const absent of ['service', 'finance', 'agents', 'studio']) {
-      expect(WORKSPACES.some((workspace) => workspace.key === absent), `${absent} has no operating surface yet`).toBe(false);
+    // Nor a workspace row with nothing behind it: Service, Finance, AI and Studio are registered but
+    // have no operating page, so `projectShell` draws none (shell-projection.test.ts proves the rows).
+    for (const absent of ['service', 'finance', 'ai', 'studio']) {
+      expect(inSidebar.some((area) => area.workspace === absent), `${absent} has no operating surface yet`).toBe(false);
     }
   });
 
@@ -833,8 +878,8 @@ describe('the organization shell taxonomy', () => {
     expect(AREA_GROUPS.find((group) => group.key === 'settings')?.label).toBeNull();
   });
 
-  it('draws two section headings: where a Product is worked in, and what every Product shares', () => {
-    expect(AREA_GROUPS.filter((group) => group.label !== null).map((group) => group.key)).toEqual(['workspaces', 'shared']);
+  it('draws one section heading: where a workspace is worked in — Insights is a workspace, not a shared section', () => {
+    expect(AREA_GROUPS.filter((group) => group.label !== null).map((group) => group.key)).toEqual(['workspaces']);
   });
 
   it('gives Insights a real Overview and Reports route, and nothing for the old paths', () => {
