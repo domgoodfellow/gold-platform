@@ -118,9 +118,12 @@ the desktop sidebar, its collapsed rail, the tablet rail, the phone bar and its 
 Settings map — draws the sections `projectShell` (`lib/shell.ts`) resolves from four independent
 facts: the organization's entitlements, the member's capabilities, whether the organization is
 GOLD's own, and the member's platform permissions. The sections are Home, **Workspaces**
-(each a Gild Product with a real surface — a workspace with several pages holds them beneath it,
-so Gild Field opens onto Overview, Work, Schedule, Resources, Locations and Assets rather than six
-rows beside Customers), **Shared** (what every Product reuses: Insights), **Business**
+(each a Product with a real surface, named without the catalogue's `Gild ` prefix — operator
+vocabulary and catalogue identity are separate concerns. A workspace's own row is its canonical
+Home; a workspace with other pages holds them as children beneath it, never repeating Home among
+them, so Field opens onto Work, Schedule, Resources, Locations and Equipment & Assets rather than
+six rows beside Customers. Insights is not a workspace — it is cross-cutting, reached from each
+workspace's own Home and from a page's Insights support mode), **Business**
 (administration of the current organization: Team, Connections, Plan & usage) and
 **Platform** — only inside GOLD and only with a platform permission — last; a
 section with nothing in it is not drawn. Settings is not a fourth Business row: it is reached from
@@ -180,7 +183,7 @@ modules — so no section is named for one. These are named for what an operator
 | Section | Holds | Why |
 |---|---|---|
 | (Home) | Home | What matters in this business right now — set apart, first |
-| Workspaces | Gild Sales (Customers, Pipeline), Gild Comms (Calls), Gild Automations (Rules, Messages, Activity), Gild Field (Overview, Work, Schedule, Resources, Locations, Assets) | Where an operator uses a Product. One real page is a plain row; several are an expandable one; a Product with no surface has no row |
+| Workspaces | Sales (Customers, Pipeline), Communications (Calls), Automations (Rules, Messages, Activity), Field (Work, Schedule, Resources, Locations, Equipment & Assets) | Where an operator uses a Product, named without the catalogue's `Gild ` prefix. The row's own destination is the workspace's Home; a workspace with only Home is a plain row, with other pages too an expandable one — Home is never repeated among them; a Product with no surface has no row |
 | Shared | Insights | Cross-Product analytics over the one reporting aggregate; not a Product |
 | (Settings) | Settings | Where the business is configured — set apart by the rule above it |
 

@@ -21,7 +21,7 @@ import { WorkInsights } from '@/features/insights/workspace-insights';
 import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
 import { availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { todayInZone } from '@/lib/domain/scheduling/window';
-import { areaAvailable, areaHref, areaLabel } from '@/lib/navigation';
+import { areaAvailable, areaHref, areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { PageHeader } from '@/components/containers/page-header';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 
@@ -104,6 +104,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
       ) : null}
       <PageHeader
         title={areaLabel('work')}
+        crumbs={workspaceAncestry('work')}
         activity={types.length > 0}
         insights={mayInsight && types.length > 0}
         configure={mayConfigure && types.length > 0}

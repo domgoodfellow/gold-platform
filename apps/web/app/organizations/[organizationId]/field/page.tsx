@@ -19,11 +19,11 @@ import { requireOrganization } from '@/lib/route/organization';
 export const dynamic = 'force-dynamic';
 
 /**
- * Gild Field: the overview of the workspace whose pages are Work, Schedule, Resources, Locations
- * and Assets. Every figure is a count some domain read already owns, one per page, and each links
- * to it — nothing is totalled here and nothing is a target, a rate or a trend. A page the
- * organization does not have (Assets without its module) is not drawn and not queried, decided by
- * the same predicate that decides the sidebar's own list of pages.
+ * Field Home: Work, Schedule, Resources, Locations and Equipment & Assets. Every figure is a count
+ * some domain read already owns, one per page, and each links to it — nothing is totalled here and
+ * nothing is a target, a rate or a trend. A page the organization does not have (Equipment & Assets
+ * without its module) is not drawn and not queried, decided by the same predicate that decides the
+ * sidebar's own list of pages.
  */
 export default async function FieldPage({ params }: PageProps<'/organizations/[organizationId]/field'>) {
   const { organizationId } = await params;
@@ -70,7 +70,7 @@ export default async function FieldPage({ params }: PageProps<'/organizations/[o
         description="Where work is planned and done: the jobs, when they happen, and what they are done with and where."
       />
       {empty ? (
-        <EmptyState>Nothing has been recorded in Gild Field yet.</EmptyState>
+        <EmptyState>Nothing has been recorded in Field yet.</EmptyState>
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           {kpis.map((kpi) => (

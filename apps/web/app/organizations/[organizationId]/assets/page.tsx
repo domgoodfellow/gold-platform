@@ -9,7 +9,7 @@ import { listLatestAssetReadings } from '@/lib/domain/assets/readings';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
-import { areaLabel } from '@/lib/navigation';
+import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { recordReadingAction } from './actions';
 
@@ -55,6 +55,7 @@ export default async function AssetsPage({
         */}
         <PageHeader
           title={areaLabel('assets')}
+          crumbs={workspaceAncestry('assets')}
           description="What work is about — machines, vehicles, properties, customer-owned equipment."
           actions={mayAdd ? <CreateAssetTrigger /> : null}
           configure={mayConfigure}

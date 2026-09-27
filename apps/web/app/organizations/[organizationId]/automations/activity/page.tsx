@@ -2,7 +2,7 @@ import { PageHeader } from '@/components/containers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
 import { listAutomationRuns } from '@/lib/domain/automation/rules';
 import { listMessageDeliveries } from '@/lib/domain/automation/templates';
-import { areaLabel } from '@/lib/navigation';
+import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { ActivityView } from '@/features/automations/activity/activity-view';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +21,7 @@ export default async function AutomationActivityPage({
 
   return (
     <>
-      <PageHeader title={areaLabel('automation-activity')} />
+      <PageHeader title={areaLabel('automation-activity')} crumbs={workspaceAncestry('automation-activity')} />
       <ActivityView runs={runs} deliveries={deliveries} />
     </>
   );

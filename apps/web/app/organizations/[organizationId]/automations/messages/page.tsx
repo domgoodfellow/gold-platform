@@ -1,7 +1,7 @@
 import { PageHeader } from '@/components/containers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
 import { listMessageTemplates } from '@/lib/domain/automation/templates';
-import { areaLabel } from '@/lib/navigation';
+import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { MessagesView } from '@/features/automations/templates/messages-view';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ export default async function AutomationMessagesPage({
 
   return (
     <>
-      <PageHeader title={areaLabel('automation-messages')} />
+      <PageHeader title={areaLabel('automation-messages')} crumbs={workspaceAncestry('automation-messages')} />
       <MessagesView
         organizationId={organizationId}
         templates={templates}

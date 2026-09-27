@@ -32,7 +32,7 @@ describe('sibling views are navigation, not page actions', () => {
     expect(read(`${UI}/tab-styles.ts`)).toContain('aria-[current=page]:border-accent');
   });
 
-  it('Customers and Pipeline are pages of Gild Sales in the sidebar, so neither repeats them as a tab strip', () => {
+  it('Customers and Pipeline are pages of Sales in the sidebar, so neither repeats them as a tab strip', () => {
     // One navigation grain: a sidebar child is a page of a Product, and a ViewNav is for views inside
     // one page. Customers and Pipeline are the former, so the strip that used to say the same thing
     // over the same two routes is gone (Automations' Rules, Messages and Activity likewise).

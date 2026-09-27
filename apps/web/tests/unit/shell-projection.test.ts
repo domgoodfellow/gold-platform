@@ -63,25 +63,27 @@ describe('GOLD owner who is also a platform operator', () => {
 
   it('sees the business workspaces GOLD is entitled to', () => {
     expect(keys(sections, 'home')).toEqual(['home']);
-    // One row per registered workspace that has a reachable page, in the order a customer meets
+    // One row per registered workspace that has a reachable area, in the order a customer meets
     // them. Service, Finance, AI and Studio are registered and have no page, so they draw no row.
-    expect(topLevel(sections, 'workspaces')).toEqual(['workspace-sales', 'workspace-comms', 'workspace-automations', 'workspace-field', 'workspace-insights']);
+    // Insights is not a workspace row at all (D66) — it is reached contextually.
+    expect(topLevel(sections, 'workspaces')).toEqual(['workspace-sales', 'workspace-comms', 'workspace-automations', 'workspace-field']);
     expect(keys(sections, 'workspaces')).toEqual([
       'workspace-sales', 'customers', 'pipeline',
-      'workspace-comms',
-      'workspace-automations', 'automations', 'automation-messages', 'automation-activity',
-      'workspace-field', 'field', 'work', 'schedule', 'resources', 'locations', 'assets',
-      'workspace-insights',
+      'workspace-comms', 'calls',
+      'workspace-automations', 'automation-rules', 'automation-messages', 'automation-activity',
+      'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets',
     ]);
     const row = (key: string) => sections.flatMap((section) => section.items).find((item) => item.key === key)!;
-    // A row with several real pages is expandable; a row with one is a plain row, never a dropdown of one.
-    expect(row('workspace-field').children?.map((page) => page.key)).toEqual(['field', 'work', 'schedule', 'resources', 'locations', 'assets']);
+    // The parent's own destination is the workspace's Home, never repeated as a child beneath it.
+    expect(row('workspace-field').children?.map((page) => page.key)).toEqual(['work', 'schedule', 'resources', 'locations', 'assets']);
     expect(row('workspace-sales').children?.map((page) => page.key)).toEqual(['customers', 'pipeline']);
     expect(row('workspace-automations').children?.map((page) => page.label)).toEqual(['Rules', 'Messages', 'Activity']);
-    expect(row('workspace-comms').children).toBeUndefined();
-    expect(row('workspace-insights').children).toBeUndefined();
-    expect(row('workspace-field').label).toBe('Gild Field');
-    expect(row('workspace-insights').label).toBe('Gild Insights');
+    expect(row('workspace-comms').children?.map((page) => page.key)).toEqual(['calls']);
+    expect(row('workspace-field').label).toBe('Field');
+    expect(row('workspace-field').href).toBe(`/organizations/${ORG}/field`);
+    expect(row('workspace-sales').href).toBe(`/organizations/${ORG}/sales`);
+    expect(row('workspace-comms').href).toBe(`/organizations/${ORG}/comms`);
+    expect(row('workspace-automations').href).toBe(`/organizations/${ORG}/automations`);
   });
 
   it('sees organization administration, item by item', () => {
@@ -147,7 +149,7 @@ describe('GOLD sales member in the same organization', () => {
 
   it('uses GOLD as an ordinary business: sales, customers and calls', () => {
     expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-sales', 'customers', 'pipeline', 'workspace-comms', 'workspace-field', 'field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-insights',
+      'workspace-sales', 'customers', 'pipeline', 'workspace-comms', 'calls', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets',
     ]);
   });
 
@@ -213,7 +215,7 @@ describe('tenant ordinary member', () => {
   const technician = project(preset('technician'));
 
   it('sees the operational workspaces their business has, and nothing administrative', () => {
-    expect(keys(technician, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-field', 'field', 'work', 'schedule', 'resources', 'locations', 'assets']);
+    expect(keys(technician, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets']);
     expect(keys(technician, 'business')).toEqual([]);
     expect(keys(technician, 'platform')).toEqual([]);
   });
@@ -221,7 +223,7 @@ describe('tenant ordinary member', () => {
   it('a viewer with no capability at all still gets the kernel, and no administration', () => {
     const viewer = project(preset('viewer'));
     expect(keys(viewer, 'home')).toEqual(['home']);
-    expect(keys(viewer, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-field', 'field', 'work', 'schedule', 'resources', 'locations', 'assets']);
+    expect(keys(viewer, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets']);
     expect(keys(viewer, 'business')).toEqual([]);
   });
 });
@@ -248,10 +250,10 @@ describe('configuration-only authority', () => {
 describe('entitlement absent', () => {
   it('a broad role does not conjure a workspace the business does not have', () => {
     const sections = project(ALL_CAPABILITIES, { enabledModules: new Set(), featureAvailability: new Set() });
-    // Assets is a module: without it Operations has the rest of its pages, and no more.
-    // No modules: no Pipeline, so Sales is one page and a plain row; no Assets, so Field has the rest.
+    // Assets is a module: without it Field has the rest of its pages, and no more. No modules: no
+    // Pipeline, so Sales has just Home and the kernel Customers; the Home is never a child.
     expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-sales', 'workspace-field', 'field', 'work', 'schedule', 'resources', 'locations',
+      'workspace-sales', 'customers', 'workspace-field', 'work', 'schedule', 'resources', 'locations',
     ]);
     // Connections is a product too: no Integrations entitlement, no item — Team and Plan remain.
     expect(keys(sections, 'business')).toEqual(['team', 'plan']);
@@ -274,15 +276,15 @@ describe('the phone renders the same projection', () => {
   it('in a business carries Home and the first workspace pages in the bar, and everything else behind More', () => {
     // A workspace with pages contributes its pages, so Work and Schedule stay one tap away.
     expect(primary.map((item) => item.key)).toEqual(['home', 'customers', 'work', 'schedule']);
+    // Every workspace here has a Home plus at least one other page, so each is a heading over its
+    // pages — never a loose "Workspaces" group, and never Home listed again as one of them.
     expect(more.map((section) => section.label)).toEqual([
-      'Workspaces', 'Gild Sales', 'Gild Automations', 'Gild Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
+      'Sales', 'Communications', 'Automations', 'Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
     ]);
-    // Gild Comms and Gild Insights are one page each, so plain items; a workspace with several is a heading over its pages.
-    expect(more[0].items.map((item) => item.key)).toEqual(['workspace-comms', 'workspace-insights']);
-    expect(more[1].items.map((item) => item.key)).toEqual(['pipeline']);
+    expect(more[0].items.map((item) => item.key)).toEqual(['pipeline']);
+    expect(more[1].items.map((item) => item.key)).toEqual(['calls']);
     expect(more[2].items.map((item) => item.label)).toEqual(['Rules', 'Messages', 'Activity']);
-    expect(more[3].items.map((item) => item.key)).toEqual(['field', 'resources', 'locations', 'assets']);
-    expect(more[3].items[0].label).toBe('Overview');
+    expect(more[3].items.map((item) => item.key)).toEqual(['resources', 'locations', 'assets']);
   });
 
   it('loses and adds nothing: the bar and More together are exactly the desktop projection', () => {
@@ -302,7 +304,7 @@ describe('the phone renders the same projection', () => {
     ]);
     // Platform's own pages lead More; GOLD's workspaces follow. Ten Platform destinations and every workspace never share the bar.
     expect(platform.more.map((section) => section.label)).toEqual([
-      'Catalog', 'Commercial', 'Infrastructure', 'Workspaces', 'Gild Sales', 'Gild Automations', 'Gild Field', 'Business',
+      'Catalog', 'Commercial', 'Infrastructure', 'Sales', 'Communications', 'Automations', 'Field', 'Business',
     ]);
     const phone = pagesOf([...platform.primary, ...platform.more.flatMap((section) => section.items)]);
     expect(phone).toEqual(pagesOf(projectedItems(sections)));
@@ -322,7 +324,7 @@ describe('the phone renders the same projection', () => {
     expect(tiny.primary.every((item) => item.section === 'home' || item.section === 'workspaces')).toBe(true);
   });
 
-  it('leaves only the rest of Gild Field behind More for somebody with the kernel and nothing else', () => {
+  it('leaves only the rest of Field behind More for somebody with the kernel and nothing else', () => {
     const minimal = projectShell({
       organizationId: ORG,
       enabledModules: new Set(),
@@ -331,8 +333,10 @@ describe('the phone renders the same projection', () => {
       platform: null,
     }).filter((section) => section.key === 'home' || section.key === 'workspaces');
     const { more: rest } = projectPhone(minimal);
+    // Sales is fully absorbed into the bar (Home's only other kernel page, Customers, is already
+    // there, and Pipeline needs a module this business lacks), so it draws no More entry at all.
     expect(rest.map((section) => [section.label, section.items.map((item) => item.key)])).toEqual([
-      ['Gild Field', ['field', 'resources', 'locations']],
+      ['Field', ['resources', 'locations']],
     ]);
   });
 });
@@ -362,13 +366,17 @@ describe('the current item', () => {
       expect(active).toBe(page);
       expect(itemContains(field, active)).toBe(true);
     }
-    expect(activeItemKey(sections, `/organizations/${ORG}/field`)).toBe('field');
+    // Home is never a child, so its own address marks the parent — not a separate 'field' leaf.
+    expect(activeItemKey(sections, `/organizations/${ORG}/field`)).toBe('workspace-field');
     expect(itemContains(items.find((item) => item.key === 'workspace-sales')!, 'work')).toBe(false);
     // A page of a bigger route activates itself, not the page it is nested under.
     expect(activeItemKey(sections, `/organizations/${ORG}/customers/pipeline`)).toBe('pipeline');
     expect(activeItemKey(sections, `/organizations/${ORG}/customers/abc`)).toBe('customers');
     expect(activeItemKey(sections, `/organizations/${ORG}/automations/messages`)).toBe('automation-messages');
-    expect(activeItemKey(sections, `/organizations/${ORG}/automations/rule-1`)).toBe('automations');
+    // A rule's own detail route is nested under Automations Home's address, not Rules' — it
+    // activates the parent, the same rule the Home/child split follows everywhere else.
+    expect(activeItemKey(sections, `/organizations/${ORG}/automations/rule-1`)).toBe('workspace-automations');
+    expect(activeItemKey(sections, `/organizations/${ORG}/automations/rules`)).toBe('automation-rules');
   });
 
   it('inside Platform the group holding the current page is the one that is open, and a heading yields to its first page', () => {
@@ -487,9 +495,9 @@ describe('the permission gradient: operating work, then business administration,
     expect(catalog.children?.map((page) => page.key)).toEqual(['platform-products', 'platform-plans', 'platform-meters', 'platform-connectors']);
   });
 
-  it('a workspace with one reachable page is a plain row; with several, an expandable one', () => {
+  it('a workspace with one reachable area is a plain row; with several, an expandable one — never a dropdown of one Home', () => {
     const rows = personas[1].sections.find((section) => section.key === 'workspaces')!.items;
-    for (const row of rows) expect(row.children === undefined || row.children.length > 1).toBe(true);
+    for (const row of rows) expect(row.children === undefined || row.children.length >= 1).toBe(true);
   });
 
   it('the phone carries the same items, with the administration tiers behind More in the same order', () => {

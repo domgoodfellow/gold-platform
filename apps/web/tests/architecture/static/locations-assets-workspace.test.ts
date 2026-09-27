@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Gild Field's Locations and Assets, finished: create form/sheet, table and the collection's
+ * Field's Locations and Assets, finished: create form/sheet, table and the collection's
  * bounded row interactions all feature-owned, one Customer↔Location form used from both hosts,
  * and the assets list's latest-reading read down from one query per asset to one query total.
  * Source guards — nothing here mounts a component.
@@ -196,15 +196,15 @@ describe('no calendar dependency arrived with Locations coordinates', () => {
   });
 });
 
-describe('Locations and Assets revalidate the Gild Field surfaces they change', () => {
-  it('creating a Location refreshes Locations and Field, since Field Overview counts Locations', () => {
+describe('Locations and Assets revalidate the Field surfaces they change', () => {
+  it('creating a Location refreshes Locations and Field, since Field Home counts Locations', () => {
     const actions = read(`${ROUTES}/locations/actions.ts`);
     const createAction = actions.slice(actions.indexOf('export async function createLocationAction'), actions.indexOf('export async function linkCustomerAction'));
     expect(createAction).toContain(`revalidatePath(\`/organizations/\${organizationId}/locations\`)`);
     expect(createAction).toContain(`revalidatePath(\`/organizations/\${organizationId}/field\`)`);
   });
 
-  it('creating an Asset refreshes Assets and Field, since Field Overview counts Assets', () => {
+  it('creating an Asset refreshes Assets and Field, since Field Home counts Assets', () => {
     const actions = read(`${ROUTES}/assets/actions.ts`);
     const createAction = actions.slice(actions.indexOf('export async function createAssetAction'), actions.indexOf('export async function recordReadingAction'));
     expect(createAction).toContain(`revalidatePath(\`/organizations/\${organizationId}/assets\`)`);

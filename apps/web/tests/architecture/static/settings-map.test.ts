@@ -67,7 +67,10 @@ describe('the Settings configuration map', () => {
   });
 
   it('keeps every configuration-only area reachable, since none of them has a sidebar row any more', () => {
-    for (const area of AREAS.filter((candidate) => candidate.sidebar === false && candidate.segment !== 'setup')) {
+    // Setup is its own SETUP-lifecycle destination and Insights is an operating page reached
+    // contextually from each workspace's Home and from PageHeader's Insights support mode
+    // (`areaAvailable('insights', ...)`) — neither is a Settings *configuration* door.
+    for (const area of AREAS.filter((candidate) => candidate.sidebar === false && !['setup', 'insights'].includes(candidate.segment))) {
       expect(
         entries.some((entry) => entry.path.split(/[/#]/)[0] === area.segment),
         `${area.segment} left the sidebar and is not on the Settings map`,

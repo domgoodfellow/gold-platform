@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/containers/page-header';
 import { GroupHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
-import { areaLabel } from '@/lib/navigation';
+import { areaHref, areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listAutomationRules, listAutomationRuns } from '@/lib/domain/automation/rules';
@@ -73,7 +73,7 @@ export default async function AutomationRulePage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title={rule.name}
-        crumbs={[{ label: areaLabel('automations'), href: `/organizations/${organizationId}/automations` }]}
+        crumbs={[...workspaceAncestry('automation-rules'), { label: areaLabel('automation-rules'), href: areaHref(organizationId, 'automation-rules') }]}
         meta={mayManage ? undefined : rule.enabled ? 'Enabled' : 'Off'}
         className="mb-0"
       />

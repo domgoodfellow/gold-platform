@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Gild Field's first real scheduling workspace: Schedule as Day and Week over the one
+ * Field's first real scheduling workspace: Schedule as Day and Week over the one
  * availability calculation, Resources' own feature ownership finished, and Schedule's
  * configuration reaching into no Settings UI. Source guards, like `screen-grammar.test.ts` and
  * `workspace-shell.test.ts` — nothing here mounts a component; the rendered result was checked
@@ -17,7 +17,7 @@ const CONFIG = `${WEB}/features/scheduling/configuration`;
 const read = (path: string) => readFileSync(path, 'utf8');
 const code = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-describe('Schedule stays a page of Gild Field, under its own URL', () => {
+describe('Schedule stays a page of Field, under its own URL', () => {
   it('the route is still /schedule, and its configuration is still /schedule/configuration', () => {
     expect(existsSync(`${ROUTES}/schedule/page.tsx`)).toBe(true);
     expect(existsSync(`${ROUTES}/schedule/configuration/page.tsx`)).toBe(true);
@@ -257,7 +257,7 @@ describe('Resources create/table UI is feature-owned', () => {
   });
 });
 
-describe('Resources and Schedule/Work revalidate every surface Gild Field now shares', () => {
+describe('Resources and Schedule/Work revalidate every surface Field now shares', () => {
   it('creating a Resource refreshes Resources, Schedule and Field', () => {
     const actions = read(`${ROUTES}/resources/actions.ts`);
     for (const path of ['/resources', '/schedule', '/field']) {

@@ -12,7 +12,7 @@ import {
 import { listScheduleDays } from '@/lib/domain/scheduling/availability';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { isoDayOfWeek, shiftDate, todayInZone } from '@/lib/domain/scheduling/window';
-import { areaLabel } from '@/lib/navigation';
+import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -86,6 +86,7 @@ export default async function SchedulePage({
           zone, so naming the zone is part of reading the page rather than decoration. */}
       <PageHeader
         title={areaLabel('schedule')}
+        crumbs={workspaceAncestry('schedule')}
         description={
           <>
             Times shown in {organization.timezone} ·{' '}

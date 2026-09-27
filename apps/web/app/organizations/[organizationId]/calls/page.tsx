@@ -11,7 +11,7 @@ import { listCalls } from '@/lib/domain/reception/calls';
 import { listCallOutcomes } from '@/lib/domain/reception/outcomes';
 import { callingNumber } from '@/lib/domain/reception/telephony';
 import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
-import { areaLabel } from '@/lib/navigation';
+import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -53,6 +53,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
     <AppPage>
       <PageHeader
         title={areaLabel('calls')}
+        crumbs={workspaceAncestry('calls')}
         description="Calling activity, follow-up and the identity this business calls from."
         actions={
           <div id="setup" className="scroll-mt-20">

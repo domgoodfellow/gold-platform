@@ -195,23 +195,28 @@ export function projectShell(input: ShellInput): ShellSection[] {
   const inGroup = (group: Area['group']) => AREAS.filter((area) => area.group === group && operable(area));
 
   // A workspace is a Product with pages: each page still gated by its own module and capability, so
-  // a business without Assets has a Field without that page. What the rows are is decided by how
-  // many pages are real — none, no row; one, a plain row; several, an expandable one. Never a
-  // dropdown of one, and never a row for a Product with nothing behind it.
+  // a business without Assets has a Field without that page. The parent row's own destination is
+  // the workspace's canonical Home (`WORKSPACES[].home`), never the first child — a Home is never
+  // repeated as a child beneath its own parent. What the row is is decided by how many areas are
+  // real — none, no row; one (Home alone, or a workspace with no declared Home and one page),
+  // a plain row; several, an expandable one. Never a dropdown of one, and never a row for a
+  // Product with nothing behind it.
   const workspaceItems = (): NavItem[] =>
     WORKSPACES.flatMap((workspace) => {
-      const pages = AREAS.filter((area) => area.workspace === workspace.key && operable(area)).map((area) =>
-        areaItem(organizationId, area, 'workspaces'),
-      );
-      if (pages.length === 0) return [];
+      const areas = AREAS.filter((area) => area.workspace === workspace.key && operable(area));
+      if (areas.length === 0) return [];
+      const home = workspace.home ? areas.find((area) => area.segment === workspace.home) : undefined;
+      const childAreas = home ? areas.filter((area) => area.segment !== home.segment) : areas;
+      const children = childAreas.map((area) => areaItem(organizationId, area, 'workspaces'));
+      const homeItem = home ? areaItem(organizationId, home, 'workspaces') : children[0];
       const row: NavItem = {
         key: `workspace-${workspace.key}`,
         label: workspace.label,
-        href: pages[0].href,
+        href: homeItem.href,
         section: 'workspaces',
       };
-      if (pages.length === 1) return [{ ...row, ...(pages[0].phone ? { phone: true } : {}) }];
-      return [{ ...row, heading: true, children: pages }];
+      if (areas.length === 1) return [{ ...row, ...(homeItem.phone ? { phone: true } : {}) }];
+      return [{ ...row, heading: true, children: home ? children : children.slice(1) }];
     });
 
   const business: NavItem[] = [];

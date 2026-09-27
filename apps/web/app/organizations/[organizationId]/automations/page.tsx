@@ -1,27 +1,23 @@
 import { redirect } from 'next/navigation';
+import { AppPage } from '@/components/containers/app-page';
+import { KpiCard, type Kpi } from '@/components/containers/kpi-card';
 import { PageHeader } from '@/components/containers/page-header';
+import { EmptyState } from '@/components/containers/section';
 import { requireOrganization } from '@/lib/route/organization';
-import { listAutomationRules } from '@/lib/domain/automation/rules';
-import { reviewAutomationRules } from '@/lib/domain/automation/review';
-import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
-import { listWorkItemTypes } from '@/lib/domain/work-items/types';
-import { areaHref, areaLabel } from '@/lib/navigation';
+import { listAutomationRules, listAutomationRuns } from '@/lib/domain/automation/rules';
+import { listMessageDeliveries } from '@/lib/domain/automation/templates';
+import { areaHref, areaLabel, workspaceLabel } from '@/lib/navigation';
 import { resolveAutomationsView } from '@/features/automations/workspace/views';
-import { RulesTable } from '@/features/automations/rules/rules-table';
-import { NewAutomationSheet } from '@/features/automations/rules/new-automation-sheet';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Rules, the first page of the Automations workspace. When something happens, if a job looks a
- * certain way, do this. Messages and Activity are the workspace's other pages and are routes of
- * their own (`automations/messages`, `automations/activity`); the sidebar is their one navigation,
- * so this page carries no tab strip over the same three. A rule is a complex entity and gets its own
- * detail route (`/automations/[ruleId]`); creating one, or adding a condition, action or message, is
- * bounded enough for a Sheet.
+ * Automations Home: Rules, Messages and Activity, the workspace's three pages. Every figure is a
+ * count some domain read already owns, one per page, and each links to it — nothing is totalled
+ * here.
  *
- * The old `?view=messages` and `?view=activity` addresses still resolve, to the pages that replaced
- * them, so a bookmark or an email link is not a dead end.
+ * The old `?view=messages` and `?view=activity` addresses still resolve, to the pages that
+ * replaced them, so a bookmark or an email link is not a dead end.
  */
 export default async function AutomationsPage({
   params,
@@ -33,39 +29,38 @@ export default async function AutomationsPage({
   if (view === 'messages') redirect(areaHref(organizationId, 'automation-messages'));
   if (view === 'activity') redirect(areaHref(organizationId, 'automation-activity'));
 
-  const { db, organization } = await requireOrganization(organizationId);
-  const mayManage = organization.capabilities.includes('automation.manage');
+  const { db } = await requireOrganization(organizationId);
 
-  const [rules, types] = await Promise.all([
+  const [rules, runs, deliveries] = await Promise.all([
     listAutomationRules(db, { organizationId }),
-    listWorkItemTypes(db, { organizationId }),
+    listAutomationRuns(db, { organizationId, limit: 50 }),
+    listMessageDeliveries(db, { organizationId, limit: 50 }),
   ]);
 
-  const everyStatus = (
-    await Promise.all(
-      types.map(async (type) => {
-        const own = await listWorkItemStatuses(db, { organizationId, typeId: type.id });
-        return own.map((status) => ({
-          id: status.id,
-          typeId: type.id,
-          name: status.name,
-          typeName: type.name,
-          label: `${type.name} — ${status.name}`,
-        }));
-      }),
-    )
-  ).flat();
+  const href = (segment: string) => areaHref(organizationId, segment);
+  const kpis: Kpi[] = [
+    { key: 'rules', label: areaLabel('automation-rules'), value: rules.length, href: href('automation-rules') },
+    { key: 'messages', label: areaLabel('automation-messages'), value: deliveries.length, note: 'recent', href: href('automation-messages') },
+    { key: 'activity', label: areaLabel('automation-activity'), value: runs.length, note: 'recent runs', href: href('automation-activity') },
+  ];
 
-  const warnings = await reviewAutomationRules(db, { organizationId, rules, statuses: everyStatus });
+  const empty = kpis.every((kpi) => kpi.value === 0);
 
   return (
-    <>
+    <AppPage>
       <PageHeader
-        title={areaLabel('automations')}
-        description="A rule watches for something happening, checks whether the job looks the way you describe, and then does something. Every condition has to hold — two rules is how you say “or”."
-        actions={mayManage ? <NewAutomationSheet organizationId={organizationId} /> : null}
+        title={workspaceLabel('automations')}
+        description="Rules this business writes: when something happens, if a job looks a certain way, do this."
       />
-      <RulesTable organizationId={organizationId} rules={rules} warnings={warnings} mayManage={mayManage} />
-    </>
+      {empty ? (
+        <EmptyState>Nothing has been recorded in Automations yet.</EmptyState>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {kpis.map((kpi) => (
+            <KpiCard key={kpi.key} kpi={kpi} />
+          ))}
+        </div>
+      )}
+    </AppPage>
   );
 }

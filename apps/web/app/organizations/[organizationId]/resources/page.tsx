@@ -6,7 +6,7 @@ import { ResourceTable } from '@/features/resources/resource-table';
 import { CreateResourceSheetProvider, CreateResourceTrigger } from '@/features/resources/create-resource-sheet';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listResources } from '@/lib/domain/resources/resources';
-import { areaLabel } from '@/lib/navigation';
+import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -35,6 +35,7 @@ export default async function ResourcesPage({
         */}
         <PageHeader
           title={areaLabel('resources')}
+          crumbs={workspaceAncestry('resources')}
           description="People, vehicles and equipment that work is scheduled against."
           actions={mayAdd ? <CreateResourceTrigger /> : null}
           configure={mayConfigure}

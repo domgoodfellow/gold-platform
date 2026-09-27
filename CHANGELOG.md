@@ -5,6 +5,24 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Every workspace opens on a real Home; the chevron only expands it
+
+Clicking a workspace's name in the sidebar now always opens that workspace's own Home page;
+clicking its chevron only expands or collapses the pages beneath it, independently of where the
+click lands. Sales, Communications, Field and Automations each get a real Home — a small cockpit
+built from what each already reads elsewhere, linking into its pages — rather than the parent
+silently opening whichever child page happened to be listed first. Field's page moves from
+"Overview" (duplicated as both the parent's destination and a child beneath it) to being the
+workspace's own Home outright, so Field's children are now only Work, Schedule, Resources,
+Locations and Equipment & Assets. Automations' Rules moves from `/automations` to
+`/automations/rules` so `/automations` can be its Home instead; the `?view=` bookmark compatibility
+moves with it. Operator-facing workspace names drop the `Gild ` prefix (Sales, Communications,
+Finance, AI, Automations, Field, Studio), and Service reads as Customer Experience — the
+catalogue's own product names are untouched. Standalone Insights is no longer a sidebar row: the
+route, its dashboards and reports, and every existing Insights support-mode entry point stay real;
+only its classification as a ninth workspace is gone. Assets reads as Equipment & Assets in the
+operator shell; the underlying `assets` domain is untouched.
+
 ### Sidebar identity and account chrome split from business navigation
 
 The sidebar's business header is now a clean single row — the mark genuinely centered when

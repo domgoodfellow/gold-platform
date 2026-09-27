@@ -35,7 +35,7 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 export type AreaGroup = 'home' | 'workspaces' | 'settings';
 
 /**
- * The **registered** workspaces: the nine a business has today, whether or not each has an
+ * The **registered** workspaces: the eight a business has today, whether or not each has an
  * operating surface yet. A workspace is where an operator does a kind of work — never a data
  * owner, Product, Plan, Module, Feature or permission (D67). Marketing and Commerce are named
  * there and not registered: each waits for a catalogue Product to map to. Registered is not visible. A workspace draws a row in the sidebar only
@@ -47,27 +47,29 @@ export type AreaGroup = 'home' | 'workspaces' | 'settings';
  * Product ≠ Module ≠ Feature ≠ Workspace ≠ Page. `product` is the catalogue row whose Features
  * this workspace is the surface of (`platform_catalog_products.key`, D46/D61), which
  * `gild-taxonomy.test.ts` checks. It is a separate word because the catalogue still names two of
- * them `agents` and `workspace` (a rename is catalogue work, M12), and a workspace's name is not
- * the catalogue's key.
+ * them `agents` and `service` (the catalogue's own label stays "Gild ..."; only the operator-facing
+ * `label` here dropped the prefix), and a workspace's name is not the catalogue's key.
  *
- * Insights is the shared analytical workspace — dashboards, reports, analytics — over the one
- * reporting aggregate every other workspace reads. Home is not a workspace: it is the cross-workspace
- * cockpit, and each workspace's own overview answers a narrower question (D66). Platform
- * Administration is not here either: it is a scope of GOLD's own organization, never a workspace of
- * a business (D45, D60).
+ * `label` is what an operator reads; it carries no `Gild ` prefix (that is the catalogue's own
+ * naming, kept there deliberately — D67 restated: operator vocabulary and catalogue identity are
+ * separate concerns). `home` names the Area that is this workspace's landing page — the parent
+ * row's own destination — and is absent only for a workspace with no page yet. Insights is not a
+ * workspace here: it is cross-cutting, surfaced from each workspace's own Home and from a page's
+ * Insights support mode, not a ninth row (D66 restated for this slice). Home the cross-workspace
+ * cockpit is not a workspace either, and neither is Platform Administration — a scope of GOLD's
+ * own organization, never a workspace of a business (D45, D60).
  *
  * Order is the order a customer meets them.
  */
 export const WORKSPACES = [
-  { key: 'sales', label: 'Gild Sales', product: 'sales' },
-  { key: 'service', label: 'Gild Service', product: 'service' },
-  { key: 'comms', label: 'Gild Comms', product: 'comms' },
-  { key: 'finance', label: 'Gild Finance', product: 'finance' },
-  { key: 'ai', label: 'Gild AI', product: 'agents' },
-  { key: 'automations', label: 'Gild Automations', product: 'automations' },
-  { key: 'field', label: 'Gild Field', product: 'field' },
-  { key: 'studio', label: 'Gild Studio', product: 'studio' },
-  { key: 'insights', label: 'Gild Insights', product: 'workspace' },
+  { key: 'sales', label: 'Sales', product: 'sales', home: 'sales' },
+  { key: 'service', label: 'Customer Experience', product: 'service', home: undefined },
+  { key: 'comms', label: 'Communications', product: 'comms', home: 'comms' },
+  { key: 'finance', label: 'Finance', product: 'finance', home: undefined },
+  { key: 'ai', label: 'AI', product: 'agents', home: undefined },
+  { key: 'automations', label: 'Automations', product: 'automations', home: 'automations' },
+  { key: 'field', label: 'Field', product: 'field', home: 'field' },
+  { key: 'studio', label: 'Studio', product: 'studio', home: undefined },
 ] as const;
 
 export type WorkspaceKey = (typeof WORKSPACES)[number]['key'];
@@ -323,38 +325,46 @@ export const AREAS: readonly Area[] = [
   // Leads because D23 says the action an operator's phone is designed around is "what do I do next".
   { segment: 'home', label: 'Home', group: 'home' },
 
-  // Gild Sales. Customers is the kernel; the Pipeline is the CRM stages view, offered where the
-  // business has it (the reception module). Two real pages make Sales expandable; one, a plain row.
+  // Sales. Home is the workspace's own parent destination — kernel, like Customers, so the row is
+  // always there — and is never repeated as a child beneath it. Pipeline is the CRM stages view,
+  // offered where the business has it (the reception module).
+  { segment: 'sales', label: 'Sales', group: 'workspaces', workspace: 'sales' },
   { segment: 'customers', label: 'Customers', group: 'workspaces', workspace: 'sales', phone: true },
   { segment: 'pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'sales', route: 'customers/pipeline', module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
-  // Gild Comms. Calls is the one channel implemented; SMS, email and an inbox are not pages until
-  // they exist. The route is still `calls`. The specific Voice features this surface is — not the
-  // pipeline features that share the `reception` module key (D46's many-to-many seam, and the
-  // reason `featureKeys` exists rather than gating on `module` alone).
+  // Communications. Home carries the same entitlement as Calls, the one channel implemented, so
+  // the workspace draws no row for a business without it. SMS, email and an inbox are not pages
+  // until they exist. The specific Voice features Calls is — not the pipeline features that share
+  // the `reception` module key (D46's many-to-many seam, and the reason `featureKeys` exists
+  // rather than gating on `module` alone).
+  { segment: 'comms', label: 'Communications', group: 'workspaces', workspace: 'comms', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
   { segment: 'calls', label: 'Calls', group: 'workspaces', workspace: 'comms', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
-  // Gild Automations: building, reviewing and observing rules is ongoing work, so it is a
-  // workspace. Rules, Messages and Activity are three pages of it, each its own route — the sidebar
-  // is the one navigation for them, and the page carries no second tab strip over the same three.
-  { segment: 'automations', label: 'Rules', group: 'workspaces', workspace: 'automations', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  // Automations: building, reviewing and observing rules is ongoing work, so it is a workspace.
+  // Home carries Rules' own entitlement, so the workspace draws no row for a business without it.
+  // Rules, Messages and Activity are three pages of it, each its own route — the sidebar is the
+  // one navigation for them, and no page carries a second tab strip over the same three.
+  { segment: 'automations', label: 'Automations', group: 'workspaces', workspace: 'automations', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  { segment: 'automation-rules', label: 'Rules', group: 'workspaces', workspace: 'automations', route: 'automations/rules', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
   { segment: 'automation-messages', label: 'Messages', group: 'workspaces', workspace: 'automations', route: 'automations/messages', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
   { segment: 'automation-activity', label: 'Activity', group: 'workspaces', workspace: 'automations', route: 'automations/activity', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
-  // Gild Field: what work is being done, where, when and with what. Its overview is a real page;
-  // Work, Schedule, Resources, Locations and Assets are its pages. All kernel except Assets, a module.
-  { segment: 'field', label: 'Overview', group: 'workspaces', workspace: 'field' },
+  // Field: what work is being done, where, when and with what. Home is a real page — kernel, like
+  // Work and Schedule — and is never repeated as a child beneath it. Equipment & Assets is the one
+  // page behind a module.
+  { segment: 'field', label: 'Field', group: 'workspaces', workspace: 'field' },
   { segment: 'work', label: 'Work', group: 'workspaces', workspace: 'field', phone: true },
   { segment: 'schedule', label: 'Schedule', group: 'workspaces', workspace: 'field', phone: true },
   { segment: 'resources', label: 'Resources', group: 'workspaces', workspace: 'field' },
   { segment: 'locations', label: 'Locations', group: 'workspaces', workspace: 'field' },
-  { segment: 'assets', label: 'Assets', group: 'workspaces', workspace: 'field', module: 'assets', featureKeys: ['assets'] },
+  { segment: 'assets', label: 'Equipment & Assets', group: 'workspaces', workspace: 'field', module: 'assets', featureKeys: ['assets'] },
 
-  // Gild Insights: dashboards and reports over the one reporting aggregate every workspace reads.
-  // Workspace-local numbers stay in their own workspace's overview; this is deliberate analysis.
-  { segment: 'insights', label: 'Insights', group: 'workspaces', workspace: 'insights', module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
+  // Insights: dashboards and reports over the one reporting aggregate every workspace reads. Not a
+  // workspace of its own (D66) — no permanent sidebar row — but still a real, directly addressable
+  // route, read from each workspace's own Home and from a page's Insights support mode.
+  { segment: 'insights', label: 'Insights', group: 'workspaces', sidebar: false, module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
 
   // Configuration, not places somebody works: each is a real, directly addressable route with its
   // module and capability gating unchanged, found from the Settings map (`sidebar: false`).
   // Turning Pricing off also takes priced lines and the invoice off a job screen — see the work item route.
-  // Owned by Gild Finance, which has no row until it has an operating surface of its own.
+  // Owned by Finance, which has no row until it has an operating surface of its own.
   { segment: 'pricing', label: 'Pricing', group: 'settings', workspace: 'finance', module: 'billing', sidebar: false, relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
   { segment: 'fields', label: 'Custom fields', group: 'settings', sidebar: false, relevantCapabilities: ['field.manage'] },
   { segment: 'roles', label: 'Team', group: 'settings', sidebar: false, relevantCapabilities: ['role.manage'] },
@@ -588,14 +598,25 @@ export function areaLabel(segment: string): string {
  * it, and repeating it in the trail would say the same thing twice (`Platform → Business →
  * Workspace → Page`, with the sidebar carrying the first two).
  *
- * Strips the catalogue's `Gild ` prefix rather than adding a second, unprefixed workspace name —
- * the taxonomy rename that drops the prefix at the source is the next slice's job, not this one's.
- * A page of a workspace with several pages still names only the workspace: `Pipeline` reads as
+ * A workspace's own Home names no ancestor and no redundant current-page crumb (`Sales`, not
+ * `Sales / Sales` or `Sales / Home`) — its `<h1>` is `workspaceLabel`, read directly. A page of a
+ * workspace with several pages still names only the workspace: `Pipeline` reads as
  * `Sales / Pipeline`, not `Sales / Customers / Pipeline` — the workspace is the ancestor, its pages
  * are peers.
  */
 export function workspaceAncestry(segment: string): { label: string }[] {
+  const workspace = WORKSPACES.find((candidate) => candidate.home === segment);
+  if (workspace) return [];
   const area = AREAS.find((candidate) => candidate.segment === segment);
   if (!area?.workspace) return [];
-  return [{ label: workspaceLabel(area.workspace).replace(/^Gild /, '') }];
+  return [{ label: workspaceLabel(area.workspace) }];
 }
+
+/**
+ * Marketing is an intended operator workspace — authoring and running campaigns that bring
+ * customers in, distinct from Studio (authoring and publishing the public site and reusable
+ * experiences) and from Sales (working relationships once they exist). It has no catalogue Product
+ * yet, so it is not registered here: `WORKSPACES` names only what a Product backs (D67). It
+ * arrives in a catalogue/domain slice of its own, never mapped onto Studio's or another Product's
+ * key in the meantime.
+ */

@@ -14,7 +14,7 @@ import { mapConfig } from '@/lib/adapters/maps/config';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
-import { areaLabel } from '@/lib/navigation';
+import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -49,6 +49,7 @@ export default async function LocationsPage({
         */}
         <PageHeader
           title={areaLabel('locations')}
+          crumbs={workspaceAncestry('locations')}
           description="Places where this organization works, and the customers they serve."
           actions={mayAdd ? <CreateLocationTrigger /> : null}
           configure={mayConfigure}

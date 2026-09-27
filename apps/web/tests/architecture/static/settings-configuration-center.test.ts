@@ -83,10 +83,12 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     expect(page).not.toContain('redirect(');
   });
 
-  it('/automations is canonical: Rules, Messages and Activity are three pages of Gild Automations, and a rule is its own detail route', () => {
+  it('/automations is canonical Automations Home; Rules, Messages and Activity are its three pages, and a rule is its own detail route', () => {
     const page = readFileSync(`${ROUTES}/automations/page.tsx`, 'utf8');
-    expect(page).toContain('RulesTable');
-    expect(page).toContain('NewAutomationSheet');
+    // Home summarizes the three pages rather than rendering Rules itself — a Home is never a
+    // page's content wearing the parent's address.
+    expect(page).not.toContain('RulesTable');
+    expect(page).not.toContain('NewAutomationSheet');
     // The sidebar is the one navigation for the three: no tab strip over the same routes.
     expect(page).not.toMatch(/AutomationsViewTabs|MessagesView|ActivityView/);
     expect(existsSync(`${WEB_FEATURES}/automations/workspace/view-tabs.tsx`)).toBe(false);
@@ -94,6 +96,10 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     expect(page).toContain("redirect(areaHref(organizationId, 'automation-messages'))");
     expect(page).toContain("redirect(areaHref(organizationId, 'automation-activity'))");
     expect(page).not.toContain('AutomationRuleCard');
+
+    const rules = readFileSync(`${ROUTES}/automations/rules/page.tsx`, 'utf8');
+    expect(rules).toContain('RulesTable');
+    expect(rules).toContain('NewAutomationSheet');
     expect(readFileSync(`${ROUTES}/automations/messages/page.tsx`, 'utf8')).toContain('MessagesView');
     expect(readFileSync(`${ROUTES}/automations/activity/page.tsx`, 'utf8')).toContain('ActivityView');
 
