@@ -188,7 +188,7 @@ workspace of its own — the deep, cross-workspace one: `/insights` is saved das
 link into it; the report builder never sits in a rail. *Agent* is the workspace-global assistant
 rail, and is none of these.
 
-**Workspaces are the Gild Products; they are not Plans or SKUs.** A row is where an operator uses
+**Workspaces are surfaces of the Gild Products; they are not Plans, SKUs or data owners (D67).** A row is where an operator uses
 one of the nine registered workspaces (D66) — Sales, Service, Comms, Finance, AI, Automations, Field,
 Studio, Insights — and only those with a real surface get one. A Plan grants Features that may compose into
 several rows, and there is no row per SKU (D25, D46). **One grain per navigation:** a sidebar
@@ -206,6 +206,9 @@ of them is a workspace.
 | Work / Schedule | Work owns what is to be done. Schedule alone owns when a resource can commit to it, and is the one engine that says what is free. Neither is a view of the other |
 | Financials / GOLD platform economics | Financials is the business's own price book, quotes, invoices, payments and costs. GOLD's Plans, subscription pricing, provider COGS, tenant economics, margin and forecasting stay in Platform Administration. Two money directions, never one screen |
 | Website & Portal / Communications | Website & Portal is what a customer meets before and outside a conversation — website, booking, forms, portal, brand. Communications is the conversation itself |
+| Sidebar / record links | The sidebar answers *what kind of work am I doing*; a record's relationships answer *what is related to this* (D67). A workspace may show an action or summary owned elsewhere (Call on a customer opens Comms' one dialer, never a second one) |
+| Related-record card | A link plus a read of the canonical record, filtered by the caller's permissions and the organization's entitlements, with loading, error and empty states. It holds no copy of the record and no rule. Not built until its first caller |
+| Scope | Organization workspaces run one business; Platform Administration runs GildOps (D60). A Platform page is never a tenant workspace repeated so staff can look inside |
 | Library | Documents are shared organization resources, not a sub-feature of Customers, Work or Financials; a document may be linked to a customer, job, asset or invoice without being owned by it. Templates and Knowledge are Library's only when a real shared collection exists; automation message templates and checklist templates stay with their owning domain |
 | Service / pricing / scheduling | A Service (Offering) is the reusable definition of what the business does; a Work Item is one instance; the Price Book prices it; Scheduling says when resources can commit; a Quote or Invoice is the snapshotted result for one transaction. A Service may later supply estimated duration, resource requirements, a pricing rule, a checklist, bookability and a service-specific buffer. `buffer_minutes` remains a scheduling policy, and travel time is a separate, future scheduling input from locations and routes — never the same thing as a fixed buffer |
 

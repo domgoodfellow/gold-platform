@@ -19,7 +19,7 @@ M0–M8 and M11 established the current platform foundation. The active pre-Next
 2. **M13 — BusinessOS and reusable organization configuration.**
 3. **M14 — provider control plane, proven through Voice**, enabling M9 without replacing it.
 4. **M15 — Financial Operations boundary and migration.**
-5. **M16 — Customer Experience distribution.**
+5. **M16 — Studio distribution.**
 6. **M17 — platform hardening and GOLD dogfood gate.**
 7. **M18 — NextFund migration and parity.**
 8. **M10 — desktop**, still waiting on demonstrated demand.
@@ -494,7 +494,7 @@ Preserve the existing `billing` and `card_payments` persistence keys during migr
 Scope richer pricing rules, discounting, taxes, acceptance, refunds and accounting integrations
 from evidence rather than treating the Product boundary as proof they are built.
 
-## M16 — Customer Experience distribution
+## M16 — Studio distribution
 
 > **Done when:** an organization can publish its approved site to its own resolved hostname with
 > governed media, required legal pages, correct public authentication context and attributable

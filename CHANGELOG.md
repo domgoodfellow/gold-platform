@@ -9,6 +9,10 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 The four sign-in screens now sit in one bordered card of a readable width. "Forgot password?" is on the Password label row, Google sign-in is set apart under an "or" rule, and creating an account, logging in or going back is a clear link at the foot of the card. The glowing background behind the form is removed, along with the three.js library that drew it. Nothing about how sign-in works changed.
 
+### One written contract for workspaces, capabilities and AI
+
+The rules for what a workspace is, who owns calling, money, messaging and stock, and how AI is split into a built-in guide, a business agent, a public assistant and a voice agent are now written down in one place. It also records what the code does not yet do: AI questions are not metered, the assistant runs on one model per purpose with no choice, "available" on screen does not prove a provider can answer, and the calling-user allowance is listed but not enforced. Two older wordings were corrected (marketing is not part of Studio; workspaces are surfaces of Products, not the same thing). Nothing a person sees changed. See D67.
+
 ### Nine workspaces, named and registered
 
 The product now has one written-down list of nine workspaces: Sales, Service, Comms, Finance, AI, Automations, Field, Studio and Insights. "Agents" is now AI, and the shared "Workspace" is now Insights, which appears as a row beside the others instead of under its own "Shared" heading. Only workspaces with a real page draw a row, so Service, Finance, AI and Studio are listed but do not appear until they have something to open. Each existing page and settings entry now says which workspace owns it. No address changed, and nothing in the database changed. See D66.

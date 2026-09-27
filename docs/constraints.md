@@ -1789,7 +1789,7 @@ its `/calls` route.
 
 ### D61 — Gild Products are eight, the shared Workspace is not one of them, and a workspace row is only ever real pages
 
-*Amended by D66: the workspace registry is nine and holds unbuilt ones, Agents is AI in the sidebar, and Gild Workspace is Gild Insights. The catalogue rows below keep their keys.*
+*Amended by D66 and D67 (Studio and marketing; Workspaces are surfaces of Products): the workspace registry is nine and holds unbuilt ones, Agents is AI in the sidebar, and Gild Workspace is Gild Insights. The catalogue rows below keep their keys.*
 
 **Decision.** Three internal layers and eight customer-facing Products, kept apart on purpose.
 
@@ -2083,3 +2083,215 @@ one section heading), `shell-projection.test.ts` (rows come from pages, Insights
 locked by a check constraint). The registry maps to them through `WORKSPACES[].product`; renaming
 the rows is catalogue work for M12, with a migration, and no operator-facing sidebar text depends on
 it. D61's "Insights is not a ninth Product" is now a statement about the catalogue, not the sidebar.
+
+### D67 — The workspace, capability and AI contract: what owns what, and how the gates stack
+
+**Decision.** Vocabulary and ownership, written once so later work does not redefine them. This
+decision changes no behaviour, route, table or price. It corrects D61 in three places, named under
+*Corrections to D61*, and leaves D66's registry, routes and migration boundary as they are.
+
+**Words.** GildOps is the company; *Gild* prefixes the products (D61). Historical migrations,
+database identifiers and old changelog entries keep their legacy names.
+
+| Word | Means | Is never |
+|---|---|---|
+| **Workspace** | Where an operator does one kind of ongoing work | a data owner, Product, Plan, SKU, Module, Feature, permission or directory |
+| **Page** | One task inside a workspace | a Feature |
+| **Product** | A customer-facing family in the catalogue | a workspace (see below) |
+| **Module** | A coherent area inside a Product that a business switches on | authorization (D25) |
+| **Feature** | One concrete capability; what a Plan grants | a page |
+| **Permission** | May *this person* operate it (`call.place`, `assistant.ask`) | evidence the business bought it |
+| **Entitlement** | The business bought or was given it (Plan → Feature) | a permission |
+| **Seat** | An entitlement to a *person* using a Feature (calling users) | a permission or a role |
+| **Allowance** | How much may be used per period, under the Plan (`platform_plan_quotas`) | a rate limit |
+| **Rate limit** | How fast, whatever was bought; abuse protection | an allowance |
+| **Provider readiness** | Whether GildOps can technically fulfil it | an entitlement |
+
+A workspace maps to one catalogue row today (`WORKSPACES[].product`). That is a fact about the
+registry, not the definition: Insights maps to a row that is not sellable, and two workspaces named
+below have no catalogue row yet.
+
+**Records are canonical once; workspaces project them.** A Customer, Document, Inventory item, Call
+or Work item is one record. The owning workspace has its canonical page; any other workspace shows a
+link or summary of it and never a copy of the record or its rules. **The sidebar answers *what kind
+of work am I doing*; a record's relationships answer *what is related to this*.** A related-record
+card is a link plus a read, filtered by the caller's permissions and the organization's entitlements,
+with its own loading, error and empty states.
+
+**Ownership.**
+
+| Owns | Workspace |
+|---|---|
+| Relationship acquisition and progression: customers as prospects, pipeline, qualification, follow-up | **Sales** |
+| Channels and conversation history: voice, dialer, numbers, SMS, email, recordings, transcripts, call outcomes, delivery state, the Voice Agent as a channel | **Comms** |
+| Performing work: jobs, scheduling, dispatch, resources, locations, field execution, operational assets | **Field** (D66's name; *Operations* is the concept) |
+| Money: price book, quotes, invoices, payments, credits, job economics | **Finance** |
+| Rules, triggers, conditions, sequences, run history | **Automations** |
+| Intelligence: agents, assistants, models, knowledge, conversations, runtime, usage | **AI** |
+| Public presence: website, forms, booking entry, portal, brand, domains | **Studio** |
+| Cross-domain analysis over the one reporting aggregate | **Insights** |
+| Cases, requests, complaints | **Service**: planned; a Product with planned Features only, no page and no table |
+| Audiences, segments, campaigns, journeys, lifecycle policy | **Marketing**: not built, not registered |
+| Products sold, SKUs, variants, catalogues, orders, promotions | **Commerce**: not built, not registered |
+
+Home is the cross-workspace cockpit and is not a workspace. Customers, Documents, Knowledge,
+Inventory, Assets, the Scheduling engine, events, Connections, identity and usage serve several
+workspaces and are not workspaces. Inventory is shared: a service business may hold stock with no
+Commerce, and Field consumes it; Commerce sells items and never owns the stock. A lead is a stage of
+a customer (*Decided, not yet built*), so Sales and Marketing share one person record.
+
+**Registered is not visible (D66), and Marketing and Commerce are not registered.** The registry
+holds workspaces that map to a catalogue Product; `gild-taxonomy.test.ts` enforces that. They join
+when the catalogue has a Product for them (M12) and a page exists to draw. No placeholder, no empty
+page. Field is not renamed: a rename moves the catalogue key (`field`), routes and tests together,
+and nothing depends on the word *Operations*.
+
+**Invocation.** Another workspace *invokes* a capability and never re-implements it. A Sales customer
+shows Call, Email and Message that open the same Comms capability with the customer as context; there
+is one dialer. The same holds for Customer → Finance, Work item → Inventory, Order → fulfilment work,
+and a Voice Agent using CRM lookup, Scheduling, Documents or Finance tools. **Comms owns talking,
+Scheduling owns scheduling, Finance owns money, CRM owns relationship state, AI orchestrates.**
+Marketing will consume CRM state, Automation triggers, Comms delivery, Finance offers and Commerce
+items, and own none of them. An operational notice, a lifecycle message and a marketing message are
+three kinds, because consent, suppression and urgency differ. An offer references a Finance price and
+never carries an amount in a template.
+
+**The dialer as the test.** Feature `outbound_calling` (catalogue) → calling-user seat → seat held by
+a person → permission `call.place` → organization Voice configuration and number → provider binding
+and Gild's telephony runtime → Twilio subaccount → call record → usage event (`voice_minutes`) →
+Finance. One Feature implementation; a Sales package and a Comms package may both grant it. Two links
+in that chain are not built (*Findings* 7 and 15).
+
+**Scope.** An organization runs one business. Platform Administration runs GildOps itself: provider
+accounts, model catalogue, Product catalogue, Plans, rate cards, provider cost, health, provisioning,
+subscriptions, global AI policy. It is a sub-scope of GOLD's own organization (D60); rendering it
+inside that shell does not make its records tenant-owned, and no tenant workspace is duplicated
+beneath it so staff can inspect tenant data (I21).
+
+**Finance is the commercial source of truth.** AI defines what exists technically; Comms what
+channels exist; Commerce what a tenant sells; Finance how money works: prices, allowances, overage,
+credits, provider cost, margin. AI and Comms screens *show* entitlement, usage and upgrade; they keep
+no price of their own (D40, D43, D65).
+
+**AI has four surfaces, and each is its own entitlement and its own usage pool.**
+
+| Surface | For | Included? | Model chosen by |
+|---|---|---|---|
+| **Gild Guide** | Setup, navigation, explaining the app, diagnosing configuration | Baseline; metered; fair-use limits; never unlimited | The platform |
+| **Business Agent** | Business work: analysis, drafting, research, proposing actions | Commercially entitled; metered; allowance and tier apply | The user, from the models the organization may use |
+| **Public Assistant** | A business's visitors and customers | Separate entitlement | The business, once; the visitor never |
+| **Voice Agent** | Spoken conversation; operated by Comms, defined on the shared AI runtime | Separate entitlement | The business |
+
+A public traffic spike must not drain staff allowance unless a Plan says so. Guide sees only what the
+asker may see (I48).
+
+**Models and tiers are catalogue data.** A model is a platform row that will carry: a stable Gild id,
+display name, provider, the provider's own model identifier, provider service, lifecycle, commercial
+tier, supported surfaces, whether a tenant may select it, and a link to its cost. Tiers (AI Standard,
+AI Pro, Advanced Reasoning) name packages of models; membership is data, never a conditional in the
+Agent UI, and no model name is architecture. Model *visibility* and provider *infrastructure* are
+separate: a tenant sees and picks a model and never sees a Gild key, provider account, vault record
+or wholesale rate.
+
+**Gates for a Business Agent request: ten, separate, all server-side.** (1) platform runtime ready;
+(2) organization entitled; (3) feature enabled and configured; (4) `assistant.ask`; (5) model enabled;
+(6) model supported on this surface; (7) model allowed by the organization's tier or override;
+(8) allowance or credit permits; (9) rate limit permits; (10) the provider account can execute it.
+**A model id sent by the browser authorizes nothing.** The server resolves it against the
+organization's effective entitlement before any provider spend.
+
+**Providers stay platform infrastructure.** Accounts, keys, the vault, verification, routing, upstream
+model ids and wholesale cost are Platform Administration (D54, D62). No second provider system is
+built; what exists already satisfies this and is kept.
+
+**Meter everything worth controlling; bill selectively.** Every workload above should emit usage even
+when it is included: Guide requests, Business Agent requests, Public Assistant conversations, Voice
+Agent minutes, call minutes, SMS segments, email. Lower-level figures (tokens, speech-to-text,
+text-to-speech, latency, provider cost) sit beneath. Tenant-facing units stay understandable and need
+not equal a provider's. One writer, `app.record_usage` (I59).
+
+**Shared components.** shadcn primitives → GildOps product components → workspace composition.
+Existing equivalents: `record-header` (entity header), `features/timeline` (activity timeline),
+`widget` and `kpi-card` (metric group), `collection-view` and `table` (resource table), `view-nav`,
+`page-drawer`, `configure-registrar` and `support-registrar` (configuration and support panels). Named
+and not built: related-records card, open-in-workspace link, usage meter, cost summary, context and
+knowledge sources, setup checklist. Each is built by its first real caller, not before.
+
+**Documents and knowledge are one record with many readers.** A document may guide the Business
+Agent, Voice Agent, Public Assistant, Automation and others without being copied. The screens will
+eventually show *Guided by* and *Used by* on a record, and *Affects*, *Depends on* and *Used by* on a
+configuration such as the Voice Agent. Not built; the information architecture is fixed here.
+
+**Corrections to D61.**
+1. *"Website, booking, forms, the portal, brand, domains and marketing are Studio."* Marketing
+   (audiences, campaigns, journeys) is its own future workspace; Studio keeps the public form and the
+   destination owns the record (D66). The catalogue's `studio` description still says *and
+   marketing*; that wording changes with M12's catalogue work.
+2. *"Operators see product names: Gild Field, not Operations."* Stands as the label, but *Operations*
+   is the concept and Field is today's implementation of it.
+3. *"Workspaces are the Gild Products"* (`ui-spec.md` §1) becomes *are surfaces of them*.
+
+**Findings on main at this decision.** The answers a later slice starts from.
+
+1. **Service** is a planned Product with planned Features only, unlisted, and a registered workspace
+   with no page. No case object exists.
+2. **Field** is the present, deliberate implementation of Operations. Kept.
+3. **AI** is the workspace; *agent* is one implementation in it; the catalogue Product is still keyed
+   `agents` (M12).
+4. **Insights** is a workspace and a shared analytical surface, mapped to the catalogue's non-sellable
+   `workspace` row. It is not a Product a business buys.
+5. **Studio** owns website, forms and intake, booking entry, portal presentation, brand and domains.
+6. **Customer-service work today** is spread over Comms (calls), Sales (customers), Field (work items),
+   Studio (intake) and the Agent. No Service surface exists.
+7. **`reception`** is one Module (*Reception and sales*) gating both the Comms Calls page and the Sales
+   Pipeline page, on purpose: a pipeline with no calls is a hand-kept list. That is against the target,
+   where calling belongs to Comms and the pipeline to Sales. The later step is two modules; the
+   catalogue Features are already separate (`inbound_calling`, `outbound_calling`, `pipeline`). Nothing
+   needs it until a Plan sells one without the other.
+8. **Wording that implied identity:** `ui-spec.md` §1 (Product = workspace, corrected above) and
+   D61's Studio and marketing line. No document was found equating entitlement with permission, a
+   Module with a workspace, or a provider account with tenant configuration.
+9. **AI, platform-global:** provider accounts, credentials, runtime assignments, adapters.
+   **Organization-specific:** conversations, runs, attachments, proposals, assistant grants, public
+   deployments, `assistant.ask`, the drafting module.
+10. **One model per capability.** `platform_ai_runtime_assignments` is keyed by capability
+    (`operator_assistant`, `public_assistant`) and holds one provider, account and free-text model,
+    platform-wide, with no organization, tier or surface. This blocks model choice and is left alone.
+11. **Configure → Connections.** The tenant Agent's Configure panel links *Connections & permissions*
+    to `/integrations` (`features/agent/tenant-agent-rail.tsx`), and `agent-conversations.test.ts`
+    pins that link and text. Connections are outside apps; what the assistant may read is
+    `assistant_resource_grants`. The mismatch is recorded; the later Agent slice updates that test
+    with the screen.
+12. **The ask flow does not meter.** No path in `apps/api` calls `record_usage`. `ai_tokens_input` and
+    `ai_tokens_output` exist as meters and catalogue Features name them; nothing writes them.
+13. **AI readiness is not end-to-end.** The web treats *`ASSISTANT_API_URL` is set* as available
+    (`answeringProvider`). The API resolves assignment, credential and adapter at request time and
+    fails the run there, so a screen can say available when a run will fail.
+14. **Telephony credentials against configuration.** A business stores one number and no secret
+    (`telephony_settings`, D39). The subaccount is a provider resource; Gild's master token lives in
+    `apps/api` and the vault, readable only by `provider_operator`.
+15. **Commercial gaps for calling.** Present: Features with `voice_minutes`, plan allowances
+    (`calling_users`, `intelligent_call_minutes`, `sms_segments`), an `additional_caller` add-on,
+    usage events, provider rates and cost. Missing: nothing reads `calling_users` (a seeded,
+    unenforced row), no table assigns a seat to a person, and placing a call does not check the
+    Feature at the write. M17 owns that enforcement (`CLAUDE.md`, *Current state*).
+
+**Packaging and model tier are two things, joined by one entitlement axis.** Add-ons and Plans are
+what Gild sells; a *model tier* (standard, pro, advanced) is what an organization is entitled to; a
+model is classified into a tier. `ai_lite` (labelled **AI Standard**, key kept) and `ai_pro` are
+Add-ons that each grant a tier, and a Plan may grant the same tier without either Add-on: both
+resolve to one axis, so no parallel set of AI Products exists. Tiers are cumulative by default
+(pro includes standard, advanced includes both) unless a model states an exception. The grant is per
+surface, so `business_agent` Pro does not make the public chatbot run Pro models. The tier attribute
+and its resolver are Slice 2's; `ai_lite` and `ai_pro` are neither renamed nor duplicated
+(`20261008000003` changes the `ai_lite` label only).
+
+**Not built, and why.** Model catalogue, model picker, tier entitlement, the AI request gate, a
+readiness probe, AI usage metering, the Guide, Public Assistant and Voice Agent runtimes, seat
+assignment, Marketing, Commerce, Service, the related-record components, the `reception` split. Each
+is a later slice or milestone and none has its first caller yet.
+
+**Holds.** Nothing new. Already pinned: `navigation.test.ts` and `gild-taxonomy.test.ts` (the nine
+workspaces, each mapped to a real catalogue row, none drawn without a page), `usage-boundary.test.ts`
+(one usage writer), `provider-accounts.test.ts` (credentials), and `agent-conversations.test.ts` (the
+Configure link, on record above as wrong). The rest of this decision is definition with no test.

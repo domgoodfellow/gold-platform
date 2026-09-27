@@ -35,8 +35,10 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 export type AreaGroup = 'home' | 'workspaces' | 'settings';
 
 /**
- * The **registered** workspaces: the whole target taxonomy of one business, whether or not each has
- * an operating surface yet. Registered is not visible. A workspace draws a row in the sidebar only
+ * The **registered** workspaces: the nine a business has today, whether or not each has an
+ * operating surface yet. A workspace is where an operator does a kind of work — never a data
+ * owner, Product, Plan, Module, Feature or permission (D67). Marketing and Commerce are named
+ * there and not registered: each waits for a catalogue Product to map to. Registered is not visible. A workspace draws a row in the sidebar only
  * when at least one page names it (`Area.workspace`) and that page is reachable to this person
  * (`projectShell`), so Service, Finance, AI and Studio are registered here and absent from
  * navigation until a real page arrives. Navigation never leads to an empty placeholder, and
