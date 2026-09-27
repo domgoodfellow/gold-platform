@@ -4,6 +4,7 @@ import {
   ADMINISTRATION_SECTIONS,
   SHELL_SECTION_ORDER,
   activeItemKey,
+  businessSettingsOffered,
   inPlatformScope,
   itemContains,
   projectedItems,
@@ -84,7 +85,7 @@ describe('GOLD owner who is also a platform operator', () => {
   });
 
   it('sees organization administration, item by item', () => {
-    expect(keys(sections, 'business')).toEqual(['team', 'connections', 'plan', 'settings']);
+    expect(keys(sections, 'business')).toEqual(['team', 'connections', 'plan']);
   });
 
   it('sees every authorized Platform destination, and only through the projection', () => {
@@ -195,7 +196,7 @@ describe('tenant owner or administrator', () => {
 
   it('sees the tenant workspaces and the administration they hold authority for', () => {
     expect(keys(sections, 'workspaces')).toContain('customers');
-    expect(keys(sections, 'business')).toEqual(['team', 'connections', 'plan', 'settings']);
+    expect(keys(sections, 'business')).toEqual(['team', 'connections', 'plan']);
   });
 
   it('never sees GOLD Platform controls, however many capabilities they hold', () => {
@@ -226,18 +227,21 @@ describe('tenant ordinary member', () => {
 });
 
 describe('configuration-only authority', () => {
-  it('reaches Settings for what they may configure even when they cannot operate the workspace', () => {
+  it('has nothing in Business administration, but Business settings still offers them a target — no permanent sidebar row either way', () => {
     const configurer = project(['field.manage']);
     // Cannot place calls, so there is no calling workspace for them…
     expect(keys(configurer, 'workspaces')).not.toContain('calls');
-    // …yet the configuration index is theirs, because they may configure.
-    expect(keys(configurer, 'business')).toEqual(['settings']);
+    // …none of Team, Connections or Plan & usage names their capability, so Business
+    // administration has nothing to show — Settings is not a fourth permanent row beside them.
+    expect(keys(configurer, 'business')).toEqual([]);
+    // Yet the account menu's Business settings link is theirs, because they may configure.
+    expect(businessSettingsOffered({ enabledModules: new Set(EVERYTHING_MODULES), featureAvailability: everyFeature(), capabilities: new Set(['field.manage']) })).toBe(true);
   });
 
   it('is offered exactly the administration items their own permissions name', () => {
-    expect(keys(project(['role.manage']), 'business')).toEqual(['team', 'settings']);
-    expect(keys(project(['billing.manage']), 'business')).toEqual(['plan', 'settings']);
-    expect(keys(project(['integration.manage']), 'business')).toEqual(['connections', 'settings']);
+    expect(keys(project(['role.manage']), 'business')).toEqual(['team']);
+    expect(keys(project(['billing.manage']), 'business')).toEqual(['plan']);
+    expect(keys(project(['integration.manage']), 'business')).toEqual(['connections']);
   });
 });
 
@@ -250,7 +254,7 @@ describe('entitlement absent', () => {
       'workspace-sales', 'workspace-field', 'field', 'work', 'schedule', 'resources', 'locations',
     ]);
     // Connections is a product too: no Integrations entitlement, no item — Team and Plan remain.
-    expect(keys(sections, 'business')).toEqual(['team', 'plan', 'settings']);
+    expect(keys(sections, 'business')).toEqual(['team', 'plan']);
   });
 
   it('the kernel — Home, Customers, Work, Schedule, Setup — never depends on a module', () => {
@@ -338,7 +342,9 @@ describe('the current item', () => {
 
   it('marks the most specific item, never two', () => {
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/plan`)).toBe('plan');
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/general`)).toBe('settings');
+    // Settings is no longer a permanent sidebar row (Business settings is reached from the
+    // account menu instead), so nothing in the sidebar highlights while visiting it.
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/general`)).toBeNull();
     expect(activeItemKey(sections, `/organizations/${ORG}/work/abc`)).toBe('work');
     expect(activeItemKey(sections, `/organizations/${ORG}/roles`)).toBe('team');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog/plans/base'))).toBe('platform-plans');

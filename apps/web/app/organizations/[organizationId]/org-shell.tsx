@@ -339,6 +339,7 @@ export function OrgSidebar({
   sections,
   email,
   signOutAction,
+  businessSettingsOffered,
   ...props
 }: {
   organizationId: string;
@@ -350,6 +351,8 @@ export function OrgSidebar({
   /** True only while the business is in SETUP — the layout decides, from `operationalState`. */
   email: string;
   signOutAction: () => Promise<void>;
+  /** Whether the account menu should offer Business settings — `lib/shell.ts`'s `businessSettingsOffered`. */
+  businessSettingsOffered: boolean;
 } & React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -363,7 +366,9 @@ export function OrgSidebar({
       <SidebarContent>
         <OrgNav sections={sections} />
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border">
+        <AccountMenu email={email} signOutAction={signOutAction} businessSettingsOffered={businessSettingsOffered} />
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

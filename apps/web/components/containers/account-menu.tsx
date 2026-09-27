@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronUp, LogOut, UserRound } from 'lucide-react';
+import { ChevronUp, LogOut, Settings, UserRound } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import {
   DropdownMenu,
@@ -14,23 +14,30 @@ import {
 } from '@gold/ui/components/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@gold/ui/components/sidebar';
 import { Button } from '@/components/controls/button';
+import { cx } from '@/components/class-names';
 import { organizationIdFromPath } from '@/lib/route/platform-context';
 import { personalSettingsHref } from '@/lib/route/personal-settings';
 
 /**
  * The truthful, shared person/session menu, one implementation for every shell's sidebar footer.
  * Represents the PERSON, not where they are operating — cross-context navigation (switching
- * business, entering Platform Administration) is `ContextSwitcher`'s job alone.
+ * business, entering Platform Administration) is `ContextSwitcher`'s job alone. Business settings
+ * (the current organization's own configuration map) and Account settings (this person's profile,
+ * security and preferences) are two different destinations and never share one label.
  */
 
 type AccountMenuProps = {
   /** The signed-in Supabase Auth email. Every caller resolves it the same way: `db.auth.getUser()`. */
   email: string;
   signOutAction: () => Promise<void>;
+  /** Whether the current organization has anything this member may configure — `lib/shell.ts`'s
+   * `businessSettingsOffered`. Absent or `false` withholds the Business settings link rather than
+   * offering a destination with nothing behind it. */
+  businessSettingsOffered?: boolean;
 };
 
-function AccountMenuContent({ email, signOutAction }: AccountMenuProps) {
-  // The business being left, so Personal settings can offer the way back. Read from the path
+function AccountMenuContent({ email, signOutAction, businessSettingsOffered }: AccountMenuProps) {
+  // The business being left, so Account settings can offer the way back. Read from the path
   // rather than passed in: this menu is shared by shells that have no organization at all.
   const from = organizationIdFromPath(usePathname());
 
@@ -38,16 +45,26 @@ function AccountMenuContent({ email, signOutAction }: AccountMenuProps) {
     <>
       <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
       <DropdownMenuSeparator />
-      <DropdownMenuItem asChild><Link href={personalSettingsHref('profile', from)}><UserRound />Personal settings</Link></DropdownMenuItem>
+      {from && businessSettingsOffered ? (
+        <DropdownMenuItem asChild>
+          <Link href={`/organizations/${from}/settings`}><Settings />Business settings</Link>
+        </DropdownMenuItem>
+      ) : null}
+      <DropdownMenuItem asChild><Link href={personalSettingsHref('profile', from)}><UserRound />Account settings</Link></DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Sign out</DropdownMenuItem>
     </>
   );
 }
 
-/** The `Sidebar`-footer trigger, for use inside a desktop/tablet sidebar. */
-export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
-  const { isMobile } = useSidebar();
+/**
+ * The `Sidebar`-footer trigger, for use inside a desktop/tablet sidebar. Collapsed, the menu opens
+ * to the right, beside the icon rail; expanded, it opens above its own trigger, attached to the
+ * footer it sits in, rather than floating off to the side of a full-width row.
+ */
+export function AccountMenu({ email, signOutAction, businessSettingsOffered }: AccountMenuProps) {
+  const { isMobile, state } = useSidebar();
+  const side = isMobile ? 'bottom' : state === 'collapsed' ? 'right' : 'top';
 
   return (
     <SidebarMenu>
@@ -71,8 +88,13 @@ export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
               <ChevronUp aria-hidden className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side={isMobile ? 'bottom' : 'right'} align="end" sideOffset={8} className="min-w-56">
-            <AccountMenuContent email={email} signOutAction={signOutAction} />
+          <DropdownMenuContent
+            side={side}
+            align={side === 'top' ? 'center' : 'end'}
+            sideOffset={8}
+            className={cx('min-w-56', side === 'top' && 'w-(--radix-dropdown-menu-trigger-width)')}
+          >
+            <AccountMenuContent email={email} signOutAction={signOutAction} businessSettingsOffered={businessSettingsOffered} />
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
@@ -87,7 +109,7 @@ export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
  * fight the other controls in it for space rather than sizing to its own content, exactly the
  * geometry `WorkspaceHeader`'s row depends on getting right around it.
  */
-export function CompactAccountMenu({ email, signOutAction }: AccountMenuProps) {
+export function CompactAccountMenu({ email, signOutAction, businessSettingsOffered }: AccountMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -106,7 +128,7 @@ export function CompactAccountMenu({ email, signOutAction }: AccountMenuProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="end" sideOffset={8} className="min-w-56">
-        <AccountMenuContent email={email} signOutAction={signOutAction} />
+        <AccountMenuContent email={email} signOutAction={signOutAction} businessSettingsOffered={businessSettingsOffered} />
       </DropdownMenuContent>
     </DropdownMenu>
   );

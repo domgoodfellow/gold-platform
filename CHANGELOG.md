@@ -5,7 +5,20 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
-### One composition for log in, sign up and password recovery
+### Sidebar identity and account chrome split from business navigation
+
+The sidebar's business header is now a clean single row — the mark genuinely centered when
+collapsed, the business name centered between the mark and the switcher chevron when expanded,
+with no role printed underneath it (the role still shows inside the opened switcher). The
+organization switcher now only switches business: Settings, Personal settings and Sign out have
+moved to the account control at the foot of the sidebar, which opens above itself when the sidebar
+is expanded and to the right when it is collapsed or on a phone, and now distinguishes "Business
+settings" (this organization's configuration map) from "Account settings" (this person's own).
+Settings is no longer a permanent sidebar row — it is still a real, directly addressable page,
+reached from the account menu and from contextual Configure links. On a phone, the compact context
+switcher and the compact account menu are two separate header controls again, instead of one
+combined operator menu. A first breadcrumb now reads a page's ancestry from the workspace that
+owns it (`Pipeline` under `Sales`) rather than a page writing its own trail by hand.
 
 The four sign-in screens now sit in one bordered card of a readable width. "Forgot password?" is on the Password label row, Google sign-in is set apart under an "or" rule, and creating an account, logging in or going back is a clear link at the foot of the card. The glowing background behind the form is removed, along with the three.js library that drew it. Nothing about how sign-in works changed.
 

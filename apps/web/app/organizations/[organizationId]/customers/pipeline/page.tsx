@@ -7,7 +7,7 @@ import { StageSettingsSheet } from '@/features/crm/sales/stage-settings-sheet';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
-import { areaLabel } from '@/lib/navigation';
+import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +30,7 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
     <AppPage>
       <PageHeader
         title={areaLabel('pipeline')}
+        crumbs={workspaceAncestry('pipeline')}
         description="Where each relationship has got to."
         actions={
           reception ? (

@@ -48,6 +48,11 @@ describe('the switcher', () => {
     expect(executable).not.toMatch(/usePathname|inPlatformScope|platformSubpath/);
   });
 
+  it('answers which business only — Settings, Personal settings and Sign out are the account menu\'s job', () => {
+    const executable = switcher.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(executable).not.toMatch(/Organization settings|Personal settings|Sign out|signOutAction/);
+  });
+
   it('is the list of where else, never the current context', () => {
     expect(switcher).toContain('organization.id !== current.organizationId');
   });

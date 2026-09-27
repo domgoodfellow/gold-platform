@@ -13,11 +13,10 @@ import {
   DropdownMenuTrigger,
 } from '@gold/ui/components/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@gold/ui/components/sidebar';
-import { Building2, ChevronsUpDown, LogOut, Settings, UserRound } from 'lucide-react';
+import { Building2, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 import { organizationHomeHref } from '@/lib/navigation';
-import { personalSettingsHref } from '@/lib/route/personal-settings';
 
 export const GOLD_MARK = (
   <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-foreground text-sm font-bold text-background">
@@ -67,17 +66,11 @@ export function deriveSwitcherView(current: SwitcherContext, organizations: Swit
 }
 
 function ContextSwitcherMenuContent({
-  current,
   triggerName,
   triggerRole,
   avatarInitial,
   businesses,
-  email,
-  signOutAction,
-}: SwitcherProps & ReturnType<typeof deriveSwitcherView> & {
-  email?: string;
-  signOutAction?: () => Promise<void>;
-}) {
+}: SwitcherProps & ReturnType<typeof deriveSwitcherView>) {
   return (
     <DropdownMenuContent side="bottom" align="start" className="w-64 min-w-64">
       <DropdownMenuLabel className="flex items-center gap-3 px-2 py-2">
@@ -109,28 +102,6 @@ function ContextSwitcherMenuContent({
           ))}
         </>
       ) : null}
-
-      {current.kind === 'business' && email && signOutAction ? (
-        <>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link href={`/organizations/${current.organizationId}/settings`}>
-              <Settings />Organization settings
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href={personalSettingsHref('profile', current.organizationId)}>
-              <UserRound />Personal settings
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className="truncate px-2 text-xs font-normal text-muted">{email}</DropdownMenuLabel>
-          <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}>
-            <LogOut />Sign out
-          </DropdownMenuItem>
-        </>
-      ) : null}
-
     </DropdownMenuContent>
   );
 }
@@ -138,18 +109,28 @@ function ContextSwitcherMenuContent({
 export function ContextSwitcher({ mark, current, organizations }: SwitcherProps) {
   const view = deriveSwitcherView(current, organizations);
 
-  // Nowhere else to go: a label, not a menu with nothing in it.
+  // Nowhere else to go: a label, not a menu with nothing in it. `asChild` swaps the underlying
+  // element for a non-interactive `<div>` — which means the button's own `flex` row classes land
+  // on that div too (Slot merges them onto the one child), so the row inside stays plain flex
+  // children rather than a nested `grid` that would fight the merged `flex` for `display`.
   if (!view.hasChoices) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton asChild size="lg" tooltip={view.triggerName} className="cursor-default hover:bg-transparent">
+          <SidebarMenuButton
+            asChild
+            size="lg"
+            tooltip={view.triggerName}
+            className="cursor-default justify-center hover:bg-transparent"
+          >
             <div>
-              {mark}
-              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{view.triggerName}</span>
-                <span className="truncate text-xs text-sidebar-foreground/70">{view.triggerRole}</span>
-              </div>
+              <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded">{mark}</span>
+              <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold group-data-[collapsible=icon]:hidden">
+                {view.triggerName}
+              </span>
+              {/* Balances the mark's width on the other side, so the centered name lands in the
+                  middle of the whole row rather than the middle of the space left of it. */}
+              <span aria-hidden className="size-8 shrink-0 group-data-[collapsible=icon]:hidden" />
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -165,16 +146,19 @@ export function ContextSwitcher({ mark, current, organizations }: SwitcherProps)
             <SidebarMenuButton
               size="lg"
               tooltip={view.triggerName}
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="justify-center data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              {mark}
-              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                <span className="flex items-center gap-1">
-                  <span className="truncate font-semibold">{view.triggerName}</span>
-                  <ChevronsUpDown aria-hidden className="size-3.5 shrink-0" />
-                </span>
-                <span className="truncate text-xs text-sidebar-foreground/70">{view.triggerRole}</span>
-              </div>
+              {/* Symmetric identity row when expanded — mark, centered name, chevron, the mark and
+                  chevron each a same-size (2rem) flex item — so the name is genuinely centered
+                  rather than left-aligned beside a wide mark column. Collapsed, the row falls back
+                  to the mark alone, centered by the row's own `justify-center` above. */}
+              <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded">{mark}</span>
+              <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold group-data-[collapsible=icon]:hidden">
+                {view.triggerName}
+              </span>
+              <span className="flex size-8 shrink-0 items-center justify-center group-data-[collapsible=icon]:hidden">
+                <ChevronsUpDown aria-hidden className="size-3.5 shrink-0" />
+              </span>
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <ContextSwitcherMenuContent
@@ -220,45 +204,6 @@ export function CompactContextSwitcher({ mark, current, organizations }: Switche
         mark={mark}
         current={current}
         organizations={organizations}
-        {...view}
-      />
-    </DropdownMenu>
-  );
-}
-
-/** One phone control for business, role, switching, organization settings and account actions. */
-export function CompactOperatorMenu({
-  mark,
-  current,
-  organizations,
-  email,
-  signOutAction,
-}: SwitcherProps & { email: string; signOutAction: () => Promise<void> }) {
-  const view = deriveSwitcherView(current, organizations);
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          tone="secondary"
-          size="small"
-          aria-label={`${view.triggerName}, ${view.triggerRole}. Open organization and account menu`}
-          className="min-w-0 gap-2 px-2"
-        >
-          <span aria-hidden className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded">
-            {mark}
-          </span>
-          <span className="max-w-32 truncate font-medium">{view.triggerName}</span>
-          <ChevronsUpDown aria-hidden size={14} className="shrink-0" />
-        </Button>
-      </DropdownMenuTrigger>
-      <ContextSwitcherMenuContent
-        mark={mark}
-        current={current}
-        organizations={organizations}
-        email={email}
-        signOutAction={signOutAction}
         {...view}
       />
     </DropdownMenu>

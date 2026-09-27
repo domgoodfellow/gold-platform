@@ -580,3 +580,22 @@ export function areaLabel(segment: string): string {
   if (!area) throw new Error(`No area has the segment "${segment}".`);
   return area.label;
 }
+
+/**
+ * The static ancestor trail for a page of a workspace, read from the one hierarchy that already
+ * owns sidebar nesting (`Area.workspace`) rather than a page inventing its own. The current
+ * organization is never one of these crumbs — the sidebar's own identity row already establishes
+ * it, and repeating it in the trail would say the same thing twice (`Platform → Business →
+ * Workspace → Page`, with the sidebar carrying the first two).
+ *
+ * Strips the catalogue's `Gild ` prefix rather than adding a second, unprefixed workspace name —
+ * the taxonomy rename that drops the prefix at the source is the next slice's job, not this one's.
+ * A page of a workspace with several pages still names only the workspace: `Pipeline` reads as
+ * `Sales / Pipeline`, not `Sales / Customers / Pipeline` — the workspace is the ancestor, its pages
+ * are peers.
+ */
+export function workspaceAncestry(segment: string): { label: string }[] {
+  const area = AREAS.find((candidate) => candidate.segment === segment);
+  if (!area?.workspace) return [];
+  return [{ label: workspaceLabel(area.workspace).replace(/^Gild /, '') }];
+}

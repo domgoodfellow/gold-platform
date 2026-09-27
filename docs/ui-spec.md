@@ -44,15 +44,18 @@ Three consequences that are easy to undo.
 Internal. Public, portal and auth surfaces remain flows or single-purpose pages. A customer must
 never meet a business-configuration concept or a Platform section.
 
-**Settings has two scopes, and they share a presentation without sharing ownership.** *Personal
+**Settings has two scopes, and they share a presentation without sharing ownership.** *Account
 settings* (`/settings/account`: Profile, Security & sign-in) is the signed-in person's identity —
 their email and password belong to them, so no business's Settings ever holds them (D45).
-*Organization settings* (`/organizations/{id}/settings`) is the selected business's. Both render
+*Business settings* (`/organizations/{id}/settings`) is the selected business's. Both render
 through `WorkspaceShell` and `SettingsPageFrame`, and each says whose it is in its own description.
-The account menu offers *Personal settings* and *Sign out* (switching is the context switcher's); it carries the
-business being left as `?org=`, which the page honours only for a business the caller belongs to,
-so Personal settings can offer *Back to* it. `/account` redirects here and has no page. Nothing
-organization-owned is listed in the Personal sidebar to fill it. Addresses:
+The account menu — the footer of the sidebar, or its compact phone equivalent — offers *Business
+settings* (only where the member may configure something there), *Account settings* and *Sign
+out*; switching business is the context switcher's alone, and Settings holds no permanent row of
+its own in the sidebar (`lib/shell.ts`'s `businessSettingsOffered`). The link to Account settings
+carries the business being left as `?org=`, which the page honours only for a business the caller
+belongs to, so Account settings can offer *Back to* it. `/account` redirects here and has no page.
+Nothing organization-owned is listed in the Personal sidebar to fill it. Addresses:
 `lib/route/personal-settings.ts`.
 
 **`SiteShell` is GOLD's chrome and belongs on GOLD's pages only** — the front page and the four
@@ -118,10 +121,13 @@ GOLD's own, and the member's platform permissions. The sections are Home, **Work
 (each a Gild Product with a real surface — a workspace with several pages holds them beneath it,
 so Gild Field opens onto Overview, Work, Schedule, Resources, Locations and Assets rather than six
 rows beside Customers), **Shared** (what every Product reuses: Insights), **Business**
-(administration of the current organization: Team, Connections, Plan & usage, Settings) and
+(administration of the current organization: Team, Connections, Plan & usage) and
 **Platform** — only inside GOLD and only with a platform permission — last; a
-section with nothing in it is not drawn. Account, a person's own settings, is none of these and sits
-in the header's account menu. No renderer names a capability, a module or
+section with nothing in it is not drawn. Settings is not a fourth Business row: it is reached from
+the account menu (*Business settings*, offered only where the member may configure something
+there — `lib/shell.ts`'s `businessSettingsOffered`) and from contextual Configure links, never a
+permanent sidebar destination. Account, a person's own settings, is none of these either, and sits
+beside Business settings in the same account menu. No renderer names a capability, a module or
 a role, and none is a second authorization system — hiding an item is courtesy and every page,
 domain function and policy behind it still refuses (I12).
 
@@ -129,8 +135,7 @@ domain function and policy behind it still refuses (I12).
 Communications has no calling workspace for its owner; a member without `call.place` does not
 operate calling in a business that has it. Business is likewise one item at a time by the
 authority for that item — Team by `role.manage`, Connections by `integration.manage` (and the
-product), Plan & usage by `billing.manage`, Settings when anything at all is configurable by that
-member — never a section a role has or lacks. **Configuring is not operating**: a Settings entry is
+product), Plan & usage by `billing.manage`. **Configuring is not operating**: a Settings entry is
 a `ConfigTarget` that borrows a workspace's entitlement and declares its own configuration
 permission, so `field.manage` reaches call outcomes without `call.place`. Setup is kernel;
 Agent-assisted drafting is an optional section inside it.

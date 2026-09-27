@@ -16,7 +16,6 @@ import {
   platformSubpath,
   type PlatformDestination,
 } from '@/lib/platform-navigation';
-import { PERSONAL_SETTINGS_ROOT } from '@/lib/route/personal-settings';
 import type { PlatformCapability } from '@/lib/domain/platform/permissions';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
@@ -173,6 +172,17 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
   return items;
 }
 
+/**
+ * Whether Business settings has anything this member may configure — the same gate the Business
+ * section once used to draw a permanent Settings row (D-restated: Settings is not one of the
+ * permanent rows, per the shell-chrome slice). The account menu's "Business settings" link and any
+ * contextual Configure link ask this before offering the destination at all.
+ */
+export function businessSettingsOffered(input: Pick<ShellInput, 'enabledModules' | 'featureAvailability' | 'capabilities'>): boolean {
+  const gate = { enabledModules: input.enabledModules, featureAvailability: input.featureAvailability, capabilities: input.capabilities };
+  return CONFIG_TARGETS.some((target) => configTargetOffered(target, gate));
+}
+
 export function projectShell(input: ShellInput): ShellSection[] {
   const { organizationId, enabledModules, featureAvailability, capabilities, platform } = input;
   const gate = { enabledModules, featureAvailability, capabilities };
@@ -215,10 +225,6 @@ export function projectShell(input: ShellInput): ShellSection[] {
       section: 'business',
     });
   }
-  const settings = AREAS.find((area) => area.segment === 'settings')!;
-  if (CONFIG_TARGETS.some((target) => configTargetOffered(target, gate))) {
-    business.push(areaItem(organizationId, settings, 'business'));
-  }
 
   const platformItems: NavItem[] = platform ? projectPlatform(organizationId, platform) : [];
 
@@ -255,11 +261,6 @@ export function itemContains(item: NavItem, key: string | null): boolean {
  */
 export function activeItemKey(sections: readonly ShellSection[], pathname: string): string | null {
   const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
-  // Personal settings has its own address but is drawn inside the business's shell, as part of
-  // Settings — that row is current there, though no `/organizations/...` path says so.
-  if (path === PERSONAL_SETTINGS_ROOT || path.startsWith(`${PERSONAL_SETTINGS_ROOT}/`)) {
-    return projectedItems(sections).some((item) => item.key === 'settings') ? 'settings' : null;
-  }
   let best: NavItem | null = null;
   for (const item of projectedItems(sections)) {
     const inside = item.exact ? path === item.href : path === item.href || path.startsWith(`${item.href}/`);

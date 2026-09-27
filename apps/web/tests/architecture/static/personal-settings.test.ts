@@ -56,8 +56,8 @@ describe('the one address', () => {
 describe('the menu', () => {
   const menu = read('components/containers/account-menu.tsx');
 
-  it('offers Personal settings and Sign out, and leaves switching context to the switcher', () => {
-    expect(menu).toContain('Personal settings');
+  it('offers Account settings and Sign out, and leaves switching context to the switcher', () => {
+    expect(menu).toContain('Account settings');
     expect(menu).toContain('Sign out');
     expect(menu).not.toContain('Switch organization');
     expect(menu).not.toContain('href="/account"');
@@ -81,8 +81,8 @@ describe('scope stays honest in both directions', () => {
     expect(read('app/organizations/[organizationId]/settings/page.tsx')).toContain('<PersonalSettingsEntries');
   });
 
-  it('the shell marks Settings current on a Personal settings address', () => {
-    expect(read('lib/shell.ts')).toContain('PERSONAL_SETTINGS_ROOT');
+  it('the shell no longer special-cases the Personal settings address — Settings is not a permanent sidebar row to mark current', () => {
+    expect(read('lib/shell.ts')).not.toContain('PERSONAL_SETTINGS_ROOT');
   });
 
   it('the return business is checked against the callers own memberships, never trusted', () => {

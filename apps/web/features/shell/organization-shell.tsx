@@ -15,8 +15,9 @@ import {
   organizationResolvedFeatureStates,
 } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
-import { projectShell } from '@/lib/shell';
-import { CompactOperatorMenu } from '@/components/containers/context-switcher';
+import { businessSettingsOffered, projectShell } from '@/lib/shell';
+import { CompactContextSwitcher } from '@/components/containers/context-switcher';
+import { CompactAccountMenu } from '@/components/containers/account-menu';
 import { WorkspaceHeader } from '@/components/containers/workspace-header';
 import { WorkspaceShell } from '@/components/containers/workspace-shell';
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
@@ -93,13 +94,11 @@ export async function OrganizationShell({
   // mounted, by route (`RouteAwareAgent`): the shell cannot know the path, and neither Agent may
   // borrow the other's scope.
   const canAnswerPlatform = platform && platform.size > 0 ? await canAnswerPlatformQuestions() : false;
-  const sections = projectShell({
-    organizationId,
-    enabledModules: activeModuleKeys(featureStates),
-    featureAvailability: availableFeatureKeys(featureStates),
-    capabilities: new Set(organization.capabilities),
-    platform,
-  });
+  const enabledModules = activeModuleKeys(featureStates);
+  const featureAvailability = availableFeatureKeys(featureStates);
+  const capabilities = new Set(organization.capabilities);
+  const sections = projectShell({ organizationId, enabledModules, featureAvailability, capabilities, platform });
+  const settingsOffered = businessSettingsOffered({ enabledModules, featureAvailability, capabilities });
 
   // `requireOrganization` already proved a session exists; this is a second, deliberately
   // separate read of the same session for the one extra fact the shell shows (I11's minimal
@@ -173,6 +172,7 @@ export async function OrganizationShell({
       sections={sections}
       email={email}
       signOutAction={signOutAction}
+      businessSettingsOffered={settingsOffered}
     />
   );
 
@@ -180,23 +180,27 @@ export async function OrganizationShell({
     The global header, composed from the shared `WorkspaceHeader`. Left to right: the sidebar's
     own trigger (from `md` up, where the sidebar exists at all) and — on a phone, where the
     sidebar itself renders nothing and `OrgNavBar` carries navigation instead — the two identity
-    controls the sidebar would otherwise have held: a compact context switcher and the account
-    menu immediately before Agent, so Agent stays the furthest-right control at every width. A
-    phone reaches Setup through `OrgNavBar`'s own first item while SETUP lasts, never through this
-    header. Page identity is each page's own `PageHeader`.
+    controls the sidebar would otherwise have held, kept as the two separate responsibilities they
+    are everywhere else: a compact context switcher in the context slot, and the account menu in
+    `beforeActions`, immediately before Agent, so Agent stays the furthest-right control at every
+    width. A phone reaches Setup through `OrgNavBar`'s own first item while SETUP lasts, never
+    through this header. Page identity is each page's own `PageHeader`.
   */
   const header = (
     <WorkspaceHeader
       navigationTrigger="md"
       context={
         <div className="flex min-w-0 items-center gap-3 md:hidden">
-          <CompactOperatorMenu
+          <CompactContextSwitcher
             mark={mark}
             current={{ kind: 'business', organizationId, name: organization.name, role: organization.role }}
             organizations={switchable}
-            email={email}
-            signOutAction={signOutAction}
           />
+        </div>
+      }
+      beforeActions={
+        <div className="md:hidden">
+          <CompactAccountMenu email={email} signOutAction={signOutAction} businessSettingsOffered={settingsOffered} />
         </div>
       }
     />
