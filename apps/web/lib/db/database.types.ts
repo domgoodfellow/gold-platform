@@ -1001,6 +1001,7 @@ export type Database = {
           joined_at: string | null
           left_at: string | null
           member_id: string | null
+          muted: boolean
           on_hold: boolean
           organization_id: string
           party: string
@@ -1014,6 +1015,7 @@ export type Database = {
           joined_at?: string | null
           left_at?: string | null
           member_id?: string | null
+          muted?: boolean
           on_hold?: boolean
           organization_id: string
           party: string
@@ -1027,6 +1029,7 @@ export type Database = {
           joined_at?: string | null
           left_at?: string | null
           member_id?: string | null
+          muted?: boolean
           on_hold?: boolean
           organization_id?: string
           party?: string
@@ -6874,6 +6877,15 @@ export type Database = {
         Args: { p_display_name: string; p_token: string }
         Returns: string
       }
+      add_call_participant: {
+        Args: {
+          p_call_id: string
+          p_external_id?: string
+          p_organization_id: string
+          p_party: string
+        }
+        Returns: string
+      }
       add_checklist_item: {
         Args: { p_label: string; p_position: number; p_work_item_id: string }
         Returns: string
@@ -7911,6 +7923,10 @@ export type Database = {
         Args: { p_domain_id: string; p_organization_id: string }
         Returns: undefined
       }
+      remove_call_participant: {
+        Args: { p_organization_id: string; p_participant_id: string }
+        Returns: undefined
+      }
       remove_connector_app_feature: {
         Args: { p_connector_app_id: string; p_feature_id: string }
         Returns: undefined
@@ -8043,6 +8059,22 @@ export type Database = {
           p_intro: string
           p_organization_id: string
           p_tagline: string
+        }
+        Returns: undefined
+      }
+      set_participant_hold: {
+        Args: {
+          p_hold: boolean
+          p_organization_id: string
+          p_participant_id: string
+        }
+        Returns: undefined
+      }
+      set_participant_muted: {
+        Args: {
+          p_muted: boolean
+          p_organization_id: string
+          p_participant_id: string
         }
         Returns: undefined
       }

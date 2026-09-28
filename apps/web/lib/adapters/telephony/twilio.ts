@@ -146,6 +146,32 @@ export function twilioTelephony(config: {
 
       return `${header}.${payload}.${signature}`;
     },
+
+    async updateParticipant(input): Promise<void> {
+      // Twilio's Conference resource takes either its SID or its friendly name in this path —
+      // the same fact `addToRoom` above already relies on to avoid a second lookup.
+      const form: Record<string, string> = {};
+      if (input.hold !== undefined) form.Hold = String(input.hold);
+      if (input.muted !== undefined) form.Muted = String(input.muted);
+      if (input.status) form.Status = input.status;
+
+      const response = await fetch(
+        `${API}/Accounts/${actingAccount}/Conferences/${encodeURIComponent(input.room)}/Participants/${encodeURIComponent(input.externalId)}.json`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${basic}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams(form).toString(),
+        },
+      );
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(`telephony refused to update the participant (${response.status}): ${detail}`);
+      }
+    },
   };
 }
 

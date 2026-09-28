@@ -62,6 +62,22 @@ export type TelephonyProvider = {
    * id rather than anything the vendor knows about. It is minted per session and never stored.
    */
   browserToken(input: { identity: string; ttlSeconds?: number }): Promise<string>;
+
+  /**
+   * Change what one leg is doing inside a room that already exists — the operation D38 promised
+   * once a conference existed: hold, mute, or end this one leg without ending the conference for
+   * everybody else in it. One method rather than three, because all three are the same REST
+   * shape at the carrier (update one participant) and a caller asks for only the field it means
+   * to change.
+   */
+  updateParticipant(input: {
+    room: string;
+    externalId: string;
+    hold?: boolean;
+    muted?: boolean;
+    /** Ends this one leg. The conference itself survives — that is the entire point of D38. */
+    status?: 'completed';
+  }): Promise<void>;
 };
 
 /**

@@ -1194,6 +1194,13 @@
         "scheduling"
       ]
     },
+    "apps/web/tests/integration/database/conference.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/phone-numbers.test.ts": {
       "category": "database-integration",
       "concerns": [
