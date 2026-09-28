@@ -17,6 +17,7 @@ import {
   PROVIDER_SERVICE_IMPLEMENTATION_STATES,
   PROVIDER_SERVICE_VENDOR_STATUSES,
 } from '@/lib/domain/providers/services';
+import { IMPLEMENTATION_STATE_LABEL } from '@/features/catalogue/implementation-state';
 import {
   removeConnectorAppAction,
   saveConnectorAction,
@@ -36,7 +37,6 @@ const CAPABILITY_LABEL: Record<string, string> = {
   triggers_actions: 'Triggers and actions',
   agent_tools: 'Agent tools',
 };
-const IMPLEMENTATION_LABEL: Record<string, string> = { planned: 'Planned', partial: 'Partial', available: 'Available' };
 const VENDOR_STATUS_LABEL: Record<string, string> = {
   generally_available: 'Generally available',
   preview: 'Preview',
@@ -226,7 +226,7 @@ export function AppForm({ connectorKey }: { connectorKey: string }) {
           <FieldLabel htmlFor="app-implementation">GildOps implementation</FieldLabel>
           <SelectInput id="app-implementation" name="implementationState" size="small" defaultValue="planned" className="w-36">
             {PROVIDER_SERVICE_IMPLEMENTATION_STATES.map((s) => (
-              <option key={s} value={s}>{IMPLEMENTATION_LABEL[s]}</option>
+              <option key={s} value={s}>{IMPLEMENTATION_STATE_LABEL[s]}</option>
             ))}
           </SelectInput>
         </Field>

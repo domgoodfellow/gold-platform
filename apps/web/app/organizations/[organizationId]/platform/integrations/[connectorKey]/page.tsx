@@ -4,17 +4,15 @@ import { notFound } from 'next/navigation';
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeader } from '@/components/containers/page-header';
 import { DividedList, Section, SectionHeading } from '@/components/containers/section';
-import { Badge } from '@/components/display/data';
 import { Hint } from '@/components/controls/inputs';
 import { getDb } from '@/lib/db/server';
 import { connectorLogoUrl, getConnector } from '@/lib/domain/integrations/connectors';
 import { isConnectorImplemented } from '@/lib/adapters/integrations';
 import { ConnectorIcon, isBuiltInConnector } from '@/features/integrations/catalogue/connector-icon';
 import { AppForm, ConnectorForm, LogoForm, RemoveAppButton } from '@/features/platform/integrations/connector-form';
+import { ImplementationStateBadge } from '@/features/catalogue/implementation-state';
 
 export const dynamic = 'force-dynamic';
-
-const IMPLEMENTATION_LABEL: Record<string, string> = { planned: 'Planned', partial: 'Partial', available: 'Available' };
 
 export default async function ConnectorPage({ params }: PageProps<'/organizations/[organizationId]/platform/integrations/[connectorKey]'>) {
   const { organizationId: goldId, connectorKey } = await params;
@@ -87,9 +85,7 @@ export default async function ConnectorPage({ params }: PageProps<'/organization
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge tone={app.implementationState === 'available' ? 'success' : 'neutral'}>
-                    {IMPLEMENTATION_LABEL[app.implementationState]}
-                  </Badge>
+                  <ImplementationStateBadge state={app.implementationState} />
                   <RemoveAppButton connectorKey={connector.key} appKey={app.key} />
                 </div>
               </li>

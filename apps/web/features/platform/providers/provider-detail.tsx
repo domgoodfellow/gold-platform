@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
 import { Section, SectionHeading } from '@/components/containers/section';
-import { Badge } from '@/components/display/data';
 import type { ProviderService } from '@/lib/domain/providers/services';
+import { ImplementationStateBadge } from '@/features/catalogue/implementation-state';
 
-const IMPLEMENTATION_LABEL: Record<string, string> = { planned: 'Planned', partial: 'Partial', available: 'Available' };
 const VENDOR_STATUS_LABEL: Record<string, string> = {
   generally_available: 'Generally available',
   preview: 'Preview',
@@ -61,9 +60,7 @@ export function ProviderDetail({
                           ) : null}
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1">
-                          <Badge tone={service.implementationState === 'available' ? 'success' : 'neutral'}>
-                            {IMPLEMENTATION_LABEL[service.implementationState]}
-                          </Badge>
+                          <ImplementationStateBadge state={service.implementationState} />
                           <span className="text-xs text-subtle">Vendor: {VENDOR_STATUS_LABEL[service.vendorStatus]}</span>
                         </div>
                       </li>

@@ -1,6 +1,7 @@
 import { Badge } from '@/components/display/data';
 import type { CatalogFeature } from '@/lib/domain/catalogue/catalogue';
 import type { ResolvedFeatureState } from '@/lib/domain/catalogue/organization-plans';
+import { ImplementationStateBadge } from '@/features/catalogue/implementation-state';
 
 /**
  * The four independent axes a Feature carries (section 4 of the brief) — never collapsed into
@@ -15,12 +16,6 @@ const LIFECYCLE_LABEL: Record<CatalogFeature['lifecycle'], string> = {
   deprecated: 'Deprecated',
 };
 
-const IMPLEMENTATION_LABEL: Record<CatalogFeature['implementationState'], string> = {
-  planned: 'Planned',
-  partial: 'Partial',
-  available: 'Available',
-};
-
 const PACKAGING_LABEL: Record<CatalogFeature['packagingDefault'], string> = {
   core: 'Core',
   included: 'Included',
@@ -28,16 +23,10 @@ const PACKAGING_LABEL: Record<CatalogFeature['packagingDefault'], string> = {
   add_on: 'Add-on',
 };
 
-export function ImplementationBadge({ state }: { state: CatalogFeature['implementationState'] }) {
-  return (
-    <Badge tone={state === 'available' ? 'success' : 'neutral'}>{IMPLEMENTATION_LABEL[state]}</Badge>
-  );
-}
-
 export function FeatureStatusBadges({ feature }: { feature: CatalogFeature }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      <ImplementationBadge state={feature.implementationState} />
+      <ImplementationStateBadge state={feature.implementationState} />
       {feature.lifecycle !== 'stable' ? <Badge>{LIFECYCLE_LABEL[feature.lifecycle]}</Badge> : null}
       <Badge>{PACKAGING_LABEL[feature.packagingDefault]}</Badge>
       {feature.metered ? <Badge>Metered</Badge> : null}
