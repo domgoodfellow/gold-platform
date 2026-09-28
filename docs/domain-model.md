@@ -98,6 +98,50 @@ only when assignment, filtering or reporting actually needs membership groups. E
 and per-recipient notifications likewise remain distinct future concepts rather than being
 forced into the append-only Event table.
 
+### Authorization and visibility vocabulary (Slice 0A)
+
+Locked here because the terms were being used loosely across Scheduling, Automation and the
+commercial catalogue at once. Each is a distinct question; none substitutes for another.
+
+- **Membership** answers *does this human belong to this organization* — a `memberships` row,
+  `(organization_id, user_id)`, nothing else. Carries no scheduling, HR or commercial state.
+- **Role** answers *what may this member do* — an organization's own named bundle of
+  Capabilities (`roles`), assigned to a Membership. A role's *name* carries no authority; only
+  its `capabilities` array does.
+- **Capability** is a fixed, platform-declared action a Role may hold (`CAPABILITIES`,
+  `capabilities.ts`), enforced by RLS/`app.has_capability`, never by a role's or preset's name
+  (I16, I12).
+- **Role preset** is a named starting template of capabilities (`ROLE_PRESETS`), copied once
+  into an ordinary Role at creation and never referenced again. Never a runtime classification —
+  `role-preset-not-classification.test.ts` guards this.
+- **Visibility scope** answers *which rows may this member read*, distinct from what they may
+  write. **Today there is exactly one scope: organization-wide.** The `resources`/`work_items`
+  select policies, and `listSchedule`/`listScheduleDays`, filter on `organization_id` alone —
+  nothing narrows a read below tenant membership, for any role. "Own schedule" and "team
+  schedule" are not narrower visibility scopes that exist today and happen to be unused; they
+  are **not representable at all**, because a Resource carries no Membership identity link and
+  no Team/group relationship exists to filter by (see "A future Team entity," above). This is a
+  current fact awaiting a decision, not a permanent rule — see the Resource↔Membership and Team
+  rows in `constraints.md`'s "Decided, not yet built." Until either exists, do not fake a
+  narrower scope with a role's name, a resource's own free-text name, `created_by`, a custom
+  field or a display name — `schedule-visibility-heuristic.test.ts` guards against exactly that
+  substitution, without forbidding the real relationship once it exists. Note also that
+  `work_items` itself is readable organization-wide independent of `listSchedule` — a future
+  scoped Schedule *read* alone would be a surface projection, not a security boundary, unless
+  `work_items`'s own visibility is scoped too.
+- **Human actor** is a signed-in `auth.users` row acting through its own session/JWT — every
+  ordinary write (`requireActor`, RLS's own `auth.uid()`).
+- **System / automation actor** is the identity a write carries when no human is present —
+  `app.acting_automation()`, a transaction-local Postgres setting set only inside `security
+  definer` `app.run_automation`, unreachable from any client role. Authoring a rule
+  (`automation.manage`) is a human capability checked once, at write time, and never re-checked
+  or reused as runtime execution authority — `automation-authority-boundary.test.ts` guards
+  this, and I22 governs what a rule's runtime authority may actually do.
+- **Organization scope** is the tenant boundary itself — `app.current_tenant_ids()` (I1–I3).
+- **Platform scope** is GOLD's own operator authority, orthogonal to any tenant —
+  `platform_staff`, D45, I21. Never derived from a role's name or from membership of GOLD's own
+  organization alone (I52).
+
 ## Canonical product and commercial model
 
 Use this vocabulary in product and platform UI. Existing persistence names are mapped below;

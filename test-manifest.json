@@ -412,6 +412,15 @@
         "auth"
       ]
     },
+    "apps/web/tests/architecture/static/automation-authority-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "security",
+        "auth",
+        "automation"
+      ],
+      "note": "Slice 0A. Authoring authority (automation.manage) vs. runtime authority (app.acting_automation()) stay separate."
+    },
     "apps/web/tests/architecture/static/catalogue-surface-coverage.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -568,6 +577,24 @@
         "ui",
         "work"
       ]
+    },
+    "apps/web/tests/architecture/static/role-preset-not-classification.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "security",
+        "auth",
+        "tenancy"
+      ],
+      "note": "Slice 0A. Role presets are templates only; nothing branches on a role/preset name."
+    },
+    "apps/web/tests/architecture/static/schedule-visibility-heuristic.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "security",
+        "scheduling",
+        "tenancy"
+      ],
+      "note": "Slice 0A. Guards against faking self/team schedule visibility via name, role, created_by or a custom field."
     },
     "apps/web/tests/architecture/static/organization-page-guard.test.ts": {
       "category": "architecture-static",
