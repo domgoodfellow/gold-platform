@@ -164,6 +164,14 @@
       ],
       "note": "Domain command over a patched PostgREST call."
     },
+    "apps/api/tests/component/test_domains_routing.py": {
+      "category": "python-component",
+      "concerns": [
+        "voice",
+        "routing"
+      ],
+      "note": "The routing resolver's own branching over a faked transport — business hours, ring strategies, fallback, cycle rejection, callback affinity, outbound AUTO/MANUAL."
+    },
     "apps/api/tests/component/test_handlers.py": {
       "category": "python-component",
       "concerns": [
@@ -915,6 +923,14 @@
         "catalogue"
       ]
     },
+    "apps/web/tests/integration/database/public-plan-catalog.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "catalogue",
+        "public"
+      ]
+    },
     "apps/web/tests/integration/database/gild-taxonomy.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1192,6 +1208,13 @@
       "category": "database-integration",
       "concerns": [
         "scheduling"
+      ]
+    },
+    "apps/web/tests/integration/database/routing.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
       ]
     },
     "apps/web/tests/integration/database/conference.test.ts": {

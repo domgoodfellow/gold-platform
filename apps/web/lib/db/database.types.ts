@@ -1189,6 +1189,167 @@ export type Database = {
           },
         ]
       }
+      communication_route_targets: {
+        Row: {
+          created_at: string
+          id: string
+          member_id: string
+          organization_id: string
+          position: number
+          route_id: string
+          slot: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_id: string
+          organization_id: string
+          position?: number
+          route_id: string
+          slot: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_id?: string
+          organization_id?: string
+          position?: number
+          route_id?: string
+          slot?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_route_targets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_route_targets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_route_targets_organization_id_member_id_fkey"
+            columns: ["organization_id", "member_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "communication_route_targets_organization_id_route_id_fkey"
+            columns: ["organization_id", "route_id"]
+            isOneToOne: false
+            referencedRelation: "communication_routes"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      communication_routes: {
+        Row: {
+          callback_affinity_enabled: boolean
+          created_at: string
+          created_by: string | null
+          destination_external_number: string | null
+          destination_route_id: string | null
+          destination_type: string
+          enabled: boolean
+          fallback_external_number: string | null
+          fallback_route_id: string | null
+          fallback_type: string
+          id: string
+          name: string
+          number_id: string | null
+          organization_id: string
+          ring_strategy: string
+          ring_timeout_seconds: number
+          round_robin_cursor: number
+          updated_at: string
+          when_mode: string
+        }
+        Insert: {
+          callback_affinity_enabled?: boolean
+          created_at?: string
+          created_by?: string | null
+          destination_external_number?: string | null
+          destination_route_id?: string | null
+          destination_type: string
+          enabled?: boolean
+          fallback_external_number?: string | null
+          fallback_route_id?: string | null
+          fallback_type?: string
+          id?: string
+          name: string
+          number_id?: string | null
+          organization_id: string
+          ring_strategy?: string
+          ring_timeout_seconds?: number
+          round_robin_cursor?: number
+          updated_at?: string
+          when_mode?: string
+        }
+        Update: {
+          callback_affinity_enabled?: boolean
+          created_at?: string
+          created_by?: string | null
+          destination_external_number?: string | null
+          destination_route_id?: string | null
+          destination_type?: string
+          enabled?: boolean
+          fallback_external_number?: string | null
+          fallback_route_id?: string | null
+          fallback_type?: string
+          id?: string
+          name?: string
+          number_id?: string | null
+          organization_id?: string
+          ring_strategy?: string
+          ring_timeout_seconds?: number
+          round_robin_cursor?: number
+          updated_at?: string
+          when_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_routes_organization_id_destination_route_id_fkey"
+            columns: ["organization_id", "destination_route_id"]
+            isOneToOne: false
+            referencedRelation: "communication_routes"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "communication_routes_organization_id_fallback_route_id_fkey"
+            columns: ["organization_id", "fallback_route_id"]
+            isOneToOne: false
+            referencedRelation: "communication_routes"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "communication_routes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_routes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_routes_organization_id_number_id_fkey"
+            columns: ["organization_id", "number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_numbers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       communication_threads: {
         Row: {
           channel: string
@@ -6925,6 +7086,10 @@ export type Database = {
         }
         Returns: string
       }
+      advance_route_round_robin: {
+        Args: { p_organization_id: string; p_route_id: string }
+        Returns: number
+      }
       apply_import_run: {
         Args: { p_organization_id: string; p_run_id: string }
         Returns: undefined
@@ -7385,6 +7550,10 @@ export type Database = {
         Args: { p_id: string }
         Returns: string[]
       }
+      organization_open_now: {
+        Args: { p_at?: string; p_organization_id: string }
+        Returns: boolean
+      }
       organization_plan_price:
         | {
             Args: {
@@ -7528,6 +7697,19 @@ export type Database = {
       public_homepage_preview: {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: Json
+      }
+      public_plan_catalog: {
+        Args: never
+        Returns: {
+          description: string
+          kind: string
+          label: string
+          plan_key: string
+          prices: Json
+          products: Json
+          quotas: Json
+          requires_contact_sales: boolean
+        }[]
       }
       publish_public_homepage_revision: {
         Args: { p_organization_id: string; p_revision_id: string }

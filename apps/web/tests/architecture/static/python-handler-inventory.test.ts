@@ -36,6 +36,8 @@ const INVENTORY: { file: string; route: string; trust: keyof typeof TRUST }[] = 
   { file: 'ai_ask', route: '/ai/ask', trust: 'bearer-token' },
   { file: 'crm_change_customer_stage', route: '/crm/change-customer-stage', trust: 'bearer-token' },
   { file: 'voice_wrap_up_call', route: '/voice/wrap-up-call', trust: 'bearer-token' },
+  { file: 'routing_preview_inbound', route: '/routing/preview-inbound', trust: 'bearer-token' },
+  { file: 'routing_preview_outbound', route: '/routing/preview-outbound', trust: 'bearer-token' },
   { file: 'integration_operations', route: '/integrations/operate', trust: 'bearer-token' },
   { file: 'provider_operations', route: '/providers/operate', trust: 'bearer-token' },
   { file: 'organization_domains', route: '/organizations/domains', trust: 'bearer-token' },

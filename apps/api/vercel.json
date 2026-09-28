@@ -56,6 +56,14 @@
       "destination": "/api/voice_wrap_up_call"
     },
     {
+      "source": "/routing/preview-inbound",
+      "destination": "/api/routing_preview_inbound"
+    },
+    {
+      "source": "/routing/preview-outbound",
+      "destination": "/api/routing_preview_outbound"
+    },
+    {
       "source": "/webhooks/stripe-platform-billing",
       "destination": "/api/stripe_platform_billing_webhook"
     },

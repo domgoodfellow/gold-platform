@@ -33,6 +33,8 @@ import api.integration_operations as integration_operations
 import api.organization_domains as organization_domains
 import api.provider_operations as provider_operations
 import api.public_chat as public_chat
+import api.routing_preview_inbound as routing_preview_inbound
+import api.routing_preview_outbound as routing_preview_outbound
 import api.stripe_platform_billing_webhook as platform_billing_webhook
 import api.stripe_webhook as stripe_webhook
 import api.voice_inbound as voice_inbound
@@ -277,6 +279,8 @@ PEOPLE = [
     (ai_ask, "load_assistant_settings", "answer"),
     (crm_change_customer_stage, "load_domain_settings", "change_customer_stage"),
     (voice_wrap_up_call, "load_domain_settings", "wrap_up_call"),
+    (routing_preview_inbound, "load_domain_settings", "resolve_inbound_route"),
+    (routing_preview_outbound, "load_domain_settings", "resolve_outbound_identity"),
     (integration_operations, "load_integration_settings", "operate"),
     (provider_operations, "load_provider_operations_settings", "operate"),
     (organization_domains, "load_provider_operations_settings", "run_domain_command"),

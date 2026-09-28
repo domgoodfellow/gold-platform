@@ -8,18 +8,23 @@ import { Hint } from '@/components/controls/inputs';
 import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/containers/page-drawer';
 import { configTarget } from '@/lib/navigation';
 import type { CallOutcome } from '@/lib/domain/reception/outcomes';
+import type { Route } from '@/lib/domain/reception/routing';
 import { OutboundIdentity } from './outbound-identity';
 import { CreateOutcomeForm } from './outcome-settings';
+import { RoutingSection } from './routing-section';
 
 /**
  * Communications' one Configure surface (`call-setup`, `calls#setup`). Eight sections, each a
  * concern the work order named — most are truthful "not yet" states rather than editable
  * controls, because a control with nothing behind it is worse than no control (D31).
  */
-export function VoiceSettingsSheet({ organizationId, number, outcomes, mayManageIdentity, mayConfigureOutcomes, role }: {
+export function VoiceSettingsSheet({ organizationId, number, outcomes, routes, numbers, members, mayManageIdentity, mayConfigureOutcomes, role }: {
   organizationId: string;
   number: string | null;
   outcomes: CallOutcome[];
+  routes: Route[];
+  numbers: { id: string; e164: string; label: string | null }[];
+  members: { id: string; displayName: string }[];
   mayManageIdentity: boolean;
   mayConfigureOutcomes: boolean;
   role: string;
@@ -43,7 +48,13 @@ export function VoiceSettingsSheet({ organizationId, number, outcomes, mayManage
           </section>
           <section>
             <GroupHeading>Routing</GroupHeading>
-            <Hint className="mt-2">Routing a call by time of day or by where it came from is not available yet.</Hint>
+            <div className="mt-2">
+              {mayConfigureOutcomes ? (
+                <RoutingSection organizationId={organizationId} routes={routes} numbers={numbers} members={members} />
+              ) : (
+                <Hint>Your role, {role}, cannot change routing.</Hint>
+              )}
+            </div>
           </section>
           <section>
             <GroupHeading>Caller identity</GroupHeading>

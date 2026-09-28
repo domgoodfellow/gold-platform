@@ -160,6 +160,28 @@
         "p_status"
       ]
     },
+    "organization_open_now": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/communications/routing.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_at",
+        "p_organization_id"
+      ]
+    },
+    "advance_route_round_robin": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/communications/routing.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_organization_id",
+        "p_route_id"
+      ]
+    },
     "record_external_readings": {
       "role": "automation_runner",
       "callers": [
