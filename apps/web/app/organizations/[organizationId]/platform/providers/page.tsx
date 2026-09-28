@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeader } from '@/components/containers/page-header';
@@ -45,7 +45,7 @@ export default async function ProvidersPage({ params }: PageProps<'/organization
     <AppPage>
       <PageHeader
         title="Providers"
-        crumbs={[{ label: 'Infrastructure' }]}
+        crumbs={platformAncestry(goldId, 'providers')}
         description="Infrastructure GildOps operates to deliver capabilities: each provider’s readiness, the organizations that depend on it, and what needs attention. Credentials are never read or displayed here."
       />
       <DataTable

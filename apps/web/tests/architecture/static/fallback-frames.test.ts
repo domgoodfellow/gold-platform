@@ -193,10 +193,13 @@ describe('the mobile sidebar trigger says what the layouts do', () => {
 });
 
 describe('Personal settings says it once', () => {
-  it('draws no crumb repeating the sidebar', () => {
+  it('draws no crumb repeating the sidebar — its own ancestor is the plain "Account" scope, never a business or organization id', () => {
     for (const page of ['app/settings/account/page.tsx', 'app/settings/account/security/page.tsx']) {
-      expect(read(page), page).not.toContain('crumbs=');
+      const source = read(page);
+      expect(source, page).toContain('crumbs={personalSettingsAncestry()}');
+      expect(source, page).not.toMatch(/organizationId|origin\.name/);
     }
+    expect(read('lib/route/personal-settings.ts')).toContain("export function personalSettingsAncestry(): { label: string }[]");
   });
 
   it('keeps its sections presentation-free, named once for the nav and the Settings index', () => {

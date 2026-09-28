@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { SectionHeading } from '@/components/containers/section';
@@ -36,7 +36,7 @@ export default async function PlansPage({ params }: PageProps<'/organizations/[o
 
   return (
     <AppPage>
-      <PageHeader title="Plans & Add-ons" actions={<CreatePlanSheet />} description="Reusable packaging over the canonical catalogue. A Plan is one organization&rsquo;s base package; an Add-on stacks alongside it." />
+      <PageHeader title="Plans & Add-ons" crumbs={platformAncestry(goldId, 'plans')} actions={<CreatePlanSheet />} description="Reusable packaging over the canonical catalogue. A Plan is one organization&rsquo;s base package; an Add-on stacks alongside it." />
 
       <SectionHeading>Plans</SectionHeading>
       {basePlans.length === 0 ? (

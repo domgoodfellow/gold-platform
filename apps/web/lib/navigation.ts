@@ -602,14 +602,18 @@ export function areaLabel(segment: string): string {
  * `Sales / Sales` or `Sales / Home`) — its `<h1>` is `workspaceLabel`, read directly. A page of a
  * workspace with several pages still names only the workspace: `Pipeline` reads as
  * `Sales / Pipeline`, not `Sales / Customers / Pipeline` — the workspace is the ancestor, its pages
- * are peers.
+ * are peers. The workspace ancestor is a real link to its canonical Home when the workspace has
+ * one (`WORKSPACES[].home`) — a workspace with no declared Home (Service, Finance, AI, Studio, not
+ * yet given a landing page) stays a plain label, since there is nowhere real to send the click.
  */
-export function workspaceAncestry(segment: string): { label: string }[] {
+export function workspaceAncestry(organizationId: string, segment: string): { label: string; href?: string }[] {
   const workspace = WORKSPACES.find((candidate) => candidate.home === segment);
   if (workspace) return [];
   const area = AREAS.find((candidate) => candidate.segment === segment);
   if (!area?.workspace) return [];
-  return [{ label: workspaceLabel(area.workspace) }];
+  const owner = WORKSPACES.find((candidate) => candidate.key === area.workspace)!;
+  if (!owner.home) return [{ label: owner.label }];
+  return [{ label: owner.label, href: areaHref(organizationId, owner.home) }];
 }
 
 /**

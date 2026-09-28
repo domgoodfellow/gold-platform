@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeader } from '@/components/containers/page-header';
@@ -24,7 +24,7 @@ export default async function ModulesPage({ params }: PageProps<'/organizations/
     <AppPage>
       <PageHeader
         title="Modules"
-        crumbs={[{ label: 'Catalog', href: platformHref(goldId, 'catalog') }]}
+        crumbs={[...platformAncestry(goldId, 'products'), { label: 'Products', href: platformHref(goldId, 'catalog') }]}
         description="Available code capabilities. A catalogue row can sell a module, but creating a new software module remains a development change."
       />
       <div>

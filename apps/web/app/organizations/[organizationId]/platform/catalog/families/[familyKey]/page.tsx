@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import { notFound } from 'next/navigation';
 import { RecordHeader } from '@/components/containers/record-header';
 import { Section, SectionHeading } from '@/components/containers/section';
@@ -87,7 +87,7 @@ export default async function ProductFamilyPage({ params }: PageProps<'/organiza
     <>
       <RecordHeader
         title={product.label}
-        crumbs={[{ label: 'Catalog', href: platformHref(goldId, 'catalog') }, { label: product.label }]}
+        crumbs={[...platformAncestry(goldId, 'products'), { label: 'Products', href: platformHref(goldId, 'catalog') }, { label: product.label }]}
         summary={product.description}
         actions={<EditProductSheet product={product} />}
       />

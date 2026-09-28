@@ -49,7 +49,7 @@ export default async function LocationsPage({
         */}
         <PageHeader
           title={areaLabel('locations')}
-          crumbs={workspaceAncestry('locations')}
+          crumbs={workspaceAncestry(organizationId, 'locations')}
           description="Places where this organization works, and the customers they serve."
           actions={mayAdd ? <CreateLocationTrigger /> : null}
           configure={mayConfigure}

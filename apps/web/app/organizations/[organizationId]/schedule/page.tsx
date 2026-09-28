@@ -86,7 +86,7 @@ export default async function SchedulePage({
           zone, so naming the zone is part of reading the page rather than decoration. */}
       <PageHeader
         title={areaLabel('schedule')}
-        crumbs={workspaceAncestry('schedule')}
+        crumbs={workspaceAncestry(organizationId, 'schedule')}
         description={
           <>
             Times shown in {organization.timezone} ·{' '}

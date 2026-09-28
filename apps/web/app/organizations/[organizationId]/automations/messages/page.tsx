@@ -16,7 +16,7 @@ export default async function AutomationMessagesPage({
 
   return (
     <>
-      <PageHeader title={areaLabel('automation-messages')} crumbs={workspaceAncestry('automation-messages')} />
+      <PageHeader title={areaLabel('automation-messages')} crumbs={workspaceAncestry(organizationId, 'automation-messages')} />
       <MessagesView
         organizationId={organizationId}
         templates={templates}

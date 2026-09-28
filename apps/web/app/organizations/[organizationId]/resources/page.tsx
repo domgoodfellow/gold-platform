@@ -35,7 +35,7 @@ export default async function ResourcesPage({
         */}
         <PageHeader
           title={areaLabel('resources')}
-          crumbs={workspaceAncestry('resources')}
+          crumbs={workspaceAncestry(organizationId, 'resources')}
           description="People, vehicles and equipment that work is scheduled against."
           actions={mayAdd ? <CreateResourceTrigger /> : null}
           configure={mayConfigure}

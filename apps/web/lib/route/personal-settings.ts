@@ -13,6 +13,15 @@ export const PERSONAL_SECTIONS = [
 export type PersonalSection = (typeof PERSONAL_SECTIONS)[number]['key'];
 
 /**
+ * The breadcrumb ancestor for every Personal settings page: a plain label, since "Account" has no
+ * landing page of its own distinct from Profile (which occupies `PERSONAL_SETTINGS_ROOT`) — the
+ * same reason a Platform sidebar group stays unlinked. `PageHeader` appends the current page.
+ */
+export function personalSettingsAncestry(): { label: string }[] {
+  return [{ label: 'Account' }];
+}
+
+/**
  * `organizationId` is the business the person came from, carried only so Personal settings can
  * offer a way back. It is a hint, never authority: the page checks it against the caller's own
  * memberships before showing anything.

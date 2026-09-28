@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@gold/ui/components/alert';
 import { AppPage } from '@/components/containers/app-page';
@@ -63,7 +63,7 @@ export default async function TwilioProviderPage({ params, searchParams }: PageP
     <AppPage>
       <PageHeader
         title="Twilio"
-        crumbs={[{ label: 'Infrastructure' }, { label: 'Providers', href: platformHref(goldId, 'providers') }]}
+        crumbs={[...platformAncestry(goldId, 'providers'), { label: 'Providers', href: platformHref(goldId, 'providers') }]}
         description="Telephony infrastructure GildOps operates for every organization: the parent account, the subaccount each organization runs inside, and the numbers beneath it."
         meta={
           <span className="inline-flex items-center gap-2">

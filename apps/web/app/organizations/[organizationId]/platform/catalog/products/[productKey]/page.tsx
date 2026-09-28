@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RecordHeader } from '@/components/containers/record-header';
@@ -32,7 +32,8 @@ export default async function ProductPage({
       <RecordHeader
         title={product.label}
         crumbs={[
-          { label: 'Catalog', href: platformHref(goldId, 'catalog') },
+          ...platformAncestry(goldId, 'products'),
+          { label: 'Products', href: platformHref(goldId, 'catalog') },
           { label: 'Line items', href: platformHref(goldId, 'catalog/products') },
           { label: product.label },
         ]}

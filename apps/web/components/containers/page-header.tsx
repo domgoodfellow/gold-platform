@@ -21,11 +21,17 @@ export type PageHeaderCrumb = Crumb;
  * places one, which is what makes the order impossible to get wrong; `SupportTrigger` is rendered
  * nowhere else. Each is paired with a `SupportRegistrar` on the page that holds its content.
  *
- * `crumbs` are ancestors only; `title` is the current page and the page's single `<h1>`.
+ * `crumbs` are ancestors only; `title` is the current page and the page's single `<h1>`. This
+ * always publishes a trail into the workspace bar — `ancestors + current page` — even when
+ * `crumbs` is empty, so no page leaves the sticky header's location area blank. The published
+ * current-page label is `breadcrumbLabel` when given, else `title` itself; the override exists
+ * only for a title that is visually richer (an icon, a status pill) than the plain text a
+ * breadcrumb should show.
  */
 export function PageHeader({
   title,
   crumbs,
+  breadcrumbLabel,
   description,
   meta,
   actions,
@@ -36,6 +42,8 @@ export function PageHeader({
 }: {
   title: ReactNode;
   crumbs?: PageHeaderCrumb[];
+  /** Overrides the current-page breadcrumb label; defaults to `title`. */
+  breadcrumbLabel?: ReactNode;
   description?: ReactNode;
   /** Short, secondary facts about the record — a schedule window, a status — under the title. */
   meta?: ReactNode;
@@ -53,7 +61,7 @@ export function PageHeader({
   return (
     <header className={cx('flex flex-wrap items-start justify-between gap-x-4 gap-y-3', className ?? 'mb-6')}>
       <div className="min-w-0 flex-1 basis-64">
-        {crumbs && crumbs.length > 0 ? <PageCrumbs crumbs={crumbs} /> : null}
+        <PageCrumbs crumbs={crumbs ?? []} current={breadcrumbLabel ?? title} />
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         {description ? <p className="mt-1 max-w-3xl text-sm text-muted">{description}</p> : null}
         {meta ? <div className="mt-1 text-sm text-muted">{meta}</div> : null}

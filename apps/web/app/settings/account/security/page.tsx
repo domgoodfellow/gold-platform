@@ -3,6 +3,7 @@ import { Section, SectionHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { CredentialsForm } from '@/app/(auth)/credentials-form';
 import { PersonalSettingsShell } from '@/features/account/personal-settings-shell';
+import { personalSettingsAncestry } from '@/lib/route/personal-settings';
 import { changePasswordAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,7 @@ export default async function SecurityPage({ searchParams }: PageProps<'/setting
         <>
           <PageHeader
             title="Security & sign-in"
+            crumbs={personalSettingsAncestry()}
             description="How you sign in. These settings protect your identity everywhere you use GildOps."
           />
           <Section>

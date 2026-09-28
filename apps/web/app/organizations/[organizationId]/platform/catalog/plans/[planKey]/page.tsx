@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RecordHeader } from '@/components/containers/record-header';
@@ -92,7 +92,7 @@ export default async function PlanDetailPage({ params }: PageProps<'/organizatio
     <>
       <RecordHeader
         title={plan.label}
-        crumbs={[{ label: 'Plans & Add-ons', href: platformHref(goldId, 'catalog/plans') }, { label: plan.label }]}
+        crumbs={[...platformAncestry(goldId, 'plans'), { label: 'Plans & Add-ons', href: platformHref(goldId, 'catalog/plans') }, { label: plan.label }]}
         summary={plan.description}
         actions={<EditPlanSheet plan={plan} />}
       />

@@ -60,7 +60,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
       <CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions}>
         <PageHeader
           title={areaLabel('customers')}
-          crumbs={workspaceAncestry('customers')}
+          crumbs={workspaceAncestry(organizationId, 'customers')}
           description="People and businesses this organization works for."
           actions={!emptyCollection ? (
             <>

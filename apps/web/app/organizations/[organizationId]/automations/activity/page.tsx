@@ -21,7 +21,7 @@ export default async function AutomationActivityPage({
 
   return (
     <>
-      <PageHeader title={areaLabel('automation-activity')} crumbs={workspaceAncestry('automation-activity')} />
+      <PageHeader title={areaLabel('automation-activity')} crumbs={workspaceAncestry(organizationId, 'automation-activity')} />
       <ActivityView runs={runs} deliveries={deliveries} />
     </>
   );

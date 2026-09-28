@@ -55,7 +55,7 @@ export default async function AssetsPage({
         */}
         <PageHeader
           title={areaLabel('assets')}
-          crumbs={workspaceAncestry('assets')}
+          crumbs={workspaceAncestry(organizationId, 'assets')}
           description="What work is about — machines, vehicles, properties, customer-owned equipment."
           actions={mayAdd ? <CreateAssetTrigger /> : null}
           configure={mayConfigure}

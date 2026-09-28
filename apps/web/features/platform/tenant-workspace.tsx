@@ -7,7 +7,7 @@ import { ButtonLink } from '@/components/controls/button';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/containers/page-header';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 
 const sections = [['Overview', ''], ['Plan & Entitlements', '/commercial'], ['Providers', '/providers'], ['Integrations', '/integrations'], ['Usage', '/usage'], ['Failures', '/failures']] as const;
 
@@ -40,7 +40,7 @@ export function TenantWorkspaceHeader({
     <>
       <PageHeader
         title={name}
-        crumbs={[{ label: 'Organizations', href: platformHref(goldId, 'organizations') }]}
+        crumbs={[...platformAncestry(goldId, 'organizations'), { label: 'Organizations', href: platformHref(goldId, 'organizations') }]}
         actions={
           canOpenBusiness ? (
             <ButtonLink href={`/organizations/${id}`} tone="secondary" size="small" className="gap-1.5">

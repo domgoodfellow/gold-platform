@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeader } from '@/components/containers/page-header';
@@ -105,7 +105,7 @@ export default async function CatalogPage({ params }: PageProps<'/organizations/
 
   return (
     <AppPage>
-      <PageHeader title="Products" crumbs={[{ label: 'Catalog' }]} description="What Gild offers, as a customer would recognize it: eight Products, each a coherent set of Modules and Features. The shared Workspace beneath them is listed last and is not one a business buys. Internal keys and legacy runtime mappings live one click deeper." />
+      <PageHeader title="Products" crumbs={platformAncestry(goldId, 'products')} description="What Gild offers, as a customer would recognize it: eight Products, each a coherent set of Modules and Features. The shared Workspace beneath them is listed last and is not one a business buys. Internal keys and legacy runtime mappings live one click deeper." />
 
       <div className="flex flex-wrap gap-3 text-sm">
         <Link href={platformHref(goldId, 'catalog/plans')} className="underline underline-offset-4">

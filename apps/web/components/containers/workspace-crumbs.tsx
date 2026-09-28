@@ -7,6 +7,7 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
+  BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@gold/ui/components/breadcrumb';
 import { cx, FOCUS_RING } from '../class-names';
@@ -29,30 +30,41 @@ export function WorkspaceCrumbSlot() {
   return <div ref={context?.setSlot} className="min-w-0 flex-1 sm:flex-none" />;
 }
 
-/** A page's trail, rendered into the workspace bar. Ancestors only; the title is the page's own `<h1>`. */
-export function PageCrumbs({ crumbs }: { crumbs: Crumb[] }) {
+/**
+ * A page's full trail, rendered into the workspace bar: `ancestors + current`. Always renders —
+ * there is no page with nothing to say here, since `current` is required and every `PageHeader`
+ * supplies one. The current page is the final, non-linked segment (`BreadcrumbPage`); an ancestor
+ * is a link only where it names a real destination, and plain text otherwise (a heading with no
+ * page of its own, such as a Platform sidebar group). The current segment carries the flexible,
+ * truncating space first, so a long record title yields before an ancestor does and never pushes
+ * the header's other controls out of view.
+ */
+export function PageCrumbs({ crumbs, current }: { crumbs: Crumb[]; current: ReactNode }) {
   const slot = useContext(CrumbSlotContext)?.slot;
-  if (!slot || crumbs.length === 0) return null;
+  if (!slot) return null;
   return createPortal(
     <Breadcrumb>
       <BreadcrumbList className="flex-nowrap gap-1 text-sm">
         {crumbs.map((crumb, index) => (
           <Fragment key={index}>
-            {index > 0 ? <BreadcrumbSeparator /> : null}
-            <BreadcrumbItem className="min-w-0">
+            <BreadcrumbItem className="min-w-0 shrink">
               {crumb.href ? (
                 <Link
                   href={crumb.href}
-                  className={cx('truncate rounded underline-offset-4 hover:text-foreground hover:underline', FOCUS_RING)}
+                  className={cx('block truncate rounded underline-offset-4 hover:text-foreground hover:underline', FOCUS_RING)}
                 >
                   {crumb.label}
                 </Link>
               ) : (
-                <span className="truncate">{crumb.label}</span>
+                <span className="block truncate">{crumb.label}</span>
               )}
             </BreadcrumbItem>
+            <BreadcrumbSeparator />
           </Fragment>
         ))}
+        <BreadcrumbItem className="min-w-0 flex-1">
+          <BreadcrumbPage className="block truncate">{current}</BreadcrumbPage>
+        </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>,
     slot,

@@ -104,7 +104,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
       ) : null}
       <PageHeader
         title={areaLabel('work')}
-        crumbs={workspaceAncestry('work')}
+        crumbs={workspaceAncestry(organizationId, 'work')}
         activity={types.length > 0}
         insights={mayInsight && types.length > 0}
         configure={mayConfigure && types.length > 0}

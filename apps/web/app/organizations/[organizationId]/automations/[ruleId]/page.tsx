@@ -73,7 +73,7 @@ export default async function AutomationRulePage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title={rule.name}
-        crumbs={[...workspaceAncestry('automation-rules'), { label: areaLabel('automation-rules'), href: areaHref(organizationId, 'automation-rules') }]}
+        crumbs={[...workspaceAncestry(organizationId, 'automation-rules'), { label: areaLabel('automation-rules'), href: areaHref(organizationId, 'automation-rules') }]}
         meta={mayManage ? undefined : rule.enabled ? 'Enabled' : 'Off'}
         className="mb-0"
       />

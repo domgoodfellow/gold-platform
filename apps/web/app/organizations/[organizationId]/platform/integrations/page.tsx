@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeader } from '@/components/containers/page-header';
@@ -22,6 +22,7 @@ export default async function PlatformIntegrationsPage({ params }: PageProps<'/o
     <AppPage>
       <PageHeader
         title="Connectors"
+        crumbs={platformAncestry(goldId, 'connectors')}
         description="The kinds of outside app GildOps supports, which a business then connects. Who GildOps buys infrastructure from is under Providers."
         actions={<ButtonLink href={platformHref(goldId, 'integrations/new')} size="small">New connector</ButtonLink>}
       />

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import { AppPage } from '@/components/containers/app-page';
 import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
 import { PageHeader } from '@/components/containers/page-header';
@@ -60,7 +60,7 @@ export default async function ProviderDetailPage({
     <AppPage>
       <PageHeader
         title={provider.label}
-        crumbs={[{ label: 'Infrastructure' }, { label: 'Providers', href: platformHref(goldId, 'providers') }]}
+        crumbs={[...platformAncestry(goldId, 'providers'), { label: 'Providers', href: platformHref(goldId, 'providers') }]}
         description="Infrastructure GildOps operates to deliver capabilities — each service's own implementation and vendor state, and what GildOps uses it for. Credentials are never read or displayed here."
         meta={<ProviderIcon providerKey={provider.key} label={provider.label} size="large" />}
         configure={hasAccountModel}

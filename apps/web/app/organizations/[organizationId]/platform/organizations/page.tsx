@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { AppPage } from '@/components/containers/app-page';
@@ -25,6 +25,7 @@ export default async function PlatformOrganizationsPage({
     <AppPage>
       <PageHeader
         title="Organizations"
+        crumbs={platformAncestry(goldId, 'organizations')}
         meta={`${total === 1 ? '1 organization' : `${total} organizations`} on GildOps`}
         actions={<ProvisionOrganizationDialog />}
       />

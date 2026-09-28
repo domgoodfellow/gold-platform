@@ -53,7 +53,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
     <AppPage>
       <PageHeader
         title={areaLabel('calls')}
-        crumbs={workspaceAncestry('calls')}
+        crumbs={workspaceAncestry(organizationId, 'calls')}
         description="Calling activity, follow-up and the identity this business calls from."
         actions={
           <div id="setup" className="scroll-mt-20">

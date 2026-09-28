@@ -30,7 +30,7 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
     <AppPage>
       <PageHeader
         title={areaLabel('pipeline')}
-        crumbs={workspaceAncestry('pipeline')}
+        crumbs={workspaceAncestry(organizationId, 'pipeline')}
         description="Where each relationship has got to."
         actions={
           reception ? (

@@ -259,6 +259,13 @@
         "automation"
       ]
     },
+    "apps/web/e2e/breadcrumbs.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "navigation",
+        "breadcrumbs"
+      ]
+    },
     "apps/web/e2e/catalog-plans.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import { AppPage } from '@/components/containers/app-page';
 import { SectionHeading } from '@/components/containers/section';
 import { PageHeader } from '@/components/containers/page-header';
@@ -27,7 +27,11 @@ export function PlatformOverview({
 
   return (
     <AppPage>
-      <PageHeader title="Overview" description="The state of every business running on GildOps." />
+      <PageHeader
+        title="Overview"
+        crumbs={platformAncestry(goldId, 'overview')}
+        description="The state of every business running on GildOps."
+      />
 
       <WidgetGrid className="mt-6">
         <Widget

@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeader } from '@/components/containers/page-header';
 import { getDb } from '@/lib/db/server';
@@ -27,7 +27,7 @@ export default async function ConfigureTwilioPage({ params, searchParams }: Page
       <PageHeader
         title={account ? `Configure ${account.label}` : 'Add a Twilio account'}
         crumbs={[
-          { label: 'Infrastructure' },
+          ...platformAncestry(goldId, 'providers'),
           { label: 'Providers', href: platformHref(goldId, 'providers') },
           { label: 'Twilio', href: platformHref(goldId, `providers/${key}`) },
         ]}

@@ -62,6 +62,7 @@ describe('platform control-plane scope boundaries', () => {
     const allowed = [
       /organizationId: goldId/g,
       /platformHref\(goldId,/g,
+      /platformAncestry\(goldId,/g,
       /requirePlatformArea\(goldId,/g,
       /goldId=\{goldId\}/g,
       /\{ goldId: string \}/g,

@@ -689,3 +689,97 @@ describe('the sidebar settles administration at the foot', () => {
     expect(readFileSync(`${WEB}/components/containers/context-switcher.tsx`, 'utf8')).not.toMatch(/platformHref|Platform administration/);
   });
 });
+
+describe('the breadcrumb contract — every page publishes a location, ancestors + current', () => {
+  const workspaceCrumbs = readFileSync(`${WEB}/components/containers/workspace-crumbs.tsx`, 'utf8');
+  const navigationSource = readFileSync(`${WEB}/lib/navigation.ts`, 'utf8');
+  const platformNavigationSource = readFileSync(`${WEB}/lib/platform-navigation.ts`, 'utf8');
+
+  it('WorkspaceHeader exposes exactly one breadcrumb slot, and it is the crumb portal target', () => {
+    expect(workspaceHeader.match(/<WorkspaceCrumbSlot/g)).toHaveLength(1);
+    expect(workspaceCrumbs).toContain('export function WorkspaceCrumbSlot()');
+  });
+
+  it('PageHeader always publishes a trail — no length guard stands between crumbs and the portal', () => {
+    const source = code(pageHeader);
+    // The historical guard this slice removes: rendering `PageCrumbs` only when ancestors exist.
+    expect(source).not.toMatch(/crumbs\s*&&\s*crumbs\.length/);
+    expect(source).not.toMatch(/crumbs\.length === 0\s*\?\s*null/);
+    expect(source).toContain('<PageCrumbs crumbs={crumbs ?? []} current={breadcrumbLabel ?? title} />');
+  });
+
+  it('PageCrumbs takes a required `current` and always renders once mounted in the slot — no ancestor-count escape hatch', () => {
+    expect(workspaceCrumbs).toContain('export function PageCrumbs({ crumbs, current }: { crumbs: Crumb[]; current: ReactNode })');
+    expect(workspaceCrumbs).not.toMatch(/crumbs\.length === 0/);
+  });
+
+  it('the current page renders as the non-linked BreadcrumbPage primitive, never a link', () => {
+    expect(workspaceCrumbs).toContain('import {');
+    expect(workspaceCrumbs).toMatch(/BreadcrumbPage,?\n/);
+    expect(workspaceCrumbs).toContain('<BreadcrumbPage className="block truncate">{current}</BreadcrumbPage>');
+    // Ancestors alone go through BreadcrumbLink/Link; the current item is never wrapped in one.
+    const currentBlock = workspaceCrumbs.slice(workspaceCrumbs.indexOf('<BreadcrumbItem className="min-w-0 flex-1">'));
+    expect(currentBlock).not.toContain('<Link');
+    expect(currentBlock).not.toContain('<BreadcrumbLink');
+  });
+
+  it('an ancestor is a link only where it names a real href, plain text otherwise — never a fabricated one', () => {
+    expect(workspaceCrumbs).toContain('crumb.href ? (');
+    expect(workspaceCrumbs).toContain('<span className="block truncate">{crumb.label}</span>');
+  });
+
+  it('workspaceAncestry reads WORKSPACES/AREAS, takes organizationId, and links a real workspace Home', () => {
+    expect(navigationSource).toContain('export function workspaceAncestry(organizationId: string, segment: string)');
+    expect(navigationSource).toContain("const owner = WORKSPACES.find((candidate) => candidate.key === area.workspace)!");
+    // A workspace with a declared Home gets a real href; one without stays a plain label.
+    expect(navigationSource).toContain('if (!owner.home) return [{ label: owner.label }];');
+    expect(navigationSource).toContain('return [{ label: owner.label, href: areaHref(organizationId, owner.home) }];');
+  });
+
+  it('a workspace Home names no ancestor of its own — no "Field / Field"', () => {
+    expect(navigationSource).toContain('const workspace = WORKSPACES.find((candidate) => candidate.home === segment);');
+    expect(navigationSource).toMatch(/if \(workspace\) return \[\];/);
+  });
+
+  it('platformAncestry reads PLATFORM_DESTINATIONS/PLATFORM_GROUPS — no second string table of "Infrastructure"/"Catalog"/"Commercial" in a page', () => {
+    expect(platformNavigationSource).toContain('export function platformAncestry(organizationId: string, destinationKey: string)');
+    expect(platformNavigationSource).toContain("PLATFORM_DESTINATIONS.find((candidate) => candidate.key === destinationKey)");
+    expect(platformNavigationSource).toContain('PLATFORM_GROUPS.find((candidate) => candidate.key === destination.under)');
+
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) walk(`${dir}/${entry.name}`);
+        else if (/\.tsx$/.test(entry.name)) {
+          const source = readFileSync(`${dir}/${entry.name}`, 'utf8');
+          if (/label:\s*'Infrastructure'|label:\s*'Catalog'|label:\s*'Commercial'/.test(source)) {
+            offenders.push(`${dir}/${entry.name}`.slice(WEB.length));
+          }
+        }
+      }
+    };
+    walk(`${WEB}/app/organizations/[organizationId]/platform`);
+    walk(`${WEB}/features/platform`);
+    expect(offenders).toEqual([]);
+  });
+
+  it('RecordHeader drops its own final crumb, so the current record is never duplicated as its own parent', () => {
+    expect(recordHeader).toContain('crumbs={crumbs.slice(0, -1)}');
+  });
+
+  it('no page renders PageCrumbs directly — only PageHeader does, so every page goes through one contract', () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) walk(`${dir}/${entry.name}`);
+        else if (/\.tsx$/.test(entry.name) && entry.name !== 'page-header.tsx' && readFileSync(`${dir}/${entry.name}`, 'utf8').includes('<PageCrumbs')) {
+          offenders.push(`${dir}/${entry.name}`.slice(WEB.length));
+        }
+      }
+    };
+    walk(`${WEB}/app`);
+    walk(`${WEB}/features`);
+    walk(`${WEB}/components`);
+    expect(offenders).toEqual([]);
+  });
+});

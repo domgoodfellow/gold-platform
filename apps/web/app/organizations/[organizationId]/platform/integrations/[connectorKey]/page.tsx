@@ -1,5 +1,5 @@
 import { requirePlatformArea } from '@/lib/route/platform';
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import { notFound } from 'next/navigation';
 import { AppPage } from '@/components/containers/app-page';
 import { PageHeader } from '@/components/containers/page-header';
@@ -27,7 +27,7 @@ export default async function ConnectorPage({ params }: PageProps<'/organization
     <AppPage>
       <PageHeader
         title={connector.name}
-        crumbs={[{ label: 'Connectors', href: platformHref(goldId, 'integrations') }]}
+        crumbs={[...platformAncestry(goldId, 'connectors'), { label: 'Connectors', href: platformHref(goldId, 'integrations') }]}
         meta={<ConnectorIcon connector={connector} logoUrl={logoUrl} size="large" />}
       />
       {connector.status !== 'planned' && !isConnectorImplemented(connector.key) ? (

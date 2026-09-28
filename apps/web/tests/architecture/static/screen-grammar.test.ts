@@ -145,7 +145,7 @@ describe('muted is a text role and is never a background', () => {
 describe('Platform Overview follows the shared header geometry', () => {
   it('carries its description in PageHeader rather than a Hint beneath it', () => {
     const overview = read(`${WEB}/features/platform/platform-overview.tsx`);
-    expect(overview).toContain('<PageHeader title="Overview" description="The state of every business running on GildOps." />');
+    expect(overview).toMatch(/<PageHeader\s+title="Overview"\s+crumbs=\{platformAncestry\(goldId, 'overview'\)\}\s+description="The state of every business running on GildOps\."\s*\/>/);
     expect(overview).not.toContain('<Hint');
   });
 });

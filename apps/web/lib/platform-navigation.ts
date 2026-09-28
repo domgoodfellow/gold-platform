@@ -74,6 +74,28 @@ export function platformRouteRequires(path: string): PlatformCapability {
   return matches.reduce((best, item) => (item.path.length > best.path.length ? item : best)).requires;
 }
 
+/**
+ * The ancestor trail for a Platform destination's own page, read from this one registry rather
+ * than a page hand-writing `Infrastructure` or `Catalog` as a string. `Platform` always leads,
+ * linking to the root. A destination nested under a sidebar group (`PLATFORM_GROUPS`) adds that
+ * group's label — unlinked, since a group opens no page of its own here (its sidebar heading
+ * merely borrows its first destination's `href`; the ancestry trail names the group as a label,
+ * not a second link to a page the current one may already be). The destination's own page is
+ * never included — `PageHeader` appends the current page automatically. A page nested one level
+ * further than a registered destination (a product, a plan, a provider) extends this with its own
+ * extra crumb rather than this function inventing one.
+ */
+export function platformAncestry(organizationId: string, destinationKey: string): { label: string; href?: string }[] {
+  const destination = PLATFORM_DESTINATIONS.find((candidate) => candidate.key === destinationKey);
+  if (!destination) throw new Error(`No platform destination has the key "${destinationKey}".`);
+  const trail: { label: string; href?: string }[] = [{ label: 'Platform', href: platformHref(organizationId, '') }];
+  if (destination.under) {
+    const group = PLATFORM_GROUPS.find((candidate) => candidate.key === destination.under)!;
+    trail.push({ label: group.label });
+  }
+  return trail;
+}
+
 const PLATFORM_ROOT = /^\/organizations\/[0-9a-f-]{36}\/platform(?:\/(.*))?$/i;
 
 /** The part of a pathname beneath the platform root, or `null` when the path is not a Platform address. */

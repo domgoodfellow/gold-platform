@@ -300,15 +300,26 @@ page or record am I on* and holds that page's controls. They were one bar once, 
 which is about the workspace. A control belongs to the layer whose scope it has.
 
 **`WorkspaceHeader` — global, sticky.** It carries its own background: the page moves underneath
-it, and a transparent bar shows rows sliding through the text. It holds the breadcrumb trail and
-no title, status or page action. The page writes the trail (`PageHeader`'s `crumbs`) and it
-renders here, through a slot, so a page never draws its own.
+it, and a transparent bar shows rows sliding through the text. It holds the persistent breadcrumb
+location and no title, status or page action.
+
+Ownership is durable, not a page-by-page convention: **every** `PageHeader` publishes a trail —
+`ancestors + current page` — into the workspace bar automatically, even when it has no ancestors.
+There is no page with nothing to say here. The current page is always the trail's final,
+non-linked segment (the shared `Breadcrumb` primitives' current-page role); an ancestor is a link
+only where it names a real destination someone can navigate to, and plain text otherwise (a
+heading with no page of its own, such as a Platform sidebar group). Ancestry itself is read from
+the existing navigation registries — `workspaceAncestry` from `WORKSPACES`/`AREAS`, `platformAncestry`
+from `PLATFORM_DESTINATIONS`/`PLATFORM_GROUPS` — never a page's own hand-written string, and never
+a pathname-to-title lookup. Because publishing is unconditional, location stays visible in the
+sticky header while the page beneath it scrolls, on every authenticated route: an organization
+workspace, Platform, or Account.
 
 | | What | Which widths |
 |---|---|---|
 | Left | the sidebar trigger | `md` and up in the organization shell (which Platform renders inside), where a phone gets the bottom bar instead; every width in Personal settings and the fallback frame, whose only phone navigation is the sidebar sheet |
 | Left | the compact context switcher — the business's mark and name, opening the same menu the sidebar's own switcher does — nothing about Setup lives in this header at any width | below `md` only, in the organization shell — the sidebar says it above that |
-| Left, after the above | the breadcrumb trail — ancestors only, on a page that passes `crumbs` | all |
+| Left, after the above | the breadcrumb trail — ancestors, then the current page, always published | all |
 | Right, before Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
 | Right, furthest | Agent | all — always the last control in the row |
 
