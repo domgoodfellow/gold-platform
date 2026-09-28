@@ -74,6 +74,27 @@ export async function listPortalInvites(
   }));
 }
 
+/** Whether this business has invited any customer to the portal at all, and how many links are still live — the one business-wide fact the per-customer invite model supports. */
+export async function organizationPortalInviteCount(
+  db: Db,
+  input: { organizationId: string },
+): Promise<{ total: number; active: number }> {
+  const { count: total, error: totalError } = await db
+    .from('customer_portal_invites')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', input.organizationId);
+  if (totalError) throw new DomainError(totalError.message, 'portal.list_failed');
+
+  const { count: active, error: activeError } = await db
+    .from('customer_portal_invites')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', input.organizationId)
+    .is('revoked_at', null);
+  if (activeError) throw new DomainError(activeError.message, 'portal.list_failed');
+
+  return { total: total ?? 0, active: active ?? 0 };
+}
+
 /**
  * An update, not a delete — a business wants to see that a link existed and was withdrawn.
  *

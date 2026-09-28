@@ -5,6 +5,19 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Gild Studio becomes a real workspace
+
+Studio moves from a registered-but-invisible workspace to one with a real Home: `/studio` reads
+what is currently public for this business — website state (draft, in review or published, with
+its revision number and last-published date), whether a bookable type exists, how many customers
+currently hold a live portal invite, and whether a brand logo and colour are set — and surfaces it
+as a plain sidebar row, since it has exactly one page today. Nothing about Website, Branding or
+Domains moves: their existing routes, forms and Settings-map entries are unchanged, and Studio's
+Home only links into them. A small `studioOverview` projection (`lib/domain/studio/`) reads each
+existing domain's own state rather than inventing a second one; the one new read is
+`organizationPortalInviteCount`, since the per-customer portal invite model had no organization-wide
+count before. Service, Finance and AI remain registered with no page.
+
 ### A business connects its own domain, through GildOps' one Vercel account
 
 Settings → Domains shows a business its GildOps-managed address (its own public name under the

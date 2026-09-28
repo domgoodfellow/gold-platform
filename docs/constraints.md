@@ -2346,7 +2346,7 @@ the other.
 | **AI** | assistants, business-intelligence interaction, knowledge and tool configuration | Agent rail/runtime only; no Home |
 | **Automations** | durable rules, triggers, sequences and workflow execution | Home, Rules, Messages and Activity are present |
 | **Field** | operational work, schedule, resources, locations and equipment/assets | implemented |
-| **Studio** | authoring and publishing website, forms, brand and portal experiences | public/settings capabilities exist; no Home |
+| **Studio** | authoring and publishing website, forms, brand and portal experiences | Home summarizes public-surface status; Website, Forms, Brand and Portal remain configuration reached from Settings, not yet real pages |
 
 **Canonical records and projections.** A business record exists canonically once. Customers,
 invoices, conversations/threads, work items, documents, genuinely shared forms and genuinely
