@@ -145,11 +145,11 @@ describe('the operator shell navigation', () => {
     ]);
     const withAPage = (key: string) => AREAS.some((area) => area.workspace === key && area.group === 'workspaces' && area.sidebar !== false);
     expect(WORKSPACES.filter((workspace) => withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
-      'sales', 'comms', 'automations', 'field',
+      'sales', 'comms', 'automations', 'field', 'studio',
     ]);
     // Registered, not yet visible. Delete a key here in the same change that gives it a real page.
     expect(WORKSPACES.filter((workspace) => !withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
-      'service', 'finance', 'ai', 'studio',
+      'service', 'finance', 'ai',
     ]);
   });
 
@@ -173,7 +173,7 @@ describe('the operator shell navigation', () => {
   it('gives every workspace an owner-side map: pages and configuration name the workspace that owns them', () => {
     const owner = (segment: string) => AREAS.find((area) => area.segment === segment)?.workspace;
     expect(['sales', 'customers', 'pipeline'].map(owner)).toEqual(['sales', 'sales', 'sales']);
-    expect(['comms', 'calls'].map(owner)).toEqual(['comms', 'comms']);
+    expect(['comms', 'calls', 'comms-messages', 'comms-numbers'].map(owner)).toEqual(['comms', 'comms', 'comms', 'comms']);
     expect(['automations', 'automation-rules'].map(owner)).toEqual(['automations', 'automations']);
     expect(owner('pricing')).toBe('finance');
     // Insights is cross-cutting, not a workspace (D66) — it belongs to no one workspace either.
@@ -244,9 +244,10 @@ describe('the operator shell navigation', () => {
     expect(inSidebar).toEqual([
       'home',
       'sales', 'customers', 'pipeline',
-      'comms', 'calls',
+      'comms', 'calls', 'comms-messages', 'comms-numbers',
       'automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'field', 'work', 'schedule', 'resources', 'locations', 'assets',
+      'studio',
       'settings',
     ]);
     for (const segment of ['pricing', 'fields', 'roles', 'integrations', 'setup']) {
@@ -865,6 +866,8 @@ describe('the organization shell taxonomy', () => {
   it('names the workspaces in the operator’s words', () => {
     const labels = new Map(AREAS.map((area) => [area.segment, area.label]));
     expect(labels.get('calls')).toBe('Calls');
+    expect(labels.get('comms-messages')).toBe('Text messages');
+    expect(labels.get('comms-numbers')).toBe('Numbers');
     expect(labels.get('automations')).toBe('Automations');
     expect(labels.get('automation-rules')).toBe('Rules');
     expect(labels.get('insights')).toBe('Insights');
@@ -885,9 +888,9 @@ describe('the organization shell taxonomy', () => {
     for (const area of inSidebar) {
       expect(existsSync(`${ROUTES}/${area.route ?? area.segment}/page.tsx`)).toBe(true);
     }
-    // Nor a workspace row with nothing behind it: Service, Finance, AI and Studio are registered but
+    // Nor a workspace row with nothing behind it: Service, Finance and AI are registered but
     // have no operating page, so `projectShell` draws none (shell-projection.test.ts proves the rows).
-    for (const absent of ['service', 'finance', 'ai', 'studio']) {
+    for (const absent of ['service', 'finance', 'ai']) {
       expect(inSidebar.some((area) => area.workspace === absent), `${absent} has no operating surface yet`).toBe(false);
     }
   });

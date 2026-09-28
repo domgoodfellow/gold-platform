@@ -3869,8 +3869,9 @@ export type Database = {
           label: string | null
           lifecycle: string
           organization_id: string
+          origin: string
           outbound_enabled: boolean
-          provider_resource_id: string
+          provider_resource_id: string | null
           purpose: string
           updated_at: string
         }
@@ -3885,8 +3886,9 @@ export type Database = {
           label?: string | null
           lifecycle?: string
           organization_id: string
+          origin?: string
           outbound_enabled?: boolean
-          provider_resource_id: string
+          provider_resource_id?: string | null
           purpose?: string
           updated_at?: string
         }
@@ -3901,8 +3903,9 @@ export type Database = {
           label?: string | null
           lifecycle?: string
           organization_id?: string
+          origin?: string
           outbound_enabled?: boolean
-          provider_resource_id?: string
+          provider_resource_id?: string | null
           purpose?: string
           updated_at?: string
         }
@@ -8166,6 +8169,16 @@ export type Database = {
           p_topic: string
         }
         Returns: undefined
+      }
+      sync_phone_number: {
+        Args: {
+          p_e164: string
+          p_label?: string
+          p_organization_id: string
+          p_provider_resource_id: string
+          p_status?: string
+        }
+        Returns: string
       }
       time_committed: {
         Args: {

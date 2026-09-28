@@ -24,6 +24,6 @@ describe('catalogue implementation evidence', () => {
     const ownership = CATALOGUE_SURFACE_COVERAGE.find((entry) => entry.key === 'sales.customers_contacts.ownership_assignment');
     const inventory = CATALOGUE_SURFACE_COVERAGE.find((entry) => entry.key === 'comms.voice.number_inventory');
     expect(ownership).toMatchObject({ catalogueState: 'available', domain: 'none', ui: 'none' });
-    expect(inventory).toMatchObject({ catalogueState: 'available', ui: 'none' });
+    expect(inventory).toMatchObject({ catalogueState: 'available', ui: 'partial', interaction: 'read-only' });
   });
 });

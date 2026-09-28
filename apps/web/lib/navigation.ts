@@ -40,7 +40,7 @@ export type AreaGroup = 'home' | 'workspaces' | 'settings';
  * owner, Product, Plan, Module, Feature or permission (D67). Marketing and Commerce are named
  * there and not registered: each waits for a catalogue Product to map to. Registered is not visible. A workspace draws a row in the sidebar only
  * when at least one page names it (`Area.workspace`) and that page is reachable to this person
- * (`projectShell`), so Service, Finance, AI and Studio are registered here and absent from
+ * (`projectShell`), so Service, Finance and AI are registered here and absent from
  * navigation until a real page arrives. Navigation never leads to an empty placeholder, and
  * readiness is a fact about the pages, never a flag on the workspace or an entitlement.
  *
@@ -69,7 +69,7 @@ export const WORKSPACES = [
   { key: 'ai', label: 'AI', product: 'agents', home: undefined },
   { key: 'automations', label: 'Automations', product: 'automations', home: 'automations' },
   { key: 'field', label: 'Field', product: 'field', home: 'field' },
-  { key: 'studio', label: 'Studio', product: 'studio', home: undefined },
+  { key: 'studio', label: 'Studio', product: 'studio', home: 'studio' },
 ] as const;
 
 export type WorkspaceKey = (typeof WORKSPACES)[number]['key'];
@@ -332,12 +332,17 @@ export const AREAS: readonly Area[] = [
   { segment: 'customers', label: 'Customers', group: 'workspaces', workspace: 'sales', phone: true },
   { segment: 'pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'sales', route: 'customers/pipeline', module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
   // Communications. Home carries the same entitlement as Calls, the one channel implemented, so
-  // the workspace draws no row for a business without it. SMS, email and an inbox are not pages
-  // until they exist. The specific Voice features Calls is — not the pipeline features that share
-  // the `reception` module key (D46's many-to-many seam, and the reason `featureKeys` exists
-  // rather than gating on `module` alone).
+  // the workspace draws no row for a business without it. The specific Voice features Calls is —
+  // not the pipeline features that share the `reception` module key (D46's many-to-many seam, and
+  // the reason `featureKeys` exists rather than gating on `module` alone). Messages and Numbers
+  // are the domain-facing shells for SMS and the number inventory: each names the canonical
+  // catalogue Features it is actually the surface for, so a deployment where those Features are
+  // still `planned` in the catalogue (SMS today) shows the page and says so truthfully rather
+  // than riding along on the `reception` module the way an unqualified module gate would.
   { segment: 'comms', label: 'Communications', group: 'workspaces', workspace: 'comms', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
   { segment: 'calls', label: 'Calls', group: 'workspaces', workspace: 'comms', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
+  { segment: 'comms-messages', label: 'Text messages', group: 'workspaces', workspace: 'comms', route: 'comms/messages', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_sms', 'outbound_sms'] },
+  { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'comms', route: 'comms/numbers', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['number_inventory', 'caller_id'] },
   // Automations: building, reviewing and observing rules is ongoing work, so it is a workspace.
   // Home carries Rules' own entitlement, so the workspace draws no row for a business without it.
   // Rules, Messages and Activity are three pages of it, each its own route — the sidebar is the
@@ -355,6 +360,11 @@ export const AREAS: readonly Area[] = [
   { segment: 'resources', label: 'Resources', group: 'workspaces', workspace: 'field' },
   { segment: 'locations', label: 'Locations', group: 'workspaces', workspace: 'field' },
   { segment: 'assets', label: 'Equipment & Assets', group: 'workspaces', workspace: 'field', module: 'assets', featureKeys: ['assets'] },
+  // Studio: what is public for this business, and what needs attention. Home is a real page and,
+  // for now, the workspace's only one — kernel, like Sales and Field's own Home, so a member sees
+  // it regardless of role. Website, Forms, Brand and Portal remain configuration reached from
+  // Settings (`CONFIG_TARGETS`) until each earns a real operating page of its own (D68).
+  { segment: 'studio', label: 'Studio', group: 'workspaces', workspace: 'studio' },
 
   // Insights: dashboards and reports over the one reporting aggregate every workspace reads. Not a
   // workspace of its own (D66) — no permanent sidebar row — but still a real, directly addressable

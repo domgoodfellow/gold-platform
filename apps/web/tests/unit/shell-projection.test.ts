@@ -64,26 +64,32 @@ describe('GOLD owner who is also a platform operator', () => {
   it('sees the business workspaces GOLD is entitled to', () => {
     expect(keys(sections, 'home')).toEqual(['home']);
     // One row per registered workspace that has a reachable area, in the order a customer meets
-    // them. Service, Finance, AI and Studio are registered and have no page, so they draw no row.
-    // Insights is not a workspace row at all (D66) — it is reached contextually.
-    expect(topLevel(sections, 'workspaces')).toEqual(['workspace-sales', 'workspace-comms', 'workspace-automations', 'workspace-field']);
+    // them. Service, Finance and AI are registered and have no page, so they draw no row. Studio
+    // has one page (Home), so it draws a plain row with no children. Insights is not a workspace
+    // row at all (D66) — it is reached contextually.
+    expect(topLevel(sections, 'workspaces')).toEqual(['workspace-sales', 'workspace-comms', 'workspace-automations', 'workspace-field', 'workspace-studio']);
     expect(keys(sections, 'workspaces')).toEqual([
       'workspace-sales', 'customers', 'pipeline',
-      'workspace-comms', 'calls',
+      'workspace-comms', 'calls', 'comms-messages', 'comms-numbers',
       'workspace-automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets',
+      'workspace-studio',
     ]);
     const row = (key: string) => sections.flatMap((section) => section.items).find((item) => item.key === key)!;
     // The parent's own destination is the workspace's Home, never repeated as a child beneath it.
     expect(row('workspace-field').children?.map((page) => page.key)).toEqual(['work', 'schedule', 'resources', 'locations', 'assets']);
     expect(row('workspace-sales').children?.map((page) => page.key)).toEqual(['customers', 'pipeline']);
     expect(row('workspace-automations').children?.map((page) => page.label)).toEqual(['Rules', 'Messages', 'Activity']);
-    expect(row('workspace-comms').children?.map((page) => page.key)).toEqual(['calls']);
+    expect(row('workspace-comms').children?.map((page) => page.key)).toEqual(['calls', 'comms-messages', 'comms-numbers']);
     expect(row('workspace-field').label).toBe('Field');
     expect(row('workspace-field').href).toBe(`/organizations/${ORG}/field`);
     expect(row('workspace-sales').href).toBe(`/organizations/${ORG}/sales`);
     expect(row('workspace-comms').href).toBe(`/organizations/${ORG}/comms`);
     expect(row('workspace-automations').href).toBe(`/organizations/${ORG}/automations`);
+    // Studio has exactly one reachable area, so it is a plain row: no children, no chevron.
+    expect(row('workspace-studio').children).toBeUndefined();
+    expect(row('workspace-studio').heading).toBeUndefined();
+    expect(row('workspace-studio').href).toBe(`/organizations/${ORG}/studio`);
   });
 
   it('sees organization administration, item by item', () => {
@@ -149,7 +155,7 @@ describe('GOLD sales member in the same organization', () => {
 
   it('uses GOLD as an ordinary business: sales, customers and calls', () => {
     expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-sales', 'customers', 'pipeline', 'workspace-comms', 'calls', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets',
+      'workspace-sales', 'customers', 'pipeline', 'workspace-comms', 'calls', 'comms-messages', 'comms-numbers', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio',
     ]);
   });
 
@@ -215,7 +221,7 @@ describe('tenant ordinary member', () => {
   const technician = project(preset('technician'));
 
   it('sees the operational workspaces their business has, and nothing administrative', () => {
-    expect(keys(technician, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets']);
+    expect(keys(technician, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
     expect(keys(technician, 'business')).toEqual([]);
     expect(keys(technician, 'platform')).toEqual([]);
   });
@@ -223,7 +229,7 @@ describe('tenant ordinary member', () => {
   it('a viewer with no capability at all still gets the kernel, and no administration', () => {
     const viewer = project(preset('viewer'));
     expect(keys(viewer, 'home')).toEqual(['home']);
-    expect(keys(viewer, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets']);
+    expect(keys(viewer, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
     expect(keys(viewer, 'business')).toEqual([]);
   });
 });
@@ -253,7 +259,7 @@ describe('entitlement absent', () => {
     // Assets is a module: without it Field has the rest of its pages, and no more. No modules: no
     // Pipeline, so Sales has just Home and the kernel Customers; the Home is never a child.
     expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-sales', 'customers', 'workspace-field', 'work', 'schedule', 'resources', 'locations',
+      'workspace-sales', 'customers', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'workspace-studio',
     ]);
     // Connections is a product too: no Integrations entitlement, no item — Team and Plan remain.
     expect(keys(sections, 'business')).toEqual(['team', 'plan']);
@@ -278,13 +284,17 @@ describe('the phone renders the same projection', () => {
     expect(primary.map((item) => item.key)).toEqual(['home', 'customers', 'work', 'schedule']);
     // Every workspace here has a Home plus at least one other page, so each is a heading over its
     // pages — never a loose "Workspaces" group, and never Home listed again as one of them.
+    // Studio has one page and no children, so it is a loose item under the section's own
+    // "Workspaces" heading rather than a heading of its own — the same rule a parent with pages
+    // follows, applied to a workspace with none.
     expect(more.map((section) => section.label)).toEqual([
-      'Sales', 'Communications', 'Automations', 'Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
+      'Workspaces', 'Sales', 'Communications', 'Automations', 'Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
     ]);
-    expect(more[0].items.map((item) => item.key)).toEqual(['pipeline']);
-    expect(more[1].items.map((item) => item.key)).toEqual(['calls']);
-    expect(more[2].items.map((item) => item.label)).toEqual(['Rules', 'Messages', 'Activity']);
-    expect(more[3].items.map((item) => item.key)).toEqual(['resources', 'locations', 'assets']);
+    expect(more[0].items.map((item) => item.key)).toEqual(['workspace-studio']);
+    expect(more[1].items.map((item) => item.key)).toEqual(['pipeline']);
+    expect(more[2].items.map((item) => item.key)).toEqual(['calls', 'comms-messages', 'comms-numbers']);
+    expect(more[3].items.map((item) => item.label)).toEqual(['Rules', 'Messages', 'Activity']);
+    expect(more[4].items.map((item) => item.key)).toEqual(['resources', 'locations', 'assets']);
   });
 
   it('loses and adds nothing: the bar and More together are exactly the desktop projection', () => {
@@ -304,7 +314,7 @@ describe('the phone renders the same projection', () => {
     ]);
     // Platform's own pages lead More; GOLD's workspaces follow. Ten Platform destinations and every workspace never share the bar.
     expect(platform.more.map((section) => section.label)).toEqual([
-      'Catalog', 'Commercial', 'Infrastructure', 'Sales', 'Communications', 'Automations', 'Field', 'Business',
+      'Catalog', 'Commercial', 'Infrastructure', 'Workspaces', 'Sales', 'Communications', 'Automations', 'Field', 'Business',
     ]);
     const phone = pagesOf([...platform.primary, ...platform.more.flatMap((section) => section.items)]);
     expect(phone).toEqual(pagesOf(projectedItems(sections)));
@@ -335,7 +345,10 @@ describe('the phone renders the same projection', () => {
     const { more: rest } = projectPhone(minimal);
     // Sales is fully absorbed into the bar (Home's only other kernel page, Customers, is already
     // there, and Pipeline needs a module this business lacks), so it draws no More entry at all.
+    // Studio is kernel too and has no phone-primary page of its own, so its one page surfaces as a
+    // loose item under "Workspaces".
     expect(rest.map((section) => [section.label, section.items.map((item) => item.key)])).toEqual([
+      ['Workspaces', ['workspace-studio']],
       ['Field', ['resources', 'locations']],
     ]);
   });
@@ -377,6 +390,8 @@ describe('the current item', () => {
     // activates the parent, the same rule the Home/child split follows everywhere else.
     expect(activeItemKey(sections, `/organizations/${ORG}/automations/rule-1`)).toBe('workspace-automations');
     expect(activeItemKey(sections, `/organizations/${ORG}/automations/rules`)).toBe('automation-rules');
+    // Studio is a plain row: its own address marks the row itself, the same as any other Home.
+    expect(activeItemKey(sections, `/organizations/${ORG}/studio`)).toBe('workspace-studio');
   });
 
   it('inside Platform the group holding the current page is the one that is open, and a heading yields to its first page', () => {
