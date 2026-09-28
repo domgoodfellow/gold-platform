@@ -388,6 +388,103 @@ def record_provider_account_verification(
         raise RuntimeError(f"record_provider_account_verification failed: {response.status_code}")
 
 
+# --- a business's custom domain: three more doors on the same role, and no table grant ----------
+#
+# The same machine identity and the same trust path as the account doors above: `apps/api` proves
+# the caller may manage this business's domains under the caller's own token first
+# (`app.domains.web_delivery`), and only then asks which GildOps account answers, reads its
+# credential, and records what the provider said. Recording a verification is this role's alone
+# so that neither a tenant nor a staff token can mark a hostname verified that no provider checked.
+
+
+def _provider_headers(settings: ProviderOperationsSettings) -> dict[str, str]:
+    token = machine_token(settings.supabase_jwt_secret, role=PROVIDER_ROLE, sub=PROVIDER_ACTOR)
+    return {
+        "apikey": settings.supabase_publishable_key,
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+
+def custom_domain_provider_account(
+    settings: ProviderOperationsSettings,
+    *,
+    organization_id: str,
+    domain_id: str,
+) -> str | None:
+    """The GildOps provider account that answers for this domain, or `None` when none is active."""
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/custom_domain_provider_account",
+        headers=_provider_headers(settings),
+        json={"p_organization_id": organization_id, "p_domain_id": domain_id},
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"custom_domain_provider_account failed: {response.status_code}")
+    return response.json() or None
+
+
+def record_custom_domain_registration(
+    settings: ProviderOperationsSettings,
+    *,
+    organization_id: str,
+    domain_id: str,
+    configuration_state: str,
+    dns_records: list[dict],
+    error_code: str | None = None,
+    error_message: str | None = None,
+) -> None:
+    """What the provider said when asked to attach the hostname -- or why it was never asked."""
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/record_custom_domain_registration",
+        headers=_provider_headers(settings),
+        json={
+            "p_organization_id": organization_id,
+            "p_domain_id": domain_id,
+            "p_configuration_state": configuration_state,
+            "p_dns_records": dns_records,
+            "p_error_code": error_code,
+            "p_error_message": error_message,
+        },
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"record_custom_domain_registration failed: {response.status_code}")
+
+
+def set_custom_domain_verification(
+    settings: ProviderOperationsSettings,
+    *,
+    organization_id: str,
+    domain_id: str,
+    verification_state: str,
+    configuration_state: str | None,
+    ssl_state: str | None,
+    dns_records: list[dict] | None,
+    error_code: str | None = None,
+    error_message: str | None = None,
+) -> None:
+    """What the provider said on a recheck. Idempotent at the database: the same answer twice is
+    the same row."""
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/set_custom_domain_verification",
+        headers=_provider_headers(settings),
+        json={
+            "p_organization_id": organization_id,
+            "p_domain_id": domain_id,
+            "p_verification_state": verification_state,
+            "p_configuration_state": configuration_state,
+            "p_ssl_state": ssl_state,
+            "p_dns_records": dns_records,
+            "p_error_code": error_code,
+            "p_error_message": error_message,
+        },
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"set_custom_domain_verification failed: {response.status_code}")
+
+
 INTEGRATION_ROLE = "integration_operator"
 
 # The integration-credentials integration's own `auth.users` row, fixed in

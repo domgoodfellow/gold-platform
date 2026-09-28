@@ -22,4 +22,4 @@ export function credentialEnvironmentState(providerKey: string): 'configured' | 
  * UI for is a fact about this deployment's routes, never something `lib/domain/` may say (I15).
  * Named once so the Providers list and a Provider's own detail route agree.
  */
-export const GENERIC_ACCOUNT_PROVIDER_KEYS = new Set(['openai', 'anthropic', 'google']);
+export const GENERIC_ACCOUNT_PROVIDER_KEYS = new Set(['openai', 'anthropic', 'google', 'vercel']);

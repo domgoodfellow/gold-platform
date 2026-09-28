@@ -2901,6 +2901,98 @@ export type Database = {
           },
         ]
       }
+      organization_domains: {
+        Row: {
+          configuration_state: string
+          created_at: string
+          created_by: string
+          error_code: string | null
+          error_message: string | null
+          hostname: string
+          id: string
+          is_primary: boolean
+          last_checked_at: string | null
+          organization_id: string
+          provider_key: string
+          provider_resource_id: string | null
+          released_at: string | null
+          released_by: string | null
+          ssl_state: string
+          surface: string
+          updated_at: string
+          verification_state: string
+        }
+        Insert: {
+          configuration_state?: string
+          created_at?: string
+          created_by: string
+          error_code?: string | null
+          error_message?: string | null
+          hostname: string
+          id?: string
+          is_primary?: boolean
+          last_checked_at?: string | null
+          organization_id: string
+          provider_key?: string
+          provider_resource_id?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          ssl_state?: string
+          surface: string
+          updated_at?: string
+          verification_state?: string
+        }
+        Update: {
+          configuration_state?: string
+          created_at?: string
+          created_by?: string
+          error_code?: string | null
+          error_message?: string | null
+          hostname?: string
+          id?: string
+          is_primary?: boolean
+          last_checked_at?: string | null
+          organization_id?: string
+          provider_key?: string
+          provider_resource_id?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          ssl_state?: string
+          surface?: string
+          updated_at?: string
+          verification_state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_domains_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_domains_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_domains_organization_id_provider_resource_id_fkey"
+            columns: ["organization_id", "provider_resource_id"]
+            isOneToOne: false
+            referencedRelation: "organization_provider_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "organization_domains_provider_key_fkey"
+            columns: ["provider_key"]
+            isOneToOne: false
+            referencedRelation: "platform_providers"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       organization_feature_activation_overrides: {
         Row: {
           disabled_at: string
@@ -5171,18 +5263,21 @@ export type Database = {
         Row: {
           gold_public_organization_id: string | null
           gold_public_site_id: string | null
+          platform_public_domain: string | null
           singleton: boolean
           workflow_review_organization_id: string | null
         }
         Insert: {
           gold_public_organization_id?: string | null
           gold_public_site_id?: string | null
+          platform_public_domain?: string | null
           singleton?: boolean
           workflow_review_organization_id?: string | null
         }
         Update: {
           gold_public_organization_id?: string | null
           gold_public_site_id?: string | null
+          platform_public_domain?: string | null
           singleton?: boolean
           workflow_review_organization_id?: string | null
         }
@@ -6844,6 +6939,14 @@ export type Database = {
         Args: { p_organization_id: string; p_resource_id: string }
         Returns: boolean
       }
+      begin_custom_domain_connection: {
+        Args: {
+          p_hostname: string
+          p_organization_id: string
+          p_surface: string
+        }
+        Returns: string
+      }
       begin_external_card_payment: {
         Args: { p_invoice_id: string; p_provider: string }
         Returns: {
@@ -6877,6 +6980,10 @@ export type Database = {
           p_role: string
         }
         Returns: string
+      }
+      can_manage_custom_domains: {
+        Args: { p_organization_id: string }
+        Returns: boolean
       }
       can_manage_integrations: {
         Args: { p_organization_id: string }
@@ -7083,6 +7190,10 @@ export type Database = {
         Returns: string
       }
       credit_balance: { Args: { p_organization_id: string }; Returns: number }
+      custom_domain_provider_account: {
+        Args: { p_domain_id: string; p_organization_id: string }
+        Returns: string
+      }
       customers_not_contacted: {
         Args: { p_days?: number; p_organization_id: string }
         Returns: {
@@ -7124,6 +7235,13 @@ export type Database = {
       grant_plan_product: {
         Args: { p_plan_id: string; p_product_key: string }
         Returns: undefined
+      }
+      hostname_binding: {
+        Args: { p_hostname: string }
+        Returns: {
+          organization_id: string
+          surface: string
+        }[]
       }
       invite_member: {
         Args: { p_email: string; p_organization_id: string; p_role_id: string }
@@ -7356,6 +7474,7 @@ export type Database = {
           resource_count: number
         }[]
       }
+      platform_public_domain: { Args: never; Returns: string }
       provision_organization: {
         Args: {
           p_capabilities: string[]
@@ -7400,6 +7519,7 @@ export type Database = {
         }[]
       }
       published_gold_homepage: { Args: never; Returns: Json }
+      published_hostname_site: { Args: { p_hostname: string }; Returns: Json }
       queued_messages: {
         Args: { p_limit?: number }
         Returns: {
@@ -7496,6 +7616,17 @@ export type Database = {
           p_price_minor: number
           p_product_key: string
           p_quantity?: number
+        }
+        Returns: string
+      }
+      record_custom_domain_registration: {
+        Args: {
+          p_configuration_state: string
+          p_dns_records: Json
+          p_domain_id: string
+          p_error_code?: string
+          p_error_message?: string
+          p_organization_id: string
         }
         Returns: string
       }
@@ -7758,6 +7889,10 @@ export type Database = {
         }
         Returns: string
       }
+      release_custom_domain: {
+        Args: { p_domain_id: string; p_organization_id: string }
+        Returns: undefined
+      }
       remove_connector_app_feature: {
         Args: { p_connector_app_id: string; p_feature_id: string }
         Returns: undefined
@@ -7864,6 +7999,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_custom_domain_verification: {
+        Args: {
+          p_configuration_state?: string
+          p_dns_records?: Json
+          p_domain_id: string
+          p_error_code?: string
+          p_error_message?: string
+          p_organization_id: string
+          p_ssl_state?: string
+          p_verification_state: string
+        }
+        Returns: undefined
+      }
       set_default_provider_account: {
         Args: { p_account_id: string }
         Returns: undefined
@@ -7911,6 +8059,10 @@ export type Database = {
           p_name: string
           p_vendor_status?: string
         }
+        Returns: undefined
+      }
+      set_primary_custom_domain: {
+        Args: { p_domain_id: string; p_organization_id: string }
         Returns: undefined
       }
       set_provider_account_status: {

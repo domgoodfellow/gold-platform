@@ -5,6 +5,22 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A business connects its own domain, through GildOps' one Vercel account
+
+Settings → Domains shows a business its GildOps-managed address (its own public name under the
+deployment's managed zone, computed from `organizations.slug` rather than stored) and lets it
+connect a custom domain it owns, choose whether the domain opens its website or its customer
+portal, and see exactly what DNS to publish. Connecting, rechecking and removing a domain go
+through GildOps' one Vercel provider account (`platform_provider_accounts`, following the same
+provider-binding pattern as the Resend sending domain) — a tenant never holds or sees a hosting
+credential, and only the machine role that asked the provider may record what it said. A hostname
+is claimed by at most one unreleased row across every tenant; verification, DNS configuration and
+certificate state are the provider's own answer, never a client-supplied boolean. Platform
+Administration gets Vercel as an ordinary provider account (project id, team id, access token)
+through the existing generic provider-account screen. `custom_domain` joins the catalogue as a
+`partial` Feature under Brand & Domains; entitlement is checked and recorded on connection but not
+yet enforced (M17).
+
 ### Every workspace opens on a real Home; the chevron only expands it
 
 Clicking a workspace's name in the sidebar now always opens that workspace's own Home page;

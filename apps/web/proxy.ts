@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { updateSession } from '@/lib/db/session';
 import { decideRedirect } from '@/lib/route/access';
+import { bindingForRequestHost } from '@/lib/route/hostname';
 import { LAST_ORGANIZATION_COOKIE, LAST_ORGANIZATION_COOKIE_OPTIONS } from '@/lib/route/last-organization';
 import { organizationIdFromPath } from '@/lib/route/platform-context';
 
@@ -14,6 +15,22 @@ import { organizationIdFromPath } from '@/lib/route/platform-context';
 export async function proxy(request: NextRequest) {
   const { response, identity } = await updateSession(request);
   const { pathname } = request.nextUrl;
+
+  // A business's own hostname opens its public surface at the root and nowhere else in this
+  // slice. The rewrite carries the hostname, never an organization id: the page resolves it again
+  // itself (D17). A hostname that resolves to nothing falls through unchanged — to exactly what an
+  // unknown host would have seen — so nothing says which names are almost valid.
+  if (pathname === '/') {
+    const host = request.headers.get('host');
+    const binding = await bindingForRequestHost(host);
+    if (binding && host) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/sites/${encodeURIComponent(host.toLowerCase().replace(/:\d+$/, ''))}`;
+      const rewrite = NextResponse.rewrite(url, { request });
+      for (const cookie of response.cookies.getAll()) rewrite.cookies.set(cookie);
+      return rewrite;
+    }
+  }
 
   // Redirection here is convenience, not authorization. Every protected operation is
   // checked again server-side and again by RLS; if this block were deleted the system

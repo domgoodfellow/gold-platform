@@ -106,7 +106,7 @@ describe('configuring is not operating', () => {
   });
 
   it('gates every kernel entry on its own configuration permission, never on being a member', () => {
-    for (const key of ['general', 'branding', 'website', 'communications']) {
+    for (const key of ['general', 'branding', 'website', 'domains', 'communications']) {
       const target = configTarget(key);
       expect(target.entitledBy, key).toBeUndefined();
       expect(configTargetOffered(target, { ...nothingEntitled, capabilities: new Set() }), key).toBe(false);

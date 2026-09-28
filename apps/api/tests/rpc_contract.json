@@ -317,6 +317,65 @@
         "p_from",
         "p_to"
       ]
+    },
+    "can_manage_custom_domains": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/web_delivery/domains.py"
+      ],
+      "sends": [
+        "p_organization_id"
+      ]
+    },
+    "release_custom_domain": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/web_delivery/domains.py"
+      ],
+      "sends": [
+        "p_domain_id",
+        "p_organization_id"
+      ]
+    },
+    "custom_domain_provider_account": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_domain_id",
+        "p_organization_id"
+      ]
+    },
+    "record_custom_domain_registration": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_configuration_state",
+        "p_dns_records",
+        "p_domain_id",
+        "p_error_code",
+        "p_error_message",
+        "p_organization_id"
+      ]
+    },
+    "set_custom_domain_verification": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_configuration_state",
+        "p_dns_records",
+        "p_domain_id",
+        "p_error_code",
+        "p_error_message",
+        "p_organization_id",
+        "p_ssl_state",
+        "p_verification_state"
+      ]
     }
   }
 }

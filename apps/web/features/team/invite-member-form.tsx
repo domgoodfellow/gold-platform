@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState, useState } from 'react';
-import { toast } from 'sonner';
+import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
+import { CopyField } from '@/components/controls/copy-field';
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { inviteMemberAction, type InviteMemberState } from '@/app/organizations/[organizationId]/roles/actions';
@@ -21,7 +21,6 @@ export function InviteMemberForm({
   roles: Role[];
 }) {
   const [state, formAction, pending] = useActionState(inviteMemberAction, INITIAL);
-  const [copied, setCopied] = useState(false);
 
   if (roles.length === 0) {
     return <Hint className="mt-4">Create a role before inviting people.</Hint>;
@@ -31,20 +30,7 @@ export function InviteMemberForm({
     return (
       <div className="mt-4 flex flex-col gap-3">
         <Hint>Invitation created. Copy this link if you&rsquo;d like to send it yourself:</Hint>
-        <div className="flex gap-2">
-          <TextInput readOnly value={state.link} className="flex-1" aria-label="Invitation link" />
-          <Button
-            type="button"
-            tone="secondary"
-            onClick={async () => {
-              await navigator.clipboard.writeText(state.link ?? '');
-              setCopied(true);
-              toast.success('Invitation link copied');
-            }}
-          >
-            {copied ? 'Copied' : 'Copy'}
-          </Button>
-        </div>
+        <CopyField value={state.link} label="Invitation link" copiedMessage="Invitation link copied" />
       </div>
     );
   }

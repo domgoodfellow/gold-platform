@@ -193,6 +193,14 @@
         "security"
       ]
     },
+    "apps/api/tests/component/test_web_delivery_domains.py": {
+      "category": "python-component",
+      "concerns": [
+        "providers",
+        "security"
+      ],
+      "note": "Replaces app.providers.vercel.domains and the db.py machine-role callers; the database half is organization-domains.test.ts."
+    },
     "apps/api/tests/contract/test_connectors.py": {
       "category": "python-contract",
       "concerns": [
@@ -231,6 +239,13 @@
         "voice",
         "providers"
       ]
+    },
+    "apps/api/tests/contract/test_vercel_domains.py": {
+      "category": "python-contract",
+      "concerns": [
+        "providers"
+      ],
+      "note": "Vercel's Domains API, offline: register/config/verify/remove and normalize()."
     },
     "apps/api/tests/unit/test_automation_tick.py": {
       "category": "python-unit",
@@ -1170,6 +1185,15 @@
       "concerns": [
         "scheduling"
       ]
+    },
+    "apps/web/tests/integration/database/organization-domains.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "providers",
+        "security",
+        "public"
+      ],
+      "note": "One describe stubs nothing; the provider_operator writes go through raw SQL under `set local role`, like provider-accounts.test.ts."
     },
     "apps/web/tests/integration/database/platform-billing.test.ts": {
       "category": "database-integration",

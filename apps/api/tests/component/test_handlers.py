@@ -30,6 +30,7 @@ import api.ai_ask as ai_ask
 import api.automation_tick as automation_tick
 import api.crm_change_customer_stage as crm_change_customer_stage
 import api.integration_operations as integration_operations
+import api.organization_domains as organization_domains
 import api.provider_operations as provider_operations
 import api.public_chat as public_chat
 import api.stripe_platform_billing_webhook as platform_billing_webhook
@@ -278,6 +279,7 @@ PEOPLE = [
     (voice_wrap_up_call, "load_domain_settings", "wrap_up_call"),
     (integration_operations, "load_integration_settings", "operate"),
     (provider_operations, "load_provider_operations_settings", "operate"),
+    (organization_domains, "load_provider_operations_settings", "run_domain_command"),
 ]
 
 

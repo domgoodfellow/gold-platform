@@ -76,6 +76,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     entries: [
       entry('branding', 'Branding', 'Logo, colours, and the public booking page.'),
       entry('website', 'Website', 'Homepage publishing and the public communication profile.'),
+      entry('domains', 'Domains', 'This business’s GildOps address, and any domain it owns and has connected.'),
     ],
   },
   {

@@ -414,6 +414,7 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'team', path: 'roles', permission: ['role.manage'] },
   { key: 'branding', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
   { key: 'website', workspace: 'studio', path: 'settings/website', permission: ['organization.manage'] },
+  { key: 'domains', workspace: 'studio', path: 'settings/domains', permission: ['organization.manage'] },
   { key: 'communications', workspace: 'comms', path: 'settings/communications', permission: ['organization.manage'] },
   { key: 'integrations', path: 'integrations', entitledBy: 'integrations', permission: ['integration.manage'] },
   { key: 'features', path: 'settings/features', permission: ['feature.manage'] },

@@ -95,6 +95,7 @@ const FEATURE_STATES = {
   'studio.forms_intake.booking_intake': 'available',
   'studio.brand_domains.brand_theme': 'available',
   'studio.brand_domains.domain_binding': 'partial',
+  'studio.brand_domains.custom_domain': 'partial',
 } as const;
 
 const EVIDENCE: readonly [string, readonly string[]][] = [
@@ -116,6 +117,7 @@ const EVIDENCE: readonly [string, readonly string[]][] = [
   ['studio.public_booking', ['apps/web/lib/domain/booking/booking.ts', 'apps/web/app/(public)/book/[slug]/page.tsx', 'apps/web/tests/integration/database/booking.test.ts']],
   ['studio.customer_portal', ['apps/web/lib/domain/portal/portal.ts', 'apps/web/features/portal-access/invite-list.tsx', 'apps/web/app/(public)/portal/[token]/page.tsx', 'apps/web/tests/integration/database/portal.test.ts']],
   ['studio.forms_intake', ['apps/web/lib/domain/booking/booking.ts', 'apps/web/app/(public)/book/[slug]/booking-form.tsx', 'apps/web/tests/integration/database/booking.test.ts']],
+  ['studio.brand_domains.custom_domain', ['apps/web/lib/domain/domains/domains.ts', 'apps/web/features/domains/connect-domain-dialog.tsx', 'apps/web/app/organizations/[organizationId]/settings/domains/page.tsx', 'apps/web/tests/integration/database/organization-domains.test.ts']],
   ['studio.brand_domains', ['apps/web/lib/domain/branding/brand.ts', 'apps/web/features/branding/brand-style.tsx', 'apps/web/app/organizations/[organizationId]/settings/page.tsx', 'apps/web/tests/integration/database/branding.test.ts']],
 ];
 
@@ -138,6 +140,7 @@ const GAPS: Record<string, Partial<Omit<CatalogueSurfaceCoverage, 'key' | 'catal
   'automations.actions.voice_action': { domain: 'partial', ui: 'none', interaction: 'none', gap: 'No automation authoring control exposes outbound calls.' },
   'studio.website.seo_metadata': { ui: 'partial', interaction: 'configurable', gap: 'Basic metadata exists without the complete SEO surface.' },
   'studio.brand_domains.domain_binding': { domain: 'partial', ui: 'partial', interaction: 'read-only', gap: 'Sending-domain state exists; site-domain binding remains incomplete.' },
+  'studio.brand_domains.custom_domain': { domain: 'partial', ui: 'partial', interaction: 'configurable', gap: 'Connect, verify and resolve exist; entitlement is checked and recorded but not enforced (M17), and a tenant’s own published site is not yet reachable at the address.' },
 };
 
 export const CATALOGUE_SURFACE_COVERAGE: readonly CatalogueSurfaceCoverage[] = Object.entries(FEATURE_STATES).map(([key, catalogueState]) => {

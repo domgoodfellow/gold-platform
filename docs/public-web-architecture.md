@@ -30,11 +30,22 @@ atomically advances the public pointer, published revisions are immutable, and a
 use `published_gold_homepage()` rather than table access. Tenant brand settings and logo also
 drive authenticated and selected public surfaces.
 
-This is not yet tenant website distribution. There is no public hostname resolver for each
-organization, verified custom-domain lifecycle, governed public media library, additional/legal
-page publication, full public authentication-context preservation, or complete attribution/
-consent layer. The site at GOLD's root proves publishing mechanics for GOLD; it does not imply
-that a tenant's published revision is reachable on that tenant's host.
+A hostname resolver and a verified custom-domain lifecycle now exist (`20261010000001`):
+`public.hostname_binding` resolves a business's own GildOps-managed subdomain
+(`{organizations.slug}.{platform_settings.platform_public_domain}`, computed rather than stored)
+or a verified, unreleased `organization_domains` row to that organization and surface, failing
+closed for anything else; `/sites/[hostname]` renders the website surface's published home page
+through the same `public_site_revisions` projection GOLD's own root uses. Connecting, verifying and
+removing a custom domain go through GildOps' one Vercel provider account
+(`platform_provider_accounts`, never a per-tenant credential), following the D44/D54 provider-
+binding pattern exactly as the Resend sending-domain binding does. Resolution itself does not
+distinguish a managed subdomain from a custom domain — both reach `published_hostname_site` the
+same way — but this is still not full tenant website distribution: governed public media library,
+additional/legal page publication, full public authentication-context preservation, and complete
+attribution/consent remain unbuilt, and Website settings (`create_public_homepage_draft` and its
+siblings) still publishes only GOLD's own site (`platform_settings.workflow_review_organization_id`),
+so no ordinary tenant has a `public_sites` row to resolve to at either address yet — that gap
+belongs to Studio's own site model, not to hostname resolution.
 
 Operational `assets` are customer/business equipment and property. Public images and downloads
 need a distinct governed media concept; reusing `assets` would corrupt both authorization and
@@ -140,12 +151,19 @@ Four explicit modes share the same organization and operations domain:
 - **Migration:** inventory URLs/assets/metadata, map canonical records and redirects, preview,
   validate analytics and search signals, then cut DNS. Redirects are durable site data.
 
-`public_domains` should lead every uniqueness rule with normalized hostname globally unique across
-active claims. It records organization/site, kind (`platform | gold_subdomain | custom`), requested,
-verification and certificate states, verification token/method, primary flag, redirect target,
-created/verified timestamps, and platform actor. A tenant may request a domain; only the platform
-can mark verification/certificate facts. Resolution accepts a normalized Host value, never a tenant
-id header or query parameter, and returns only an active mapping. Unknown hosts fail closed.
+**Built as `organization_domains`, `20261010000001`** — narrower than the `public_domains` sketch
+above in one deliberate way: the GildOps-managed (`gold_subdomain`) address is not a row at all,
+since `organizations.slug` under `platform_settings.platform_public_domain` already answers it
+without a second copy to drift. A row exists only for a `custom` hostname: normalized, globally
+unique across active (unreleased) claims (I2's exemption), with `surface` (`website | portal`),
+`is_primary`, and verification/configuration/certificate states kept apart because they move
+independently. A tenant names a hostname (`begin_custom_domain_connection`, `organization.manage`);
+only `provider_operator` — the machine role `apps/api` wears after proving the caller may manage
+this business's domains — ever records what the hosting provider (Vercel) said
+(`record_custom_domain_registration`, `set_custom_domain_verification`), never a tenant, never
+staff from a browser console. Resolution (`public.hostname_binding`) accepts a normalized Host
+value, never a tenant id, and returns only a verified, unreleased mapping. Unknown, pending, failed
+and released hosts all fail closed, indistinguishably.
 
 No customer gets a repository, Supabase project, or Vercel application merely for a domain.
 
@@ -239,7 +257,7 @@ publish.
 | **REFACTOR** | Auth intended-context routing and public header/footer information architecture |
 | **CONNECT EXISTING** | Work types as service capability; price book as offer input; locations/hours; documents; customer events and stages; commercial catalogue where public terms are explicitly approved |
 | **CONFIGURE** | Production canonical origin; public-intake target (`platform_settings`); deployment domain; analytics/consent provider; support/privacy contacts |
-| **BUILD** | Media library; hostname mapping; legal versions/acceptance; attribution; abuse controls; French routing/content |
+| **BUILD** | Media library; Website settings extended past GOLD's own site, so an ordinary tenant has a `public_sites` row for hostname resolution to reach; legal versions/acceptance; attribution; abuse controls; French routing/content |
 | **RESEARCH** | Counsel-reviewed Quebec/Canada/US scope; accessibility obligations by market; subprocessors/transfers; registrar/reseller economics and `.ca` requirements; analytics consent choice |
 | **DEFER** | Arbitrary drag-and-drop builder; domain registration/reselling; full external SDK; articles/industry directory without content owners; multi-template marketplace; translation automation |
 | **REMOVE** | Provider-technology marquee as marketing proof; duplicate/route-inappropriate auth CTA; any future dead footer link or invented proof |

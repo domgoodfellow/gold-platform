@@ -23,13 +23,14 @@ platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and acces
 | `POST /voice/wrap-up-call` | `api/voice_wrap_up_call.py` | Bearer token, forwarded. A domain command under the caller's own rights. |
 | `POST /integrations/operate` | `api/integration_operations.py` | Bearer token; the caller must be able to manage integrations for that business. OAuth handshake and disconnect. |
 | `POST /providers/operate` | `api/provider_operations.py` | Bearer token; platform staff only, proved by RLS. Operates GOLD's own provider account. |
+| `POST /organizations/domains` | `api/organization_domains.py` | Bearer token; the caller must hold `organization.manage` in that business, proved by RLS. Connects, rechecks or removes a custom domain at GildOps' hosting provider. |
 | `POST /voice/inbound` | `api/voice_inbound.py` | Twilio signature. Declines the call; a number with no configured behaviour says nothing of its own. |
 | `POST /voice/outbound` | `api/voice_outbound.py` | Twilio signature. Returns the conference instructions for the room the web app created. |
 | `POST /voice/status` | `api/voice_status.py` | Twilio signature. Records a call's status through the Voice machine role. |
 | `POST /voice/recording` | `api/voice_recording.py` | Twilio signature. Records recording metadata through the Voice machine role. |
 | `POST /public_chat` | `api/public_chat.py` | Shared server-to-server key (`x-gold-public-chat-key`) from `apps/web` only; the same answer as "not configured" on any mismatch. Public-site assistant. |
 
-13 deployable handlers, one file each. Vercel also serves every file under `api/` at its
+14 deployable handlers, one file each. Vercel also serves every file under `api/` at its
 physical `/api/<name>` path, so a rewrite is the documented route, not the only reachable one.
 `tests/architecture/static/python-handler-inventory.test.ts` holds this table, `vercel.json`, the
 files in `api/` and the handler tests to one another.

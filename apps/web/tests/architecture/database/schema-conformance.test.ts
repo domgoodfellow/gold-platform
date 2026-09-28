@@ -80,7 +80,7 @@ describe('schema conformance', () => {
         order by t.relname, i.relname`,
     );
 
-    // **Three exceptions, and they share one rule rather than being separate lapses.**
+    // **Four exceptions, and they share one rule rather than being separate lapses.**
     //
     // I2 exists so one tenant's uniqueness cannot block another's: two businesses must both be
     // able to call a status "Booked". Every index below is the opposite question — **an
@@ -99,8 +99,12 @@ describe('schema conformance', () => {
     //     `accept_invitation` before that caller has any membership for a tenant to be scoped
     //     by. Hashed rather than plaintext (it grants a role, not a view), which changes what is
     //     stored but not why the index cannot lead with `organization_id`.
+    //   * `organization_domains_active_hostname_unique` is the same shape as the portal token and
+    //     the invitation hash: a browser arrives holding a hostname, with no tenant in hand to
+    //     scope it by, so it must be unique across every claim or resolution would have to guess
+    //     which business `shop.example.com` means. Only an unreleased claim counts.
     //
-    // Named individually rather than excluded by a pattern, so a fourth cannot arrive quietly
+    // Named individually rather than excluded by a pattern, so a fifth cannot arrive quietly
     // by matching a rule somebody loosened. A new entry here should have to argue for itself.
     expect(rows).toEqual([
       {
@@ -112,6 +116,11 @@ describe('schema conformance', () => {
         table_name: 'external_actors',
         index_name: 'external_actors_one_tenant_per_user',
         first: 'user_id',
+      },
+      {
+        table_name: 'organization_domains',
+        index_name: 'organization_domains_active_hostname_unique',
+        first: 'hostname',
       },
       {
         table_name: 'organization_invitations',
