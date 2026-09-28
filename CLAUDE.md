@@ -41,7 +41,7 @@ tellings of one thing and no way to tell which is stale.
 | [docs/walkthrough.md](docs/walkthrough.md) | You need to drive the running application by hand |
 | [docs/ui-spec.md](docs/ui-spec.md) | You are building or changing a screen |
 | [docs/testing.md](docs/testing.md) | You are adding, classifying or running a test |
-| [docs/public-web-architecture.md](docs/public-web-architecture.md) | You are touching GOLD's site, tenant publishing, public auth, domains, media or legal pages |
+| [docs/public-web-architecture.md](docs/public-web-architecture.md) | You are touching GildOps' site, tenant publishing, public auth, domains, media or legal pages |
 
 `docs/starting_conversation.txt` is an archived source, not a governing document. It is
 superseded by `docs/constraints.md` wherever the two disagree.
@@ -78,6 +78,13 @@ provider and Voice hardening, Financial Operations separation, tenant public dis
 a platform-hardening/dogfood gate before NextFund migration. `domain-model.md` owns the
 canonical terms. `roadmap.md` owns the sequence and criteria.
 
+Target architecture and current navigation are separate facts (D68). The target operator
+workspaces are CRM, Communications, Marketing, Finance, AI, Automations, Field and Studio. Current
+navigation still exposes Sales for much of CRM; Marketing is not registered; Finance, AI and
+Studio have partial capabilities without full Homes; and Insights retains deep routes while being
+cross-cutting rather than a workspace. Library is target shared infrastructure; only
+record-attached Documents exist today.
+
 One domain/runtime capability has no operator UI: `browserTelephoneToken` — the token boundary
 exists, but no browser softphone consumes it yet (M9/M14). Resource has no domain-level document
 relation. Keep these gaps explicit.
@@ -104,6 +111,10 @@ Report a failure verbatim; do not summarise one.
 | `pnpm db:reset` | Re-apply every migration from scratch against the local stack |
 | `pnpm db:types` | Regenerate `apps/web/lib/db/database.types.ts`. Checked in; a stale one fails the gate (D15). |
 | `pnpm db:push` | Apply migrations to the linked remote project |
+
+`@gold/*` is the current live package namespace and these commands must remain operationally
+accurate. D69 records the atomic `@gildops/*` migration target; do not pre-rename documentation or
+imports ahead of that migration.
 
 - Every test file is classified once in `test-manifest.json`; an unclassified one fails the gate. Python tests need `pip install -r apps/api/requirements-dev.txt`.
 - The tests talk to a **real Postgres with real RLS**, as two genuinely signed-in users. A policy
@@ -133,11 +144,11 @@ Nothing is created before a slice needs it.
 apps/
   web/              Next.js — every surface a browser reaches, grouped by whose it is (D20)
     app/            routing, route handlers, server data loading and screen composition
-      (marketing)/  GOLD's own site, in GOLD's voice
+      (marketing)/  GildOps' own site, in GildOps' voice
       (auth)/       sign in, sign up
       (public)/     book/{slug}, portal/{token} — a tenant's customers, a tenant's words
       organizations/ the operator shell. Deliberately UNGROUPED — see below. Platform Administration is
-                    organizations/[organizationId]/platform/, a sub-scope of GOLD's own organization (D60)
+                    organizations/[organizationId]/platform/, a sub-scope of GildOps' own organization (D60)
       platform/     the old /platform address: a redirect to the nested one, and nothing else
     features/       product-capability presentation and interaction — see its README
     components/     generic composed app controls and containers
@@ -153,7 +164,7 @@ apps/
     app/ai/         the tool loop and its two registries. No SQL, no arithmetic
     app/channels/   sending a message to a person, as a capability
     app/conditions/ what the world is doing at a place, as a capability
-    app/providers/  the infrastructure GOLD operates (Twilio, Stripe, Resend, model vendors) — the only place Python names one
+    app/providers/  the infrastructure GildOps operates (Twilio, Stripe, Resend, model vendors) — the only place Python names one
     app/connectors/ the outside apps a business authorizes (OAuth handshakes); never a provider
   desktop/          Electron shell (M10; not before)
 packages/           each with a real, immediate consumer inside apps/web (D45); packages/sdk stays deferred
@@ -180,9 +191,9 @@ docs/
   and a group folder would hide its children from that scan.
 - **Organization context is the normal operating context, and there is one shell.** What a person
   sees is projected by `projectShell` from the organization's entitlements, the member's
-  capabilities and — in GOLD's own organization only — their `platform_staff.capabilities`. Platform
+  capabilities and — in GildOps' own organization only — their `platform_staff.capabilities`. Platform
   Administration is `/organizations/{goldId}/platform/**`; the address names the context an operator
-  is working in and never who owns the data, which stays platform-scoped (D60). GOLD holds no
+  is working in and never who owns the data, which stays platform-scoped (D60). GildOps holds no
   exemption (D42, D45), and `platform_staff` is a table checked live (D45, D59).
 
 ## Rules that hold in every change
@@ -286,17 +297,17 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 |---|---|---|
 | A rate or a term written by a general table grant | D40's rule, restated: staff hold no `insert`/`update`/`delete` on any table. A rate or a term is a narrow `SECURITY DEFINER` function's job, checked and audited, never a grant somebody widens later | `platform_provider_rates`, `platform_retail_rates`, `organization_commercial_terms` hold no such grant for any role; `public.record_provider_rate`, `public.record_retail_rate`, `public.record_commercial_term` are the only doors — `execute`-granted to `authenticated`, each staff-checked internally by `app.require_platform_staff()` (D45) |
 | An RLS policy that reads entitlement | D25 surviving the arrival of money: a module is billing and navigation, never authorization, and a lapsed term must never become an access-control decision | No policy anywhere selects from `organization_commercial_terms`; the refusal is `app.check_module_entitlement`, a trigger |
-| GOLD's own provider cost, a reconciliation, or the margin either implies, reaching a tenant | A business is entitled to know what it is charged, never what it costs GOLD to serve it or who GOLD used | `platform_provider_rates` and `usage_cost_reconciliations` have no grant to `authenticated`; `usage_events`'s grant to `authenticated` omits `provider_key`/`provider_currency`/`provider_cost_micros`; `public.organization_commercial_summary` and `public.organization_usage_detail` are `security definer`, staff-checked internally, and never reachable through the withheld columns any other way (D45) |
+| GildOps' own provider cost, a reconciliation, or the margin either implies, reaching a tenant | A business is entitled to know what it is charged, never what it costs GildOps to serve it or who GildOps used | `platform_provider_rates` and `usage_cost_reconciliations` have no grant to `authenticated`; `usage_events`'s grant to `authenticated` omits `provider_key`/`provider_currency`/`provider_cost_micros`; `public.organization_commercial_summary` and `public.organization_usage_detail` are `security definer`, staff-checked internally, and never reachable through the withheld columns any other way (D45) |
 | A platform table readable by every signed-in caller by default | A booking visitor is `authenticated` (D22). A table is vocabulary, commercial configuration or control plane, and only vocabulary is for everybody (D64) | `catalogue-visibility.test.ts` proves each class from both sides against real row counts; the Stripe price mapping is reached only through `plan_price_provider_reference` |
 | A recorded amount below one minor unit | I10 | Only a *rate* (price per unit) carries micro-minor-unit precision; every disclosed total still rounds once, at render |
 | A second retail price list, or a price keyed to a channel | Retail usage pricing is meter-based and effective-dated in `platform_retail_rates`; communications are consumers of it, not a pricing engine (D40, D43) | `usage-boundary.test.ts` asserts no `communication_rates` and no function keyed by a channel; `usage-economics.test.ts` proves resolution by meter, currency and moment |
 | A usage event written by anything but `app.record_usage` | Callers report usage; one function decides what it is worth, from the rates in force when it occurred, and refuses provenance that could not be true (I59, D65) | No role holds insert on `usage_events`; `usage-boundary.test.ts` finds no other inserter; composite foreign keys keep a binding, resource, account or rate to its own business, provider and meter |
 | A provider named on a meter | Two providers may answer one meter (Deepgram or ElevenLabs, both `transcription_seconds`); a meter that named one could not express the second | `platform_meters` carries no provider column; `platform_provider_rates` is keyed by `(provider_key, meter_id, currency, effective_from)` |
-| A provider cost subtracted from a charge in a different currency | Nothing converts, and a guessed margin is worse than none (I10, restated for GOLD's own books) | `organization_commercial_summary` returns `margin_minor` as null whenever the two currencies disagree and the cost is not exactly zero |
+| A provider cost subtracted from a charge in a different currency | Nothing converts, and a guessed margin is worse than none (I10, restated for GildOps' own books) | `organization_commercial_summary` returns `margin_minor` as null whenever the two currencies disagree and the cost is not exactly zero |
 | A reconciliation that adds quantity or a customer charge | It would duplicate a fact `usage_events` already recorded once | `usage_cost_reconciliations` has no quantity column and no customer-charge column at all |
 | An RLS grant on `payment_requests`/`payment_accounts` for the external axis | D22's rule, one axis over: an external actor holds insert on exactly one table, its own binding — a customer paying their own invoice is a second write, not a wider grant on the same one | No policy for `app.current_external_tenant()` exists on either table; `begin_external_card_payment`, `confirm_external_card_payment` and `external_card_payment_availability` are the only doors, each deriving scope itself and re-proving invoice ownership rather than trusting an earlier read (I42) |
 | A stored `locked`/`is_paid` flag, or a status check outside the one resolver | Service access is derived from the Plan and the processor's subscription; a copy would disagree, and a page-local status check is a second grace policy (D57) | `resolveServiceAccess`; `requireOrganization` calls it and `requireOrganizationForBillingRecovery` is the only way past it, for a closed list of users; `service-access-boundary.test.ts` |
-| GOLD platform billing (organization → GOLD, D-restated for this plane) sharing an ingress path, a Postgres role, or a signing secret with tenant commerce (customer → tenant, `payment_webhook`) | The two money directions are never one ledger; a leaked platform-billing webhook secret must never mint a token that also writes a tenant's card payments, or the other way round | `platform_billing_webhook` is its own role holding no table grant and exactly two executes (`apply_platform_subscription_event`, `record_platform_billing_notice`), fed by its own Stripe destination and its own `STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET`, distinct from `payment_webhook`'s (I43) |
+| GildOps platform billing (organization → GildOps, D-restated for this plane) sharing an ingress path, a Postgres role, or a signing secret with tenant commerce (customer → tenant, `payment_webhook`) | The two money directions are never one ledger; a leaked platform-billing webhook secret must never mint a token that also writes a tenant's card payments, or the other way round | `platform_billing_webhook` is its own role holding no table grant and exactly two executes (`apply_platform_subscription_event`, `record_platform_billing_notice`), fed by its own Stripe destination and its own `STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET`, distinct from `payment_webhook`'s (I43) |
 
 ### Provider bindings and secrets
 
@@ -304,15 +315,15 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 |---|---|---|
 | A binding or a resource written by a general table grant | The same rule as above, restated for a third axis: staff hold no `insert`/`update`/`delete` on any table | `organization_provider_bindings` and `organization_provider_resources` hold no such grant for any role; `begin_provider_binding`, `set_provider_binding_status`, `record_provider_resource`, `set_provider_resource_status` are the only doors — `execute`-granted to `authenticated`, each staff-checked internally by `app.require_platform_staff()` (D45) |
 | A function that selects a decrypted secret back out | Staff necessarily holds a generated secret for the one moment it is created; nothing signed in may ever ask for it again through this API — not staff, not a tenant, not the browser. The one door that decrypts is `read_provider_account_credential`, below (D54) | No role holds `select` on `vault.secrets` or `vault.decrypted_secrets`; `store_provider_secret` returns the resource id it acted on, never the secret or the vault row's own id |
-| `secret_id` reaching any caller | A vault reference is exactly as sensitive as what it points to handing back | Withheld from every grant on `organization_provider_resources`, the same column-grant mechanism `usage_events` uses for GOLD's own cost |
-| A signed-in role executing `read_provider_account_credential` | A staff token could then read GOLD's parent credential from a browser console, and the web runtime holds no signing secret to use it any other way (D14, D54) | Executable by `provider_operator` alone, which only `apps/api` wears after proving the caller is staff; `provider-accounts.test.ts` asserts `has_function_privilege` false for `authenticated`, no table grant, and exactly three narrow executes (D62 added `resolve_ai_runtime_assignment`). `platform_provider_accounts.secret_id` is in no column grant |
+| `secret_id` reaching any caller | A vault reference is exactly as sensitive as what it points to handing back | Withheld from every grant on `organization_provider_resources`, the same column-grant mechanism `usage_events` uses for GildOps' own cost |
+| A signed-in role executing `read_provider_account_credential` | A staff token could then read GildOps' parent credential from a browser console, and the web runtime holds no signing secret to use it any other way (D14, D54) | Executable by `provider_operator` alone, which only `apps/api` wears after proving the caller is staff; `provider-accounts.test.ts` asserts `has_function_privilege` false for `authenticated`, no table grant, and exactly three narrow executes (D62 added `resolve_ai_runtime_assignment`). `platform_provider_accounts.secret_id` is in no column grant |
 | A provider named in `lib/domain/` | I15, extended: a resource-type string like `twilio_subaccount` is a vendor's name wearing a different shape | `organization_provider_resources.resourceType` is opaque `string`; `lib/adapters/telephony/registry.ts` alone knows `telephonyProviderKey()` and `TELEPHONY_RESOURCE_TYPES` |
 | A React page or constant owning the list of outside apps | The connector list is catalogue data an admin edits; a second list in code disagrees the day someone edits the first (D55) | `platform_connectors`; `integration_connections_insert` refuses a `planned` or private connector at the table; `connector-catalogue.test.ts` |
 | A signed-in role executing a tenant-credential door, or `secret_id` selectable on `integration_connections` | A business's own OAuth token is read back only to be used, and the person it belongs to must not be able to read it from a console either (D56) | `integration_operator` alone holds the five executes and no table grant; `secret_id` is in no column grant; `integration-credentials.test.ts` |
 | A connection standing in for the assistant's permission | "Connected" and "the assistant may read this" are two decisions; one implying the other would give an assistant everything a sync finds tomorrow | `assistant_resource_grants` is per resource with no default row; `public.assistant_may_read_resource` also needs the resource and connection active; `assistant-grants.test.ts` |
 | A vendor's client secret, a token or the OAuth state secret in `apps/web` | The web runtime relays a browser and proves nothing about a token (D14, D56) | `apps/api/app/connectors/` and `app/domains/integrations/` do the handshake; `integration-credentials.test.ts` scans `apps/web` for the names |
-| A tenant selecting another organization's bound resource as its own | A number or a domain typed by hand must not let GOLD use somebody else's scope (D39) | `app.phone_number_owner`, `security definer`, checked inside `set_calling_number`; a number bound to a different organization is refused, one bound to nobody is unaffected |
-| A subaccount's own credential used to place a call | GOLD's master account can already address any subaccount by naming it in the request path (D39); a second credential per business is a second thing to rotate for no isolation gained | `telephonyProvider(actingAccountSid)` authenticates with GOLD's master token throughout; only the acting account in the URL path changes |
+| A tenant selecting another organization's bound resource as its own | A number or a domain typed by hand must not let GildOps use somebody else's scope (D39) | `app.phone_number_owner`, `security definer`, checked inside `set_calling_number`; a number bound to a different organization is refused, one bound to nobody is unaffected |
+| A subaccount's own credential used to place a call | GildOps' master account can already address any subaccount by naming it in the request path (D39); a second credential per business is a second thing to rotate for no isolation gained | `telephonyProvider(actingAccountSid)` authenticates with GildOps' master token throughout; only the acting account in the URL path changes |
 
 ### Files and imports
 
@@ -333,7 +344,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | An unverified JWT claim used to build an authenticated `CallerContext` | A claim this runtime did not check is a claim a forged token can set to anything; a later PostgREST refusal does not undo a provider call already made on the strength of it | `verify_access_token` never returns without either a local signature check or a 200 from Supabase's own Auth server (D52); `test_auth.py`'s ordering test proves a rejected token never reaches a domain/provider call |
 | "Checked and fine" and "could not check" treated alike | An unreachable JWKS endpoint or Supabase Auth server is not evidence about the token | Both raise `AuthError(503, ...)`, never an authenticated context (D52) |
 | An authorization decision inside `apps/api/app/auth/` | It answers *who*, never *what they may do* — folding permission in here is D25's mistake on a new axis | RLS, `app/domains/**`'s own commands, and `app.is_platform_staff()` remain the only deciders (D52) |
-| Platform authority read from a JWT `role` claim | The design D45 retired once already, on the Postgres-role axis; a claim a caller's own token asserts is not a fact GOLD checked | `CallerContext.role` is exposed read-only for inspection; nothing branches on it |
+| Platform authority read from a JWT `role` claim | The design D45 retired once already, on the Postgres-role axis; a claim a caller's own token asserts is not a fact GildOps checked | `CallerContext.role` is exposed read-only for inspection; nothing branches on it |
 
 ### The AI axis
 
@@ -393,11 +404,11 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | Never | Because | Held by |
 |---|---|---|
 | A page container centred with `mx-auto` and no `w-full` | An auto side margin cancels flex stretch, so the box shrinks to its own text — which is how every surface outside the shell shipped | `layout.test.ts`, a source scan; jsdom computes no layout, so nothing that renders could have caught it |
-| Platform items in a customer's business, or for somebody whose staff row does not name them | Platform is a scope: membership of GOLD is not platform authority, and the control plane never sits beside a tenant's own work (D45, D59) | `projectShell` takes `platform` as an input that is `null` unless the organization is GOLD's own and the caller is staff (`organization-shell.tsx`); `shell-projection.test.ts`; `adaptive-shell.test.ts` proves each Platform area's layout, and each page, refuses a row that does not name it |
+| Platform items in a customer's business, or for somebody whose staff row does not name them | Platform is a scope: membership of GildOps is not platform authority, and the control plane never sits beside a tenant's own work (D45, D59) | `projectShell` takes `platform` as an input that is `null` unless the organization is GildOps' own and the caller is staff (`organization-shell.tsx`); `shell-projection.test.ts`; `adaptive-shell.test.ts` proves each Platform area's layout, and each page, refuses a row that does not name it |
 | A Platform address spelled by hand, or Platform data filtered by the organization in its URL | The address names the context an operator is in, never who owns the records; a hand-written `/platform/...` link is the old namespace coming back (D60) | `platformHref` is the one way to write one; `adaptive-shell.test.ts` finds any other, and `platform-control-plane.test.ts` refuses any use of `goldId` but a link |
-| Any organization but GOLD's own serving Platform, however trusted the caller | Staff may bring a tenant into existence and never reach into one (I21); membership of a business is not Platform authority | `requirePlatformScope`: GOLD's own Plan, then membership, then a live `platform_staff` permission, in that order; `adaptive-shell.test.ts` |
+| Any organization but GildOps' own serving Platform, however trusted the caller | Staff may bring a tenant into existence and never reach into one (I21); membership of a business is not Platform authority | `requirePlatformScope`: GildOps' own Plan, then membership, then a live `platform_staff` permission, in that order; `adaptive-shell.test.ts` |
 | A page of a workspace drawn as its peer | Work, Schedule, Resources, Locations and Assets are pages of Operations; five rows beside Customers say the opposite (D60) | `Area.parent`, read by `projectShell`; `navigation.test.ts` checks every parent is a real workspace in the same section |
-| A sidebar row for a workspace with no real page, or a dropdown holding anything but real pages | A placeholder is a promise the product cannot keep; *coming soon* belongs in the catalogue (D61) | `WORKSPACES` registers all nine workspaces and a row is derived from reachable pages; `navigation.test.ts` pins Service, Finance, AI and Studio as registered and absent, and refuses a page with no route (D66) |
+| A sidebar row for a workspace with no real page, or a dropdown holding anything but real pages | A placeholder is a promise the product cannot keep; *coming soon* belongs in the catalogue (D68) | Current `WORKSPACES` rows are implementation state and visibility derives from reachable pages; `navigation.test.ts` refuses a page with no route. The target set is documented separately in D68 |
 | An old Product key (`crm`, `operations`, `insights`, ...) written back to the catalogue, or reporting made a ninth Product | The customer-facing set is the eight Gild Products; the shared Workspace is a different kind of row (D61) | `platform_catalog_products_key_check` and `_workspace_kind`; `gild-taxonomy.test.ts` |
 | A failed read of platform staff treated as *not staff* | Schema drift then looks like an authorization decision and Platform vanishes without a word | `platformPermissions` and `isPlatformStaff` throw; `platform-permissions-read.test.ts` (I53) |
 | A renderer, a role name or a breakpoint deciding what somebody may reach | Entitlement and permission are separate, both required, and resolved once; a second rule per breakpoint is how phone and desktop disagree (D59) | `org-shell.tsx` and `more-menu.tsx` name no capability, module or role; `adaptive-shell.test.ts` |
@@ -405,7 +416,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | Setup gated on the drafting module | Setup is kernel; Agent-assisted drafting is an optional accelerator inside it (D59) | `setup` has no module or capability on its `AREAS` row; `adaptive-shell.test.ts` |
 | A permanent sidebar row for configuration, or an Ask row | A row is a place somebody works; configuring how another workspace behaves is reached from Settings, and the Agent is a rail on every workspace | `Area.sidebar: false` on Pricing, Custom fields, Team, Integrations and Setup; `settings-map.test.ts` fails if one is left unreachable; `navigation.test.ts` fails on an `ask` area |
 | A shell action in the list of areas | *Leave this business* is not somewhere to go, and a list holding both makes sixteen areas look like eighteen | Switch business and Sign out live in the header; `navigation.test.ts` fails on an `AREAS` entry with no route behind it |
-| GOLD's header on a tenant's public page | `SiteShell` says GOLD twice. On `/book/{slug}` that is our wordmark on somebody else's shop front (D20) | `public-profile.test.ts` scans `app/(public)/` for it, beside the sentences it already refuses |
+| GildOps' header on a tenant's public page | `SiteShell` says GildOps twice. On `/book/{slug}` that is our wordmark on somebody else's shop front (D20) | `public-profile.test.ts` scans `app/(public)/` for it, beside the sentences it already refuses |
 | A heading on an area page | One string in `navigation.ts` is both the navigation entry and the `<h1>`; an area's root page reads it with `areaLabel`. A detail route writes its own, because a job's title is not a platform noun | `navigation.test.ts` fails on a route with no entry and on an entry with no route |
 | A page title or page action in `WorkspaceHeader` | It is the global bar; a control belongs to the layer whose scope it has, and *Configure* on Agent's row put one page's controls on the workspace's (`ui-spec.md` §2a). The breadcrumb trail is the one page-supplied thing it hosts, through `WorkspaceCrumbSlot` | `WorkspaceHeader` accepts no slot but that one; every page renders one `PageHeader`, and its `crumbs` render in the bar rather than the page; `workspace-shell.test.ts` scans both |
 | An interleaved `AREAS` list | An operator must never reach today's work by going through settings (D23), and the sidebar rules between sections — a broken run draws a divider through the middle of one | `navigation.test.ts` asserts each group is one unbroken run, in `AREA_GROUPS` order, Home first and Settings last |
@@ -433,7 +444,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | Tenant identity, and the caller's own JWT | D14, D17 |
 | The external actor axis | D22 |
 | The interface, and the control set | D23, `docs/ui-spec.md` |
-| Home, workspaces, the page-support rail, and operator against catalogue taxonomy | D58 |
+| Home, target workspaces, canonical projections, Library, Insights, and operator against catalogue taxonomy | D68 (with D58 and D67 for history/invariants) |
 | Modules against engines | D25 |
 | Payments, and whose account holds the money | D26, D27, D33 |
 | Platform staff, provisioning, the two doors | D28, D29 |
@@ -447,15 +458,16 @@ Every entry above has a decision record behind it. Read it before changing the t
 | The dialer, and whose telephone account it is | D38, D39 |
 | What reaching somebody costs, and who pays first | D40 |
 | What a business is buying, and what a lapse does | D41 |
-| GOLD's own business, and why staff is a second account | D42 |
+| GildOps' own business, and why staff is a second account | D42 |
 | The commercial catalogue, entitlement's build, provider cost and margin | D43 |
 | Provider bindings, provisioning and where a generated secret lives | D44 |
-| GOLD's own provider account, its write-only credential, and reconciliation | D54 |
+| GildOps' own provider account, its write-only credential, and reconciliation | D54 |
 | The canonical Product/Module/Feature catalogue, Plans/Add-ons, and how they coexist with the legacy commercial layer | D46, D50 |
 | The API's human-auth boundary, JWKS verification, and the Supabase key rename | D52 |
 | Connectors as catalogue data, against providers and connections | D55 |
 | A tenant's OAuth credential, the fifth machine role, one contract for two suites | D56 |
-| Eight Gild Products, the shared Workspace, and when a sidebar row is real | D61 |
+| Catalogue Product history and the shared catalogue row | D61, D67 |
+| GildOps naming, legacy identifiers and forward namespace migration | D69 |
 | A generic Provider Account for an API-key-only provider, and AI Runtime assignment | D62 |
 | Files, imports and policy, against Connections | D63, D55 |
 | Usage, its provenance, and retail and provider rates as one model | D65, D40, D43 |

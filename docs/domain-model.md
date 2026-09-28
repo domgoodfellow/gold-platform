@@ -19,7 +19,7 @@ Use `/verify <n>` to audit one. "The code appears to do the right thing" is not 
 | # | Invariant | Enforced by |
 | --- | --- | --- |
 | I1 | Every tenant-owned row carries `organization_id`, and RLS keyed to it is enabled on its table. | `20260825000001_tenancy.sql` — RLS enabled *and* forced; `tenancy.test.ts` hides the other tenant even when its id is known; `schema-conformance.test.ts` asserts it from `pg_class` for every table in `public`, so a table added later can't ship without it. |
-| I2 | Every unique index and every exclusion constraint on a tenant-owned table leads with `organization_id`. | `memberships_org_user_unique`, `work_item_types_org_name_unique`, `work_item_statuses_org_type_name_unique`; `schema-conformance.test.ts` asserts from `pg_index`/`pg_constraint` that every non-primary unique index and exclusion constraint on a table carrying `organization_id` leads with it. Three named exemptions, not lapses: `external_actors_one_tenant_per_user` is on `user_id` alone, since it enforces that one *actor* can never span two tenants (D22) — leading with `organization_id` would permit exactly the row it forbids. `customer_portal_invites (token)` and `organization_domains_active_hostname_unique (hostname, where released_at is null)` are the same shape: an identifier the outside world presents — an invitation token, a hostname a browser arrives holding — must be resolvable without already knowing its tenant, so it has to be unique across every tenant's claim rather than scoped by one. `invoices_org_number_unique (organization_id, number)` is the rule at its most visible — a global sequence would refuse two businesses their own invoice #1 and reveal how many invoices GOLD has ever issued. |
+| I2 | Every unique index and every exclusion constraint on a tenant-owned table leads with `organization_id`. | `memberships_org_user_unique`, `work_item_types_org_name_unique`, `work_item_statuses_org_type_name_unique`; `schema-conformance.test.ts` asserts from `pg_index`/`pg_constraint` that every non-primary unique index and exclusion constraint on a table carrying `organization_id` leads with it. Three named exemptions, not lapses: `external_actors_one_tenant_per_user` is on `user_id` alone, since it enforces that one *actor* can never span two tenants (D22) — leading with `organization_id` would permit exactly the row it forbids. `customer_portal_invites (token)` and `organization_domains_active_hostname_unique (hostname, where released_at is null)` are the same shape: an identifier the outside world presents — an invitation token, a hostname a browser arrives holding — must be resolvable without already knowing its tenant, so it has to be unique across every tenant's claim rather than scoped by one. `invoices_org_number_unique (organization_id, number)` is the rule at its most visible — a global sequence would refuse two businesses their own invoice #1 and reveal how many invoices GildOps has ever issued. |
 | I3 | Tenant identity resolves through exactly one function; nothing assumes how many tenants a database holds. | `app.current_tenant_ids()` — returns a *set*, is the only tenant lookup, and every RLS policy calls it; `tenancy.test.ts` shows each user only their own organizations. |
 | I4 | There is exactly one price calculation. | `priceWorkItem` in `lib/domain/pricing/prices.ts` is the only place an amount is derived. A line copies its catalogue row rather than joining to it (`add_work_item_priced_line`); `work_item_priced_lines` holds no foreign key to `price_book_items` at all (`prices.test.ts`, from `pg_constraint`). `work_item_priced_lines_one_currency`, a gist exclusion, refuses a second currency on one job in the database rather than in a pre-insert check that would race identically (I6). Quantity is an integer, so nothing rounds. `jobEconomics` calls `priceWorkItem` rather than reshaping its answer (`economics.test.ts`). An invoice carries no `total_minor` column either — `invoiceStanding` calls `priceWorkItem` over the invoice's own snapshotted lines (`invoices.test.ts`). **Expressed a second time and pinned, not duplicated** (D35): `public.invoiced_and_incurred` totals lines in SQL for reports and AI tools, held honest by a correspondence test (`reporting.test.ts`) that fails on any disagreement — repaired by teaching the aggregate, never by relaxing the test, the same mechanism I5 uses for availability. |
 | I5 | There is exactly one availability calculation. | `freeWindows` in `lib/domain/scheduling/availability.ts`, with `listSchedule` above it, is the only availability calculation — `scheduleWorkItem` never calls it, so there's no second opinion to drift. `listSchedule`'s filters are the exclusion constraint's own partial predicate written as a query (`status_releases_resource = false`, overlap against `occupies`); `availability.test.ts`, `work-item-editing.test.ts` and `buffer.test.ts` assert both directions agree. Operating hours are subtracted first from `operating_hours`, and nothing anywhere seeds a default working week — a business with none configured is always open (`operating-hours.test.ts`). |
@@ -50,7 +50,7 @@ Use `/verify <n>` to audit one. "The code appears to do the right thing" is not 
 | I26 | A public write on the external axis may name its own target organization to nobody — the caller supplies no organization id, and no policy grants a way to read what was written. | `submit_public_inquiry` (the demo and contact forms' one door) takes no `p_organization_id` parameter at all (`public-intake.test.ts` reads `pg_proc.proargnames` from the catalogue rather than trusting the source); the target comes from `platform_settings`, a table with RLS forced and no grant to any role, set only by `supabase/snippets/workflow-review-target.sql` (D22, D42). Unlike `create_booking`, no `external_actors` binding is written, so `public-intake.test.ts` proves the caller can read back no customer, event, organization or membership even while its anonymous session is still live — the absence of a grant, not a policy that happens to decline (I21's shape, one axis over). |
 | I27 | An organization cannot transition SETUP → LIVE while a blocker exists, regardless of which caller invokes the transition. | `public.organization_launch_blockers(id)` is the one definition of what blocks the move — a switched-on `booking` module with no public address or nothing published to it, or a switched-on `card_payments` module with no connected account. `computeReadiness` calls it for presentation; `app.check_launch_readiness`, a `before update of operational_state` trigger, calls the same answer through `app.organization_launch_blockers_unchecked` for enforcement, so the two can never disagree (I13's shape, one table over). **Verified non-vacuous**: the first version of `launch_organization` checked only `organization.manage` and not this function at all, so any caller holding that capability could invoke it directly through PostgREST and skip `computeReadiness` entirely — `lifecycle.test.ts` asserts a direct RPC call is refused while a blocker is open. |
 | I28 | What a business is entitled to use is the intersection of what it wants and what it has paid for — a separate axis from `organization_modules`, and no RLS policy ever consults it. | D41, built **in full as a model** — the wanted∩paid intersection is computed, correct, and holds for every module. `organization_commercial_terms` is append-only and holds no insert/update/delete grant for anyone, staff included — `public.record_commercial_term` is the one door, `security definer`, checked against `platform_staff` and granted `execute` to that role alone. `public.usable_modules` computes the intersection fresh (`security invoker`, reading both source tables under the caller's own RLS); `public.module_commercial_state` returns all four states except the absent one, which produces no row rather than a false one. **A second, narrower claim, not to be read as the same one:** the model's *enforcement* — the write-refusal trigger that makes a lapsed term actually stop a write — is proven on exactly one table, `payment_accounts` (`card_payments`). The other five optional modules' tables carry no such trigger yet; their entitlement is correctly computed and correctly displayed, and simply not yet enforced at the write a person or an automation could still make. `commercial-terms.test.ts` proves all four states on one business, the entitlement refusal and its lift on the one table that has it, and that neither a tenant nor staff can insert a term directly. |
-| I29 | GOLD's own provider cost, a reconciliation of it, and the margin either implies, are never visible to a tenant. | `platform_provider_rates` and `usage_cost_reconciliations` grant `select` to `platform_staff` only — no grant to `authenticated` exists on either, unlike `platform_retail_rates`. `usage_events`'s column grant to `authenticated` names every column except `provider_key`, `provider_currency` and `provider_cost_micros` — which vendor GOLD uses and what GOLD pays it are both withheld by the same mechanism (D43). `public.organization_commercial_summary` and `public.organization_usage_detail`, the two functions that ever compute or disclose a margin or a reconciled cost, are granted `execute` to `platform_staff` alone. `commercial-usage.test.ts` asserts every one of these columns and both functions are refused to a signed-in tenant, and that the tenant-safe reader (`listUsageEvents`) still returns its own rows with none of them. |
+| I29 | GildOps' own provider cost, a reconciliation of it, and the margin either implies, are never visible to a tenant. | `platform_provider_rates` and `usage_cost_reconciliations` grant `select` to `platform_staff` only — no grant to `authenticated` exists on either, unlike `platform_retail_rates`. `usage_events`'s column grant to `authenticated` names every column except `provider_key`, `provider_currency` and `provider_cost_micros` — which vendor GildOps uses and what GildOps pays it are both withheld by the same mechanism (D43). `public.organization_commercial_summary` and `public.organization_usage_detail`, the two functions that ever compute or disclose a margin or a reconciled cost, are granted `execute` to `platform_staff` alone. `commercial-usage.test.ts` asserts every one of these columns and both functions are refused to a signed-in tenant, and that the tenant-safe reader (`listUsageEvents`) still returns its own rows with none of them. |
 | I30 | A rate is append-only, effective-dated, and named to the provider that set it; a usage event snapshots the cost and the charge in effect when it happened, each in its own currency, and neither is reinterpreted when a rate changes later. | `platform_provider_rates` is keyed by `(provider_key, meter_id, currency, effective_from)` — two providers may price one meter independently, and neither table nor lookup ever assumes a meter has one vendor (D43's correction; `platform_meters` itself carries no provider column at all). Both rate tables hold no update or delete grant for anyone — a new price is a new row, and "current" is the latest approved row with `effective_from <= now()`, read by `app.provider_rate_at` (which returns the provider's own currency rather than being told one to look for) and `public.retail_rate_at`. `usage_events.provider_cost_micros`/`provider_currency` and `customer_charge_micros`/`customer_currency` are written once, by `app.charge_for_call`, and the table holds no update grant either. Amounts are micro-minor-units (millionths of one minor currency unit) rather than I10's minor units directly, because a provider's wholesale price is routinely sub-cent; every total this platform actually discloses still rounds to a minor unit exactly once, at render. `commercial-catalogue.test.ts` asserts the update refusal directly and that two providers price one meter independently without a second business meter ever being created. |
 | I31 | A provider's cost and a customer's charge are never assumed to share a currency, and a margin is reported only where they truthfully agree — never guessed by conversion. | `usage_events` and `usage_cost_reconciliations` each carry their own currency column for the provider side, independent of `customer_currency`; nothing derives one from the other, and `app.charge_for_call` looks up GOLD's own rate by provider and meter, never by the tenant's currency (the bug D43's correction fixed — Twilio does not bill GOLD in whatever a Canadian customer trades in). `public.organization_commercial_summary` groups by both currencies together and returns `margin_minor` as null whenever they disagree and the cost is not exactly zero — the same "return null rather than convert" rule `jobEconomics` already holds across a tenant's own currencies (I10), restated for GOLD's own books, and the same open question D40 already named ("the spread") rather than a new one. `commercial-usage.test.ts` records a real, non-zero cost in one currency against a charge in another and asserts the margin is null, not a subtracted number. |
 | I32 | A reconciliation corrects what a usage event is believed to have cost GOLD; it never adds quantity or customer charge, so it can never duplicate either. | `usage_cost_reconciliations` carries `reconciled_provider_cost_micros`, a provider currency and a reference — no quantity column and no customer-charge column exist on it at all, so there is nothing on the row that could double either figure. `public.record_usage_reconciliation` is the one door, `security definer`, checked against `platform_staff` (a machine role for a provider-sync job is the next slice's to add, onto the same function). `public.organization_commercial_summary` uses the latest reconciliation's cost in place of the original estimate, never the sum of both, and `public.organization_usage_detail` keeps the original estimate visible next to it, permanently. `commercial-usage.test.ts` reconciles a usage event twice and asserts the aggregate always reflects only the latest correction, the quantity and customer charge never move, and the very first estimate is still readable throughout. |
@@ -177,7 +177,7 @@ enforcement is partial. The complete path is Plan/Add-on → Entitlement → nav
 availability → domain/server authorization → database enforcement where appropriate.
 
 **Four independent axes decide whether a Feature is available to an organization, and none folds
-into another:** Entitlement (GOLD's grant), Activation (the organization's own opt-out — entitled
+into another:** Entitlement (GildOps' grant), Activation (the organization's own opt-out — entitled
 ordinary capabilities are active by default), Readiness (whether it can do useful work right now,
 separate from whether it is switched on at all), and role authorization (`app.has_capability`,
 untouched by any of the first three). `organizationResolvedFeatureStates` is the one place the
@@ -189,48 +189,82 @@ limit. An AI request additionally checks the actor's permission, safety policy, 
 capability and allowed model; it records raw provider usage, normalized usage and cost. No
 credit unit, allowance, price or overage rule is authoritative until it is explicitly modeled.
 
-GOLD dogfoods this model as an ordinary internal organization with an ordinary Plan,
+GildOps dogfoods this model as an ordinary internal organization with an ordinary Plan,
 Subscription and broad Entitlements. There is no tenant-zero, magic slug or unmetered bypass.
 
 ## Product boundaries
 
-The eight Gild Products and what each owns (D61 is the canonical decision; renamed in place from
-the seven-Product taxonomy this table used to list — `crm`→Sales, `communications`→Comms,
-`operations`→Field, `financial_operations`→Finance, `automation`→Automations,
-`customer_experience`→Studio — with `insights` demoted to a shared catalogue row, and Service/Agents added; D66 names the
-operator-facing workspaces Gild AI for Agents and Gild Insights for the shared row):
+Catalogue Products and operator workspaces are separate facts (D68). The catalogue may continue to
+package Sales and Service while the operator works through CRM; a workspace can compose Features
+from several Products and a Product can contribute Features to several workspaces. Do not infer
+navigation from this catalogue table.
 
 | Product | Owns |
 |---|---|
-| Gild Sales | Customers and contacts, sales, CRM configuration and CRM intelligence. |
-| Gild Service | Planned; catalogued with Features only, `unlisted` — no operational surface yet. |
+| Gild Sales | Commercial Sales capability family; contributes relationship and pipeline Features to CRM. |
+| Gild Service | Planned catalogue family with Features only, `unlisted`; any future cases/requests surface composes into CRM unless evidence establishes another operator need. |
 | Gild Comms | Voice, SMS and Email. |
-| Gild Finance | Tenant pricing and Price Book, quotes, invoices, payments and job economics. This is separate from GOLD's own Plans, subscriptions and billing. Configured from Settings today; no dedicated workspace. |
-| Gild AI (catalogue key `agents`) | Intelligence: assistants, chatbots, knowledge, conversations, tools and actions, models and runtime, evaluations, AI usage. The Agent tool loop and drafting are one implementation inside it. Reached from the page-support rail only; no dedicated workspace yet. |
+| Gild Finance | Tenant pricing and Price Book, quotes, invoices, payments and job economics. This is separate from GildOps' own Plans, subscriptions and billing. |
+| Gild AI (catalogue key `agents`) | Intelligence capabilities: assistants, chatbots, knowledge, conversations, tools/actions, models/runtime, evaluations and AI usage. |
 | Gild Automations | Workflows, triggers, conditions, actions, AI actions, execution and human review. |
 | Gild Field | Work, Scheduling, Resources, Assets and Locations, plus dispatch policy. |
-| Gild Studio | Website, booking, portal, forms, public brand/assets and domains. Public pages project business context; they do not own it. Configured from Settings today; no dedicated workspace. |
+| Gild Studio | Authoring and publishing website, booking entry, portal, forms, public brand/media and domains. It does not own campaign intent. |
 
-**Gild Insights** (catalogue key `workspace`) is the shared analytical workspace — dashboards,
-reports, analytics over the one reporting aggregate; Home, Documents and the page-support rail are
-shell. All nine are registered workspaces (D66); a sidebar row exists only for one with a real
-reachable page today — Sales, Comms, Automations, Field and Insights. Service, Finance, AI and
-Studio are registered and reached from Settings or the rail, never a hollow row.
+The shared catalogue row keyed `workspace` packages cross-cutting substrate. It does not create an
+Insights workspace. Insights is shared reporting infrastructure over the one aggregate.
+
+## Operator workspace composition
+
+| Workspace | Canonical responsibility |
+|---|---|
+| CRM | Customers, relationship intent/state, pipeline, qualification, follow-up and intake progression. |
+| Communications | Calls, voice, email, messaging, threads, delivery state, numbers and routing. |
+| Marketing | Campaigns, audiences, acquisition and lifecycle intent. It consumes Studio content and Communications delivery. |
+| Finance | Tenant/customer pricing, quotes, invoices, payments and job economics. |
+| AI | Assistants, business-intelligence interaction, knowledge and tool configuration. It reasons and invokes; it does not own durable workflows. |
+| Automations | Durable rules, triggers, sequences and workflow execution. |
+| Field | Operational work, scheduling, resources, locations and equipment/assets. |
+| Studio | Authoring and publishing website, forms, brand and portal experiences. |
+
+Home is the cross-workspace cockpit. Insights is cross-cutting analysis. Library is shared
+organization infrastructure. None is an owner workspace. Current navigation still exposes Sales
+rather than CRM, does not expose Marketing, and has only partial Finance, AI, Studio and Library
+surfaces; those are implementation facts, not changes to this target model.
+
+## Canonical records and projections
+
+A Customer, Conversation/thread, Invoice, Work Item and Document exists canonically once. A Form
+or reusable Template does too when multiple real consumers genuinely share it. Any workspace may
+project a canonical record. A projection reads authoritative state, may add context-specific
+secondary data and authorized actions, and links to the owning/canonical destination. It never
+copies authoritative state, takes ownership or reimplements business rules.
+
+Invocation follows the same rule. CRM can call through Communications; Marketing can use Studio
+content and Communications delivery; Finance can send through Communications; Automations can
+invoke every domain; AI can use permitted tools. The caller never acquires the invoked capability.
+
+Library is the target shared infrastructure for Files, Templates, Media and Knowledge. Today,
+record-attached Documents exist but an organization-wide Library collection does not. Do not create
+a generic Form or Template persistence model until more than one real consumer needs the same
+canonical object; domain-specific templates retain domain behavior and ownership until then.
+
+A **Resource** is capacity — what work is done with. An **Asset** is the subject — what work is
+about. A work item may relate to both without merging their meaning or ownership.
 
 Business Offerings answer “what do we offer and how do we describe it?” and belong to shared
 BusinessOS context. Financial Operations' Price Book answers “what do we charge and under
 which pricing rules?” A Product may read both but must not merge them.
 
-Two financial directions must never share a ledger merely because GOLD dogfoods the platform:
+Two financial directions must never share a ledger merely because GildOps dogfoods the platform:
 
 | Plane | Money direction | Owns |
 |---|---|---|
-| GOLD Plans & Billing | Organization → GOLD | Catalogue, Plans, Add-ons, Subscription terms, Entitlements, Usage/credits, retail rates, provider costs, GOLD invoices/payments and margin. |
+| GildOps Plans & Billing | Organization → GildOps | Catalogue, Plans, Add-ons, Subscription terms, Entitlements, Usage/credits, retail rates, provider costs, GildOps invoices/payments and margin. |
 | Financial Operations | Tenant customer → Tenant | Price Book, quotes/estimates, invoices, payments, job economics and tenant revenue/margin. |
 
 CRM may display those business facts and Operations may contribute costs; neither absorbs
-Financial Operations. GOLD's internal organization uses Financial Operations only for its own
-customers, never as a shortcut for GOLD subscription revenue.
+Financial Operations. GildOps' internal organization uses Financial Operations only for its own
+customers, never as a shortcut for GildOps subscription revenue.
 
 ## BusinessOS
 
@@ -247,9 +281,9 @@ Operations, and workflow execution with Automation.
 
 ## Provider and Intelligence control planes
 
-A **Provider** is a supplier. A **provider capability** is the abstract service GOLD needs; a
+A **Provider** is a supplier. A **provider capability** is the abstract service GildOps needs; a
 **provider binding** is an organization's configured relationship to a supplier; a **provider
-resource** is the concrete external number, domain, account or similar object. A **provider account** is GOLD's own upstream account (the Twilio parent) that bindings sit beneath, and is a different thing from an **integration connection**, which is a tenant's own authorization to an outside system (D54). Product features
+resource** is the concrete external number, domain, account or similar object. A **provider account** is GildOps' own upstream account (the Twilio parent) that bindings sit beneath, and is a different thing from an **integration connection**, which is a tenant's own authorization to an outside system (D54). Product features
 depend on capabilities, never on a provider brand. One supplier may implement several
 capabilities: Twilio can provide telephony voice, number inventory and SMS; Resend can provide
 email; Stripe can provide payments; an AI provider can provide model inference.
@@ -271,11 +305,11 @@ platform-staff act through `record_ai_runtime_assignment`, never a tenant one.
 
 A **Provider Service** (`platform_provider_services`) is one capability a Provider exposes at a
 grain finer than the Provider itself — Google is a Provider; Gemini Interactions and Routes are
-two of its Services, each independently `implementation_state` (what GOLD runs) and
+two of its Services, each independently `implementation_state` (what GildOps runs) and
 `vendor_status` (the upstream service's own maturity, never collapsed into the first). A
 Connector's own child apps (`platform_connector_apps`) carry the identical two facts, at the
 same grain, for the outside-app axis. Either may map, descriptively only, to a Catalog Feature
-(`platform_provider_service_features`, `platform_connector_app_features`) to answer "what GOLD
+(`platform_provider_service_features`, `platform_connector_app_features`) to answer "what GildOps
 Feature can this external capability support" — never a Plan/entitlement grant, which stays
 `platform_plan_*_grants`'s alone. The five external nouns — Provider, Provider Service,
 Connector, Connection, Resource — are never collapsed into each other; see D55 and
@@ -289,7 +323,7 @@ data, not permission to draw Google's own map geometry on a different renderer.
 
 Intelligence is a horizontal runtime for model providers, routing, fallback, budgets, quotas,
 concurrency, metering, cost, health, audit, tools, safety and agents. Product-specific AI
-features stay inside their Products. GOLD Intelligence may package those features commercially;
+features stay inside their Products. GildOps Intelligence may package those features commercially;
 AI Receptionist is a Solution composed from Communications / Voice, Automation, CRM and the
 Intelligence runtime, not a new engine or Product.
 
@@ -303,9 +337,9 @@ still-unmanaged capability: it remains Anthropic-only, chosen by environment var
 `lib/adapters/geocoding` and `lib/adapters/integrations` work, not yet brought under AI Runtime
 assignment.
 
-Initially local-model bindings are Platform Context only. GOLD's internal organization may
+Initially local-model bindings are Platform Context only. GildOps' internal organization may
 consume those capabilities through ordinary managed features. External tenant organizations may
-also consume managed AI-backed GOLD features, but cannot configure Ollama URLs/local inference
+also consume managed AI-backed GildOps features, but cannot configure Ollama URLs/local inference
 endpoints, view platform credentials, or select arbitrary internal models. Tenant-managed model
 credentials, endpoints, model selection and dedicated inference are deferred until their control
 and isolation model is designed.
@@ -318,7 +352,7 @@ ownership boundaries.
 
 | Engine | Owns |
 |---|---|
-| Pricing | `priceWorkItem`, tenant Price Book calculation, quoted and invoice line semantics, and job economics (I4). It does not own GOLD Plans or subscription billing. |
+| Pricing | `priceWorkItem`, tenant Price Book calculation, quoted and invoice line semantics, and job economics (I4). It does not own GildOps Plans or subscription billing. |
 | Scheduling | `freeWindows`, `listSchedule`, resource commitment, availability, operating hours and conflict prevention (I5, I7). |
 | Automation | The single trigger-condition-action execution runtime and its recorded outcomes (I22-I25). |
 
@@ -328,6 +362,6 @@ availability calculations. Only a future route/travel optimizer with its own ind
 optimization rules may earn a separate engine boundary. Automation and workflows similarly
 share one execution runtime even when they have different authoring experiences.
 
-Communications, CRM, Insights, Customer Experience, Voice and AI are not engines merely because
+Communications, CRM, Marketing, Insights, Studio, Voice and AI are not engines merely because
 they are important product areas. Add an engine only when a distinct load-bearing calculation or
 runtime has evidence and enforced invariants; do not stub future engine directories.

@@ -23,25 +23,25 @@ ahead of it. What is recorded there is what was built and what it replaced.
 
 ## 1. The surfaces
 
-Six. The two authenticated workspaces share shell and Sidebar infrastructure but deliberately
+Six. The authenticated operating scopes share shell and Sidebar infrastructure but deliberately
 do not share a navigation model. That is the reason this file exists rather than another
 paragraph in D23.
 
 | Surface | Whose it is | Navigation | Where |
 |---|---|---|---|
-| GOLD's front page | a stranger | GOLD's own header and footer (`SiteShell`) | `app/(marketing)/` |
+| GildOps' front page | a stranger | GildOps' own header and footer (`SiteShell`) | `app/(marketing)/` |
 | Operator shell | a business's own staff | full IA, three renderings (§2) | `app/organizations/[organizationId]/` |
 | Public booking | a stranger with no account | none — one linear flow | `app/(public)/book/[slug]/` |
 | Customer portal | one customer of one business | none — a single page of their own things | `app/(public)/portal/[token]/` |
-| Platform tools | GOLD staff operating from the GOLD Internal workspace | Platform section inside the ordinary GOLD sidebar | `app/organizations/[organizationId]/platform/` (only for GOLD's own organization) |
-| Auth | anybody | GOLD's own header and footer (`SiteShell`) | `app/(auth)/` |
+| Platform tools | GildOps staff operating from GildOps' ordinary organization | Platform section inside the ordinary organization sidebar | `app/organizations/[organizationId]/platform/` (only for GildOps' own organization) |
+| Auth | anybody | GildOps' own header and footer (`SiteShell`) | `app/(auth)/` |
 
 Three consequences that are easy to undo.
 
 **The operator shell has one workspace frame.** The tenant model comes from
 `lib/navigation.ts`; the global Platform section comes from
-`lib/platform-navigation.ts` and appears only for platform staff inside GOLD
-Internal. Public, portal and auth surfaces remain flows or single-purpose pages. A customer must
+`lib/platform-navigation.ts` and appears only for platform staff inside GildOps' organization.
+Public, portal and auth surfaces remain flows or single-purpose pages. A customer must
 never meet a business-configuration concept or a Platform section.
 
 **Settings has two scopes, and they share a presentation without sharing ownership.** *Account
@@ -58,16 +58,16 @@ belongs to, so Account settings can offer *Back to* it. `/account` redirects her
 Nothing organization-owned is listed in the Personal sidebar to fill it. Addresses:
 `lib/route/personal-settings.ts`.
 
-**`SiteShell` is GOLD's chrome and belongs on GOLD's pages only** — the front page and the four
+**`SiteShell` is GildOps' chrome and belongs on GildOps' pages only** — the front page and the four
 credential screens, which is why those two rows share a description above. It is a header saying
-GOLD and a footer saying GOLD, and on `/book/{slug}` or `/portal/{token}` that would be our
+GildOps and a footer saying GildOps, and on `/book/{slug}` or `/portal/{token}` that would be our
 wordmark on somebody else's shop front. D20 keeps the platform out of a tenant's frame entirely,
 and `public-profile.test.ts` now fails the build on a `SiteShell` anywhere under `app/(public)/` —
 the structural form of the sentence rule the rest of that suite enforces.
 
 **Platform pages never enter tenant `navigation.ts`.** Platform Overview, Organizations,
 Products, Modules, Meters, Pricing, Providers and Failures are a separate IA because they govern
-GOLD itself, not one business. Both models render through the shared `AppShell` and shadcn
+GildOps itself, not one business. Both models render through the shared `AppShell` and shadcn
 Sidebar primitives — and, since the shell/context correction, through the shared
 `WorkspaceShell`/`WorkspaceRightRail` too (`apps/web/components/containers/workspace-shell.tsx`):
 two independent panels — Agent, and the page-support rail that Activity, Insights, Configure and every create/edit form
@@ -83,7 +83,7 @@ sticky *global* bar, and `PageHeader` (`components/containers/page-header.tsx`),
 identity and actions — §2a says which owns what. Agent itself is scope-bound rather than shared
 data: `TenantAgentRail` answers with
 one business's own rows under the caller's RLS; `PlatformAgentRail` takes no organization id at
-all and never runs "inside" a tenant, GOLD's own included — a selected organization may appear as
+all and never runs "inside" a tenant, GildOps' own included — a selected organization may appear as
 Platform Agent's *context*, never as a switch of its scope. What's shared is presentation only
 (`features/agent/agent-shared.tsx`): the conversation header, the transcript, the composer, and the
 unavailable-vs-empty distinction described at `lib/domain/assistant/platform-questions.ts`. §2c
@@ -114,25 +114,82 @@ was — segments, labels, groups, modules.
 same `AREAS`; two lists that had to agree eventually would not.
 
 **One shell, projected.** Organization context is the normal operating context. Every renderer —
-the desktop sidebar, its collapsed rail, the tablet rail, the phone bar and its More menu, the
-Settings map — draws the sections `projectShell` (`lib/shell.ts`) resolves from four independent
+the desktop sidebar, its collapsed rail, the tablet rail, the phone bar and its More menu, and the
+Settings map — draws the projection `projectShell` (`lib/shell.ts`) resolves from four independent
 facts: the organization's entitlements, the member's capabilities, whether the organization is
-GOLD's own, and the member's platform permissions. The sections are Home, **Workspaces**
-(each a Product with a real surface, named without the catalogue's `Gild ` prefix — operator
-vocabulary and catalogue identity are separate concerns. A workspace's own row is its canonical
-Home; a workspace with other pages holds them as children beneath it, never repeating Home among
-them, so Field opens onto Work, Schedule, Resources, Locations and Equipment & Assets rather than
-six rows beside Customers. Insights is not a workspace — it is cross-cutting, reached from each
-workspace's own Home and from a page's Insights support mode), **Business**
-(administration of the current organization: Team, Connections, Plan & usage) and
-**Platform** — only inside GOLD and only with a platform permission — last; a
-section with nothing in it is not drawn. Settings is not a fourth Business row: it is reached from
-the account menu (*Business settings*, offered only where the member may configure something
-there — `lib/shell.ts`'s `businessSettingsOffered`) and from contextual Configure links, never a
-permanent sidebar destination. Account, a person's own settings, is none of these either, and sits
-beside Business settings in the same account menu. No renderer names a capability, a module or
-a role, and none is a second authorization system — hiding an item is courtesy and every page,
-domain function and policy behind it still refuses (I12).
+GildOps' own, and the member's platform permissions. Hiding an item is courtesy, never
+authorization; every page, domain function and policy behind it still refuses independently (I12).
+
+The target information architecture is:
+
+```text
+Home
+
+Library
+├── Files
+├── Templates
+├── Media
+└── Knowledge
+
+Workspaces
+├── CRM
+│   ├── Home
+│   ├── Customers
+│   ├── Pipeline
+│   ├── Inbox
+│   ├── Cases / Requests  (future)
+│   └── Feedback          (future)
+├── Communications
+│   ├── Home
+│   ├── Calls / Voice
+│   ├── Email
+│   ├── Messaging
+│   └── Numbers / routing
+├── Marketing
+│   ├── Home
+│   ├── Campaigns
+│   ├── Audiences
+│   ├── Content
+│   └── Forms / landing-page usage
+├── Finance
+│   ├── Home
+│   ├── Invoices
+│   ├── Quotes
+│   ├── Payments
+│   └── Pricing
+├── AI
+│   ├── Home
+│   ├── Assistants
+│   ├── Knowledge
+│   └── Tools
+├── Automations
+│   ├── Home
+│   ├── Rules
+│   ├── Messages
+│   └── Activity
+├── Field
+│   ├── Home
+│   ├── Work
+│   ├── Schedule
+│   ├── Resources
+│   ├── Locations
+│   └── Equipment & Assets
+└── Studio
+    ├── Home
+    ├── Website
+    ├── Forms
+    ├── Brand
+    └── Portal
+
+Business
+Platform Administration  ← GildOps organization + platform authority only
+```
+
+Only implemented, entitled, permitted and reachable destinations are drawn. This target is not a
+claim that every row exists on current `main`: Sales still fronts the present CRM surface;
+Marketing is absent; Finance, AI and Studio are partial; Library has no organization collection.
+Insights has real deep routes but is cross-cutting and therefore has no workspace row or permanent
+section. Target architecture and current navigation are separate facts (D68).
 
 **Entitlement and permission are separate, and both are required.** A business without
 Communications has no calling workspace for its owner; a member without `call.place` does not
@@ -143,32 +200,33 @@ a `ConfigTarget` that borrows a workspace's entitlement and declares its own con
 permission, so `field.manage` reaches call outcomes without `call.place`. Setup is kernel;
 Agent-assisted drafting is an optional section inside it.
 
-**Platform is a sub-scope of GOLD's own organization** (D60). There are three scopes — a person
+**Platform is a sub-scope of GildOps' own organization** (D60). There are three scopes — a person
 (`/settings/account`), an organization (`/organizations/{id}`) and Platform
 (`/organizations/{goldId}/platform`) — and the address says which one somebody is working in; it
 says nothing about who owns the records on the page. Providers, catalogue and billing stay
 platform-scoped whatever the address. `PLATFORM_DESTINATIONS` is the one registry of its
 destinations, what each takes (`platform_staff.capabilities`) and how the sidebar nests them:
 Catalog holds Plans & Add-ons, Meters and Connectors, Commercial holds Pricing and Billing, and
-Infrastructure holds Providers and Failures. Platform is a section beneath GOLD's own workspaces,
-never a replacement for them, and while somebody is inside it every group is open. A GOLD
-salesperson sees GOLD as any business and no Platform; a limited operator sees only the
+Infrastructure holds Providers and Failures. Platform is a section beneath GildOps' own workspaces,
+never a replacement for them, and while somebody is inside it every group is open. A GildOps
+salesperson sees GildOps as any business and no Platform; a limited operator sees only the
 destinations their row names; nobody sees Platform beside a customer's business. The context
 switcher answers one question — *which organization am I operating?* — and offers no Platform
-entry, because inside Platform the answer is still GOLD.
+entry, because inside Platform the answer is still GildOps.
 
-**A Plan, a Product, a workspace and a page are four different things.** A Plan or Add-on grants
-capabilities; a Product groups the customer-facing capability; a workspace is where an operator
-uses it; a page is one task inside that workspace. Only the last two are navigation, and nothing in
-the sidebar is named for a Plan.
+**A Plan, Product, Module, Feature, workspace and page are different things.** A Plan or Add-on
+grants Features; a Product groups customer-facing capabilities; a workspace composes capabilities
+where an operator works; a page is one task inside it. A Product can contribute to several
+workspaces and a workspace can compose several Products. Only workspaces and pages are navigation,
+and nothing in the sidebar is named for a Plan.
 
 **The phone bar is Home, the first workspaces and More.** Frequent work is in the bar
-(`projectPhone`); everything else — the remaining workspace pages, Shared, Business and
+(`projectPhone`); everything else — the remaining workspace pages, Library, Business and
 Platform — is behind **More**, a sheet grouped as the sidebar is. It is a rendering choice over the
 same projection, so the bar and More together are exactly what the desktop shows. The sidebar
 trigger is hidden below `md` because the bottom bar is the phone's navigation.
 
-**Sections, ruled apart, in `AREA_GROUPS` order** — Home, Workspaces, Shared, Business and
+**Sections, ruled apart, in `AREA_GROUPS` order** — Home, Library, Workspaces, Business and
 Platform. `navigation.test.ts` fails on an interleaved list: each
 section must be one unbroken run, and an operator must never reach today's work by going through
 settings (D23).
@@ -183,42 +241,42 @@ modules — so no section is named for one. These are named for what an operator
 | Section | Holds | Why |
 |---|---|---|
 | (Home) | Home | What matters in this business right now — set apart, first |
-| Workspaces | Sales (Customers, Pipeline), Communications (Calls), Automations (Rules, Messages, Activity), Field (Work, Schedule, Resources, Locations, Equipment & Assets) | Where an operator uses a Product, named without the catalogue's `Gild ` prefix. The row's own destination is the workspace's Home; a workspace with only Home is a plain row, with other pages too an expandable one — Home is never repeated among them; a Product with no surface has no row |
-| Shared | Insights | Cross-Product analytics over the one reporting aggregate; not a Product |
+| Library | Files, Templates, Media, Knowledge | Shared organization infrastructure; current implementation has record-attached Documents but no organization collection |
+| Workspaces | CRM, Communications, Marketing, Finance, AI, Automations, Field, Studio | Where an operator does one kind of ongoing work. Current rows are derived only from real reachable pages; the target set is independent of catalogue Products |
 | (Settings) | Settings | Where the business is configured — set apart by the rule above it |
 
-**The operating model.** An organization is *Home*, its *workspaces*, and *Settings*. A workspace
-is a place somebody works and follows one contract: an **Overview**, its primary views, an
-**Activity** read, a few contextual **Insights**, and **Configure**. Not every workspace has every
-part as a page; a part with no honest source is left out and not faked. *Insights* is also a
-workspace of its own — the deep, cross-workspace one: `/insights` is saved dashboards and
-`/insights/reports` the report builder. A workspace's Insights rail is a handful of numbers with a
-link into it; the report builder never sits in a rail. *Agent* is the workspace-global assistant
-rail, and is none of these.
+**Workspace interaction contract.** The row body opens the workspace's canonical **Home**. The
+chevron expands or collapses children only: clicking it never navigates, and clicking the body never
+merely toggles. Home summarizes the workspace and routes into real child surfaces; it is never
+repeated below the parent, and **Overview** is not a competing page type. A dropdown contains only
+real, reachable child pages — never *coming soon*. A `ViewNav` holds sibling views inside one page;
+the same destinations are never both navigation grains.
 
-**Workspaces are surfaces of the Gild Products; they are not Plans, SKUs or data owners (D67).** A row is where an operator uses
-one of the nine registered workspaces (D66) — Sales, Service, Comms, Finance, AI, Automations, Field,
-Studio, Insights — and only those with a real surface get one. A Plan grants Features that may compose into
-several rows, and there is no row per SKU (D25, D46). **One grain per navigation:** a sidebar
-child is a major page of a Product, and a `ViewNav` is for views inside one page; the same three
-names are never both. **A dropdown holds only real, reachable pages** — never *coming soon*.
-GildOps is the company, Gild Platform the control plane (D60), Gild Admin organization
-administration, and Home the cross-workspace cockpit, and the Agent shell and page-support rail shared shell: none
-of them is a workspace.
+**Activity, Insights and Configure are support modes, not workspace pages by definition.** A
+workspace or page exposes only the modes with an honest source. Insights is contextual analysis
+over shared reporting aggregates. `/insights` and `/insights/reports` may remain real deep routes,
+and the Insights support mode may link there; neither fact creates an Insights workspace. Agent is
+the workspace-global assistant rail and is none of these.
 
 **Where each concern lives.**
 
 | Boundary | Rule |
 |---|---|
-| Customers / Communications | Customers owns the relationship — the record, the stage, the follow-up. Communications owns the channel — a call, a conversation, a message. A call appears on a customer's timeline; it is not a customer field |
+| CRM / Communications | CRM owns the relationship — customer, stage, intent and follow-up. Communications owns the channel — call, thread, email or message. A communication can appear on a customer's timeline without becoming a customer field |
 | Work / Schedule | Work owns what is to be done. Schedule alone owns when a resource can commit to it, and is the one engine that says what is free. Neither is a view of the other |
-| Financials / GOLD platform economics | Financials is the business's own price book, quotes, invoices, payments and costs. GOLD's Plans, subscription pricing, provider COGS, tenant economics, margin and forecasting stay in Platform Administration. Two money directions, never one screen |
-| Website & Portal / Communications | Website & Portal is what a customer meets before and outside a conversation — website, booking, forms, portal, brand. Communications is the conversation itself |
-| Sidebar / record links | The sidebar answers *what kind of work am I doing*; a record's relationships answer *what is related to this* (D67). A workspace may show an action or summary owned elsewhere (Call on a customer opens Comms' one dialer, never a second one) |
-| Related-record card | A link plus a read of the canonical record, filtered by the caller's permissions and the organization's entitlements, with loading, error and empty states. It holds no copy of the record and no rule. Not built until its first caller |
+| Finance / GildOps platform economics | Finance is the business's own price book, quotes, invoices, payments and costs. GildOps' Plans, subscription pricing, provider cost and platform margin stay in Platform Administration. Two money directions, never one ledger |
+| Studio / Marketing | Studio authors and publishes website, forms, brand and portal experiences. Marketing owns campaign, audience, acquisition and lifecycle intent and consumes Studio content |
+| Sidebar / record links | The sidebar answers *what kind of work am I doing*; a record's relationships answer *what is related to this* (D68). A workspace may invoke or summarize a capability owned elsewhere without acquiring it |
+| Related-record/projection card | Reads one canonical record, adds only context-specific secondary data or authorized actions, and offers **Open in …** where useful. It has loading, error and empty states and holds no copy of authoritative state or business rule |
 | Scope | Organization workspaces run one business; Platform Administration runs GildOps (D60). A Platform page is never a tenant workspace repeated so staff can look inside |
-| Library | Documents are shared organization resources, not a sub-feature of Customers, Work or Financials; a document may be linked to a customer, job, asset or invoice without being owned by it. Templates and Knowledge are Library's only when a real shared collection exists; automation message templates and checklist templates stay with their owning domain |
+| Library | Shared organization infrastructure: Files, Templates, Media and Knowledge. A file may link to a customer, job, asset or invoice without being owned by it. Templates and Knowledge enter Library only when a real shared collection exists; domain templates retain their domain owner until then |
 | Service / pricing / scheduling | A Service (Offering) is the reusable definition of what the business does; a Work Item is one instance; the Price Book prices it; Scheduling says when resources can commit; a Quote or Invoice is the snapshotted result for one transaction. A Service may later supply estimated duration, resource requirements, a pricing rule, a checklist, bookability and a service-specific buffer. `buffer_minutes` remains a scheduling policy, and travel time is a separate, future scheduling input from locations and routes — never the same thing as a fixed buffer |
+
+**Card taxonomy.** A **workspace summary/KPI card** summarizes one child surface, provides a
+metric or state, and navigates there. A **related-record/projection card** represents one canonical
+record under the contract above. An **area-local widget** is a richer interactive view local to one
+area and preserves the existing `?widget=<key>` URL-state contract. These are distinct components,
+not interchangeable uses of “card.”
 
 There is no Ask row. The Agent is a rail on every workspace and understands the page and record it
 is opened from; the `assistant` module and `assistant.ask` capability are unchanged, and the old
@@ -262,7 +320,7 @@ three URL-backed sibling views — Members, Invitations, Roles (`?view=`, Tabs p
 the default). Members and Roles are the two collections a Sheet full of inline forms used to sit
 above; adding a member, whether by inviting an email address or adding an existing account, is one
 Add Member Sheet reused from both Members and Invitations, defaulting to invite-by-email because
-that works whether or not the person already has a GOLD account — the two remain the domain
+that works whether or not the person already has a GildOps account — the two remain the domain
 layer's two distinct writes, chosen with a segmented control, never merged. Revoking a pending
 invitation goes through the shared destructive confirmation dialog. A role's capabilities are
 edited in `CreateRoleSheet`/`EditRoleSheet`, both sharing one `CapabilitySelector`; the Roles
@@ -351,18 +409,18 @@ props and renders the same `PageHeader`. Every page renders exactly one page ide
 more memberships, and one current context. The menu's header is the current context and its list
 is *where else*: the other businesses, each linking straight to that business's own lifecycle
 entry. Platform is not an organization and is not listed; inside Platform the current context
-is GOLD. With nowhere else to go it is a label, not an empty menu. There is no directory page: `/organizations` only lands a sign-in (the business last
+is GildOps. With nowhere else to go it is a label, not an empty menu. There is no directory page: `/organizations` only lands a sign-in (the business last
 worked in, else the first) and founds a first business, and the old `?all=1` request is ignored.
 It does not manufacture a list or creation action without a server read behind it. **Sign out belongs to the account menu**, in the sidebar footer on desktop and in
 the compact header menu on a phone. Neither is an operating action or permanent page-header
 command.
 
-**GOLD staff operate GOLD through its ordinary organization workspace when they are real members
+**GildOps staff operate GildOps through its ordinary organization workspace when they are real members
 of it.** The current `gold_internal` base Plan identifies that workspace, never its name. Platform
 Administration is a sub-scope of that same organization (D60), reached from the Platform section of
 its sidebar, not from the switcher. Neither authority substitutes for the other. On a phone the bar
 presents Platform while the address is inside it — a way back to Home and the Platform
-destinations, with the pages under Catalog, Commercial and Infrastructure and GOLD's own workspaces
+destinations, with the pages under Catalog, Commercial and Infrastructure and GildOps' own workspaces
 behind More — and the business's own places otherwise.
 
 **The application canvas has three modes.** `AppPage` owns `fluid` (the default), `form` and
@@ -425,16 +483,16 @@ is `navigation.test.ts`'s dead entry in another costume.
 | No Chat / Context / Activity tabs | Context and Configure are things you do while composing, and Activity was an audit list sitting in a place people read answers. The recorded tool facts remain on every run and will feed a Reports surface; the rail no longer draws them |
 | History is a Popover, never a page | The bounded list (thirty, newest activity first) is a way to switch, not a destination. Hover is `bg-hover`, the current one `bg-selected`, never `bg-muted` |
 | New chat is an unsaved state | It clears the selection and focuses the composer; nothing is written until its first question is sent |
-| The transcript is `Message`, `Bubble`, `Marker` inside `MessageScroller` | The shadcn chat set in `@gold/ui`, adapted to GOLD roles: no avatars, reactions, delivery states or regeneration, no `bg-muted`, no demo blue |
+| The transcript is `Message`, `Bubble`, `Marker` inside `MessageScroller` | The shadcn chat set in the current legacy `@gold/ui` package, adapted to GildOps roles: no avatars, reactions, delivery states or regeneration, no `bg-muted`, no demo blue |
 | A `Marker` is a concise, non-speech note | *Thinking…*, *Checked 14 records*, *Tool refused*, *Action completed*, *Action failed*. Never a list of tool calls — `run-events.ts` is the one place that decides what is worth a line |
 | A proposed action sits directly beneath the response it belongs to | Two shared Buttons, **Decline** and **Approve**. Nothing happens until somebody presses Approve, and then the domain layer does it under their own session (D34) |
 | Enter sends, Shift+Enter adds a line, the field grows to a bound | The bound is `COMPOSER_MAX_HEIGHT`; past it the field scrolls inside itself, and the composer never pushes the transcript off screen |
-| Context is inspection, not configuration | A popover listing what the next turn is given, using only facts GOLD has: the business, the workspace, the record open on the page, the business's time zone. It follows navigation. A row for something that does not exist (an attachment, a connected source the loop does not read) is not drawn |
+| Context is inspection, not configuration | A popover listing what the next turn is given, using only facts GildOps has: the business, the workspace, the record open on the page, the business's time zone. It follows navigation. A row for something that does not exist (an attachment, a connected source the loop does not read) is not drawn |
 | Configure is runtime only | Today one control has a behaviour behind it — whether the open record is named — and a link to *Connections & permissions* for those who may manage them. Durable settings stay in Settings and Platform; a control is added the day something honours it, never before |
 | The paperclip attaches text, Markdown, CSV and JSON, up to three files of 1 MB | It is on the left of the toolbar, before Context and Configure, and it exists because the whole path does: choose, upload privately, a card with its state, sent with the question, kept with it, shown again when the conversation is reopened. Anything the Agent cannot read (a PDF, an image) is refused with a sentence saying so, never accepted and ignored |
-| Attached files are cards above the textarea, and again beside the question they were sent with | `Attachment` on GOLD roles. They wrap rather than scroll, so at 320px none is hidden; each shows *Uploading…*, *CSV · 12 KB* or the reason it failed, and can be cancelled or removed until the question is sent. Send waits for an upload in flight |
+| Attached files are cards above the textarea, and again beside the question they were sent with | `Attachment` on GildOps roles. They wrap rather than scroll, so at 320px none is hidden; each shows *Uploading…*, *CSV · 12 KB* or the reason it failed, and can be cancelled or removed until the question is sent. Send waits for an upload in flight |
 | Popovers never outgrow the rail | `max-w-(--radix-popover-content-available-width)` and collision padding, opening above the composer, so the whole composition holds at the rail's 320px minimum and on a phone |
-| Neither popover shows a secret or GOLD's economics | The same rule as every tenant screen (D45) |
+| Neither popover shows a secret or GildOps' economics | The same rule as every tenant screen (D45) |
 
 `agent-conversations.test.ts` reads the source for each of these; nothing here mounts a component.
 
@@ -457,7 +515,7 @@ and each one names something the screens were already drawing without a word for
 | muted | hint and help text | `opacity-70` |
 | subtle | the quieter weight beneath it | `opacity-60` |
 | danger | a refusal, an error, a destructive action | `red-600` in 34 places and `red-700` in 7 |
-| success | a state GOLD itself reports as good — Setup ready, a connection live, a feature included; never a tenant's word (§7) | `emerald-*` literals inside `Badge` |
+| success | a state GildOps itself reports as good — Setup ready, a connection live, a feature included; never a tenant's word (§7) | `emerald-*` literals inside `Badge` |
 | accent / on-accent | emphasis, and the text on it — the primary button | `bg-foreground text-background` |
 | accent-text | the accent used as *text*: a link, a focus ring | nothing; there was no link colour |
 | hover | a neutral control or menu item under the pointer — the sidebar's own tint | `bg-muted` (a 70% black text role), `black/5`, `accent` |
@@ -505,7 +563,7 @@ calculation for the reason there is one price calculation.
 
 **No role is named for a tenant's meaning.** No `complete`, no `pending`, no `overdue`. Those are
 statuses, the tenant owns them, and §7 is why. `danger` and `success` are the exception because they
-are *GOLD's* facts — a refusal, a connection that is live — and neither is a tenant-settable role.
+are *GildOps'* facts — a refusal, a connection that is live — and neither is a tenant-settable role.
 
 ---
 
@@ -533,7 +591,7 @@ the generic layers merely because it has multiple call sites.
 The operator and platform surfaces have converged on those layers. Dialog, Table, Badge, Card
 and Sidebar primitives come from `@gold/ui`; composed controls retain the application behavior
 that primitives intentionally do not own. `globals.css` aliases `--card`,
-`--card-foreground` and `--muted-foreground` to GOLD's semantic roles, so the platform Card
+`--card-foreground` and `--muted-foreground` to GildOps' semantic roles, so the platform Card
 does not carry an unthemed exception.
 
 **What it replaced, measured before and after.** 23 local style constants across eight names —
@@ -644,7 +702,7 @@ nine gets three, decided by the width there is rather than by a number somebody 
 ## 5b. Collections, and the three navigations
 
 **One word each.** A **Connection** is one organization's configured link to an outside system; a
-**Connector** is a type of outside system GOLD supports; a **Provider** is infrastructure GOLD
+**Connector** is a type of outside system GildOps supports; a **Provider** is infrastructure GildOps
 itself operates. The tenant page is *Connections* (`/integrations`, the route unchanged); the
 Platform page is *Connectors*; Providers stay their own page.
 
@@ -729,9 +787,9 @@ styling hook.
 
 **`Badge` is where this rule lives, and the line it draws is about who owns the meaning.**
 Tenant-authored statuses stay neutral: a work status, a customer stage, a role name is the
-tenant's word and GOLD cannot know whether it is good. `tone="accent"` paints a badge in the
+tenant's word and GildOps cannot know whether it is good. `tone="accent"` paints a badge in the
 *tenant's* colour and says **this one** — who a job is assigned to, on a board somebody is
-scanning — never *this one is good*. **GOLD-owned facts may carry a tone**, because GOLD defined
+scanning — never *this one is good*. **GildOps-owned facts may carry a tone**, because GildOps defined
 them and knows what they mean: Setup's *Ready* is `success`, a provider connection that failed is
 `danger`, a Plan feature that is included is `success`. The tell that the rule has been broken is
 still a lookup keyed to an English word a tenant wrote. Both tones are central roles in

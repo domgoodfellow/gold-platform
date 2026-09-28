@@ -3,7 +3,7 @@
 > Audit date: 2026-09-12. Repository state, migrations, and tests are the evidence. Legal and
 > registrar notes are current research, not legal advice or provider selection.
 
-This document answers one question: **how does GOLD's public presence become a production web
+This document answers one question: **how does GildOps' public presence become a production web
 system without becoming a second product beside the operating platform?** It records the current
 surface, the intended information architecture, and the boundaries for the next implementation
 slices. It does not track delivery status; shipped work remains in `CHANGELOG.md`.
@@ -15,8 +15,8 @@ layout boundaries, not URL or security boundaries.
 
 | Route | Current purpose and truth | Required follow-through |
 |---|---|---|
-| `/` | GOLD's homepage renders the one immutable revision selected by the publishing model. Canonical/social metadata, `robots.txt`, a deliberate marketing-route sitemap and JSON-LD are built; drafts, review and history are not anonymous. | Expand the sitemap only as approved public routes gain substantive content; keep structured claims tied to published facts. |
-| `/demo`, `/contact` | Two forms, one narrow RPC (`submit_public_inquiry`): a demo request and a general inquiry each attribute a Customer and an Event (`source` = `demo` or `contact`) to the platform-configured GOLD organization. The old `/workflow-review` route and RPC are gone. | Add rate limiting/bot mitigation and a confirmed retention period. |
+| `/` | GildOps' homepage renders the one immutable revision selected by the publishing model. Canonical/social metadata, `robots.txt`, a deliberate marketing-route sitemap and JSON-LD are built; drafts, review and history are not anonymous. | Expand the sitemap only as approved public routes gain substantive content; keep structured claims tied to published facts. |
+| `/demo`, `/contact` | Two forms, one narrow RPC (`submit_public_inquiry`): a demo request and a general inquiry each attribute a Customer and an Event (`source` = `demo` or `contact`) to the platform-configured GildOps organization. The old `/workflow-review` route and RPC are gone. | Add rate limiting/bot mitigation and a confirmed retention period. |
 | `/privacy`, `/terms` | Routed initial text with metadata, in the sitemap and footer; marked pending legal review, each unconfirmed clause carries a `LEGAL-REVIEW` comment. | Counsel-approved text; the versioned `/legal/[type]` model below remains the target. |
 | `/login`, `/sign-up`, password routes | One identity serves Organization and Platform Context. Auth layout is noindex; invitation/recovery callbacks work without a second account or re-login. | Preserve safe intended route and hostname context. |
 | `/book/[slug]` | Tenant-branded transaction flow over the real Scheduling and Pricing domain. | Connect it to the tenant's primary public site and canonical host rather than treating the slug as distribution. |
@@ -35,7 +35,7 @@ A hostname resolver and a verified custom-domain lifecycle now exist (`202610100
 (`{organizations.slug}.{platform_settings.platform_public_domain}`, computed rather than stored)
 or a verified, unreleased `organization_domains` row to that organization and surface, failing
 closed for anything else; `/sites/[hostname]` renders the website surface's published home page
-through the same `public_site_revisions` projection GOLD's own root uses. Connecting, verifying and
+through the same `public_site_revisions` projection GildOps' own root uses. Connecting, verifying and
 removing a custom domain go through GildOps' one Vercel provider account
 (`platform_provider_accounts`, never a per-tenant credential), following the D44/D54 provider-
 binding pattern exactly as the Resend sending-domain binding does. Resolution itself does not
@@ -43,7 +43,7 @@ distinguish a managed subdomain from a custom domain — both reach `published_h
 same way — but this is still not full tenant website distribution: governed public media library,
 additional/legal page publication, full public authentication-context preservation, and complete
 attribution/consent remain unbuilt, and Website settings (`create_public_homepage_draft` and its
-siblings) still publishes only GOLD's own site (`platform_settings.workflow_review_organization_id`),
+siblings) still publishes only GildOps' own site (`platform_settings.workflow_review_organization_id`),
 so no ordinary tenant has a `public_sites` row to resolve to at either address yet — that gap
 belongs to Studio's own site model, not to hostname resolution.
 
@@ -51,7 +51,7 @@ Operational `assets` are customer/business equipment and property. Public images
 need a distinct governed media concept; reusing `assets` would corrupt both authorization and
 language.
 
-## Proposed GOLD sitemap and conversion intent
+## Proposed GildOps sitemap and conversion intent
 
 The launch sitemap stays smaller than the illustrative brief. Industries, Resources, and public
 Pricing wait for real material; publishing thin pages would create crawlable noise rather than
@@ -59,19 +59,25 @@ search coverage.
 
 | Page | Visitor problem and search intent | Marketing objective / CTA | Section order | Proof and source | Links / structured data |
 |---|---|---|---|---|---|
-| `/` | “What is GOLD, and is it for an operations business like mine?” | Qualify quickly; **Request a demo**; secondary See how it works | Outcome hero → fragmented-work problem → shared operating model → real capabilities → configurable examples → implementation → security/trust → FAQ → CTA | Product screenshots and only verified capability claims; published GOLD site revision | Platform, Solutions, Review; `Organization`, `WebSite`, `WebPage` |
-| `/platform` | “Business operating platform / operations management software” | Explain the whole system; **See how GOLD works** | Product thesis → shared customer/work/timeline → modules → configuration → automation/AI boundaries → security → implementation → CTA | Real UI and domain concepts; published structured sections | Solutions, Review, Sign in; `Product` only once a visible, purchasable product description is accurate |
+| `/` | “What is GildOps, and is it for an operations business like mine?” | Qualify quickly; **Request a demo**; secondary See how it works | Outcome hero → fragmented-work problem → shared operating model → real capabilities → configurable examples → implementation → security/trust → FAQ → CTA | Product screenshots and only verified capability claims; published GildOps site revision | Platform, Solutions, Review; `Organization`, `WebSite`, `WebPage` |
+| `/platform` | “Business operating platform / operations management software” | Explain the whole system; **See how GildOps works** | Product thesis → shared customer/work/timeline → modules → configuration → automation/AI boundaries → security → implementation → CTA | Real UI and domain concepts; published structured sections | Solutions, Review, Sign in; `Product` only once a visible, purchasable product description is accurate |
 | `/solutions` | “Connect sales, operations, service, automation” | Route visitors by problem; **Choose a workflow** | Problem chooser → Sales → Operations → Customer service → Automation/AI → partial adoption → CTA | Capability-backed examples; no invented vertical claims | Platform and focused solution anchors/pages when each has enough unique evidence; `Service` where visible |
-| `/demo` | “Show me GOLD on my business” | Capture a qualified request; **Request a demo** | Expectations → compact form → privacy-purpose notice → what happens next | Existing customer/event write; published form definition | Platform/Solutions; `WebPage` (not `FAQPage`) |
-| `/about` | “Who operates GOLD and can I trust them?” | Establish accountability; **Contact GOLD** | Company identity → approach → responsible operator/contact → trust → CTA | Canonical GOLD organization profile and verified team/company facts | Legal, Platform; `AboutPage`, `Organization` |
+| `/demo` | “Show me GildOps on my business” | Capture a qualified request; **Request a demo** | Expectations → compact form → privacy-purpose notice → what happens next | Existing customer/event write; published form definition | Platform/Solutions; `WebPage` (not `FAQPage`) |
+| `/about` | “Who operates GildOps and can I trust them?” | Establish accountability; **Contact GildOps** | Company identity → approach → responsible operator/contact → trust → CTA | Canonical GildOps organization profile and verified team/company facts | Legal, Platform; `AboutPage`, `Organization` |
 | `/contact` | General or support contact | Route enquiry; **Send enquiry** | Contact choices → narrow form → existing-customer sign-in | Organization contact records and purpose-specific form | Review, Sign in, Legal; `ContactPage` |
 | `/legal/[type]` | Understand governing terms/privacy | Read current policy; acceptance only when required | Document title/effective date → counsel-approved body → version/supersession → contact | Published platform legal-document version | Footer and forms; `WebPage` |
 | `/login`, `/sign-up` | Enter or establish the one identity | Authenticate | One task per page | Supabase Auth | `noindex`; links home and between credential states |
 
 Later, add `/industries/[slug]` only when a real customer/use case supplies distinct language and
 proof; `/resources/[slug]` only with an editorial owner and article pipeline; `/pricing` only when
-published catalogue terms match how GOLD actually sells. Integrations belong as proof within the
+published catalogue terms match how GildOps actually sells. Integrations belong as proof within the
 platform page before they earn a directory.
+
+Sales, Operations and Customer Service in public solution language are customer-facing problem
+categories. They define neither operator-workspace IA nor catalogue identity. Internally, Studio
+authors the page, form, brand and public experience; Marketing chooses campaign, audience and
+acquisition use; CRM receives relationship and intake state; Communications delivers messages;
+Automations owns durable reactions and orchestration. Invocation never transfers ownership (D68).
 
 ## Public content and publishing model
 
@@ -87,7 +93,7 @@ work_item_types as service capability   ─┤   public_page_revisions (SEO + or
 price_book_items as public offer input  ─┘   section references canonical record ids
 
 platform-owned configuration
-platform_settings: GOLD site owner and lead target
+platform_settings: GildOps site owner and lead target
 public_domains: hostname verification, primary/redirect and certificate state
 provider adapters: DNS/hosting/registrar implementations and secrets
 ```
@@ -106,11 +112,12 @@ unforgeable, expiring, site-and-revision-bound token and must return `noindex, n
 Public reads go through narrow functions/views returning published fields only. Anonymous callers
 never receive a tenant-wide table grant. Publish invalidates the page/domain cache; drafts never do.
 
-Media needs a new `media_assets` concept because operational `assets` already has a different,
-load-bearing meaning. Postgres owns organization, object key, kind/MIME, title, alt text, dimensions,
-tags, source, rights/license note, created by/at, archived state, and public/private visibility.
+Public media belongs to **Library → Media**, never to operational `assets`, which already has a
+different load-bearing meaning. The exact persistence model remains uncommitted; when built,
+Postgres owns organization, object key, kind/MIME, title, alt text, dimensions, tags, source,
+rights/license note, created by/at, archived state, and public/private visibility.
 Storage owns bytes. Public renderers accept only public media records. Google Drive is an import
-adapter: copy stable public-site media and counsel-approved documents into GOLD; retain Drive ids
+adapter: copy stable public-site media and counsel-approved documents into GildOps; retain Drive ids
 and checksums as provenance; synchronize only by an explicit reviewed import. The live site never
 depends on Drive availability or authorization.
 
@@ -130,7 +137,7 @@ public visitor
 same identity = platform_staff fact + zero/many organization memberships
 ```
 
-Membership in GOLD's organization never implies platform authority; the existing independent
+Membership in GildOps' organization never implies platform authority; the existing independent
 `platform_staff` check and membership list are correct. A custom-domain login must preserve its
 host so cookies and OAuth callbacks return to the initiating host, then verify that the account may
 enter the resolved organization. Intended destinations must be relative, normalized application
@@ -142,8 +149,8 @@ narrower, token-specific context.
 Four explicit modes share the same organization and operations domain:
 
 - **Hosted:** hostname → verified `public_domains` row → organization/site → locale → published
-  page revision → shared renderer. GOLD subdomain and custom domain are the same mode.
-- **External + GOLD:** the external site remains presentation; narrow server endpoints/embeds create
+  page revision → shared renderer. GildOps subdomain and custom domain are the same mode.
+- **External + GildOps:** the external site remains presentation; narrow server endpoints/embeds create
   bookings, enquiries, and portal sessions. Origin allowlists, signed embed configuration, rate
   limiting, and server validation are per site.
 - **Headless:** a versioned, cacheable public-content API returns only published projections. It
@@ -178,7 +185,7 @@ registration so the customer owns the account; a reseller integration becomes ju
 ## Public forms, analytics, and attribution
 
 The public intake path (`submit_public_inquiry`, serving `/demo` and `/contact`) is already correctly narrow: it accepts no organization id, creates one
-ordinary customer plus an event in the deployment-configured GOLD organization, leaves no external
+ordinary customer plus an event in the deployment-configured GildOps organization, leaves no external
 binding, and signs out. Extend it with server-enforced size validation, rate limiting/bot mitigation,
 purpose/retention notice, and attribution fields. Contact, demo, and consultation remain distinct
 operations even if they resolve to the same customer entity; each records its purpose and event.
@@ -240,7 +247,7 @@ Primary sources reviewed 2026-09-12:
 Policy, Data Processing Addendum, Subprocessor List, Security/Data Handling statement, support and
 service terms, cancellation/refund terms, and feature-specific SMS/call-recording/AI disclosures.
 **Tenant documents:** each tenant's privacy/cookie notices, service terms, cancellation/refund
-policies, and consent language. A Pneu3L policy never becomes GOLD SaaS terms.
+policies, and consent language. A Pneu3L policy never becomes GildOps SaaS terms.
 
 Store a stable legal-document identity plus immutable versions: owner scope (`platform` or
 organization), type, jurisdiction, locale, status, effective date, body/document media reference,
@@ -257,7 +264,7 @@ publish.
 | **REFACTOR** | Auth intended-context routing and public header/footer information architecture |
 | **CONNECT EXISTING** | Work types as service capability; price book as offer input; locations/hours; documents; customer events and stages; commercial catalogue where public terms are explicitly approved |
 | **CONFIGURE** | Production canonical origin; public-intake target (`platform_settings`); deployment domain; analytics/consent provider; support/privacy contacts |
-| **BUILD** | Media library; Website settings extended past GOLD's own site, so an ordinary tenant has a `public_sites` row for hostname resolution to reach; legal versions/acceptance; attribution; abuse controls; French routing/content |
+| **BUILD** | Library → Media; Website settings extended past GildOps' own site, so an ordinary tenant has a `public_sites` row for hostname resolution to reach; legal versions/acceptance; attribution; abuse controls; French routing/content |
 | **RESEARCH** | Counsel-reviewed Quebec/Canada/US scope; accessibility obligations by market; subprocessors/transfers; registrar/reseller economics and `.ca` requirements; analytics consent choice |
 | **DEFER** | Arbitrary drag-and-drop builder; domain registration/reselling; full external SDK; articles/industry directory without content owners; multi-template marketplace; translation automation |
 | **REMOVE** | Provider-technology marquee as marketing proof; duplicate/route-inappropriate auth CTA; any future dead footer link or invented proof |
@@ -265,7 +272,7 @@ publish.
 ## Recommended sequence
 
 The SEO/canonical/noindex foundation and the structured publishing slice are built. The homepage
-now reads one tagged published projection, uses GOLD's canonical organization profile/brand, and
+now reads one tagged published projection, uses GildOps' canonical organization profile/brand, and
 shares its typed renderer with a manager-only preview; only publish invalidates that projection.
 M16 next adds governed media and legal versions, then hostname/domain mapping and tenant
 distribution. External embeds/headless reads must follow the same published projection rather

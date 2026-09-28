@@ -1316,7 +1316,7 @@ acceptance criteria, not optional polish.
 
 ### D50 — The canonical catalogue and Plans are additive, alongside the legacy commercial layer, never a replacement of it
 
-**Decision.** `platform_catalog_products` (seven rows, locked by key), `platform_catalog_modules`,
+**Decision.** `platform_catalog_products` (eight Products and one shared Workspace row, locked by key — D61 renamed the seven this record was written against), `platform_catalog_modules`,
 `platform_catalog_features`, `platform_catalog_feature_dependencies` and
 `platform_catalog_runtime_mappings` are the canonical Product → Module → Feature hierarchy D46
 named. `platform_plans` (kind `plan` or `addon`), three typed grant tables, `platform_plan_quotas`
@@ -1663,13 +1663,16 @@ consult the policy.
 
 ### D58 — An organization is Home, its workspaces and Settings; the operator's taxonomy is not the catalogue's
 
+> **Amended by D68.** The workspace landing surface is **Home**, not Overview. Insights is a
+> cross-cutting capability and may retain deep routes; it is not an operator workspace.
+
 **Decision.** The organization shell is *Home*, a set of *workspaces*, and *Settings*. Home is an
 adaptive business dashboard, not a renamed list of today's appointments, and it draws a block only
 when its capability is entitled and relevant to the caller — the same `areaAvailable` predicate
 navigation applies — and the domain already answers the question. It computes nothing itself. A
-workspace follows one contract (Overview, primary views, Activity, contextual Insights, Configure);
+workspace follows one contract (Home, primary views, Activity, contextual Insights, Configure);
 a page-support rail with three modes (Activity, Insights, Configure) is the one place a page shows
-them, and it holds a single open mode. Insights is the deep cross-workspace analytics workspace
+them, and it holds a single open mode. Insights is the deep cross-workspace analytics capability
 (`/insights` saved dashboards, `/insights/reports` the builder); a workspace's Insights rail is a
 few numbers from the same aggregates.
 
@@ -1742,15 +1745,15 @@ a permission share an area layout.
 decides; every platform area refuses; Setup is kernel), `settings-map.test.ts` (configuring is not
 operating), `platform-permissions.test.ts` (the row, read live, never self-issued).
 
-### D60 — Platform is a sub-scope of GOLD's own organization; a URL names a context, never an owner
+### D60 — Platform is a sub-scope of GildOps' own organization; a URL names a context, never an owner
 
 **Decision.** There are three scopes: a **person** (`/settings/account/**`), an **organization**
 (`/organizations/{id}/**`), and **Platform Administration**, which is
-`/organizations/{goldId}/platform/**` — available only while operating GOLD's own organization, and
+`/organizations/{goldId}/platform/**` — available only while operating GildOps' own organization, and
 only to somebody holding a platform permission. It is not another tenant and no longer a route
 tree of its own. There is one canonical tree; `/platform/**` survives only as a redirect
-(`app/platform/[[...path]]/page.tsx`) that resolves GOLD's organization from the caller's
-memberships and GOLD's current Plan — never from the URL — and keeps the path and query.
+(`app/platform/[[...path]]/page.tsx`) that resolves GildOps' organization from the caller's
+memberships and GildOps' current Plan — never from the URL — and keeps the path and query.
 
 **A URL names a context, not who owns the data.** Providers, catalogue, plans, billing and rates
 are the same platform-scoped records they always were. Nothing below `/platform` filters by the
@@ -1759,15 +1762,15 @@ component that spells links, nothing else. `platform-control-plane.test.ts` read
 refuses any other use.
 
 **Three facts, proven for every Platform request** (`requirePlatformScope`): the organization is
-GOLD's own (its Plan says so, not its name), the caller is a member of it, and the caller holds at
+GildOps' own (its Plan says so, not its name), the caller is a member of it, and the caller holds at
 least one platform permission. The organization layout, each area's layout and each page ask for
 themselves — a layout is not re-rendered on every client navigation and renders beside its page.
 Any other organization, staff or not, answers `notFound()`. Finer permissions per area are exactly
 what D59 built and are unchanged; this adds none.
 
 **The switcher answers one question.** Which organization am I operating? While inside Platform the
-answer is still GOLD. Platform is shown by the sidebar section, the page's own heading and its
-breadcrumb, never by pretending the context changed. It is a section beneath GOLD's own workspaces,
+answer is still GildOps. Platform is shown by the sidebar section, the page's own heading and its
+breadcrumb, never by pretending the context changed. It is a section beneath GildOps' own workspaces,
 not a replacement for them; on a phone the bar presents Platform while the address is inside it and
 the business's own places otherwise.
 
@@ -1793,7 +1796,12 @@ its `/calls` route.
 
 ### D61 — Gild Products are eight, the shared Workspace is not one of them, and a workspace row is only ever real pages
 
-*Amended by D66 and D67 (Studio and marketing; Workspaces are surfaces of Products): the workspace registry is nine and holds unbuilt ones, Agents is AI in the sidebar, and Gild Workspace is Gild Insights. The catalogue rows below keep their keys.*
+> **Partially superseded by D68.** The catalogue history and the
+> Product/Module/Feature distinctions below stand. Its operator-workspace mapping, CRM-inside-Sales
+> implication, and Studio-owns-Marketing wording do not. Sales and Service may remain catalogue
+> families without being operator workspaces.
+
+*Previously amended by D66 and D67. The catalogue rows below keep their keys.*
 
 **Decision.** Three internal layers and eight customer-facing Products, kept apart on purpose.
 
@@ -2004,6 +2012,10 @@ usage event; the composite keys; amounts stay nullable with no default).
 
 ### D66 — Nine registered workspaces; registered is not visible; Studio owns the form, the destination owns the record
 
+> **Superseded by D68 for workspace information architecture.** This decision remains historical
+> evidence of the implementation generation that introduced a nine-workspace registry. Sales,
+> Service and Insights are not members of the target operator-workspace set.
+
 **Decision.** A business has nine workspaces: Gild Sales, Service, Comms, Finance, AI,
 Automations, Field, Studio and Insights, in `WORKSPACES` (`lib/navigation.ts`). Two D61 words are
 corrected. **Agents → AI**: the workspace is intelligence — assistants, chatbots, knowledge,
@@ -2090,6 +2102,11 @@ it. D61's "Insights is not a ninth Product" is now a statement about the catalog
 
 ### D67 — The workspace, capability and AI contract: what owns what, and how the gates stack
 
+> **Amended by D68.** The canonical-record, projection, invocation, provider and related-record
+> rules below stand. D68 replaces the workspace registry and ownership table: CRM replaces Sales as
+> the relationship workspace; Marketing is a target workspace independently of catalogue timing;
+> Service is not an operator workspace; and Insights is cross-cutting rather than a workspace.
+
 **Decision.** Vocabulary and ownership, written once so later work does not redefine them. This
 decision changes no behaviour, route, table or price. It corrects D61 in three places, named under
 *Corrections to D61*, and leaves D66's registry, routes and migration boundary as they are.
@@ -2126,35 +2143,36 @@ with its own loading, error and empty states.
 
 | Owns | Workspace |
 |---|---|
-| Relationship acquisition and progression: customers as prospects, pipeline, qualification, follow-up | **Sales** |
+| Relationship acquisition and progression: customers, pipeline, qualification, follow-up and intake state | **CRM** |
 | Channels and conversation history: voice, dialer, numbers, SMS, email, recordings, transcripts, call outcomes, delivery state, the Voice Agent as a channel | **Comms** |
 | Performing work: jobs, scheduling, dispatch, resources, locations, field execution, operational assets | **Field** (D66's name; *Operations* is the concept) |
 | Money: price book, quotes, invoices, payments, credits, job economics | **Finance** |
 | Rules, triggers, conditions, sequences, run history | **Automations** |
 | Intelligence: agents, assistants, models, knowledge, conversations, runtime, usage | **AI** |
 | Public presence: website, forms, booking entry, portal, brand, domains | **Studio** |
-| Cross-domain analysis over the one reporting aggregate | **Insights** |
-| Cases, requests, complaints | **Service**: planned; a Product with planned Features only, no page and no table |
-| Audiences, segments, campaigns, journeys, lifecycle policy | **Marketing**: not built, not registered |
+| Cross-domain analysis over the one reporting aggregate | **Insights capability**: cross-cutting, not an owner workspace |
+| Cases, requests, complaints | **CRM** when built; Service may remain a catalogue family, not an operator workspace |
+| Audiences, segments, campaigns, journeys, lifecycle policy | **Marketing**: target workspace; not built or registered today |
 | Products sold, SKUs, variants, catalogues, orders, promotions | **Commerce**: not built, not registered |
 
 Home is the cross-workspace cockpit and is not a workspace. Customers, Documents, Knowledge,
 Inventory, Assets, the Scheduling engine, events, Connections, identity and usage serve several
 workspaces and are not workspaces. Inventory is shared: a service business may hold stock with no
 Commerce, and Field consumes it; Commerce sells items and never owns the stock. A lead is a stage of
-a customer (*Decided, not yet built*), so Sales and Marketing share one person record.
+a customer (*Decided, not yet built*), so CRM and Marketing share one person record.
 
-**Registered is not visible (D66), and Marketing and Commerce are not registered.** The registry
-holds workspaces that map to a catalogue Product; `gild-taxonomy.test.ts` enforces that. They join
-when the catalogue has a Product for them (M12) and a page exists to draw. No placeholder, no empty
-page. Field is not renamed: a rename moves the catalogue key (`field`), routes and tests together,
-and nothing depends on the word *Operations*.
+**Target is not visibility (D68).** Marketing is a target workspace even though current code has no
+registered workspace, catalogue entitlement mapping or page for it. A row still waits for a real,
+reachable page; architectural existence does not wait for a Product. Commerce remains undecided and
+unregistered. Field is not renamed: a rename moves the catalogue key (`field`), routes and tests
+together, and nothing depends on the word *Operations*.
 
-**Invocation.** Another workspace *invokes* a capability and never re-implements it. A Sales customer
+**Invocation.** Another workspace *invokes* a capability and never re-implements it. A CRM customer
 shows Call, Email and Message that open the same Comms capability with the customer as context; there
 is one dialer. The same holds for Customer → Finance, Work item → Inventory, Order → fulfilment work,
 and a Voice Agent using CRM lookup, Scheduling, Documents or Finance tools. **Comms owns talking,
-Scheduling owns scheduling, Finance owns money, CRM owns relationship state, AI orchestrates.**
+Scheduling owns scheduling, Finance owns tenant money, CRM owns relationship state, AI reasons and
+invokes, and Automations owns durable orchestration.**
 Marketing will consume CRM state, Automation triggers, Comms delivery, Finance offers and Commerce
 items, and own none of them. An operational notice, a lifecycle message and a marketing message are
 three kinds, because consent, suppression and urgency differ. An offer references a Finance price and
@@ -2168,14 +2186,15 @@ in that chain are not built (*Findings* 7 and 15).
 
 **Scope.** An organization runs one business. Platform Administration runs GildOps itself: provider
 accounts, model catalogue, Product catalogue, Plans, rate cards, provider cost, health, provisioning,
-subscriptions, global AI policy. It is a sub-scope of GOLD's own organization (D60); rendering it
+subscriptions, global AI policy. It is a sub-scope of GildOps' own organization (D60); rendering it
 inside that shell does not make its records tenant-owned, and no tenant workspace is duplicated
 beneath it so staff can inspect tenant data (I21).
 
-**Finance is the commercial source of truth.** AI defines what exists technically; Comms what
-channels exist; Commerce what a tenant sells; Finance how money works: prices, allowances, overage,
-credits, provider cost, margin. AI and Comms screens *show* entitlement, usage and upgrade; they keep
-no price of their own (D40, D43, D65).
+**The finance planes remain separate.** Tenant Finance owns customer → tenant prices, quotes,
+invoices, payments, credits and job economics. Platform Administration owns organization → GildOps
+Plans, subscriptions, allowances, overage, provider cost and platform margin. AI and Communications
+screens may show entitlement, usage and upgrade state; they keep no price of their own (D40, D43,
+D65).
 
 **AI has four surfaces, and each is its own entitlement and its own usage pool.**
 
@@ -2299,3 +2318,100 @@ is a later slice or milestone and none has its first caller yet.
 workspaces, each mapped to a real catalogue row, none drawn without a page), `usage-boundary.test.ts`
 (one usage writer), `provider-accounts.test.ts` (credentials), and `agent-conversations.test.ts` (the
 Configure link, on record above as wrong). The rest of this decision is definition with no test.
+
+### D68 — Operator workspaces compose capabilities; canonical records, Insights and Library remain shared
+
+**Decision.** The target operator workspaces are exactly **CRM, Communications, Marketing,
+Finance, AI, Automations, Field and Studio**. This is an operator taxonomy — where a person goes to
+do a kind of work — and is independent of the commercial catalogue. A Product may contribute
+Features to several workspaces, and a workspace may compose Features from several Products.
+Therefore Sales and Service may remain catalogue Products or families without becoming operator
+workspaces. Plan ≠ Product ≠ Module ≠ Feature ≠ Workspace ≠ Page.
+
+**Target and implementation are separate facts.** `apps/web/lib/navigation.ts` still describes the
+current implementation: Sales and Customer Experience remain registered, Marketing is absent,
+and some target workspaces have no Home. That registry is not the target architecture. Conversely,
+a target workspace does not earn a visible row until it has a real, reachable page. Documentation
+must label current-state evidence and target architecture rather than forcing either to impersonate
+the other.
+
+| Target area | Canonical responsibility | Current implementation |
+|---|---|---|
+| **CRM** | customers, relationship intent and state, pipeline, qualification, follow-up and intake progression | Sales Home, Customers and Pipeline provide much of the present surface; the workspace has not been renamed |
+| **Communications** | calls, voice, email, messaging, threads, delivery state, numbers and routing | Home and Calls are present |
+| **Marketing** | campaigns, audiences, acquisition and lifecycle intent | no registered workspace or route |
+| **Finance** | tenant/customer pricing, quotes, invoices, payments and job economics | Pricing/configuration and per-record finance only; no Home |
+| **AI** | assistants, business-intelligence interaction, knowledge and tool configuration | Agent rail/runtime only; no Home |
+| **Automations** | durable rules, triggers, sequences and workflow execution | Home, Rules, Messages and Activity are present |
+| **Field** | operational work, schedule, resources, locations and equipment/assets | implemented |
+| **Studio** | authoring and publishing website, forms, brand and portal experiences | public/settings capabilities exist; no Home |
+
+**Canonical records and projections.** A business record exists canonically once. Customers,
+invoices, conversations/threads, work items, documents, genuinely shared forms and genuinely
+shared reusable templates may appear in several workspaces without becoming several records. A
+projection reads canonical state, may add context-specific secondary data and authorized actions,
+and links to the canonical or owning destination. It never copies authoritative state, acquires
+ownership or reproduces the record's business rules.
+
+**Ownership does not follow invocation.** CRM may invoke Communications to contact a customer;
+Marketing may consume Studio content and Communications delivery; Finance may send an invoice
+through Communications; Automations may invoke every domain; AI may use permitted domain tools.
+The invoked implementation remains owned by its canonical domain. AI reasons and invokes;
+Automations owns durable orchestration.
+
+**Workspace Home contract.** The workspace-row body opens its canonical Home. Its chevron only
+expands or collapses children and does not navigate. Home is never repeated as a child and
+Overview is not a competing architectural page type. A Home summarizes the workspace and links to
+real child surfaces; a child list contains only real, reachable pages.
+
+**Insights is cross-cutting.** It is reporting and analysis over shared aggregates, not an owner or
+operator workspace. `/insights` and other deep report/dashboard routes may remain real and
+reachable, and a page's Insights support mode may link to them. Route existence does not create a
+workspace or sidebar section.
+
+**Library is shared organization infrastructure, not a workspace.** Its target collections are
+Files, Templates, Media and Knowledge. Record-attached Documents exist today; an organization-wide
+Library collection does not. A generalized Form or Template record is introduced only when
+multiple real consumers require the same canonical object. Until then, domain-specific templates
+retain their domain behavior and owner.
+
+**Studio and Marketing remain distinct.** Studio authors and publishes experiences and reusable
+content. Marketing owns campaign, audience, acquisition and lifecycle intent and consumes Studio
+outputs. A form's canonical owner and the record created by a submission may differ: Studio can
+own the published form while CRM owns resulting relationship/intake state.
+
+**Two finance planes.** Tenant Finance owns customer → tenant money. Platform Administration owns
+organization → GildOps money: SaaS catalogue, Plans, subscriptions, provider cost, platform margin
+and global provider/model policy. Rendering Platform Administration inside GildOps' ordinary
+organization shell (D60) transfers no ownership and creates no special tenant.
+
+**Resource and Asset.** A Resource is capacity — what work is done **with**. An Asset is the subject
+— what work is **about**. Their relationship on a work item does not make either a projection of
+the other.
+
+**Holds today.** The current shell already treats a workspace parent destination as its Home and
+does not repeat Home among children. Insights already has a real route with `sidebar: false`. The
+remaining target/current differences are implementation debt, not permission to restore D66's IA.
+
+### D69 — GildOps naming and technical namespaces migrate forward, never by rewriting history
+
+**Decision.** Current human-facing prose and branding use **GildOps**, and the canonical public
+domain is `gildops.com`. The target technical namespace is `@gildops/*`, `gildops_*` and
+`GildOps*`. Existing `@gold/*`, `gold_*`, `Gold*`, `gold-platform` and repository metadata are live
+legacy identifiers and explicit migration debt, not the preferred vocabulary for new identifiers.
+
+**Applied migrations and historical evidence are immutable.** Never rename an applied migration or
+rewrite its body merely to modernize branding. Database identifiers move only through forward
+migrations with an explicit compatibility and rollback plan. Historical changelog and audit prose
+may retain the name accurate to its time when changing it would falsify the record.
+
+**Package and repository changes are atomic operations.** Rename `@gold/*` only in a change that
+updates package manifests, imports, build/test configuration, CI and operational commands together.
+Rename `gold-platform` repository/external metadata separately with redirect and integration checks.
+Until those migrations land, operating documentation must show commands and identifiers that
+actually run and label them as legacy/current rather than pretending the target is already live.
+
+**Current source identifiers move deliberately.** Names such as `findGoldInternalOrganization`,
+`goldApiAnsweringProvider`, `gold_internal`, `bootstrap_gold_internal_workspace` and
+`gold_public_organization_id` remain load-bearing until a bounded source or forward-database
+migration changes their callers. Blind repository-wide replacement is prohibited.

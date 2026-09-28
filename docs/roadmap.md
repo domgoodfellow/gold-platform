@@ -20,7 +20,7 @@ M0–M8 and M11 established the current platform foundation. The active pre-Next
 3. **M14 — provider control plane, proven through Voice**, enabling M9 without replacing it.
 4. **M15 — Financial Operations boundary and migration.**
 5. **M16 — Studio distribution.**
-6. **M17 — platform hardening and GOLD dogfood gate.**
+6. **M17 — platform hardening and GildOps dogfood gate.**
 7. **M18 — NextFund migration and parity.**
 8. **M10 — desktop**, still waiting on demonstrated demand.
 
@@ -28,11 +28,11 @@ Inside M12–M17, preserve this dependency order: normalize catalogue and commer
 ship platform catalogue/Plan controls; complete BusinessOS; harden provider configuration;
 take Voice through the whole control plane; expose CRM configuration; separate Financial
 Operations; apply the control-plane pattern to Email, SMS and Automation; finish public
-distribution/media/legal/domain work; expose Insights, usage and cost; add provisioning health,
+distribution/media/legal/domain work; expose cross-cutting Insights, usage and cost; add provisioning health,
 drift and retry; dogfood it; then prove migration readiness. Numbers remain identities, so M9's
 front-desk outcome is completed through M14 rather than renumbered.
 
-GOLD runs as an ordinary tenant (customers, work items, scheduling) alongside all of this and is
+GildOps runs as an ordinary tenant (customers, work items, scheduling) alongside all of this and is
 not itself a milestone — a field only our own pipeline wants is one caller, and building for one
 is still refused.
 
@@ -123,7 +123,7 @@ shared form components extracted at their third caller.
 
 ## M4 — Vertical one: a real business runs on the platform
 
-> **Done when:** a real business runs its operations on GOLD — quotes or bookings in, work
+> **Done when:** a real business runs its operations on GildOps — quotes or bookings in, work
 > scheduled and assigned, completed, invoiced, paid — and nobody at that business has ever held
 > database credentials.
 
@@ -147,8 +147,8 @@ Covers:
 - **Booking and the customer portal**, unblocked once I5, I6 (M2) and I4 (M3) existed.
 - **Quote → invoice → payment.** Stripe is the first vendor behind an adapter. **D26** moves
   `apps/api/` forward for webhook ingress (Python owns it, D2). **D27**: a tenant connects their
-  own processor account; GOLD stores an account id, charges land on the business's own account, no
-  customer money touches GOLD's balance — the thing that keeps this platform out of being a money
+  own processor account; GildOps stores an account id, charges land on the business's own account, no
+  customer money touches GildOps' balance — the thing that keeps this platform out of being a money
   transmitter.
 - **Job economics** — revenue minus cost per job, the number an owner asks for first.
 - **The customer timeline**, over `Event` (shipped in M1 for exactly this).
@@ -183,9 +183,9 @@ now removes the quote/invoice/margin sections everywhere, not just the sidebar e
 
 ## M5 — The platform side
 
-> **Done when:** somebody who runs GOLD — not a business on it — can see every tenant, what each
+> **Done when:** somebody who runs GildOps — not a business on it — can see every tenant, what each
 > has switched on, and what is failing, from a surface holding no membership in any tenant and no
-> service-role key. And a business GOLD signs becomes a tenant because GOLD provisioned it,
+> service-role key. And a business GildOps signs becomes a tenant because GildOps provisioned it,
 > through the same `createOrganization` a self-serve door will call once M8 can do the configuring.
 
 Staff are a Postgres role, not a fourth authorization shape stretched from the other three (D28):
@@ -202,8 +202,8 @@ Covers:
   an alternative to self-serve. A new organization is genuinely empty; handing that emptiness to
   an unattended stranger is not a product, which is what closes: `/sign-up` as an *unattended*
   door, not registration itself (an account still isn't a tenant).
-- GOLD's own public site, distinguished at last from the tenant marketing surface D20 defers —
-  this one is GOLD's own claim about GOLD.
+- GildOps' own public site, distinguished at last from the tenant marketing surface D20 defers —
+  this one is GildOps' own claim about GildOps.
 
 Billing a tenant for what they've switched on is deliberately not here — a price is a number, and
 D8 keeps numbers out of this directory.
@@ -220,7 +220,7 @@ existence and may never reach into one that exists.
 
 Creating a business and configuring one came apart here because the database wouldn't let them
 stay together — `createRole` and everything after it are keyed to `app.current_tenant_ids()`, and
-platform staff are a member of nothing. So GOLD creates, and whoever configures configures — D29's
+platform staff are a member of nothing. So GildOps creates, and whoever configures configures — D29's
 own axis, arriving because nothing else was possible.
 
 **Corrected by D45, stated here rather than left to mislead.** "Staff are a Postgres role" and
@@ -362,7 +362,7 @@ and all three drafting-adapter files, failing on either business's vocabulary ap
 
 ## M9 — Vertical two: reception and sales
 
-> **Done when:** a business can run its front desk on GOLD: call placed/answered, recorded,
+> **Done when:** a business can run its front desk on GildOps: call placed/answered, recorded,
 > transcribed, analysed, attached to timeline, with proposed actions executed through domain
 > layer.
 
@@ -372,8 +372,8 @@ business function it serves.
 This milestone buys a second host (D24): a call is a persistent media stream for its duration,
 which serverless isn't. `apps/api` stays; a realtime deployment target sits beside it.
 
-GOLD is a user of this milestone, not only its vendor — selling configured deployments to
-businesses with no system is outbound calling, so GOLD switches the module on like any tenant,
+GildOps is a user of this milestone, not only its vendor — selling configured deployments to
+businesses with no system is outbound calling, so GildOps switches the module on like any tenant,
 in its own Organization Context, no exemption and no fork (D42, D45). The trigger to build is
 call volume, not audience: thirty calls need a phone and a list.
 
@@ -485,7 +485,7 @@ phase.
 ## M15 — Financial Operations boundary
 
 > **Done when:** a tenant can price, quote, invoice and record or collect payment from its own
-> customers through Financial Operations while GOLD independently manages that tenant's Plan,
+> customers through Financial Operations while GildOps independently manages that tenant's Plan,
 > Subscription, usage and charges through Plans & Billing; the two flows use separate ownership,
 > payment/provider bindings and ledgers, and neither can mutate or settle the other's financial
 > records.
@@ -504,9 +504,9 @@ Build from the revision and publishing foundation. Domain verification, routing,
 ownership, preview/publish states, legal content and public-to-tenant attribution must be
 observable and recoverable.
 
-## M17 — Platform hardening and GOLD dogfood gate
+## M17 — Platform hardening and GildOps dogfood gate
 
-> **Done when:** GOLD runs an ordinary fully-entitled, fully-metered Subscription and routine
+> **Done when:** GildOps runs an ordinary fully-entitled, fully-metered Subscription and routine
 > catalogue, provisioning, configuration, health, drift, retry, usage, cost and support work can
 > be completed through product controls without Claude, VS Code, GitHub, Supabase Studio, manual
 > SQL, provider consoles or environment editing.
@@ -517,7 +517,10 @@ write boundaries. A direct RPC or automation may not bypass a missing entitlemen
 failures and retries, entitlement/permission/quota/provider-limit behavior, and migration
 rehearsal with audit evidence. Remaining CRM self-service, two-way Email, terminology,
 cross-product configuration, Insights and usage visibility gaps are complete only insofar as
-this externally observable gate requires them. This is the pre-NextFund hardening gate.
+this externally observable gate requires them. Normative documentation must also encode D68's
+workspace model and clearly separate target architecture from current implementation; migration
+readiness cannot be declared while governing documents direct work toward a superseded
+Sales/Service/Insights workspace model. This is the pre-NextFund hardening gate.
 
 ## M18 — NextFund migration and parity
 

@@ -1,5 +1,11 @@
 # Product Surface Audit
 
+> **Architecture status:** This document reports repository evidence using the vocabulary current
+> at each audit date. It does not define target operator information architecture. D68 supersedes
+> historical Sales, Service, Customer Experience and Insights-workspace terminology. The maintained
+> matrix below may use implementation-era names to describe current code accurately; the historical
+> snapshot is intentionally not rewritten as if it had been produced under the current model.
+
 This is the maintained human reading of `apps/web/lib/catalogue-surface-coverage.ts`, the
 machine-checked map of every canonical Feature marked `available` or `partial`. Catalogue state
 describes the commercial/runtime claim; Domain, UI, Interaction and Test describe what a person
