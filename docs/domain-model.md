@@ -77,6 +77,7 @@ Use `/verify <n>` to audit one. "The code appears to do the right thing" is not 
 | I57 | A definer function that answers for an organization proves the caller belongs to it, and one that answers for nobody in particular is granted to roles by name and never by default. | `public.organization_launch_blockers` requires a membership of that organization or a live `platform_staff` row and refuses a non-member identically whether or not the organization exists; the enforcement core is `app.organization_launch_blockers_unchecked`, which holds no grant. `launch-blockers-access.test.ts` (member and staff allowed; another business, an unbound visitor, a visitor bound to that business and a signed-out caller each refused). `function-surface.test.ts` asserts no definer function in `app` is executable by `PUBLIC` or `anon` and pins the short list a signed-in role may run. |
 | I58 | A platform table is vocabulary, commercial configuration or control plane, and its read policy says which: everyone signed in, a member of some business or staff, or staff alone (D64). | `catalogue-visibility.test.ts` compares what a member, a booking visitor, staff and a signed-out caller each see against the real row count of every one of the twenty tables, and asserts no table carries a `using (true)` select policy beside another for the same role. `platform_plan_provider_prices` is staff-only; a business reaches the one price reference checkout needs through `plan_price_provider_reference`, which requires `billing.manage`. |
 | I59 | A usage event is written by one function, priced from the rates in force when the usage occurred, and can name only what belongs to its own business, provider and meter. What it cost and what it charged are facts written once; later rates and reconciliations add rows beside it and never rewrite it. | `app.record_usage` is the only inserter of `usage_events`, and no role holds insert, update or delete on it. Composite foreign keys tie a binding to `(organization_id, provider_key)`, a resource to its binding, an account to its provider, and a rate row to its meter, provider and currency. `usage_events.fulfilled_through` says per event whether the usage ran through the business's own binding, through GOLD's account (nothing of the business's to name) or is unrecorded; a meter carries no topology, because the same meter can be served either way. The charge, its currency and the provider cost are nullable: null is *not priced* / *not costed* and zero is a price or cost that really is zero, so usage is recorded whatever its pricing state and is never made free by missing configuration. Retail and provider rates resolve to the approved row with the latest `effective_from` not after the moment, unique on `(meter, currency, effective_from)` so there is never a tie. `usage-economics.test.ts`; `usage-boundary.test.ts`. |
+| I60 | A Resource may represent at most one Membership, that Membership belongs to the same organization, and only `resource.update` may set, change or clear that link — regardless of who created the Resource, and regardless of whether the caller reaches it through the domain layer or a direct RPC call. Removing a Membership never deletes the Resource or touches its `organization_id`. | `resources_membership_same_org`, a composite foreign key `(organization_id, membership_id) references memberships (organization_id, id)`, leading with `organization_id` (I2, I18) — a cross-tenant link cannot be written even directly. `resources_membership_id_unique`, a tenant-leading partial unique index on `(organization_id, membership_id) where membership_id is not null`, is the one-Membership-one-Resource rule. `resources_update` (RLS) plus `grant update (membership_id)` require `resource.update`, checked by `app.has_capability` and independent of `resource.create`/role name; `set_resource_membership` is `security invoker`, so it adds nothing beyond the transaction boundary and the `resource.membership_changed` event. `on delete set null (membership_id)` — PostgreSQL 15+ column-targeted delete semantics — is what keeps a Membership's removal from ever attempting to null `resources.organization_id`, which is `not null`. `resource-membership.test.ts` proves same-org enforcement, the one-to-one rule, the capability boundary (domain and direct-RPC paths, both refused identically), and that deleting a Membership row directly leaves the Resource and its `organization_id` untouched. |
 
 Invariants are added when a rule becomes load-bearing, not in anticipation. Each new one
 arrives with the slice that enforces it.
@@ -98,7 +99,15 @@ only when assignment, filtering or reporting actually needs membership groups. E
 and per-recipient notifications likewise remain distinct future concepts rather than being
 forced into the append-only Event table.
 
-### Authorization and visibility vocabulary (Slice 0A)
+**A Resource may optionally represent one Membership (Slice 0B, built).** `resources.membership_id`
+is a nullable composite reference to `memberships (organization_id, id)` — null is the ordinary
+case (a vehicle, a room, a machine, a person with no GildOps account), and a value means that
+Resource represents that tenant Membership for scheduling purposes, never `auth.users` directly
+(D19). One Membership represents at most one Resource (`resources_membership_id_unique`, a
+tenant-leading partial unique index). This is a relational fact only — see "Visibility scope"
+below for what it does not yet do.
+
+### Authorization and visibility vocabulary (Slice 0A, updated 0B)
 
 Locked here because the terms were being used loosely across Scheduling, Automation and the
 commercial catalogue at once. Each is a distinct question; none substitutes for another.
@@ -115,20 +124,21 @@ commercial catalogue at once. Each is a distinct question; none substitutes for 
   into an ordinary Role at creation and never referenced again. Never a runtime classification —
   `role-preset-not-classification.test.ts` guards this.
 - **Visibility scope** answers *which rows may this member read*, distinct from what they may
-  write. **Today there is exactly one scope: organization-wide.** The `resources`/`work_items`
+  write. **Today there is still exactly one scope: organization-wide.** The `resources`/`work_items`
   select policies, and `listSchedule`/`listScheduleDays`, filter on `organization_id` alone —
-  nothing narrows a read below tenant membership, for any role. "Own schedule" and "team
-  schedule" are not narrower visibility scopes that exist today and happen to be unused; they
-  are **not representable at all**, because a Resource carries no Membership identity link and
-  no Team/group relationship exists to filter by (see "A future Team entity," above). This is a
-  current fact awaiting a decision, not a permanent rule — see the Resource↔Membership and Team
-  rows in `constraints.md`'s "Decided, not yet built." Until either exists, do not fake a
-  narrower scope with a role's name, a resource's own free-text name, `created_by`, a custom
-  field or a display name — `schedule-visibility-heuristic.test.ts` guards against exactly that
-  substitution, without forbidding the real relationship once it exists. Note also that
-  `work_items` itself is readable organization-wide independent of `listSchedule` — a future
-  scoped Schedule *read* alone would be a surface projection, not a security boundary, unless
-  `work_items`'s own visibility is scoped too.
+  nothing narrows a read below tenant membership, for any role, and Slice 0B did not change
+  this on purpose. What changed is only what is *representable*: a Resource may now name the
+  Membership it represents (above), so `getResourceForCurrentMember` can resolve "which Resource
+  is mine" as a real relational fact. **"Own schedule" is therefore relationally possible but not
+  yet enforced** — no capability, no RLS policy and no read function scopes by it. "Team
+  schedule" remains **not representable at all**, because no Team/group relationship exists to
+  filter by. Do not fake either with a role's name, a resource's own free-text name, `created_by`,
+  a custom field or a display name — `schedule-visibility-heuristic.test.ts` guards against
+  exactly that substitution. Note also that `work_items` itself is readable organization-wide
+  independent of `listSchedule` — a future scoped Schedule *read* alone would be a surface
+  projection, not a security boundary, unless `work_items`'s own visibility is scoped too; Slice
+  0C must choose between the two explicitly rather than silently building the weaker one under
+  the name of the stronger.
 - **Human actor** is a signed-in `auth.users` row acting through its own session/JWT — every
   ordinary write (`requireActor`, RLS's own `auth.uid()`).
 - **System / automation actor** is the identity a write carries when no human is present —

@@ -1329,6 +1329,15 @@
         "reporting"
       ]
     },
+    "apps/web/tests/integration/database/resource-membership.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "resources",
+        "tenancy",
+        "security"
+      ],
+      "note": "Slice 0B. Resource<->Membership FK/index behaviour, resource.update authority, current-member resolution, and that Schedule visibility stays organization-wide."
+    },
     "apps/web/tests/integration/database/resource-views-access.test.ts": {
       "category": "database-integration",
       "concerns": [

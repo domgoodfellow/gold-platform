@@ -33,6 +33,11 @@ export function ResourceTable({
             </Link>
           ),
         },
+        {
+          key: 'member',
+          header: 'Represents member',
+          cell: (resource) => (resource.member ? resource.member.displayName : '—'),
+        },
         ...(definitions.length > 0
           ? [
               {

@@ -5736,6 +5736,7 @@ export type Database = {
           created_by: string
           custom: Json
           id: string
+          membership_id: string | null
           name: string
           organization_id: string
         }
@@ -5744,6 +5745,7 @@ export type Database = {
           created_by: string
           custom?: Json
           id?: string
+          membership_id?: string | null
           name: string
           organization_id: string
         }
@@ -5752,10 +5754,18 @@ export type Database = {
           created_by?: string
           custom?: Json
           id?: string
+          membership_id?: string | null
           name?: string
           organization_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "resources_membership_same_org"
+            columns: ["organization_id", "membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "resources_organization_id_fkey"
             columns: ["organization_id"]
@@ -7143,7 +7153,12 @@ export type Database = {
         Returns: string
       }
       create_resource: {
-        Args: { p_custom: Json; p_name: string; p_organization_id: string }
+        Args: {
+          p_custom: Json
+          p_membership_id?: string
+          p_name: string
+          p_organization_id: string
+        }
         Returns: string
       }
       create_role: {
@@ -8095,6 +8110,10 @@ export type Database = {
           p_provider_service_id: string
           p_relationship?: string
         }
+        Returns: undefined
+      }
+      set_resource_membership: {
+        Args: { p_membership_id: string; p_resource_id: string }
         Returns: undefined
       }
       set_type_bookable: {

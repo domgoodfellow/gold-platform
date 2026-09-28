@@ -10,6 +10,7 @@ export const CAPABILITIES = [
   'field.manage',
   'location.create',
   'resource.create',
+  'resource.update',
   'work_item.create',
   'asset.create',
   'document.create',
@@ -51,6 +52,8 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'field.manage': 'Define custom fields',
   'location.create': 'Add locations',
   'resource.create': 'Add resources',
+  /** Correcting a resource past its name — today, only which member it represents (Slice 0B). Split from `resource.create` the same way `customer.update` is split from `customer.create`. */
+  'resource.update': 'Correct a resource, including which member it represents',
   'work_item.create': 'Add work items',
   'asset.create': 'Add assets',
   'document.create': 'Attach documents',

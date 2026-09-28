@@ -4,8 +4,10 @@ import { PageHeader } from '@/components/containers/page-header';
 import { ResourceConfiguration } from '@/features/resources/configuration/resource-configuration';
 import { ResourceTable } from '@/features/resources/resource-table';
 import { CreateResourceSheetProvider, CreateResourceTrigger } from '@/features/resources/create-resource-sheet';
+import { availableMembers } from '@/features/resources/member-options';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listResources } from '@/lib/domain/resources/resources';
+import { listMembers } from '@/lib/domain/tenancy/members';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -17,17 +19,23 @@ export default async function ResourcesPage({
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const [resources, definitions] = await Promise.all([
+  const [resources, definitions, members] = await Promise.all([
     listResources(db, { organizationId }),
     listFieldDefinitions(db, { organizationId, entityType: 'resource' }),
+    listMembers(db, { organizationId }),
   ]);
 
   const mayAdd = organization.capabilities.includes('resource.create');
   const mayConfigure = organization.capabilities.includes('field.manage');
+  const memberOptions = availableMembers(members, resources);
 
   return (
     <AppPage>
-      <CreateResourceSheetProvider organizationId={organizationId} definitions={definitions}>
+      <CreateResourceSheetProvider
+        organizationId={organizationId}
+        definitions={definitions}
+        availableMembers={memberOptions}
+      >
         {/*
           Hiding the trigger is a courtesy, not the guard. `resources_insert` requires
           resource.create in the database, so a caller who reaches the action anyway is

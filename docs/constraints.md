@@ -680,15 +680,17 @@ wrong and change this table.
 | **Richer message templates** — amount, address, who is coming, a link to the customer's own page | Nothing. It is a list rather than a mechanism | Each one must be fillable *reliably every time*; a placeholder that is sometimes blank is a sentence that is sometimes nonsense |
 | **Drafting templates from what a business already sends** | Nothing structural — a template is still a row the business owns | The same shape as drafted configuration: propose, review, apply |
 | **Group and proximity discounting** | Travel cost modelling, so a discount never exceeds what the business provably saved | A business that actually routes |
-| **Resource↔Membership relationship** (a nullable `resources.membership_id`, same-organization enforced) | A Slice 0B decision on cardinality and delete behaviour — designed, not yet built (Slice 0A audit) | Told to build Slice 0B directly, which is itself the trigger — the design already exists |
-| **Team/group membership model** | A real relationship, not an inference from role name or shared preset | A tenant whose assignment, dispatch or reporting actually needs team-scoped visibility, and only once Resource↔Membership exists to build it on |
-| **`schedule.read.self`/`schedule.read.organization` capabilities (or an equivalent visibility-scope mechanism)** | Resource↔Membership existing — there is currently no row a "self" scope could filter by | Slice 0B/0C, once the relationship above is built and a decision is made on whether scoped visibility is a Schedule-surface permission or a true `work_items` data boundary |
+| **Team/group membership model** | A real relationship, not an inference from role name or shared preset | A tenant whose assignment, dispatch or reporting actually needs team-scoped visibility, and only once a real Team relationship is asked for on its own terms |
+| **`schedule.read.self`/`schedule.read.organization` capabilities (or an equivalent visibility-scope mechanism)** | A Slice 0C decision on whether scoped visibility is a Schedule-surface permission or a true `work_items` data boundary — see domain-model.md's "Visibility scope" | Told to build Slice 0C directly. Resource↔Membership (below) is no longer the blocker — `getResourceForCurrentMember` already resolves "which Resource is mine" — but nothing yet reads it for authorization |
 | **Member-seat hard-limit enforcement** against `platform_plan_quotas`'s existing `users` allowance | Semantics: whether a pending invitation consumes a seat, whether `included_quantity` differs from a hard limit, whether overage is allowed | A decision on those semantics, then wiring the four membership-creating doors (`add_member_by_email`, `invite_member`/`accept_invitation`, `create_organization`, `provision_organization`) to check it |
 
 Website distribution, shared controls, theming, Voice, two-way email, terminology, reusable
-business setup, platform-wide usage visibility and incumbent migration are no longer deferred:
-they are built foundations or active roadmap work. Moving them out of this table does not claim
-completion; `roadmap.md` owns their remaining acceptance criteria.
+business setup, platform-wide usage visibility, incumbent migration and the Resource↔Membership
+relationship (Slice 0B: `resources.membership_id`, a nullable composite reference to
+`memberships`, one Membership to at most one Resource) are no longer deferred: they are built
+foundations or active roadmap work. Moving them out of this table does not claim completion;
+`roadmap.md` owns their remaining acceptance criteria, and for Resource↔Membership specifically:
+it is a relational fact only — no Schedule visibility scope reads it yet (see domain-model.md).
 
 Two of these carry reasoning worth keeping in full, because finding it out later is expensive.
 

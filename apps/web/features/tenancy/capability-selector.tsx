@@ -21,7 +21,7 @@ const GROUPS: readonly { label: string; capabilities: readonly Capability[] }[] 
   },
   {
     label: 'Locations / assets / resources',
-    capabilities: ['location.create', 'asset.create', 'resource.create'],
+    capabilities: ['location.create', 'asset.create', 'resource.create', 'resource.update'],
   },
   { label: 'Communications', capabilities: ['call.place'] },
   { label: 'Finance', capabilities: ['price.manage', 'invoice.issue', 'payment.record'] },

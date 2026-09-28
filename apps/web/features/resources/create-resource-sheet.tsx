@@ -12,6 +12,7 @@ import {
   PageDrawerTitle,
 } from '@/components/containers/page-drawer';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
+import type { AvailableMember } from './member-options';
 import { CreateResourceForm } from './create-resource-form';
 
 const CreateResourceSheetContext = createContext<(() => void) | null>(null);
@@ -24,10 +25,13 @@ const CreateResourceSheetContext = createContext<(() => void) | null>(null);
 export function CreateResourceSheetProvider({
   organizationId,
   definitions,
+  availableMembers,
   children,
 }: {
   organizationId: string;
   definitions: FieldDefinition[];
+  /** Members not already representing another Resource — see `member-options.ts`. */
+  availableMembers: AvailableMember[];
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -49,6 +53,7 @@ export function CreateResourceSheetProvider({
             <CreateResourceForm
               organizationId={organizationId}
               definitions={definitions}
+              availableMembers={availableMembers}
               onCreated={() => setOpen(false)}
               formId={formId}
               onPendingChange={setPending}

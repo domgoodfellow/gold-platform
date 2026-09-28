@@ -19,7 +19,7 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
     label: 'Administrator',
     capabilities: [
       'customer.create', 'customer.update', 'role.manage', 'field.manage', 'location.create', 'resource.create',
-      'work_item.create', 'asset.create', 'document.create', 'work_item.transition', 'work_item.schedule',
+      'resource.update', 'work_item.create', 'asset.create', 'document.create', 'work_item.transition', 'work_item.schedule',
       'work_item.record', 'organization.manage', 'price.manage', 'work_item.price', 'work_item.update',
       'invoice.issue', 'payment.record', 'automation.manage', 'configuration.propose', 'assistant.ask',
       'report.read', 'report.manage', 'call.place', 'integration.manage', 'feature.manage', 'billing.manage',
@@ -29,7 +29,7 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
     key: 'manager',
     label: 'Manager',
     capabilities: [
-      'customer.create', 'customer.update', 'location.create', 'resource.create', 'work_item.create',
+      'customer.create', 'customer.update', 'location.create', 'resource.create', 'resource.update', 'work_item.create',
       'asset.create', 'document.create', 'work_item.transition', 'work_item.schedule', 'work_item.record',
       'work_item.price', 'work_item.update', 'invoice.issue', 'payment.record', 'assistant.ask', 'report.read', 'call.place',
     ],
@@ -47,7 +47,7 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
   {
     key: 'dispatcher',
     label: 'Dispatcher',
-    capabilities: ['customer.update', 'work_item.create', 'work_item.transition', 'work_item.schedule', 'work_item.update', 'resource.create'],
+    capabilities: ['customer.update', 'work_item.create', 'work_item.transition', 'work_item.schedule', 'work_item.update', 'resource.create', 'resource.update'],
   },
   {
     key: 'technician',
