@@ -1029,6 +1029,12 @@
       ],
       "note": "Also contains source scans."
     },
+    "apps/web/tests/integration/database/configuration-recommendation.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "crm"
+      ]
+    },
     "apps/web/tests/integration/database/counted.test.ts": {
       "category": "database-integration",
       "concerns": [

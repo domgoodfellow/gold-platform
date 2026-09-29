@@ -8,8 +8,10 @@ import { ActivityList } from '@/features/timeline/activity-list';
 import { CallHistory } from '@/features/communications/voice/call-history';
 import { PortalLinkForm } from '@/features/portal-access/portal-link-form';
 import { PortalInviteList } from '@/features/portal-access/invite-list';
+import { ConfigurationRecommendationSection } from './configuration-recommendation-section';
 import { DiscoverySnapshotSection } from './discovery-snapshot-section';
 import type { Invoice } from '@/lib/domain/billing/invoices';
+import type { ConfigurationRecommendation } from '@/lib/domain/customers/configuration-recommendation';
 import type { Customer } from '@/lib/domain/customers/customers';
 import type { DiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
@@ -41,6 +43,7 @@ export function CustomerDetail({
   invoices,
   invites,
   discoverySnapshot,
+  configurationRecommendation,
   origin,
   timezone,
   role,
@@ -59,6 +62,7 @@ export function CustomerDetail({
   invoices: Invoice[];
   invites: PortalInvite[];
   discoverySnapshot: DiscoverySnapshot | null;
+  configurationRecommendation: ConfigurationRecommendation;
   origin: string;
   timezone: string;
   role: string;
@@ -73,6 +77,7 @@ export function CustomerDetail({
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="discovery">Discovery</TabsTrigger>
+          <TabsTrigger value="configuration">Proposed configuration</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="work">Work</TabsTrigger>
           {features.voice ? <TabsTrigger value="calls">Calls</TabsTrigger> : null}
@@ -102,6 +107,9 @@ export function CustomerDetail({
             mayEdit={permissions.edit}
             role={role}
           />
+        </TabsContent>
+        <TabsContent value="configuration" className="mt-6">
+          <ConfigurationRecommendationSection recommendation={configurationRecommendation} />
         </TabsContent>
         <TabsContent value="activity" className="mt-6"><ActivityList timeline={timeline} timezone={timezone} /></TabsContent>
         <TabsContent value="work" className="mt-6"><CustomerRelatedWork organizationId={organizationId} work={work} /></TabsContent>

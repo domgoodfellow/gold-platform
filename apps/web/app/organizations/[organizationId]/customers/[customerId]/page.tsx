@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { AppPage } from '@/components/containers/app-page';
 import { CustomerDetail } from '@/features/crm/customers/customer-detail';
 import { listCustomerInvoices } from '@/lib/domain/billing/invoices';
+import { recommendConfiguration } from '@/lib/domain/customers/configuration-recommendation';
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { getDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
@@ -36,6 +37,9 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
     listWorkItems(db, { organizationId, customerId }),
     getDiscoverySnapshot(db, { organizationId, customerId }),
   ]);
+  const configurationRecommendation = await recommendConfiguration(db, {
+    answers: discoverySnapshot?.answers ?? {},
+  });
   const modules = activeModuleKeys(resolvedFeatures);
   const voice = modules.has('reception');
 
@@ -54,6 +58,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
         invoices={invoices}
         invites={invites}
         discoverySnapshot={discoverySnapshot}
+        configurationRecommendation={configurationRecommendation}
         origin={origin}
         timezone={organization.timezone}
         role={organization.role}
