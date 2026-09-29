@@ -4,6 +4,11 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { createPortalInvite, revokePortalInvite } from '@/lib/domain/portal/portal';
 import { updateCustomer } from '@/lib/domain/customers/customers';
+import {
+  DISCOVERY_SNAPSHOT_CATEGORIES,
+  upsertDiscoverySnapshotAnswers,
+  type DiscoverySnapshotAnswers,
+} from '@/lib/domain/customers/discovery-snapshots';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import { DomainError } from '@/lib/domain/errors';
@@ -138,6 +143,43 @@ export async function editCustomerAction(
       // none and for a customer nobody has staged yet.
       stageId: stageId === '' ? null : stageId,
     });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message, updated: false };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
+  return { error: null, updated: true };
+}
+
+export type EditDiscoverySnapshotState = { error: string | null; updated: boolean };
+
+/**
+ * Save whatever a discovery conversation covered.
+ *
+ * Every category on the form is the new value, including the ones left blank — the same reason
+ * `editCustomerAction` submits the whole record: a form has no way to say *leave this alone* that
+ * is distinguishable from *nothing was said here*, and clearing a category is a real edit a
+ * salesperson makes.
+ */
+export async function editDiscoverySnapshotAction(
+  _previous: EditDiscoverySnapshotState,
+  formData: FormData,
+): Promise<EditDiscoverySnapshotState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  const customerId = String(formData.get('customerId') ?? '');
+
+  const patch: DiscoverySnapshotAnswers = {};
+  for (const category of DISCOVERY_SNAPSHOT_CATEGORIES) {
+    patch[category] = String(formData.get(category) ?? '').trim();
+  }
+
+  try {
+    await upsertDiscoverySnapshotAnswers(db, { organizationId, customerId, patch });
   } catch (error) {
     if (error instanceof DomainError) {
       return { error: error.message, updated: false };

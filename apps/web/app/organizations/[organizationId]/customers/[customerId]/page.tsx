@@ -3,6 +3,7 @@ import { AppPage } from '@/components/containers/app-page';
 import { CustomerDetail } from '@/features/crm/customers/customer-detail';
 import { listCustomerInvoices } from '@/lib/domain/billing/invoices';
 import { getCustomer } from '@/lib/domain/customers/customers';
+import { getDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
@@ -23,7 +24,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
   if (!customer) notFound();
 
   const origin = await requestOrigin();
-  const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work] = await Promise.all([
+  const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work, discoverySnapshot] = await Promise.all([
     listDocuments(db, { organizationId, attachedTo: { entity: 'customer', id: customerId } }),
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
     listCustomerTimeline(db, { organizationId, customerId }),
@@ -33,6 +34,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
     listCustomerCalls(db, { organizationId, customerId }),
     listCustomerInvoices(db, { organizationId, customerId }),
     listWorkItems(db, { organizationId, customerId }),
+    getDiscoverySnapshot(db, { organizationId, customerId }),
   ]);
   const modules = activeModuleKeys(resolvedFeatures);
   const voice = modules.has('reception');
@@ -51,6 +53,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
         calls={calls}
         invoices={invoices}
         invites={invites}
+        discoverySnapshot={discoverySnapshot}
         origin={origin}
         timezone={organization.timezone}
         role={organization.role}

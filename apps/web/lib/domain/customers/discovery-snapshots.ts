@@ -23,7 +23,7 @@ export type DiscoverySnapshotCategory =
   | 'automationGoals'
   | 'existingSoftware';
 
-const DISCOVERY_SNAPSHOT_CATEGORIES: readonly DiscoverySnapshotCategory[] = [
+export const DISCOVERY_SNAPSHOT_CATEGORIES: readonly DiscoverySnapshotCategory[] = [
   'contactChannels',
   'bookingIntake',
   'phoneHandling',
@@ -37,6 +37,22 @@ const DISCOVERY_SNAPSHOT_CATEGORIES: readonly DiscoverySnapshotCategory[] = [
   'automationGoals',
   'existingSoftware',
 ];
+
+/** The platform's own words for each category — fixed vocabulary, not tenant-editable (unlike `field_definitions`). */
+export const DISCOVERY_SNAPSHOT_CATEGORY_LABELS: Record<DiscoverySnapshotCategory, string> = {
+  contactChannels: 'Contact channels',
+  bookingIntake: 'Booking / work intake',
+  phoneHandling: 'Phone handling',
+  teamAccess: 'Team & access needs',
+  websiteSurfaces: 'Website & public surfaces',
+  customerSelfService: 'Customer self-service',
+  workersResources: 'Workers & resources',
+  locationConstraints: 'Location, travel & weather constraints',
+  quoteInvoiceModel: 'Quote & invoice model',
+  postContactWorkflow: 'Post-contact workflow',
+  automationGoals: 'Automation goals',
+  existingSoftware: 'Existing software',
+};
 
 export type DiscoverySnapshotAnswers = Partial<Record<DiscoverySnapshotCategory, string>>;
 

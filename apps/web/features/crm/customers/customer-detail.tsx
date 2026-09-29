@@ -8,8 +8,10 @@ import { ActivityList } from '@/features/timeline/activity-list';
 import { CallHistory } from '@/features/communications/voice/call-history';
 import { PortalLinkForm } from '@/features/portal-access/portal-link-form';
 import { PortalInviteList } from '@/features/portal-access/invite-list';
+import { DiscoverySnapshotSection } from './discovery-snapshot-section';
 import type { Invoice } from '@/lib/domain/billing/invoices';
 import type { Customer } from '@/lib/domain/customers/customers';
+import type { DiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import type { StoredDocument } from '@/lib/domain/documents/documents';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
@@ -38,6 +40,7 @@ export function CustomerDetail({
   calls,
   invoices,
   invites,
+  discoverySnapshot,
   origin,
   timezone,
   role,
@@ -55,6 +58,7 @@ export function CustomerDetail({
   calls: Call[];
   invoices: Invoice[];
   invites: PortalInvite[];
+  discoverySnapshot: DiscoverySnapshot | null;
   origin: string;
   timezone: string;
   role: string;
@@ -68,6 +72,7 @@ export function CustomerDetail({
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="discovery">Discovery</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="work">Work</TabsTrigger>
           {features.voice ? <TabsTrigger value="calls">Calls</TabsTrigger> : null}
@@ -89,6 +94,15 @@ export function CustomerDetail({
           </Section>
         </TabsContent>
 
+        <TabsContent value="discovery" className="mt-6">
+          <DiscoverySnapshotSection
+            organizationId={organizationId}
+            customerId={customer.id}
+            snapshot={discoverySnapshot}
+            mayEdit={permissions.edit}
+            role={role}
+          />
+        </TabsContent>
         <TabsContent value="activity" className="mt-6"><ActivityList timeline={timeline} timezone={timezone} /></TabsContent>
         <TabsContent value="work" className="mt-6"><CustomerRelatedWork organizationId={organizationId} work={work} /></TabsContent>
         {features.voice ? <TabsContent value="calls" className="mt-6"><CallHistory calls={calls} empty="No calls with this customer." />{permissions.call ? null : <Hint className="mt-4">Your role, {role}, cannot call customers.</Hint>}</TabsContent> : null}
