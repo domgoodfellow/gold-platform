@@ -64,6 +64,14 @@
       "destination": "/api/routing_preview_outbound"
     },
     {
+      "source": "/sms/inbound",
+      "destination": "/api/sms_inbound"
+    },
+    {
+      "source": "/sms/status",
+      "destination": "/api/sms_status"
+    },
+    {
       "source": "/webhooks/stripe-platform-billing",
       "destination": "/api/stripe_platform_billing_webhook"
     },

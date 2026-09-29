@@ -285,6 +285,92 @@ def record_call_event(
     return response.json()
 
 
+SMS_ROLE = "sms_webhook"
+
+# The messaging integration's own auth.users row, fixed in
+# 20261016000001_communications_owns_messaging.sql. Like the voice one: no email, no password,
+# and the only way to act as it is to hold the JWT secret.
+SMS_ACTOR = "00000000-0000-4000-8000-0000000000a5"
+
+
+def record_inbound_message(
+    settings: VoiceSettings,
+    *,
+    to_number: str,
+    from_number: str,
+    external_id: str,
+    body: str,
+) -> str | None:
+    """One inbound text, applied through `sms_webhook`'s one door.
+
+    Organization and conversation are both derived *inside* `record_inbound_message` from
+    `to_number`, the carrier's own -- never from an organization id this handler could otherwise
+    have been asked to trust (D17): a callback that could name a business could name somebody
+    else's.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=SMS_ROLE, sub=SMS_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/record_inbound_message",
+        headers={"apikey": settings.supabase_publishable_key, "Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        json={
+            "p_to_number": to_number,
+            "p_from_number": from_number,
+            "p_external_id": external_id,
+            "p_body": body,
+        },
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"record_inbound_message failed: {response.status_code}")
+    return response.json()
+
+
+def record_message_status(
+    settings: VoiceSettings,
+    *,
+    external_id: str,
+    status: str,
+    failure_reason: str | None,
+) -> str | None:
+    """A carrier status callback for one outbound message, applied through `sms_webhook`."""
+    token = machine_token(settings.supabase_jwt_secret, role=SMS_ROLE, sub=SMS_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/record_message_status",
+        headers={"apikey": settings.supabase_publishable_key, "Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        json={"p_external_id": external_id, "p_status": status, "p_failure_reason": failure_reason},
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"record_message_status failed: {response.status_code}")
+    return response.json()
+
+
+def record_message_suppression(
+    settings: VoiceSettings,
+    *,
+    to_number: str,
+    external_number: str,
+    opted_out: bool,
+) -> None:
+    """STOP/START, applied through `sms_webhook`'s one door onto `messaging_opt_outs`.
+
+    The organization is derived inside the function from `to_number`, same as
+    `record_inbound_message` -- `sms_webhook` holds no table grant to resolve one any other way.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=SMS_ROLE, sub=SMS_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/record_message_suppression",
+        headers={"apikey": settings.supabase_publishable_key, "Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        json={"p_to_number": to_number, "p_external_number": external_number, "p_opted_out": opted_out},
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"record_message_suppression failed: {response.status_code}")
+
+
 PROVIDER_ROLE = "provider_operator"
 
 # The provider-operations integration's own `auth.users` row, fixed in

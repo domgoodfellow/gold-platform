@@ -1485,6 +1485,71 @@ export type Database = {
           },
         ]
       }
+      conversations: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          external_number: string
+          id: string
+          last_message_at: string
+          last_message_preview: string
+          organization_id: string
+          phone_number_id: string
+          unread: boolean
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          external_number: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string
+          organization_id: string
+          phone_number_id: string
+          unread?: boolean
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          external_number?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string
+          organization_id?: string
+          phone_number_id?: string
+          unread?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_phone_number_id_fkey"
+            columns: ["organization_id", "phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_numbers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       customer_locations: {
         Row: {
           created_at: string
@@ -2901,6 +2966,124 @@ export type Database = {
           },
           {
             foreignKeyName: "message_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          created_by: string | null
+          delivered_at: string | null
+          direction: string
+          external_id: string | null
+          failure_reason: string | null
+          id: string
+          idempotency_key: string | null
+          intent: string
+          organization_id: string
+          requested_transport: string
+          sent_at: string | null
+          status: string
+          transport: string | null
+        }
+        Insert: {
+          body?: string
+          conversation_id: string
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          direction: string
+          external_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          idempotency_key?: string | null
+          intent?: string
+          organization_id: string
+          requested_transport?: string
+          sent_at?: string | null
+          status?: string
+          transport?: string | null
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          direction?: string
+          external_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          idempotency_key?: string | null
+          intent?: string
+          organization_id?: string
+          requested_transport?: string
+          sent_at?: string | null
+          status?: string
+          transport?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_organization_id_conversation_id_fkey"
+            columns: ["organization_id", "conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messaging_opt_outs: {
+        Row: {
+          external_number: string
+          occurred_at: string
+          opted_out: boolean
+          organization_id: string
+          source: string
+        }
+        Insert: {
+          external_number: string
+          occurred_at?: string
+          opted_out?: boolean
+          organization_id: string
+          source: string
+        }
+        Update: {
+          external_number?: string
+          occurred_at?: string
+          opted_out?: boolean
+          organization_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messaging_opt_outs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messaging_opt_outs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "platform_tenants"
@@ -7846,6 +8029,16 @@ export type Database = {
         Args: { p_location_id: string; p_readings: Json }
         Returns: number
       }
+      record_inbound_message: {
+        Args: {
+          p_body: string
+          p_external_id: string
+          p_external_number: string
+          p_organization_id: string
+          p_phone_number_id: string
+        }
+        Returns: string
+      }
       record_integration_connection: {
         Args: {
           p_account_label: string
@@ -7888,6 +8081,22 @@ export type Database = {
       }
       record_message_delivery: {
         Args: { p_detail: string; p_id: string; p_sent: boolean }
+        Returns: undefined
+      }
+      record_message_status: {
+        Args: {
+          p_external_id: string
+          p_failure_reason?: string
+          p_status: string
+        }
+        Returns: string
+      }
+      record_message_suppression: {
+        Args: {
+          p_external_number: string
+          p_opted_out: boolean
+          p_organization_id: string
+        }
         Returns: undefined
       }
       record_organization_email_domain: {

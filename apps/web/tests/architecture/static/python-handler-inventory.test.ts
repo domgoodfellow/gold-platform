@@ -45,6 +45,8 @@ const INVENTORY: { file: string; route: string; trust: keyof typeof TRUST }[] = 
   { file: 'voice_outbound', route: '/voice/outbound', trust: 'twilio-signature' },
   { file: 'voice_status', route: '/voice/status', trust: 'twilio-signature' },
   { file: 'voice_recording', route: '/voice/recording', trust: 'twilio-signature' },
+  { file: 'sms_inbound', route: '/sms/inbound', trust: 'twilio-signature' },
+  { file: 'sms_status', route: '/sms/status', trust: 'twilio-signature' },
   { file: 'public_chat', route: '/public_chat', trust: 'shared-key' },
 ];
 

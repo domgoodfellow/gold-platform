@@ -30,9 +30,11 @@ platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and acces
 | `POST /voice/outbound` | `api/voice_outbound.py` | Twilio signature. Returns the conference instructions for the room the web app created. |
 | `POST /voice/status` | `api/voice_status.py` | Twilio signature. Records a call's status through the Voice machine role. |
 | `POST /voice/recording` | `api/voice_recording.py` | Twilio signature. Records recording metadata through the Voice machine role. |
+| `POST /sms/inbound` | `api/sms_inbound.py` | Twilio signature. Records an inbound text and applies STOP/START through the Messaging machine role. |
+| `POST /sms/status` | `api/sms_status.py` | Twilio signature. Records a message's delivery status through the Messaging machine role. |
 | `POST /public_chat` | `api/public_chat.py` | Shared server-to-server key (`x-gold-public-chat-key`) from `apps/web` only; the same answer as "not configured" on any mismatch. Public-site assistant. |
 
-16 deployable handlers, one file each. Vercel also serves every file under `api/` at its
+18 deployable handlers, one file each. Vercel also serves every file under `api/` at its
 physical `/api/<name>` path, so a rewrite is the documented route, not the only reachable one.
 `tests/architecture/static/python-handler-inventory.test.ts` holds this table, `vercel.json`, the
 files in `api/` and the handler tests to one another.

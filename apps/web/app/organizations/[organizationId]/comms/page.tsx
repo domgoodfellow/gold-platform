@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/containers/page-header';
 import { EmptyState, GroupHeading } from '@/components/containers/section';
 import { Hint } from '@/components/controls/inputs';
 import { listCalls } from '@/lib/domain/reception/calls';
+import { listConversations } from '@/lib/domain/reception/messaging';
 import { listPhoneNumbers } from '@/lib/domain/reception/numbers';
 import { communicationsProviderReadiness } from '@/lib/domain/reception/provider-readiness';
 import { callingNumber } from '@/lib/domain/reception/telephony';
@@ -15,18 +16,18 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Communications Home. Every figure is a count some domain read already owns — nothing is
- * totalled here. Messaging draws no figure: the catalogue carries SMS as `planned`, so a count
- * would claim activity that cannot happen yet — the readiness line says so instead.
+ * totalled here.
  */
 export default async function CommsPage({ params }: PageProps<'/organizations/[organizationId]/comms'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const [calls, numbers, number, readiness] = await Promise.all([
+  const [calls, numbers, number, readiness, conversations] = await Promise.all([
     listCalls(db, { organizationId }),
     listPhoneNumbers(db, { organizationId }),
     callingNumber(db, { organizationId }),
     communicationsProviderReadiness(db, { organizationId }),
+    listConversations(db, { organizationId }),
   ]);
   const day = zonedDayRange(todayInZone(organization.timezone), organization.timezone);
   const today = calls.filter((call) => call.startedAt >= day.startsAt && call.startedAt < day.endsAt);
@@ -37,6 +38,7 @@ export default async function CommsPage({ params }: PageProps<'/organizations/[o
     { key: 'calls-today', label: 'Calls today', value: today.length, href: href('calls') },
     { key: 'calls', label: areaLabel('calls'), value: calls.total, note: 'recorded', href: href('calls') },
     { key: 'numbers', label: areaLabel('comms-numbers'), value: numbers.length, note: 'owned', href: href('comms-numbers') },
+    { key: 'conversations', label: areaLabel('comms-messages'), value: conversations.length, note: 'open', href: href('comms-messages') },
   ];
 
   const issues: string[] = [];
@@ -73,7 +75,6 @@ export default async function CommsPage({ params }: PageProps<'/organizations/[o
           </ul>
         </section>
       ) : null}
-      <Hint className="mt-6">Text messaging is not available on this deployment yet.</Hint>
     </AppPage>
   );
 }

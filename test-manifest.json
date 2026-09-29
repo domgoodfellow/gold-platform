@@ -1217,6 +1217,13 @@
         "security"
       ]
     },
+    "apps/web/tests/integration/database/messaging.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/conference.test.ts": {
       "category": "database-integration",
       "concerns": [

@@ -145,6 +145,40 @@
         "p_status"
       ]
     },
+    "record_inbound_message": {
+      "role": "sms_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_body",
+        "p_external_id",
+        "p_from_number",
+        "p_to_number"
+      ]
+    },
+    "record_message_status": {
+      "role": "sms_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_external_id",
+        "p_failure_reason",
+        "p_status"
+      ]
+    },
+    "record_message_suppression": {
+      "role": "sms_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_external_number",
+        "p_opted_out",
+        "p_to_number"
+      ]
+    },
     "record_call_outcome": {
       "role": "authenticated",
       "callers": [

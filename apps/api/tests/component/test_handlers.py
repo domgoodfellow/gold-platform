@@ -35,6 +35,8 @@ import api.provider_operations as provider_operations
 import api.public_chat as public_chat
 import api.routing_preview_inbound as routing_preview_inbound
 import api.routing_preview_outbound as routing_preview_outbound
+import api.sms_inbound as sms_inbound
+import api.sms_status as sms_status
 import api.stripe_platform_billing_webhook as platform_billing_webhook
 import api.stripe_webhook as stripe_webhook
 import api.voice_inbound as voice_inbound
@@ -110,13 +112,15 @@ CALLBACKS = [
     ),
     (voice_inbound, "/voice/inbound", None, {"CallSid": "CA1", "To": "+31000000000"}),
     (voice_outbound, "/voice/outbound", None, {"CallSid": "CA1", "Conference": "room-1"}),
+    (sms_inbound, "/sms/inbound", "record_inbound_message", {"MessageSid": "SM1", "To": "+31000000000", "From": "+31000000001", "Body": "Thanks"}),
+    (sms_status, "/sms/status", "record_message_status", {"MessageSid": "SM1", "MessageStatus": "delivered"}),
 ]
 IDS = [module.__name__.split(".")[-1] for module, *_ in CALLBACKS]
 
 
 @pytest.fixture
 def configured(monkeypatch):
-    for module in (voice_status, voice_recording, voice_inbound, voice_outbound):
+    for module in (voice_status, voice_recording, voice_inbound, voice_outbound, sms_inbound, sms_status):
         monkeypatch.setattr(module, "load_voice_settings", lambda: SETTINGS)
 
 
@@ -208,6 +212,55 @@ class TestCarrierCallbacksThatAreSigned:
 
         status, _ = self._signed(voice_outbound, "/voice/outbound", {"CallSid": "CA1"})
         assert status == 400
+
+    def test_a_signed_inbound_text_is_recorded(self, configured, monkeypatch) -> None:
+        recorded = Sink(result="a-message-row")
+        monkeypatch.setattr(sms_inbound, "record_inbound_message", recorded)
+
+        status, body = self._signed(sms_inbound, "/sms/inbound", CALLBACKS[4][3])
+
+        assert (status, body) == (200, "recorded")
+        assert len(recorded.calls) == 1
+
+    def test_a_stop_keyword_suppresses_before_the_message_is_recorded(self, configured, monkeypatch) -> None:
+        suppressed = Sink()
+        recorded = Sink(result="a-message-row")
+        monkeypatch.setattr(sms_inbound, "record_message_suppression", suppressed)
+        monkeypatch.setattr(sms_inbound, "record_inbound_message", recorded)
+
+        params = {"MessageSid": "SM2", "To": "+31000000000", "From": "+31000000001", "Body": "STOP"}
+        status, body = self._signed(sms_inbound, "/sms/inbound", params)
+
+        assert (status, body) == (200, "recorded")
+        assert len(suppressed.calls) == 1
+        assert suppressed.calls[0][1]["opted_out"] is True
+
+    def test_an_ordinary_message_never_touches_suppression(self, configured, monkeypatch) -> None:
+        suppressed = Sink()
+        monkeypatch.setattr(sms_inbound, "record_message_suppression", suppressed)
+        monkeypatch.setattr(sms_inbound, "record_inbound_message", Sink(result="a-message-row"))
+
+        self._signed(sms_inbound, "/sms/inbound", CALLBACKS[4][3])
+
+        assert suppressed.calls == []
+
+    def test_a_signed_delivery_status_is_recorded(self, configured, monkeypatch) -> None:
+        recorded = Sink(result="a-message-id")
+        monkeypatch.setattr(sms_status, "record_message_status", recorded)
+
+        status, body = self._signed(sms_status, "/sms/status", CALLBACKS[5][3])
+
+        assert (status, body) == (200, "recorded")
+        assert recorded.calls[0][1]["status"] == "delivered"
+
+    def test_a_failed_delivery_carries_a_reason(self, configured, monkeypatch) -> None:
+        recorded = Sink(result="a-message-id")
+        monkeypatch.setattr(sms_status, "record_message_status", recorded)
+
+        params = {"MessageSid": "SM1", "MessageStatus": "failed", "ErrorCode": "30007"}
+        self._signed(sms_status, "/sms/status", params)
+
+        assert recorded.calls[0][1]["failure_reason"]
 
 
 # --- the payment processors' webhooks: verified over the raw body, or refused --------------------
