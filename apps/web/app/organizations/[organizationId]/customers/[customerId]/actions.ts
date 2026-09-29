@@ -164,10 +164,11 @@ export type EditDiscoverySnapshotState = { error: string | null; updated: boolea
  * alone* that is distinguishable from *nothing was said here*, and clearing an answer is a real
  * edit a salesperson makes.
  *
- * A value saved through this form is always `confirmed`: a person here read it and is the one
- * typing it in, whether it started blank, from a prospect's own words at intake, or from a
+ * A typed value saved through this form is always `confirmed`: a person here read it and is the
+ * one typing it in, whether it started blank, from a prospect's own words at intake, or from a
  * conversation — status only ever moves forward from a public form's `provided` once a person
- * here has looked at it.
+ * here has looked at it. A requirement whose "Not applicable" box is ticked is `not_applicable`
+ * regardless of what its textarea holds — the checkbox is the answer, not the text beside it.
  */
 export async function editDiscoverySnapshotAction(
   _previous: EditDiscoverySnapshotState,
@@ -180,11 +181,10 @@ export async function editDiscoverySnapshotAction(
 
   const patch: DiscoveryAnswerPatch = {};
   for (const requirement of DISCOVERY_REQUIREMENTS) {
-    patch[requirement.key] = {
-      value: String(formData.get(requirement.key) ?? '').trim(),
-      status: 'confirmed',
-      source: organization.role,
-    };
+    const notApplicable = formData.get(`${requirement.key}__na`) === 'on';
+    patch[requirement.key] = notApplicable
+      ? { value: '', status: 'not_applicable', source: organization.role }
+      : { value: String(formData.get(requirement.key) ?? '').trim(), status: 'confirmed', source: organization.role };
   }
 
   try {

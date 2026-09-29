@@ -5,6 +5,7 @@ import { createCustomer } from '@/lib/domain/customers/customers';
 import {
   discoverySnapshotCompleteness,
   getDiscoverySnapshot,
+  unresolvedDiscoveryRequirements,
   upsertDiscoverySnapshotAnswers,
 } from '@/lib/domain/customers/discovery-snapshots';
 import { foundBusiness } from '@/tests/support/founding';
@@ -133,6 +134,40 @@ describe('discovery snapshots', () => {
 
     const completeness = discoverySnapshotCompleteness(snapshot!);
     expect(completeness).toEqual({ answered: 2, total: 12 });
+  });
+
+  it('marks a requirement not_applicable with an empty value, and counts it toward completeness', async () => {
+    const marked = await upsertDiscoverySnapshotAnswers(alice.db, {
+      organizationId: alice.organizationId,
+      customerId: aliceCustomerId,
+      patch: { websiteSurfaces: { value: '', status: 'not_applicable', source: 'Owner' } },
+    });
+
+    expect(marked.answers.websiteSurfaces).toMatchObject({ value: '', status: 'not_applicable' });
+
+    // A blank value did not get deleted the way an ordinary empty confirmed submission would —
+    // not_applicable is the one status a blank value does not mean "nothing was said" for.
+    const reread = await getDiscoverySnapshot(alice.db, {
+      organizationId: alice.organizationId,
+      customerId: aliceCustomerId,
+    });
+    expect(reread!.answers.websiteSurfaces?.status).toBe('not_applicable');
+
+    const completenessBefore = discoverySnapshotCompleteness({ answers: {} });
+    expect(completenessBefore.answered).toBe(0);
+    const completenessAfter = discoverySnapshotCompleteness(reread!);
+    expect(completenessAfter.answered).toBe(3); // contactChannels, teamAccess, websiteSurfaces
+  });
+
+  it('lists unresolved requirements — neither answered nor marked not applicable', async () => {
+    const snapshot = await getDiscoverySnapshot(alice.db, {
+      organizationId: alice.organizationId,
+      customerId: aliceCustomerId,
+    });
+    const unresolved = unresolvedDiscoveryRequirements(snapshot!);
+    expect(unresolved.map((requirement) => requirement.key)).not.toContain('contactChannels');
+    expect(unresolved.map((requirement) => requirement.key)).not.toContain('websiteSurfaces');
+    expect(unresolved.map((requirement) => requirement.key)).toContain('phoneHandling');
   });
 
   it('shows each tenant only its own snapshot (I1)', async () => {
