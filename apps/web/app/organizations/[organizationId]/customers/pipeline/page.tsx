@@ -43,7 +43,7 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
       {!reception ? (
         <EmptyState className="mt-6">Switch Communications/Voice on to name a pipeline for this business.</EmptyState>
       ) : stages.length === 0 ? (
-        <EmptyState className="mt-6">No stages named. Use Stages to create the first one.</EmptyState>
+        <EmptyState className="mt-6">No stages named.</EmptyState>
       ) : (
         <div className="mt-6">
           <PipelineBoard

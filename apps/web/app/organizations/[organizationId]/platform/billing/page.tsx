@@ -2,9 +2,12 @@ import { requirePlatformArea } from '@/lib/route/platform';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { AppPage } from '@/components/containers/app-page';
-import { SectionHeading } from '@/components/containers/section';
+import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
 import { PageHeader } from '@/components/containers/page-header';
+import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
+import { DataTable } from '@/components/display/table';
+import { Widget, WidgetGrid } from '@/components/display/widget';
 import { getDb } from '@/lib/db/server';
 import { platformBillingEnvironment, platformBillingProvider } from '@/lib/adapters/platform-billing';
 import { getOrganizationServiceAccess } from '@/lib/domain/platform-billing/service-access';
@@ -57,36 +60,39 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
 
   return (
     <AppPage>
-      <PageHeader title="Billing" crumbs={platformAncestry(goldId, 'billing')} description={<>GildOps’s own subscription book — organizations paying GildOps, never the other direction. Plans and prices are managed at{' '} <Link href={platformHref(goldId, 'catalog/plans')} className="underline underline-offset-4"> Catalog → Plans </Link> .</>} />
+      <PageHeader
+        title="Billing"
+        crumbs={platformAncestry(goldId, 'billing')}
+        description={
+          <>
+            GildOps&rsquo;s own subscription book. Plans and prices are managed at{' '}
+            <Link href={platformHref(goldId, 'catalog/plans')} className="underline underline-offset-4">
+              Catalog → Plans
+            </Link>
+            .
+          </>
+        }
+      />
 
       {!provider ? (
-        <p className="mt-6 rounded border border-border bg-secondary p-4 text-sm text-muted-foreground">
+        <EmptyState className="mt-6">
           Billing is not configured for this deployment — no STRIPE_SECRET_KEY is set.
-        </p>
+        </EmptyState>
       ) : (
-        <p className="mt-2 text-xs text-muted-foreground">Environment: {provider.environment}</p>
+        <Hint className="mt-2">Environment: {provider.environment}</Hint>
       )}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        <div className="rounded border border-border p-4">
-          <p className="text-xs text-muted-foreground">Active or trialing</p>
-          <p className="text-2xl font-medium">{counts.active}</p>
-        </div>
-        <div className="rounded border border-border p-4">
-          <p className="text-xs text-muted-foreground">Requiring attention</p>
-          <p className="text-2xl font-medium">{counts.attention}</p>
-        </div>
-        <div className="rounded border border-border p-4">
-          <p className="text-xs text-muted-foreground">Total subscriptions recorded</p>
-          <p className="text-2xl font-medium">{counts.total}</p>
-        </div>
-      </div>
+      <WidgetGrid className="mt-6">
+        <Widget title="Active or trialing" value={counts.active} />
+        <Widget title="Requiring attention" value={counts.attention} />
+        <Widget title="Total subscriptions recorded" value={counts.total} />
+      </WidgetGrid>
 
       <SectionHeading className="mt-8">Organizations requiring attention</SectionHeading>
       {attention.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">Nothing past due or unpaid.</p>
+        <EmptyState className="mt-2">Nothing past due or unpaid.</EmptyState>
       ) : (
-        <ul className="mt-2 flex flex-col divide-y divide-border">
+        <DividedList className="mt-2">
           {attention.map((s) => (
             <li key={s.organizationId} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
               <Link
@@ -98,68 +104,75 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
               <Badge>{s.status.replace('_', ' ')}</Badge>
             </li>
           ))}
-        </ul>
+        </DividedList>
       )}
 
       <SectionHeading className="mt-8">Subscriptions</SectionHeading>
-      {subscriptions.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">No organization has subscribed yet.</p>
-      ) : (
-        <table className="mt-2 w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="py-2 pr-4 font-medium">Organization</th>
-              <th className="py-2 pr-4 font-medium">Status</th>
-              <th className="py-2 pr-4 font-medium">Service access</th>
-              <th className="py-2 pr-4 font-medium">Environment</th>
-              <th className="py-2 font-medium">Current period ends</th>
-            </tr>
-          </thead>
-          <tbody>
-            {subscriptions.map((s) => (
-              <tr key={`${s.organizationId}:${s.environment}`} className="border-b border-border/50">
-                <td className="py-2 pr-4">
-                  <Link
-                    href={platformHref(goldId, `organizations/${s.organizationId}/commercial`)}
-                    className="underline underline-offset-4"
-                  >
-                    {nameById.get(s.organizationId) ?? s.organizationId}
-                  </Link>
-                </td>
-                <td className="py-2 pr-4">
-                  <Badge tone={s.status === 'active' || s.status === 'trialing' ? 'success' : 'neutral'}>
-                    {s.status.replace('_', ' ')}
-                  </Badge>
-                </td>
-                <td className="py-2 pr-4">
-                  <Badge tone={accessById.get(s.organizationId)?.permitted ? 'success' : 'neutral'}>
-                    {accessById.get(s.organizationId)?.permitted ? 'Available' : 'Locked'}
-                  </Badge>
-                </td>
-                <td className="py-2 pr-4">{s.environment}</td>
-                <td className="py-2">
+      <div className="mt-2">
+        <DataTable
+          rows={subscriptions}
+          rowKey={(s) => `${s.organizationId}:${s.environment}`}
+          empty="No organization has subscribed yet."
+          columns={[
+            {
+              key: 'organization',
+              header: 'Organization',
+              emphasis: 'primary',
+              cell: (s) => (
+                <Link
+                  href={platformHref(goldId, `organizations/${s.organizationId}/commercial`)}
+                  className="underline underline-offset-4"
+                >
+                  {nameById.get(s.organizationId) ?? s.organizationId}
+                </Link>
+              ),
+            },
+            {
+              key: 'status',
+              header: 'Status',
+              cell: (s) => (
+                <Badge tone={s.status === 'active' || s.status === 'trialing' ? 'success' : 'neutral'}>
+                  {s.status.replace('_', ' ')}
+                </Badge>
+              ),
+            },
+            {
+              key: 'access',
+              header: 'Service access',
+              cell: (s) => (
+                <Badge tone={accessById.get(s.organizationId)?.permitted ? 'success' : 'neutral'}>
+                  {accessById.get(s.organizationId)?.permitted ? 'Available' : 'Locked'}
+                </Badge>
+              ),
+            },
+            { key: 'environment', header: 'Environment', emphasis: 'secondary', cell: (s) => s.environment },
+            {
+              key: 'period',
+              header: 'Current period ends',
+              cell: (s) => (
+                <>
                   {s.currentPeriodEnd ? new Date(s.currentPeriodEnd).toLocaleDateString() : '—'}
                   {s.cancelAtPeriodEnd ? ' (canceling)' : ''}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+                </>
+              ),
+            },
+          ]}
+        />
+      </div>
 
       <SectionHeading className="mt-8">Recent webhook deliveries</SectionHeading>
       {events.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">Nothing received yet.</p>
+        <EmptyState className="mt-2">Nothing received yet.</EmptyState>
       ) : (
-        <ul className="mt-2 flex flex-col divide-y divide-border">
+        <DividedList className="mt-2">
           {events.map((event) => (
             <li key={event.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
               <span className="font-mono text-xs">{event.eventType}</span>
-              <span className="text-muted-foreground">{nameById.get(event.organizationId ?? '') ?? event.organizationId ?? '—'}</span>
-              <span className="text-xs text-muted-foreground">{new Date(event.receivedAt).toLocaleString()}</span>
+              <span className="text-muted">{nameById.get(event.organizationId ?? '') ?? event.organizationId ?? '—'}</span>
+              <span className="text-xs text-muted">{new Date(event.receivedAt).toLocaleString()}</span>
             </li>
           ))}
-        </ul>
+        </DividedList>
       )}
     </AppPage>
   );

@@ -50,7 +50,7 @@ export default async function AutomationRulesPage({
       <PageHeader
         title={areaLabel('automation-rules')}
         crumbs={workspaceAncestry(organizationId, 'automation-rules')}
-        description="A rule watches for something happening, checks whether the job looks the way you describe, and then does something. Every condition has to hold — two rules is how you say “or”."
+        description="Every condition has to hold — two rules is how you say “or”."
         actions={mayManage ? <NewAutomationSheet organizationId={organizationId} /> : null}
       />
       <RulesTable organizationId={organizationId} rules={rules} warnings={warnings} mayManage={mayManage} />

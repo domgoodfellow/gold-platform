@@ -24,7 +24,7 @@ export default async function ProductsPage({ params }: PageProps<'/organizations
 
   return (
     <AppPage>
-      <PageHeader title="Line items" crumbs={[...platformAncestry(goldId, 'products'), { label: 'Products', href: platformHref(goldId, 'catalog') }]} description="The legacy flat SKUs this platform still sells by, one level under the seven Products. Presentation and sale state are staff-managed; identifiers and module mappings remain deployment-owned." />
+      <PageHeader title="Line items" crumbs={[...platformAncestry(goldId, 'products'), { label: 'Products', href: platformHref(goldId, 'catalog') }]} description="The legacy flat SKUs this platform still sells by, one level under the eight Products. Presentation and sale state are staff-managed; identifiers and module mappings remain deployment-owned." />
 
       <div>
         <DataTable
