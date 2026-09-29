@@ -186,25 +186,45 @@ not worth blocking a release for, and they are **not** the reason anything is un
   what it does. Extracting a proven function later is an afternoon. A directory named for a
   category it might one day belong to gets defended for a year because it looks like architecture.
 - **A rule gets extracted at its second caller.** Another route, action or tool in this repository
-  is enough, and can arrive in week one.
-- **An engine gets named when it owns rules that two different business shapes both need.** Not
-  before, because a single source cannot tell you which parts of itself were general.
+  is enough, and can arrive in week one — or in the same change, when an approved plan's next slice
+  is that second caller.
+- **An engine gets named when it owns rules that two different business shapes both need, or when
+  told to.** A direct instruction to build one is evidence on its own — the two-shapes bar exists
+  to stop an engine being invented speculatively, ahead of any real use, not to make an approved
+  plan argue with this document.
 - **No column, table or enum value without something using it in the same change.** A caller is a
   screen, a route, a domain function, a demo you are about to show, or an operator who needs it on
-  Monday. It is not "a second existing call site" — that is the bar for extracting a function.
-- **A workspace package waits for its second consumer.** One consumer buys a build step and a
-  `dist/` for no isolation. Each package in the target tree has a trigger in *Deferred*.
+  Monday. It is not "a second existing call site" — that is the bar for extracting a function. A
+  slice of an approved multi-slice plan supplies its own caller: the screen, route or domain
+  function that slice adds *is* the thing using it, so the canonical shape the plan calls for gets
+  built for that slice rather than a narrower stand-in awaiting a second consumer that was never
+  the bar.
+- **A workspace package waits for its second consumer** — unless an approved plan's next slice is
+  building that second consumer, in which case the package arrives with it. One consumer with no
+  plan behind it still buys a build step and a `dist/` for no isolation; each package in the target
+  tree has a trigger in *Deferred*.
 - **A vendor goes behind an adapter.** Domain code names capabilities — *place a call*, *charge a
   card* — never providers. A domain file importing a vendor SDK means the adapter is missing.
   *Vendor* here always means a third-party service, never the packaging sense of the word.
 - **A document waits for the code it describes.** See D8.
 
+**Approved-plan completeness.** Once a multi-slice work plan is approved, each slice is an
+explicit requirement, not a proposal to re-litigate against the rules above. Implement slices in
+order; lack of a second caller, a second consumer, or reuse elsewhere is not a blocker for a slice
+the plan already calls for — the plan is the need "before something needs it" refers to. When a
+later slice depends on infrastructure that does not exist yet, build the minimum canonical version
+that slice requires, following this repository's existing security, tenancy, audit and domain
+invariants, rather than treating the missing infrastructure as a reason to defer. A genuine
+technical blocker — an invariant the slice cannot be built to satisfy, or a product decision the
+plan leaves genuinely undefined — is still a reason to stop and ask; absence of reuse is not one.
+
 **This section's failure mode, stated so it stays checkable.** It has removed features that
 should have shipped — module enablement was cut by applying the engine bar to a question about
 what a tenant switches on, which is not code at all. **Before applying any rule here, name the
 layer it governs and check that it is the layer in front of you.** These rules refuse speculative
-*code*. They have never had anything to say about what a tenant turns on, what a screen shows, or
-what you need in order to sell.
+*code* — work with no plan and no caller behind it. They have never had anything to say about what
+a tenant turns on, what a screen shows, what you need in order to sell, or a slice of a plan
+someone has already approved.
 
 ---
 

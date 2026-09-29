@@ -206,7 +206,12 @@ The full set is `docs/constraints.md`. These are the ones generated code breaks 
 - A second caller of an inline rule extracts it first, then calls it twice. Never copy it.
 - Every tenant-owned table carries `organization_id`, has RLS keyed to it, and leads every unique index
   and every exclusion constraint with it (I2). This is the thing that has broken a prior repo.
-- No column, table, enum value or abstraction without a caller in the same change.
+- A caller is one real use in the same change — a screen, a route, a domain function, an operator
+  who needs it Monday — never a second existing call site; that bar is for extracting a function,
+  not for writing one. Once a multi-slice plan is approved, each slice is that caller for the
+  column, table or abstraction it calls for: build the canonical shape for its first real use
+  rather than a narrower stand-in, and do not wait for a second consumer that was never the bar
+  (`docs/constraints.md`, "Rules that keep the code sane").
 - Nothing is hardcoded that a business might want different: statuses, terminology, prices, hours,
   currency, buffers, the working week, a starter catalogue, a dashboard.
 - Nothing a business has not said is filled in on its behalf, and *has not said* is a state the
