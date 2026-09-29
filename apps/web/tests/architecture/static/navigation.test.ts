@@ -145,11 +145,11 @@ describe('the operator shell navigation', () => {
     ]);
     const withAPage = (key: string) => AREAS.some((area) => area.workspace === key && area.group === 'workspaces' && area.sidebar !== false);
     expect(WORKSPACES.filter((workspace) => withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
-      'sales', 'comms', 'automations', 'field', 'studio',
+      'sales', 'comms', 'finance', 'automations', 'field', 'studio',
     ]);
     // Registered, not yet visible. Delete a key here in the same change that gives it a real page.
     expect(WORKSPACES.filter((workspace) => !withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
-      'service', 'finance', 'ai',
+      'service', 'ai',
     ]);
   });
 
@@ -245,6 +245,7 @@ describe('the operator shell navigation', () => {
       'home',
       'sales', 'customers', 'pipeline',
       'comms', 'calls', 'comms-messages', 'comms-numbers',
+      'finance',
       'automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'field', 'work', 'schedule', 'resources', 'locations', 'assets',
       'studio',
@@ -888,9 +889,9 @@ describe('the organization shell taxonomy', () => {
     for (const area of inSidebar) {
       expect(existsSync(`${ROUTES}/${area.route ?? area.segment}/page.tsx`)).toBe(true);
     }
-    // Nor a workspace row with nothing behind it: Service, Finance and AI are registered but
+    // Nor a workspace row with nothing behind it: Service and AI are registered but
     // have no operating page, so `projectShell` draws none (shell-projection.test.ts proves the rows).
-    for (const absent of ['service', 'finance', 'ai']) {
+    for (const absent of ['service', 'ai']) {
       expect(inSidebar.some((area) => area.workspace === absent), `${absent} has no operating surface yet`).toBe(false);
     }
   });

@@ -88,4 +88,18 @@ test.describe('tenant cost boundary', () => {
     await expect(page.getByText('Provider rate')).toHaveCount(0);
     await page.screenshot({ path: '../../.artifacts/finance/tenant-plan-usage.png', fullPage: true });
   });
+
+  test('does not expose wholesale economics on Finance Home, and reaches it from the sidebar', async ({ page }) => {
+    const { organizationId } = loadDemoContext();
+    await page.goto(`/organizations/${organizationId}/home`);
+    await page.getByRole('link', { name: 'Finance', exact: true }).click();
+    await expect(page).toHaveURL(`/organizations/${organizationId}/finance`);
+    await expect(page.getByRole('heading', { name: 'Finance', level: 1 })).toBeVisible();
+    await expect(page.getByText('Known COGS')).toHaveCount(0);
+    await expect(page.getByText('Provider rate')).toHaveCount(0);
+    await expect(page.getByText('margin', { exact: false })).toHaveCount(0);
+    await page.screenshot({ path: '../../.artifacts/finance/finance-home-desktop.png', fullPage: true });
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.screenshot({ path: '../../.artifacts/finance/finance-home-narrow.png', fullPage: true });
+  });
 });

@@ -40,7 +40,7 @@ export type AreaGroup = 'home' | 'workspaces' | 'settings';
  * owner, Product, Plan, Module, Feature or permission (D67). Marketing and Commerce are named
  * there and not registered: each waits for a catalogue Product to map to. Registered is not visible. A workspace draws a row in the sidebar only
  * when at least one page names it (`Area.workspace`) and that page is reachable to this person
- * (`projectShell`), so Service, Finance and AI are registered here and absent from
+ * (`projectShell`), so Service and AI are registered here and absent from
  * navigation until a real page arrives. Navigation never leads to an empty placeholder, and
  * readiness is a fact about the pages, never a flag on the workspace or an entitlement.
  *
@@ -65,7 +65,7 @@ export const WORKSPACES = [
   { key: 'sales', label: 'Sales', product: 'sales', home: 'sales' },
   { key: 'service', label: 'Customer Experience', product: 'service', home: undefined },
   { key: 'comms', label: 'Communications', product: 'comms', home: 'comms' },
-  { key: 'finance', label: 'Finance', product: 'finance', home: undefined },
+  { key: 'finance', label: 'Finance', product: 'finance', home: 'finance' },
   { key: 'ai', label: 'AI', product: 'agents', home: undefined },
   { key: 'automations', label: 'Automations', product: 'automations', home: 'automations' },
   { key: 'field', label: 'Field', product: 'field', home: 'field' },
@@ -343,6 +343,13 @@ export const AREAS: readonly Area[] = [
   { segment: 'calls', label: 'Calls', group: 'workspaces', workspace: 'comms', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
   { segment: 'comms-messages', label: 'Text messages', group: 'workspaces', workspace: 'comms', route: 'comms/messages', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_sms', 'outbound_sms'] },
   { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'comms', route: 'comms/numbers', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['number_inventory', 'caller_id'] },
+  // Finance: what money is moving through this business, and what it is paying GildOps for —
+  // kernel, like Sales and Field's own Home, so a member sees it regardless of role. Its only
+  // page for now (D68's discipline against a row with nothing behind it); Billing, Usage or
+  // Insights pages of its own arrive once each has real, distinct content Home cannot already
+  // summarize in one line. Pricing stays a Settings-only configuration target it owns without
+  // drawing a sidebar row of its own.
+  { segment: 'finance', label: 'Finance', group: 'workspaces', workspace: 'finance' },
   // Automations: building, reviewing and observing rules is ongoing work, so it is a workspace.
   // Home carries Rules' own entitlement, so the workspace draws no row for a business without it.
   // Rules, Messages and Activity are three pages of it, each its own route — the sidebar is the
@@ -374,7 +381,7 @@ export const AREAS: readonly Area[] = [
   // Configuration, not places somebody works: each is a real, directly addressable route with its
   // module and capability gating unchanged, found from the Settings map (`sidebar: false`).
   // Turning Pricing off also takes priced lines and the invoice off a job screen — see the work item route.
-  // Owned by Finance, which has no row until it has an operating surface of its own.
+  // Owned by Finance, whose Home links here for configuration rather than repeating it.
   { segment: 'pricing', label: 'Pricing', group: 'settings', workspace: 'finance', module: 'billing', sidebar: false, relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
   { segment: 'fields', label: 'Custom fields', group: 'settings', sidebar: false, relevantCapabilities: ['field.manage'] },
   { segment: 'roles', label: 'Team', group: 'settings', sidebar: false, relevantCapabilities: ['role.manage'] },

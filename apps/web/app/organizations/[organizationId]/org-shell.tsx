@@ -102,6 +102,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   assets: Package,
   resources: Layers,
   insights: BarChart3,
+  finance: CircleDollarSign,
   automations: Zap,
   studio: Globe,
   settings: Settings,
@@ -113,6 +114,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   // A workspace row is drawn with its Product's mark; its pages, in the phone sheet, with their own.
   'workspace-sales': Users,
   'workspace-comms': Phone,
+  'workspace-finance': CircleDollarSign,
   'workspace-automations': Zap,
   'workspace-field': Wrench,
   'workspace-studio': Globe,

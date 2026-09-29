@@ -80,7 +80,7 @@ canonical terms. `roadmap.md` owns the sequence and criteria.
 
 Target architecture and current navigation are separate facts (D68). The target operator
 workspaces are CRM, Communications, Marketing, Finance, AI, Automations, Field and Studio. Current
-navigation still exposes Sales for much of CRM; Marketing is not registered; Finance, AI and
+navigation still exposes Sales for much of CRM; Marketing is not registered; AI and
 Studio have partial capabilities without full Homes; and Insights retains deep routes while being
 cross-cutting rather than a workspace. Library is target shared infrastructure; only
 record-attached Documents exist today.
