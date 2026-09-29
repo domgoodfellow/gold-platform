@@ -4,6 +4,7 @@ import { Client } from 'pg';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { submitPublicInquiry } from '@/lib/domain/public-intake/public-intake';
 import { listCustomers } from '@/lib/domain/customers/customers';
+import { getDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
@@ -130,6 +131,56 @@ describe('the public intake, by somebody who is a member of nothing', () => {
     expect(written!.stageId).toBeNull();
   });
 
+  it('starts a discovery snapshot from whatever the form already collected (I61)', async () => {
+    const visitor = anonClient();
+    await submitPublicInquiry(visitor, {
+      kind: 'demo',
+      name: 'Priya Shah',
+      businessName: 'Discovery Seeded Co',
+      email: 'priya-seed@example.test',
+      phone: '',
+      context: 'Three crews, booked over text today.',
+      teamSize: '3',
+      businessType: 'Landscaping',
+    });
+
+    const customers = await listCustomers(target.db, { organizationId: target.organizationId });
+    const written = customers.find((customer) => customer.name === 'Discovery Seeded Co');
+    expect(written).toBeDefined();
+
+    const snapshot = await getDiscoverySnapshot(target.db, {
+      organizationId: target.organizationId,
+      customerId: written!.id,
+    });
+    expect(snapshot?.answers).toEqual({
+      teamAccess: '3',
+      existingSoftware: 'Three crews, booked over text today.',
+    });
+  });
+
+  it('starts no discovery snapshot when the form gave nothing to map', async () => {
+    const visitor = anonClient();
+    await submitPublicInquiry(visitor, {
+      kind: 'contact',
+      name: 'No Mappable Fields',
+      email: 'no-mappable@example.test',
+      topic: 'General question',
+      context: 'Just saying hello.',
+    });
+
+    // `context` on a contact inquiry is a message to a person, not a discovery answer about the
+    // business's tools — the mapping only ever reads `context` on a demo request.
+    const customers = await listCustomers(target.db, { organizationId: target.organizationId });
+    const written = customers.find((customer) => customer.name === 'No Mappable Fields');
+    expect(written).toBeDefined();
+
+    const snapshot = await getDiscoverySnapshot(target.db, {
+      organizationId: target.organizationId,
+      customerId: written!.id,
+    });
+    expect(snapshot).toBeNull();
+  });
+
   it('records an attributable event using the existing customer.created vocabulary', async () => {
     const visitor = anonClient();
     await submitPublicInquiry(visitor, {
@@ -192,6 +243,9 @@ describe('the public intake, by somebody who is a member of nothing', () => {
 
     const { data: memberships } = await visitor.from('memberships').select('id');
     expect(memberships ?? []).toEqual([]);
+
+    const { data: snapshots } = await visitor.from('customer_discovery_snapshots').select('id');
+    expect(snapshots ?? []).toEqual([]);
   });
 
   it('creates no external_actors binding for the visitor', async () => {
