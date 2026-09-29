@@ -1564,6 +1564,12 @@
         "rbac"
       ]
     },
+    "apps/web/tests/unit/discovery-requirements.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "crm"
+      ]
+    },
     "apps/web/tests/unit/economics.test.ts": {
       "category": "unit",
       "concerns": [

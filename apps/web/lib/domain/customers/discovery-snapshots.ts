@@ -1,60 +1,35 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import {
+  DISCOVERY_REQUIREMENTS,
+  discoveryRequirementsFor,
+  type DiscoveryRequirementKey,
+  type DiscoveryStage,
+} from './discovery-requirements';
 
 /**
- * The categories a discovery conversation might cover. Each is a plain freeform note today --
- * the only inputs that exist until intake and guided discovery are wired up (later slices) are
- * freeform strings. A typed/dependency/confidence requirements engine is a later slice's job,
- * not this one's: this shape is deliberately the smallest thing that survives being subsumed by
- * it without a rewrite.
+ * Where an answer stands. `unknown` is absence, not a stored value — the same reasoning
+ * `customers.stageId` being nullable already carries here (D31): a requirement nobody has
+ * touched yet is not a row saying so.
+ *
+ * `provided` is what a prospect said themselves, unconfirmed by anyone at GildOps.
+ * `confirmed` is what a person here read and affirmed, whether they typed it fresh or agreed
+ * with what intake already had. `inferred` — a value nothing here produces yet — arrives with
+ * whatever slice first proposes an answer nobody gave (D31, and the caller-bar this file
+ * otherwise holds to: no status without something setting it).
  */
-export type DiscoverySnapshotCategory =
-  | 'contactChannels'
-  | 'bookingIntake'
-  | 'phoneHandling'
-  | 'teamAccess'
-  | 'websiteSurfaces'
-  | 'customerSelfService'
-  | 'workersResources'
-  | 'locationConstraints'
-  | 'quoteInvoiceModel'
-  | 'postContactWorkflow'
-  | 'automationGoals'
-  | 'existingSoftware';
+export type DiscoveryAnswerStatus = 'provided' | 'confirmed';
 
-export const DISCOVERY_SNAPSHOT_CATEGORIES: readonly DiscoverySnapshotCategory[] = [
-  'contactChannels',
-  'bookingIntake',
-  'phoneHandling',
-  'teamAccess',
-  'websiteSurfaces',
-  'customerSelfService',
-  'workersResources',
-  'locationConstraints',
-  'quoteInvoiceModel',
-  'postContactWorkflow',
-  'automationGoals',
-  'existingSoftware',
-];
-
-/** The platform's own words for each category — fixed vocabulary, not tenant-editable (unlike `field_definitions`). */
-export const DISCOVERY_SNAPSHOT_CATEGORY_LABELS: Record<DiscoverySnapshotCategory, string> = {
-  contactChannels: 'Contact channels',
-  bookingIntake: 'Booking / work intake',
-  phoneHandling: 'Phone handling',
-  teamAccess: 'Team & access needs',
-  websiteSurfaces: 'Website & public surfaces',
-  customerSelfService: 'Customer self-service',
-  workersResources: 'Workers & resources',
-  locationConstraints: 'Location, travel & weather constraints',
-  quoteInvoiceModel: 'Quote & invoice model',
-  postContactWorkflow: 'Post-contact workflow',
-  automationGoals: 'Automation goals',
-  existingSoftware: 'Existing software',
+export type DiscoveryAnswer = {
+  value: string;
+  status: DiscoveryAnswerStatus;
+  /** Free text naming what produced this answer — a form, a call, a person's own entry. Not a closed vocabulary: nothing downstream branches on its exact wording. */
+  source: string;
+  updatedAt: string;
 };
 
-export type DiscoverySnapshotAnswers = Partial<Record<DiscoverySnapshotCategory, string>>;
+export type DiscoverySnapshotAnswers = Partial<Record<DiscoveryRequirementKey, DiscoveryAnswer>>;
 
 export type DiscoverySnapshot = {
   id: string;
@@ -65,13 +40,42 @@ export type DiscoverySnapshot = {
   createdBy: string;
 };
 
+function isDiscoveryAnswer(value: unknown): value is DiscoveryAnswer {
+  if (value === null || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.value === 'string' &&
+    (candidate.status === 'provided' || candidate.status === 'confirmed') &&
+    typeof candidate.source === 'string' &&
+    typeof candidate.updatedAt === 'string'
+  );
+}
+
 function isDiscoverySnapshotAnswers(value: unknown): value is DiscoverySnapshotAnswers {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
   return Object.entries(value as Record<string, unknown>).every(
     ([key, entry]) =>
-      DISCOVERY_SNAPSHOT_CATEGORIES.includes(key as DiscoverySnapshotCategory) &&
-      typeof entry === 'string',
+      DISCOVERY_REQUIREMENTS.some((requirement) => requirement.key === key) &&
+      isDiscoveryAnswer(entry),
   );
+}
+
+function readSnapshot(data: {
+  id: string;
+  organization_id: string;
+  customer_id: string;
+  answers: unknown;
+  created_at: string;
+  created_by: string;
+}): DiscoverySnapshot {
+  return {
+    id: data.id,
+    organizationId: data.organization_id,
+    customerId: data.customer_id,
+    answers: isDiscoverySnapshotAnswers(data.answers) ? data.answers : {},
+    createdAt: data.created_at,
+    createdBy: data.created_by,
+  };
 }
 
 /**
@@ -96,33 +100,48 @@ export async function getDiscoverySnapshot(
   }
   if (!data) return null;
 
-  const answers = isDiscoverySnapshotAnswers(data.answers) ? data.answers : {};
-
-  return {
-    id: data.id,
-    organizationId: data.organization_id,
-    customerId: data.customer_id,
-    answers,
-    createdAt: data.created_at,
-    createdBy: data.created_by,
-  };
+  return readSnapshot(data);
 }
+
+export type DiscoveryAnswerPatch = Partial<
+  Record<DiscoveryRequirementKey, { value: string; status: DiscoveryAnswerStatus; source: string }>
+>;
 
 /**
  * Merge new answers into the customer's discovery snapshot, starting one if none exists yet.
  *
  * A patch, never a whole document: a sales rep filling in one section, or an intake form
- * supplying the handful of categories it collects, must not blank out every other category
- * someone already answered.
+ * supplying the handful of requirements it collects, must not blank out every other requirement
+ * someone already answered. `updatedAt` is this function's own, never the caller's, so a patch
+ * cannot backdate an answer.
+ *
+ * An entry whose `value` is blank clears that requirement rather than storing an empty answer —
+ * "unknown" is absence here (D31), the same as everywhere else this domain holds that rule, so a
+ * form submitting its untouched fields alongside a real edit does not manufacture eleven empty
+ * "confirmed" answers nobody gave.
  */
 export async function upsertDiscoverySnapshotAnswers(
   db: Db,
-  input: { organizationId: string; customerId: string; patch: DiscoverySnapshotAnswers },
+  input: { organizationId: string; customerId: string; patch: DiscoveryAnswerPatch },
 ): Promise<DiscoverySnapshot> {
   const actor = await requireActor(db);
 
+  const now = new Date().toISOString();
   const existing = await getDiscoverySnapshot(db, input);
-  const merged: DiscoverySnapshotAnswers = { ...existing?.answers, ...input.patch };
+  const merged: DiscoverySnapshotAnswers = { ...existing?.answers };
+
+  for (const [key, answer] of Object.entries(input.patch)) {
+    if (answer!.value.trim().length === 0) {
+      delete merged[key as keyof DiscoverySnapshotAnswers];
+      continue;
+    }
+    merged[key as keyof DiscoverySnapshotAnswers] = {
+      value: answer!.value,
+      status: answer!.status,
+      source: answer!.source,
+      updatedAt: now,
+    };
+  }
 
   if (existing) {
     const { data, error } = await db
@@ -137,14 +156,7 @@ export async function upsertDiscoverySnapshotAnswers(
       throw new DomainError(error.message, 'discovery_snapshots.update_failed');
     }
 
-    return {
-      id: data.id,
-      organizationId: data.organization_id,
-      customerId: data.customer_id,
-      answers: isDiscoverySnapshotAnswers(data.answers) ? data.answers : {},
-      createdAt: data.created_at,
-      createdBy: data.created_by,
-    };
+    return readSnapshot(data);
   }
 
   const { data, error } = await db
@@ -168,23 +180,24 @@ export async function upsertDiscoverySnapshotAnswers(
     throw new DomainError(error.message, 'discovery_snapshots.create_failed');
   }
 
-  return {
-    id: data.id,
-    organizationId: data.organization_id,
-    customerId: data.customer_id,
-    answers: isDiscoverySnapshotAnswers(data.answers) ? data.answers : {},
-    createdAt: data.created_at,
-    createdBy: data.created_by,
-  };
+  return readSnapshot(data);
 }
 
-/** How much of the discovery conversation has been captured, derived rather than stored. */
+/**
+ * How much of one stage's requirements have an answer, derived rather than stored.
+ *
+ * Defaults to `sales_discovery`, the one stage a person works from this snapshot today; a caller
+ * asks for a different stage explicitly (`public_intake`'s own completeness, read by nothing yet,
+ * is still a real, callable question rather than a guess).
+ */
 export function discoverySnapshotCompleteness(
   snapshot: Pick<DiscoverySnapshot, 'answers'>,
+  stage: DiscoveryStage = 'sales_discovery',
 ): { answered: number; total: number } {
-  const answered = DISCOVERY_SNAPSHOT_CATEGORIES.filter(
-    (category) => (snapshot.answers[category] ?? '').trim().length > 0,
+  const requirements = discoveryRequirementsFor(stage);
+  const answered = requirements.filter(
+    (requirement) => (snapshot.answers[requirement.key]?.value ?? '').trim().length > 0,
   ).length;
 
-  return { answered, total: DISCOVERY_SNAPSHOT_CATEGORIES.length };
+  return { answered, total: requirements.length };
 }

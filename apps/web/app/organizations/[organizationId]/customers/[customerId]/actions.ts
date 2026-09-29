@@ -5,10 +5,10 @@ import { getDb } from '@/lib/db/server';
 import { createPortalInvite, revokePortalInvite } from '@/lib/domain/portal/portal';
 import { updateCustomer } from '@/lib/domain/customers/customers';
 import {
-  DISCOVERY_SNAPSHOT_CATEGORIES,
   upsertDiscoverySnapshotAnswers,
-  type DiscoverySnapshotAnswers,
+  type DiscoveryAnswerPatch,
 } from '@/lib/domain/customers/discovery-snapshots';
+import { DISCOVERY_REQUIREMENTS } from '@/lib/domain/customers/discovery-requirements';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import { DomainError } from '@/lib/domain/errors';
@@ -159,10 +159,15 @@ export type EditDiscoverySnapshotState = { error: string | null; updated: boolea
 /**
  * Save whatever a discovery conversation covered.
  *
- * Every category on the form is the new value, including the ones left blank — the same reason
- * `editCustomerAction` submits the whole record: a form has no way to say *leave this alone* that
- * is distinguishable from *nothing was said here*, and clearing a category is a real edit a
- * salesperson makes.
+ * Every requirement on the form is the new value, including the ones left blank — the same
+ * reason `editCustomerAction` submits the whole record: a form has no way to say *leave this
+ * alone* that is distinguishable from *nothing was said here*, and clearing an answer is a real
+ * edit a salesperson makes.
+ *
+ * A value saved through this form is always `confirmed`: a person here read it and is the one
+ * typing it in, whether it started blank, from a prospect's own words at intake, or from a
+ * conversation — status only ever moves forward from a public form's `provided` once a person
+ * here has looked at it.
  */
 export async function editDiscoverySnapshotAction(
   _previous: EditDiscoverySnapshotState,
@@ -170,12 +175,16 @@ export async function editDiscoverySnapshotAction(
 ): Promise<EditDiscoverySnapshotState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
+  const { organization } = await requireOrganization(organizationId);
   const customerId = String(formData.get('customerId') ?? '');
 
-  const patch: DiscoverySnapshotAnswers = {};
-  for (const category of DISCOVERY_SNAPSHOT_CATEGORIES) {
-    patch[category] = String(formData.get(category) ?? '').trim();
+  const patch: DiscoveryAnswerPatch = {};
+  for (const requirement of DISCOVERY_REQUIREMENTS) {
+    patch[requirement.key] = {
+      value: String(formData.get(requirement.key) ?? '').trim(),
+      status: 'confirmed',
+      source: organization.role,
+    };
   }
 
   try {

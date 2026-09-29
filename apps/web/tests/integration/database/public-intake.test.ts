@@ -152,9 +152,11 @@ describe('the public intake, by somebody who is a member of nothing', () => {
       organizationId: target.organizationId,
       customerId: written!.id,
     });
-    expect(snapshot?.answers).toEqual({
-      teamAccess: '3',
-      existingSoftware: 'Three crews, booked over text today.',
+    expect(snapshot?.answers.teamAccess).toMatchObject({ value: '3', status: 'provided', source: 'demo_form' });
+    expect(snapshot?.answers.existingSoftware).toMatchObject({
+      value: 'Three crews, booked over text today.',
+      status: 'provided',
+      source: 'demo_form',
     });
   });
 
