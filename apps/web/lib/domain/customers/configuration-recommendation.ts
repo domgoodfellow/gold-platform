@@ -1,7 +1,8 @@
 import type { Db } from '@/lib/db/types';
-import { listCatalogFeatures, listCatalogModules, listCatalogProducts } from '@/lib/domain/catalogue/catalogue';
+import { listCatalogFeatures, listCatalogModules, listCatalogProducts, type CatalogProductKey } from '@/lib/domain/catalogue/catalogue';
 import type { DiscoverySnapshotAnswers } from '@/lib/domain/customers/discovery-snapshots';
 import type { DiscoveryRequirementKey } from '@/lib/domain/customers/discovery-requirements';
+import { WORKSPACES, type WorkspaceKey } from '@/lib/navigation';
 
 /**
  * What a discovery answer suggests, in the canonical catalogue's own words — never a provider or
@@ -33,6 +34,7 @@ const REQUIREMENT_FEATURE_MAP: Record<DiscoveryRequirementKey, readonly string[]
 export type ConfigurationRecommendationEntry = {
   featureKey: string;
   label: string;
+  productKey: CatalogProductKey;
   productLabel: string;
   moduleLabel: string;
 };
@@ -67,7 +69,7 @@ export async function recommendConfiguration(
     listCatalogFeatures(db),
   ]);
 
-  const productLabelById = new Map(products.map((product) => [product.id, product.label]));
+  const productById = new Map(products.map((product) => [product.id, product]));
   const moduleById = new Map(modules.map((catalogModule) => [catalogModule.id, catalogModule]));
   const featureByKey = new Map(features.map((feature) => [feature.key, feature]));
 
@@ -75,10 +77,12 @@ export async function recommendConfiguration(
     const feature = featureByKey.get(featureKey);
     if (!feature || feature.implementationState === 'planned') return null;
     const catalogModule = moduleById.get(feature.moduleId);
+    const product = catalogModule ? productById.get(catalogModule.productId) : undefined;
     return {
       featureKey: feature.key,
       label: feature.label,
-      productLabel: catalogModule ? (productLabelById.get(catalogModule.productId) ?? '') : '',
+      productKey: product?.key ?? 'workspace',
+      productLabel: product?.label ?? '',
       moduleLabel: catalogModule?.label ?? '',
     };
   }
@@ -120,4 +124,25 @@ export async function recommendConfiguration(
   const notNeeded = [...notNeededKeys].map(toEntry).filter((entry): entry is ConfigurationRecommendationEntry => entry !== null);
 
   return { recommended, optional, notNeeded };
+}
+
+export type WorkspacePreview = {
+  workspace: WorkspaceKey;
+  label: string;
+  entries: ConfigurationRecommendationEntry[];
+};
+
+/**
+ * The recommended set, grouped by the real operator workspace it would appear under — the same
+ * `WORKSPACES` array the actual sidebar reads, never a second, prospect-facing copy of that list.
+ * A catalogue Product with no matching workspace (`workspace`, the shared cross-cutting Gild
+ * Workspace behind reporting/dashboards) contributes nothing here — it draws no sidebar row of
+ * its own either (`lib/navigation.ts`).
+ */
+export function previewByWorkspace(recommended: readonly ConfigurationRecommendationEntry[]): WorkspacePreview[] {
+  return WORKSPACES.map((workspace) => ({
+    workspace: workspace.key,
+    label: workspace.label,
+    entries: recommended.filter((entry) => entry.productKey === workspace.product),
+  })).filter((preview) => preview.entries.length > 0);
 }

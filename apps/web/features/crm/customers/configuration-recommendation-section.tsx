@@ -1,6 +1,10 @@
 import { Hint } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/containers/section';
-import type { ConfigurationRecommendation, ConfigurationRecommendationEntry } from '@/lib/domain/customers/configuration-recommendation';
+import {
+  previewByWorkspace,
+  type ConfigurationRecommendation,
+  type ConfigurationRecommendationEntry,
+} from '@/lib/domain/customers/configuration-recommendation';
 
 function EntryRow({ entry }: { entry: ConfigurationRecommendationEntry }) {
   return (
@@ -25,6 +29,7 @@ export function ConfigurationRecommendationSection({
   recommendation: ConfigurationRecommendation;
 }) {
   const { recommended, optional, notNeeded } = recommendation;
+  const preview = previewByWorkspace(recommended);
 
   if (recommended.length === 0 && optional.length === 0 && notNeeded.length === 0) {
     return (
@@ -40,7 +45,27 @@ export function ConfigurationRecommendationSection({
       <SectionHeading>Proposed configuration</SectionHeading>
       <Hint className="mt-1">Drawn from Discovery, recomputed on every visit — nothing here is provisioned.</Hint>
 
-      <div className="mt-4 flex flex-col gap-6">
+      {preview.length > 0 ? (
+        <div className="mt-4 rounded-lg border border-border">
+          <div className="border-b border-border px-4 py-2 text-sm font-medium">Your GildOps</div>
+          <div className="divide-y divide-border">
+            {preview.map((workspace) => (
+              <div key={workspace.workspace} className="px-4 py-3">
+                <div className="text-sm font-medium">{workspace.label}</div>
+                <ul className="mt-1 flex flex-col gap-0.5">
+                  {workspace.entries.map((entry) => (
+                    <li key={entry.featureKey} className="pl-3 text-sm text-subtle">
+                      {entry.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-6 flex flex-col gap-6">
         {recommended.length > 0 ? (
           <div>
             <h3 className="text-sm font-medium">Recommended</h3>

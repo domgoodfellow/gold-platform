@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { recommendConfiguration } from '@/lib/domain/customers/configuration-recommendation';
+import { previewByWorkspace, recommendConfiguration } from '@/lib/domain/customers/configuration-recommendation';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
@@ -98,5 +98,28 @@ describe('configuration recommendation', () => {
     // rule_authoring is mapped from both postContactWorkflow (answered) and automationGoals (not applicable).
     expect(recommendation.recommended.map((entry) => entry.featureKey)).toContain('rule_authoring');
     expect(recommendation.notNeeded.map((entry) => entry.featureKey)).not.toContain('rule_authoring');
+  });
+
+  it('groups the recommended set under the real operator workspace it would appear in', async () => {
+    const recommendation = await recommendConfiguration(db, {
+      answers: {
+        bookingIntake: { value: 'Books online.', status: 'confirmed', source: 'Owner', updatedAt: new Date().toISOString() },
+      },
+    });
+    const preview = previewByWorkspace(recommendation.recommended);
+
+    const studio = preview.find((entry) => entry.workspace === 'studio');
+    expect(studio).toBeDefined();
+    expect(studio!.label).toBe('Studio');
+    expect(studio!.entries.map((entry) => entry.featureKey)).toContain('booking');
+
+    // Every workspace present names a real, non-empty entry list — no empty row drawn.
+    for (const entry of preview) {
+      expect(entry.entries.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('groups nothing when nothing is recommended', () => {
+    expect(previewByWorkspace([])).toEqual([]);
   });
 });
