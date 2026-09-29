@@ -9,6 +9,7 @@ import {
   type DiscoveryAnswerPatch,
 } from '@/lib/domain/customers/discovery-snapshots';
 import { DISCOVERY_REQUIREMENTS } from '@/lib/domain/customers/discovery-requirements';
+import { buildCommercialProposal, markCommercialProposalSent } from '@/lib/domain/customers/commercial-proposals';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import { DomainError } from '@/lib/domain/errors';
@@ -198,4 +199,64 @@ export async function editDiscoverySnapshotAction(
 
   revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
   return { error: null, updated: true };
+}
+
+export type BuildCommercialProposalState = { error: string | null; created: boolean };
+
+export async function buildCommercialProposalAction(
+  _previous: BuildCommercialProposalState,
+  formData: FormData,
+): Promise<BuildCommercialProposalState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  const customerId = String(formData.get('customerId') ?? '');
+  const discountMinor = Number(formData.get('discountMinor') ?? 0);
+
+  try {
+    await buildCommercialProposal(db, {
+      organizationId,
+      customerId,
+      planId: String(formData.get('planId') ?? ''),
+      addonPlanIds: formData.getAll('addonPlanIds').map(String),
+      currency: String(formData.get('currency') ?? ''),
+      billingInterval: String(formData.get('billingInterval') ?? 'month') as 'month' | 'year' | 'one_time',
+      discountMinor: Number.isFinite(discountMinor) ? discountMinor : 0,
+      discountReason: String(formData.get('discountReason') ?? ''),
+      notes: String(formData.get('notes') ?? ''),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message, created: false };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
+  return { error: null, created: true };
+}
+
+export type SendCommercialProposalState = { error: string | null };
+
+export async function sendCommercialProposalAction(
+  _previous: SendCommercialProposalState,
+  formData: FormData,
+): Promise<SendCommercialProposalState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  const customerId = String(formData.get('customerId') ?? '');
+  const proposalId = String(formData.get('proposalId') ?? '');
+
+  try {
+    await markCommercialProposalSent(db, { organizationId, proposalId });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
+  return { error: null };
 }

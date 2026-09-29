@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { AppPage } from '@/components/containers/app-page';
 import { CustomerDetail } from '@/features/crm/customers/customer-detail';
 import { listCustomerInvoices } from '@/lib/domain/billing/invoices';
+import { listPlans } from '@/lib/domain/catalogue/plans';
+import { listCommercialProposals } from '@/lib/domain/customers/commercial-proposals';
 import { recommendConfiguration } from '@/lib/domain/customers/configuration-recommendation';
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { getDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
@@ -25,7 +27,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
   if (!customer) notFound();
 
   const origin = await requestOrigin();
-  const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work, discoverySnapshot] = await Promise.all([
+  const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work, discoverySnapshot, commercialProposals, plans, addonPlans] = await Promise.all([
     listDocuments(db, { organizationId, attachedTo: { entity: 'customer', id: customerId } }),
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
     listCustomerTimeline(db, { organizationId, customerId }),
@@ -36,6 +38,9 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
     listCustomerInvoices(db, { organizationId, customerId }),
     listWorkItems(db, { organizationId, customerId }),
     getDiscoverySnapshot(db, { organizationId, customerId }),
+    listCommercialProposals(db, { organizationId, customerId }),
+    listPlans(db, { kind: 'plan' }),
+    listPlans(db, { kind: 'addon' }),
   ]);
   const configurationRecommendation = await recommendConfiguration(db, {
     answers: discoverySnapshot?.answers ?? {},
@@ -59,8 +64,12 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
         invites={invites}
         discoverySnapshot={discoverySnapshot}
         configurationRecommendation={configurationRecommendation}
+        commercialProposals={commercialProposals}
+        plans={plans.filter((plan) => plan.saleStatus === 'active')}
+        addonPlans={addonPlans.filter((plan) => plan.saleStatus === 'active')}
         origin={origin}
         timezone={organization.timezone}
+        currency={organization.currency ?? ''}
         role={organization.role}
         features={{ voice, billing: modules.has('billing'), portal: modules.has('portal') }}
         permissions={{
@@ -68,6 +77,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
           call: organization.capabilities.includes('call.place'),
           attach: organization.capabilities.includes('document.create'),
           portal: organization.capabilities.includes('customer.create'),
+          priceManage: organization.capabilities.includes('price.manage'),
         }}
       />
     </AppPage>

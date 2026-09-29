@@ -365,6 +365,29 @@ export async function listPlanPrices(db: Db, planId: string): Promise<PlanPrice[
   return (data ?? []).map(toPrice);
 }
 
+/**
+ * The one price in force right now for a currency and billing interval, or null if none is
+ * approved yet. `prices` is already ordered newest-first (`listPlanPrices`), so the first
+ * approved, currently-effective match is the answer — never a second resolution of "which price"
+ * built separately from it.
+ */
+export function currentPlanPrice(
+  prices: readonly PlanPrice[],
+  input: { currency: string; billingInterval: PlanPrice['billingInterval']; asOf?: Date },
+): PlanPrice | null {
+  const asOf = input.asOf ?? new Date();
+  return (
+    prices.find(
+      (price) =>
+        price.currency === input.currency &&
+        price.billingInterval === input.billingInterval &&
+        price.approvalState === 'approved' &&
+        new Date(price.effectiveFrom) <= asOf &&
+        (price.effectiveTo === null || new Date(price.effectiveTo) > asOf),
+    ) ?? null
+  );
+}
+
 export type RecordPlanPriceInput = {
   planId: string;
   currency: string;

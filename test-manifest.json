@@ -973,6 +973,13 @@
         "catalogue"
       ]
     },
+    "apps/web/tests/integration/database/commercial-proposals.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "crm",
+        "commercial"
+      ]
+    },
     "apps/web/tests/integration/database/commercial-terms.test.ts": {
       "category": "database-integration",
       "concerns": [

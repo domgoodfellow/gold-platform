@@ -8,9 +8,12 @@ import { ActivityList } from '@/features/timeline/activity-list';
 import { CallHistory } from '@/features/communications/voice/call-history';
 import { PortalLinkForm } from '@/features/portal-access/portal-link-form';
 import { PortalInviteList } from '@/features/portal-access/invite-list';
+import { CommercialProposalSection } from './commercial-proposal-section';
 import { ConfigurationRecommendationSection } from './configuration-recommendation-section';
 import { DiscoverySnapshotSection } from './discovery-snapshot-section';
 import type { Invoice } from '@/lib/domain/billing/invoices';
+import type { Plan } from '@/lib/domain/catalogue/plans';
+import type { CommercialProposal } from '@/lib/domain/customers/commercial-proposals';
 import type { ConfigurationRecommendation } from '@/lib/domain/customers/configuration-recommendation';
 import type { Customer } from '@/lib/domain/customers/customers';
 import type { DiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
@@ -44,8 +47,12 @@ export function CustomerDetail({
   invites,
   discoverySnapshot,
   configurationRecommendation,
+  commercialProposals,
+  plans,
+  addonPlans,
   origin,
   timezone,
+  currency,
   role,
   features,
   permissions,
@@ -63,11 +70,15 @@ export function CustomerDetail({
   invites: PortalInvite[];
   discoverySnapshot: DiscoverySnapshot | null;
   configurationRecommendation: ConfigurationRecommendation;
+  commercialProposals: CommercialProposal[];
+  plans: Plan[];
+  addonPlans: Plan[];
   origin: string;
   timezone: string;
+  currency: string;
   role: string;
   features: { voice: boolean; billing: boolean; portal: boolean };
-  permissions: { edit: boolean; call: boolean; attach: boolean; portal: boolean };
+  permissions: { edit: boolean; call: boolean; attach: boolean; portal: boolean; priceManage: boolean };
 }) {
   return (
     <>
@@ -78,6 +89,7 @@ export function CustomerDetail({
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="discovery">Discovery</TabsTrigger>
           <TabsTrigger value="configuration">Proposed configuration</TabsTrigger>
+          <TabsTrigger value="commercial">Commercial proposal</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="work">Work</TabsTrigger>
           {features.voice ? <TabsTrigger value="calls">Calls</TabsTrigger> : null}
@@ -110,6 +122,18 @@ export function CustomerDetail({
         </TabsContent>
         <TabsContent value="configuration" className="mt-6">
           <ConfigurationRecommendationSection recommendation={configurationRecommendation} />
+        </TabsContent>
+        <TabsContent value="commercial" className="mt-6">
+          <CommercialProposalSection
+            organizationId={organizationId}
+            customerId={customer.id}
+            proposals={commercialProposals}
+            plans={plans}
+            addonPlans={addonPlans}
+            mayEdit={permissions.priceManage}
+            role={role}
+            currency={currency}
+          />
         </TabsContent>
         <TabsContent value="activity" className="mt-6"><ActivityList timeline={timeline} timezone={timezone} /></TabsContent>
         <TabsContent value="work" className="mt-6"><CustomerRelatedWork organizationId={organizationId} work={work} /></TabsContent>

@@ -1735,6 +1735,149 @@ export type Database = {
           },
         ]
       }
+      customer_commercial_proposal_addons: {
+        Row: {
+          addon_plan_id: string
+          organization_id: string
+          price_minor: number
+          proposal_id: string
+        }
+        Insert: {
+          addon_plan_id: string
+          organization_id: string
+          price_minor: number
+          proposal_id: string
+        }
+        Update: {
+          addon_plan_id?: string
+          organization_id?: string
+          price_minor?: number
+          proposal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_commercial_proposal_a_organization_id_proposal_id_fkey"
+            columns: ["organization_id", "proposal_id"]
+            isOneToOne: false
+            referencedRelation: "customer_commercial_proposals"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_commercial_proposal_addons_addon_plan_id_fkey"
+            columns: ["addon_plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_commercial_proposal_addons_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_commercial_proposal_addons_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_commercial_proposals: {
+        Row: {
+          addon_price_minor: number
+          billing_interval: string
+          created_at: string
+          created_by: string
+          currency: string
+          customer_id: string
+          discount_minor: number
+          discount_reason: string | null
+          id: string
+          notes: string
+          organization_id: string
+          plan_id: string
+          plan_price_minor: number
+          status: string
+          supersedes_id: string | null
+          version: number
+        }
+        Insert: {
+          addon_price_minor?: number
+          billing_interval: string
+          created_at?: string
+          created_by: string
+          currency: string
+          customer_id: string
+          discount_minor?: number
+          discount_reason?: string | null
+          id?: string
+          notes?: string
+          organization_id: string
+          plan_id: string
+          plan_price_minor: number
+          status?: string
+          supersedes_id?: string | null
+          version: number
+        }
+        Update: {
+          addon_price_minor?: number
+          billing_interval?: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          customer_id?: string
+          discount_minor?: number
+          discount_reason?: string | null
+          id?: string
+          notes?: string
+          organization_id?: string
+          plan_id?: string
+          plan_price_minor?: number
+          status?: string
+          supersedes_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_commercial_proposals_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_commercial_proposals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_commercial_proposals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_commercial_proposals_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_commercial_proposals_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "customer_commercial_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_discovery_snapshots: {
         Row: {
           answers: Json
