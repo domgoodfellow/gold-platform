@@ -1,7 +1,7 @@
 import { Hint } from '@/components/controls/inputs';
-import { areaLabel } from '@/lib/navigation';
 import { PageHeader } from '@/components/containers/page-header';
 import { ViewNav } from '@/components/containers/view-nav';
+import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { listPendingInvitations } from '@/lib/domain/tenancy/invitations';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { listRoles } from '@/lib/domain/tenancy/roles';
@@ -43,14 +43,14 @@ export default async function RolesPage({
   return (
     <AddMemberSheetProvider organizationId={organizationId} roles={roles}>
       <PageHeader
-        title={areaLabel('roles')}
-        description="Who works here, and what each role may do."
+        title="Access"
         actions={
           mayManage ? (
             view === 'roles' ? <CreateRoleSheet organizationId={organizationId} /> : <AddMemberTrigger />
           ) : null
         }
       />
+      <SettingsScopeNav organizationId={organizationId} active="access" />
       <ViewNav
         label="Team views"
         current={view}

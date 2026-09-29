@@ -14,6 +14,7 @@ import { requireOrganization } from '@/lib/route/organization';
 import { ConnectorCatalogue } from '@/features/integrations/catalogue/connector-catalogue';
 import { ConnectedApps } from '@/features/integrations/connections/connected-apps';
 import { IntegrationsNav } from '@/features/integrations/integrations-nav';
+import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,7 +59,8 @@ export default async function IntegrationsPage({
 
   return (
     <>
-      <PageHeader title={areaLabel('integrations')} description="Connect GildOps to the apps and files your organization already uses." />
+      <PageHeader title={areaLabel('integrations')} />
+      <SettingsScopeNav organizationId={organizationId} active="connections" />
       <IntegrationsNav organizationId={organizationId} current={view} />
       {oauthError ? (
         <Hint className="mt-4 block" role="alert">

@@ -1,10 +1,10 @@
 import { areaLabel } from '@/lib/navigation';
 import { PageHeader } from '@/components/containers/page-header';
 import { EmptyState } from '@/components/containers/section';
-import { PersonalSettingsEntries } from '@/features/settings/personal-settings-entries';
 import { SettingsIndex } from '@/features/settings/settings-index';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { offeredSections } from '@/features/settings/settings-map';
+import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import {
   activeModuleKeys,
   availableFeatureKeys,
@@ -34,19 +34,12 @@ export default async function SettingsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader
-        title={areaLabel('settings')}
-        description={`Where ${organization.name} is configured. Changes here apply to this business, not to your personal account.`}
-      />
-      <PersonalSettingsEntries organizationId={organizationId} />
+      <PageHeader title={areaLabel('settings')} />
+      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
       {sections.length === 0 ? (
         <EmptyState>Your role, {organization.role}, does not configure anything in this business.</EmptyState>
       ) : (
-        <>
-          <h2 className="mb-1 text-base font-semibold">Business — {organization.name}</h2>
-          <p className="mb-6 text-sm text-muted">Applies to everyone who works here.</p>
-          <SettingsIndex organizationId={organizationId} sections={sections} />
-        </>
+        <SettingsIndex organizationId={organizationId} sections={sections} />
       )}
     </SettingsPageFrame>
   );

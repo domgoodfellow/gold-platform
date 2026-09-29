@@ -1,9 +1,9 @@
-import Link from 'next/link';
 import { PageHeader } from '@/components/containers/page-header';
-import { areaLabel } from '@/lib/navigation';
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { communicationsAccount } from '@/lib/domain/communications/credits';
 import { listProducts } from '@/lib/domain/commercial/catalogue';
 import { listOrganizationTerms } from '@/lib/domain/commercial/terms';
@@ -72,17 +72,14 @@ export default async function PlanAndUsagePage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader title="Plan &amp; usage" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
-      <Hint className="mt-1">
-        What this business is entitled to use right now, what GildOps has recorded selling it, and
-        what it has used. Nothing here is what any of it cost GildOps to provide.{' '}
-        <Link href={`/organizations/${organizationId}/settings/features`} className="underline underline-offset-4">
-          Manage features →
-        </Link>
-      </Hint>
+      <PageHeader
+        title="Subscription"
+        actions={<ButtonLink href={`/organizations/${organizationId}/settings/features`}>Manage features</ButtonLink>}
+      />
+      <SettingsScopeNav organizationId={organizationId} active="subscription" />
 
       <Section className="mt-8">
-        <SectionHeading>Your Plan</SectionHeading>
+        <SectionHeading>Plan</SectionHeading>
         {basePlan ? (
           <div className="mt-2 text-sm">
             <p className="font-medium">{basePlan.label}</p>

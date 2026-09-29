@@ -472,6 +472,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | Files, imports and policy, against Connections | D63, D55 |
 | Usage, its provenance, and retail and provider rates as one model | D65, D40, D43 |
 | Which platform tables a member, a booking visitor and staff may each read | D64 |
+| Settings as one destination, and its five scopes | D71, D45 |
 
 ## When you finish a change
 

@@ -2454,3 +2454,35 @@ readers.
 component idempotency, historical rate selection, unknown-not-zero, number-month idempotency and
 tenant refusal. The Communications and usage-boundary suites continue to prove one usage ledger
 and server-derived call/message quantities.
+
+### D71 — Settings is one destination; Organization, Account, Access, Connections and Subscription are scopes inside it
+
+**Decision.** Reverses the earlier split (never itself a numbered decision) that gave "Business
+settings" and "Account settings" separate account-menu entries and separate visual shells. There
+is one Settings destination, one shared tab bar (`SettingsScopeNav`, `lib/route/settings.ts`)
+naming five scopes, and one account-menu entry that opens it — landing on the Organization scope
+when a business is in play, on Account otherwise. A Subscription shortcut sits beside it for the
+same reason a person reaches billing often enough to skip a hop.
+
+**What does not move.** Account remains the signed-in person's own route tree
+(`/settings/account`), independent of which organization is selected (D45) — merging the *shell*
+does not merge the *domain*. Organization (`/organizations/{id}/settings`), Access
+(`/organizations/{id}/roles`), Connections (`/organizations/{id}/integrations`) and Subscription
+(`/organizations/{id}/settings/plan`) keep their existing routes, RLS and capability gates
+unchanged; the tab bar is a navigation layer over them, not a re-platforming. `configTarget`,
+`CONFIG_TARGETS` and the Settings configuration map (`settings-map.ts`) are unaffected — they
+remain how the *Organization* scope's own index of configuration doors is built and gated.
+
+**What is still owed.** Work/Schedule configuration, Pricing, Custom fields, Calls/sales-stage
+wording, Branding, Website, Domains and Phone/email provider setup remain reachable only from the
+Organization scope's own index, not from Connections or a workspace's contextual Configure surface
+— they are workspace-owned configuration this slice deliberately left in place rather than
+migrating blind (see `CLAUDE.md`'s "the load-bearing absences" table and the roadmap's contextual
+Configure work). The sidebar's own Business-section label for Access still reads "Team"
+(`lib/shell.ts`'s `BUSINESS_ITEMS`) and the underlying `Area.label` for `roles` still reads "Team"
+(`lib/navigation.ts`) — both are legacy labels a later pass may rename; only the pages a caller
+actually lands on say "Access" today.
+
+**Holds.** `personal-settings.test.ts` proves the account menu offers one Settings entry, no
+Business/Account split, and that `PersonalSettingsShell` and every organization-scoped Settings
+page render the same `SettingsScopeNav`.

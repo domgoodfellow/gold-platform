@@ -202,8 +202,8 @@ describe('Personal settings says it once', () => {
     expect(read('lib/route/personal-settings.ts')).toContain("export function personalSettingsAncestry(): { label: string }[]");
   });
 
-  it('keeps its sections presentation-free, named once for the nav and the Settings index', () => {
+  it('keeps its sections presentation-free, named once for its own Profile/Security sub-nav (D71: the scope tab bar is shared, this is one level in)', () => {
     expect(read('lib/route/personal-settings.ts')).not.toMatch(/lucide|Icon/);
-    expect(read('features/account/personal-settings-nav.tsx')).toContain('PERSONAL_SECTIONS');
+    expect(read('features/account/account-section-nav.tsx')).toContain('PERSONAL_SECTIONS');
   });
 });

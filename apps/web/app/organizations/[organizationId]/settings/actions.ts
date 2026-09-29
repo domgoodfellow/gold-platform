@@ -38,7 +38,9 @@ export async function updateOrganizationAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/general`);
+  // 'layout', not the page alone: the organization's name is read by the sidebar identity, the
+  // context switcher and every breadcrumb in this shell, none of which sit under this route.
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
   await invalidateGoldHomepageIfReferenced(db, organizationId);
   return { error: null };
 }

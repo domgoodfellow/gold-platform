@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
+import { AccountSectionNav } from '@/features/account/account-section-nav';
 import { GlobalFallbackShell } from '@/features/account/global-fallback-shell';
-import { PersonalSettingsNav } from '@/features/account/personal-settings-nav';
 import { OrganizationShell } from '@/features/shell/organization-shell';
+import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { readLastOrganizationId } from '@/lib/route/landing';
 import { loadPersonContext } from '@/lib/route/person-context';
@@ -38,10 +39,8 @@ export async function PersonalSettingsShell({
 
   const body = (
     <SettingsPageFrame>
-      <PersonalSettingsNav
-        organizationId={origin?.id ?? null}
-        business={origin ? { name: origin.name, settingsHref: `/organizations/${origin.id}/settings` } : null}
-      />
+      <SettingsScopeNav organizationId={origin?.id ?? null} active="account" />
+      <AccountSectionNav organizationId={origin?.id ?? null} />
       {children({ email, hasPassword })}
     </SettingsPageFrame>
   );

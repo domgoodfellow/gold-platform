@@ -56,11 +56,18 @@ describe('the one address', () => {
 describe('the menu', () => {
   const menu = read('components/containers/account-menu.tsx');
 
-  it('offers Account settings and Sign out, and leaves switching context to the switcher', () => {
-    expect(menu).toContain('Account settings');
+  it('offers one Settings entry and Sign out, and leaves switching context to the switcher (D71)', () => {
+    expect(menu).toContain('>Settings</Link>');
+    expect(menu).not.toContain('Business settings');
+    expect(menu).not.toContain('Account settings');
     expect(menu).toContain('Sign out');
     expect(menu).not.toContain('Switch organization');
     expect(menu).not.toContain('href="/account"');
+  });
+
+  it('offers a Subscription shortcut only when a business is in play', () => {
+    expect(menu).toContain('Subscription');
+    expect(menu).toContain("settingsScopeHref('subscription', from)");
   });
 });
 
@@ -74,11 +81,12 @@ describe('scope stays honest in both directions', () => {
     }
   });
 
-  it('the Personal sections are listed in the business Settings index, from the one list', () => {
-    const index = read('features/settings/personal-settings-entries.tsx');
-    expect(index).toContain('PERSONAL_SECTIONS');
-    expect(index).toContain('personalSettingsHref(');
-    expect(read('app/organizations/[organizationId]/settings/page.tsx')).toContain('<PersonalSettingsEntries');
+  it('Account is a scope tab, not a section duplicated inside the Organization index (D71)', () => {
+    const orgSettings = read('app/organizations/[organizationId]/settings/page.tsx');
+    expect(orgSettings).toContain('<SettingsScopeNav');
+    expect(orgSettings).not.toContain('PersonalSettingsEntries');
+    const shell = read('features/account/personal-settings-shell.tsx');
+    expect(shell).toContain('<SettingsScopeNav');
   });
 
   it('the shell no longer special-cases the Personal settings address — Settings is not a permanent sidebar row to mark current', () => {
@@ -92,6 +100,6 @@ describe('scope stays honest in both directions', () => {
 
   it('each side says whose it is', () => {
     expect(read('app/settings/account/page.tsx')).toContain('belongs to you, not to any business');
-    expect(read('app/organizations/[organizationId]/settings/page.tsx')).toContain('not to your personal account');
+    expect(read('lib/route/settings.ts')).toContain('Settings that apply to everyone in');
   });
 });

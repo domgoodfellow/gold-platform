@@ -173,10 +173,11 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
 }
 
 /**
- * Whether Business settings has anything this member may configure — the same gate the Business
- * section once used to draw a permanent Settings row (D-restated: Settings is not one of the
- * permanent rows, per the shell-chrome slice). The account menu's "Business settings" link and any
- * contextual Configure link ask this before offering the destination at all.
+ * Whether this business's Organization Settings scope has anything this member may configure —
+ * the same gate the Business section once used to draw a permanent Settings row (D-restated:
+ * Settings is not one of the permanent rows, per the shell-chrome slice). The account menu's one
+ * Settings entry (D71) asks this to decide whether it lands on Organization or falls back to
+ * Account; any contextual Configure link asks it the same way before offering a destination at all.
  */
 export function businessSettingsOffered(input: Pick<ShellInput, 'enabledModules' | 'featureAvailability' | 'capabilities'>): boolean {
   const gate = { enabledModules: input.enabledModules, featureAvailability: input.featureAvailability, capabilities: input.capabilities };

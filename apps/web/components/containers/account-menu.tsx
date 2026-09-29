@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronUp, LogOut, Settings, UserRound } from 'lucide-react';
+import { ChevronUp, CreditCard, LogOut, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import {
   DropdownMenu,
@@ -16,14 +16,15 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@go
 import { Button } from '@/components/controls/button';
 import { cx } from '@/components/class-names';
 import { organizationIdFromPath } from '@/lib/route/platform-context';
-import { personalSettingsHref } from '@/lib/route/personal-settings';
+import { settingsScopeHref } from '@/lib/route/settings';
 
 /**
  * The truthful, shared person/session menu, one implementation for every shell's sidebar footer.
  * Represents the PERSON, not where they are operating — cross-context navigation (switching
- * business, entering Platform Administration) is `ContextSwitcher`'s job alone. Business settings
- * (the current organization's own configuration map) and Account settings (this person's profile,
- * security and preferences) are two different destinations and never share one label.
+ * business, entering Platform Administration) is `ContextSwitcher`'s job alone. Settings is one
+ * destination (Organization, Account, Access, Connections and Subscription are scopes inside it,
+ * `SettingsScopeNav`), so this menu offers exactly one Settings entry rather than a Business/Account
+ * split — landing on Organization when a business is offered, on Account otherwise.
  */
 
 type AccountMenuProps = {
@@ -31,26 +32,30 @@ type AccountMenuProps = {
   email: string;
   signOutAction: () => Promise<void>;
   /** Whether the current organization has anything this member may configure — `lib/shell.ts`'s
-   * `businessSettingsOffered`. Absent or `false` withholds the Business settings link rather than
-   * offering a destination with nothing behind it. */
+   * `businessSettingsOffered`. Absent or `false` sends the one Settings entry to Account instead
+   * of Organization, rather than opening a scope with nothing behind it. */
   businessSettingsOffered?: boolean;
 };
 
 function AccountMenuContent({ email, signOutAction, businessSettingsOffered }: AccountMenuProps) {
-  // The business being left, so Account settings can offer the way back. Read from the path
-  // rather than passed in: this menu is shared by shells that have no organization at all.
+  // The business being left, so Settings can land on its Organization scope and Subscription can
+  // offer a shortcut. Read from the path rather than passed in: this menu is shared by shells that
+  // have no organization at all.
   const from = organizationIdFromPath(usePathname());
+  const settingsHref = from && businessSettingsOffered
+    ? settingsScopeHref('organization', from)
+    : settingsScopeHref('account', from);
 
   return (
     <>
       <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
       <DropdownMenuSeparator />
-      {from && businessSettingsOffered ? (
+      <DropdownMenuItem asChild><Link href={settingsHref}><Settings />Settings</Link></DropdownMenuItem>
+      {from ? (
         <DropdownMenuItem asChild>
-          <Link href={`/organizations/${from}/settings`}><Settings />Business settings</Link>
+          <Link href={settingsScopeHref('subscription', from)}><CreditCard />Subscription</Link>
         </DropdownMenuItem>
       ) : null}
-      <DropdownMenuItem asChild><Link href={personalSettingsHref('profile', from)}><UserRound />Account settings</Link></DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Sign out</DropdownMenuItem>
     </>
