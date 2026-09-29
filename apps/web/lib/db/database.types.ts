@@ -1148,6 +1148,191 @@ export type Database = {
           },
         ]
       }
+      commercial_draft_scenario_addons: {
+        Row: {
+          addon_plan_id: string
+          version_id: string
+        }
+        Insert: {
+          addon_plan_id: string
+          version_id: string
+        }
+        Update: {
+          addon_plan_id?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_draft_scenario_addons_addon_plan_id_fkey"
+            columns: ["addon_plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_draft_scenario_addons_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_draft_scenario_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_draft_scenario_direct_costs: {
+        Row: {
+          amount_minor: number
+          currency: string
+          id: string
+          label: string
+          note: string
+          version_id: string
+        }
+        Insert: {
+          amount_minor: number
+          currency: string
+          id?: string
+          label: string
+          note?: string
+          version_id: string
+        }
+        Update: {
+          amount_minor?: number
+          currency?: string
+          id?: string
+          label?: string
+          note?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_draft_scenario_direct_costs_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_draft_scenario_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_draft_scenario_inputs: {
+        Row: {
+          allowance_key: string
+          expected_quantity: number | null
+          meter_id: string | null
+          utilization: number | null
+          version_id: string
+        }
+        Insert: {
+          allowance_key: string
+          expected_quantity?: number | null
+          meter_id?: string | null
+          utilization?: number | null
+          version_id: string
+        }
+        Update: {
+          allowance_key?: string
+          expected_quantity?: number | null
+          meter_id?: string | null
+          utilization?: number | null
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_draft_scenario_inputs_meter_id_fkey"
+            columns: ["meter_id"]
+            isOneToOne: false
+            referencedRelation: "platform_meters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_draft_scenario_inputs_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_draft_scenario_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_draft_scenario_versions: {
+        Row: {
+          candidate_prices_minor: number[]
+          currency: string
+          expected_resource_count: number | null
+          expected_seats: number | null
+          id: string
+          plan_id: string
+          recorded_at: string
+          recorded_by: string
+          revision: number
+          scenario_id: string
+        }
+        Insert: {
+          candidate_prices_minor: number[]
+          currency: string
+          expected_resource_count?: number | null
+          expected_seats?: number | null
+          id?: string
+          plan_id: string
+          recorded_at?: string
+          recorded_by: string
+          revision: number
+          scenario_id: string
+        }
+        Update: {
+          candidate_prices_minor?: number[]
+          currency?: string
+          expected_resource_count?: number | null
+          expected_seats?: number | null
+          id?: string
+          plan_id?: string
+          recorded_at?: string
+          recorded_by?: string
+          revision?: number
+          scenario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_draft_scenario_versions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_draft_scenario_versions_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_draft_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_draft_scenarios: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          notes: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          notes?: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          notes?: string
+        }
+        Relationships: []
+      }
       communication_entries: {
         Row: {
           body: string
@@ -3488,6 +3673,7 @@ export type Database = {
           amount_minor: number
           currency: string
           effective_from: string
+          effective_to: string | null
           id: string
           note: string
           organization_id: string
@@ -3499,6 +3685,7 @@ export type Database = {
           amount_minor: number
           currency: string
           effective_from?: string
+          effective_to?: string | null
           id?: string
           note?: string
           organization_id: string
@@ -3510,6 +3697,7 @@ export type Database = {
           amount_minor?: number
           currency?: string
           effective_from?: string
+          effective_to?: string | null
           id?: string
           note?: string
           organization_id?: string
@@ -4850,6 +5038,76 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_meter_cost_model_components: {
+        Row: {
+          component_key: string
+          cost_meter_key: string
+          direction: string | null
+          id: string
+          meter_id: string
+          note: string
+          provider_key: string
+          quantity_multiplier: number
+          region: string | null
+          required: boolean
+          resource_type: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          component_key: string
+          cost_meter_key: string
+          direction?: string | null
+          id?: string
+          meter_id: string
+          note?: string
+          provider_key: string
+          quantity_multiplier: number
+          region?: string | null
+          required?: boolean
+          resource_type?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          component_key?: string
+          cost_meter_key?: string
+          direction?: string | null
+          id?: string
+          meter_id?: string
+          note?: string
+          provider_key?: string
+          quantity_multiplier?: number
+          region?: string | null
+          required?: boolean
+          resource_type?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_meter_cost_model_components_cost_meter_key_fkey"
+            columns: ["cost_meter_key"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_cost_meters"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "platform_meter_cost_model_components_meter_id_fkey"
+            columns: ["meter_id"]
+            isOneToOne: false
+            referencedRelation: "platform_meters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_meter_cost_model_components_provider_key_fkey"
+            columns: ["provider_key"]
+            isOneToOne: false
+            referencedRelation: "platform_providers"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       platform_meters: {
         Row: {
           created_at: string
@@ -4870,6 +5128,45 @@ export type Database = {
           unit?: string
         }
         Relationships: []
+      }
+      platform_plan_addons: {
+        Row: {
+          addon_plan_id: string
+          created_at: string
+          created_by: string | null
+          included_by_default: boolean
+          plan_id: string
+        }
+        Insert: {
+          addon_plan_id: string
+          created_at?: string
+          created_by?: string | null
+          included_by_default?: boolean
+          plan_id: string
+        }
+        Update: {
+          addon_plan_id?: string
+          created_at?: string
+          created_by?: string | null
+          included_by_default?: boolean
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_addons_addon_plan_id_fkey"
+            columns: ["addon_plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_plan_addons_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_plan_cost_assumptions: {
         Row: {
@@ -4951,6 +5248,56 @@ export type Database = {
           },
         ]
       }
+      platform_plan_margin_policies: {
+        Row: {
+          currency: string
+          effective_from: string
+          hard_floor_margin: number
+          id: string
+          note: string
+          plan_id: string
+          recorded_at: string
+          recorded_by: string | null
+          source: string
+          target_margin: number
+          warning_margin: number
+        }
+        Insert: {
+          currency: string
+          effective_from?: string
+          hard_floor_margin: number
+          id?: string
+          note?: string
+          plan_id: string
+          recorded_at?: string
+          recorded_by?: string | null
+          source: string
+          target_margin: number
+          warning_margin: number
+        }
+        Update: {
+          currency?: string
+          effective_from?: string
+          hard_floor_margin?: number
+          id?: string
+          note?: string
+          plan_id?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          source?: string
+          target_margin?: number
+          warning_margin?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_margin_policies_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_plan_module_grants: {
         Row: {
           created_at: string
@@ -4995,6 +5342,7 @@ export type Database = {
           captured_at: string
           currency: string
           effective_from: string
+          effective_to: string | null
           id: string
           note: string
           plan_id: string
@@ -5009,6 +5357,7 @@ export type Database = {
           captured_at?: string
           currency: string
           effective_from?: string
+          effective_to?: string | null
           id?: string
           note?: string
           plan_id: string
@@ -5023,6 +5372,7 @@ export type Database = {
           captured_at?: string
           currency?: string
           effective_from?: string
+          effective_to?: string | null
           id?: string
           note?: string
           plan_id?: string
@@ -5120,6 +5470,7 @@ export type Database = {
       platform_plan_quotas: {
         Row: {
           allowance_key: string
+          allowance_type: string
           created_at: string
           display_order: number
           hard_limit: number | null
@@ -5127,14 +5478,17 @@ export type Database = {
           included_quantity: number
           label: string
           meter_id: string | null
+          overage_behavior: string
           overage_policy: string
           period: string
           plan_id: string
+          reset_semantics: string
           service_class: string | null
           unit: string
         }
         Insert: {
           allowance_key: string
+          allowance_type?: string
           created_at?: string
           display_order?: number
           hard_limit?: number | null
@@ -5142,14 +5496,17 @@ export type Database = {
           included_quantity: number
           label: string
           meter_id?: string | null
+          overage_behavior?: string
           overage_policy?: string
           period?: string
           plan_id: string
+          reset_semantics?: string
           service_class?: string | null
           unit: string
         }
         Update: {
           allowance_key?: string
+          allowance_type?: string
           created_at?: string
           display_order?: number
           hard_limit?: number | null
@@ -5157,9 +5514,11 @@ export type Database = {
           included_quantity?: number
           label?: string
           meter_id?: string | null
+          overage_behavior?: string
           overage_policy?: string
           period?: string
           plan_id?: string
+          reset_semantics?: string
           service_class?: string | null
           unit?: string
         }
@@ -5173,6 +5532,53 @@ export type Database = {
           },
           {
             foreignKeyName: "platform_plan_quotas_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_plan_utilization_assumptions: {
+        Row: {
+          allowance_key: string
+          effective_from: string
+          id: string
+          note: string
+          plan_id: string
+          recorded_at: string
+          recorded_by: string | null
+          scenario: string
+          source: string
+          utilization: number
+        }
+        Insert: {
+          allowance_key: string
+          effective_from?: string
+          id?: string
+          note?: string
+          plan_id: string
+          recorded_at?: string
+          recorded_by?: string | null
+          scenario: string
+          source: string
+          utilization: number
+        }
+        Update: {
+          allowance_key?: string
+          effective_from?: string
+          id?: string
+          note?: string
+          plan_id?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          scenario?: string
+          source?: string
+          utilization?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_utilization_assumptions_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "platform_plans"
@@ -5660,12 +6066,16 @@ export type Database = {
       platform_retail_rates: {
         Row: {
           approval_state: string
+          billing_interval: string | null
           captured_at: string
           currency: string
           effective_from: string
+          effective_to: string | null
           id: string
           meter_id: string
           note: string
+          organization_id: string | null
+          plan_id: string | null
           recorded_by: string | null
           source: string
           source_url: string | null
@@ -5673,12 +6083,16 @@ export type Database = {
         }
         Insert: {
           approval_state?: string
+          billing_interval?: string | null
           captured_at?: string
           currency: string
           effective_from?: string
+          effective_to?: string | null
           id?: string
           meter_id: string
           note?: string
+          organization_id?: string | null
+          plan_id?: string | null
           recorded_by?: string | null
           source: string
           source_url?: string | null
@@ -5686,12 +6100,16 @@ export type Database = {
         }
         Update: {
           approval_state?: string
+          billing_interval?: string | null
           captured_at?: string
           currency?: string
           effective_from?: string
+          effective_to?: string | null
           id?: string
           meter_id?: string
           note?: string
+          organization_id?: string | null
+          plan_id?: string | null
           recorded_by?: string | null
           source?: string
           source_url?: string | null
@@ -5703,6 +6121,27 @@ export type Database = {
             columns: ["meter_id"]
             isOneToOne: false
             referencedRelation: "platform_meters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_retail_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_retail_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_retail_rates_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -7633,6 +8072,14 @@ export type Database = {
         Args: { p_organization_id: string; p_resource_id: string }
         Returns: boolean
       }
+      attach_plan_addon: {
+        Args: {
+          p_addon_plan_id: string
+          p_included_by_default?: boolean
+          p_plan_id: string
+        }
+        Returns: undefined
+      }
       begin_custom_domain_connection: {
         Args: {
           p_hostname: string
@@ -7905,6 +8352,10 @@ export type Database = {
           phone: string
           time_zone: string
         }[]
+      }
+      detach_plan_addon: {
+        Args: { p_addon_plan_id: string; p_plan_id: string }
+        Returns: undefined
       }
       disconnect_integration: {
         Args: { p_connection_id: string; p_organization_id: string }
@@ -8367,6 +8818,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_commercial_retail_rate: {
+        Args: {
+          p_approval_state?: string
+          p_billing_interval?: string
+          p_currency: string
+          p_effective_from: string
+          p_effective_to?: string
+          p_meter_id: string
+          p_note?: string
+          p_organization_id?: string
+          p_plan_id?: string
+          p_source: string
+          p_unit_amount_micros: number
+        }
+        Returns: string
+      }
       record_commercial_term: {
         Args: {
           p_currency?: string
@@ -8468,6 +8935,18 @@ export type Database = {
         Args: { p_domain: string; p_organization_id: string }
         Returns: string
       }
+      record_organization_plan_agreement: {
+        Args: {
+          p_amount_minor: number
+          p_currency: string
+          p_effective_from: string
+          p_effective_to?: string
+          p_note?: string
+          p_organization_id: string
+          p_plan_id: string
+        }
+        Returns: string
+      }
       record_payment: {
         Args: {
           p_amount_minor: number
@@ -8504,6 +8983,19 @@ export type Database = {
         }
         Returns: string
       }
+      record_plan_margin_policy: {
+        Args: {
+          p_currency: string
+          p_effective_from: string
+          p_hard_floor_margin: number
+          p_note?: string
+          p_plan_id: string
+          p_source: string
+          p_target_margin: number
+          p_warning_margin: number
+        }
+        Returns: string
+      }
       record_plan_price: {
         Args: {
           p_amount_minor: number
@@ -8536,6 +9028,18 @@ export type Database = {
           p_note?: string
           p_organization_id: string
           p_plan_id: string
+        }
+        Returns: string
+      }
+      record_plan_utilization_assumption: {
+        Args: {
+          p_allowance_key: string
+          p_effective_from: string
+          p_note?: string
+          p_plan_id: string
+          p_scenario: string
+          p_source: string
+          p_utilization: number
         }
         Returns: string
       }
@@ -8744,6 +9248,22 @@ export type Database = {
           provider_service_key: string
         }[]
       }
+      resolve_commercial_retail_rate: {
+        Args: {
+          p_at: string
+          p_billing_interval?: string
+          p_currency: string
+          p_meter_id: string
+          p_organization_id?: string
+          p_plan_id?: string
+        }
+        Returns: {
+          rate_id: string
+          source: string
+          source_scope: string
+          unit_amount_micros: number
+        }[]
+      }
       resolve_effective_outbound_identity: {
         Args: { p_organization_id: string }
         Returns: string
@@ -8758,6 +9278,22 @@ export type Database = {
         Returns: undefined
       }
       run_due_automations: { Args: never; Returns: number }
+      save_commercial_draft_scenario: {
+        Args: {
+          p_addon_plan_ids?: string[]
+          p_candidate_prices_minor: number[]
+          p_currency: string
+          p_direct_costs?: Json
+          p_expected_resource_count: number
+          p_expected_seats: number
+          p_inputs?: Json
+          p_name: string
+          p_notes: string
+          p_plan_id: string
+          p_scenario_id: string
+        }
+        Returns: string
+      }
       schedule_ahead: {
         Args: { p_days?: number; p_organization_id: string }
         Returns: {
@@ -8828,6 +9364,21 @@ export type Database = {
         Args: { p_account_id: string }
         Returns: undefined
       }
+      set_meter_cost_model_component: {
+        Args: {
+          p_component_key: string
+          p_cost_meter_key: string
+          p_direction?: string
+          p_meter_id: string
+          p_note?: string
+          p_provider_key: string
+          p_quantity_multiplier: number
+          p_region?: string
+          p_required?: boolean
+          p_resource_type?: string
+        }
+        Returns: string
+      }
       set_organization_profile: {
         Args: {
           p_address: string
@@ -8855,6 +9406,24 @@ export type Database = {
           p_participant_id: string
         }
         Returns: undefined
+      }
+      set_plan_allowance: {
+        Args: {
+          p_allowance_key: string
+          p_allowance_type: string
+          p_display_order?: number
+          p_hard_limit: number
+          p_included_quantity: number
+          p_label: string
+          p_meter_id?: string
+          p_overage_behavior: string
+          p_period: string
+          p_plan_id: string
+          p_reset_semantics: string
+          p_service_class?: string
+          p_unit: string
+        }
+        Returns: string
       }
       set_plan_feature_override: {
         Args: { p_feature_id: string; p_included: boolean; p_plan_id: string }

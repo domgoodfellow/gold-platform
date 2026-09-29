@@ -32,13 +32,13 @@ test.describe('platform catalog', () => {
     await expect(page.getByText('Planned').first()).toBeVisible();
   });
 
-  test('shows GOLD Internal in Plans & Add-ons, non-billable, with entitlements and quotas', async ({ page }) => {
+  test('shows GildOps Internal in Plans & Add-ons, non-billable, with entitlements and quotas', async ({ page }) => {
     await page.goto(platformUrl('catalog/plans'));
     await expect(page.getByRole('heading', { name: 'Plans & Add-ons', level: 1 })).toBeVisible();
-    await expect(page.getByText('GOLD Internal').first()).toBeVisible();
+    await expect(page.getByText('GildOps Internal').first()).toBeVisible();
 
     await page.goto(platformUrl('catalog/plans/gold_internal'));
-    await expect(page.getByRole('heading', { name: 'GOLD Internal', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'GildOps Internal', level: 1 })).toBeVisible();
     await expect(page.getByText('Non-billable').first()).toBeVisible();
 
     await page.getByRole('tab', { name: 'Quotas' }).click();

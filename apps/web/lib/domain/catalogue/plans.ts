@@ -13,6 +13,8 @@ import { DomainError } from '@/lib/domain/errors';
 export type PlanKind = 'plan' | 'addon';
 export type SaleStatus = 'active' | 'unlisted' | 'archived';
 export type OveragePolicy = 'allowed' | 'blocked' | 'not_applicable';
+export type OverageBehavior = 'metered' | 'hard_limit' | 'soft_limit' | 'unmetered' | 'not_applicable';
+export type AllowanceType = 'capacity' | 'recurring_resource' | 'usage' | 'boolean';
 export type QuotaPeriod = 'day' | 'week' | 'month' | 'year' | 'none';
 
 export type Plan = {
@@ -39,6 +41,9 @@ export type PlanQuota = {
   serviceClass: string | null;
   meterId: string | null;
   displayOrder: number;
+  allowanceType: AllowanceType;
+  resetSemantics: 'billing_period' | 'calendar_period' | 'none';
+  overageBehavior: OverageBehavior;
 };
 
 export type PlanPrice = {
@@ -48,10 +53,25 @@ export type PlanPrice = {
   amountMinor: number;
   billingInterval: 'month' | 'year' | 'one_time';
   effectiveFrom: string;
+  effectiveTo: string | null;
   approvalState: 'draft' | 'approved';
   source: string;
   note: string;
 };
+
+export type PlanOverageRate = {
+  id: string;
+  planId: string;
+  meterId: string;
+  currency: string;
+  unitAmountMicros: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  source: string;
+};
+
+export type PlanMarginPolicy = { targetMargin: number; warningMargin: number; hardFloorMargin: number; currency: string; effectiveFrom: string };
+export type PlanUtilizationAssumption = { scenario: 'low' | 'expected' | 'heavy' | 'max_allowance'; allowanceKey: string; utilization: number; effectiveFrom: string };
 
 const PLAN_COLUMNS = 'id, key, kind, label, description, billable, sale_status, display_order';
 
@@ -233,6 +253,9 @@ function toQuota(row: {
   service_class: string | null;
   meter_id: string | null;
   display_order: number;
+  allowance_type: string;
+  reset_semantics: string;
+  overage_behavior: string;
 }): PlanQuota {
   return {
     id: row.id,
@@ -247,13 +270,16 @@ function toQuota(row: {
     serviceClass: row.service_class,
     meterId: row.meter_id,
     displayOrder: row.display_order,
+    allowanceType: row.allowance_type as AllowanceType,
+    resetSemantics: row.reset_semantics as PlanQuota['resetSemantics'],
+    overageBehavior: row.overage_behavior as OverageBehavior,
   };
 }
 
 export async function listPlanQuotas(db: Db, planId: string): Promise<PlanQuota[]> {
   const { data, error } = await db
     .from('platform_plan_quotas')
-    .select('id, plan_id, allowance_key, label, unit, included_quantity, period, hard_limit, overage_policy, service_class, meter_id, display_order')
+    .select('id, plan_id, allowance_key, label, unit, included_quantity, period, hard_limit, overage_policy, service_class, meter_id, display_order, allowance_type, reset_semantics, overage_behavior')
     .eq('plan_id', planId)
     .order('display_order');
   if (error) throw new DomainError(error.message, 'plans.quotas_failed');
@@ -272,22 +298,28 @@ export type SetPlanQuotaInput = {
   serviceClass?: string | null;
   meterId?: string | null;
   displayOrder?: number;
+  allowanceType?: AllowanceType;
+  resetSemantics?: PlanQuota['resetSemantics'];
+  overageBehavior?: OverageBehavior;
 };
 
 export async function setPlanQuota(db: Db, input: SetPlanQuotaInput): Promise<string> {
-  const { data, error } = await db.rpc('set_plan_quota', {
+  const overageBehavior = input.overageBehavior ?? (input.overagePolicy === 'allowed' ? 'metered' : input.overagePolicy === 'blocked' ? 'hard_limit' : 'not_applicable');
+  const { data, error } = await db.rpc('set_plan_allowance', ({
     p_plan_id: input.planId,
     p_allowance_key: input.allowanceKey,
     p_label: input.label,
     p_unit: input.unit,
     p_included_quantity: input.includedQuantity,
     p_period: input.period ?? 'month',
-    p_hard_limit: input.hardLimit ?? undefined,
-    p_overage_policy: input.overagePolicy ?? 'not_applicable',
-    p_service_class: input.serviceClass ?? undefined,
-    p_meter_id: input.meterId ?? undefined,
+    p_hard_limit: input.hardLimit ?? null,
+    p_overage_behavior: overageBehavior,
+    p_allowance_type: input.allowanceType ?? (input.meterId ? 'usage' : 'capacity'),
+    p_reset_semantics: input.resetSemantics ?? (input.period === 'none' ? 'none' : 'billing_period'),
+    p_service_class: input.serviceClass ?? null,
+    p_meter_id: input.meterId ?? null,
     p_display_order: input.displayOrder ?? 0,
-  });
+  }) as never);
   if (error) staffOnly(error, 'plans.set_quota_failed');
   return data as string;
 }
@@ -304,6 +336,7 @@ function toPrice(row: {
   amount_minor: string | number;
   billing_interval: string;
   effective_from: string;
+  effective_to: string | null;
   approval_state: string;
   source: string;
   note: string;
@@ -315,6 +348,7 @@ function toPrice(row: {
     amountMinor: Number(row.amount_minor),
     billingInterval: row.billing_interval as PlanPrice['billingInterval'],
     effectiveFrom: row.effective_from,
+    effectiveTo: row.effective_to,
     approvalState: row.approval_state as PlanPrice['approvalState'],
     source: row.source,
     note: row.note,
@@ -324,7 +358,7 @@ function toPrice(row: {
 export async function listPlanPrices(db: Db, planId: string): Promise<PlanPrice[]> {
   const { data, error } = await db
     .from('platform_plan_prices')
-    .select('id, plan_id, currency, amount_minor, billing_interval, effective_from, approval_state, source, note')
+    .select('id, plan_id, currency, amount_minor, billing_interval, effective_from, effective_to, approval_state, source, note')
     .eq('plan_id', planId)
     .order('effective_from', { ascending: false });
   if (error) throw new DomainError(error.message, 'plans.prices_failed');
@@ -353,4 +387,68 @@ export async function recordPlanPrice(db: Db, input: RecordPlanPriceInput): Prom
   });
   if (error) staffOnly(error, 'plans.record_price_failed');
   return data as string;
+}
+
+export async function listPlanOverageRates(db: Db, planId: string): Promise<PlanOverageRate[]> {
+  const { data, error } = await db.from('platform_retail_rates')
+    .select('id,plan_id,meter_id,currency,unit_amount_micros,effective_from,effective_to,source')
+    .eq('plan_id', planId).is('organization_id', null).order('effective_from', { ascending: false });
+  if (error) throw new DomainError(error.message, 'plans.overage_rates_failed');
+  return (data ?? []).map((row) => ({ id: row.id, planId: row.plan_id!, meterId: row.meter_id, currency: row.currency, unitAmountMicros: Number(row.unit_amount_micros), effectiveFrom: row.effective_from, effectiveTo: row.effective_to, source: row.source }));
+}
+
+export async function recordPlanOverageRate(db: Db, input: { planId: string; meterId: string; currency: string; unitAmountMicros: number; effectiveFrom: string; source: string; note?: string }): Promise<string> {
+  const { data, error } = await db.rpc('record_commercial_retail_rate', ({
+    p_meter_id: input.meterId,
+    p_currency: input.currency,
+    p_unit_amount_micros: input.unitAmountMicros,
+    p_effective_from: input.effectiveFrom,
+    p_source: input.source,
+    p_plan_id: input.planId,
+    p_organization_id: null,
+    p_billing_interval: 'month',
+    p_effective_to: null,
+    p_approval_state: 'approved',
+    p_note: input.note ?? '',
+  }) as never);
+  if (error) staffOnly(error, 'plans.record_overage_rate_failed');
+  return data as string;
+}
+
+export async function currentPlanMarginPolicy(db: Db, planId: string, currency: string): Promise<PlanMarginPolicy | null> {
+  const { data, error } = await db.from('platform_plan_margin_policies').select('target_margin,warning_margin,hard_floor_margin,currency,effective_from').eq('plan_id', planId).eq('currency', currency).lte('effective_from', new Date().toISOString()).order('effective_from', { ascending: false }).limit(1).maybeSingle();
+  if (error) throw new DomainError(error.message, 'plans.margin_policy_failed');
+  return data ? { targetMargin: Number(data.target_margin), warningMargin: Number(data.warning_margin), hardFloorMargin: Number(data.hard_floor_margin), currency: data.currency, effectiveFrom: data.effective_from } : null;
+}
+
+export async function listPlanUtilizationAssumptions(db: Db, planId: string): Promise<PlanUtilizationAssumption[]> {
+  const { data, error } = await db.from('platform_plan_utilization_assumptions').select('scenario,allowance_key,utilization,effective_from').eq('plan_id', planId).lte('effective_from', new Date().toISOString()).order('effective_from', { ascending: false });
+  if (error) throw new DomainError(error.message, 'plans.utilization_assumptions_failed');
+  const seen = new Set<string>();
+  return (data ?? []).flatMap((row) => { const key = `${row.scenario}:${row.allowance_key}`; if (seen.has(key)) return []; seen.add(key); return [{ scenario: row.scenario as PlanUtilizationAssumption['scenario'], allowanceKey: row.allowance_key, utilization: Number(row.utilization), effectiveFrom: row.effective_from }]; });
+}
+
+export async function recordPlanMarginPolicy(db: Db, input: { planId: string; currency: string; targetMargin: number; warningMargin: number; hardFloorMargin: number; effectiveFrom: string; source: string }): Promise<string> {
+  const { data, error } = await db.rpc('record_plan_margin_policy', { p_plan_id: input.planId, p_currency: input.currency, p_target_margin: input.targetMargin, p_warning_margin: input.warningMargin, p_hard_floor_margin: input.hardFloorMargin, p_effective_from: input.effectiveFrom, p_source: input.source, p_note: '' });
+  if (error) staffOnly(error, 'plans.record_margin_policy_failed');
+  return data as string;
+}
+
+export async function recordPlanUtilizationAssumption(db: Db, input: { planId: string; scenario: PlanUtilizationAssumption['scenario']; allowanceKey: string; utilization: number; effectiveFrom: string; source: string }): Promise<string> {
+  const { data, error } = await db.rpc('record_plan_utilization_assumption', { p_plan_id: input.planId, p_scenario: input.scenario, p_allowance_key: input.allowanceKey, p_utilization: input.utilization, p_effective_from: input.effectiveFrom, p_source: input.source, p_note: '' });
+  if (error) staffOnly(error, 'plans.record_utilization_failed');
+  return data as string;
+}
+
+export async function listPlanAddonIds(db: Db, planId: string): Promise<string[]> {
+  const { data, error } = await db.from('platform_plan_addons').select('addon_plan_id').eq('plan_id', planId);
+  if (error) throw new DomainError(error.message, 'plans.addons_failed');
+  return (data ?? []).map((row) => row.addon_plan_id);
+}
+
+export async function setPlanAddon(db: Db, input: { planId: string; addonPlanId: string; attached: boolean }): Promise<void> {
+  const { error } = input.attached
+    ? await db.rpc('attach_plan_addon', { p_plan_id: input.planId, p_addon_plan_id: input.addonPlanId, p_included_by_default: false })
+    : await db.rpc('detach_plan_addon', { p_plan_id: input.planId, p_addon_plan_id: input.addonPlanId });
+  if (error) staffOnly(error, 'plans.set_addon_failed');
 }

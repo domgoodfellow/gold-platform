@@ -10,3 +10,7 @@ export type RecordTermState = RegisterResourceState;
 export const TERM_INITIAL: RecordTermState = { error: null, recorded: false };
 export type RecordPlanAssignmentState = RegisterResourceState;
 export const PLAN_ASSIGNMENT_INITIAL: RecordPlanAssignmentState = { error: null, recorded: false };
+export type RecordPlanAgreementState = RegisterResourceState;
+export const PLAN_AGREEMENT_INITIAL: RecordPlanAgreementState = { error: null, recorded: false };
+export type RecordQuotaOverrideState = RegisterResourceState;
+export const QUOTA_OVERRIDE_INITIAL: RecordQuotaOverrideState = { error: null, recorded: false };

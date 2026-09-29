@@ -18,7 +18,7 @@ describe('hiding a navigation item is never the security boundary', () => {
   it('every platform area refuses, on the server, a person whose staff row does not name it', () => {
     // One layout per area, calling the guard with the permission the registry assigns that path.
     const segments = [...new Set(PLATFORM_DESTINATIONS.map((destination) => destination.path.split('/')[0]).filter(Boolean))];
-    expect(segments.sort()).toEqual(['ai-runtime', 'billing', 'catalog', 'failures', 'integrations', 'organizations', 'pricing', 'providers']);
+    expect(segments.sort()).toEqual(['ai-runtime', 'billing', 'catalog', 'failures', 'integrations', 'organizations', 'package-economics', 'pricing', 'providers', 'usage', 'vendor-rates']);
     for (const segment of segments) {
       const layout = `app/organizations/[organizationId]/platform/${segment}/layout.tsx`;
       expect(existsSync(`${WEB}/${layout}`), `${segment} has no guard layout`).toBe(true);

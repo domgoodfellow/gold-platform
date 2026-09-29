@@ -120,6 +120,9 @@ describe('GOLD owner who is also a platform operator', () => {
       'platform-connectors',
       'platform-group-commercial',
       'platform-pricing',
+      'platform-usage-economics',
+      'platform-vendor-rates',
+      'platform-package-economics',
       'platform-billing',
       'platform-group-infrastructure',
       'platform-providers',
@@ -182,7 +185,7 @@ describe('a platform member with limited platform permissions', () => {
     expect(keys(providersOnly, 'platform')).toEqual(['platform-group-infrastructure', 'platform-providers', 'platform-ai-runtime']);
 
     const commercial = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.commercial']) });
-    expect(keys(commercial, 'platform')).toEqual(['platform-group-commercial', 'platform-pricing', 'platform-billing']);
+    expect(keys(commercial, 'platform')).toEqual(['platform-group-commercial', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-billing']);
 
     const catalogue = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.catalogue']) });
     expect(keys(catalogue, 'platform')).toEqual(['platform-group-catalog', 'platform-products', 'platform-plans', 'platform-meters', 'platform-connectors']);

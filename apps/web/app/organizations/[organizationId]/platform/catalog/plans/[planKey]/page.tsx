@@ -3,8 +3,11 @@ import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RecordHeader } from '@/components/containers/record-header';
-import { SectionHeading } from '@/components/containers/section';
+import { EmptyState, SectionHeading } from '@/components/containers/section';
+import { Hint } from '@/components/controls/inputs';
+import { ButtonLink } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
+import { DataTable } from '@/components/display/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@gold/ui/components/accordion';
 import { getDb } from '@/lib/db/server';
@@ -14,9 +17,14 @@ import { getProvisionedPlanPrice } from '@/lib/domain/platform-billing/provision
 import { listCatalogFeatures, listCatalogModules, listCatalogProducts } from '@/lib/domain/catalogue/catalogue';
 import {
   getPlan,
+  listPlans,
   listPlanFeatureGrants,
   listPlanModuleGrants,
   listPlanPrices,
+  listPlanOverageRates,
+  currentPlanMarginPolicy,
+  listPlanUtilizationAssumptions,
+  listPlanAddonIds,
   listPlanProductGrants,
   listPlanQuotas,
   planEntitledFeatureIds,
@@ -32,6 +40,9 @@ import {
   QuotaSheet,
   RecordPlanPriceSheet,
   RemoveQuotaButton,
+  RecordOverageRateSheet,
+  PlanEconomicsSettingsSheet,
+  PlanAddonToggle,
 } from '@/features/platform/catalog/plan-forms';
 import { ProvisionPriceControl } from '@/features/platform/catalog/plan-billing';
 
@@ -45,7 +56,7 @@ export default async function PlanDetailPage({ params }: PageProps<'/organizatio
   const plan = await getPlan(db, planKey);
   if (!plan) notFound();
 
-  const [products, productGrants, moduleGrants, featureGrants, entitled, quotas, prices, assignments] = await Promise.all([
+  const [products, productGrants, moduleGrants, featureGrants, entitled, quotas, prices, assignments, overageRates, assumptions, addonIds, allPlans] = await Promise.all([
     listCatalogProducts(db),
     listPlanProductGrants(db, plan.id),
     listPlanModuleGrants(db, plan.id),
@@ -54,6 +65,10 @@ export default async function PlanDetailPage({ params }: PageProps<'/organizatio
     listPlanQuotas(db, plan.id),
     listPlanPrices(db, plan.id),
     listAssignmentsForPlan(db, plan.id),
+    listPlanOverageRates(db, plan.id),
+    listPlanUtilizationAssumptions(db, plan.id),
+    listPlanAddonIds(db, plan.id),
+    listPlans(db),
   ]);
 
   const productGrantSet = new Set(productGrants);
@@ -71,6 +86,8 @@ export default async function PlanDetailPage({ params }: PageProps<'/organizatio
   }
 
   const currentPrice = prices.find((p) => p.approvalState === 'approved');
+  const marginPolicy = currentPrice ? await currentPlanMarginPolicy(db, plan.id, currentPrice.currency) : null;
+  const addonOptions = allPlans.filter((item) => item.kind === 'addon' && item.saleStatus !== 'archived');
 
   const billingProvider = await platformBillingProvider();
   const provisionedByPriceId = billingProvider
@@ -94,7 +111,7 @@ export default async function PlanDetailPage({ params }: PageProps<'/organizatio
         title={plan.label}
         crumbs={[...platformAncestry(goldId, 'plans'), { label: 'Plans & Add-ons', href: platformHref(goldId, 'catalog/plans') }, { label: plan.label }]}
         summary={plan.description}
-        actions={<EditPlanSheet plan={plan} />}
+        actions={<div className="flex gap-2"><ButtonLink href={`${platformHref(goldId, 'package-economics')}?source=plan_default&id=${plan.id}`} tone="secondary" size="small">Simulate</ButtonLink><EditPlanSheet plan={plan} /></div>}
       />
 
       <div className="flex flex-wrap gap-1.5">
@@ -113,6 +130,7 @@ export default async function PlanDetailPage({ params }: PageProps<'/organizatio
           <TabsTrigger value="entitlements">Entitlements</TabsTrigger>
           <TabsTrigger value="quotas">Quotas</TabsTrigger>
           <TabsTrigger value="pricing">Pricing</TabsTrigger>
+          <TabsTrigger value="economics">Economics</TabsTrigger>
           <TabsTrigger value="organizations">Organizations</TabsTrigger>
         </TabsList>
 
@@ -190,7 +208,7 @@ export default async function PlanDetailPage({ params }: PageProps<'/organizatio
             <QuotaSheet planId={plan.id} planKey={plan.key} />
           </div>
           {quotas.length === 0 ? (
-            <p className="text-sm text-muted-foreground">This Plan has no structured usage limits.</p>
+            <EmptyState>This Plan has no structured usage limits.</EmptyState>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {quotas.map((quota) => (
@@ -205,12 +223,16 @@ export default async function PlanDetailPage({ params }: PageProps<'/organizatio
                     <dt className="text-muted-foreground">Hard limit</dt>
                     <dd>{quota.hardLimit !== null ? quota.hardLimit.toLocaleString() : 'None'}</dd>
                     <dt className="text-muted-foreground">Overage</dt>
-                    <dd>{quota.overagePolicy.replace('_', ' ')}</dd>
+                    <dd>{quota.overageBehavior.replaceAll('_', ' ')}</dd>
+                    <dt className="text-muted-foreground">Type</dt>
+                    <dd>{quota.allowanceType.replaceAll('_', ' ')}</dd>
                   </dl>
                   <div className="mt-3 flex gap-2">
                     <QuotaSheet planId={plan.id} planKey={plan.key} quota={quota} />
+                    {quota.overageBehavior === 'metered' && quota.meterId ? <RecordOverageRateSheet planId={plan.id} planKey={plan.key} meterId={quota.meterId} label={quota.label} currency={currentPrice?.currency} /> : null}
                     <RemoveQuotaButton planId={plan.id} planKey={plan.key} allowanceKey={quota.allowanceKey} />
                   </div>
+                  {quota.meterId ? <p className="mt-2 text-xs text-muted">{overageRates.find((rate) => rate.meterId === quota.meterId) ? `Current Plan rate: ${(overageRates.find((rate) => rate.meterId === quota.meterId)!.unitAmountMicros / 100_000_000).toFixed(4)} ${overageRates.find((rate) => rate.meterId === quota.meterId)!.currency} / ${quota.unit}` : 'No Plan overage rate'}</p> : null}
                 </div>
               ))}
             </div>
@@ -222,7 +244,7 @@ export default async function PlanDetailPage({ params }: PageProps<'/organizatio
             <RecordPlanPriceSheet planId={plan.id} planKey={plan.key} />
           </div>
           {prices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No standard price has been recorded for this Plan.</p>
+            <EmptyState>No standard price has been recorded for this Plan.</EmptyState>
           ) : (
             <ul className="flex flex-col divide-y divide-border">
               {prices.map((price) => (
@@ -245,39 +267,49 @@ export default async function PlanDetailPage({ params }: PageProps<'/organizatio
           )}
         </TabsContent>
 
+        <TabsContent value="economics" className="mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div><SectionHeading>Planning assumptions</SectionHeading><p className="mt-1 text-sm text-muted">Low defaults to 25%; Max allowance is always 100%. Expected and Heavy are versioned per allowance.</p></div>
+            <div className="flex gap-2"><ButtonLink href={`${platformHref(goldId, 'package-economics')}?source=plan_default&id=${plan.id}`} tone="secondary">Open simulator</ButtonLink><PlanEconomicsSettingsSheet planId={plan.id} planKey={plan.key} currency={currentPrice?.currency ?? 'CAD'} quotas={quotas} policy={marginPolicy} assumptions={assumptions} /></div>
+          </div>
+          <dl className="mt-5 grid grid-cols-3 gap-4 border-y border-border py-3 text-sm"><div><dt className="text-muted">Target margin</dt><dd className="font-medium">{marginPolicy ? `${(marginPolicy.targetMargin * 100).toFixed(1)}%` : 'Not set'}</dd></div><div><dt className="text-muted">Warning below</dt><dd>{marginPolicy ? `${(marginPolicy.warningMargin * 100).toFixed(1)}%` : '—'}</dd></div><div><dt className="text-muted">Hard floor</dt><dd>{marginPolicy ? `${(marginPolicy.hardFloorMargin * 100).toFixed(1)}%` : '—'}</dd></div></dl>
+          {plan.kind === 'plan' ? <div className="mt-6"><SectionHeading>Add-ons</SectionHeading><div className="mt-2">{addonOptions.map((addon) => <PlanAddonToggle key={addon.id} planId={plan.id} planKey={plan.key} addonId={addon.id} label={addon.label} attached={addonIds.includes(addon.id)} />)}</div></div> : null}
+        </TabsContent>
+
         <TabsContent value="organizations" className="mt-4">
-          {assignedOrganizations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No organization is currently assigned this Plan.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="py-2 pr-4 font-medium">Organization</th>
-                  <th className="py-2 pr-4 font-medium">Effective period</th>
-                  <th className="py-2 font-medium">Kind</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assignedOrganizations.map(({ assignment, tenant }) => (
-                  <tr key={assignment.id} className="border-b border-border/50">
-                    <td className="py-2 pr-4">
-                      <Link href={platformHref(goldId, `organizations/${assignment.organizationId}`)} className="underline underline-offset-4">
-                        {tenant?.name ?? assignment.organizationId}
-                      </Link>
-                    </td>
-                    <td className="py-2 pr-4">
-                      {assignment.periodStart} – {assignment.periodEnd === '9999-12-31' ? 'ongoing' : assignment.periodEnd}
-                    </td>
-                    <td className="py-2">
-                      <Badge>{assignment.planKind}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            rows={assignedOrganizations}
+            rowKey={({ assignment }) => assignment.id}
+            empty="No organization is currently assigned this Plan."
+            columns={[
+              {
+                key: 'organization',
+                header: 'Organization',
+                emphasis: 'primary',
+                cell: ({ assignment, tenant }) => (
+                  <Link href={platformHref(goldId, `organizations/${assignment.organizationId}`)} className="underline underline-offset-4">
+                    {tenant?.name ?? assignment.organizationId}
+                  </Link>
+                ),
+              },
+              {
+                key: 'period',
+                header: 'Effective period',
+                cell: ({ assignment }) => (
+                  <>
+                    {assignment.periodStart} – {assignment.periodEnd === '9999-12-31' ? 'ongoing' : assignment.periodEnd}
+                  </>
+                ),
+              },
+              {
+                key: 'kind',
+                header: 'Kind',
+                cell: ({ assignment }) => <Badge>{assignment.planKind}</Badge>,
+              },
+            ]}
+          />
           <SectionHeading className="mt-8">Advanced</SectionHeading>
-          <p className="mt-1 font-mono text-xs text-muted-foreground">key: {plan.key} · id: {plan.id}</p>
+          <Hint className="mt-1 font-mono text-xs">key: {plan.key} · id: {plan.id}</Hint>
         </TabsContent>
       </Tabs>
     </>

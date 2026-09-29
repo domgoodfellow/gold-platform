@@ -12,12 +12,16 @@ import {
   PageDrawerTitle,
   PageDrawerTrigger,
 } from '@/components/containers/page-drawer';
+import { Section, SectionHeading } from '@/components/containers/section';
 import { createPlanAction, type CreatePlanState } from '@/app/organizations/[organizationId]/platform/catalog/plans/actions';
 import {
   grantPlanFeatureOverrideAction,
   grantPlanModuleAction,
   grantPlanProductAction,
   recordPlanPriceAction,
+  recordPlanOverageRateAction,
+  savePlanEconomicsSettingsAction,
+  setPlanAddonAction,
   removePlanQuotaAction,
   revokePlanFeatureOverrideAction,
   revokePlanModuleAction,
@@ -26,7 +30,7 @@ import {
   updatePlanAction,
   type PlanActionState,
 } from '@/app/organizations/[organizationId]/platform/catalog/plans/[planKey]/actions';
-import type { Plan, PlanQuota } from '@/lib/domain/catalogue/plans';
+import type { Plan, PlanMarginPolicy, PlanQuota, PlanUtilizationAssumption } from '@/lib/domain/catalogue/plans';
 
 const CREATE_INITIAL: CreatePlanState = { error: null };
 const ACTION_INITIAL: PlanActionState = { error: null, updated: false };
@@ -212,6 +216,7 @@ export function FeatureOverrideControl({
 export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey: string; quota?: PlanQuota }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(setPlanQuotaAction, ACTION_INITIAL);
+  const [overageBehavior, setOverageBehavior] = useState(quota?.overageBehavior ?? 'not_applicable');
 
   return (
     <PageDrawer open={open} onOpenChange={setOpen}>
@@ -262,13 +267,30 @@ export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey
               <TextInput id="hardLimit" name="hardLimit" type="number" min={0} defaultValue={quota?.hardLimit ?? undefined} placeholder="No hard limit" />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <FieldLabel htmlFor="allowanceType">Allowance type</FieldLabel>
+              <SelectInput id="allowanceType" name="allowanceType" defaultValue={quota?.allowanceType ?? 'usage'}>
+                <option value="usage">Usage</option><option value="capacity">Count / capacity</option><option value="recurring_resource">Recurring resource</option><option value="boolean">Boolean entitlement</option>
+              </SelectInput>
+            </div>
+            <div className="flex flex-col gap-1">
+              <FieldLabel htmlFor="resetSemantics">Reset</FieldLabel>
+              <SelectInput id="resetSemantics" name="resetSemantics" defaultValue={quota?.resetSemantics ?? 'billing_period'}>
+                <option value="billing_period">Billing period</option><option value="calendar_period">Calendar period</option><option value="none">Does not reset</option>
+              </SelectInput>
+            </div>
+          </div>
           <div className="flex flex-col gap-1">
-            <FieldLabel htmlFor="overagePolicy">Overage policy</FieldLabel>
-            <SelectInput id="overagePolicy" name="overagePolicy" defaultValue={quota?.overagePolicy ?? 'not_applicable'}>
-              <option value="allowed">Allowed</option>
-              <option value="blocked">Blocked</option>
-              <option value="not_applicable">Not applicable</option>
+            <FieldLabel htmlFor="meterId">Commercial meter</FieldLabel>
+            <TextInput id="meterId" name="meterId" defaultValue={quota?.meterId ?? ''} placeholder="voice_minutes (optional)" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <FieldLabel htmlFor="overageBehavior">Overage behavior</FieldLabel>
+            <SelectInput id="overageBehavior" name="overageBehavior" value={overageBehavior} onChange={(event) => setOverageBehavior(event.target.value as PlanQuota['overageBehavior'])}>
+              <option value="metered">Metered</option><option value="hard_limit">Hard limit</option><option value="soft_limit">Soft limit</option><option value="unmetered">Unmetered retail</option><option value="not_applicable">Not applicable</option>
             </SelectInput>
+            <input type="hidden" name="overagePolicy" value={overageBehavior === 'metered' ? 'allowed' : overageBehavior === 'hard_limit' ? 'blocked' : 'not_applicable'} />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
           <PageDrawerFooter className="px-0">
@@ -350,4 +372,19 @@ export function RecordPlanPriceSheet({ planId, planKey }: { planId: string; plan
       </PageDrawerContent>
     </PageDrawer>
   );
+}
+
+export function RecordOverageRateSheet({ planId, planKey, meterId, label, currency = 'CAD' }: { planId: string; planKey: string; meterId: string; label: string; currency?: string }) {
+  const [state, action, pending] = useActionState(recordPlanOverageRateAction, ACTION_INITIAL);
+  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" tone="secondary" size="small">Add rate</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Record {label} overage rate</PageDrawerTitle><PageDrawerDescription>Appends a Plan-scoped effective version. Historical rates remain unchanged.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-3 px-4"><input type="hidden" name="planId" value={planId} /><input type="hidden" name="planKey" value={planKey} /><input type="hidden" name="meterId" value={meterId} /><div className="grid grid-cols-[1fr_6rem] gap-3"><div className="grid gap-1"><FieldLabel htmlFor={`overage-amount-${meterId}`}>Rate per unit</FieldLabel><TextInput id={`overage-amount-${meterId}`} name="amount" type="number" min="0" step="0.0001" required /></div><div className="grid gap-1"><FieldLabel htmlFor={`overage-currency-${meterId}`}>Currency</FieldLabel><TextInput id={`overage-currency-${meterId}`} name="currency" defaultValue={currency} minLength={3} maxLength={3} required /></div></div><div className="grid gap-1"><FieldLabel htmlFor={`overage-effective-${meterId}`}>Effective from</FieldLabel><TextInput id={`overage-effective-${meterId}`} name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0,10)} /></div><div className="grid gap-1"><FieldLabel htmlFor={`overage-source-${meterId}`}>Source</FieldLabel><TextInput id={`overage-source-${meterId}`} name="source" required placeholder="Commercial decision" /></div><ErrorText>{state.error}</ErrorText>{state.updated ? <Hint>Rate recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Recording…' : 'Record rate'}</Button></form></PageDrawerContent></PageDrawer>;
+}
+
+export function PlanEconomicsSettingsSheet({ planId, planKey, currency, quotas, policy, assumptions }: { planId: string; planKey: string; currency: string; quotas: PlanQuota[]; policy: PlanMarginPolicy | null; assumptions: PlanUtilizationAssumption[] }) {
+  const [state, action, pending] = useActionState(savePlanEconomicsSettingsAction, ACTION_INITIAL);
+  const assumption = (scenario: string, key: string, fallback: number) => Math.round((assumptions.find((item) => item.scenario === scenario && item.allowanceKey === key)?.utilization ?? fallback) * 100);
+  return <PageDrawer><PageDrawerTrigger asChild><Button type="button">Economics settings</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Economics settings</PageDrawerTitle><PageDrawerDescription>Versioned planning assumptions only; operational usage and provider costs are unchanged.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-4 px-4"><input type="hidden" name="planId" value={planId} /><input type="hidden" name="planKey" value={planKey} /><input type="hidden" name="currency" value={currency} /><div className="grid grid-cols-3 gap-3"><div className="grid gap-1"><FieldLabel htmlFor="targetMargin">Target %</FieldLabel><TextInput id="targetMargin" name="targetMargin" type="number" min="1" max="99" step="0.1" defaultValue={(policy?.targetMargin ?? .7) * 100} required /></div><div className="grid gap-1"><FieldLabel htmlFor="warningMargin">Warning %</FieldLabel><TextInput id="warningMargin" name="warningMargin" type="number" min="0" max="99" step="0.1" defaultValue={(policy?.warningMargin ?? .6) * 100} required /></div><div className="grid gap-1"><FieldLabel htmlFor="hardFloorMargin">Floor %</FieldLabel><TextInput id="hardFloorMargin" name="hardFloorMargin" type="number" min="0" max="99" step="0.1" defaultValue={(policy?.hardFloorMargin ?? .45) * 100} required /></div></div><Section><SectionHeading>Utilization</SectionHeading><div className="mt-3 space-y-3">{quotas.map((quota) => <div key={quota.allowanceKey} className="grid grid-cols-[1fr_5rem_5rem] items-end gap-3"><p className="pb-2 text-sm">{quota.label}</p><div className="grid gap-1"><FieldLabel htmlFor={`expected-${quota.allowanceKey}`}>Expected</FieldLabel><TextInput id={`expected-${quota.allowanceKey}`} name={`utilization:expected:${quota.allowanceKey}`} type="number" min="0" max="100" defaultValue={assumption('expected', quota.allowanceKey, .5)} /></div><div className="grid gap-1"><FieldLabel htmlFor={`heavy-${quota.allowanceKey}`}>Heavy</FieldLabel><TextInput id={`heavy-${quota.allowanceKey}`} name={`utilization:heavy:${quota.allowanceKey}`} type="number" min="0" max="100" defaultValue={assumption('heavy', quota.allowanceKey, .8)} /></div></div>)}</div></Section><TextInput name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0,10)} aria-label="Effective from" /><TextInput name="source" required defaultValue="Staff planning assumption" aria-label="Source" /><ErrorText>{state.error}</ErrorText>{state.updated ? <Hint>New assumption versions recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Saving…' : 'Save assumptions'}</Button></form></PageDrawerContent></PageDrawer>;
+}
+
+export function PlanAddonToggle({ planId, planKey, addonId, label, attached }: { planId: string; planKey: string; addonId: string; label: string; attached: boolean }) {
+  return <form action={setPlanAddonAction} className="flex items-center justify-between gap-3 border-t border-border py-2"><input type="hidden" name="planId" value={planId} /><input type="hidden" name="planKey" value={planKey} /><input type="hidden" name="addonPlanId" value={addonId} /><input type="hidden" name="attached" value={String(!attached)} /><span className="text-sm">{label}</span><Button type="submit" tone="secondary" size="small">{attached ? 'Remove' : 'Add'}</Button></form>;
 }

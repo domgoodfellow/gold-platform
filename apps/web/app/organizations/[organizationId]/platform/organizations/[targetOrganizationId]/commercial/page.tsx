@@ -25,7 +25,8 @@ import {
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { TenantWorkspaceHeader } from '@/features/platform/tenant-workspace';
 import { deriveOrganizationFeatureState, EntitlementStatus, FeatureStatusBadges } from '@/features/catalogue/feature-badges';
-import { AssignPlanSheet, RecordCommercialTermForm } from '@/features/platform/organizations/forms';
+import { AssignPlanSheet, RecordCommercialTermForm, RecordPlanAgreementSheet, RecordQuotaOverrideSheet } from '@/features/platform/organizations/forms';
+import { ButtonLink } from '@/components/controls/button';
 
 export const dynamic = 'force-dynamic';
 
@@ -155,7 +156,7 @@ export default async function Commercial({ params }: PageProps<'/organizations/[
         </TabsContent>
 
         <TabsContent value="overrides" className="mt-4">
-          <SectionHeading>Negotiated agreements</SectionHeading>
+          <div className="flex flex-wrap items-center justify-between gap-3"><SectionHeading>Negotiated agreements</SectionHeading>{basePlan && basePlanDefinition ? <div className="flex gap-2"><ButtonLink href={`${platformHref(goldId, 'package-economics')}?source=organization_agreement&id=${organizationId}`} tone="secondary" size="small">Simulate agreement</ButtonLink><RecordPlanAgreementSheet organizationId={organizationId} planId={basePlan.planId} planLabel={basePlanDefinition.label} currency={tenant.currency} /></div> : null}</div>
           {agreements.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No negotiated price. This organization pays each Plan&rsquo;s standard price.</p>
           ) : (
@@ -166,10 +167,11 @@ export default async function Commercial({ params }: PageProps<'/organizations/[
               columns={[
                 { key: 'plan', header: 'Plan', emphasis: 'primary', cell: (row) => plans.find((p) => p.id === row.planId)?.label ?? row.planId },
                 { key: 'amount', header: 'Agreed price', cell: (row) => formatMoney(row.amountMinor, row.currency) },
-                { key: 'effective', header: 'Effective from', cell: (row) => new Date(row.effectiveFrom).toLocaleDateString() },
+                { key: 'effective', header: 'Effective window', cell: (row) => `${new Date(row.effectiveFrom).toLocaleDateString()} – ${row.effectiveTo ? new Date(row.effectiveTo).toLocaleDateString() : 'Open-ended'}` },
               ]}
             />
           )}
+          {basePlan ? <div className="mt-4"><RecordQuotaOverrideSheet organizationId={organizationId} planId={basePlan.planId} quotas={quotas.map((quota) => ({ allowanceKey: quota.allowanceKey, label: quota.label, includedQuantity: quota.includedQuantity }))} /></div> : null}
 
           <SectionHeading className="mt-8">Legacy per-product terms</SectionHeading>
           <p className="mt-1 text-sm text-muted-foreground">

@@ -7,6 +7,10 @@ import {
   grantPlanModule,
   grantPlanProduct,
   recordPlanPrice,
+  recordPlanOverageRate,
+  recordPlanMarginPolicy,
+  recordPlanUtilizationAssumption,
+  setPlanAddon,
   removePlanQuota,
   revokePlanModule,
   revokePlanProduct,
@@ -14,6 +18,8 @@ import {
   setPlanQuota,
   updatePlan,
   type OveragePolicy,
+  type OverageBehavior,
+  type AllowanceType,
   type QuotaPeriod,
   type SaleStatus,
 } from '@/lib/domain/catalogue/plans';
@@ -100,6 +106,10 @@ export async function setPlanQuotaAction(_: PlanActionState, formData: FormData)
       period: String(formData.get('period') ?? 'month') as QuotaPeriod,
       hardLimit: hardLimitRaw === '' ? null : Number(hardLimitRaw),
       overagePolicy: String(formData.get('overagePolicy') ?? 'not_applicable') as OveragePolicy,
+      overageBehavior: String(formData.get('overageBehavior') ?? 'not_applicable') as OverageBehavior,
+      allowanceType: String(formData.get('allowanceType') ?? 'usage') as AllowanceType,
+      resetSemantics: String(formData.get('resetSemantics') ?? 'billing_period') as 'billing_period' | 'calendar_period' | 'none',
+      meterId: String(formData.get('meterId') ?? '') || null,
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message, updated: false };
@@ -134,4 +144,47 @@ export async function recordPlanPriceAction(_: PlanActionState, formData: FormDa
   }
   revalidatePlatform();
   return { error: null, updated: true };
+}
+
+export async function recordPlanOverageRateAction(_: PlanActionState, formData: FormData): Promise<PlanActionState> {
+  try {
+    await recordPlanOverageRate(await getDb(), {
+      planId: String(formData.get('planId') ?? ''),
+      meterId: String(formData.get('meterId') ?? ''),
+      currency: String(formData.get('currency') ?? '').toUpperCase(),
+      unitAmountMicros: Math.round(Number(formData.get('amount') ?? 0) * 100_000_000),
+      effectiveFrom: new Date(String(formData.get('effectiveFrom') ?? '')).toISOString(),
+      source: String(formData.get('source') ?? ''),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message, updated: false };
+    throw error;
+  }
+  revalidatePlatform();
+  return { error: null, updated: true };
+}
+
+export async function savePlanEconomicsSettingsAction(_: PlanActionState, formData: FormData): Promise<PlanActionState> {
+  try {
+    const db = await getDb();
+    const planId = String(formData.get('planId') ?? '');
+    const effectiveFrom = new Date(String(formData.get('effectiveFrom') ?? '')).toISOString();
+    const source = String(formData.get('source') ?? 'Staff planning assumption');
+    await recordPlanMarginPolicy(db, { planId, currency: String(formData.get('currency') ?? 'CAD'), targetMargin: Number(formData.get('targetMargin')) / 100, warningMargin: Number(formData.get('warningMargin')) / 100, hardFloorMargin: Number(formData.get('hardFloorMargin')) / 100, effectiveFrom, source });
+    for (const [key, value] of formData.entries()) {
+      if (!key.startsWith('utilization:') || String(value).trim() === '') continue;
+      const [, scenario, allowanceKey] = key.split(':');
+      await recordPlanUtilizationAssumption(db, { planId, scenario: scenario as 'expected' | 'heavy', allowanceKey, utilization: Number(value) / 100, effectiveFrom, source });
+    }
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message, updated: false };
+    throw error;
+  }
+  revalidatePlatform();
+  return { error: null, updated: true };
+}
+
+export async function setPlanAddonAction(formData: FormData): Promise<void> {
+  await setPlanAddon(await getDb(), { planId: String(formData.get('planId') ?? ''), addonPlanId: String(formData.get('addonPlanId') ?? ''), attached: formData.get('attached') === 'true' });
+  revalidatePlatform();
 }

@@ -32,6 +32,7 @@ export type PlanAgreement = {
   currency: string;
   amountMinor: number;
   effectiveFrom: string;
+  effectiveTo: string | null;
   recordedAt: string;
   note: string;
 };
@@ -193,7 +194,7 @@ export async function listOrganizationPlanAgreements(
 ): Promise<PlanAgreement[]> {
   let query = db
     .from('organization_plan_agreements')
-    .select('id, organization_id, plan_id, currency, amount_minor, effective_from, recorded_at, note')
+    .select('id, organization_id, plan_id, currency, amount_minor, effective_from, effective_to, recorded_at, note')
     .eq('organization_id', input.organizationId)
     .order('effective_from', { ascending: false });
   if (input.planId) query = query.eq('plan_id', input.planId);
@@ -206,6 +207,7 @@ export async function listOrganizationPlanAgreements(
     currency: row.currency,
     amountMinor: Number(row.amount_minor),
     effectiveFrom: row.effective_from,
+    effectiveTo: row.effective_to,
     recordedAt: row.recorded_at,
     note: row.note,
   }));
@@ -217,18 +219,20 @@ export type RecordPlanAgreementInput = {
   currency: string;
   amountMinor: number;
   effectiveFrom?: string;
+  effectiveTo?: string | null;
   note?: string;
 };
 
 export async function recordPlanAgreement(db: Db, input: RecordPlanAgreementInput): Promise<string> {
-  const { data, error } = await db.rpc('record_plan_agreement', {
+  const { data, error } = await db.rpc('record_organization_plan_agreement', ({
     p_organization_id: input.organizationId,
     p_plan_id: input.planId,
     p_currency: input.currency,
     p_amount_minor: input.amountMinor,
     p_effective_from: input.effectiveFrom ?? new Date().toISOString(),
+    p_effective_to: input.effectiveTo ?? null,
     p_note: input.note ?? '',
-  });
+  }) as never);
   if (error) staffOnly(error, 'organization_plans.record_agreement_failed');
   return data as string;
 }

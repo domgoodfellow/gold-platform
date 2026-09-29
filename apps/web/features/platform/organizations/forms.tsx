@@ -7,6 +7,8 @@ import {
   provisionTwilioAction,
   recordCommercialTermAction,
   recordPlanAssignmentAction,
+  recordPlanAgreementAction,
+  recordPlanQuotaOverrideAction,
   registerPhoneNumberAction,
   setResourceStatusAction,
 } from '@/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/actions';
@@ -20,6 +22,8 @@ import {
 } from '@/components/containers/page-drawer';
 import {
   PLAN_ASSIGNMENT_INITIAL,
+  PLAN_AGREEMENT_INITIAL,
+  QUOTA_OVERRIDE_INITIAL,
   PROVISION_TWILIO_INITIAL,
   REGISTER_RESOURCE_INITIAL,
   SET_RESOURCE_STATUS_INITIAL,
@@ -91,4 +95,14 @@ export function AssignPlanSheet({ organizationId, plans }: { organizationId: str
 export function RecordCommercialTermForm({ organizationId, products }: { organizationId: string; products: Option[] }) {
   const [state, action, pending] = useActionState(recordCommercialTermAction, TERM_INITIAL);
   return <form action={action} className="flex max-w-sm flex-col gap-2"><input type="hidden" name="organizationId" value={organizationId} /><SelectInput name="productKey" required aria-label="Product"><option value="">What was sold…</option>{products.map((product) => <option key={product.value} value={product.value}>{product.label}</option>)}</SelectInput><div className="grid grid-cols-2 gap-2"><TextInput name="periodStart" type="date" required aria-label="Period start" /><TextInput name="periodEnd" type="date" required aria-label="Period end" /></div><div className="flex gap-2"><TextInput name="priceMinor" type="number" min={0} step={1} required placeholder="Minor units" /><TextInput name="currency" maxLength={3} placeholder="USD" className="w-24" /></div><ErrorText>{state.error}</ErrorText>{state.recorded ? <p className="text-sm text-muted-foreground">Recorded.</p> : null}<Button type="submit" size="small" className="w-fit" disabled={pending}>{pending ? 'Recording…' : 'Record term'}</Button></form>;
+}
+
+export function RecordPlanAgreementSheet({ organizationId, planId, planLabel, currency }: { organizationId: string; planId: string; planLabel: string; currency: string }) {
+  const [state, action, pending] = useActionState(recordPlanAgreementAction, PLAN_AGREEMENT_INITIAL);
+  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" size="small">Edit agreement</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Record negotiated price</PageDrawerTitle><PageDrawerDescription>Appends an effective-dated agreement for {planLabel}; the Plan default remains unchanged.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-3 px-4"><input type="hidden" name="organizationId" value={organizationId} /><input type="hidden" name="planId" value={planId} /><div className="grid grid-cols-[1fr_6rem] gap-3"><TextInput name="amount" type="number" min="0" step="0.01" required aria-label="Agreement price" placeholder="699.00" /><TextInput name="currency" defaultValue={currency} minLength={3} maxLength={3} required aria-label="Currency" /></div><div className="grid grid-cols-2 gap-3"><TextInput name="effectiveFrom" type="date" required aria-label="Effective from" /><TextInput name="effectiveTo" type="date" aria-label="Optional end date" /></div><TextInput name="note" placeholder="Commercial provenance" /><ErrorText>{state.error}</ErrorText>{state.recorded ? <Hint>Agreement recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Recording…' : 'Record agreement'}</Button></form></PageDrawerContent></PageDrawer>;
+}
+
+export function RecordQuotaOverrideSheet({ organizationId, planId, quotas }: { organizationId: string; planId: string; quotas: Array<{ allowanceKey: string; label: string; includedQuantity: number }> }) {
+  const [state, action, pending] = useActionState(recordPlanQuotaOverrideAction, QUOTA_OVERRIDE_INITIAL);
+  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" tone="secondary" size="small">Add quota override</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Record quota override</PageDrawerTitle><PageDrawerDescription>Appends an organization-specific value. The Plan default remains visible.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-3 px-4"><input type="hidden" name="organizationId" value={organizationId} /><input type="hidden" name="planId" value={planId} /><SelectInput name="allowanceKey" required aria-label="Allowance"><option value="">Choose allowance…</option>{quotas.map((quota) => <option key={quota.allowanceKey} value={quota.allowanceKey}>{quota.label} · Plan default {quota.includedQuantity.toLocaleString()}</option>)}</SelectInput><TextInput name="includedQuantity" type="number" min="0" required aria-label="Included quantity" /><TextInput name="hardLimit" type="number" min="0" aria-label="Hard limit" placeholder="No hard limit" /><TextInput name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0,10)} aria-label="Effective from" /><TextInput name="note" placeholder="Commercial provenance" /><ErrorText>{state.error}</ErrorText>{state.recorded ? <Hint>Override recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Recording…' : 'Record override'}</Button></form></PageDrawerContent></PageDrawer>;
 }

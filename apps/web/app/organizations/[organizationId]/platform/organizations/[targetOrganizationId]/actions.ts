@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { recordPlanAgreement, recordPlanAssignment, recordPlanQuotaOverride } from '@/lib/domain/catalogue/organization-plans';
 import { bootstrapGoldInternalWorkspace } from '@/lib/domain/tenancy/gold-internal';
 import { revalidatePlatform } from '@/lib/route/platform';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
@@ -10,7 +10,7 @@ import { recordProviderResource, setProviderResourceStatus } from '@/lib/domain/
 import { provisionTelephonySubaccount } from '@/lib/domain/providers/twilio-provisioning';
 import { endSupportSession, startSupportSession } from '@/lib/domain/platform/support';
 import { TELEPHONY_RESOURCE_TYPES, telephonyProviderKey } from '@/lib/adapters/telephony';
-import type { ProvisionTwilioState, RegisterResourceState, SetResourceStatusState, SupportSessionState, RecordTermState, RecordPlanAssignmentState } from './action-states';
+import type { ProvisionTwilioState, RegisterResourceState, SetResourceStatusState, SupportSessionState, RecordTermState, RecordPlanAssignmentState, RecordPlanAgreementState, RecordQuotaOverrideState } from './action-states';
 
 
 async function attempt<T extends { error: string | null }>(operation: () => Promise<void>, success: Omit<T, 'error'>): Promise<T> { try { await operation(); revalidatePlatform(); return { ...success, error: null } as T; } catch (error) { return { ...success, error: error instanceof Error ? error.message : 'Unable to record change.' } as T; } }
@@ -21,6 +21,8 @@ export async function startSupportSessionAction(_: SupportSessionState, f: FormD
 export async function endSupportSessionAction(_: SupportSessionState, f: FormData) { return attempt(async () => { const db = await getDb(); await endSupportSession(db, { id: String(f.get('sessionId') ?? '') }); }, {}); }
 export async function recordCommercialTermAction(_: RecordTermState, f: FormData): Promise<RecordTermState> { const id = String(f.get('organizationId') ?? ''); return attempt<RecordTermState>(async () => { const db = await getDb(); await recordCommercialTerm(db, { organizationId: id, productKey: String(f.get('productKey') ?? ''), periodStart: String(f.get('periodStart') ?? ''), periodEnd: String(f.get('periodEnd') ?? ''), priceMinor: Number(f.get('priceMinor') ?? 0), currency: String(f.get('currency') ?? '') || undefined }); }, { recorded: true }); }
 export async function recordPlanAssignmentAction(_: RecordPlanAssignmentState, f: FormData): Promise<RecordPlanAssignmentState> { const id = String(f.get('organizationId') ?? ''); return attempt<RecordPlanAssignmentState>(async () => { const db = await getDb(); await recordPlanAssignment(db, { organizationId: id, planId: String(f.get('planId') ?? ''), periodStart: String(f.get('periodStart') ?? ''), periodEnd: String(f.get('periodEnd') ?? ''), note: String(f.get('note') ?? '') }); }, { recorded: true }); }
+export async function recordPlanAgreementAction(_: RecordPlanAgreementState, f: FormData): Promise<RecordPlanAgreementState> { const id = String(f.get('organizationId') ?? ''); const effectiveTo = String(f.get('effectiveTo') ?? '').trim(); return attempt<RecordPlanAgreementState>(async () => { const db = await getDb(); await recordPlanAgreement(db, { organizationId: id, planId: String(f.get('planId') ?? ''), currency: String(f.get('currency') ?? ''), amountMinor: Math.round(Number(f.get('amount') ?? 0) * 100), effectiveFrom: new Date(String(f.get('effectiveFrom') ?? '')).toISOString(), effectiveTo: effectiveTo ? new Date(effectiveTo).toISOString() : null, note: String(f.get('note') ?? '') }); }, { recorded: true }); }
+export async function recordPlanQuotaOverrideAction(_: RecordQuotaOverrideState, f: FormData): Promise<RecordQuotaOverrideState> { const id = String(f.get('organizationId') ?? ''); const hard = String(f.get('hardLimit') ?? '').trim(); return attempt<RecordQuotaOverrideState>(async () => { const db = await getDb(); await recordPlanQuotaOverride(db, { organizationId: id, planId: String(f.get('planId') ?? ''), allowanceKey: String(f.get('allowanceKey') ?? ''), includedQuantity: Number(f.get('includedQuantity') ?? 0), hardLimit: hard ? Number(hard) : null, effectiveFrom: new Date(String(f.get('effectiveFrom') ?? '')).toISOString(), note: String(f.get('note') ?? '') }); }, { recorded: true }); }
 
 /** Explicit operator bootstrap: membership + no current plan + no existing GOLD workspace. */
 export async function initializeGoldWorkspaceAction(organizationId: string) {

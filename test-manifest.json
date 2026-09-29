@@ -296,6 +296,20 @@
         "platform"
       ]
     },
+    "apps/web/e2e/finance-economics.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "commercial",
+        "platform"
+      ]
+    },
+    "apps/web/e2e/package-economics.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "commercial",
+        "platform"
+      ]
+    },
     "apps/web/e2e/crm-voice.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [
@@ -921,6 +935,14 @@
       "concerns": [
         "commercial",
         "catalogue"
+      ]
+    },
+    "apps/web/tests/integration/database/package-economics.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "catalogue",
+        "security"
       ]
     },
     "apps/web/tests/integration/database/public-plan-catalog.test.ts": {
