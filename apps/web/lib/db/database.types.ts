@@ -2988,6 +2988,7 @@ export type Database = {
           intent: string
           organization_id: string
           requested_transport: string
+          segment_count: number | null
           sent_at: string | null
           status: string
           transport: string | null
@@ -3006,6 +3007,7 @@ export type Database = {
           intent?: string
           organization_id: string
           requested_transport?: string
+          segment_count?: number | null
           sent_at?: string | null
           status?: string
           transport?: string | null
@@ -3024,6 +3026,7 @@ export type Database = {
           intent?: string
           organization_id?: string
           requested_transport?: string
+          segment_count?: number | null
           sent_at?: string | null
           status?: string
           transport?: string | null
@@ -4811,6 +4814,42 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_fx_rates: {
+        Row: {
+          base_currency: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          imported_at: string
+          quote_currency: string
+          rate: number
+          recorded_by: string | null
+          source: string
+        }
+        Insert: {
+          base_currency: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          imported_at?: string
+          quote_currency: string
+          rate: number
+          recorded_by?: string | null
+          source: string
+        }
+        Update: {
+          base_currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          imported_at?: string
+          quote_currency?: string
+          rate?: number
+          recorded_by?: string | null
+          source?: string
+        }
+        Relationships: []
+      }
       platform_meters: {
         Row: {
           created_at: string
@@ -5331,17 +5370,48 @@ export type Database = {
           },
         ]
       }
+      platform_provider_cost_meters: {
+        Row: {
+          created_at: string
+          key: string
+          label: string
+          service: string
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          label: string
+          service: string
+          unit: string
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          label?: string
+          service?: string
+          unit?: string
+        }
+        Relationships: []
+      }
       platform_provider_rates: {
         Row: {
           approval_state: string
           captured_at: string
+          cost_meter_key: string
           currency: string
+          direction: string | null
           effective_from: string
+          effective_to: string | null
           id: string
+          imported_at: string
           meter_id: string
           note: string
+          provider_account_id: string | null
           provider_key: string
           recorded_by: string | null
+          region: string | null
+          resource_type: string | null
           source: string
           source_url: string | null
           unit_amount_micros: number
@@ -5349,13 +5419,20 @@ export type Database = {
         Insert: {
           approval_state?: string
           captured_at?: string
+          cost_meter_key: string
           currency: string
+          direction?: string | null
           effective_from?: string
+          effective_to?: string | null
           id?: string
+          imported_at?: string
           meter_id: string
           note?: string
+          provider_account_id?: string | null
           provider_key: string
           recorded_by?: string | null
+          region?: string | null
+          resource_type?: string | null
           source: string
           source_url?: string | null
           unit_amount_micros: number
@@ -5363,23 +5440,44 @@ export type Database = {
         Update: {
           approval_state?: string
           captured_at?: string
+          cost_meter_key?: string
           currency?: string
+          direction?: string | null
           effective_from?: string
+          effective_to?: string | null
           id?: string
+          imported_at?: string
           meter_id?: string
           note?: string
+          provider_account_id?: string | null
           provider_key?: string
           recorded_by?: string | null
+          region?: string | null
+          resource_type?: string | null
           source?: string
           source_url?: string | null
           unit_amount_micros?: number
         }
         Relationships: [
           {
+            foreignKeyName: "platform_provider_rates_cost_meter_key_fkey"
+            columns: ["cost_meter_key"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_cost_meters"
+            referencedColumns: ["key"]
+          },
+          {
             foreignKeyName: "platform_provider_rates_meter_id_fkey"
             columns: ["meter_id"]
             isOneToOne: false
             referencedRelation: "platform_meters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_provider_rates_provider_account_id_fkey"
+            columns: ["provider_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_accounts"
             referencedColumns: ["id"]
           },
           {
@@ -6210,6 +6308,220 @@ export type Database = {
           },
         ]
       }
+      usage_cost_component_adjustments: {
+        Row: {
+          cost_component_id: string
+          id: string
+          native_cost_micros: number
+          native_currency: string
+          note: string
+          organization_id: string
+          provider_reference: string
+          recorded_at: string
+          recorded_by: string | null
+          source: string
+          state: string
+        }
+        Insert: {
+          cost_component_id: string
+          id?: string
+          native_cost_micros: number
+          native_currency: string
+          note?: string
+          organization_id: string
+          provider_reference?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          source: string
+          state: string
+        }
+        Update: {
+          cost_component_id?: string
+          id?: string
+          native_cost_micros?: number
+          native_currency?: string
+          note?: string
+          organization_id?: string
+          provider_reference?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          source?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_cost_component_adjustme_organization_id_cost_compone_fkey"
+            columns: ["organization_id", "cost_component_id"]
+            isOneToOne: false
+            referencedRelation: "usage_cost_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "usage_cost_component_adjustments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_cost_component_adjustments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_cost_components: {
+        Row: {
+          component_key: string
+          cost_meter_key: string
+          cost_state: string
+          created_at: string
+          fx_rate: number | null
+          fx_rate_id: string | null
+          id: string
+          native_cost_micros: number | null
+          native_currency: string | null
+          occurred_at: string
+          organization_id: string
+          provider_account_id: string | null
+          provider_binding_id: string | null
+          provider_key: string
+          provider_rate_id: string | null
+          provider_resource_id: string | null
+          quantity: number
+          reporting_cost_micros: number | null
+          reporting_currency: string | null
+          unit: string
+          unknown_reason: string | null
+          usage_event_id: string
+        }
+        Insert: {
+          component_key: string
+          cost_meter_key: string
+          cost_state: string
+          created_at?: string
+          fx_rate?: number | null
+          fx_rate_id?: string | null
+          id?: string
+          native_cost_micros?: number | null
+          native_currency?: string | null
+          occurred_at: string
+          organization_id: string
+          provider_account_id?: string | null
+          provider_binding_id?: string | null
+          provider_key: string
+          provider_rate_id?: string | null
+          provider_resource_id?: string | null
+          quantity: number
+          reporting_cost_micros?: number | null
+          reporting_currency?: string | null
+          unit: string
+          unknown_reason?: string | null
+          usage_event_id: string
+        }
+        Update: {
+          component_key?: string
+          cost_meter_key?: string
+          cost_state?: string
+          created_at?: string
+          fx_rate?: number | null
+          fx_rate_id?: string | null
+          id?: string
+          native_cost_micros?: number | null
+          native_currency?: string | null
+          occurred_at?: string
+          organization_id?: string
+          provider_account_id?: string | null
+          provider_binding_id?: string | null
+          provider_key?: string
+          provider_rate_id?: string | null
+          provider_resource_id?: string | null
+          quantity?: number
+          reporting_cost_micros?: number | null
+          reporting_currency?: string | null
+          unit?: string
+          unknown_reason?: string | null
+          usage_event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_cost_components_cost_meter_key_fkey"
+            columns: ["cost_meter_key"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_cost_meters"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "usage_cost_components_fx_rate_id_fkey"
+            columns: ["fx_rate_id"]
+            isOneToOne: false
+            referencedRelation: "platform_fx_rates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_cost_components_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_cost_components_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_cost_components_organization_id_provider_binding_id__fkey"
+            columns: ["organization_id", "provider_binding_id", "provider_key"]
+            isOneToOne: false
+            referencedRelation: "organization_provider_bindings"
+            referencedColumns: ["organization_id", "id", "provider_key"]
+          },
+          {
+            foreignKeyName: "usage_cost_components_organization_id_provider_binding_id_fkey1"
+            columns: [
+              "organization_id",
+              "provider_binding_id",
+              "provider_resource_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "organization_provider_resources"
+            referencedColumns: ["organization_id", "binding_id", "id"]
+          },
+          {
+            foreignKeyName: "usage_cost_components_organization_id_usage_event_id_fkey"
+            columns: ["organization_id", "usage_event_id"]
+            isOneToOne: false
+            referencedRelation: "usage_events"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "usage_cost_components_provider_account_id_fkey"
+            columns: ["provider_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_cost_components_provider_key_fkey"
+            columns: ["provider_key"]
+            isOneToOne: false
+            referencedRelation: "platform_providers"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "usage_cost_components_provider_rate_id_fkey"
+            columns: ["provider_rate_id"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_rates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_cost_reconciliations: {
         Row: {
           id: string
@@ -6273,6 +6585,7 @@ export type Database = {
       }
       usage_events: {
         Row: {
+          billing_period: string | null
           created_at: string
           customer_charge_micros: number | null
           customer_currency: string | null
@@ -6294,8 +6607,11 @@ export type Database = {
           quantity: number
           reference: string | null
           retail_rate_id: string | null
+          source_domain: string
+          source_record_id: string | null
         }
         Insert: {
+          billing_period?: string | null
           created_at?: string
           customer_charge_micros?: number | null
           customer_currency?: string | null
@@ -6317,8 +6633,11 @@ export type Database = {
           quantity: number
           reference?: string | null
           retail_rate_id?: string | null
+          source_domain?: string
+          source_record_id?: string | null
         }
         Update: {
+          billing_period?: string | null
           created_at?: string
           customer_charge_micros?: number | null
           customer_currency?: string | null
@@ -6340,6 +6659,8 @@ export type Database = {
           quantity?: number
           reference?: string | null
           retail_rate_id?: string | null
+          source_domain?: string
+          source_record_id?: string | null
         }
         Relationships: [
           {
@@ -7857,6 +8178,51 @@ export type Database = {
         }[]
       }
       platform_public_domain: { Args: never; Returns: string }
+      platform_usage_cost_components: {
+        Args: { p_usage_event_id: string }
+        Returns: {
+          component_key: string
+          cost_meter_key: string
+          cost_state: string
+          effective_state: string
+          id: string
+          native_cost_micros: number
+          native_currency: string
+          provider_key: string
+          provider_rate_id: string
+          quantity: number
+          reporting_cost_micros: number
+          reporting_currency: string
+          unit: string
+          unknown_reason: string
+        }[]
+      }
+      platform_usage_economics: {
+        Args: {
+          p_cost_state?: string
+          p_from?: string
+          p_meter_id?: string
+          p_organization_id?: string
+          p_provider_key?: string
+          p_to?: string
+        }
+        Returns: {
+          component_count: number
+          cost_state: string
+          customer_charge_micros: number
+          customer_currency: string
+          known_cost_micros: number
+          meter_id: string
+          occurred_at: string
+          organization_id: string
+          organization_name: string
+          quantity: number
+          reporting_currency: string
+          source_domain: string
+          source_record_id: string
+          usage_event_id: string
+        }[]
+      }
       provision_organization: {
         Args: {
           p_capabilities: string[]
@@ -8033,9 +8399,8 @@ export type Database = {
         Args: {
           p_body: string
           p_external_id: string
-          p_external_number: string
-          p_organization_id: string
-          p_phone_number_id: string
+          p_from_number: string
+          p_to_number: string
         }
         Returns: string
       }
@@ -8095,7 +8460,7 @@ export type Database = {
         Args: {
           p_external_number: string
           p_opted_out: boolean
-          p_organization_id: string
+          p_to_number: string
         }
         Returns: undefined
       }
@@ -8112,6 +8477,10 @@ export type Database = {
           p_provider_reference: string
           p_received_at: string
         }
+        Returns: string
+      }
+      record_phone_number_month: {
+        Args: { p_billing_period: string; p_phone_number_id: string }
         Returns: string
       }
       record_plan_agreement: {
@@ -8220,6 +8589,24 @@ export type Database = {
           p_state: string
         }
         Returns: undefined
+      }
+      record_provider_cost_rate: {
+        Args: {
+          p_commercial_meter_id: string
+          p_cost_meter_key: string
+          p_currency: string
+          p_direction?: string
+          p_effective_from: string
+          p_effective_to?: string
+          p_note?: string
+          p_provider_account_id?: string
+          p_provider_key: string
+          p_region?: string
+          p_resource_type?: string
+          p_source: string
+          p_unit_amount_micros: number
+        }
+        Returns: string
       }
       record_provider_payment: {
         Args: {

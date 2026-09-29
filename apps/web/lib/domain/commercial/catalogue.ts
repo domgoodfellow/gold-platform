@@ -79,6 +79,22 @@ export type Rate = {
   note: string;
 };
 
+export type ProviderCostMeter = {
+  key: string;
+  service: string;
+  unit: string;
+  label: string;
+};
+
+export type ProviderCostRate = Rate & {
+  costMeterKey: string;
+  region: string | null;
+  direction: string | null;
+  resourceType: string | null;
+  effectiveTo: string | null;
+  importedAt: string;
+};
+
 /** Micro-minor-units to minor units, rounded once, at the point a number is finally shown. */
 export function microsToMinor(micros: number): number {
   return Math.round(micros / 1_000_000);
@@ -106,6 +122,78 @@ export async function listProviders(db: Db): Promise<Provider[]> {
   if (error) throw new DomainError(error.message, 'commercial.providers_failed');
 
   return data ?? [];
+}
+
+export async function listProviderCostMeters(db: Db): Promise<ProviderCostMeter[]> {
+  const { data, error } = await db
+    .from('platform_provider_cost_meters')
+    .select('key, service, unit, label')
+    .order('service')
+    .order('label');
+  if (error) throw new DomainError(error.message, 'commercial.provider_cost_meters_failed');
+  return data ?? [];
+}
+
+export async function listProviderCostRates(
+  db: Db,
+  input: { providerKey?: string; costMeterKey?: string; region?: string; currentOnly?: boolean } = {},
+): Promise<ProviderCostRate[]> {
+  let query = db
+    .from('platform_provider_rates')
+    .select('id, provider_key, meter_id, cost_meter_key, currency, unit_amount_micros, effective_from, effective_to, approval_state, source, source_url, captured_at, imported_at, note, region, direction, resource_type')
+    .order('cost_meter_key')
+    .order('effective_from', { ascending: false });
+  if (input.providerKey) query = query.eq('provider_key', input.providerKey);
+  if (input.costMeterKey) query = query.eq('cost_meter_key', input.costMeterKey);
+  if (input.region) query = query.eq('region', input.region);
+  if (input.currentOnly) query = query.lte('effective_from', new Date().toISOString()).or(`effective_to.is.null,effective_to.gt.${new Date().toISOString()}`);
+  const { data, error } = await query;
+  if (error) throw new DomainError(error.message, 'commercial.provider_cost_rates_failed');
+  return (data ?? []).map((row) => ({
+    ...toRate(row),
+    costMeterKey: row.cost_meter_key,
+    region: row.region,
+    direction: row.direction,
+    resourceType: row.resource_type,
+    effectiveTo: row.effective_to,
+    importedAt: row.imported_at,
+  }));
+}
+
+export async function recordProviderCostRate(
+  db: Db,
+  input: {
+    providerKey: string;
+    commercialMeterId: string;
+    costMeterKey: string;
+    currency: string;
+    unitAmountMicros: number;
+    effectiveFrom: string;
+    source: string;
+    region?: string;
+    direction?: 'inbound' | 'outbound';
+    resourceType?: string;
+    effectiveTo?: string;
+    note?: string;
+  },
+): Promise<string> {
+  const { data, error } = await db.rpc('record_provider_cost_rate', {
+    p_provider_key: input.providerKey,
+    p_commercial_meter_id: input.commercialMeterId,
+    p_cost_meter_key: input.costMeterKey,
+    p_currency: input.currency,
+    p_unit_amount_micros: input.unitAmountMicros,
+    p_effective_from: input.effectiveFrom,
+    p_source: input.source,
+    p_region: input.region,
+    p_direction: input.direction,
+    p_resource_type: input.resourceType,
+    p_effective_to: input.effectiveTo,
+    p_provider_account_id: undefined,
+    p_note: input.note ?? '',
+  });
+  if (error) throw new DomainError(error.code === '42501' ? 'Only platform staff may record vendor rates.' : error.message, 'commercial.record_provider_cost_rate_failed');
+  return data as string;
 }
 
 export async function listProducts(db: Db): Promise<Product[]> {

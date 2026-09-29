@@ -40,6 +40,8 @@ export const PLATFORM_DESTINATIONS: readonly PlatformDestination[] = [
   { key: 'meters', label: 'Meters', path: 'catalog/meters', requires: 'platform.catalogue', under: 'catalog' },
   { key: 'connectors', label: 'Connectors', path: 'integrations', requires: 'platform.catalogue', under: 'catalog' },
   { key: 'pricing', label: 'Pricing', path: 'pricing', requires: 'platform.commercial', under: 'commercial' },
+  { key: 'usage-economics', label: 'Usage & economics', path: 'usage', requires: 'platform.commercial', under: 'commercial' },
+  { key: 'vendor-rates', label: 'Vendor rates', path: 'vendor-rates', requires: 'platform.commercial', under: 'commercial' },
   { key: 'billing', label: 'Billing', path: 'billing', requires: 'platform.commercial', under: 'commercial' },
   { key: 'providers', label: 'Providers', path: 'providers', requires: 'platform.providers', under: 'infrastructure' },
   { key: 'ai-runtime', label: 'AI Runtime', path: 'ai-runtime', requires: 'platform.providers', under: 'infrastructure' },

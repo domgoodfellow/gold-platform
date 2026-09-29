@@ -2417,3 +2417,40 @@ actually run and label them as legacy/current rather than pretending the target 
 `goldApiAnsweringProvider`, `gold_internal`, `bootstrap_gold_internal_workspace` and
 `gold_public_organization_id` remain load-bearing until a bounded source or forward-database
 migration changes their callers. Blind repository-wide replacement is prohibited.
+
+### D70 — One commercial reading may carry many independently reconciled provider costs
+
+**Decision.** `usage_events` remains the one commercial usage ledger. A row says what an
+organization consumed; `usage_cost_components` says every vendor-billed ingredient used to fulfil
+that reading. Provider cost meters live in `platform_provider_cost_meters`, separate from the
+tenant-facing `platform_meters`, so one `voice_minutes` reading can carry PSTN, browser-client,
+conference and recording quantities without selling four telecom products. A component names its
+provider, precise cost meter, quantity, rate version, native amount and currency, and optional
+reporting conversion. Missing rate or FX produces `unknown` with a reason and a null amount, never
+zero.
+
+**History and reconciliation.** Provider rates remain append-only and now include cost meter,
+region, direction, resource type, optional provider-account scope and an effective window.
+`usage_cost_component_adjustments` appends a reconciled or adjusted amount beside the estimate;
+neither the commercial quantity nor the first estimate is replaced. `platform_fx_rates` is a small
+effective-dated catalogue whose selected row and numeric rate are both snapshotted onto the cost
+component. Same-currency reporting needs no invented FX row; different currencies with no matching
+row remain unconverted.
+
+**Operational ownership.** `app.charge_for_call` and `app.charge_for_message` derive quantities from
+the canonical call, participant and message records, then ask Finance's cost-component writer to
+resolve money. `record_phone_number_month` emits a recurring `phone_numbers` reading keyed by
+number and month, so a retry returns the existing event. No historical number backfill runs:
+earlier phone-number rows do not retain a trustworthy active interval from which one could infer
+every past billable month.
+
+**Visibility.** Cost components, adjustments, provider cost meters, provider rates and FX rates
+are staff-only under `app.is_platform_staff()`. Tenant reads continue to use the commercial
+columns of `usage_events`; they cannot reach a wholesale row by guessing its URL or id. Commercial
+staff pages use the guarded `platform_usage_economics` and `platform_usage_cost_components`
+readers.
+
+**Holds.** `usage-economics.test.ts` proves multiple components and providers on one event,
+component idempotency, historical rate selection, unknown-not-zero, number-month idempotency and
+tenant refusal. The Communications and usage-boundary suites continue to prove one usage ledger
+and server-derived call/message quantities.

@@ -139,16 +139,106 @@ beforeAll(async () => {
 afterAll(async () => {
   try {
     const orgs = createdOrganizations;
+    await pg.query(`delete from public.usage_cost_component_adjustments where organization_id = any($1)`, [orgs]);
+    await pg.query(`delete from public.usage_cost_components where organization_id = any($1)`, [orgs]);
     await pg.query('delete from public.usage_events where organization_id = any($1)', [orgs]);
     await pg.query('delete from public.phone_numbers where organization_id = any($1)', [orgs]);
     await pg.query('delete from public.organization_provider_resources where organization_id = any($1)', [orgs]);
     await pg.query('delete from public.organization_provider_bindings where organization_id = any($1)', [orgs]);
     await pg.query('delete from public.platform_provider_accounts where id = $1', [accountId]);
     await pg.query(`delete from public.platform_retail_rates where source = 'usage-economics.test.ts'`);
-    await pg.query(`delete from public.platform_provider_rates where source = 'usage-economics.test.ts'`);
+    await pg.query(
+      `delete from public.platform_provider_rates
+        where source = 'usage-economics.test.ts'
+           or source like 'components-%'
+           or source like 'history-%'`,
+    );
   } finally {
     await pg.end();
   }
+});
+
+describe('provider cost components', () => {
+  it('records several independently-rated components against one commercial event idempotently', async () => {
+    const source = `components-${randomUUID()}`;
+    for (const [costMeter, amount] of [
+      ['telephony.pstn.outbound.minute', 1_400_000],
+      ['telephony.client.minute', 400_000],
+      ['telephony.conference.participant_minute', 250_000],
+    ] as const) {
+      await pg.query(
+        `insert into public.platform_provider_rates
+           (provider_key, meter_id, cost_meter_key, currency, unit_amount_micros,
+            approval_state, effective_from, source)
+         values ('twilio', 'voice_minutes', $1, 'USD', $2, 'approved', now() - interval '1 day', $3)`,
+        [costMeter, amount, source],
+      );
+    }
+    const event = (await pg.query(
+      `select app.record_usage($1, 'voice_minutes', 2, 'twilio', now(), null, $2, $3, $4, 'multi') as id`,
+      [tenant.organizationId, bindingId, resourceId, source],
+    )).rows[0].id as string;
+    await pg.query(`select app.identify_usage_source($1, 'communications.call', $2)`, [event, source]);
+    await pg.query(`select app.record_usage_cost_component($1, 'pstn', 'twilio', 'telephony.pstn.outbound.minute', 2, 'minute', $2, $3, 'CA', 'outbound')`, [event, bindingId, resourceId]);
+    await pg.query(`select app.record_usage_cost_component($1, 'client', 'twilio', 'telephony.client.minute', 2, 'minute', $2, $3)`, [event, bindingId, resourceId]);
+    await pg.query(`select app.record_usage_cost_component($1, 'conference', 'twilio', 'telephony.conference.participant_minute', 4, 'participant_minute', $2, $3)`, [event, bindingId, resourceId]);
+    await pg.query(`select app.record_usage_cost_component($1, 'pstn', 'twilio', 'telephony.pstn.outbound.minute', 2, 'minute', $2, $3, 'CA', 'outbound')`, [event, bindingId, resourceId]);
+    const { rows } = await pg.query(`select component_key, cost_state, native_currency from public.usage_cost_components where usage_event_id = $1 order by component_key`, [event]);
+    expect(rows).toHaveLength(3);
+    expect(rows.map((row) => row.component_key)).toEqual(['client', 'conference', 'pstn']);
+    expect(rows.every((row) => row.cost_state === 'estimated' && row.native_currency === 'USD')).toBe(true);
+  });
+
+  it('keeps unknown distinct from zero when no rate or FX matches', async () => {
+    const reference = `unknown-${randomUUID()}`;
+    const event = (await pg.query(
+      `select app.record_usage($1, 'sms_segment', 1, 'twilio', now(), null, $2, $3, $4, '') as id`,
+      [tenant.organizationId, bindingId, resourceId, reference],
+    )).rows[0].id as string;
+    await pg.query(`select app.record_usage_cost_component($1, 'carrier', 'twilio', 'messaging.carrier_fee', 1, 'message', $2, $3)`, [event, bindingId, resourceId]);
+    const { rows } = await pg.query(`select cost_state, native_cost_micros, unknown_reason from public.usage_cost_components where usage_event_id = $1`, [event]);
+    expect(rows[0]).toMatchObject({ cost_state: 'unknown', native_cost_micros: null });
+    expect(rows[0].unknown_reason).toContain('No current provider rate');
+  });
+
+  it('retains the historical rate version and supports another provider on the same event', async () => {
+    const source = `history-${randomUUID()}`;
+    const first = (await pg.query(
+      `insert into public.platform_provider_rates
+         (provider_key, meter_id, cost_meter_key, currency, unit_amount_micros, approval_state, effective_from, source)
+       values ('twilio', 'voice_minutes', 'telephony.client.minute', 'USD', 1000000, 'approved', now() - interval '2 days', $1)
+       returning id`, [source])).rows[0].id;
+    await pg.query(
+      `insert into public.platform_provider_rates
+         (provider_key, meter_id, cost_meter_key, currency, unit_amount_micros, approval_state, effective_from, source)
+       values ('twilio', 'voice_minutes', 'telephony.client.minute', 'USD', 2000000, 'approved', now(), $1)`, [source]);
+    const event = (await pg.query(
+      `select app.record_usage($1, 'voice_minutes', 1, 'twilio', now() - interval '36 hours', null, $2, $3, $4, '') as id`,
+      [tenant.organizationId, bindingId, resourceId, source],
+    )).rows[0].id as string;
+    await pg.query(`select app.record_usage_cost_component($1, 'client', 'twilio', 'telephony.client.minute', 1, 'minute', $2, $3)`, [event, bindingId, resourceId]);
+    await pg.query(`select app.record_usage_cost_component($1, 'stt', 'deepgram', 'messaging.carrier_fee', 1, 'message')`, [event]);
+    const { rows } = await pg.query(`select provider_key, provider_rate_id, cost_state from public.usage_cost_components where usage_event_id = $1 order by provider_key`, [event]);
+    expect(rows.find((row) => row.provider_key === 'twilio')?.provider_rate_id).toBe(first);
+    expect(rows.find((row) => row.provider_key === 'deepgram')?.cost_state).toBe('unknown');
+  });
+
+  it('records one active number-month once when a monthly job retries', async () => {
+    const number = (await pg.query(`select id from public.phone_numbers where organization_id = $1 and e164 = $2`, [tenant.organizationId, NUMBER])).rows[0].id;
+    const month = new Date().toISOString().slice(0, 7) + '-01';
+    const first = await staff.rpc('record_phone_number_month', { p_phone_number_id: number, p_billing_period: month });
+    const second = await staff.rpc('record_phone_number_month', { p_phone_number_id: number, p_billing_period: month });
+    expect(first.error).toBeNull();
+    expect(second.error).toBeNull();
+    expect(second.data).toBe(first.data);
+    const { rows } = await pg.query(`select count(*)::int as count from public.usage_events where organization_id = $1 and meter_id = 'phone_numbers' and billing_period = $2`, [tenant.organizationId, month]);
+    expect(rows[0].count).toBe(1);
+  });
+
+  it('does not expose wholesale components to an ordinary tenant', async () => {
+    const result = await tenant.db.from('usage_cost_components').select('id').limit(1);
+    expect(result.data ?? []).toEqual([]);
+  });
 });
 
 describe('retail rate resolution', () => {

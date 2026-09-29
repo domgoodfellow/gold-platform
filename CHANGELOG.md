@@ -5,6 +5,17 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Communications usage reaches auditable vendor unit economics
+
+The canonical usage ledger now separates tenant-facing commercial meters from provider cost
+meters. One call can retain PSTN, browser-client, conference and recording components, each with
+its own quantity, effective rate version, native currency, optional FX provenance and explicit
+estimated, reconciled or unknown state. SMS/MMS/RCS producers and an idempotent number-month
+producer use the same Finance-owned writers. Platform Administration → Commercial gains dense
+Usage & economics and Vendor rates collections with filters, detail drawers, rate history and
+manual version entry; tenant surfaces remain unable to read wholesale rates or costs. Package
+pricing, allowances, overages and invoices remain deliberately outside this slice.
+
 ### Gild Studio becomes a real workspace
 
 Studio moves from a registered-but-invisible workspace to one with a real Home: `/studio` reads
