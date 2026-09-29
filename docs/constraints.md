@@ -1689,12 +1689,13 @@ two taxonomies are kept apart on purpose (D25, D46).
 one section heading), `organization-home.test.ts` (Home reads only what a business has and totals
 nothing), `workspace-shell.test.ts` (one support mode at a time, only supported modes offered).
 
-**Not built, and why.** Financials, Website & Portal and Library are target vocabulary, not rows: no
-operating surface exists yet for the first two beyond Settings-owned configuration and per-record
-job billing, and Documents are attached to a customer, location, asset or job with no
-organization-level collection to list. Quick Create waits on create flows a link can reach — every
-create form today is a sheet opened from its own page. Communications keeps the `/calls` route
-until the call-domain work lands.
+**Not built, and why.** Financials and Website & Portal are target vocabulary, not rows: no
+operating surface exists yet beyond Settings-owned configuration and per-record job billing.
+Library has a shell (its own `AREA_GROUPS` row, `/organizations/{id}/library` and seven
+empty-state destinations) but no organization-level collection behind it: Documents stay attached
+to a customer, location, asset or job, and the agent's files stay private to their asker. Quick
+Create waits on create flows a link can reach — every create form today is a sheet opened from its
+own page. Communications keeps the `/calls` route until the call-domain work lands.
 
 ### D59 — One adaptive shell: entitlement and permission are separate, platform authority is a set of permissions, and roles are editable bundles
 
@@ -1791,11 +1792,11 @@ switcher reads no path), `shell-projection.test.ts` (nesting, active branch, bot
 mounted by route, the Platform Agent handed no organization or conversation).
 
 **Not built, and why.** Quick Create: every create form today is a sheet opened from its own page,
-so a menu of them could only be decoration until a link can open one. Library: Documents belong to a
-customer, location, asset or job and the agent's files are private to their asker, so there is no
-organization-level collection to list. Financials, Communications sub-pages, Website & Portal and
-the rest of the target page maps are vocabulary until a real surface exists. Communications keeps
-its `/calls` route.
+so a menu of them could only be decoration until a link can open one. Library has a shell but no
+organization-level collection: Documents still belong to a customer, location, asset or job and the
+agent's files are still private to their asker. Financials, Communications sub-pages, Website &
+Portal and the rest of the target page maps are vocabulary until a real surface exists.
+Communications keeps its `/calls` route.
 
 ### D61 — Gild Products are eight, the shared Workspace is not one of them, and a workspace row is only ever real pages
 
@@ -2373,10 +2374,12 @@ reachable, and a page's Insights support mode may link to them. Route existence 
 workspace or sidebar section.
 
 **Library is shared organization infrastructure, not a workspace.** Its target collections are
-Files, Templates, Media and Knowledge. Record-attached Documents exist today; an organization-wide
-Library collection does not. A generalized Form or Template record is introduced only when
-multiple real consumers require the same canonical object. Until then, domain-specific templates
-retain their domain behavior and owner.
+Files, Templates, Media and Knowledge. It has its own `AREA_GROUPS` row, ruled apart from Home and
+Workspaces, and a shell at `/organizations/{id}/library` with an empty-state page for each target
+collection plus Collections, Sources and Trash — but record-attached Documents remain the only
+files that exist; an organization-wide Library collection does not. A generalized Form or Template
+record is introduced only when multiple real consumers require the same canonical object. Until
+then, domain-specific templates retain their domain behavior and owner.
 
 **Studio and Marketing remain distinct.** Studio authors and publishes experiences and reusable
 content. Marketing owns campaign, audience, acquisition and lifecycle intent and consumes Studio

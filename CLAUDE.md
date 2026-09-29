@@ -82,8 +82,9 @@ Target architecture and current navigation are separate facts (D68). The target 
 workspaces are CRM, Communications, Marketing, Finance, AI, Automations, Field and Studio. Current
 navigation still exposes Sales for much of CRM; Marketing is not registered; AI and
 Studio have partial capabilities without full Homes; and Insights retains deep routes while being
-cross-cutting rather than a workspace. Library is target shared infrastructure; only
-record-attached Documents exist today.
+cross-cutting rather than a workspace. Library has a shell — Home and seven empty-state
+destinations (Files, Media, Templates, Knowledge, Collections, Sources, Trash) — but no
+organization-level collection behind any of them yet; only record-attached Documents exist today.
 
 One domain/runtime capability has no operator UI: `browserTelephoneToken` — the token boundary
 exists, but no browser softphone consumes it yet (M9/M14). Resource has no domain-level document

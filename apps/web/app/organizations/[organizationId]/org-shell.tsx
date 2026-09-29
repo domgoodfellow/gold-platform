@@ -44,6 +44,7 @@ import {
   Landmark,
   Layers,
   LayoutDashboard,
+  Library,
   MapPin,
   MessageSquare,
   Package,
@@ -85,6 +86,7 @@ import {
  */
 export const AREA_ICONS: Record<string, LucideIcon> = {
   home: Home,
+  library: Library,
   work: ClipboardList,
   field: Wrench,
   sales: Users,

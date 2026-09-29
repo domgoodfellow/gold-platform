@@ -243,6 +243,7 @@ describe('the operator shell navigation', () => {
     const inSidebar = AREAS.filter((area) => area.sidebar !== false).map((area) => area.segment);
     expect(inSidebar).toEqual([
       'home',
+      'library',
       'sales', 'customers', 'pipeline',
       'comms', 'calls', 'comms-messages', 'comms-numbers',
       'finance',
@@ -880,9 +881,11 @@ describe('the organization shell taxonomy', () => {
   });
 
   it('adds no workspace whose surface does not exist yet', () => {
-    // Financials, Website & Portal and Library are target vocabulary, not rows: nothing operates
-    // them as a workspace today (see docs/ui-spec.md). A row appears with its real route.
-    for (const absent of ['financials', 'website', 'library', 'documents']) {
+    // Financials, Website & Portal are target vocabulary, not rows: nothing operates them as a
+    // workspace today (see docs/ui-spec.md). Library is shared infrastructure rather than a
+    // workspace, and has its own shell — see 'the Library area' below. A row appears with its
+    // real route.
+    for (const absent of ['financials', 'website', 'documents']) {
       expect(AREAS.some((area) => area.segment === absent), `${absent} has no operating surface yet`).toBe(false);
     }
     // And every workspace row has a page behind it — no placeholder route to satisfy a list.
@@ -909,5 +912,40 @@ describe('the organization shell taxonomy', () => {
   it('gives Insights a real Overview and Reports route, and nothing for the old paths', () => {
     expect(existsSync(`${ROUTES}/insights/page.tsx`)).toBe(true);
     expect(existsSync(`${ROUTES}/insights/reports/page.tsx`)).toBe(true);
+  });
+});
+
+/**
+ * Library: shared organization infrastructure, never a workspace (docs/domain-model.md,
+ * constraints.md D60/D68, docs/ui-spec.md). Ruled apart from Home and from Workspaces, one row
+ * today — its internal destinations (Files, Media, Templates, Knowledge, Collections, Sources,
+ * Trash) are reached from Library's own page, not a second permanent sidebar.
+ */
+describe('the Library area', () => {
+  const library = AREAS.find((area) => area.segment === 'library')!;
+
+  it('is a real, sidebar-visible area owned by no workspace and no module', () => {
+    expect(library).toBeDefined();
+    expect(library.group).toBe('library');
+    expect(library.sidebar).not.toBe(false);
+    expect(library.workspace).toBeUndefined();
+    expect(library.module).toBeUndefined();
+    expect(WORKSPACES.some((workspace) => (workspace as { key: string }).key === 'library')).toBe(false);
+  });
+
+  it('sits directly after Home and outside Workspaces, per AREA_GROUPS order', () => {
+    expect(AREA_GROUPS.map((group) => group.key)).toEqual(['home', 'library', 'workspaces', 'settings']);
+    expect(AREAS[0].segment).toBe('home');
+    expect(AREAS[1].segment).toBe('library');
+  });
+
+  it('resolves through the one href function', () => {
+    expect(areaHref('org-1', 'library')).toBe('/organizations/org-1/library');
+  });
+
+  it('has a page behind every one of its internal destinations', () => {
+    for (const segment of ['files', 'media', 'templates', 'knowledge', 'collections', 'sources', 'trash']) {
+      expect(existsSync(`${ROUTES}/library/${segment}/page.tsx`), `library/${segment} has no page`).toBe(true);
+    }
   });
 });

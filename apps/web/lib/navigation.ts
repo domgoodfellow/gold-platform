@@ -32,7 +32,7 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
  * D23 still governs the part that matters: work comes first and Settings last, and an operator
  * must never reach today's work by going through settings.
  */
-export type AreaGroup = 'home' | 'workspaces' | 'settings';
+export type AreaGroup = 'home' | 'library' | 'workspaces' | 'settings';
 
 /**
  * The **registered** workspaces: the eight a business has today, whether or not each has an
@@ -83,6 +83,10 @@ export type WorkspaceKey = (typeof WORKSPACES)[number]['key'];
 export const AREA_GROUPS = [
   // Home is one row set apart, and the answer to "what matters right now".
   { key: 'home', label: null },
+  // Shared organization infrastructure — never a workspace, and ruled apart from where an
+  // operator does a kind of work (docs/ui-spec.md). One row today, like Home; no heading for the
+  // same reason Home draws none.
+  { key: 'library', label: null },
   // Where an operator does a kind of work: each row is a workspace, and a workspace with several
   // pages holds them as children (`Area.workspace`) rather than as peers.
   { key: 'workspaces', label: 'Workspaces' },
@@ -324,6 +328,12 @@ export type Area = {
 export const AREAS: readonly Area[] = [
   // Leads because D23 says the action an operator's phone is designed around is "what do I do next".
   { segment: 'home', label: 'Home', group: 'home' },
+
+  // Library: shared organization infrastructure, never a workspace (docs/domain-model.md,
+  // constraints.md D60/D68). Kernel, like Home — every business has it, so it names no module.
+  // Its own internal destinations (Files, Media, Templates, Knowledge, Collections, Sources,
+  // Trash) are reached from Library's own page, not a second permanent sidebar.
+  { segment: 'library', label: 'Library', group: 'library' },
 
   // Sales. Home is the workspace's own parent destination — kernel, like Customers, so the row is
   // always there — and is never repeated as a child beneath it. Pipeline is the CRM stages view,

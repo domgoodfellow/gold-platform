@@ -45,7 +45,7 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  * several make it an expandable one. A registered workspace with no reachable page has no row at
  * all: registered is not visible.
  */
-export type ShellSectionKey = 'home' | 'workspaces' | 'business' | 'platform';
+export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'business' | 'platform';
 
 export type NavItem = {
   /** Unique across the whole projection; also the icon key. */
@@ -95,6 +95,7 @@ export type ShellInput = {
 
 const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
   home: null,
+  library: null,
   workspaces: 'Workspaces',
   business: 'Business',
   platform: 'Platform administration',
@@ -106,7 +107,7 @@ const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
  * change. `projectShell` returns sections in this order and a renderer settles the last two toward
  * the bottom of the sidebar, so the highest authority is the furthest from the daily work.
  */
-export const SHELL_SECTION_ORDER: readonly ShellSectionKey[] = ['home', 'workspaces', 'business', 'platform'];
+export const SHELL_SECTION_ORDER: readonly ShellSectionKey[] = ['home', 'library', 'workspaces', 'business', 'platform'];
 
 /** The sections that are administration rather than operating work: drawn as one block, at the foot. */
 export const ADMINISTRATION_SECTIONS: ReadonlySet<ShellSectionKey> = new Set(['business', 'platform']);
@@ -236,6 +237,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
 
   const sections: ShellSection[] = [
     { key: 'home', label: SECTION_LABELS.home, items: inGroup('home').map((area) => areaItem(organizationId, area, 'home')) },
+    { key: 'library', label: SECTION_LABELS.library, items: inGroup('library').map((area) => areaItem(organizationId, area, 'library')) },
     { key: 'workspaces', label: SECTION_LABELS.workspaces, items: workspaceItems() },
     { key: 'business', label: SECTION_LABELS.business, items: business },
     { key: 'platform', label: SECTION_LABELS.platform, items: platformItems },

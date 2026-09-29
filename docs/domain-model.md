@@ -253,10 +253,12 @@ Invocation follows the same rule. CRM can call through Communications; Marketing
 content and Communications delivery; Finance can send through Communications; Automations can
 invoke every domain; AI can use permitted tools. The caller never acquires the invoked capability.
 
-Library is the target shared infrastructure for Files, Templates, Media and Knowledge. Today,
-record-attached Documents exist but an organization-wide Library collection does not. Do not create
-a generic Form or Template persistence model until more than one real consumer needs the same
-canonical object; domain-specific templates retain domain behavior and ownership until then.
+Library is the target shared infrastructure for Files, Templates, Media and Knowledge. It has a
+shell — its own place in navigation and an empty-state page for each target collection plus
+Collections, Sources and Trash — but no organization-level collection behind any of them yet:
+record-attached Documents remain the only files that exist. Do not create a generic Form or
+Template persistence model until more than one real consumer needs the same canonical object;
+domain-specific templates retain domain behavior and ownership until then.
 
 A **Resource** is capacity — what work is done with. An **Asset** is the subject — what work is
 about. A work item may relate to both without merging their meaning or ownership.

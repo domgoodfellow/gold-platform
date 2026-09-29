@@ -137,8 +137,8 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(keys(sections, 'workspaces')).toContain('customers');
   });
 
-  it('labels its sections Home, Workspaces, Business, Platform administration', () => {
-    expect(sections.map((section) => section.label)).toEqual([null, 'Workspaces', 'Business', 'Platform administration']);
+  it('labels its sections Home, Library, Workspaces, Business, Platform administration', () => {
+    expect(sections.map((section) => section.label)).toEqual([null, null, 'Workspaces', 'Business', 'Platform administration']);
   });
 
   it('names the tenant destination Connections and the platform one Connectors, once each', () => {
@@ -152,8 +152,8 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(labels).not.toContain('Integrations');
   });
 
-  it('draws sections in one fixed order: Home, Workspaces, Business, Platform', () => {
-    expect(sections.map((section) => section.key)).toEqual(['home', 'workspaces', 'business', 'platform']);
+  it('draws sections in one fixed order: Home, Library, Workspaces, Business, Platform', () => {
+    expect(sections.map((section) => section.key)).toEqual(['home', 'library', 'workspaces', 'business', 'platform']);
   });
 });
 
@@ -295,13 +295,14 @@ describe('the phone renders the same projection', () => {
     // section's own "Workspaces" heading rather than a heading of their own — the same rule a
     // parent with pages follows, applied to a workspace with none.
     expect(more.map((section) => section.label)).toEqual([
-      'Workspaces', 'Sales', 'Communications', 'Automations', 'Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
+      null, 'Workspaces', 'Sales', 'Communications', 'Automations', 'Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
     ]);
-    expect(more[0].items.map((item) => item.key)).toEqual(['workspace-finance', 'workspace-studio']);
-    expect(more[1].items.map((item) => item.key)).toEqual(['pipeline']);
-    expect(more[2].items.map((item) => item.key)).toEqual(['calls', 'comms-messages', 'comms-numbers']);
-    expect(more[3].items.map((item) => item.label)).toEqual(['Rules', 'Messages', 'Activity']);
-    expect(more[4].items.map((item) => item.key)).toEqual(['resources', 'locations', 'assets']);
+    expect(more[0].items.map((item) => item.key)).toEqual(['library']);
+    expect(more[1].items.map((item) => item.key)).toEqual(['workspace-finance', 'workspace-studio']);
+    expect(more[2].items.map((item) => item.key)).toEqual(['pipeline']);
+    expect(more[3].items.map((item) => item.key)).toEqual(['calls', 'comms-messages', 'comms-numbers']);
+    expect(more[4].items.map((item) => item.label)).toEqual(['Rules', 'Messages', 'Activity']);
+    expect(more[5].items.map((item) => item.key)).toEqual(['resources', 'locations', 'assets']);
   });
 
   it('loses and adds nothing: the bar and More together are exactly the desktop projection', () => {
@@ -321,7 +322,7 @@ describe('the phone renders the same projection', () => {
     ]);
     // Platform's own pages lead More; GOLD's workspaces follow. Ten Platform destinations and every workspace never share the bar.
     expect(platform.more.map((section) => section.label)).toEqual([
-      'Catalog', 'Commercial', 'Infrastructure', 'Workspaces', 'Sales', 'Communications', 'Automations', 'Field', 'Business',
+      'Catalog', 'Commercial', 'Infrastructure', null, 'Workspaces', 'Sales', 'Communications', 'Automations', 'Field', 'Business',
     ]);
     const phone = pagesOf([...platform.primary, ...platform.more.flatMap((section) => section.items)]);
     expect(phone).toEqual(pagesOf(projectedItems(sections)));
@@ -471,20 +472,20 @@ describe('role presets are templates, not personas', () => {
 describe('the permission gradient: operating work, then business administration, then platform', () => {
   const partial = new Set<PlatformCapability>(['platform.catalogue']);
   const personas: { name: string; sections: ShellSection[]; sectionKeys: string[]; platformTop: string[] }[] = [
-    { name: 'ordinary tenant member', sections: project(preset('technician')), sectionKeys: ['home', 'workspaces'], platformTop: [] },
-    { name: 'tenant administrator', sections: project(ALL_CAPABILITIES), sectionKeys: ['home', 'workspaces', 'business'], platformTop: [] },
+    { name: 'ordinary tenant member', sections: project(preset('technician')), sectionKeys: ['home', 'library', 'workspaces'], platformTop: [] },
+    { name: 'tenant administrator', sections: project(ALL_CAPABILITIES), sectionKeys: ['home', 'library', 'workspaces', 'business'], platformTop: [] },
     // Same organization as the platform operator below, but no platform_staff permission: an ordinary business.
-    { name: 'GOLD member without platform permission', sections: project(preset('sales'), { platform: new Set() }), sectionKeys: ['home', 'workspaces'], platformTop: [] },
+    { name: 'GOLD member without platform permission', sections: project(preset('sales'), { platform: new Set() }), sectionKeys: ['home', 'library', 'workspaces'], platformTop: [] },
     {
       name: 'platform staff with partial permissions',
       sections: project(ALL_CAPABILITIES, { platform: partial }),
-      sectionKeys: ['home', 'workspaces', 'business', 'platform'],
+      sectionKeys: ['home', 'library', 'workspaces', 'business', 'platform'],
       platformTop: ['platform-group-catalog'],
     },
     {
       name: 'platform owner',
       sections: project(ALL_CAPABILITIES, { platform: allPlatform }),
-      sectionKeys: ['home', 'workspaces', 'business', 'platform'],
+      sectionKeys: ['home', 'library', 'workspaces', 'business', 'platform'],
       platformTop: ['platform-overview', 'platform-organizations', 'platform-group-catalog', 'platform-group-commercial', 'platform-group-infrastructure'],
     },
   ];
