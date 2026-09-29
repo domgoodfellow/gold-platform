@@ -1735,6 +1735,55 @@ export type Database = {
           },
         ]
       }
+      customer_discovery_snapshots: {
+        Row: {
+          answers: Json
+          created_at: string
+          created_by: string
+          customer_id: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          created_by: string
+          customer_id: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_discovery_snapshots_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_discovery_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_discovery_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_locations: {
         Row: {
           created_at: string

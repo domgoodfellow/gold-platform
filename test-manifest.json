@@ -1041,6 +1041,12 @@
         "crm"
       ]
     },
+    "apps/web/tests/integration/database/discovery-snapshots.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "crm"
+      ]
+    },
     "apps/web/tests/integration/database/documents.test.ts": {
       "category": "database-integration",
       "concerns": [
