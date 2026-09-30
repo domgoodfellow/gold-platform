@@ -1,4 +1,4 @@
-import { ViewNav } from '@/components/containers/view-nav';
+import { ViewNav } from '@/components/navigation/view-nav';
 import { scheduleHref, type ScheduleView } from './schedule-url';
 
 /**

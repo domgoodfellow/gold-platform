@@ -11,7 +11,7 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { updateRoleAction, type UpdateRoleState } from '@/app/organizations/[organizationId]/settings/access/actions';
 import { RoleEditorFields } from './role-editor-fields';

@@ -1,7 +1,7 @@
 import { requirePlatformArea } from '@/lib/route/platform';
 import { platformAncestry } from '@/lib/platform-navigation';
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
 import { getDb } from '@/lib/db/server';
 import { listProviders } from '@/lib/domain/commercial/catalogue';
 import { listProviderServices } from '@/lib/domain/providers/services';

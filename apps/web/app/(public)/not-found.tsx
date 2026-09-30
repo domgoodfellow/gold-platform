@@ -1,4 +1,4 @@
-import { PageHeading } from '@/components/containers/section';
+import { PageHeading } from '@/components/surfaces/section';
 
 /** Neutral application state: never place GOLD's brand on a tenant's customer-facing surface. */
 export default function PublicNotFound() {

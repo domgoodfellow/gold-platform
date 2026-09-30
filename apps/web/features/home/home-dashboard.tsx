@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { AppPage } from '@/components/containers/app-page';
-import { Card } from '@/components/containers/card';
-import { KpiCard, type Kpi } from '@/components/containers/kpi-card';
-import { PageHeader } from '@/components/containers/page-header';
-import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
+import { AppPage } from '@/components/layout/app-page';
+import { Card } from '@/components/surfaces/card';
+import { KpiCard, type Kpi } from '@/components/surfaces/kpi-card';
+import { PageHeader } from '@/components/headers/page-header';
+import { DividedList, EmptyState, SectionHeading } from '@/components/surfaces/section';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { Badge } from '@/components/display/data';
 import { ActivityList } from '@/features/timeline/activity-list';

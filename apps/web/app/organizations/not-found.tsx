@@ -1,4 +1,4 @@
-import { OrganizationUnavailable } from '@/components/containers/organization-not-found';
+import { OrganizationUnavailable } from '@/features/account/organization-not-found';
 
 /**
  * The boundary that actually catches a non-member's visit to `/organizations/{id}` and everything

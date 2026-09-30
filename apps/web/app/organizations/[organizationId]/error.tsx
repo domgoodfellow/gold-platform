@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
-import { SectionHeading } from '@/components/containers/section';
+import { SectionHeading } from '@/components/surfaces/section';
 
 /**
  * For the unexpected only — a `DomainError` a person can act on is caught and rendered beside

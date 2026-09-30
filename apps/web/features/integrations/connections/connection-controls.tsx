@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { Button } from '@/components/controls/button';
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import {

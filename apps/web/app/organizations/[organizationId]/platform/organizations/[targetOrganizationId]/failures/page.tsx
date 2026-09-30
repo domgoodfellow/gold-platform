@@ -1,7 +1,7 @@
 import { requirePlatformArea } from '@/lib/route/platform';
 import { platformHref } from '@/lib/platform-navigation';
 import { redirect } from 'next/navigation';
-import { AppPage } from '@/components/containers/app-page';
+import { AppPage } from '@/components/layout/app-page';
 import { DataTable } from '@/components/display/table';
 import { getDb } from '@/lib/db/server';
 import { getTenant, listFailures } from '@/lib/domain/platform/tenants';

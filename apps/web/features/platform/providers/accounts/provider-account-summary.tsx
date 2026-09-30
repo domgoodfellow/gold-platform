@@ -1,4 +1,4 @@
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Badge, Detail, DefinitionList } from '@/components/display/data';
 import type { ProviderAccount } from '@/lib/domain/providers/accounts';
 

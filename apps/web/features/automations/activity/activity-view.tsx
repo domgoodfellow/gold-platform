@@ -1,5 +1,5 @@
-import { DividedList } from '@/components/containers/section';
-import { EmptyState } from '@/components/containers/section';
+import { DividedList } from '@/components/surfaces/section';
+import { EmptyState } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import type { AutomationRun } from '@/lib/domain/automation/rules';
 import type { MessageDelivery } from '@/lib/domain/automation/templates';

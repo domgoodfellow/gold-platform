@@ -1,7 +1,7 @@
-import { Disclosure } from '@/components/containers/card';
-import { AppPage } from '@/components/containers/app-page';
-import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
-import { PageHeader } from '@/components/containers/page-header';
+import { Disclosure } from '@/components/surfaces/card';
+import { AppPage } from '@/components/layout/app-page';
+import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
+import { PageHeader } from '@/components/headers/page-header';
 import { LocationConfiguration } from '@/features/locations/configuration/location-configuration';
 import { CreateLocationSheetProvider, CreateLocationTrigger } from '@/features/locations/create-location-sheet';
 import { LinkCustomerLocationForm } from '@/features/locations/link-customer-location-form';

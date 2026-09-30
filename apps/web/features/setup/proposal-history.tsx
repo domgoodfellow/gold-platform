@@ -1,4 +1,4 @@
-import { SectionHeading } from '@/components/containers/section';
+import { SectionHeading } from '@/components/surfaces/section';
 import { ErrorText } from '@/components/controls/inputs';
 import type { ConfigurationProposal } from '@/lib/domain/configuration/proposals';
 

@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { Settings2 } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { DividedList, EmptyState, GroupHeading } from '@/components/containers/section';
+import { DividedList, EmptyState, GroupHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
-import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/containers/page-drawer';
+import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
 import { configTarget } from '@/lib/navigation';
 import type { CallOutcome } from '@/lib/domain/reception/outcomes';
 import type { Route } from '@/lib/domain/reception/routing';

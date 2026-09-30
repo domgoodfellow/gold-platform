@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import { PageHeader } from '@/components/containers/page-header';
-import { GroupHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/headers/page-header';
+import { GroupHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { areaHref, areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';

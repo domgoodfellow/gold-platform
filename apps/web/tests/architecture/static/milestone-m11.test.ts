@@ -66,7 +66,7 @@ describe('M11 — a control file with no focus treatment', () => {
   const CONTROL_FILES = [
     `${COMPONENTS_ROOT}/controls/button.tsx`,
     `${COMPONENTS_ROOT}/controls/inputs.tsx`,
-    `${COMPONENTS_ROOT}/containers/card.tsx`,
+    `${COMPONENTS_ROOT}/surfaces/card.tsx`,
     // The shell's own rows. `app-shell.tsx` used to hold the sign-out control by hand
     // (`SIDEBAR_ROW`/`SidebarButton`, which is where it moved when the first test in this file
     // caught it spelled raw under `app/`) and its own collapse toggle; both are gone now that

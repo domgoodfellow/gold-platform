@@ -1,4 +1,4 @@
-import { DividedList, EmptyState } from '@/components/containers/section';
+import { DividedList, EmptyState } from '@/components/surfaces/section';
 import { cx } from '@/components/class-names';
 import type { TimelineEntry } from '@/lib/domain/timeline/timeline';
 

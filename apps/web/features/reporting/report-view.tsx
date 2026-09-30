@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { Button } from '@/components/controls/button';
 import { Hint, SelectInput } from '@/components/controls/inputs';
-import { ViewNav } from '@/components/containers/view-nav';
-import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
+import { ViewNav } from '@/components/navigation/view-nav';
+import { DividedList, EmptyState, SectionHeading } from '@/components/surfaces/section';
 import type { Dashboard, DashboardTile } from '@/lib/domain/reporting/dashboards';
 import type { ReportDefinition, ReportResult } from '@/lib/domain/reporting/definitions';
 import {

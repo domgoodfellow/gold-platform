@@ -1,6 +1,6 @@
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
-import { EmptyState } from '@/components/containers/section';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
+import { EmptyState } from '@/components/surfaces/section';
 import { buildPipelineColumns, PipelineBoard } from '@/features/crm/sales/pipeline-board';
 import { CustomerStageControl } from '@/features/crm/sales/stage-control';
 import { StageSettingsSheet } from '@/features/crm/sales/stage-settings-sheet';

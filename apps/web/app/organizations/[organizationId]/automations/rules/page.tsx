@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
 import { listAutomationRules } from '@/lib/domain/automation/rules';
 import { reviewAutomationRules } from '@/lib/domain/automation/review';

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Send } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { EmptyState } from '@/components/containers/section';
+import { EmptyState } from '@/components/surfaces/section';
 import { ErrorText, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import {
   listConversationsAction,

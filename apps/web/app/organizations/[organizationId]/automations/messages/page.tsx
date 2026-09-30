@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
 import { listMessageTemplates } from '@/lib/domain/automation/templates';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';

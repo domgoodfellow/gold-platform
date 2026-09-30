@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ButtonLink } from '@/components/controls/button';
-import { DividedList, Section, SectionHeading } from '@/components/containers/section';
+import { DividedList, Section, SectionHeading } from '@/components/surfaces/section';
 import { Badge } from '@/components/display/data';
 import { Widget, WidgetGrid } from '@/components/display/widget';
 import type { IntegrationConnection } from '@/lib/domain/integrations/connections';

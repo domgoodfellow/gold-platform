@@ -10,7 +10,7 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import { RecordReadingForm } from './record-reading-form';
 
 /**

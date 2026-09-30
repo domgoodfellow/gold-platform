@@ -1,5 +1,5 @@
 import { areaLabel } from '@/lib/navigation';
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';

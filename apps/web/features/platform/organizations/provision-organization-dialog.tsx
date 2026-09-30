@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/containers/dialog';
+} from '@/components/controls/confirm-submit';
 import { ProvisionForm } from '@/features/platform/organizations/provision-form';
 
 export function ProvisionOrganizationDialog() {

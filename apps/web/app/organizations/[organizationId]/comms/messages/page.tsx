@@ -1,5 +1,5 @@
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
 import { MessagesInbox } from '@/features/communications/messaging/messages-inbox';
 import { listPhoneNumbers } from '@/lib/domain/reception/numbers';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';

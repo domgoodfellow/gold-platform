@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { MapPinOff } from 'lucide-react';
-import { EmptyState } from '@/components/containers/section';
+import { EmptyState } from '@/components/surfaces/section';
 import { TextInput } from '@/components/controls/inputs';
 import type { Location } from '@/lib/domain/locations/locations';
 import { LocationCoordinatesDrawer } from '../location-coordinates-drawer';

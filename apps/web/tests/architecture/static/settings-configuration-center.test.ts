@@ -234,7 +234,7 @@ describe('contextual Configure, generalized from Work â€” the same componen
   it('ConfigureRegistrar itself is shared infrastructure, not owned by Work', () => {
     expect(
       readFileSync(
-        fileURLToPath(new URL('../../../components/containers/configure-registrar.tsx', import.meta.url)),
+        fileURLToPath(new URL('../../../components/panels/configure-registrar.tsx', import.meta.url)),
         'utf8',
       ),
     ).toContain('export function ConfigureRegistrar');

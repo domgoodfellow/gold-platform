@@ -1,7 +1,7 @@
-import { PageHeader } from '@/components/containers/page-header';
-import { Card } from '@/components/containers/card';
-import { EmptyState, SectionHeading } from '@/components/containers/section';
-import { AppPage } from '@/components/containers/app-page';
+import { PageHeader } from '@/components/headers/page-header';
+import { Card } from '@/components/surfaces/card';
+import { EmptyState, SectionHeading } from '@/components/surfaces/section';
+import { AppPage } from '@/components/layout/app-page';
 import { Hint } from '@/components/controls/inputs';
 import { LaunchReview, SetupAreaList, SetupProgressCard } from '@/features/setup/setup-cockpit';
 import {

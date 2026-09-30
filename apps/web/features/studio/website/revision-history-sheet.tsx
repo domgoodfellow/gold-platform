@@ -1,14 +1,14 @@
 'use client';
 
 import { Button } from '@/components/controls/button';
-import { DividedList, EmptyState } from '@/components/containers/section';
+import { DividedList, EmptyState } from '@/components/surfaces/section';
 import {
   PageDrawer,
   PageDrawerContent,
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 
 export type HistoryEntry = { id: string; number: number; status: string; publishedAt: string | null; archivedAt: string | null };
 

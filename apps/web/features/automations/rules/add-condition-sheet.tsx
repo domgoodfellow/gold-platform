@@ -11,7 +11,7 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import { CONDITION_FIELDS, OPERATORS, type AutomationRule } from '@/lib/domain/automation/rules';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { StatusChoice } from './rule-detail-types';

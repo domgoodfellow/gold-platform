@@ -10,7 +10,7 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import type { Location } from '@/lib/domain/locations/locations';
 import { LocationCoordinatesForm } from './location-coordinates-form';
 

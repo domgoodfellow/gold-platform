@@ -10,7 +10,7 @@ import {
 } from '@gold/ui/components/table';
 import { cx } from '../class-names';
 import { Hint } from '../controls/inputs';
-import { EmptyState } from '../containers/section';
+import { EmptyState } from '../surfaces/section';
 
 /**
  * A table above a breakpoint, a list of cards below it. Uses `@container`, not a viewport query —

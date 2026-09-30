@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { RecordHeader } from '@/components/containers/record-header';
+import { RecordHeader } from '@/components/headers/record-header';
 import { LocationDetail } from '@/features/locations/location-detail';
 import { geocodingProvider } from '@/lib/adapters/geocoding';
 import { listAssets } from '@/lib/domain/assets/assets';

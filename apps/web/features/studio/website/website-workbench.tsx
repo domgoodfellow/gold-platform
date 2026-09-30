@@ -11,7 +11,7 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import type { EditorRevision } from '@/lib/domain/public-site/public-site';
 import {
   createDraftAction,

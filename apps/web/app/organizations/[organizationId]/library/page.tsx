@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
-import { DividedList } from '@/components/containers/section';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
+import { DividedList } from '@/components/surfaces/section';
 import { FOCUS_RING } from '@/components/class-names';
 import { LibraryNav } from '@/features/library/library-nav';
 import { LIBRARY_SECTIONS, libraryHref } from '@/lib/route/library';

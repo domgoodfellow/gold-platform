@@ -1,5 +1,5 @@
-import { PageHeader } from '@/components/containers/page-header';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/headers/page-header';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { CredentialsForm } from '@/app/(auth)/credentials-form';
 import { PersonalSettingsShell } from '@/features/account/personal-settings-shell';

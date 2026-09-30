@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { AppPage } from '@/components/containers/app-page';
+import { AppPage } from '@/components/layout/app-page';
 import { CustomerDetail } from '@/features/crm/customers/customer-detail';
 import { listCustomerInvoices } from '@/lib/domain/billing/invoices';
 import { listPlans } from '@/lib/domain/catalogue/plans';

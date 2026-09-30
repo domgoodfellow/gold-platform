@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { CollectionView } from '@/components/containers/collection-view';
+import { CollectionView } from '@/components/surfaces/collection-view';
 import { ViewModeSwitcher } from '@/components/controls/view-mode-switcher';
 import { SettingsGrid, SettingsIndex, SettingsList } from '@/features/settings/settings-index';
 import { SETTINGS_SECTIONS } from '@/features/settings/settings-map';

@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { CircleAlert, CircleCheck } from 'lucide-react';
 import { Progress } from '@gold/ui/components/progress';
-import { Card } from '@/components/containers/card';
-import { DividedList, SectionHeading } from '@/components/containers/section';
+import { Card } from '@/components/surfaces/card';
+import { DividedList, SectionHeading } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';

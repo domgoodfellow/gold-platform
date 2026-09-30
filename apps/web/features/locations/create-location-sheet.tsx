@@ -10,7 +10,7 @@ import {
   PageDrawerFooter,
   PageDrawerHeader,
   PageDrawerTitle,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { CreateLocationForm } from './create-location-form';
 

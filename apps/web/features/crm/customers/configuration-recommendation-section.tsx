@@ -1,5 +1,5 @@
 import { Hint } from '@/components/controls/inputs';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import {
   previewByWorkspace,
   type ConfigurationRecommendation,

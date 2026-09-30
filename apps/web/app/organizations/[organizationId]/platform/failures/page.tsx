@@ -1,9 +1,9 @@
 import { requirePlatformArea } from '@/lib/route/platform';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
-import { AppPage } from '@/components/containers/app-page';
-import { SectionHeading } from '@/components/containers/section';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { SectionHeading } from '@/components/surfaces/section';
+import { PageHeader } from '@/components/headers/page-header';
 import { DataTable } from '@/components/display/table';
 import { getDb } from '@/lib/db/server';
 import { listProviderSyncFailures } from '@/lib/domain/commercial/usage';

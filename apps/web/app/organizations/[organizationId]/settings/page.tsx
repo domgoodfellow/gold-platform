@@ -1,5 +1,5 @@
-import { PageHeader } from '@/components/containers/page-header';
-import { EmptyState } from '@/components/containers/section';
+import { PageHeader } from '@/components/headers/page-header';
+import { EmptyState } from '@/components/surfaces/section';
 import { SettingsIndex } from '@/features/settings/settings-index';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { offeredSections } from '@/features/settings/settings-map';

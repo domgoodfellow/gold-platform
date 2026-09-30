@@ -1,5 +1,5 @@
 import { WorkList } from '@/features/work/work-list';
-import { AppPage } from '@/components/containers/app-page';
+import { AppPage } from '@/components/layout/app-page';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { counted } from '@/lib/domain/counted';
 import { listCustomers } from '@/lib/domain/customers/customers';
@@ -15,14 +15,14 @@ import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
 import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
-import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
-import { SupportRegistrar } from '@/components/containers/support-registrar';
+import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
+import { SupportRegistrar } from '@/components/panels/support-registrar';
 import { WorkInsights } from '@/features/insights/workspace-insights';
 import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
 import { availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { todayInZone } from '@/lib/domain/scheduling/window';
 import { areaAvailable, areaHref, areaLabel, workspaceAncestry } from '@/lib/navigation';
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 
 export const dynamic = 'force-dynamic';

@@ -6,7 +6,7 @@ import { ArrowUpRight } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 
 const sections = [['Overview', ''], ['Plan & Entitlements', '/commercial'], ['Providers', '/providers'], ['Integrations', '/integrations'], ['Usage', '/usage'], ['Failures', '/failures']] as const;

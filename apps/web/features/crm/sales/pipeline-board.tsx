@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/display/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@gold/ui/components/card';
-import { EmptyState, GroupHeading } from '@/components/containers/section';
+import { EmptyState, GroupHeading } from '@/components/surfaces/section';
 
 export type PipelinePerson = { id: string; name: string };
 export type PipelineColumn = { key: string; name: string; people: PipelinePerson[] };

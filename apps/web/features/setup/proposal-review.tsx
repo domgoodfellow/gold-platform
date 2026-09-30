@@ -1,8 +1,8 @@
 'use client';
 
 import { Button } from '@/components/controls/button';
-import { Card } from '@/components/containers/card';
-import { EmptyState } from '@/components/containers/section';
+import { Card } from '@/components/surfaces/card';
+import { EmptyState } from '@/components/surfaces/section';
 import { Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { useActionState, useState } from 'react';
 import {

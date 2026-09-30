@@ -4,7 +4,7 @@ import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { FormError, FormField } from '@/components/controls/form';
 import { SelectInput, TextInput } from '@/components/controls/inputs';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import {
   addPricedLineAction,

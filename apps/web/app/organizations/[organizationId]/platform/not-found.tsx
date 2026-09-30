@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { platformHref } from '@/lib/platform-navigation';
-import { FallbackPage } from '@/components/containers/fallback-page';
+import { FallbackPage } from '@/components/feedback/fallback-page';
 import { ButtonLink } from '@/components/controls/button';
 
 /**

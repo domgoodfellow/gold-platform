@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Button } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
 import { cx, FOCUS_RING } from '@/components/class-names';
-import { EmptyState, Section } from '@/components/containers/section';
+import { EmptyState, Section } from '@/components/surfaces/section';
 import type { Connector } from '@/lib/domain/integrations/connectors';
 import { ConnectorCard } from './connector-card';
 

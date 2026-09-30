@@ -4,7 +4,7 @@ import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import {
   commercialProposalTotalMinor,

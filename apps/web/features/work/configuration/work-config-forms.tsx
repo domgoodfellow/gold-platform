@@ -2,7 +2,7 @@
 
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { useActionState } from 'react';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';

@@ -1,6 +1,6 @@
 import { Hint } from '@/components/controls/inputs';
 import { DefinitionList, Detail } from '@/components/display/data';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { DocumentsSection } from '@/features/documents/section';

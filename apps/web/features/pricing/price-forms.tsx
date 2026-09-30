@@ -1,7 +1,7 @@
 'use client';
 
 import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
-import { SectionHeading } from '@/components/containers/section';
+import { SectionHeading } from '@/components/surfaces/section';
 import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
 import { CurrencyField } from '@/features/locale/locale-fields';

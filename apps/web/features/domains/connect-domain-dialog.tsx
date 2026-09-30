@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/containers/dialog';
+} from '@/components/controls/confirm-submit';
 import { checkDomainAction, connectDomainAction } from '@/app/organizations/[organizationId]/settings/domains/actions';
 import { DOMAIN_SURFACES } from '@/lib/domain/domains/presentation';
 import { connectDomainFlow, INITIAL_FLOW, type FlowState } from './connect-domain-flow';

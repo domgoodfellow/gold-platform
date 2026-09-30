@@ -10,7 +10,7 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import {
   CUSTOM_FIELD_ENTITY_LABELS,
   type CustomFieldEntity,

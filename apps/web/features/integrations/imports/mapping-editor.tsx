@@ -1,4 +1,4 @@
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { ErrorText, Hint, SelectInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';

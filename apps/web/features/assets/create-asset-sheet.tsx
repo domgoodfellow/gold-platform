@@ -10,7 +10,7 @@ import {
   PageDrawerFooter,
   PageDrawerHeader,
   PageDrawerTitle,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import type { SelectOption } from '@/components/controls/optional-select';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { CreateAssetForm } from './create-asset-form';

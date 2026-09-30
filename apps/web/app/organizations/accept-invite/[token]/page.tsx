@@ -1,5 +1,5 @@
 import { Button } from '@/components/controls/button';
-import { PageHeading } from '@/components/containers/section';
+import { PageHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { getDb } from '@/lib/db/server';
 import { resolveSessionIdentity } from '@/lib/domain/identity/session';

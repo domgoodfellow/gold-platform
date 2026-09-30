@@ -59,7 +59,7 @@ describe('the shared variants own the states; a screen writes none', () => {
   });
 
   it('Agent and the page-support modes show pressed through aria-pressed on the variant, not a class of their own', () => {
-    const rail = read(`${WEB}/components/containers/workspace-right-rail.tsx`);
+    const rail = read(`${WEB}/components/panels/workspace-right-rail.tsx`);
     expect(rail).toContain('aria-pressed={agentOpen}');
     expect(rail).toContain('aria-pressed={supportMode === mode}');
     expect(rail).not.toMatch(/&& 'bg-/);
@@ -76,6 +76,36 @@ describe('the shared variants own the states; a screen writes none', () => {
     const menu = read(`${UI}/dropdown-menu.tsx`);
     expect(menu).not.toMatch(/focus:bg-accent|data-open:bg-accent/);
     expect(menu).toContain('focus:bg-hover');
+  });
+});
+
+describe('muted is a text role and is never a background', () => {
+  it('no source in the workspace or the shared UI uses bg-muted, whatever the opacity or variant', () => {
+    const offenders = workspace.filter(({ text }) => /bg-muted(?![-\w])/.test(text)).map(({ path }) => path.slice(WEB.length));
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe('a static fill is a surface, never the hover/selected roles', () => {
+  it('the Agent question bubble is a static surface', () => {
+    const shared = read(`${WEB}/features/agent/agent-shared.tsx`);
+    const bubble = read(`${UI}/bubble.tsx`);
+    expect(shared).toContain('<Bubble variant="secondary" align="end"');
+    expect(bubble).toContain('*:data-[slot=bubble-content]:bg-secondary');
+  });
+});
+
+describe('Badge: tenant statuses are neutral; GOLD-owned facts may carry a tone', () => {
+  it('the implementation offers success and danger, and Setup Ready uses success', () => {
+    const badge = read(`${WEB}/components/display/data.tsx`);
+    expect(badge).toContain("'neutral' | 'accent' | 'success' | 'danger'");
+    expect(read(`${WEB}/features/setup/setup-cockpit.tsx`)).toContain("tone: 'success'");
+  });
+
+  it('the spec states the rule the code follows', () => {
+    const spec = read(`${fileURLToPath(new URL('../../../../../docs/ui-spec.md', import.meta.url))}`);
+    expect(spec).toContain('GildOps-owned facts');
+    expect(spec).toContain('Tenant-authored statuses stay neutral');
   });
 });
 

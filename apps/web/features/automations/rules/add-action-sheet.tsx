@@ -11,7 +11,7 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import { ACTION_KINDS, type AutomationRule } from '@/lib/domain/automation/rules';
 import { CHANNELS, type MessageTemplate } from '@/lib/domain/automation/templates';
 import type { StatusChoice } from './rule-detail-types';

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
+import { DividedList, EmptyState, SectionHeading } from '@/components/surfaces/section';
 import { Widget, WidgetGrid } from '@/components/display/widget';
 import { PipelineSummary } from '@/features/crm/sales/pipeline-summary';
 import type { Customer } from '@/lib/domain/customers/customers';

@@ -1,4 +1,4 @@
-import { ViewNav } from '@/components/containers/view-nav';
+import { ViewNav } from '@/components/navigation/view-nav';
 
 export type IntegrationsView = 'connected' | 'browse' | 'sources' | 'imports';
 

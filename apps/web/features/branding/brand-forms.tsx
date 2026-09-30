@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
-import { Card } from '@/components/containers/card';
+import { Card } from '@/components/surfaces/card';
 import { ErrorText, FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import type { Brand } from '@/lib/domain/branding/brand';
 import {
@@ -13,7 +13,7 @@ import {
   contrastRatio,
 } from '@/lib/domain/branding/palette';
 import { removeLogoAction, updateBrandAction, uploadLogoAction, type BrandState } from '@/app/organizations/[organizationId]/settings/actions';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 
 const INITIAL: BrandState = { error: null };
 

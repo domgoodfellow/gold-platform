@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Pencil, Phone } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/containers/page-drawer';
+import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
 import type { Customer } from '@/lib/domain/customers/customers';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';

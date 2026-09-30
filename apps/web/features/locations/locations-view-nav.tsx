@@ -1,4 +1,4 @@
-import { ViewNav } from '@/components/containers/view-nav';
+import { ViewNav } from '@/components/navigation/view-nav';
 import { locationsViewHref, type LocationsView } from './locations-view';
 
 /** List and Map, as `ViewNav`'s two sibling views — never a client Tabs standing in for the URL. */

@@ -3,8 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { FormError, FormField, type FieldControlProps } from '@/components/controls/form';
 import { TextInput } from '@/components/controls/inputs';
-import { ConfirmSubmit } from '@/components/containers/dialog';
-import { AppPage } from '@/components/containers/app-page';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
+import { AppPage } from '@/components/layout/app-page';
 import { WidgetGrid } from '@/components/display/widget';
 
 describe('shared form composition', () => {

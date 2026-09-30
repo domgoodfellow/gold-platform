@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { CollectionView } from '@/components/containers/collection-view';
-import { DividedList } from '@/components/containers/section';
+import { CollectionView } from '@/components/surfaces/collection-view';
+import { DividedList } from '@/components/surfaces/section';
 import { FOCUS_RING } from '@/components/class-names';
 import type { SettingsEntry, SettingsSection } from './settings-map';
 

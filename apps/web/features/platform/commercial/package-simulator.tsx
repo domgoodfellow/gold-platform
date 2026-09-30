@@ -3,8 +3,8 @@
 import { useActionState, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { simulatePackageAction, saveDraftScenarioAction, type DraftScenarioState } from '@/app/organizations/[organizationId]/platform/package-economics/actions';
-import { PageDrawer, PageDrawerContent, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/containers/page-drawer';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { PageDrawer, PageDrawerContent, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';

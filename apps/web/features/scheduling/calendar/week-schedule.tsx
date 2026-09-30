@@ -1,4 +1,4 @@
-import { EmptyState } from '@/components/containers/section';
+import { EmptyState } from '@/components/surfaces/section';
 import type { ScheduleDay } from '@/lib/domain/scheduling/availability';
 import { clipWindow } from '@/lib/domain/scheduling/window';
 import { ScheduleEvent } from './schedule-event';

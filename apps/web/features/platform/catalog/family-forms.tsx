@@ -11,7 +11,7 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import type { CatalogFeature, CatalogModule, CatalogProduct } from '@/lib/domain/catalogue/catalogue';
 import {
   updateCatalogFeatureAction,

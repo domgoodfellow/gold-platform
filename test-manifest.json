@@ -717,13 +717,6 @@
         "design-system"
       ]
     },
-    "apps/web/tests/architecture/static/screen-grammar.test.ts": {
-      "category": "architecture-static",
-      "concerns": [
-        "design-system",
-        "ui"
-      ]
-    },
     "apps/web/tests/architecture/static/service-access-boundary.test.ts": {
       "category": "architecture-static",
       "concerns": [

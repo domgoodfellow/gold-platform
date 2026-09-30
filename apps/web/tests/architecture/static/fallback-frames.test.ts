@@ -40,12 +40,12 @@ describe('the retired directory is gone from every fallback', () => {
     const shell = read('features/account/global-fallback-shell.tsx');
     expect(shell).toContain("'Return to workspace'");
     expect(shell).toContain("'Set up your business'");
-    expect(code(read('components/containers/organization-not-found.tsx'))).toContain('Return to workspace');
+    expect(code(read('features/account/organization-not-found.tsx'))).toContain('Return to workspace');
   });
 });
 
 describe('an organization that cannot be proven is never described', () => {
-  const unavailable = read('components/containers/organization-not-found.tsx');
+  const unavailable = read('features/account/organization-not-found.tsx');
   const shell = read('features/account/global-fallback-shell.tsx');
   const sidebar = read('features/account/global-fallback-sidebar.tsx');
 
@@ -96,7 +96,7 @@ describe('who owns which failure', () => {
     expect(page).toContain('await requireOrganization(organizationId)');
     expect(page).toContain('notFound()');
     // The in-shell fallback draws no chrome of its own.
-    expect(code(read('components/containers/fallback-page.tsx'))).not.toMatch(/Sidebar|WorkspaceShell|WorkspaceHeader|<main/);
+    expect(code(read('components/feedback/fallback-page.tsx'))).not.toMatch(/Sidebar|WorkspaceShell|WorkspaceHeader|<main/);
   });
 
   it('Platform keeps Platform context: a catch-all and a boundary inside its layout segment', () => {
@@ -121,7 +121,7 @@ describe('who owns which failure', () => {
       'app/organizations/[organizationId]/not-found.tsx',
       'app/organizations/[organizationId]/platform/not-found.tsx',
       'app/settings/not-found.tsx',
-      'components/containers/organization-not-found.tsx',
+      'features/account/organization-not-found.tsx',
     ]) {
       expect(read(file), file).not.toContain('SiteShell');
     }
@@ -181,7 +181,7 @@ describe('the mobile sidebar trigger says what the layouts do', () => {
   it('Platform Context uses navigationTrigger="md", and the header comment agrees', () => {
     // Platform renders inside the one organization shell, which asks for the trigger from md up.
     expect(read('features/shell/organization-shell.tsx')).toContain('navigationTrigger="md"');
-    const header = read('components/containers/workspace-header.tsx');
+    const header = read('components/headers/workspace-header.tsx');
     expect(header).toContain('Business *and*');
     expect(header).not.toMatch(/Platform, whose\s*\n\s*\*\s*`Sidebar` renders an off-canvas Sheet/);
   });

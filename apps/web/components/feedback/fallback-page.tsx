@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { AppPage } from './app-page';
-import { PageHeader } from './page-header';
+import { AppPage } from '../layout/app-page';
+import { PageHeader } from '../headers/page-header';
 
 /**
  * The content of every authenticated fallback: one heading, one sentence, one recovery action —

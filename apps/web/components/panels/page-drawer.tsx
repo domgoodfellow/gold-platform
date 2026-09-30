@@ -16,7 +16,7 @@ import { createPortal } from 'react-dom';
 import { XIcon } from 'lucide-react';
 import { Slot } from 'radix-ui';
 import { cx, FOCUS_RING } from '../class-names';
-import { DRAWER_CLOSE_OFFSET, DRAWER_HEADER } from './workspace-geometry';
+import { DRAWER_CLOSE_OFFSET, DRAWER_HEADER } from '../layout/workspace-geometry';
 import { useWorkspaceRail } from './workspace-right-rail';
 
 /**

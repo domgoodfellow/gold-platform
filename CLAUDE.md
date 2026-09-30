@@ -407,6 +407,17 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 
 ### The interface
 
+Not every row below is the same kind of rule. `docs/constraints.md` D23 names four: **hard
+invariant** (dependency direction, authorization, tenant isolation — strong tests belong here),
+**product contract** (an IA decision — tested where changing it changes the product), **pattern/
+default** (a preferred composition, not a law a later screen must obey), and **implementation
+detail** (exact classes/JSX ordering — not worth an architecture-static test unless it guards a
+demonstrated correctness or accessibility bug). Do not add a source-scanning test for an ordinary
+visual preference; that is what turned a pattern into permanent doctrine here before.
+
+An empty state describes the truth and may give concise, honest guidance toward the next step —
+avoid misleading, manipulative or duplicate advice, but do not treat contextual copy as forbidden.
+
 | Never | Because | Held by |
 |---|---|---|
 | A page container centred with `mx-auto` and no `w-full` | An auto side margin cancels flex stretch, so the box shrinks to its own text — which is how every surface outside the shell shipped | `layout.test.ts`, a source scan; jsdom computes no layout, so nothing that renders could have caught it |
@@ -435,8 +446,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | A colour literal in a screen | `globals.css` holds the roles and is the only place a value lives. Refusing a tokens *document* (D8) was once read as refusing the tokens, and the screens carried two reds nobody chose | Nine roles in `@theme`; `ui-spec.md` §3 |
 | A tenant colour outside the three accent roles | A business overriding its page, its rules or `danger` can make its own screens unreadable, or recolour a refusal | `BrandStyle` writes three variables and no others |
 | A second contrast calculation | The one that gets forgotten is the one on the screen a customer sees — I4 and I5's reasoning, about colour | `lib/domain/branding/palette.ts`; `branding.test.ts` asserts AA over a spread of colours in both schemes |
-| A second `Button` belonging to one surface | One set, extended. A parallel set per surface is what D23 forbids | `ui-spec.md` §4, whose acceptance test is an absence: no file under `app/` spells a control by hand |
-| Advice in an empty state | *No customers yet* is application state. *Add your first customer to get started* is advice the platform has no standing to give | `ui-spec.md` §8 |
+| A parallel semantic button system for one surface | Ordinary application actions use the shared semantic `Button`/`ButtonLink` contract; a feature may still reach for an appropriate `packages/ui` primitive for a genuinely different low-level interaction — this is not a blanket primitive ban | `ui-spec.md` §4, whose acceptance test is an absence: no file under `app/` spells a control by hand |
 
 ## Where the reasoning lives
 

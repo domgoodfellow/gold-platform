@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { IntegrationsNav } from '@/features/integrations/integrations-nav';
 import { SourcesTable } from '@/features/integrations/sources/sources-table';

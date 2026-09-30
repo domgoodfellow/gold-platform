@@ -1,6 +1,6 @@
 import { Lock } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@gold/ui/components/alert';
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';

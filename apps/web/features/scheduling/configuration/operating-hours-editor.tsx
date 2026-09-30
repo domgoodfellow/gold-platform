@@ -6,7 +6,7 @@ import {
   removeOperatingHoursAction,
   type ScheduleConfigActionState,
 } from '@/app/organizations/[organizationId]/schedule/configuration/actions';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { Button } from '@/components/controls/button';
 import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import type { OperatingHours } from '@/lib/domain/scheduling/operating-hours';

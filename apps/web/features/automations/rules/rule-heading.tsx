@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import type { AutomationRule } from '@/lib/domain/automation/rules';
 import {
   deleteRuleAction,

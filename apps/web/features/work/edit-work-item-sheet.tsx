@@ -9,7 +9,7 @@ import {
   PageDrawerDescription,
   PageDrawerHeader,
   PageDrawerTitle,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import type { SelectOption } from '@/components/controls/optional-select';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { AppPage } from '@/components/containers/app-page';
+import { AppPage } from '@/components/layout/app-page';
 import { DataTable } from '@/components/display/table';
 import { UsageEventDrawer } from '@/features/platform/commercial/usage-event-drawer';
 import { TenantWorkspaceHeader } from '@/features/platform/tenant-workspace';

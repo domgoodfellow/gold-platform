@@ -1,4 +1,4 @@
-import { DividedList, EmptyState } from '@/components/containers/section';
+import { DividedList, EmptyState } from '@/components/surfaces/section';
 import type { Customer } from '@/lib/domain/customers/customers';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 

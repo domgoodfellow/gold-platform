@@ -1,6 +1,6 @@
 import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { WidgetGrid, Widget } from '@/components/display/widget';

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 
 import { Hint } from '@/components/controls/inputs';

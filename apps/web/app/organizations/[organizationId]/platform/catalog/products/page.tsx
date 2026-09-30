@@ -1,8 +1,8 @@
 import { requirePlatformArea } from '@/lib/route/platform';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';

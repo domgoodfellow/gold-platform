@@ -1,5 +1,5 @@
 import { Button, ButtonLink } from '@/components/controls/button';
-import { Card } from '@/components/containers/card';
+import { Card } from '@/components/surfaces/card';
 import { Badge } from '@/components/display/data';
 import { isConnectable, type Connector } from '@/lib/domain/integrations/connectors';
 import { ConnectorAppStrip } from './connector-app-strip';

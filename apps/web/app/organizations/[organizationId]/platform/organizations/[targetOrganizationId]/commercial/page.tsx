@@ -1,8 +1,8 @@
 import { requirePlatformArea } from '@/lib/route/platform';
 import { platformHref } from '@/lib/platform-navigation';
 import { redirect } from 'next/navigation';
-import { AppPage } from '@/components/containers/app-page';
-import { SectionHeading } from '@/components/containers/section';
+import { AppPage } from '@/components/layout/app-page';
+import { SectionHeading } from '@/components/surfaces/section';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';

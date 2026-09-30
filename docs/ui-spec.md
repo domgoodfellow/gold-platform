@@ -69,7 +69,7 @@ the structural form of the sentence rule the rest of that suite enforces.
 Products, Modules, Meters, Pricing, Providers and Failures are a separate IA because they govern
 GildOps itself, not one business. Both models render through the shared `AppShell` and shadcn
 Sidebar primitives — and, since the shell/context correction, through the shared
-`WorkspaceShell`/`WorkspaceRightRail` too (`apps/web/components/containers/workspace-shell.tsx`):
+`WorkspaceShell`/`WorkspaceRightRail` too (`apps/web/components/layout/workspace-shell.tsx`):
 two independent panels — Agent, and the page-support rail that Activity, Insights, Configure and every create/edit form
 open into — neither modal. Both dock beside the page from 1720px; from 1280px one docks, the one
 opened last; between that and 768px one floats over the page from the right; below 768px one
@@ -78,8 +78,8 @@ to workspace chrome; page-local tools align to page chrome.** Agent runs the ful
 header is the workspace header's band; the page drawer starts beneath that band, and its title row
 lines up with the page's `<h1>`. Every measurement is in `workspace-geometry.ts` — no route sets a
 margin to get there. Both
-shells also share `WorkspaceHeader` (`apps/web/components/containers/workspace-header.tsx`), the
-sticky *global* bar, and `PageHeader` (`components/containers/page-header.tsx`), the page's own
+shells also share `WorkspaceHeader` (`apps/web/components/headers/workspace-header.tsx`), the
+sticky *global* bar, and `PageHeader` (`components/headers/page-header.tsx`), the page's own
 identity and actions — §2a says which owns what. Agent itself is scope-bound rather than shared
 data: `TenantAgentRail` answers with
 one business's own rows under the caller's RLS; `PlatformAgentRail` takes no organization id at
@@ -569,24 +569,27 @@ are *GildOps'* facts — a refusal, a connection that is live — and neither is
 
 ## 4. The control set
 
-Built in three deliberate layers. `packages/ui` owns generic shadcn primitives.
-`apps/web/components` owns generic composed application controls and containers.
-`apps/web/features` owns product-capability UI. A repeated product concept does not move into
-the generic layers merely because it has multiple call sites.
+Built in three layers. `packages/ui` owns generic source-owned primitives. `apps/web/components`
+owns shared GildOps application components and chrome. `apps/web/features` owns product-capability
+UI. Promotion into a generic layer is decided by whether a responsibility is a stable cross-feature
+application contract — call-site count is evidence that an abstraction may be useful, not the
+ownership rule. A feature may use a `packages/ui` primitive directly when it genuinely needs
+low-level composition and no shared application semantic already covers it; that is not a gap to
+be wrapped, it is the intended shape of layer 4.
 
-| Control | File | Call sites |
-|---|---|---|
-| `Button` · `ButtonLink` — four tones, three sizes | `controls/button.tsx` | 88 · 4 |
-| `TextInput` · `SelectInput` · `TextArea` | `controls/inputs.tsx` | 92 · 31 · 5 |
-| `FieldLabel` · `Hint` · `ErrorText` | `controls/inputs.tsx` | 10 · 113 · 50 |
-| `Section` · `SectionHeading` · `PageHeading` · `GroupHeading` | `containers/section.tsx` | 35 · 53 · 8 · 5 |
-| `PageHeader` · `RecordHeader` | `containers/page-header.tsx` · `containers/record-header.tsx` | every operator page — see §2a |
-| `DividedList` · `EmptyState` | `containers/section.tsx` | 31 · 37 |
-| `DataTable` — responsive; `TableScroll` · `TableHeaderCell` · `TableCell` | `display/table.tsx` | the lists and the reports |
-| `Card` · `Disclosure` | `containers/card.tsx` | the boards and every create form |
-| `Dialog` · `ConfirmSubmit` | `containers/dialog.tsx` | 10, every destructive action in the operator shell |
-| `Badge` · `DefinitionList` · `Detail` · `Stat` · `StatRow` · `Toolbar` | `display/data.tsx` | the detail screens |
-| `cx` | `class-names.ts` | the others |
+| Control | File |
+|---|---|
+| `Button` · `ButtonLink` — four tones, three sizes | `controls/button.tsx` |
+| `TextInput` · `SelectInput` · `TextArea` | `controls/inputs.tsx` |
+| `FieldLabel` · `Hint` · `ErrorText` | `controls/inputs.tsx` |
+| `Section` · `SectionHeading` · `PageHeading` · `GroupHeading` | `surfaces/section.tsx` |
+| `PageHeader` · `RecordHeader` | `headers/page-header.tsx` · `headers/record-header.tsx` |
+| `DividedList` · `EmptyState` | `surfaces/section.tsx` |
+| `DataTable` — responsive; `TableScroll` · `TableHeaderCell` · `TableCell` | `display/table.tsx` |
+| `Card` · `Disclosure` | `surfaces/card.tsx` |
+| `Dialog` · `ConfirmSubmit` | `controls/confirm-submit.tsx` |
+| `Badge` · `DefinitionList` · `Detail` · `Stat` · `StatRow` · `Toolbar` | `display/data.tsx` |
+| `cx` | `class-names.ts` |
 
 The operator and platform surfaces have converged on those layers. Dialog, Table, Badge, Card
 and Sidebar primitives come from `@gold/ui`; composed controls retain the application behavior
@@ -630,40 +633,39 @@ under `app/` may spell a control by hand. The seven above are the whole of the e
 
 ---
 
-## 5. Containers
+## 5. Interaction surfaces and layout patterns
 
-Not every interaction is a dialog.
+Which surface fits a task depends on the task, the attention it demands, whether context should
+stay visible, the focus model, available space, interaction complexity and accessibility — not a
+fixed table of "X is always Y." The distinctions below are still real and worth keeping apart:
 
-| Use | For | Built as |
-|---|---|---|
-| Cards | lists of jobs, customers, resources, invoices | `Card` |
-| Page drawers | filters, quick actions, status changes, small forms, and inspecting one record from a browse list | `PageDrawer` (`components/containers/page-drawer.tsx`) |
-| Full screens | complex forms, configuration, job and customer detail | the route |
-| Dialogs | confirmation, and destructive actions only | `Dialog` · `ConfirmSubmit` |
+| Kind | Character |
+|---|---|
+| Inline disclosure | `Disclosure` — progressive reveal in place, no focus trap, nothing leaves the page |
+| Non-modal supporting panel | `PageDrawer` — docks beside the page, takes no overlay or blur, moves focus in on open and returns it on close |
+| Modal interaction | `Dialog` — traps focus, takes the page behind it out of the interaction |
+| Full-page task | the route — complex forms, configuration, record detail |
 
-**One drawer implementation.** Organization quick-create forms, platform catalogue editors and
-every Configure panel use `PageDrawer`. It is not modal: it takes no overlay, no blur and no focus
-trap, docks full height beside the page, and takes its width from the host, never from the form
-that opened it. It moves focus in on open, returns it on close, and closes on Escape. Drawers
-stack, the newest showing. Use `Disclosure` for inline progressive disclosure, not as a drawer
-substitute. Do not reintroduce the modal `Sheet` for page work, and do not introduce another
-drawer pattern.
-
-`OrgNav` refused a drawer on the
-grounds that one "needs state, a toggle, a focus trap and an escape key to be correct", and the
-same argument supports a single accessible sheet primitive for drawer interactions.
-
-**What this replaced was every create form rendering permanently at the bottom of its screen.** A
-business with forty customers ended its customer list with a create form, so the answer to *what
-is on this page* was whatever fitted above a thing used once a week. A form is now available and
-opens in a focused sheet when requested, leaving the list as the stable page context.
+`PageDrawer` (`components/panels/page-drawer.tsx`) is the current canonical non-modal application
+panel — quick-create forms, catalogue editors and Configure panels — and it stacks, newest showing,
+closes on Escape, and takes its width from the host. That makes it the default for a page-scoped
+supporting interaction, not the only legal one: a different task with a different attention or
+space requirement may reach for a different surface, and a route deciding to do so is a design
+choice for that screen, not an architecture violation. Do not build a second drawer implementation
+for the same job `PageDrawer` already does.
 
 **The outermost container declares its width and not only its margins.** `mx-auto max-w-2xl`
 centres a block and does nothing useful in a flex parent, where an automatic side margin absorbs
 the free space instead of stretching the item and leaves the box as wide as its longest line.
 Every `<main>` outside the operator shell is a direct flex child of `<body>`, so each carries
 `w-full` as well; `layout.test.ts` reads the source and fails on one that does not, because jsdom
-implements no layout and a test that rendered these pages would have seen nothing wrong.
+implements no layout and a test that rendered these pages would have seen nothing wrong. This is a
+demonstrated correctness defect, not a style preference, and stays enforced.
+
+**What this replaced was every create form rendering permanently at the bottom of its screen.** A
+business with forty customers ended its customer list with a create form, so the answer to *what
+is on this page* was whatever fitted above a thing used once a week. A form is now available and
+opens in a focused sheet when requested, leaving the list as the stable page context.
 
 ---
 
@@ -675,9 +677,13 @@ never on the row: it was on the page you reached by clicking, or in a form at th
 is therefore a slot on `DataTable` rather than a column — a row action is tertiary by construction,
 which is why §6's one-primary-per-screen rule is not in tension with it.
 
-**Below `md` a table is a list of cards, never a horizontal scroll.** A `overflow-x-auto` table on
-a phone puts the columns that matter off the right edge and asks the reader to drag a grid
-sideways to find out what a number refers to. Each card is the `primary` columns as a heading and
+**`DataTable`'s contract: below `md` a table is a list of cards, never a horizontal scroll.** A
+`overflow-x-auto` table on a phone puts the columns that matter off the right edge and asks the
+reader to drag a grid sideways to find out what a number refers to, and that is why `DataTable`
+chooses cards. This is `DataTable`'s pattern, not a universal law: a different information task —
+a report someone scans column-by-column, a purpose-built comparison view — may legitimately choose
+column reduction or horizontal scroll instead. §5a's own report table (below) is exactly that case.
+Each card is the `primary` columns as a heading and
 every other column as a label-and-value pair, so a value is never separated from the word that
 says what it is. That is why `header` is required: on a phone it is not a heading, it is the label
 on every single row.
@@ -753,12 +759,18 @@ columns being compared. This is a guide for later slices, not a list of what is 
 
 ## 6. Action hierarchy
 
-**One primary action per screen**, secondary and tertiary beneath it.
+**One primary action per screen is a strong default, not a universal law.** The actual objective
+is a clear hierarchy and no competing emphasis — most collection and record screens reach that with
+one primary action and secondary/tertiary ones beneath it, and that remains the pattern to reach
+for first. A task surface whose job genuinely requires several high-priority controls (an
+operational canvas, a communication composer, a builder) is not in violation merely for having
+more than one; the thing to avoid is two controls competing for the same emphasis with no way to
+tell which matters more.
 
 Destructive actions are confirmed when consequential (M11). `ConfirmSubmit` is the one shape: a
 trigger that opens a `Dialog` rather than submitting, and a Confirm button inside it that submits
-the original form through the native `form` attribute — ten call sites across the operator shell
-use it and none holds its own copy of the pattern.
+the original form through the native `form` attribute — used throughout the operator shell, and no
+call site holds its own copy of the pattern.
 
 **A row action is tertiary and sits outside this count.** Moving a job on, recording a meter
 reading, setting a location's coordinates: each is one row's business rather than the screen's,
@@ -817,23 +829,30 @@ fallback is one heading, one sentence and one recovery (`FallbackPage`); the rec
 validated landing a sign-in uses, named for what it does (*Return to workspace*), never a list of
 businesses.
 
-**An empty collection explains state; it does not repeat the page's primary action.** *No customers
-yet.* is state. A second *New customer* under a header that already offers one is the same control
-twice, and *Add your first customer to get started* is advice the platform has no standing to
-give. `EmptyState` and `DataTable` therefore carry no action at all — the prop was removed when its
-last caller went. That holds for a page whose `PageHeader` creates the record (Customers, Team,
-Resources, Locations, Assets) and for a drawer or view whose create control is always visible beside
-the count (a Configure drawer's field list, Automations' rules and messages).
+**An empty state describes the truth and may offer concise, honest guidance toward the next
+available step.** *No customers yet.* states the fact. Contextual next-step copy is valid UX where
+it helps — the doctrine that all empty-state guidance is "advice the platform has no standing to
+give" is retired: it blocked ordinary, useful copy at the architecture level. What remains
+refused is misleading advice, unnecessary verbosity, a manipulative call to action, and duplicating
+an always-visible primary action without reason — a page whose header already offers *New
+customer* does not need the identical control repeated inside the empty state for no reason. The
+richer `EmptyState` implementation this enables is a Pattern/default question for a later slice
+(Application States), not something this document's architecture layer decides.
 
-**Inside a page, four layers in one order.** *Page header* — identity and the page's actions
-(Configure, create, import); one is primary. *Local view navigation* — sibling views of the same
-workspace as URLs (`ViewNav`: Customers' List and Pipeline, Team's Members, Invitations and
-Roles); it holds nothing but views and is never disguised as an action or stood beside one.
-*Toolbar* — search, filter, sort. *Content* — the table, cards or empty state. A naked underlined
-link belongs in none of the first three; navigation between siblings is the second, and an
-operation is a `Button`/`ButtonLink` in the first or third. Tables have one grammar: column
-headers at reading size in full-strength text, cells centred on the row so a control and the text
-beside it share a line, and no hover on a row that is not itself the action.
+**Collection-style screens often compose page header, local view navigation, toolbar and content,
+in that order, because that composition matches a common browse/filter/act task.** That is a
+pattern worth defaulting to for a browse screen, not a universal screen grammar every page must
+obey — a record, a dashboard, an operational canvas, a communication workspace, a builder, a
+configuration screen or a wizard each has a different task and may compose differently. Where the
+pattern is used: *Page header* carries identity and the page's actions (Configure, create, import),
+with one primary. *Local view navigation* (`ViewNav`) holds sibling views of the same workspace as
+URLs (Customers' List and Pipeline, Team's Members, Invitations and Roles) and nothing else — never
+disguised as an action or stood beside one. *Toolbar* holds search, filter and sort. *Content* is
+the table, cards or empty state. A naked underlined link belongs in none of the first three;
+navigation between siblings is the second, and an operation is a `Button`/`ButtonLink` in the first
+or third. Tables have one grammar: column headers at reading size in full-strength text, cells
+centred on the row so a control and the text beside it share a line, and no hover on a row that is
+not itself the action.
 
 **Strings describing application state stay in code**: "Loading", "No results", aria labels, and
 the sentences `outstandingModuleSetup` produces about what a deployment cannot do.
@@ -843,9 +862,8 @@ scanned for them — `public-profile.test.ts` reads the source of `app/(public)/
 platform sentence appearing there. A business that has configured nothing renders its own name
 and stops.
 
-An empty state sits on that line and belongs to the first category. *No customers yet* is
-application state. *Add your first customer to get started* is advice the platform has no
-standing to give.
+An empty state sits on that line: the fact of the state belongs to the first category, and concise
+next-step guidance is now permitted alongside it under the rule above.
 
 ---
 
@@ -897,3 +915,13 @@ tenant never sees any of this: it sees phone numbers, routing and recording in i
 - **Any value.** See the opening.
 - **Desktop packaging.** M10 decides Electron and device integrations. `packages/ui` is already
   extracted and shared; no UI fork is authorized.
+- **Exact component order, exact Tailwind classes, or one universal page composition.** Unless a
+  section above names something a hard invariant or product contract, it is a pattern/default and
+  a screen may compose differently when its task calls for it.
+- **Whether every local view looks like tabs, or every table transforms identically.** `ViewNav`'s
+  contract is URL-backed sibling navigation, not one visual placement; `DataTable`'s card
+  transform is its own contract, not every table's.
+- **Whether every action belongs in the same visual region**, or future screen archetypes (record,
+  dashboard, operational canvas, communication workspace, builder, configuration, wizard/lifecycle)
+  not yet built here.
+- **Arbitrary decorative markup.** Not everything under `app/` needs a rule; most of it needs none.

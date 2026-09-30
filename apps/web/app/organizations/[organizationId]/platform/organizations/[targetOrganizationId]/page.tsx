@@ -1,7 +1,7 @@
 import { requirePlatformArea } from '@/lib/route/platform';
 import { platformHref } from '@/lib/platform-navigation';
 import { redirect } from 'next/navigation';
-import { AppPage } from '@/components/containers/app-page';
+import { AppPage } from '@/components/layout/app-page';
 import { Button } from '@/components/controls/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { getDb } from '@/lib/db/server';

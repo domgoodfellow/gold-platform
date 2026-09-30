@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
-import { DividedList, EmptyState, GroupHeading } from '@/components/containers/section';
+import { DividedList, EmptyState, GroupHeading } from '@/components/surfaces/section';
 import { ErrorText, FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import {
   createRouteAction,

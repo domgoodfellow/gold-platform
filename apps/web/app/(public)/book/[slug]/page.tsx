@@ -1,4 +1,4 @@
-import { EmptyState } from '@/components/containers/section';
+import { EmptyState } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { notFound } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
@@ -10,7 +10,7 @@ import {
   type Slot,
 } from '@/lib/domain/booking/booking';
 import { BrandStyle } from '@/features/branding/brand-style';
-import { Card } from '@/components/containers/card';
+import { Card } from '@/components/surfaces/card';
 import { PublicHeader } from '@/features/public-profile/public-header';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { publicProfile } from '@/lib/domain/tenancy/profile';

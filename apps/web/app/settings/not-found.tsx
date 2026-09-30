@@ -1,4 +1,4 @@
-import { FallbackPage } from '@/components/containers/fallback-page';
+import { FallbackPage } from '@/components/feedback/fallback-page';
 import { ButtonLink } from '@/components/controls/button';
 import { PersonalSettingsShell } from '@/features/account/personal-settings-shell';
 import { personalSettingsHref } from '@/lib/route/personal-settings';

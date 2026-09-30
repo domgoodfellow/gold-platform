@@ -1,6 +1,6 @@
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
-import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
+import { DividedList, EmptyState, SectionHeading } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Widget, WidgetGrid } from '@/components/display/widget';
 import { studioOverview } from '@/lib/domain/studio/studio-overview';

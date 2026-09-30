@@ -4,7 +4,7 @@ import { useActionState, useEffect, useId } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/controls/button';
 import { ErrorText } from '@/components/controls/inputs';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import {
   recheckDomainAction,
   removeDomainAction,

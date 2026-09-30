@@ -1,6 +1,6 @@
-import { AppPage } from '@/components/containers/app-page';
-import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
+import { PageHeader } from '@/components/headers/page-header';
 import { ResourceConfiguration } from '@/features/resources/configuration/resource-configuration';
 import { ResourceTable } from '@/features/resources/resource-table';
 import { CreateResourceSheetProvider, CreateResourceTrigger } from '@/features/resources/create-resource-sheet';

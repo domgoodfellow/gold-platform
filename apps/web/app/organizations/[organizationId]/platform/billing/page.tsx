@@ -1,9 +1,9 @@
 import { requirePlatformArea } from '@/lib/route/platform';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
-import { AppPage } from '@/components/containers/app-page';
-import { DividedList, EmptyState, SectionHeading } from '@/components/containers/section';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { DividedList, EmptyState, SectionHeading } from '@/components/surfaces/section';
+import { PageHeader } from '@/components/headers/page-header';
 import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';

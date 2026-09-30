@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation';
 import { requirePlatformArea } from '@/lib/route/platform';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
-import { AppPage } from '@/components/containers/app-page';
-import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
-import { PageHeader } from '@/components/containers/page-header';
-import { Section, SectionHeading } from '@/components/containers/section';
-import { ViewNav } from '@/components/containers/view-nav';
+import { AppPage } from '@/components/layout/app-page';
+import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
+import { PageHeader } from '@/components/headers/page-header';
+import { Section, SectionHeading } from '@/components/surfaces/section';
+import { ViewNav } from '@/components/navigation/view-nav';
 import { Detail, DefinitionList } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';
 import { listProviders } from '@/lib/domain/commercial/catalogue';

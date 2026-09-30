@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { CopyField } from '@/components/controls/copy-field';
 import { Hint } from '@/components/controls/inputs';
 import type { ManagedAddress as ManagedAddressState } from '@/lib/domain/domains/domains';

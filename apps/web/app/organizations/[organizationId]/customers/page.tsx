@@ -1,7 +1,7 @@
-import { AppPage } from '@/components/containers/app-page';
-import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
-import { SupportRegistrar } from '@/components/containers/support-registrar';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
+import { SupportRegistrar } from '@/components/panels/support-registrar';
+import { PageHeader } from '@/components/headers/page-header';
 import { ButtonLink } from '@/components/controls/button';
 import {
   CreateCustomerSheetProvider,

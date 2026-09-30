@@ -1,4 +1,4 @@
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { AI_CAPABILITIES, AI_CAPABILITY_LABEL, type AiRuntimeAssignment } from '@/lib/domain/ai/runtime';
 import { RuntimeAssignmentRow } from './runtime-assignment-row';

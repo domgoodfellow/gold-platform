@@ -1,7 +1,7 @@
-import { AppPage } from '@/components/containers/app-page';
-import { KpiCard, type Kpi } from '@/components/containers/kpi-card';
-import { PageHeader } from '@/components/containers/page-header';
-import { EmptyState } from '@/components/containers/section';
+import { AppPage } from '@/components/layout/app-page';
+import { KpiCard, type Kpi } from '@/components/surfaces/kpi-card';
+import { PageHeader } from '@/components/headers/page-header';
+import { EmptyState } from '@/components/surfaces/section';
 import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';

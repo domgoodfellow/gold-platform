@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
-import { AppPage } from '@/components/containers/app-page';
-import { SectionHeading } from '@/components/containers/section';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { SectionHeading } from '@/components/surfaces/section';
+import { PageHeader } from '@/components/headers/page-header';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { Widget, WidgetGrid } from '@/components/display/widget';

@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { Card, Disclosure } from '@/components/containers/card';
-import { EmptyState, SectionHeading } from '@/components/containers/section';
+import { Card, Disclosure } from '@/components/surfaces/card';
+import { EmptyState, SectionHeading } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';

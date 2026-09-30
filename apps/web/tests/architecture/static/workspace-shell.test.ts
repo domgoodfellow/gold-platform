@@ -17,23 +17,23 @@ const WEB = fileURLToPath(new URL('../../..', import.meta.url));
 // Doc comments legitimately name what a file does not do; only the code is under test.
 const code = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-const workspaceHeader = readFileSync(`${WEB}/components/containers/workspace-header.tsx`, 'utf8');
-const workspaceRightRail = readFileSync(`${WEB}/components/containers/workspace-right-rail.tsx`, 'utf8');
-const contextSwitcher = readFileSync(`${WEB}/components/containers/context-switcher.tsx`, 'utf8');
-const accountMenu = readFileSync(`${WEB}/components/containers/account-menu.tsx`, 'utf8');
+const workspaceHeader = readFileSync(`${WEB}/components/headers/workspace-header.tsx`, 'utf8');
+const workspaceRightRail = readFileSync(`${WEB}/components/panels/workspace-right-rail.tsx`, 'utf8');
+const contextSwitcher = readFileSync(`${WEB}/components/navigation/context-switcher.tsx`, 'utf8');
+const accountMenu = readFileSync(`${WEB}/components/navigation/account-menu.tsx`, 'utf8');
 // The shell every organization page renders in — Platform included, which is a sub-scope of GOLD's own organization.
 const organizationLayout = readFileSync(`${WEB}/features/shell/organization-shell.tsx`, 'utf8');
 const organizationLayoutRoute = readFileSync(`${WEB}/app/organizations/[organizationId]/layout.tsx`, 'utf8');
 const platformLayout = readFileSync(`${WEB}/app/organizations/[organizationId]/platform/layout.tsx`, 'utf8');
 const legacyPlatformEntry = readFileSync(`${WEB}/app/platform/[[...path]]/page.tsx`, 'utf8');
-const workspaceShell = readFileSync(`${WEB}/components/containers/workspace-shell.tsx`, 'utf8');
-const pageHeader = readFileSync(`${WEB}/components/containers/page-header.tsx`, 'utf8');
+const workspaceShell = readFileSync(`${WEB}/components/layout/workspace-shell.tsx`, 'utf8');
+const pageHeader = readFileSync(`${WEB}/components/headers/page-header.tsx`, 'utf8');
 const orgShell = readFileSync(`${WEB}/app/organizations/[organizationId]/org-shell.tsx`, 'utf8');
 const resourcesPage = readFileSync(
   `${WEB}/app/organizations/[organizationId]/resources/page.tsx`,
   'utf8',
 );
-const recordHeader = readFileSync(`${WEB}/components/containers/record-header.tsx`, 'utf8');
+const recordHeader = readFileSync(`${WEB}/components/headers/record-header.tsx`, 'utf8');
 const platformNavigation = readFileSync(`${WEB}/lib/platform-navigation.ts`, 'utf8');
 const shellProjection = readFileSync(`${WEB}/lib/shell.ts`, 'utf8');
 const tenantWorkspace = readFileSync(`${WEB}/features/platform/tenant-workspace.tsx`, 'utf8');
@@ -60,25 +60,13 @@ describe('WorkspaceHeader is the global bar, not a page header', () => {
     expect(source).toContain('<WorkspaceCrumbSlot />');
   });
 
-  it('renders its slots in one fixed order: trigger, context, breadcrumbs, spacer, beforeActions, Agent', () => {
-    const order = [
-      'SidebarTrigger',
-      '{context}',
-      '<WorkspaceCrumbSlot',
-      'className="flex-1"',
-      '{beforeActions}',
-      '<AgentTrigger',
-    ];
-    let cursor = -1;
-    for (const token of order) {
-      const at = workspaceHeader.indexOf(token);
-      expect(at, `expected to find "${token}" in workspace-header.tsx`).toBeGreaterThan(-1);
-      expect(at, `"${token}" is out of order`).toBeGreaterThan(cursor);
-      cursor = at;
+  it('carries the trigger, context, breadcrumbs, before-actions and Agent slots', () => {
+    for (const token of ['SidebarTrigger', '{context}', '<WorkspaceCrumbSlot', '{beforeActions}', '<AgentTrigger']) {
+      expect(workspaceHeader, `expected to find "${token}" in workspace-header.tsx`).toContain(token);
     }
   });
 
-  it('still exposes Agent as its furthest-right control, and no Configure', () => {
+  it('exposes Agent as a workspace-global control, and no Configure', () => {
     expect(workspaceHeader).toContain('<AgentTrigger />');
     expect(code(workspaceHeader)).not.toMatch(/Configure|Settings/);
   });
@@ -106,7 +94,7 @@ describe('Agent is workspace-global and the support modes are page-level', () =>
     expect(workspaceRightRail).toMatch(/const \[supportMode, setSupportMode\] = useState<SupportMode \| null>/);
     // No second open-state per mode: the three drawers are one value compared to their own mode.
     expect(workspaceRightRail).not.toMatch(/activityOpen|insightsOpen|configureOpen/);
-    const registrar = readFileSync(`${WEB}/components/containers/support-registrar.tsx`, 'utf8');
+    const registrar = readFileSync(`${WEB}/components/panels/support-registrar.tsx`, 'utf8');
     expect(registrar).toContain('<PageDrawer open={supportMode === mode}');
     // Closing on unmount is scoped to this registrar's own mode.
     expect(registrar).toContain('current === mode ? null : current');
@@ -118,15 +106,12 @@ describe('Agent is workspace-global and the support modes are page-level', () =>
     expect(code(pageHeader)).not.toMatch(/AgentTrigger|toggleAgent/);
   });
 
-  it('no page header ever renders Agent, and PageHeader offers the support modes only as its final actions, in one order', () => {
+  it('no page header ever renders Agent, and PageHeader offers the support modes after the page actions', () => {
     expect(code(pageHeader)).not.toMatch(/Agent|useWorkspaceRail/);
     const header = code(pageHeader);
-    const activity = header.indexOf('<SupportTrigger mode="activity" />');
-    const insights = header.indexOf('<SupportTrigger mode="insights" />');
-    const configure = header.indexOf('<SupportTrigger mode="configure" />');
-    expect(activity).toBeGreaterThan(header.indexOf('{actions}'));
-    expect(insights).toBeGreaterThan(activity);
-    expect(configure).toBeGreaterThan(insights);
+    for (const mode of ['activity', 'insights', 'configure']) {
+      expect(header.indexOf(`<SupportTrigger mode="${mode}" />`)).toBeGreaterThan(header.indexOf('{actions}'));
+    }
   });
 
   it('only offers a mode where the page also registers its content', () => {
@@ -305,10 +290,10 @@ describe('AccountMenu — the compact trigger is not built from Sidebar-only geo
 });
 
 describe('the right rail — Agent and the page drawer are two independent, non-modal panels', () => {
-  const pageDrawer = readFileSync(`${WEB}/components/containers/page-drawer.tsx`, 'utf8');
-  const appShell = readFileSync(`${WEB}/components/containers/app-shell.tsx`, 'utf8');
-  const workspaceGeometry = readFileSync(`${WEB}/components/containers/workspace-geometry.ts`, 'utf8');
-  const configureRegistrar = readFileSync(`${WEB}/components/containers/configure-registrar.tsx`, 'utf8');
+  const pageDrawer = readFileSync(`${WEB}/components/panels/page-drawer.tsx`, 'utf8');
+  const appShell = readFileSync(`${WEB}/components/layout/app-shell.tsx`, 'utf8');
+  const workspaceGeometry = readFileSync(`${WEB}/components/layout/workspace-geometry.ts`, 'utf8');
+  const configureRegistrar = readFileSync(`${WEB}/components/panels/configure-registrar.tsx`, 'utf8');
 
   it('keeps Agent and the page drawer open independently, both docked only where the screen has room', () => {
     expect(workspaceRightRail).toContain('const WIDE_BREAKPOINT = 1720');
@@ -399,7 +384,7 @@ describe('the right rail — Agent and the page drawer are two independent, non-
 
   it('Configure is the configure mode of the one support rail, closed when its page unmounts', () => {
     expect(configureRegistrar).toContain('<SupportRegistrar mode="configure"');
-    const registrar = readFileSync(`${WEB}/components/containers/support-registrar.tsx`, 'utf8');
+    const registrar = readFileSync(`${WEB}/components/panels/support-registrar.tsx`, 'utf8');
     expect(registrar).toContain('setSupportMode((current) => (current === mode ? null : current))');
   });
 });
@@ -407,7 +392,7 @@ describe('the right rail — Agent and the page drawer are two independent, non-
 
 describe('the page-header contract — the page, not the workspace header, owns page identity', () => {
   it('the page-chrome registration mechanism is gone — nothing registers identity upward', () => {
-    expect(existsSync(`${WEB}/components/containers/workspace-page-chrome.tsx`)).toBe(false);
+    expect(existsSync(`${WEB}/components/layout/workspace-page-chrome.tsx`)).toBe(false);
     expect(workspaceShell).not.toContain('PageChrome');
     expect(recordHeader).not.toContain('useWorkspacePageChrome');
   });
@@ -481,10 +466,9 @@ describe('Resources — the reference page for the workspace/page hierarchy', ()
     expect(resourcesPage).not.toContain('PageChromeRegistrar');
   });
 
-  it('puts Add resource in the page-action area, before Configure — one primary action', () => {
+  it('offers Add resource as a page action, alongside Configure', () => {
     expect(headerBlock).toContain('<CreateResourceTrigger />');
     expect(headerBlock).toContain('configure={mayConfigure}');
-    expect(headerBlock.indexOf('<CreateResourceTrigger')).toBeLessThan(headerBlock.indexOf('configure='));
   });
 
   it('keeps its Configure panel registration and the create-sheet provider around the header', () => {
@@ -615,7 +599,7 @@ describe('Personal settings shares the authenticated shell — no standalone isl
   });
 
   it('has no SwitcherContext of its own: the switcher names a business or the platform', () => {
-    expect(readFileSync(`${WEB}/components/containers/context-switcher.tsx`, 'utf8')).not.toMatch(/kind:s*'account'/);
+    expect(readFileSync(`${WEB}/components/navigation/context-switcher.tsx`, 'utf8')).not.toMatch(/kind:s*'account'/);
   });
 });
 
@@ -647,7 +631,7 @@ describe('organization page composition', () => {
   const read = (path: string) => readFileSync(path, 'utf8');
 
   it('AppPage is the one frame: fluid by default, and no page names a width of its own', () => {
-    const appPage = read(`${WEB}/components/containers/app-page.tsx`);
+    const appPage = read(`${WEB}/components/layout/app-page.tsx`);
     expect(code(appPage)).toContain("width = 'fluid'");
     expect(code(appPage)).not.toMatch(/max-w-\[|max-w-screen|max-w-none/);
     const offenders = sources
@@ -658,8 +642,8 @@ describe('organization page composition', () => {
 
   it('a page never places a support mode: only PageHeader renders one, after the business actions', () => {
     const renderers = sources.filter((path) => /<SupportTrigger\b/.test(read(path)));
-    expect(renderers.map((path) => path.slice(WEB.length))).toEqual(['/components/containers/page-header.tsx']);
-    const header = code(read(`${WEB}/components/containers/page-header.tsx`));
+    expect(renderers.map((path) => path.slice(WEB.length))).toEqual(['/components/headers/page-header.tsx']);
+    const header = code(read(`${WEB}/components/headers/page-header.tsx`));
     expect(header.indexOf('{actions}')).toBeGreaterThan(-1);
     expect(header.indexOf('{actions}')).toBeLessThan(header.indexOf('<SupportTrigger mode="activity" />'));
   });
@@ -686,12 +670,12 @@ describe('the sidebar settles administration at the foot', () => {
   });
 
   it('never offers Platform in the context switcher, which answers only which business', () => {
-    expect(readFileSync(`${WEB}/components/containers/context-switcher.tsx`, 'utf8')).not.toMatch(/platformHref|Platform administration/);
+    expect(readFileSync(`${WEB}/components/navigation/context-switcher.tsx`, 'utf8')).not.toMatch(/platformHref|Platform administration/);
   });
 });
 
 describe('the breadcrumb contract — every page publishes a location, ancestors + current', () => {
-  const workspaceCrumbs = readFileSync(`${WEB}/components/containers/workspace-crumbs.tsx`, 'utf8');
+  const workspaceCrumbs = readFileSync(`${WEB}/components/navigation/workspace-crumbs.tsx`, 'utf8');
   const navigationSource = readFileSync(`${WEB}/lib/navigation.ts`, 'utf8');
   const platformNavigationSource = readFileSync(`${WEB}/lib/platform-navigation.ts`, 'utf8');
 

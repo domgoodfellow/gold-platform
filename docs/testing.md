@@ -191,7 +191,17 @@ Why each **P** and **—** is graded so:
   inquiry or a booking is not.
 - **UI / accessibility P:** one component file renders to a string (no DOM, no focus, no keyboard);
   the architecture files that check UI conventions do so by reading source. Nothing measures accessibility by
-  behaviour. This is the largest structural weakness and the least urgent.
+  behaviour. This is active remediation work (the Phase A frontend-architecture reset), not settled debt.
+
+**Architecture-static is for** dependency direction, layer ownership, forbidden authority,
+route/source-of-truth rules, semantic token ownership, and structural contracts actually provable
+from source. **Component/browser verification is for** interaction, focus, keyboard behavior,
+layout, responsive behavior, visual hierarchy, overflow, clipping, drawers, dialogs, and actual
+accessibility behavior. **Visual verification is for** spacing, alignment, hierarchy, density and
+responsive composition. A source-string assertion proves none of the second or third group; do not
+write one that claims to. No new browser/component-test system is installed to close this gap yet
+— that is a later verification slice — but architecture-static tests stop pretending to cover it in
+the meantime.
 - **Voice, softphone:** call history renders; there is no browser softphone to test (M9/M14).
 
 ## Asymmetries found, and what was done

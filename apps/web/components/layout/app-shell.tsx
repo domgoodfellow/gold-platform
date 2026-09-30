@@ -4,7 +4,7 @@ import { Fragment, type ReactNode } from 'react';
 import { SidebarInset, SidebarProvider } from '@gold/ui/components/sidebar';
 import { cx } from '../class-names';
 import { PAGE_PADDING } from './workspace-geometry';
-import { PagePanel } from './workspace-right-rail';
+import { PagePanel } from '../panels/workspace-right-rail';
 
 /**
  * The two-column frame every shell renders inside: a `Sidebar` the caller builds (each shell

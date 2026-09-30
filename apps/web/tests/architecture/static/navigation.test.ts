@@ -952,3 +952,40 @@ describe('the Library area', () => {
     }
   });
 });
+
+/**
+ * URL-addressable sibling views are navigation, never actions (`docs/ui-spec.md` §5b) — a
+ * product contract, not a placement rule. `ViewNav`'s own visual position inside a page is a
+ * pattern/default and is not pinned here.
+ */
+describe('sibling views are navigation, not page actions', () => {
+  const read = (path: string) => readFileSync(path, 'utf8');
+  const code = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const UI = fileURLToPath(new URL('../../../../../packages/ui/src/components', import.meta.url));
+  const viewNav = read(`${WEB_ROOT}/components/navigation/view-nav.tsx`);
+
+  it('ViewNav is link-based, URL-backed and shares the tabs look through one style module', () => {
+    expect(viewNav).toContain("from '@gold/ui/components/tab-styles'");
+    expect(viewNav).toContain("aria-current={view.key === current ? 'page' : undefined}");
+    expect(viewNav).not.toContain("'use client'");
+    expect(read(`${UI}/tabs.tsx`)).toContain('tabsTriggerClassName');
+    expect(read(`${UI}/tab-styles.ts`)).toContain('aria-[current=page]:border-accent');
+  });
+
+  it('Customers and Pipeline are pages of Sales in the sidebar, so neither repeats them as a tab strip', () => {
+    const list = read(`${ROUTES}/customers/page.tsx`);
+    const pipeline = read(`${ROUTES}/customers/pipeline/page.tsx`);
+    for (const page of [list, pipeline]) expect(page).not.toMatch(/ViewNav|ViewTabs/);
+    expect(() => read(`${WEB_ROOT}/features/crm/customers/customers-view-nav.tsx`)).toThrow();
+    expect(code(list)).not.toMatch(/<Link\b/);
+  });
+
+  it('Team renders ViewNav for Members, Invitations and Roles, with nothing but views in it', () => {
+    const page = read(`${ROUTES}/settings/access/access-page.tsx`);
+    expect(page).toContain('<ViewNav');
+    expect(page).not.toContain('TeamViewTabs');
+    expect(() => read(`${ROUTES}/settings/access/team-view-tabs.tsx`)).toThrow();
+    const nav = page.slice(page.indexOf('<ViewNav'), page.indexOf('/>', page.indexOf('views={[')));
+    expect(nav).not.toMatch(/Trigger|CreateRoleSheet|<Button/);
+  });
+});

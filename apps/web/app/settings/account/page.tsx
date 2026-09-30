@@ -1,5 +1,5 @@
-import { PageHeader } from '@/components/containers/page-header';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/headers/page-header';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { PersonalSettingsShell } from '@/features/account/personal-settings-shell';
 import { personalSettingsAncestry } from '@/lib/route/personal-settings';

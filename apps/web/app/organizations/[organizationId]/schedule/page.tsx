@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { AppPage } from '@/components/containers/app-page';
-import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
+import { PageHeader } from '@/components/headers/page-header';
 import { ScheduleConfiguration } from '@/features/scheduling/configuration/schedule-configuration';
 import { ScheduleWorkspace } from '@/features/scheduling/calendar/schedule-workspace';
 import {

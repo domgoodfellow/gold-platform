@@ -1,4 +1,4 @@
-import { ViewNav } from '@/components/containers/view-nav';
+import { ViewNav } from '@/components/navigation/view-nav';
 import {
   CUSTOM_FIELD_ENTITIES,
   CUSTOM_FIELD_ENTITY_LABELS,

@@ -12,8 +12,8 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
-import { DividedList, GroupHeading } from '@/components/containers/section';
+} from '@/components/panels/page-drawer';
+import { DividedList, GroupHeading } from '@/components/surfaces/section';
 import { Badge } from '@/components/display/data';
 import type { SetupArea, SetupImportance, SetupOverview } from '@/lib/domain/tenancy/lifecycle';
 

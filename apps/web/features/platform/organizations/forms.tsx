@@ -19,7 +19,7 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import {
   PLAN_ASSIGNMENT_INITIAL,
   PLAN_AGREEMENT_INITIAL,

@@ -1,7 +1,7 @@
 import { requirePlatformArea } from '@/lib/route/platform';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
 import { getDb } from '@/lib/db/server';
 import { telephonyProviderKey } from '@/lib/adapters/telephony';
 import { getProviderAccount } from '@/lib/domain/providers/accounts';

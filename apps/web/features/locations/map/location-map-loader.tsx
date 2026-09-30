@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { EmptyState } from '@/components/containers/section';
+import { EmptyState } from '@/components/surfaces/section';
 import type { Location } from '@/lib/domain/locations/locations';
 
 /**

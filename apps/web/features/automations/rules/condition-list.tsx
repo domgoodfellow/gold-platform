@@ -1,9 +1,9 @@
 'use client';
 
 import { useActionState } from 'react';
-import { EmptyState, GroupHeading } from '@/components/containers/section';
+import { EmptyState, GroupHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { CONDITION_FIELDS, OPERATORS, type AutomationRule } from '@/lib/domain/automation/rules';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { StatusChoice } from './rule-detail-types';

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ButtonLink } from '@/components/controls/button';
-import { PageHeading } from '@/components/containers/section';
-import { SiteShell } from '@/components/containers/site-shell';
+import { PageHeading } from '@/components/surfaces/section';
+import { SiteShell } from '@/components/layout/site-shell';
 
 export default function NotFound() {
   return (

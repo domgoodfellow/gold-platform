@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { Hint } from '@/components/controls/inputs';
 import { listConnections } from '@/lib/domain/integrations/connections';
 import {

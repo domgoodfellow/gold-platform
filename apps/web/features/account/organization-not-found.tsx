@@ -1,5 +1,5 @@
 import { ButtonLink } from '@/components/controls/button';
-import { FallbackPage } from '@/components/containers/fallback-page';
+import { FallbackPage } from '@/components/feedback/fallback-page';
 import { GlobalFallbackShell } from '@/features/account/global-fallback-shell';
 
 /**

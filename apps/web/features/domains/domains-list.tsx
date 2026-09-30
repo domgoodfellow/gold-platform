@@ -1,4 +1,4 @@
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';

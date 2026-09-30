@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import { Separator } from '@gold/ui/components/separator';
 import { SidebarTrigger } from '@gold/ui/components/sidebar';
 import { cx } from '../class-names';
-import { WorkspaceCrumbSlot } from './workspace-crumbs';
-import { AgentTrigger } from './workspace-right-rail';
+import { WorkspaceCrumbSlot } from '../navigation/workspace-crumbs';
+import { AgentTrigger } from '../panels/workspace-right-rail';
 
 /**
  * The sticky GLOBAL workspace bar, shared by Organization Context, Platform Context and Account:

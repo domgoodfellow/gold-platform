@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Card } from '@/components/containers/card';
+import { Card } from '@/components/surfaces/card';
 import { cx, FOCUS_RING } from '@/components/class-names';
 
 export type Kpi = { key: string; label: string; value: ReactNode; note?: ReactNode; href: string };

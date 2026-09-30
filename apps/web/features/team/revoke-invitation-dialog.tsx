@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { ErrorText } from '@/components/controls/inputs';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import type { PendingInvitation } from '@/lib/domain/tenancy/invitations';
 import { revokeInvitationAction, type RevokeInvitationState } from '@/app/organizations/[organizationId]/settings/access/actions';
 

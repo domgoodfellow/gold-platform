@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { deriveSwitcherView } from '@/components/containers/context-switcher';
+import { deriveSwitcherView } from '@/components/navigation/context-switcher';
 import { organizationIdFromPath } from '@/lib/route/platform-context';
 import { platformHref, platformSubpath } from '@/lib/platform-navigation';
 import { inPlatformScope } from '@/lib/shell';
@@ -15,7 +15,7 @@ import { inPlatformScope } from '@/lib/shell';
 
 const WEB = fileURLToPath(new URL('../../..', import.meta.url));
 const read = (path: string) => readFileSync(`${WEB}/${path}`, 'utf8');
-const switcher = read('components/containers/context-switcher.tsx');
+const switcher = read('components/navigation/context-switcher.tsx');
 
 const GOLD = '11111111-1111-4111-8111-111111111111';
 

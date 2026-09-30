@@ -1,8 +1,8 @@
 'use client';
 
 import { useActionState } from 'react';
-import { EmptyState, GroupHeading } from '@/components/containers/section';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { EmptyState, GroupHeading } from '@/components/surfaces/section';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { ACTION_KINDS, type AutomationRule } from '@/lib/domain/automation/rules';
 import { CHANNELS, type MessageTemplate } from '@/lib/domain/automation/templates';
 import type { StatusChoice } from './rule-detail-types';

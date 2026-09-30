@@ -1,5 +1,5 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { requireOrganization } from '@/lib/route/organization';

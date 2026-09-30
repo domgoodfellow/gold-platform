@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { DefinitionList, Detail } from '@/components/display/data';
-import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { CustomFieldValues } from '@/features/custom-fields/values';

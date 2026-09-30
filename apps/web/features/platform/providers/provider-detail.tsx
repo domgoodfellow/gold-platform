@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import type { ProviderService } from '@/lib/domain/providers/services';
 import { ImplementationStateBadge } from '@/features/catalogue/implementation-state';
 

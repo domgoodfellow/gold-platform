@@ -1,7 +1,7 @@
 'use client';
 
-import { AccountMenu } from '@/components/containers/account-menu';
-import { ContextSwitcher, GOLD_MARK, type SwitchableOrganization } from '@/components/containers/context-switcher';
+import { AccountMenu } from '@/components/navigation/account-menu';
+import { ContextSwitcher, GOLD_MARK, type SwitchableOrganization } from '@/components/navigation/context-switcher';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from '@gold/ui/components/sidebar';
 
 /**

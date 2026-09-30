@@ -128,7 +128,7 @@ describe('the projection is the only eligibility rule', () => {
   const projection = code(read('lib/shell.ts'));
   const shell = code(read('features/shell/organization-shell.tsx'));
   const renderers = code(read('app/organizations/[organizationId]/org-shell.tsx'));
-  const more = code(read('components/containers/more-menu.tsx'));
+  const more = code(read('components/navigation/more-menu.tsx'));
 
   it('is called once, by the shell, and its result is handed to every renderer', () => {
     expect(shell.match(/projectShell\(/g)).toHaveLength(1);

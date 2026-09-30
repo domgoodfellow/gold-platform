@@ -13,8 +13,12 @@ The legacy runtime module `reception` backs both CRM Sales and Communications Vo
 the web has separate `crm/sales` and `communications/voice` packages rather than mirroring one
 runtime folder or creating one folder for every Catalogue Feature.
 
-Generic controls in these packages come from `apps/web/components`, whose implementations
-compose source-owned shadcn primitives from `packages/ui`.
+A feature should prefer an existing shared GildOps semantic component from `apps/web/components`
+when that component already represents the required interaction. A feature may also use `@gold/ui`
+directly for low-level composition (an Accordion, an Alert, a Tabs, a Popover) where no shared
+application semantic exists — this is not a violation, and features must not be prohibited from
+importing `@gold/ui`. Promote a feature-local construction into `apps/web/components` only when it
+represents a stable cross-feature application contract, never merely to satisfy a layering diagram.
 
 A feature boundary answers which product workflow owns the UI, not how many routes currently call
 it. Route files load data and compose screens; features render and operate the capability; generic

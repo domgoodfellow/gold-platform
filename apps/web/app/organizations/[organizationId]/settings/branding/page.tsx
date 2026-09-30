@@ -1,7 +1,7 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { ProfileForm } from '@/features/public-profile/profile-form';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';

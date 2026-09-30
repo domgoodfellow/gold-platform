@@ -1,6 +1,6 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/containers/page-header';
-import { ViewNav } from '@/components/containers/view-nav';
+import { PageHeader } from '@/components/headers/page-header';
+import { ViewNav } from '@/components/navigation/view-nav';
 import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { listPendingInvitations } from '@/lib/domain/tenancy/invitations';

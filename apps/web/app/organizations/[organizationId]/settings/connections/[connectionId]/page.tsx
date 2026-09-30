@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { ButtonLink } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { ConnectionDetail } from '@/features/integrations/connections/connection-detail';

@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Badge, DefinitionList, Detail } from '@/components/display/data';
-import { Disclosure } from '@/components/containers/card';
-import { RecordHeader } from '@/components/containers/record-header';
-import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { Disclosure } from '@/components/surfaces/card';
+import { RecordHeader } from '@/components/headers/record-header';
+import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { CustomFieldValues } from '@/features/custom-fields/values';

@@ -2,7 +2,7 @@
 
 import { ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/containers/page-drawer';
+import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
 import type { Call } from '@/lib/domain/reception/calls';
 import type { CallOutcome } from '@/lib/domain/reception/outcomes';
 import { WrapUpCallForm } from './wrap-up-form';

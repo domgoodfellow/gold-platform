@@ -9,7 +9,7 @@ import {
   PageDrawerDescription,
   PageDrawerHeader,
   PageDrawerTitle,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { CreateCustomerForm } from './create-customer-form';
 

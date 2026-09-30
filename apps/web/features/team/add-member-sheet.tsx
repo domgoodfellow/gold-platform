@@ -9,7 +9,7 @@ import {
   PageDrawerDescription,
   PageDrawerHeader,
   PageDrawerTitle,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import { Tabs, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { AddMemberForm } from './add-member-form';

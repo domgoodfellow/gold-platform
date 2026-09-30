@@ -1,5 +1,5 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeading } from '@/components/containers/section';
+import { PageHeading } from '@/components/surfaces/section';
 import type { PublicProfile } from '@/lib/domain/tenancy/profile';
 
 /**

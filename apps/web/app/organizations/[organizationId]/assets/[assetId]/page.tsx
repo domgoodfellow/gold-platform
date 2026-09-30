@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { RecordHeader } from '@/components/containers/record-header';
+import { RecordHeader } from '@/components/headers/record-header';
 import { AssetDetail } from '@/features/assets/asset-detail';
 import { getAsset } from '@/lib/domain/assets/assets';
 import { listAssetReadings } from '@/lib/domain/assets/readings';

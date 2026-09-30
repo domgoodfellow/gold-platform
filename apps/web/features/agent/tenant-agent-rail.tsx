@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Checkbox } from '@gold/ui/components/checkbox';
 import { SlidersHorizontal, Info } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
-import { useAgentContent } from '@/components/containers/workspace-right-rail';
+import { useAgentContent } from '@/components/panels/workspace-right-rail';
 import {
   AgentComposer,
   AgentContextFacts,

@@ -8,8 +8,8 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
-import { Section, SectionHeading } from '@/components/containers/section';
+} from '@/components/panels/page-drawer';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, SelectInput, TextInput } from '@/components/controls/inputs';
 import { DefinitionList, Detail } from '@/components/display/data';

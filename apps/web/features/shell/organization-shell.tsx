@@ -16,10 +16,10 @@ import {
 } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 import { businessSettingsOffered, projectShell } from '@/lib/shell';
-import { CompactContextSwitcher } from '@/components/containers/context-switcher';
-import { CompactAccountMenu } from '@/components/containers/account-menu';
-import { WorkspaceHeader } from '@/components/containers/workspace-header';
-import { WorkspaceShell } from '@/components/containers/workspace-shell';
+import { CompactContextSwitcher } from '@/components/navigation/context-switcher';
+import { CompactAccountMenu } from '@/components/navigation/account-menu';
+import { WorkspaceHeader } from '@/components/headers/workspace-header';
+import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
 import { PlatformAgentRail } from '@/features/agent/platform-agent-rail';
 import { RouteAwareAgent } from '@/features/agent/route-aware-agent';

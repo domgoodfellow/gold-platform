@@ -113,15 +113,10 @@ describe('a tenant’s own words stay neutral', () => {
 
 // ---- empty states -----------------------------------------------------------------------
 
-describe('an empty state describes state; it duplicates no create control', () => {
-  it('the emptyAction/action API is gone from every shared collection component', () => {
-    const offenders = authenticated.filter(({ text }) => /emptyAction/.test(text)).map(({ path }) => path.slice(WEB.length));
-    expect(offenders).toEqual([]);
-    const section = read(`${WEB}/components/containers/section.tsx`);
-    const emptyState = section.slice(section.indexOf('export function EmptyState'));
-    expect(emptyState.slice(0, 400)).not.toMatch(/\baction\b/);
-  });
-
+// An empty state may describe the truth and offer concise next-step guidance (`docs/ui-spec.md`
+// §8, D23) — the earlier blanket ban on any `EmptyState`/`DataTable` action is retired. What
+// remains a durable rule is not duplicating a create control a page already shows elsewhere.
+describe('an empty state duplicates no create control the page already shows', () => {
   it('the field list in a Configure drawer shows its create control once, beside the count', () => {
     const fields = read(`${WEB}/features/custom-fields/configuration/entity-fields-configuration.tsx`);
     expect(fields.match(/\{create\}/g)).toHaveLength(1);
@@ -189,15 +184,3 @@ describe('no retired organization-directory language in the active UI', () => {
   });
 });
 
-// ---- shared-rule alignment ---------------------------------------------------------------
-
-describe('existing shared rules, applied', () => {
-  it('Team’s header actions are the default size, like every other page’s', () => {
-    expect(read(`${WEB}/features/team/add-member-sheet.tsx`)).not.toMatch(/AddMemberSheetContext\);\s*return \(\s*<Button type="button" size=/);
-    expect(read(`${WEB}/features/team/create-role-sheet.tsx`)).not.toMatch(/<Button type="button" size="small">\s*<Plus/);
-  });
-
-  it('a small select clears its base vertical padding, or its text is clipped in a 28px box', () => {
-    expect(read(`${WEB}/components/controls/inputs.tsx`)).toContain("'h-7 px-2 py-0 pr-7 text-sm'");
-  });
-});

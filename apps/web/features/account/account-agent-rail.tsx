@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useAgentContent } from '@/components/containers/workspace-right-rail';
+import { useAgentContent } from '@/components/panels/workspace-right-rail';
 import { AgentUnavailable } from '@/features/agent/agent-shared';
 
 /**

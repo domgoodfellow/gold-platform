@@ -1,8 +1,8 @@
 import { requirePlatformArea } from '@/lib/route/platform';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import { notFound } from 'next/navigation';
-import { RecordHeader } from '@/components/containers/record-header';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { RecordHeader } from '@/components/headers/record-header';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Badge } from '@/components/display/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@gold/ui/components/accordion';

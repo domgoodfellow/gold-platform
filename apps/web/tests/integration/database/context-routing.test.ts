@@ -248,7 +248,7 @@ describe('the routing decision stays where it can be tested', () => {
  */
 describe('business-entry links go through organizationHomeHref, not a hand-built URL', () => {
   const contextSwitcher = readFileSync(
-    fileURLToPath(new URL('../../../components/containers/context-switcher.tsx', import.meta.url)),
+    fileURLToPath(new URL('../../../components/navigation/context-switcher.tsx', import.meta.url)),
     'utf8',
   );
   const organizationsPage = readFileSync(

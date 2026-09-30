@@ -1,4 +1,4 @@
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 
 /**
  * Where a processor sends a payer back — deliberately named with no token in its path.

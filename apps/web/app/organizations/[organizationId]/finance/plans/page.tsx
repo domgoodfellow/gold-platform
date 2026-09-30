@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { SelectInput, TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';

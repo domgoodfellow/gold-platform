@@ -1,5 +1,5 @@
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
 import { WidgetPanel } from '@/components/display/widget';
 import { CallHistory } from '@/features/communications/voice/call-history';
 import { VoiceOverview } from '@/features/communications/voice/voice-overview';

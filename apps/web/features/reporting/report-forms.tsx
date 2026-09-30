@@ -2,9 +2,9 @@
 
 import { Hint, TextInput } from '@/components/controls/inputs';
 import { FormActions, FormError, FormField } from '@/components/controls/form';
-import { SectionHeading } from '@/components/containers/section';
+import { SectionHeading } from '@/components/surfaces/section';
 import { Button } from '@/components/controls/button';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { useActionState } from 'react';
 import type { ReportDefinition } from '@/lib/domain/reporting/definitions';
 import {

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { getImportRun, listStagingRows, type StagingRowStatus } from '@/lib/domain/integrations/import-runs';
 import { requireOrganization } from '@/lib/route/organization';

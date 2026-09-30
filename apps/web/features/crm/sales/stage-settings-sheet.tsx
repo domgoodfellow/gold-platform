@@ -2,9 +2,9 @@
 
 import { Settings2 } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { DividedList, EmptyState } from '@/components/containers/section';
+import { DividedList, EmptyState } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
-import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/containers/page-drawer';
+import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import { CreateStageForm, EditStageForm } from './stage-settings';
 

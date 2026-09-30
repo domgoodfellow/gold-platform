@@ -4,7 +4,7 @@ import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { ErrorText, FieldLabel, Hint, TextArea } from '@/components/controls/inputs';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import {
   discoverySnapshotCompleteness,
   unresolvedDiscoveryRequirements,

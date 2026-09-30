@@ -1,5 +1,5 @@
-import { Card } from '@/components/containers/card';
-import { SectionHeading } from '@/components/containers/section';
+import { Card } from '@/components/surfaces/card';
+import { SectionHeading } from '@/components/surfaces/section';
 import { DefinitionList, Detail } from '@/components/display/data';
 import type { AcceptedProposalHandoff } from '@/lib/domain/customers/proposal-handoff';
 import { previewByWorkspace, type ConfigurationRecommendation } from '@/lib/domain/customers/configuration-recommendation';

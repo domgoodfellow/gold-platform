@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
-import { WorkspaceHeader } from '@/components/containers/workspace-header';
-import { WorkspaceShell } from '@/components/containers/workspace-shell';
+import { WorkspaceHeader } from '@/components/headers/workspace-header';
+import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { AccountAgentRail } from '@/features/account/account-agent-rail';
 import { GlobalFallbackSidebar } from '@/features/account/global-fallback-sidebar';
 import { getDb } from '@/lib/db/server';

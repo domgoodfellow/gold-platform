@@ -1,5 +1,5 @@
 import { Badge, Detail, DefinitionList } from '@/components/display/data';
-import { GroupHeading } from '@/components/containers/section';
+import { GroupHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { telephonyCredentialKinds } from '@/lib/adapters/telephony';
 import type { ProviderAccount } from '@/lib/domain/providers/accounts';

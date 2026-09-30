@@ -1,7 +1,7 @@
 'use client';
 
-import { AccountMenu } from '@/components/containers/account-menu';
-import { ContextSwitcher, type SwitchableOrganization } from '@/components/containers/context-switcher';
+import { AccountMenu } from '@/components/navigation/account-menu';
+import { ContextSwitcher, type SwitchableOrganization } from '@/components/navigation/context-switcher';
 import {
   Sidebar,
   SidebarContent,
@@ -20,7 +20,7 @@ import {
   SidebarRail,
 } from '@gold/ui/components/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@gold/ui/components/collapsible';
-import { MoreMenu } from '@/components/containers/more-menu';
+import { MoreMenu } from '@/components/navigation/more-menu';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';

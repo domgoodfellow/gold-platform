@@ -1,4 +1,4 @@
-import { DividedList, EmptyState } from '@/components/containers/section';
+import { DividedList, EmptyState } from '@/components/surfaces/section';
 import type { StoredDocument } from '@/lib/domain/documents/documents';
 
 function formatSize(bytes: number): string {

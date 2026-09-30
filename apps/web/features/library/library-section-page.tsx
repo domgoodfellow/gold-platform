@@ -1,6 +1,6 @@
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
-import { EmptyState } from '@/components/containers/section';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
+import { EmptyState } from '@/components/surfaces/section';
 import { LibraryNav } from '@/features/library/library-nav';
 import { libraryHref, type LibrarySectionKey } from '@/lib/route/library';
 import { areaLabel } from '@/lib/navigation';

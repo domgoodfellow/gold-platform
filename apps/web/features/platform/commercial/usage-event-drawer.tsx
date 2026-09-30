@@ -6,8 +6,8 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
-import { Section, SectionHeading } from '@/components/containers/section';
+} from '@/components/panels/page-drawer';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { DefinitionList, Detail } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import type { CostComponent, EconomicsEvent } from '@/lib/domain/commercial/economics';

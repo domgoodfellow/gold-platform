@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import { ConfirmSubmit } from '@/components/containers/dialog';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import type { MessageTemplate } from '@/lib/domain/automation/templates';
 import { deleteTemplateAction } from '@/app/organizations/[organizationId]/automations/actions';
 import { ActionError, INITIAL_AUTOMATION_ACTION_STATE as INITIAL } from '../shared';

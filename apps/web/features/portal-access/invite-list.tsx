@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, TextInput } from '@/components/controls/inputs';
-import { DividedList, GroupHeading } from '@/components/containers/section';
+import { DividedList, GroupHeading } from '@/components/surfaces/section';
 import type { PortalInvite } from '@/lib/domain/portal/portal';
 
 export type RevokePortalInviteState = { error: string | null };

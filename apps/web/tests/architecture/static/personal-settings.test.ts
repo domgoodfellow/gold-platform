@@ -54,7 +54,7 @@ describe('the one address', () => {
 });
 
 describe('the menu', () => {
-  const menu = read('components/containers/account-menu.tsx');
+  const menu = read('components/navigation/account-menu.tsx');
 
   it('offers one Settings entry and Sign out, and leaves switching context to the switcher (D71)', () => {
     expect(menu).toContain('>Settings</Link>');

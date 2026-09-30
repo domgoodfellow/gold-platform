@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { DividedList, EmptyState } from '@/components/containers/section';
+import { DividedList, EmptyState } from '@/components/surfaces/section';
 import { Badge } from '@/components/display/data';
 import { invoiceStanding, type Invoice } from '@/lib/domain/billing/invoices';
 import { formatMoney } from '@/lib/domain/work-items/consumption';

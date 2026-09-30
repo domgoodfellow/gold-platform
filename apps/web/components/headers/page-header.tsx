@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cx } from '../class-names';
-import { PageCrumbs, type Crumb } from './workspace-crumbs';
-import { SupportTrigger } from './workspace-right-rail';
+import { PageCrumbs, type Crumb } from '../navigation/workspace-crumbs';
+import { SupportTrigger } from '../panels/workspace-right-rail';
 
 export type PageHeaderCrumb = Crumb;
 

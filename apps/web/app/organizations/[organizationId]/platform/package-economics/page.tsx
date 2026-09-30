@@ -1,5 +1,5 @@
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
 import { PackageSimulator } from '@/features/platform/commercial/package-simulator';
 import { getDb } from '@/lib/db/server';
 import { listPlans } from '@/lib/domain/catalogue/plans';

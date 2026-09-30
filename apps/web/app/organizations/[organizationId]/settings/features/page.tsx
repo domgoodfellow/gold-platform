@@ -1,5 +1,5 @@
-import { DividedList, Section, SectionHeading } from '@/components/containers/section';
-import { PageHeader } from '@/components/containers/page-header';
+import { DividedList, Section, SectionHeading } from '@/components/surfaces/section';
+import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';

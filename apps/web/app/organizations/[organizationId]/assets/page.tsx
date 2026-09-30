@@ -1,6 +1,6 @@
-import { AppPage } from '@/components/containers/app-page';
-import { ConfigureRegistrar } from '@/components/containers/configure-registrar';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
+import { PageHeader } from '@/components/headers/page-header';
 import { AssetConfiguration } from '@/features/assets/configuration/asset-configuration';
 import { AssetTable } from '@/features/assets/asset-table';
 import { CreateAssetSheetProvider, CreateAssetTrigger } from '@/features/assets/create-asset-sheet';

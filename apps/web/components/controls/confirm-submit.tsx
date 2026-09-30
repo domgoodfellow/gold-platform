@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@gold/ui/components/dialog';
-import { Button, type ButtonSize, type ButtonTone } from '../controls/button';
+import { Button, type ButtonSize, type ButtonTone } from './button';
 
 /**
  * A destructive submit confirmed through the source-owned shadcn Dialog.

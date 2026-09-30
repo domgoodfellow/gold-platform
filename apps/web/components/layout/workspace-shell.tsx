@@ -2,8 +2,8 @@
 
 import { Fragment, type ReactNode } from 'react';
 import { AppShell } from './app-shell';
-import { WorkspaceCrumbsProvider } from './workspace-crumbs';
-import { WorkspaceRailProvider, WorkspaceRightRail } from './workspace-right-rail';
+import { WorkspaceCrumbsProvider } from '../navigation/workspace-crumbs';
+import { WorkspaceRailProvider, WorkspaceRightRail } from '../panels/workspace-right-rail';
 
 /**
  * The one authenticated shell host. Organization pages, account pages, and global Platform

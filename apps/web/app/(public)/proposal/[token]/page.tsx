@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { Section, SectionHeading } from '@/components/containers/section';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Badge, DefinitionList, Detail } from '@/components/display/data';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { PublicHeader } from '@/features/public-profile/public-header';

@@ -11,7 +11,7 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
+} from '@/components/panels/page-drawer';
 import { PLACEHOLDERS, type MessageTemplate } from '@/lib/domain/automation/templates';
 import {
   createTemplateAction,

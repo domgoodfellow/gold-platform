@@ -1,4 +1,4 @@
-import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { notFound } from 'next/navigation';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { Badge } from '@/components/display/data';

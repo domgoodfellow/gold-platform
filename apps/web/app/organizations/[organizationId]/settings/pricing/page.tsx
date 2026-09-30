@@ -1,8 +1,8 @@
-import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { areaLabel } from '@/lib/navigation';
-import { PageHeader } from '@/components/containers/page-header';
+import { PageHeader } from '@/components/headers/page-header';
 import { Hint } from '@/components/controls/inputs';
-import { Disclosure } from '@/components/containers/card';
+import { Disclosure } from '@/components/surfaces/card';
 import { DataTable } from '@/components/display/table';
 import { paymentProvider } from '@/lib/adapters/payments';
 import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';

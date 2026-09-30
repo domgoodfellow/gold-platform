@@ -1,4 +1,4 @@
-import { RecordHeader } from '@/components/containers/record-header';
+import { RecordHeader } from '@/components/headers/record-header';
 import type { Customer } from '@/lib/domain/customers/customers';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';

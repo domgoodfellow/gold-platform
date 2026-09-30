@@ -1,4 +1,4 @@
-import { OrganizationPageNotFound } from '@/components/containers/organization-not-found';
+import { OrganizationPageNotFound } from '@/features/account/organization-not-found';
 
 /**
  * Catches a `notFound()` thrown *beneath* an already-proven membership — an address that matches

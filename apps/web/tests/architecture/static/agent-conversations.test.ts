@@ -25,7 +25,7 @@ const actions = read('features/agent/actions.ts');
 const layout = read('features/shell/organization-shell.tsx');
 const questions = read('lib/domain/assistant/questions.ts');
 const platformQuestions = read('lib/domain/assistant/platform-questions.ts');
-const rightRail = read('components/containers/workspace-right-rail.tsx');
+const rightRail = read('components/panels/workspace-right-rail.tsx');
 
 describe('the Agent grammar is header → conversation header → transcript → composer', () => {
   it('has no Chat / Context / Activity tabs and no presentation abstraction for them', () => {

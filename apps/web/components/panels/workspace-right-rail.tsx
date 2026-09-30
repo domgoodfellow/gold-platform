@@ -16,7 +16,7 @@ import {
 import { BarChart3, Bot, History, Settings, X, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { cx, FOCUS_RING } from '@/components/class-names';
-import { HEADER_HEIGHT_STYLE } from './workspace-geometry';
+import { HEADER_HEIGHT_STYLE } from '../layout/workspace-geometry';
 
 /**
  * Two independent panels beside the workspace, each with its own open state:

@@ -11,8 +11,8 @@ import {
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
-} from '@/components/containers/page-drawer';
-import { Section, SectionHeading } from '@/components/containers/section';
+} from '@/components/panels/page-drawer';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { createPlanAction, type CreatePlanState } from '@/app/organizations/[organizationId]/finance/plans/actions';
 import {
   grantPlanFeatureOverrideAction,

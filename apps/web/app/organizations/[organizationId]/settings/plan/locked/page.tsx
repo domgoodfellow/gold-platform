@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
 import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
 import { describeServiceAccess } from '@/lib/domain/platform-billing/service-access';

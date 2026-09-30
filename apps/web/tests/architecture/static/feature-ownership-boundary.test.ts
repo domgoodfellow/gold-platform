@@ -12,6 +12,8 @@ import { describe, expect, it } from 'vitest';
  */
 
 const FEATURES = fileURLToPath(new URL('../../../features', import.meta.url));
+const COMPONENTS = fileURLToPath(new URL('../../../components', import.meta.url));
+const UI_PACKAGE = fileURLToPath(new URL('../../../../../packages/ui/src', import.meta.url));
 
 /** An import naming an action module by shape, the one sanctioned exception. */
 const ACTION_MODULE = /(^|\/)(action-states|[\w-]*actions)$/;
@@ -68,6 +70,46 @@ describe('a feature imports no route-owned presentation component', () => {
       for (const specifier of importSpecifiers(source)) {
         if (/^\.\.?\//.test(specifier) && /(^|\/)app\//.test(specifier)) {
           offenders.push(`${file.slice(FEATURES.length)} imports ${specifier}`);
+        }
+      }
+    }
+    expect(offenders, offenders.join('\n')).toEqual([]);
+  });
+});
+
+/**
+ * Phase A — `apps/web/components` is shared GildOps application UI, one layer below `features/`
+ * and `app/`. It never consumes either (`docs/constraints.md` D23, `components/README.md`).
+ */
+describe('a shared component imports no feature, route or database/adapter layer', () => {
+  const FORBIDDEN = [/^@\/features\//, /^@\/app\//, /^@\/lib\/db\//, /^@\/lib\/adapters\//];
+
+  it('nothing under components/** imports a feature, a route, the database handle or an adapter', () => {
+    const offenders: string[] = [];
+    for (const file of tsxFilesUnder(COMPONENTS)) {
+      const source = readFileSync(file, 'utf8');
+      for (const specifier of importSpecifiers(source)) {
+        if (FORBIDDEN.some((pattern) => pattern.test(specifier))) {
+          offenders.push(`${file.slice(COMPONENTS.length)} imports ${specifier}`);
+        }
+      }
+    }
+    expect(offenders, offenders.join('\n')).toEqual([]);
+  });
+});
+
+/**
+ * Phase A — `packages/ui` is the generic, source-owned primitive layer. It must never import
+ * upward into the application (`packages/ui/README.md`).
+ */
+describe('packages/ui imports nothing from the application', () => {
+  it('nothing under packages/ui/src imports apps/web or an @/ alias', () => {
+    const offenders: string[] = [];
+    for (const file of tsxFilesUnder(UI_PACKAGE)) {
+      const source = readFileSync(file, 'utf8');
+      for (const specifier of importSpecifiers(source)) {
+        if (specifier.startsWith('@/') || /apps\/web/.test(specifier)) {
+          offenders.push(`${file.slice(UI_PACKAGE.length)} imports ${specifier}`);
         }
       }
     }

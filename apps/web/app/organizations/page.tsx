@@ -1,5 +1,5 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeading } from '@/components/containers/section';
+import { PageHeading } from '@/components/surfaces/section';
 import { Button } from '@/components/controls/button';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';

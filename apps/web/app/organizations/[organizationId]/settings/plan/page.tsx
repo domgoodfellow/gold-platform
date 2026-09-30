@@ -1,5 +1,5 @@
-import { PageHeader } from '@/components/containers/page-header';
-import { DividedList, EmptyState, Section, SectionHeading } from '@/components/containers/section';
+import { PageHeader } from '@/components/headers/page-header';
+import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';

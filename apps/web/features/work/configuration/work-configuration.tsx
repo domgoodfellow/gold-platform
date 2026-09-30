@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { DividedList, EmptyState } from '@/components/containers/section';
+import { DividedList, EmptyState } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { FieldSet, FieldLegend, FieldGroup } from '@gold/ui/components/field';

@@ -1,4 +1,4 @@
-import { SiteShell } from '@/components/containers/site-shell';
+import { SiteShell } from '@/components/layout/site-shell';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {

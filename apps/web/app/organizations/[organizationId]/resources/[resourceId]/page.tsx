@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { RecordHeader } from '@/components/containers/record-header';
-import { DividedList, EmptyState } from '@/components/containers/section';
+import { RecordHeader } from '@/components/headers/record-header';
+import { DividedList, EmptyState } from '@/components/surfaces/section';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { availableMembers } from '@/features/resources/member-options';

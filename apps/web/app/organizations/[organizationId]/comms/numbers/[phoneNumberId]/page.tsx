@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
-import { AppPage } from '@/components/containers/app-page';
-import { PageHeader } from '@/components/containers/page-header';
-import { EmptyState, GroupHeading } from '@/components/containers/section';
+import { AppPage } from '@/components/layout/app-page';
+import { PageHeader } from '@/components/headers/page-header';
+import { EmptyState, GroupHeading } from '@/components/surfaces/section';
 import { Badge, DefinitionList, Detail } from '@/components/display/data';
 import { Hint } from '@/components/controls/inputs';
 import { ORIGIN_LABEL } from '@/features/communications/numbers/number-list';

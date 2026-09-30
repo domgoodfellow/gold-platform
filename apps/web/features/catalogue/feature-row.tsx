@@ -12,7 +12,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/containers/dialog';
+} from '@/components/controls/confirm-submit';
 import {
   DropdownMenu,
   DropdownMenuContent,
