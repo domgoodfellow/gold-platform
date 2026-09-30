@@ -19,10 +19,13 @@ export function DescribeForm({
   organizationId,
   refining,
   disabled,
+  defaultDescription,
 }: {
   organizationId: string;
   refining: boolean;
   disabled: boolean;
+  /** What Sales discovery already recorded, verbatim — never used once refining is underway, since a refinement already carries the prior shape forward on its own. */
+  defaultDescription?: string;
 }) {
   const [state, action, pending] = useActionState(proposeAction, INITIAL);
 
@@ -34,7 +37,9 @@ export function DescribeForm({
       <label className="block text-sm" htmlFor="description">
         {refining
           ? 'Answer anything below, or say what to change. What you have already agreed to is kept.'
-          : 'Describe the business in your own words — the work it does, how a job goes from start to finish, what you charge for, when you are open.'}
+          : defaultDescription
+            ? 'Filled in from what Sales already learned. Read it, correct anything wrong, and add what is still missing before drafting.'
+            : 'Describe the business in your own words — the work it does, how a job goes from start to finish, what you charge for, when you are open.'}
       </label>
       <TextArea
         id="description"
@@ -44,6 +49,7 @@ export function DescribeForm({
         disabled={disabled}
         size="small"
         className="mt-2 w-full"
+        defaultValue={refining ? undefined : defaultDescription}
       />
 
       <Button

@@ -221,3 +221,30 @@ export function unresolvedDiscoveryRequirements(
     .filter((requirement) => !snapshot.answers[requirement.key])
     .map((requirement) => ({ key: requirement.key, question: requirement.question }));
 }
+
+/**
+ * A discovery snapshot, in the business's own words, as the free-text description the drafting
+ * adapter already knows how to turn into a `BusinessShape` (`proposeConfiguration`).
+ *
+ * Every line is a question this catalogue already asked, paired with exactly what was recorded
+ * against it — never a paraphrase, never a value this function invents for a requirement nobody
+ * has answered. A `not_applicable` requirement is named as such rather than skipped, so a person
+ * reading this back can tell "not asked" apart from "asked and doesn't apply" the same way the
+ * snapshot itself does. Unanswered requirements are left out entirely: what to say about them is
+ * `unresolvedDiscoveryRequirements`'s job, not a blank line here.
+ *
+ * Empty when nothing has been answered — a caller decides what a blank means to it.
+ */
+export function describeDiscoverySnapshot(
+  snapshot: Pick<DiscoverySnapshot, 'answers'>,
+  stage: DiscoveryStage = 'sales_discovery',
+): string {
+  const lines: string[] = [];
+  for (const requirement of discoveryRequirementsFor(stage)) {
+    const answer = snapshot.answers[requirement.key];
+    if (!answer) continue;
+    const value = answer.status === 'not_applicable' ? 'Not applicable.' : answer.value;
+    lines.push(`${requirement.question}\n${value}`);
+  }
+  return lines.join('\n\n');
+}

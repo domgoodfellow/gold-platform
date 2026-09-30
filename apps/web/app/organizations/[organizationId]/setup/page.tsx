@@ -9,6 +9,7 @@ import {
   currentConfigurationProposal,
   listConfigurationProposals,
 } from '@/lib/domain/configuration/proposals';
+import { describeDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import { getFoundingHandoff } from '@/lib/domain/customers/proposal-handoff';
 import { computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
@@ -34,6 +35,12 @@ export const dynamic = 'force-dynamic';
  * applying (`constraints.md` D32): nothing on it has happened to the business until somebody
  * presses Apply, and it goes through `configureBusiness` like any typed setup. A deployment or a
  * business without drafting still has every area above, in full.
+ *
+ * **A Sales-founded business does not describe itself twice.** The first draft's description box
+ * is filled from `discoverySnapshot` — what Sales already recorded, verbatim, never invented — so
+ * pressing "Draft a setup" drafts from what is already known rather than a blank box. Still a
+ * human's own act: the box is editable, drafting still needs `configuration.propose`, and nothing
+ * is applied until Apply is pressed, same as ever.
  */
 export default async function SetupPage({
   params,
@@ -59,6 +66,15 @@ export default async function SetupPage({
   const mayLaunch = organization.capabilities.includes('organization.manage');
   const draftingOn = usableModules.has('drafting');
   const pastProposals = history.filter((entry) => entry.outcome !== 'draft');
+
+  // Prefill the very first draft from what Sales already recorded, and never again — a
+  // refinement already carries the prior shape forward on its own (proposeAction's `previous`),
+  // and a business that has already drafted once has moved past re-describing itself from
+  // scratch either way.
+  const defaultDescription =
+    foundingHandoff && !proposal && history.length === 0
+      ? describeDiscoverySnapshot({ answers: foundingHandoff.discoverySnapshot }) || undefined
+      : undefined;
 
   return (
     <AppPage>
@@ -120,6 +136,7 @@ export default async function SetupPage({
                 organizationId={organizationId}
                 refining={proposal !== null}
                 disabled={!mayPropose}
+                defaultDescription={defaultDescription}
               />
             ) : null}
 

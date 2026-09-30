@@ -8,10 +8,14 @@ import {
 } from '@/lib/domain/customers/discovery-snapshots';
 
 /**
- * Slice 10, the terminal boundary: "Create this business in GildOps," from one accepted
- * commercial proposal. Owner membership and default modules are already `provisionOrganization`'s
- * own doing (D29) — this hands off the rest of what the plan asked for and stops. Agreement,
- * Entitlements, Initial configuration, Readiness and Launch are Conversation 2's, not built here.
+ * "Create this business in GildOps," from one accepted commercial proposal. Owner membership and
+ * default modules are already `provisionOrganization`'s own doing (D29); `hand_off_accepted_proposal`
+ * additionally records the commercial agreement and enters the accepted Plan and Add-ons onto
+ * `organization_plan_assignments`, in the same transaction — a handed-off business is entitled to
+ * what it bought the moment it exists. Initial configuration, readiness and launch are not: nothing
+ * here calls `configureBusiness` or `launchOrganization`. What Setup does with the handoff — seeding
+ * a configuration draft from `discoverySnapshot` rather than asking again — is `describeDiscoverySnapshot`
+ * (`discovery-snapshots.ts`) and the setup page, not this file.
  *
  * `hand_off_accepted_proposal` (C1 closeout) is one atomic, idempotent SQL door: provisioning and
  * recording the handoff either both happen or neither does, and a repeat call for a proposal

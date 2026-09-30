@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import {
+  describeDiscoverySnapshot,
   discoverySnapshotCompleteness,
   getDiscoverySnapshot,
   unresolvedDiscoveryRequirements,
@@ -206,6 +207,50 @@ describe('discovery snapshots', () => {
     expect(afterWholeFormSubmit.answers.websiteSurfaces).toBeUndefined();
     // What a prior test already recorded survives an unrelated blank submission untouched.
     expect(afterWholeFormSubmit.answers.contactChannels).toBeDefined();
+  });
+
+  it('describes a snapshot verbatim, in catalogue order, skipping unanswered requirements', () => {
+    const description = describeDiscoverySnapshot({
+      answers: {
+        phoneHandling: {
+          value: 'Owner answers, voicemail after hours.',
+          status: 'confirmed',
+          source: 'Owner',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+        contactChannels: {
+          value: 'Phone and text.',
+          status: 'provided',
+          source: 'Owner',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      },
+    });
+
+    // Catalogue order (contactChannels before phoneHandling), not insertion order.
+    expect(description.indexOf('reach them today')).toBeLessThan(description.indexOf('answers the phone'));
+    expect(description).toContain('Phone and text.');
+    expect(description).toContain('Owner answers, voicemail after hours.');
+    // Nothing invented for a requirement nobody answered.
+    expect(description).not.toContain('booked or requested');
+  });
+
+  it('names a not_applicable requirement rather than fabricating or skipping it', () => {
+    const description = describeDiscoverySnapshot({
+      answers: {
+        websiteSurfaces: {
+          value: '',
+          status: 'not_applicable',
+          source: 'Owner',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      },
+    });
+    expect(description).toContain('Not applicable.');
+  });
+
+  it('is empty when nothing has been answered', () => {
+    expect(describeDiscoverySnapshot({ answers: {} })).toBe('');
   });
 
   it('refuses a customer id that belongs to a different organization', async () => {
