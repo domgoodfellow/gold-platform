@@ -379,10 +379,10 @@ export const AREAS: readonly Area[] = [
   { segment: 'resources', label: 'Resources', group: 'workspaces', workspace: 'field' },
   { segment: 'locations', label: 'Locations', group: 'workspaces', workspace: 'field' },
   { segment: 'assets', label: 'Equipment & Assets', group: 'workspaces', workspace: 'field', module: 'assets', featureKeys: ['assets'] },
-  // Studio: what is public for this business, and what needs attention. Home is a real page and,
-  // for now, the workspace's only one — kernel, like Sales and Field's own Home, so a member sees
-  // it regardless of role. Website, Forms, Brand and Portal remain configuration reached from
-  // Settings (`CONFIG_TARGETS`) until each earns a real operating page of its own (D68).
+  // Studio: what is public for this business, and what needs attention. Home is a real page —
+  // kernel, like Sales and Field's own Home, so a member sees it regardless of role. Website has
+  // earned its own operating page (the workbench, `studio-website` below); Forms, Brand and Portal
+  // remain configuration reached from Settings (`CONFIG_TARGETS`) until each earns one too (D68).
   { segment: 'studio', label: 'Studio', group: 'workspaces', workspace: 'studio' },
 
   // Insights: dashboards and reports over the one reporting aggregate every workspace reads. Not a
@@ -395,6 +395,10 @@ export const AREAS: readonly Area[] = [
   // Turning Pricing off also takes priced lines and the invoice off a job screen — see the work item route.
   // Owned by Finance, whose Home links here for configuration rather than repeating it.
   { segment: 'pricing', label: 'Pricing', group: 'settings', workspace: 'finance', module: 'billing', sidebar: false, relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
+  // The Website workbench: a child operating surface of Studio, not a second workspace or sidebar
+  // row (`sidebar: false`, the same shape as Pricing above) — reached from Studio Home's own
+  // Website card, never from the rail, and no longer from the Settings map either.
+  { segment: 'studio-website', label: 'Website', group: 'settings', workspace: 'studio', route: 'studio/website', sidebar: false, relevantCapabilities: ['organization.manage'] },
   { segment: 'fields', label: 'Custom fields', group: 'settings', sidebar: false, relevantCapabilities: ['field.manage'] },
   { segment: 'roles', label: 'Team', group: 'settings', sidebar: false, relevantCapabilities: ['role.manage'] },
   // Setup is a lifecycle, not a permanent area: while SETUP lasts it is the one row `SetupEntry`
@@ -442,7 +446,6 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'call-setup', workspace: 'comms', path: 'calls#setup', entitledBy: 'calls', permission: ['field.manage'] },
   { key: 'team', path: 'settings/access', permission: ['role.manage'] },
   { key: 'branding', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
-  { key: 'website', workspace: 'studio', path: 'settings/website', permission: ['organization.manage'] },
   { key: 'domains', workspace: 'studio', path: 'settings/domains', permission: ['organization.manage'] },
   { key: 'communications', workspace: 'comms', path: 'settings/communications', permission: ['organization.manage'] },
   { key: 'integrations', path: 'settings/connections', entitledBy: 'integrations', permission: ['integration.manage'] },

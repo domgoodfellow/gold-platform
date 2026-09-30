@@ -34,7 +34,7 @@ export default async function StudioPage({ params }: PageProps<'/organizations/[
     mayManageWebsite,
   });
 
-  const websitePath = `/organizations/${organizationId}/settings/website`;
+  const websitePath = `/organizations/${organizationId}/studio/website`;
   const brandPath = `/organizations/${organizationId}/settings/branding`;
   const bookingConfigPath = `/organizations/${organizationId}/work/configuration`;
   const customersPath = `/organizations/${organizationId}/customers`;

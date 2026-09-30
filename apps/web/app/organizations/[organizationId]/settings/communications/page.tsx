@@ -9,6 +9,9 @@ import { listProviderBindings, listProviderResources } from '@/lib/domain/provid
 import { callingNumber } from '@/lib/domain/reception/telephony';
 import { requireOrganization } from '@/lib/route/organization';
 import { AddEmailDomainForm } from '@/features/communications/email-domain-form';
+import { CommunicationProfileForm } from '@/features/communications/communication-profile-form';
+import { homepageEditorState } from '@/lib/domain/public-site/public-site';
+import type { Db } from '@/lib/db/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,12 +44,18 @@ export default async function CommunicationsPage({
 }: PageProps<'/organizations/[organizationId]/settings/communications'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
+  const mayManageWebsite = organization.capabilities.includes('organization.manage');
 
-  const [bindings, resources, selectedNumber] = await Promise.all([
+  const [bindings, resources, selectedNumber, site] = await Promise.all([
     listProviderBindings(db, { organizationId }),
     listProviderResources(db, { organizationId }),
     callingNumber(db, { organizationId }),
+    mayManageWebsite ? homepageEditorState(db as Db, organizationId) : Promise.resolve(null),
   ]);
+  const profileResult = site
+    ? await (db.rpc.bind(db) as unknown as (name: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)('public_communication_profile', { p_site_id: site.siteId })
+    : null;
+  const profileValue = profileResult?.data as { displayName?: string; greeting?: string; instructions?: string; handoffMessage?: string } | null;
 
   const twilioBinding = bindings.find((row) => row.providerKey === 'twilio') ?? null;
   const numbers = resources.filter((resource) => resource.resourceType === 'twilio_phone_number');
@@ -113,6 +122,21 @@ export default async function CommunicationsPage({
         )}
         <AddEmailDomainForm organizationId={organizationId} />
       </Section>
+
+      {site ? (
+        <CommunicationProfileForm
+          organizationId={organizationId}
+          siteId={site.siteId}
+          initial={{
+            enabled: Boolean(profileValue),
+            displayName: profileValue?.displayName ?? 'Assistant',
+            greeting: profileValue?.greeting ?? 'Hi — how can I help?',
+            instructions: profileValue?.instructions ?? '',
+            handoffMessage: profileValue?.handoffMessage ?? 'Thanks — a member of our team will follow up.',
+            handoffDestination: '',
+          }}
+        />
+      ) : null}
     </SettingsPageFrame>
   );
 }

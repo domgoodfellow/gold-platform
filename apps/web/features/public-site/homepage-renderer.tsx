@@ -61,6 +61,15 @@ function ProductPreview() {
   );
 }
 
+/**
+ * One section, rendered exactly as the public site would. The public renderer and Studio's Canvas
+ * both call this — the only rendering vocabulary either owns, so Canvas can never drift from what
+ * a visitor actually sees (never a second, editor-only approximation of the same six sections).
+ */
+export function HomepageSectionRenderer({ section }: { section: PublicHomepageSection }) {
+  return <>{renderSection(section)}</>;
+}
+
 function renderSection(section: PublicHomepageSection) {
   switch (section.kind) {
     case 'hero': return (

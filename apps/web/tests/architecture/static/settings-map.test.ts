@@ -67,16 +67,17 @@ describe('the Settings configuration map', () => {
   });
 
   it('keeps every configuration-only area reachable, since none of them has a sidebar row any more', () => {
-    // Setup is its own SETUP-lifecycle destination and Insights is an operating page reached
+    // Setup is its own SETUP-lifecycle destination, Insights is an operating page reached
     // contextually from each workspace's Home and from PageHeader's Insights support mode
-    // (`areaAvailable('insights', ...)`) — neither is a Settings *configuration* door.
+    // (`areaAvailable('insights', ...)`), and Website is Studio's own operating page, reached from
+    // Studio Home's own card (D68) — none of the three is a Settings *configuration* door.
     const settingsOwned: Record<string, string> = {
       pricing: 'pricing',
       fields: 'custom-fields',
       roles: 'team',
       integrations: 'integrations',
     };
-    for (const area of AREAS.filter((candidate) => candidate.sidebar === false && !['setup', 'insights'].includes(candidate.segment))) {
+    for (const area of AREAS.filter((candidate) => candidate.sidebar === false && !['setup', 'insights', 'studio-website'].includes(candidate.segment))) {
       expect(
         entries.some((entry) => entry.key === settingsOwned[area.segment] || entry.path.split(/[/#]/)[0] === area.segment),
         `${area.segment} left the sidebar and is not on the Settings map`,
@@ -112,7 +113,7 @@ describe('configuring is not operating', () => {
   });
 
   it('gates every kernel entry on its own configuration permission, never on being a member', () => {
-    for (const key of ['general', 'branding', 'website', 'domains', 'communications']) {
+    for (const key of ['general', 'branding', 'domains', 'communications']) {
       const target = configTarget(key);
       expect(target.entitledBy, key).toBeUndefined();
       expect(configTargetOffered(target, { ...nothingEntitled, capabilities: new Set() }), key).toBe(false);

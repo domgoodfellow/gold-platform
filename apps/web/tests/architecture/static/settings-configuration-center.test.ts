@@ -41,7 +41,6 @@ describe('Settings, as the Configuration Center (source scan)', () => {
     for (const path of [
       'settings/general',
       'settings/branding',
-      'settings/website',
       'settings/communications',
       'settings/features',
       'settings/plan',
@@ -155,6 +154,39 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
       expect(page, `${segment} no longer redirects to ${destination}`).toContain(`/${destination}`);
       expect(page).toContain('redirect(');
     }
+  });
+});
+
+describe('Website is a canonical Studio operating page, not a Settings sub-route', () => {
+  it('studio/website is the workbench, not a link wrapped in one more card', () => {
+    const page = readFileSync(`${ROUTES}/studio/website/page.tsx`, 'utf8');
+    expect(page).toContain('WebsiteWorkbench');
+    expect(page).not.toContain('redirect(');
+  });
+
+  it('settings/website only redirects to the canonical route, for an old bookmark', () => {
+    const page = readFileSync(`${ROUTES}/settings/website/page.tsx`, 'utf8');
+    expect(page).toContain('redirect(');
+    expect(page).toContain('/studio/website');
+    expect(page).not.toContain('WebsiteWorkbench');
+  });
+
+  it('the website config target is retired from the Settings map â€” Website is reached from Studio Home, not Settings', () => {
+    const map = readFileSync(
+      fileURLToPath(new URL('../../../lib/navigation.ts', import.meta.url)),
+      'utf8',
+    );
+    expect(map).not.toMatch(/key:\s*'website'/);
+    expect(map).toContain("segment: 'studio-website'");
+  });
+
+  it('the private preview backlink returns to Studio, not Settings', () => {
+    const preview = readFileSync(
+      fileURLToPath(new URL('../../../app/(preview)/preview/[organizationId]/[revisionId]/page.tsx', import.meta.url)),
+      'utf8',
+    );
+    expect(preview).toContain('/studio/website');
+    expect(preview).not.toContain('/settings/website');
   });
 });
 

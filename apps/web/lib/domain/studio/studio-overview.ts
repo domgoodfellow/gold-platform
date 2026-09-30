@@ -27,7 +27,7 @@ export type StudioAttentionItem = {
 };
 
 export type StudioOverview = {
-  /** Null when this member's role cannot see website state (the same gate `settings/website` uses). */
+  /** Null when this member's role cannot see website state (the same gate `studio/website` uses). */
   website: StudioWebsiteSummary | null;
   recentPublishing: Array<{ id: string; number: number; status: string }>;
   brand: { logoConfigured: boolean; accentConfigured: boolean };

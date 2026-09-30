@@ -25,7 +25,7 @@ describe('public homepage section vocabulary', () => {
   });
 
   it('invalidates anonymous output only from publish and keeps previews protected', () => {
-    const actions = readFileSync(fileURLToPath(new URL('../../../app/organizations/[organizationId]/settings/website/actions.ts', import.meta.url)), 'utf8');
+    const actions = readFileSync(fileURLToPath(new URL('../../../app/organizations/[organizationId]/studio/website/actions.ts', import.meta.url)), 'utf8');
     const access = readFileSync(fileURLToPath(new URL('../../../lib/route/access.ts', import.meta.url)), 'utf8');
     const previewLayout = readFileSync(fileURLToPath(new URL('../../../app/(preview)/layout.tsx', import.meta.url)), 'utf8');
     expect(actions.match(/updateTag\(GOLD_HOMEPAGE_CACHE_TAG\)/g)).toHaveLength(1);

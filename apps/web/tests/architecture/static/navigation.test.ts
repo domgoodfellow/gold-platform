@@ -185,10 +185,13 @@ describe('the operator shell navigation', () => {
     }
     const configOwner = (key: string) => CONFIG_TARGETS.find((target) => target.key === key)?.workspace;
     expect(configOwner('branding')).toBe('studio');
-    expect(configOwner('website')).toBe('studio');
     expect(configOwner('pricing')).toBe('finance');
     expect(configOwner('communications')).toBe('comms');
     expect(configOwner('team')).toBeUndefined();
+    // Website earned its own operating page (D68): it is an `Area`, not a `ConfigTarget`, and the
+    // Settings map names nothing by this key any more.
+    expect(configOwner('website')).toBeUndefined();
+    expect(AREAS.find((area) => area.segment === 'studio-website')?.workspace).toBe('studio');
   });
 
   it('gives Field a Home, Work, Schedule, Resources, Locations and Equipment & Assets as its pages', () => {
