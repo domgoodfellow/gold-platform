@@ -1,12 +1,14 @@
+import type { Json } from '@/lib/db/database.types';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
-import { currentPlanPrice, getPlanById, listPlanAddonIds, listPlanPrices, type Plan } from '@/lib/domain/catalogue/plans';
+import { currentPlanPrice, getPlanById, listPlanAddonIds, listPlanPrices } from '@/lib/domain/catalogue/plans';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 export type CommercialProposalStatus = 'draft' | 'sent' | 'accepted' | 'declined';
 
 export type CommercialProposalAddon = {
   addonPlanId: string;
+  label: string;
   priceMinor: number;
 };
 
@@ -15,6 +17,7 @@ export type CommercialProposal = {
   organizationId: string;
   customerId: string;
   planId: string;
+  planLabel: string;
   currency: string;
   billingInterval: 'month' | 'year' | 'one_time';
   planPriceMinor: number;
@@ -27,6 +30,10 @@ export type CommercialProposal = {
   supersedesId: string | null;
   createdAt: string;
   createdBy: string;
+  acceptedBy: string | null;
+  acceptedAt: string | null;
+  declinedBy: string | null;
+  declinedAt: string | null;
   addons: CommercialProposalAddon[];
 };
 
@@ -36,13 +43,14 @@ export function commercialProposalTotalMinor(proposal: Pick<CommercialProposal, 
 }
 
 const PROPOSAL_COLUMNS =
-  'id, organization_id, customer_id, plan_id, currency, billing_interval, plan_price_minor, addon_price_minor, discount_minor, discount_reason, notes, status, version, supersedes_id, created_at, created_by';
+  'id, organization_id, customer_id, plan_id, plan_label, currency, billing_interval, plan_price_minor, addon_price_minor, discount_minor, discount_reason, notes, status, version, supersedes_id, created_at, created_by, accepted_by, accepted_at, declined_by, declined_at';
 
 type ProposalRow = {
   id: string;
   organization_id: string;
   customer_id: string;
   plan_id: string;
+  plan_label: string;
   currency: string;
   billing_interval: string;
   plan_price_minor: number | string;
@@ -55,6 +63,10 @@ type ProposalRow = {
   supersedes_id: string | null;
   created_at: string;
   created_by: string;
+  accepted_by: string | null;
+  accepted_at: string | null;
+  declined_by: string | null;
+  declined_at: string | null;
 };
 
 function toProposal(row: ProposalRow, addons: CommercialProposalAddon[]): CommercialProposal {
@@ -63,6 +75,7 @@ function toProposal(row: ProposalRow, addons: CommercialProposalAddon[]): Commer
     organizationId: row.organization_id,
     customerId: row.customer_id,
     planId: row.plan_id,
+    planLabel: row.plan_label,
     currency: row.currency,
     billingInterval: row.billing_interval as CommercialProposal['billingInterval'],
     planPriceMinor: Number(row.plan_price_minor),
@@ -75,6 +88,10 @@ function toProposal(row: ProposalRow, addons: CommercialProposalAddon[]): Commer
     supersedesId: row.supersedes_id,
     createdAt: row.created_at,
     createdBy: row.created_by,
+    acceptedBy: row.accepted_by,
+    acceptedAt: row.accepted_at,
+    declinedBy: row.declined_by,
+    declinedAt: row.declined_at,
     addons,
   };
 }
@@ -82,11 +99,11 @@ function toProposal(row: ProposalRow, addons: CommercialProposalAddon[]): Commer
 async function listAddonsFor(db: Db, input: { organizationId: string; proposalId: string }): Promise<CommercialProposalAddon[]> {
   const { data, error } = await db
     .from('customer_commercial_proposal_addons')
-    .select('addon_plan_id, price_minor')
+    .select('addon_plan_id, label, price_minor')
     .eq('organization_id', input.organizationId)
     .eq('proposal_id', input.proposalId);
   if (error) throw new DomainError(error.message, 'commercial_proposals.addons_failed');
-  return (data ?? []).map((row) => ({ addonPlanId: row.addon_plan_id, priceMinor: Number(row.price_minor) }));
+  return (data ?? []).map((row) => ({ addonPlanId: row.addon_plan_id, label: row.label, priceMinor: Number(row.price_minor) }));
 }
 
 /** Every commercial proposal built for one customer, newest version first — the revision history in full, nothing hidden once superseded. */
@@ -104,6 +121,38 @@ export async function listCommercialProposals(
 
   const rows = (data ?? []) as ProposalRow[];
   return Promise.all(rows.map(async (row) => toProposal(row, await listAddonsFor(db, { organizationId: input.organizationId, proposalId: row.id }))));
+}
+
+/**
+ * The proposals a recognized external customer may see — every non-draft version, newest first.
+ * Reads exactly the rows `customer_commercial_proposals_select_external` already scopes to; this
+ * function adds no filtering of its own; it is a plain, unscoped read, deliberately, because RLS
+ * is where "this organization, this customer, never a draft" is decided (I19).
+ */
+export async function listCommercialProposalsForExternalCustomer(db: Db): Promise<CommercialProposal[]> {
+  const { data, error } = await db
+    .from('customer_commercial_proposals')
+    .select(PROPOSAL_COLUMNS)
+    .order('version', { ascending: false });
+  if (error) throw new DomainError(error.message, 'commercial_proposals.list_failed');
+
+  const rows = (data ?? []) as ProposalRow[];
+  return Promise.all(
+    rows.map(async (row) => {
+      const { data: addonRows, error: addonError } = await db
+        .from('customer_commercial_proposal_addons')
+        .select('addon_plan_id, label, price_minor')
+        .eq('organization_id', row.organization_id)
+        .eq('proposal_id', row.id);
+      if (addonError) throw new DomainError(addonError.message, 'commercial_proposals.addons_failed');
+      const addons = (addonRows ?? []).map((addon) => ({
+        addonPlanId: addon.addon_plan_id,
+        label: addon.label,
+        priceMinor: Number(addon.price_minor),
+      }));
+      return toProposal(row, addons);
+    }),
+  );
 }
 
 export type BuildCommercialProposalInput = {
@@ -151,16 +200,16 @@ export async function buildCommercialProposal(db: Db, input: BuildCommercialProp
     if (!validAddonIds.has(addonPlanId)) {
       throw new DomainError('That add-on is not available on this plan.', 'commercial_proposals.addon_invalid');
     }
+    const addonPlan = await getPlanById(db, addonPlanId);
     const addonPrices = await listPlanPrices(db, addonPlanId);
     const addonPrice = currentPlanPrice(addonPrices, { currency: input.currency, billingInterval: input.billingInterval });
     if (!addonPrice) {
-      const addonPlan: Plan | null = await getPlanById(db, addonPlanId);
       throw new DomainError(
         `${addonPlan?.label ?? 'That add-on'} has no approved price in ${input.currency} for that billing interval.`,
         'commercial_proposals.no_addon_price',
       );
     }
-    addons.push({ addonPlanId, priceMinor: addonPrice.amountMinor });
+    addons.push({ addonPlanId, label: addonPlan?.label ?? '', priceMinor: addonPrice.amountMinor });
   }
 
   const discountMinor = input.discountMinor ?? 0;
@@ -178,6 +227,7 @@ export async function buildCommercialProposal(db: Db, input: BuildCommercialProp
       organization_id: input.organizationId,
       customer_id: input.customerId,
       plan_id: input.planId,
+      plan_label: plan.label,
       currency: input.currency,
       billing_interval: input.billingInterval,
       plan_price_minor: planPrice.amountMinor,
@@ -205,6 +255,7 @@ export async function buildCommercialProposal(db: Db, input: BuildCommercialProp
         organization_id: input.organizationId,
         proposal_id: data.id,
         addon_plan_id: addon.addonPlanId,
+        label: addon.label,
         price_minor: addon.priceMinor,
       })),
     );
@@ -223,4 +274,38 @@ export async function markCommercialProposalSent(db: Db, input: { organizationId
     .eq('id', input.proposalId)
     .eq('status', 'draft');
   if (error) throw new DomainError(error.message, 'commercial_proposals.send_failed');
+}
+
+/**
+ * Accept a proposal as the customer it was sent to — the door only a recognized external
+ * customer holding a valid, unrevoked proposal invite can open. `acceptedConfiguration` is
+ * computed by the caller's own session (which can already read the catalogue and its own
+ * discovery snapshot) and stored as a receipt of what was shown, the same trust
+ * `configuration_proposals.result` already carries.
+ */
+export async function acceptCommercialProposal(
+  db: Db,
+  input: { proposalId: string; acceptedConfiguration: Json },
+): Promise<void> {
+  const { error } = await db.rpc('accept_commercial_proposal', {
+    p_proposal_id: input.proposalId,
+    p_accepted_configuration: input.acceptedConfiguration,
+  });
+  if (error) {
+    if (error.code === '42501') {
+      throw new DomainError('This proposal is not open for a response.', 'commercial_proposals.accept_forbidden');
+    }
+    throw new DomainError(error.message, 'commercial_proposals.accept_failed');
+  }
+}
+
+/** Decline a proposal as the customer it was sent to. */
+export async function declineCommercialProposal(db: Db, input: { proposalId: string }): Promise<void> {
+  const { error } = await db.rpc('decline_commercial_proposal', { p_proposal_id: input.proposalId });
+  if (error) {
+    if (error.code === '42501') {
+      throw new DomainError('This proposal is not open for a response.', 'commercial_proposals.decline_forbidden');
+    }
+    throw new DomainError(error.message, 'commercial_proposals.decline_failed');
+  }
 }

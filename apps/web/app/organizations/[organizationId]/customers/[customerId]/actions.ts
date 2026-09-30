@@ -10,6 +10,7 @@ import {
 } from '@/lib/domain/customers/discovery-snapshots';
 import { DISCOVERY_REQUIREMENTS } from '@/lib/domain/customers/discovery-requirements';
 import { buildCommercialProposal, markCommercialProposalSent } from '@/lib/domain/customers/commercial-proposals';
+import { createProposalInvite } from '@/lib/domain/customers/proposal-invites';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import { DomainError } from '@/lib/domain/errors';
@@ -259,4 +260,28 @@ export async function sendCommercialProposalAction(
 
   revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
   return { error: null };
+}
+
+export type SendProposalInviteState = { error: string | null; url: string | null };
+
+export async function sendProposalInviteAction(
+  _previous: SendProposalInviteState,
+  formData: FormData,
+): Promise<SendProposalInviteState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  const customerId = String(formData.get('customerId') ?? '');
+
+  try {
+    await createProposalInvite(db, { customerId });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message, url: null };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
+  return { error: null, url: null };
 }

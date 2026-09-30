@@ -80,7 +80,7 @@ describe('schema conformance', () => {
         order by t.relname, i.relname`,
     );
 
-    // **Four exceptions, and they share one rule rather than being separate lapses.**
+    // **Five exceptions, and they share one rule rather than being separate lapses.**
     //
     // I2 exists so one tenant's uniqueness cannot block another's: two businesses must both be
     // able to call a status "Booked". Every index below is the opposite question — **an
@@ -94,6 +94,9 @@ describe('schema conformance', () => {
     //     `app.current_external_tenant()` would then have a set to return.
     //   * `customer_portal_invites_token_unique` is a secret a customer arrives holding, with
     //     no tenant in hand to scope it by.
+    //   * `customer_proposal_invites_token_unique` is the same shape one product over
+    //     (20261024000001) — a secret a prospect arrives holding, before `claim_proposal_invite`
+    //     has given their browser any tenant to be scoped by.
     //   * `organization_invitations_token_hash_unique` is the same shape one axis over
     //     (20260915000003) — a hash of a secret an invitee arrives holding, looked up by
     //     `accept_invitation` before that caller has any membership for a tenant to be scoped
@@ -104,12 +107,17 @@ describe('schema conformance', () => {
     //     scope it by, so it must be unique across every claim or resolution would have to guess
     //     which business `shop.example.com` means. Only an unreleased claim counts.
     //
-    // Named individually rather than excluded by a pattern, so a fifth cannot arrive quietly
+    // Named individually rather than excluded by a pattern, so a sixth cannot arrive quietly
     // by matching a rule somebody loosened. A new entry here should have to argue for itself.
     expect(rows).toEqual([
       {
         table_name: 'customer_portal_invites',
         index_name: 'customer_portal_invites_token_unique',
+        first: 'token',
+      },
+      {
+        table_name: 'customer_proposal_invites',
+        index_name: 'customer_proposal_invites_token_unique',
         first: 'token',
       },
       {

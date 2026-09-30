@@ -14,6 +14,7 @@ import { DiscoverySnapshotSection } from './discovery-snapshot-section';
 import type { Invoice } from '@/lib/domain/billing/invoices';
 import type { Plan } from '@/lib/domain/catalogue/plans';
 import type { CommercialProposal } from '@/lib/domain/customers/commercial-proposals';
+import type { ProposalInvite } from '@/lib/domain/customers/proposal-invites';
 import type { ConfigurationRecommendation } from '@/lib/domain/customers/configuration-recommendation';
 import type { Customer } from '@/lib/domain/customers/customers';
 import type { DiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
@@ -48,6 +49,7 @@ export function CustomerDetail({
   discoverySnapshot,
   configurationRecommendation,
   commercialProposals,
+  proposalInvites,
   plans,
   addonPlans,
   origin,
@@ -71,6 +73,7 @@ export function CustomerDetail({
   discoverySnapshot: DiscoverySnapshot | null;
   configurationRecommendation: ConfigurationRecommendation;
   commercialProposals: CommercialProposal[];
+  proposalInvites: ProposalInvite[];
   plans: Plan[];
   addonPlans: Plan[];
   origin: string;
@@ -128,6 +131,8 @@ export function CustomerDetail({
             organizationId={organizationId}
             customerId={customer.id}
             proposals={commercialProposals}
+            invites={proposalInvites}
+            origin={origin}
             plans={plans}
             addonPlans={addonPlans}
             mayEdit={permissions.priceManage}

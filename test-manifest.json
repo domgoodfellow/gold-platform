@@ -1382,6 +1382,14 @@
         "tenancy"
       ]
     },
+    "apps/web/tests/integration/database/proposal-invites.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "crm",
+        "commercial",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/public-intake.test.ts": {
       "category": "database-integration",
       "concerns": [

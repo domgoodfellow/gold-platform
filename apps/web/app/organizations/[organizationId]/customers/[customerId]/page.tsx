@@ -7,6 +7,7 @@ import { listCommercialProposals } from '@/lib/domain/customers/commercial-propo
 import { recommendConfiguration } from '@/lib/domain/customers/configuration-recommendation';
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { getDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
+import { listProposalInvites } from '@/lib/domain/customers/proposal-invites';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
@@ -27,7 +28,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
   if (!customer) notFound();
 
   const origin = await requestOrigin();
-  const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work, discoverySnapshot, commercialProposals, plans, addonPlans] = await Promise.all([
+  const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work, discoverySnapshot, commercialProposals, proposalInvites, plans, addonPlans] = await Promise.all([
     listDocuments(db, { organizationId, attachedTo: { entity: 'customer', id: customerId } }),
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
     listCustomerTimeline(db, { organizationId, customerId }),
@@ -39,6 +40,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
     listWorkItems(db, { organizationId, customerId }),
     getDiscoverySnapshot(db, { organizationId, customerId }),
     listCommercialProposals(db, { organizationId, customerId }),
+    listProposalInvites(db, { organizationId, customerId }),
     listPlans(db, { kind: 'plan' }),
     listPlans(db, { kind: 'addon' }),
   ]);
@@ -65,6 +67,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
         discoverySnapshot={discoverySnapshot}
         configurationRecommendation={configurationRecommendation}
         commercialProposals={commercialProposals}
+        proposalInvites={proposalInvites}
         plans={plans.filter((plan) => plan.saleStatus === 'active')}
         addonPlans={addonPlans.filter((plan) => plan.saleStatus === 'active')}
         origin={origin}

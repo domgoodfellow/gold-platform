@@ -12,15 +12,19 @@ import {
   type CommercialProposalStatus,
 } from '@/lib/domain/customers/commercial-proposals';
 import type { Plan } from '@/lib/domain/catalogue/plans';
+import type { ProposalInvite } from '@/lib/domain/customers/proposal-invites';
 import {
   buildCommercialProposalAction,
   sendCommercialProposalAction,
+  sendProposalInviteAction,
   type BuildCommercialProposalState,
   type SendCommercialProposalState,
+  type SendProposalInviteState,
 } from '@/app/organizations/[organizationId]/customers/[customerId]/actions';
 
 const BUILD_INITIAL: BuildCommercialProposalState = { error: null, created: false };
 const SEND_INITIAL: SendCommercialProposalState = { error: null };
+const INVITE_INITIAL: SendProposalInviteState = { error: null, url: null };
 
 const STATUS_TONE: Record<CommercialProposalStatus, 'neutral' | 'accent' | 'success'> = {
   draft: 'neutral',
@@ -29,13 +33,8 @@ const STATUS_TONE: Record<CommercialProposalStatus, 'neutral' | 'accent' | 'succ
   declined: 'neutral',
 };
 
-function planLabel(plans: readonly Plan[], planId: string): string {
-  return plans.find((plan) => plan.id === planId)?.label ?? planId;
-}
-
-function ProposalRow({ proposal, plans, organizationId, customerId, mayEdit }: {
+function ProposalRow({ proposal, organizationId, customerId, mayEdit }: {
   proposal: CommercialProposal;
-  plans: readonly Plan[];
   organizationId: string;
   customerId: string;
   mayEdit: boolean;
@@ -48,12 +47,12 @@ function ProposalRow({ proposal, plans, organizationId, customerId, mayEdit }: {
         <span className="text-sm font-medium">Version {proposal.version}</span>
         <Badge tone={STATUS_TONE[proposal.status]}>{proposal.status}</Badge>
       </div>
-      <div className="mt-2 text-sm">{planLabel(plans, proposal.planId)} — {formatMoney(proposal.planPriceMinor, proposal.currency)}/{proposal.billingInterval}</div>
+      <div className="mt-2 text-sm">{proposal.planLabel} — {formatMoney(proposal.planPriceMinor, proposal.currency)}/{proposal.billingInterval}</div>
       {proposal.addons.length > 0 ? (
         <ul className="mt-1 flex flex-col gap-0.5">
           {proposal.addons.map((addon) => (
             <li key={addon.addonPlanId} className="pl-3 text-sm text-subtle">
-              {planLabel(plans, addon.addonPlanId)} — {formatMoney(addon.priceMinor, proposal.currency)}/{proposal.billingInterval}
+              {addon.label} — {formatMoney(addon.priceMinor, proposal.currency)}/{proposal.billingInterval}
             </li>
           ))}
         </ul>
@@ -67,6 +66,8 @@ function ProposalRow({ proposal, plans, organizationId, customerId, mayEdit }: {
         Total: {formatMoney(commercialProposalTotalMinor(proposal), proposal.currency)}/{proposal.billingInterval}
       </div>
       {proposal.notes ? <p className="mt-2 text-sm text-subtle">{proposal.notes}</p> : null}
+      {proposal.status === 'accepted' ? <Hint className="mt-2">Accepted {new Date(proposal.acceptedAt!).toLocaleString()}.</Hint> : null}
+      {proposal.status === 'declined' ? <Hint className="mt-2">Declined {new Date(proposal.declinedAt!).toLocaleString()}.</Hint> : null}
 
       {mayEdit && proposal.status === 'draft' ? (
         <form action={formAction} className="mt-3">
@@ -83,6 +84,21 @@ function ProposalRow({ proposal, plans, organizationId, customerId, mayEdit }: {
   );
 }
 
+function ProposalInviteRow({ invite, origin }: { invite: ProposalInvite; origin: string }) {
+  const url = `${origin}/proposal/${invite.token}`;
+  return (
+    <li className="text-sm">
+      {invite.revokedAt ? (
+        <span className="text-subtle line-through">{url}</span>
+      ) : (
+        <a href={url} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+          {url}
+        </a>
+      )}
+    </li>
+  );
+}
+
 /**
  * A commercial proposal is a distinct, versioned commitment — never `configuration_proposals`
  * (which needs an organization to already exist) and never a live join to the price book a later
@@ -93,6 +109,8 @@ export function CommercialProposalSection({
   organizationId,
   customerId,
   proposals,
+  invites,
+  origin,
   plans,
   addonPlans,
   mayEdit,
@@ -102,13 +120,17 @@ export function CommercialProposalSection({
   organizationId: string;
   customerId: string;
   proposals: CommercialProposal[];
+  invites: ProposalInvite[];
+  origin: string;
   plans: Plan[];
   addonPlans: Plan[];
   mayEdit: boolean;
   role: string;
   currency: string;
 }) {
-  const [state, formAction, pending] = useActionState(buildCommercialProposalAction, BUILD_INITIAL);
+  const [buildState, buildFormAction, buildPending] = useActionState(buildCommercialProposalAction, BUILD_INITIAL);
+  const [inviteState, inviteFormAction, invitePending] = useActionState(sendProposalInviteAction, INVITE_INITIAL);
+  const hasSendableProposal = proposals.some((proposal) => proposal.status !== 'draft');
 
   return (
     <Section>
@@ -123,7 +145,6 @@ export function CommercialProposalSection({
             <ProposalRow
               key={proposal.id}
               proposal={proposal}
-              plans={[...plans, ...addonPlans]}
               organizationId={organizationId}
               customerId={customerId}
               mayEdit={mayEdit}
@@ -132,8 +153,31 @@ export function CommercialProposalSection({
         )}
       </div>
 
+      {mayEdit && hasSendableProposal ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <h3 className="text-sm font-medium">Proposal links</h3>
+          {invites.length > 0 ? (
+            <ul className="mt-2 flex flex-col gap-1">
+              {invites.map((invite) => (
+                <ProposalInviteRow key={invite.id} invite={invite} origin={origin} />
+              ))}
+            </ul>
+          ) : (
+            <Hint className="mt-1">No link sent yet.</Hint>
+          )}
+          <form action={inviteFormAction} className="mt-2">
+            <input type="hidden" name="organizationId" value={organizationId} />
+            <input type="hidden" name="customerId" value={customerId} />
+            <Button type="submit" tone="secondary" disabled={invitePending}>
+              Create a link
+            </Button>
+            {inviteState.error ? <ErrorText>{inviteState.error}</ErrorText> : null}
+          </form>
+        </div>
+      ) : null}
+
       {mayEdit ? (
-        <form action={formAction} className="mt-6 flex flex-col gap-3 border-t border-border pt-4">
+        <form action={buildFormAction} className="mt-6 flex flex-col gap-3 border-t border-border pt-4">
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="customerId" value={customerId} />
 
@@ -192,11 +236,11 @@ export function CommercialProposalSection({
             <TextArea id="notes" name="notes" rows={3} />
           </div>
 
-          <Button type="submit" disabled={pending} className="w-fit">
+          <Button type="submit" disabled={buildPending} className="w-fit">
             Build proposal
           </Button>
 
-          {state.error ? <ErrorText>{state.error}</ErrorText> : null}
+          {buildState.error ? <ErrorText>{buildState.error}</ErrorText> : null}
         </form>
       ) : (
         <Hint className="mt-4">Your role, {role}, cannot build a commercial proposal.</Hint>

@@ -1738,18 +1738,21 @@ export type Database = {
       customer_commercial_proposal_addons: {
         Row: {
           addon_plan_id: string
+          label: string
           organization_id: string
           price_minor: number
           proposal_id: string
         }
         Insert: {
           addon_plan_id: string
+          label: string
           organization_id: string
           price_minor: number
           proposal_id: string
         }
         Update: {
           addon_plan_id?: string
+          label?: string
           organization_id?: string
           price_minor?: number
           proposal_id?: string
@@ -1787,54 +1790,72 @@ export type Database = {
       }
       customer_commercial_proposals: {
         Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          accepted_configuration: Json | null
           addon_price_minor: number
           billing_interval: string
           created_at: string
           created_by: string
           currency: string
           customer_id: string
+          declined_at: string | null
+          declined_by: string | null
           discount_minor: number
           discount_reason: string | null
           id: string
           notes: string
           organization_id: string
           plan_id: string
+          plan_label: string
           plan_price_minor: number
           status: string
           supersedes_id: string | null
           version: number
         }
         Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          accepted_configuration?: Json | null
           addon_price_minor?: number
           billing_interval: string
           created_at?: string
           created_by: string
           currency: string
           customer_id: string
+          declined_at?: string | null
+          declined_by?: string | null
           discount_minor?: number
           discount_reason?: string | null
           id?: string
           notes?: string
           organization_id: string
           plan_id: string
+          plan_label: string
           plan_price_minor: number
           status?: string
           supersedes_id?: string | null
           version: number
         }
         Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          accepted_configuration?: Json | null
           addon_price_minor?: number
           billing_interval?: string
           created_at?: string
           created_by?: string
           currency?: string
           customer_id?: string
+          declined_at?: string | null
+          declined_by?: string | null
           discount_minor?: number
           discount_reason?: string | null
           id?: string
           notes?: string
           organization_id?: string
           plan_id?: string
+          plan_label?: string
           plan_price_minor?: number
           status?: string
           supersedes_id?: string | null
@@ -1870,11 +1891,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "customer_commercial_proposals_supersedes_id_fkey"
-            columns: ["supersedes_id"]
+            foreignKeyName: "customer_commercial_proposals_supersedes_same_org"
+            columns: ["organization_id", "supersedes_id"]
             isOneToOne: false
             referencedRelation: "customer_commercial_proposals"
-            referencedColumns: ["id"]
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -2025,6 +2046,58 @@ export type Database = {
           },
           {
             foreignKeyName: "customer_portal_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_proposal_invites: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          id: string
+          organization_id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          id?: string
+          organization_id: string
+          revoked_at?: string | null
+          token: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          id?: string
+          organization_id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_proposal_invites_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_proposal_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_proposal_invites_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "platform_tenants"
@@ -8169,6 +8242,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_commercial_proposal: {
+        Args: { p_accepted_configuration: Json; p_proposal_id: string }
+        Returns: undefined
+      }
       accept_invitation: {
         Args: { p_display_name: string; p_token: string }
         Returns: string
@@ -8351,6 +8428,7 @@ export type Database = {
         Returns: undefined
       }
       claim_portal_invite: { Args: { p_token: string }; Returns: string }
+      claim_proposal_invite: { Args: { p_token: string }; Returns: string }
       clear_integration_credential: {
         Args: { p_connection_id: string }
         Returns: undefined
@@ -8471,6 +8549,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_proposal_invite: {
+        Args: { p_customer_id: string }
+        Returns: string
+      }
       create_public_homepage_draft: {
         Args: { p_organization_id: string }
         Returns: string
@@ -8544,6 +8626,10 @@ export type Database = {
           phone: string
           time_zone: string
         }[]
+      }
+      decline_commercial_proposal: {
+        Args: { p_proposal_id: string }
+        Returns: undefined
       }
       detach_plan_addon: {
         Args: { p_addon_plan_id: string; p_plan_id: string }
