@@ -13,6 +13,11 @@ export function platformUrl(subpath = ''): string {
   return `/organizations/${loadDemoContext().goldOrganizationId}/platform${subpath ? `/${subpath}` : ''}`;
 }
 
+/** GOLD's own Finance workspace: Plans & Add-ons administration lives here, not under Platform. */
+export function financeUrl(subpath = ''): string {
+  return `/organizations/${loadDemoContext().goldOrganizationId}/finance${subpath ? `/${subpath}` : ''}`;
+}
+
 export const OWNER_STORAGE_STATE = path.join(__dirname, '.auth', 'owner.json');
 export const STAFF_STORAGE_STATE = path.join(__dirname, '.auth', 'staff.json');
 /** The demo's own reduced-role colleague (`business.member` in `scripts/demo/businesses.ts`) — signed in with no `role.manage` and no `customer.create`. */

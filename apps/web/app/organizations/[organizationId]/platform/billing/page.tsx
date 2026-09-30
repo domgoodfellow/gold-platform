@@ -66,8 +66,8 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
         description={
           <>
             GildOps&rsquo;s own subscription book. Plans and prices are managed at{' '}
-            <Link href={platformHref(goldId, 'catalog/plans')} className="underline underline-offset-4">
-              Catalog → Plans
+            <Link href={`/organizations/${goldId}/finance/plans`} className="underline underline-offset-4">
+              Finance → Plans
             </Link>
             .
           </>

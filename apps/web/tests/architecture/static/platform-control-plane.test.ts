@@ -68,6 +68,9 @@ describe('platform control-plane scope boundaries', () => {
       /\{ goldId: string \}/g,
       /^\s*goldId(,|: string;)\s*$/gm,
       /const \{ goldId \} = useParams/g,
+      // Plans & Add-ons is spelled as a link into Finance, GOLD's own workspace, the same
+      // "read from the route, spelled into a link" allowance as `platformHref(goldId,`.
+      /\/organizations\/\$\{goldId\}\/finance\//g,
     ];
     const files: string[] = [];
     const walk = (dir: string) => {

@@ -42,6 +42,10 @@ describe('hiding a navigation item is never the security boundary', () => {
     for (const page of pages) {
       const subpath = page.slice(root.length + 1).replace(/\/?page\.tsx$/, '').replace('[targetOrganizationId]', 'x');
       if (subpath.startsWith('[...unmatched]')) continue;
+      // Plans & Add-ons moved to Finance; these two addresses are bookmark redirects only, the
+      // same pattern as the top-level legacy `/platform` route — they prove nothing themselves,
+      // and the canonical Finance page is where `requirePlatformArea` actually runs.
+      if (subpath === 'catalog/plans' || subpath === 'catalog/plans/[planKey]') continue;
       const cap = platformRouteRequires(subpath);
       const source = readFileSync(page, 'utf8');
       // The overview is the front door and names its own landing option; every other page is the plain call.

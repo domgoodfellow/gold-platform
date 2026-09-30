@@ -61,14 +61,20 @@ export async function requirePlatformArea(
 }
 
 /**
- * The caller's own Platform address, for the callers that have no route parameter to read it from
- * (a server action redirecting after a write, the legacy `/platform` redirect). Resolved from the
+ * GOLD's own organization id, for the callers that have no route parameter to read it from (a
+ * server action redirecting after a write, the legacy `/platform` redirect). Resolved from the
  * caller's memberships and GOLD's current Plan, never from anything the caller sent.
  */
-export async function callerPlatformHref(path = ''): Promise<string | null> {
+export async function callerGoldInternalOrganizationId(): Promise<string | null> {
   const db = await getDb();
   const gold = await findGoldInternalOrganization(db, await listMyOrganizations(db));
-  return gold ? platformHref(gold.id, path) : null;
+  return gold ? gold.id : null;
+}
+
+/** The caller's own Platform address. See `callerGoldInternalOrganizationId`. */
+export async function callerPlatformHref(path = ''): Promise<string | null> {
+  const goldId = await callerGoldInternalOrganizationId();
+  return goldId ? platformHref(goldId, path) : null;
 }
 
 /**
@@ -78,4 +84,15 @@ export async function callerPlatformHref(path = ''): Promise<string | null> {
  */
 export function revalidatePlatform(): void {
   revalidatePath('/organizations/[organizationId]/platform', 'layout');
+}
+
+/**
+ * Drop every cached Finance page. Plan & Add-on administration lives here even though it is
+ * staff-gated the same way Platform is (`requirePlatformArea`); a write still needs to invalidate
+ * both trees because Platform's catalogue pages (Products, a Product family) read Plan-derived
+ * counts.
+ */
+export function revalidateFinance(): void {
+  revalidatePath('/organizations/[organizationId]/finance', 'layout');
+  revalidatePlatform();
 }

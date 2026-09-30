@@ -4,6 +4,8 @@ import { DividedList, EmptyState } from '@/components/containers/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Widget, WidgetGrid } from '@/components/display/widget';
 import { financeOverview } from '@/lib/domain/finance/finance-overview';
+import { platformPermissions } from '@/lib/domain/platform/permissions';
+import { isGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { workspaceLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
@@ -41,6 +43,12 @@ export default async function FinancePage({
   const planPath = `/organizations/${organizationId}/settings/plan`;
   const connectionsPath = `/organizations/${organizationId}/settings/connections/apps`;
 
+  // Plan & Add-on administration is GildOps' own commercial packaging (D25, D43), conditionally
+  // visible in this same Finance workspace rather than a second application (D59) — never for a
+  // customer's own business, and only for the staff permission that already gates it.
+  const isGoldInternal = await isGoldInternalOrganization(db, { organizationId });
+  const canManagePlans = isGoldInternal && (await platformPermissions(db)).has('platform.commercial');
+
   const subscriptionValue = overview.subscription
     ? overview.subscription.planLabel
     : 'No plan';
@@ -69,7 +77,12 @@ export default async function FinancePage({
       <PageHeader
         title={workspaceLabel('finance')}
         description="What money is moving through this business, and what it's paying GildOps for."
-        actions={<ButtonLink href={planPath}>Manage plan &amp; billing</ButtonLink>}
+        actions={
+          <div className="flex gap-2">
+            {canManagePlans ? <ButtonLink href={`/organizations/${organizationId}/finance/plans`} tone="secondary">Plans &amp; Add-ons</ButtonLink> : null}
+            <ButtonLink href={planPath}>Manage plan &amp; billing</ButtonLink>
+          </div>
+        }
       />
 
       {empty ? (

@@ -108,8 +108,8 @@ export default async function CatalogPage({ params }: PageProps<'/organizations/
       <PageHeader title="Products" crumbs={platformAncestry(goldId, 'products')} description="What Gild offers, as a customer would recognize it: eight Products, each a coherent set of Modules and Features." />
 
       <div className="flex flex-wrap gap-3 text-sm">
-        <Link href={platformHref(goldId, 'catalog/plans')} className="underline underline-offset-4">
-          Plans &amp; Add-ons
+        <Link href={`/organizations/${goldId}/finance/plans`} className="underline underline-offset-4">
+          Plans &amp; Add-ons (Finance)
         </Link>
         <span className="text-muted-foreground">·</span>
         <Link href={platformHref(goldId, 'catalog/products')} className="underline underline-offset-4">

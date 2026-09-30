@@ -36,7 +36,6 @@ export const PLATFORM_DESTINATIONS: readonly PlatformDestination[] = [
   { key: 'overview', label: 'Overview', path: '', requires: 'platform.health' },
   { key: 'organizations', label: 'Organizations', path: 'organizations', requires: 'platform.organizations' },
   { key: 'products', label: 'Products', path: 'catalog', requires: 'platform.catalogue', under: 'catalog' },
-  { key: 'plans', label: 'Plans & Add-ons', path: 'catalog/plans', requires: 'platform.catalogue', under: 'catalog' },
   { key: 'meters', label: 'Meters', path: 'catalog/meters', requires: 'platform.catalogue', under: 'catalog' },
   { key: 'connectors', label: 'Connectors', path: 'integrations', requires: 'platform.catalogue', under: 'catalog' },
   { key: 'pricing', label: 'Pricing', path: 'pricing', requires: 'platform.commercial', under: 'commercial' },

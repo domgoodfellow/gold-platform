@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePlatform } from '@/lib/route/platform';
+import { revalidateFinance } from '@/lib/route/platform';
 import { getDb } from '@/lib/db/server';
 import {
   clearPlanFeatureOverride,
@@ -41,7 +41,7 @@ export async function updatePlanAction(_: PlanActionState, formData: FormData): 
     if (error instanceof DomainError) return { error: error.message, updated: false };
     throw error;
   }
-  revalidatePlatform();
+  revalidateFinance();
   return { error: null, updated: true };
 }
 
@@ -50,7 +50,7 @@ export async function grantPlanProductAction(formData: FormData): Promise<void> 
     planId: String(formData.get('planId') ?? ''),
     productKey: String(formData.get('productKey') ?? ''),
   });
-  revalidatePlatform();
+  revalidateFinance();
 }
 
 export async function revokePlanProductAction(formData: FormData): Promise<void> {
@@ -58,7 +58,7 @@ export async function revokePlanProductAction(formData: FormData): Promise<void>
     planId: String(formData.get('planId') ?? ''),
     productKey: String(formData.get('productKey') ?? ''),
   });
-  revalidatePlatform();
+  revalidateFinance();
 }
 
 export async function grantPlanModuleAction(formData: FormData): Promise<void> {
@@ -66,7 +66,7 @@ export async function grantPlanModuleAction(formData: FormData): Promise<void> {
     planId: String(formData.get('planId') ?? ''),
     moduleId: String(formData.get('moduleId') ?? ''),
   });
-  revalidatePlatform();
+  revalidateFinance();
 }
 
 export async function revokePlanModuleAction(formData: FormData): Promise<void> {
@@ -74,7 +74,7 @@ export async function revokePlanModuleAction(formData: FormData): Promise<void> 
     planId: String(formData.get('planId') ?? ''),
     moduleId: String(formData.get('moduleId') ?? ''),
   });
-  revalidatePlatform();
+  revalidateFinance();
 }
 
 export async function grantPlanFeatureOverrideAction(formData: FormData): Promise<void> {
@@ -83,7 +83,7 @@ export async function grantPlanFeatureOverrideAction(formData: FormData): Promis
     featureId: String(formData.get('featureId') ?? ''),
     included: String(formData.get('included')) === 'true',
   });
-  revalidatePlatform();
+  revalidateFinance();
 }
 
 export async function revokePlanFeatureOverrideAction(formData: FormData): Promise<void> {
@@ -91,7 +91,7 @@ export async function revokePlanFeatureOverrideAction(formData: FormData): Promi
     planId: String(formData.get('planId') ?? ''),
     featureId: String(formData.get('featureId') ?? ''),
   });
-  revalidatePlatform();
+  revalidateFinance();
 }
 
 export async function setPlanQuotaAction(_: PlanActionState, formData: FormData): Promise<PlanActionState> {
@@ -115,7 +115,7 @@ export async function setPlanQuotaAction(_: PlanActionState, formData: FormData)
     if (error instanceof DomainError) return { error: error.message, updated: false };
     throw error;
   }
-  revalidatePlatform();
+  revalidateFinance();
   return { error: null, updated: true };
 }
 
@@ -124,7 +124,7 @@ export async function removePlanQuotaAction(formData: FormData): Promise<void> {
     planId: String(formData.get('planId') ?? ''),
     allowanceKey: String(formData.get('allowanceKey') ?? ''),
   });
-  revalidatePlatform();
+  revalidateFinance();
 }
 
 export async function recordPlanPriceAction(_: PlanActionState, formData: FormData): Promise<PlanActionState> {
@@ -142,7 +142,7 @@ export async function recordPlanPriceAction(_: PlanActionState, formData: FormDa
     if (error instanceof DomainError) return { error: error.message, updated: false };
     throw error;
   }
-  revalidatePlatform();
+  revalidateFinance();
   return { error: null, updated: true };
 }
 
@@ -160,7 +160,7 @@ export async function recordPlanOverageRateAction(_: PlanActionState, formData: 
     if (error instanceof DomainError) return { error: error.message, updated: false };
     throw error;
   }
-  revalidatePlatform();
+  revalidateFinance();
   return { error: null, updated: true };
 }
 
@@ -180,11 +180,11 @@ export async function savePlanEconomicsSettingsAction(_: PlanActionState, formDa
     if (error instanceof DomainError) return { error: error.message, updated: false };
     throw error;
   }
-  revalidatePlatform();
+  revalidateFinance();
   return { error: null, updated: true };
 }
 
 export async function setPlanAddonAction(formData: FormData): Promise<void> {
   await setPlanAddon(await getDb(), { planId: String(formData.get('planId') ?? ''), addonPlanId: String(formData.get('addonPlanId') ?? ''), attached: formData.get('attached') === 'true' });
-  revalidatePlatform();
+  revalidateFinance();
 }

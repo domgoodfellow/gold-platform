@@ -119,7 +119,6 @@ describe('GOLD owner who is also a platform operator', () => {
       'platform-organizations',
       'platform-group-catalog',
       'platform-products',
-      'platform-plans',
       'platform-meters',
       'platform-connectors',
       'platform-group-commercial',
@@ -192,7 +191,7 @@ describe('a platform member with limited platform permissions', () => {
     expect(keys(commercial, 'platform')).toEqual(['platform-group-commercial', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-billing']);
 
     const catalogue = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.catalogue']) });
-    expect(keys(catalogue, 'platform')).toEqual(['platform-group-catalog', 'platform-products', 'platform-plans', 'platform-meters', 'platform-connectors']);
+    expect(keys(catalogue, 'platform')).toEqual(['platform-group-catalog', 'platform-products', 'platform-meters', 'platform-connectors']);
   });
 
   it('does not gain full platform administration, nor organization administration, from one permission', () => {
@@ -377,7 +376,10 @@ describe('the current item', () => {
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/members`)).toBe('team');
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/invitations`)).toBe('team');
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/connections/connection-1`)).toBe('connections');
-    expect(activeItemKey(sections, platformHref(ORG, 'catalog/plans/base'))).toBe('platform-plans');
+    // Plans & Add-ons moved to Finance (D25's Catalogue/Plan split); the old address is a redirect
+    // stub, no longer a registered destination, so the longest remaining match is Products.
+    expect(activeItemKey(sections, platformHref(ORG, 'catalog/plans/base'))).toBe('platform-products');
+    expect(activeItemKey(sections, `/organizations/${ORG}/finance/plans/base`)).toBe('workspace-finance');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog'))).toBe('platform-products');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog/families/comms'))).toBe('platform-products');
     expect(activeItemKey(sections, platformHref(ORG))).toBe('platform-overview');
@@ -435,6 +437,8 @@ describe('platform routes and their permission', () => {
     expect(platformRouteRequires('failures')).toBe('platform.health');
     expect(platformRouteRequires('organizations')).toBe('platform.organizations');
     expect(platformRouteRequires('organizations/abc/providers')).toBe('platform.organizations');
+    // Plans & Add-ons moved to Finance and is no longer a registered destination; the old address
+    // still resolves (Products is the next-longest registered prefix under `catalog`).
     expect(platformRouteRequires('catalog/plans/base')).toBe('platform.catalogue');
     expect(platformRouteRequires('integrations/new')).toBe('platform.catalogue');
     expect(platformRouteRequires('pricing')).toBe('platform.commercial');
@@ -520,7 +524,7 @@ describe('the permission gradient: operating work, then business administration,
 
   it('partial platform permissions reach only their own group, in registry order', () => {
     const catalog = personas[3].sections.find((section) => section.key === 'platform')!.items[0];
-    expect(catalog.children?.map((page) => page.key)).toEqual(['platform-products', 'platform-plans', 'platform-meters', 'platform-connectors']);
+    expect(catalog.children?.map((page) => page.key)).toEqual(['platform-products', 'platform-meters', 'platform-connectors']);
   });
 
   it('a workspace with one reachable area is a plain row; with several, an expandable one — never a dropdown of one Home', () => {

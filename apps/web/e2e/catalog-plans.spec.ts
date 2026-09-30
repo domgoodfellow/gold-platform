@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { OWNER_STORAGE_STATE, platformUrl, STAFF_STORAGE_STATE } from './helpers';
+import { financeUrl, OWNER_STORAGE_STATE, platformUrl, STAFF_STORAGE_STATE } from './helpers';
 
 /**
  * The canonical Product -> Module -> Feature catalogue and Plans/Add-ons above it
@@ -33,11 +33,13 @@ test.describe('platform catalog', () => {
   });
 
   test('shows GildOps Internal in Plans & Add-ons, non-billable, with entitlements and quotas', async ({ page }) => {
-    await page.goto(platformUrl('catalog/plans'));
+    // Plans & Add-ons is Finance's own capability (D25's Catalogue/Plan split), gated the same way
+    // any other Platform door is; the old /platform/catalog/plans address is a redirect only.
+    await page.goto(financeUrl('plans'));
     await expect(page.getByRole('heading', { name: 'Plans & Add-ons', level: 1 })).toBeVisible();
     await expect(page.getByText('GildOps Internal').first()).toBeVisible();
 
-    await page.goto(platformUrl('catalog/plans/gold_internal'));
+    await page.goto(financeUrl('plans/gold_internal'));
     await expect(page.getByRole('heading', { name: 'GildOps Internal', level: 1 })).toBeVisible();
     await expect(page.getByText('Non-billable').first()).toBeVisible();
 
@@ -46,6 +48,12 @@ test.describe('platform catalog', () => {
 
     await page.getByRole('tab', { name: 'Organizations' }).click();
     await expect(page.getByRole('tab', { name: 'Organizations', selected: true })).toBeVisible();
+  });
+
+  test('the old Platform address redirects to Finance', async ({ page }) => {
+    await page.goto(platformUrl('catalog/plans/gold_internal'));
+    await expect(page).toHaveURL(financeUrl('plans/gold_internal'));
+    await expect(page.getByRole('heading', { name: 'GildOps Internal', level: 1 })).toBeVisible();
   });
 });
 

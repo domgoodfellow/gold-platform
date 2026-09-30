@@ -192,7 +192,7 @@ export default async function ProductFamilyPage({ params }: PageProps<'/organiza
               {plansIncludingProduct.map((plan) => (
                 <li key={plan.id} className="flex items-center justify-between gap-2 py-2 text-sm">
                   <span>{plan.label}</span>
-                  <a href={platformHref(goldId, `catalog/plans/${plan.key}`)} className="underline underline-offset-4">
+                  <a href={`/organizations/${goldId}/finance/plans/${plan.key}`} className="underline underline-offset-4">
                     Open
                   </a>
                 </li>

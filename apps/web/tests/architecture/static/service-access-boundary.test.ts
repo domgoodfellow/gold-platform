@@ -29,10 +29,15 @@ function walk(dir: string, match: (name: string) => boolean): string[] {
 // Actions reachable from inside a business. `settings/plan/actions.ts` is the recovery surface.
 // The Platform subtree is not "inside a business": its actions are staff writes through narrow
 // `security definer` doors that check `platform_staff` themselves (`app.require_platform_staff()`),
-// and a business's service access is not a question they ask.
+// and a business's service access is not a question they ask. Plan & Add-on administration moved
+// to Finance's own route tree, but it is the same staff-checked write, gated by
+// `requirePlatformArea` in its page rather than a business's service access — so it is excluded
+// here the same way the Platform subtree is.
 const RECOVERY_ACTIONS = ['app/organizations/[organizationId]/settings/plan/actions.ts'];
 const actionFiles = [
-  ...walk(ORGANIZATION, (name) => name === 'actions.ts').map(rel).filter((file) => !file.includes('/platform/')),
+  ...walk(ORGANIZATION, (name) => name === 'actions.ts')
+    .map(rel)
+    .filter((file) => !file.includes('/platform/') && !file.includes('/finance/plans/')),
   'features/agent/actions.ts',
   'features/work/configuration/actions.ts',
 ];
