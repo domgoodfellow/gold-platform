@@ -8,9 +8,11 @@ import { recommendConfiguration } from '@/lib/domain/customers/configuration-rec
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { getDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import { listProposalInvites } from '@/lib/domain/customers/proposal-invites';
+import { getProposalHandoff, type AcceptedProposalHandoff } from '@/lib/domain/customers/proposal-handoff';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listPortalInvites } from '@/lib/domain/portal/portal';
 import { listCustomerCalls } from '@/lib/domain/reception/calls';
 import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
@@ -50,6 +52,19 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
   const modules = activeModuleKeys(resolvedFeatures);
   const voice = modules.has('reception');
 
+  const mayHandoff = await isPlatformStaff(db);
+  const acceptedProposals = commercialProposals.filter((proposal) => proposal.status === 'accepted');
+  const handoffEntries = await Promise.all(
+    acceptedProposals.map(async (proposal) => [
+      proposal.id,
+      await getProposalHandoff(db, { organizationId, proposalId: proposal.id }),
+    ] as const),
+  );
+  const handoffsByProposalId: Record<string, AcceptedProposalHandoff> = {};
+  for (const [proposalId, handoff] of handoffEntries) {
+    if (handoff) handoffsByProposalId[proposalId] = handoff;
+  }
+
   return (
     <AppPage>
       <CustomerDetail
@@ -68,6 +83,8 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
         configurationRecommendation={configurationRecommendation}
         commercialProposals={commercialProposals}
         proposalInvites={proposalInvites}
+        handoffsByProposalId={handoffsByProposalId}
+        mayHandoff={mayHandoff}
         plans={plans.filter((plan) => plan.saleStatus === 'active')}
         addonPlans={addonPlans.filter((plan) => plan.saleStatus === 'active')}
         origin={origin}

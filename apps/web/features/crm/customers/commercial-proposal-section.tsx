@@ -13,18 +13,22 @@ import {
 } from '@/lib/domain/customers/commercial-proposals';
 import type { Plan } from '@/lib/domain/catalogue/plans';
 import type { ProposalInvite } from '@/lib/domain/customers/proposal-invites';
+import type { AcceptedProposalHandoff } from '@/lib/domain/customers/proposal-handoff';
 import {
   buildCommercialProposalAction,
   sendCommercialProposalAction,
   sendProposalInviteAction,
+  handoffProposalAction,
   type BuildCommercialProposalState,
   type SendCommercialProposalState,
   type SendProposalInviteState,
+  type HandoffProposalState,
 } from '@/app/organizations/[organizationId]/customers/[customerId]/actions';
 
 const BUILD_INITIAL: BuildCommercialProposalState = { error: null, created: false };
 const SEND_INITIAL: SendCommercialProposalState = { error: null };
 const INVITE_INITIAL: SendProposalInviteState = { error: null, url: null };
+const HANDOFF_INITIAL: HandoffProposalState = { error: null, createdOrganizationId: null };
 
 const STATUS_TONE: Record<CommercialProposalStatus, 'neutral' | 'accent' | 'success'> = {
   draft: 'neutral',
@@ -33,13 +37,17 @@ const STATUS_TONE: Record<CommercialProposalStatus, 'neutral' | 'accent' | 'succ
   declined: 'neutral',
 };
 
-function ProposalRow({ proposal, organizationId, customerId, mayEdit }: {
+function ProposalRow({ proposal, organizationId, customerId, mayEdit, mayHandoff, handoff }: {
   proposal: CommercialProposal;
   organizationId: string;
   customerId: string;
   mayEdit: boolean;
+  mayHandoff: boolean;
+  handoff: AcceptedProposalHandoff | undefined;
 }) {
   const [state, formAction, pending] = useActionState(sendCommercialProposalAction, SEND_INITIAL);
+  const [handoffState, handoffFormAction, handoffPending] = useActionState(handoffProposalAction, HANDOFF_INITIAL);
+  const createdOrganizationId = handoff?.createdOrganizationId ?? handoffState.createdOrganizationId;
 
   return (
     <div className="rounded-lg border border-border p-4">
@@ -80,6 +88,28 @@ function ProposalRow({ proposal, organizationId, customerId, mayEdit }: {
           {state.error ? <ErrorText>{state.error}</ErrorText> : null}
         </form>
       ) : null}
+
+      {proposal.status === 'accepted' && mayHandoff ? (
+        createdOrganizationId ? (
+          <Hint className="mt-3">
+            Business created.{' '}
+            <a href={`/organizations/${createdOrganizationId}`} className="underline underline-offset-4">
+              Open it
+            </a>
+            .
+          </Hint>
+        ) : (
+          <form action={handoffFormAction} className="mt-3">
+            <input type="hidden" name="organizationId" value={organizationId} />
+            <input type="hidden" name="customerId" value={customerId} />
+            <input type="hidden" name="proposalId" value={proposal.id} />
+            <Button type="submit" disabled={handoffPending}>
+              {handoffPending ? 'Creating…' : 'Create this business in GildOps'}
+            </Button>
+            {handoffState.error ? <ErrorText>{handoffState.error}</ErrorText> : null}
+          </form>
+        )
+      ) : null}
     </div>
   );
 }
@@ -110,6 +140,8 @@ export function CommercialProposalSection({
   customerId,
   proposals,
   invites,
+  handoffsByProposalId,
+  mayHandoff,
   origin,
   plans,
   addonPlans,
@@ -121,6 +153,8 @@ export function CommercialProposalSection({
   customerId: string;
   proposals: CommercialProposal[];
   invites: ProposalInvite[];
+  handoffsByProposalId: Record<string, AcceptedProposalHandoff>;
+  mayHandoff: boolean;
   origin: string;
   plans: Plan[];
   addonPlans: Plan[];
@@ -148,6 +182,8 @@ export function CommercialProposalSection({
               organizationId={organizationId}
               customerId={customerId}
               mayEdit={mayEdit}
+              mayHandoff={mayHandoff}
+              handoff={handoffsByProposalId[proposal.id]}
             />
           ))
         )}

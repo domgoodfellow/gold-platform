@@ -11,6 +11,7 @@ import {
 import { DISCOVERY_REQUIREMENTS } from '@/lib/domain/customers/discovery-requirements';
 import { buildCommercialProposal, markCommercialProposalSent } from '@/lib/domain/customers/commercial-proposals';
 import { createProposalInvite } from '@/lib/domain/customers/proposal-invites';
+import { handoffAcceptedProposal } from '@/lib/domain/customers/proposal-handoff';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import { DomainError } from '@/lib/domain/errors';
@@ -284,4 +285,36 @@ export async function sendProposalInviteAction(
 
   revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
   return { error: null, url: null };
+}
+
+export type HandoffProposalState = { error: string | null; createdOrganizationId: string | null };
+
+/**
+ * "Create this business in GildOps" — the terminal act of the commercial funnel. Real
+ * authorization is `provision_organization`'s own live platform_staff check; this action does
+ * not attempt to gate it a second time, since a client-side guard would only be a courtesy (I12).
+ */
+export async function handoffProposalAction(
+  _previous: HandoffProposalState,
+  formData: FormData,
+): Promise<HandoffProposalState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  const customerId = String(formData.get('customerId') ?? '');
+  const proposalId = String(formData.get('proposalId') ?? '');
+
+  let createdOrganizationId: string;
+  try {
+    const handoff = await handoffAcceptedProposal(db, { organizationId, proposalId });
+    createdOrganizationId = handoff.createdOrganizationId;
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message, createdOrganizationId: null };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
+  return { error: null, createdOrganizationId };
 }

@@ -15,6 +15,7 @@ import type { Invoice } from '@/lib/domain/billing/invoices';
 import type { Plan } from '@/lib/domain/catalogue/plans';
 import type { CommercialProposal } from '@/lib/domain/customers/commercial-proposals';
 import type { ProposalInvite } from '@/lib/domain/customers/proposal-invites';
+import type { AcceptedProposalHandoff } from '@/lib/domain/customers/proposal-handoff';
 import type { ConfigurationRecommendation } from '@/lib/domain/customers/configuration-recommendation';
 import type { Customer } from '@/lib/domain/customers/customers';
 import type { DiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
@@ -50,6 +51,8 @@ export function CustomerDetail({
   configurationRecommendation,
   commercialProposals,
   proposalInvites,
+  handoffsByProposalId,
+  mayHandoff,
   plans,
   addonPlans,
   origin,
@@ -74,6 +77,8 @@ export function CustomerDetail({
   configurationRecommendation: ConfigurationRecommendation;
   commercialProposals: CommercialProposal[];
   proposalInvites: ProposalInvite[];
+  handoffsByProposalId: Record<string, AcceptedProposalHandoff>;
+  mayHandoff: boolean;
   plans: Plan[];
   addonPlans: Plan[];
   origin: string;
@@ -132,6 +137,8 @@ export function CustomerDetail({
             customerId={customer.id}
             proposals={commercialProposals}
             invites={proposalInvites}
+            handoffsByProposalId={handoffsByProposalId}
+            mayHandoff={mayHandoff}
             origin={origin}
             plans={plans}
             addonPlans={addonPlans}

@@ -32,6 +32,7 @@ export type CommercialProposal = {
   createdBy: string;
   acceptedBy: string | null;
   acceptedAt: string | null;
+  acceptedConfiguration: Json | null;
   declinedBy: string | null;
   declinedAt: string | null;
   addons: CommercialProposalAddon[];
@@ -43,7 +44,7 @@ export function commercialProposalTotalMinor(proposal: Pick<CommercialProposal, 
 }
 
 const PROPOSAL_COLUMNS =
-  'id, organization_id, customer_id, plan_id, plan_label, currency, billing_interval, plan_price_minor, addon_price_minor, discount_minor, discount_reason, notes, status, version, supersedes_id, created_at, created_by, accepted_by, accepted_at, declined_by, declined_at';
+  'id, organization_id, customer_id, plan_id, plan_label, currency, billing_interval, plan_price_minor, addon_price_minor, discount_minor, discount_reason, notes, status, version, supersedes_id, created_at, created_by, accepted_by, accepted_at, accepted_configuration, declined_by, declined_at';
 
 type ProposalRow = {
   id: string;
@@ -65,6 +66,7 @@ type ProposalRow = {
   created_by: string;
   accepted_by: string | null;
   accepted_at: string | null;
+  accepted_configuration: Json | null;
   declined_by: string | null;
   declined_at: string | null;
 };
@@ -90,6 +92,7 @@ function toProposal(row: ProposalRow, addons: CommercialProposalAddon[]): Commer
     createdBy: row.created_by,
     acceptedBy: row.accepted_by,
     acceptedAt: row.accepted_at,
+    acceptedConfiguration: row.accepted_configuration,
     declinedBy: row.declined_by,
     declinedAt: row.declined_at,
     addons,
@@ -121,6 +124,24 @@ export async function listCommercialProposals(
 
   const rows = (data ?? []) as ProposalRow[];
   return Promise.all(rows.map(async (row) => toProposal(row, await listAddonsFor(db, { organizationId: input.organizationId, proposalId: row.id }))));
+}
+
+/** One proposal by id, or null. Null covers both "no such proposal" and "not yours" indistinguishably, same as every other single-row reader in this domain. */
+export async function getCommercialProposal(
+  db: Db,
+  input: { organizationId: string; proposalId: string },
+): Promise<CommercialProposal | null> {
+  const { data, error } = await db
+    .from('customer_commercial_proposals')
+    .select(PROPOSAL_COLUMNS)
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.proposalId)
+    .maybeSingle();
+  if (error) throw new DomainError(error.message, 'commercial_proposals.get_failed');
+  if (!data) return null;
+
+  const addons = await listAddonsFor(db, { organizationId: input.organizationId, proposalId: data.id });
+  return toProposal(data as ProposalRow, addons);
 }
 
 /**

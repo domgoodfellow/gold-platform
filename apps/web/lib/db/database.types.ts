@@ -2053,6 +2053,88 @@ export type Database = {
           },
         ]
       }
+      customer_proposal_handoffs: {
+        Row: {
+          accepted_configuration: Json | null
+          commercial_terms: Json
+          created_at: string
+          created_by: string
+          created_organization_id: string
+          customer_id: string
+          discovery_snapshot: Json
+          id: string
+          organization_id: string
+          proposal_id: string
+        }
+        Insert: {
+          accepted_configuration?: Json | null
+          commercial_terms: Json
+          created_at?: string
+          created_by: string
+          created_organization_id: string
+          customer_id: string
+          discovery_snapshot: Json
+          id?: string
+          organization_id: string
+          proposal_id: string
+        }
+        Update: {
+          accepted_configuration?: Json | null
+          commercial_terms?: Json
+          created_at?: string
+          created_by?: string
+          created_organization_id?: string
+          customer_id?: string
+          discovery_snapshot?: Json
+          id?: string
+          organization_id?: string
+          proposal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_proposal_handoffs_created_organization_id_fkey"
+            columns: ["created_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_proposal_handoffs_created_organization_id_fkey"
+            columns: ["created_organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_proposal_handoffs_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_proposal_handoffs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_proposal_handoffs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_proposal_handoffs_organization_id_proposal_id_fkey"
+            columns: ["organization_id", "proposal_id"]
+            isOneToOne: true
+            referencedRelation: "customer_commercial_proposals"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       customer_proposal_invites: {
         Row: {
           created_at: string
