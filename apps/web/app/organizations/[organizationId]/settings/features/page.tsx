@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/containers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import {
   listCatalogFeatures,
   listCatalogModules,
@@ -51,6 +52,7 @@ export default async function FeaturesSettingsPage({
   return (
     <SettingsPageFrame>
       <PageHeader title="Features" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
+      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
       <Hint className="mt-1">
         What this business is entitled to, and what it has switched off. An entitled feature is
         on by default — disabling one hides it from this business without removing anything it

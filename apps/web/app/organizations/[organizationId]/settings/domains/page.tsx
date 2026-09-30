@@ -5,6 +5,7 @@ import { ConnectDomainDialog } from '@/features/domains/connect-domain-dialog';
 import { DomainsList } from '@/features/domains/domains-list';
 import { ManagedAddress } from '@/features/domains/managed-address';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { getManagedHostname, listDomains, platformPublicDomain } from '@/lib/domain/domains/domains';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -29,6 +30,7 @@ export default async function DomainsSettingsPage({ params }: PageProps<'/organi
         description="Where customers reach this business: its GildOps address, and any domain it owns and has connected."
         actions={mayManage ? <ConnectDomainDialog organizationId={organizationId} platformZone={zone} /> : undefined}
       />
+      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
       {mayManage ? (
         <>
           <ManagedAddress address={address} generalHref={`/organizations/${organizationId}/settings/general`} />

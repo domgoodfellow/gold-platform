@@ -6,7 +6,7 @@ import { settingsScopeHref, settingsScopesFor, type SettingsScopeKey } from '@/l
 
 /**
  * The one tab bar every Settings scope renders — Organization, Account, Access, Connections and
- * Subscription are sections of one Settings system, not five applications (`CLAUDE.md`). It draws
+ * Plan & usage are sections of one Settings system, not five applications (`CLAUDE.md`). It draws
  * once at the head of whichever scope's page is current, names that scope in one line, and links
  * to the others. `active` is never inferred from the pathname: a scope's own page always knows
  * which one it is.

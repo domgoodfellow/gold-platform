@@ -65,9 +65,9 @@ describe('the menu', () => {
     expect(menu).not.toContain('href="/account"');
   });
 
-  it('offers a Subscription shortcut only when a business is in play', () => {
-    expect(menu).toContain('Subscription');
-    expect(menu).toContain("settingsScopeHref('subscription', from)");
+  it('offers a Plan & usage shortcut only when a business is in play', () => {
+    expect(menu).toContain('Plan &amp; usage');
+    expect(menu).toContain("settingsScopeHref('plan', from)");
   });
 });
 

@@ -8,10 +8,9 @@ export const TEAM_VIEWS = ['members', 'invitations', 'roles'] as const;
 
 export type TeamView = (typeof TEAM_VIEWS)[number];
 
-/** A Team view's address. `members` is the bare route, so the default view has one URL. */
+/** A durable Access child view address. */
 export function teamViewHref(organizationId: string, view: TeamView): string {
-  const root = `/organizations/${organizationId}/roles`;
-  return view === 'members' ? root : `${root}?view=${view}`;
+  return `/organizations/${organizationId}/settings/access/${view}`;
 }
 
 /** Invalid or missing resolves to Members — never a 404 for a mistyped query string. */

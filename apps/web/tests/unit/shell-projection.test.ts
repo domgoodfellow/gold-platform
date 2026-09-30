@@ -370,8 +370,13 @@ describe('the current item', () => {
     // Settings is no longer a permanent sidebar row (Business settings is reached from the
     // account menu instead), so nothing in the sidebar highlights while visiting it.
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/general`)).toBeNull();
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/pricing`)).toBeNull();
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/custom-fields`)).toBeNull();
     expect(activeItemKey(sections, `/organizations/${ORG}/work/abc`)).toBe('work');
-    expect(activeItemKey(sections, `/organizations/${ORG}/roles`)).toBe('team');
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/roles`)).toBe('team');
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/members`)).toBe('team');
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/invitations`)).toBe('team');
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/connections/connection-1`)).toBe('connections');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog/plans/base'))).toBe('platform-plans');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog'))).toBe('platform-products');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog/families/comms'))).toBe('platform-products');

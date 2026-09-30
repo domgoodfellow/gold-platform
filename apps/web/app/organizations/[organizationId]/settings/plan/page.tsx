@@ -73,10 +73,11 @@ export default async function PlanAndUsagePage({
   return (
     <SettingsPageFrame>
       <PageHeader
-        title="Subscription"
+        title="Plan & usage"
+        crumbs={[{ label: 'Settings', href: `/organizations/${organizationId}/settings` }]}
         actions={<ButtonLink href={`/organizations/${organizationId}/settings/features`}>Manage features</ButtonLink>}
       />
-      <SettingsScopeNav organizationId={organizationId} active="subscription" />
+      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="plan" />
 
       <Section className="mt-8">
         <SectionHeading>Plan</SectionHeading>

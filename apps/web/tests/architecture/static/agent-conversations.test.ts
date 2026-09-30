@@ -250,7 +250,7 @@ describe('Context and Configure are composer popovers, and inspection only', () 
   it('Configure exposes only what has a behaviour behind it, and links to where durable settings live', () => {
     const configure = tenantRail.slice(tenantRail.indexOf('label="Configure"'));
     expect(configure).toContain('Include the open record');
-    expect(configure).toContain('/integrations');
+    expect(configure).toContain('/settings/connections');
     expect(configure).toContain('Connections &amp; permissions');
     // No control for a behaviour that does not exist.
     expect(configure).not.toMatch(/verbosity|Verbosity|Style|style|Approved tools|suggested actions/i);

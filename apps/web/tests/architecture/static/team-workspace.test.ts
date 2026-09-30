@@ -16,7 +16,7 @@ import { resolveTeamView } from '@/features/team/team-views';
  * and remain the authority on `role.manage`.
  */
 
-const ROUTES = fileURLToPath(new URL('../../../app/organizations/[organizationId]/roles', import.meta.url));
+const ROUTES = fileURLToPath(new URL('../../../app/organizations/[organizationId]/settings/access', import.meta.url));
 const FEATURES = fileURLToPath(new URL('../../../features/team', import.meta.url));
 
 describe('Team views are URL-backed', () => {
@@ -31,7 +31,7 @@ describe('Team views are URL-backed', () => {
 });
 
 describe('Members is a collection, not an inline creation form', () => {
-  const page = readFileSync(`${ROUTES}/page.tsx`, 'utf8');
+  const page = readFileSync(`${ROUTES}/access-page.tsx`, 'utf8');
   const membersTable = readFileSync(`${FEATURES}/members-table.tsx`, 'utf8');
 
   it('renders the members collection and keeps role assignment reachable inline', () => {
@@ -68,7 +68,7 @@ describe('one Add Member Sheet exposes both existing operations', () => {
 
   it('is one Sheet, reused rather than duplicated, and reachable from both Members and Invitations', () => {
     expect(sheet.match(/function AddMemberSheetProvider/g)?.length).toBe(1);
-    const page = readFileSync(`${ROUTES}/page.tsx`, 'utf8');
+    const page = readFileSync(`${ROUTES}/access-page.tsx`, 'utf8');
     // One trigger, in the page header, serving both views that add a person; Roles has its own.
     expect(page.match(/<AddMemberTrigger/g)?.length).toBe(1);
     expect(page).toContain("view === 'roles' ? <CreateRoleSheet organizationId={organizationId} /> : <AddMemberTrigger />");
@@ -121,7 +121,7 @@ describe('Settings compatibility is preserved', () => {
     );
     const page = readFileSync(redirectPage, 'utf8');
     expect(page).toContain('redirect(');
-    expect(page).toContain('/roles');
+    expect(page).toContain('/settings/access');
 
     const settings = readFileSync(
       fileURLToPath(new URL('../../../app/organizations/[organizationId]/settings/page.tsx', import.meta.url)),

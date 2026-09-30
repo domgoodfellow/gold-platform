@@ -72,7 +72,7 @@ export async function createPriceItemAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/pricing`);
+  revalidatePath(`/organizations/${organizationId}/settings/pricing`);
   return { error: null };
 }
 
@@ -101,7 +101,7 @@ export async function updatePriceItemAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/pricing`);
+  revalidatePath(`/organizations/${organizationId}/settings/pricing`);
   return { error: null };
 }
 
@@ -132,6 +132,6 @@ export async function chooseCurrencyAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/pricing`);
+  revalidatePath(`/organizations/${organizationId}/settings/pricing`);
   return { error: null };
 }

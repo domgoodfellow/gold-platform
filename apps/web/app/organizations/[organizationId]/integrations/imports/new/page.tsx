@@ -25,7 +25,7 @@ export default async function NewImportPage({
   if (!organization.capabilities.includes('integration.manage')) {
     return (
       <>
-        <PageHeader title="Import customers" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]} />
+        <PageHeader title="Import customers" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/settings/connections` }]} />
         <Alert>
           <Lock aria-hidden />
           <AlertTitle>Your role, {organization.role}, cannot import data</AlertTitle>
@@ -38,7 +38,7 @@ export default async function NewImportPage({
   if (typeof resourceId !== 'string') {
     return (
       <>
-        <PageHeader title="Import customers" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]} description="Upload a CSV export. GildOps reads the header row and shows you a mapping to review before anything is written." />
+        <PageHeader title="Import customers" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/settings/connections` }]} description="Upload a CSV export. GildOps reads the header row and shows you a mapping to review before anything is written." />
         <UploadSourceForm organizationId={organizationId} />
       </>
     );
@@ -54,7 +54,7 @@ export default async function NewImportPage({
 
   return (
     <>
-      <PageHeader title="Map your columns" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]} />
+      <PageHeader title="Map your columns" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/settings/connections` }]} />
       <MappingEditor
         organizationId={organizationId}
         resourceId={resourceId}

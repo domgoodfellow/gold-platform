@@ -153,7 +153,7 @@ describe('ProviderIcon is distinct from ConnectorIcon (section 1, 56)', () => {
       expect(source).not.toContain('ProviderIcon');
       expect(source).not.toContain('listProviderServices');
     }
-    const page = read('app/organizations/[organizationId]/integrations/page.tsx');
+    const page = read('app/organizations/[organizationId]/settings/connections/connections-page.tsx');
     expect(page).not.toContain('listProviderServices');
     for (const providerOnly of ['Google Routes', 'OpenAI Responses', 'Gemini Interactions']) {
       expect(page, providerOnly).not.toContain(providerOnly);

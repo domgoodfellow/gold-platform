@@ -22,7 +22,7 @@ import { settingsScopeHref } from '@/lib/route/settings';
  * The truthful, shared person/session menu, one implementation for every shell's sidebar footer.
  * Represents the PERSON, not where they are operating — cross-context navigation (switching
  * business, entering Platform Administration) is `ContextSwitcher`'s job alone. Settings is one
- * destination (Organization, Account, Access, Connections and Subscription are scopes inside it,
+ * destination (Organization, Account, Access, Connections and Plan & usage are scopes inside it,
  * `SettingsScopeNav`), so this menu offers exactly one Settings entry rather than a Business/Account
  * split — landing on Organization when a business is offered, on Account otherwise.
  */
@@ -38,7 +38,7 @@ type AccountMenuProps = {
 };
 
 function AccountMenuContent({ email, signOutAction, businessSettingsOffered }: AccountMenuProps) {
-  // The business being left, so Settings can land on its Organization scope and Subscription can
+  // The business being left, so Settings can land on its Organization scope and Plan & usage can
   // offer a shortcut. Read from the path rather than passed in: this menu is shared by shells that
   // have no organization at all.
   const from = organizationIdFromPath(usePathname());
@@ -53,7 +53,7 @@ function AccountMenuContent({ email, signOutAction, businessSettingsOffered }: A
       <DropdownMenuItem asChild><Link href={settingsHref}><Settings />Settings</Link></DropdownMenuItem>
       {from ? (
         <DropdownMenuItem asChild>
-          <Link href={settingsScopeHref('subscription', from)}><CreditCard />Subscription</Link>
+          <Link href={settingsScopeHref('plan', from)}><CreditCard />Plan &amp; usage</Link>
         </DropdownMenuItem>
       ) : null}
       <DropdownMenuSeparator />

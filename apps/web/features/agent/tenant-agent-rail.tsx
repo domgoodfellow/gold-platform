@@ -336,7 +336,7 @@ function TenantAgentPanel({
                 </label>
               </div>
               {canManageConnections ? (
-                <ButtonLink href={`/organizations/${organizationId}/integrations`} tone="secondary" size="small" className="w-fit">
+                <ButtonLink href={`/organizations/${organizationId}/settings/connections`} tone="secondary" size="small" className="w-fit">
                   Connections &amp; permissions
                 </ButtonLink>
               ) : null}

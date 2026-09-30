@@ -70,9 +70,15 @@ describe('the Settings configuration map', () => {
     // Setup is its own SETUP-lifecycle destination and Insights is an operating page reached
     // contextually from each workspace's Home and from PageHeader's Insights support mode
     // (`areaAvailable('insights', ...)`) — neither is a Settings *configuration* door.
+    const settingsOwned: Record<string, string> = {
+      pricing: 'pricing',
+      fields: 'custom-fields',
+      roles: 'team',
+      integrations: 'integrations',
+    };
     for (const area of AREAS.filter((candidate) => candidate.sidebar === false && !['setup', 'insights'].includes(candidate.segment))) {
       expect(
-        entries.some((entry) => entry.path.split(/[/#]/)[0] === area.segment),
+        entries.some((entry) => entry.key === settingsOwned[area.segment] || entry.path.split(/[/#]/)[0] === area.segment),
         `${area.segment} left the sidebar and is not on the Settings map`,
       ).toBe(true);
     }

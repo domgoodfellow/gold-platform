@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
   const failed = (message: string) => {
     const target = new URL(
-      organizationHint ? `/organizations/${organizationHint}/integrations` : '/organizations',
+      organizationHint ? `/organizations/${organizationHint}/settings/connections` : '/organizations',
       request.url,
     );
     target.searchParams.set('view', 'browse');
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       state: url.searchParams.get('state') ?? '',
       nonce,
     });
-    const target = new URL(`/organizations/${done.organization_id}/integrations/${done.connection_id}`, request.url);
+    const target = new URL(`/organizations/${done.organization_id}/settings/connections/${done.connection_id}`, request.url);
     target.searchParams.set('connected', '1');
     const response = NextResponse.redirect(target);
     response.cookies.delete({ name: OAUTH_NONCE_COOKIE, path: '/connect/oauth' });

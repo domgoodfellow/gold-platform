@@ -27,7 +27,7 @@ export default async function IntegrationSourcesPage({
     <>
       <PageHeader
         title="Data sources"
-        crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]}
+        crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/settings/connections` }]}
         description="Every sheet, file or feed selected from a connection, across every connector."
       />
       <IntegrationsNav organizationId={organizationId} current="sources" />

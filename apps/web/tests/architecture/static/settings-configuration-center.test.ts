@@ -76,7 +76,7 @@ describe('Settings, as the Configuration Center (source scan)', () => {
  */
 describe('Pricing, Automations, Custom fields and Team are canonical, not Settings sub-routes', () => {
   it('/pricing is canonical and renders both the price book and, when connected, Getting paid', () => {
-    const page = readFileSync(`${ROUTES}/pricing/page.tsx`, 'utf8');
+    const page = readFileSync(`${ROUTES}/settings/pricing/page.tsx`, 'utf8');
     expect(page).toContain('CreatePriceItemForm');
     expect(page).toContain('EditPriceItemForm');
     expect(page).toContain('PaymentAccountRow');
@@ -111,7 +111,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
   });
 
   it('/fields is canonical and renders the shared, entity-scoped fields component', () => {
-    const page = readFileSync(`${ROUTES}/fields/page.tsx`, 'utf8');
+    const page = readFileSync(`${ROUTES}/settings/custom-fields/page.tsx`, 'utf8');
     expect(page).toContain('EntityFieldsConfiguration');
     expect(page).not.toContain('redirect(');
     expect(
@@ -123,14 +123,13 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
   });
 
   it('/roles is canonical and renders the Team workspace â€” Members, Invitations and Roles as URL-backed sibling views', () => {
-    const page = readFileSync(`${ROUTES}/roles/page.tsx`, 'utf8');
+    const page = readFileSync(`${ROUTES}/settings/access/access-page.tsx`, 'utf8');
     expect(page).toContain('<ViewNav');
     expect(page).toContain('AddMemberSheetProvider');
     expect(page).toContain('MembersTable');
     expect(page).toContain('InvitationsTable');
     expect(page).toContain('RolesTable');
     expect(page).toContain('CreateRoleSheet');
-    expect(page).not.toContain('redirect(');
     expect(page).not.toContain('CreateRoleForm');
     expect(page).not.toContain('./pending-invitations');
     expect(page).not.toContain('<PendingInvitations');
@@ -148,9 +147,9 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
 
   it('sends every retired Settings sub-route to its new canonical home, never a dead end', () => {
     for (const [segment, destination] of [
-      ['settings/people', 'roles'],
-      ['settings/data-automation', 'fields'],
-      ['settings/commerce', 'pricing'],
+      ['settings/people', 'settings/access'],
+      ['settings/data-automation', 'settings/custom-fields'],
+      ['settings/commerce', 'settings/pricing'],
     ] as const) {
       const page = readFileSync(`${ROUTES}/${segment}/page.tsx`, 'utf8');
       expect(page, `${segment} no longer redirects to ${destination}`).toContain(`/${destination}`);

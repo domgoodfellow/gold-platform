@@ -63,7 +63,7 @@ export default async function AssetsPage({
         {mayConfigure ? (
           <ConfigureRegistrar
             title="Assets configuration"
-            settingsHref={`/organizations/${organizationId}/fields`}
+            settingsHref={`/organizations/${organizationId}/settings/custom-fields`}
           >
             <AssetConfiguration
               organizationId={organizationId}

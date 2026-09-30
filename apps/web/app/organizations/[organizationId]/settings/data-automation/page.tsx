@@ -5,5 +5,5 @@ export default async function DataAndAutomationSettingsRedirect({
   params,
 }: PageProps<'/organizations/[organizationId]/settings/data-automation'>) {
   const { organizationId } = await params;
-  redirect(`/organizations/${organizationId}/fields`);
+  redirect(`/organizations/${organizationId}/settings/custom-fields`);
 }

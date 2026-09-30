@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
-import { disconnectConnection, recordConnection } from '@/lib/domain/integrations/connections';
+import { disconnectConnection } from '@/lib/domain/integrations/connections';
 import { setAssistantAccess } from '@/lib/domain/integrations/assistant-grants';
 import { checkConnection } from '@/lib/domain/integrations/oauth';
 import { requireOrganization } from '@/lib/route/organization';
@@ -28,8 +28,8 @@ export async function disconnectAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/integrations`);
-  revalidatePath(`/organizations/${organizationId}/integrations/${connectionId}`);
+  revalidatePath(`/organizations/${organizationId}/settings/connections`);
+  revalidatePath(`/organizations/${organizationId}/settings/connections/${connectionId}`);
   return { error: null };
 }
 
@@ -46,13 +46,13 @@ export async function checkConnectionAction(_previous: CheckState, formData: For
     await checkConnection(db, { connectionId });
   } catch (error) {
     // The provider's own words are the message; the connection's own row now says needs attention too.
-    revalidatePath(`/organizations/${organizationId}/integrations/${connectionId}`);
+    revalidatePath(`/organizations/${organizationId}/settings/connections/${connectionId}`);
     if (error instanceof DomainError) return { error: error.message, checked: false };
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/integrations`);
-  revalidatePath(`/organizations/${organizationId}/integrations/${connectionId}`);
+  revalidatePath(`/organizations/${organizationId}/settings/connections`);
+  revalidatePath(`/organizations/${organizationId}/settings/connections/${connectionId}`);
   return { error: null, checked: true };
 }
 
@@ -74,6 +74,6 @@ export async function setAssistantAccessAction(_previous: AccessState, formData:
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/integrations/${connectionId}`);
+  revalidatePath(`/organizations/${organizationId}/settings/connections/${connectionId}`);
   return { error: null };
 }

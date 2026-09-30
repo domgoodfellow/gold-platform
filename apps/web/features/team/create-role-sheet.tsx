@@ -12,7 +12,7 @@ import {
   PageDrawerTitle,
   PageDrawerTrigger,
 } from '@/components/containers/page-drawer';
-import { createRoleAction, type CreateRoleState } from '@/app/organizations/[organizationId]/roles/actions';
+import { createRoleAction, type CreateRoleState } from '@/app/organizations/[organizationId]/settings/access/actions';
 import { RoleEditorFields } from './role-editor-fields';
 
 const INITIAL: CreateRoleState = { error: null, created: false };

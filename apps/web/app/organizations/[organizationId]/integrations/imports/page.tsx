@@ -29,7 +29,7 @@ export default async function ImportRunsPage({
     <>
       <PageHeader
         title="Imports"
-        crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]}
+        crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/settings/connections` }]}
         description="Every import this business has run, newest first."
         actions={
           organization.capabilities.includes('integration.manage') ? (

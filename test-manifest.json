@@ -269,6 +269,14 @@
         "navigation"
       ]
     },
+    "apps/web/e2e/settings-routes.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "settings",
+        "navigation",
+        "routing"
+      ]
+    },
     "apps/web/e2e/adaptive-shell.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [
@@ -763,6 +771,14 @@
         "settings"
       ],
       "note": "Also runs the pure Settings-map gating functions."
+    },
+    "apps/web/tests/architecture/static/settings-route-contract.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "navigation",
+        "settings",
+        "routing"
+      ]
     },
     "apps/web/tests/architecture/static/setup-lifecycle.test.ts": {
       "category": "architecture-static",

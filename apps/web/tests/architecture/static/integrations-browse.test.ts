@@ -41,7 +41,7 @@ describe('browsing the connector catalogue', () => {
 
 describe('the tenant Integrations screen owns no connector list', () => {
   it('reads the catalogue rather than a constant', () => {
-    const page = read('app/organizations/[organizationId]/integrations/page.tsx');
+    const page = read('app/organizations/[organizationId]/settings/connections/connections-page.tsx');
     expect(page).toContain('listConnectors');
     expect(page).not.toMatch(/\bCATALOG\b/);
     for (const name of ['Google Workspace', 'HubSpot', 'Shopify', 'Notion']) {

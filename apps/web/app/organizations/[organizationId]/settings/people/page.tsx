@@ -5,5 +5,5 @@ export default async function PeopleSettingsRedirect({
   params,
 }: PageProps<'/organizations/[organizationId]/settings/people'>) {
   const { organizationId } = await params;
-  redirect(`/organizations/${organizationId}/roles`);
+  redirect(`/organizations/${organizationId}/settings/access`);
 }

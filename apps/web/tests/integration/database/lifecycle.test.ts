@@ -259,7 +259,7 @@ describe('the setup overview — areas, importance and progress', () => {
     expect(overview.optionalOpen).toBe(3);
     // Each area points at the surface that owns it, not at a copy of it.
     expect(byKey.get('work')?.area.href).toBe(`/organizations/${organizationId}/work/configuration`);
-    expect(byKey.get('billing')?.area.href).toBe(`/organizations/${organizationId}/pricing`);
+    expect(byKey.get('billing')?.area.href).toBe(`/organizations/${organizationId}/settings/pricing`);
   });
 
   it('counts an area as ready the moment its real fact is true, and orders required gaps first', async () => {

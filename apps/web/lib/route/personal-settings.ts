@@ -18,7 +18,7 @@ export type PersonalSection = (typeof PERSONAL_SECTIONS)[number]['key'];
  * same reason a Platform sidebar group stays unlinked. `PageHeader` appends the current page.
  */
 export function personalSettingsAncestry(): { label: string }[] {
-  return [{ label: 'Account' }];
+  return [{ label: 'Settings' }, { label: 'Account' }];
 }
 
 /**

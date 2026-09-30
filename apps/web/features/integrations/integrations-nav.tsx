@@ -10,7 +10,7 @@ export type IntegrationsView = 'connected' | 'browse' | 'sources' | 'imports';
  * its own breadcrumb instead of repeating this nav — record grammar, not a fifth view.
  */
 export function IntegrationsNav({ organizationId, current }: { organizationId: string; current: IntegrationsView }) {
-  const base = `/organizations/${organizationId}/integrations`;
+  const base = `/organizations/${organizationId}/settings/connections`;
 
   return (
     <ViewNav
@@ -18,9 +18,7 @@ export function IntegrationsNav({ organizationId, current }: { organizationId: s
       current={current}
       views={[
         { key: 'connected', label: 'Connected', href: base },
-        { key: 'browse', label: 'Browse apps', href: `${base}?view=browse` },
-        { key: 'sources', label: 'Data sources', href: `${base}/sources` },
-        { key: 'imports', label: 'Imports', href: `${base}/imports` },
+        { key: 'browse', label: 'Browse apps', href: `${base}/apps` },
       ]}
     />
   );

@@ -18,7 +18,7 @@ import {
   updateFieldAction,
   type CreateFieldState,
   type UpdateFieldState,
-} from '@/app/organizations/[organizationId]/fields/actions';
+} from '@/app/organizations/[organizationId]/settings/custom-fields/actions';
 
 const INITIAL: CreateFieldState = { error: null, created: false };
 const EDIT_INITIAL: UpdateFieldState = { error: null, updated: false };

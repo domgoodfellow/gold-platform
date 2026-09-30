@@ -1,12 +1,12 @@
 /**
  * Settings is one destination with five scopes: Organization, Account, Access, Connections and
- * Subscription. Each scope still writes to its own domain surface — Account is the signed-in
+ * Plan & usage. Each scope still writes to its own domain surface — Account is the signed-in
  * person's and follows them across businesses (D45); Organization, Access, Connections and
- * Subscription are this business's, checked against the caller's membership on every page the
+ * Plan & usage are this business's, checked against the caller's membership on every page the
  * same as before. This registry exists so the one tab bar every scope renders (`SettingsScopeNav`)
  * cannot disagree with itself about where a scope lives.
  */
-export type SettingsScopeKey = 'organization' | 'account' | 'access' | 'connections' | 'subscription';
+export type SettingsScopeKey = 'organization' | 'account' | 'access' | 'connections' | 'plan';
 
 export type SettingsScope = {
   key: SettingsScopeKey;
@@ -37,8 +37,8 @@ export const SETTINGS_SCOPES: readonly SettingsScope[] = [
     scopeCopy: () => 'The apps, phone numbers and data sources this business connects.',
   },
   {
-    key: 'subscription',
-    label: 'Subscription',
+    key: 'plan',
+    label: 'Plan & usage',
     scopeCopy: () => 'This business’s plan, usage and billing.',
   },
 ] as const;
@@ -53,9 +53,9 @@ export function settingsScopeHref(key: SettingsScopeKey, organizationId: string 
   if (!organizationId) return '/settings/account';
   switch (key) {
     case 'organization': return `/organizations/${organizationId}/settings`;
-    case 'access': return `/organizations/${organizationId}/roles`;
-    case 'connections': return `/organizations/${organizationId}/integrations`;
-    case 'subscription': return `/organizations/${organizationId}/settings/plan`;
+    case 'access': return `/organizations/${organizationId}/settings/access`;
+    case 'connections': return `/organizations/${organizationId}/settings/connections`;
+    case 'plan': return `/organizations/${organizationId}/settings/plan`;
   }
 }
 

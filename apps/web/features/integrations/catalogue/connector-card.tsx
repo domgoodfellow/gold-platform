@@ -56,7 +56,7 @@ export function ConnectorCard({
             Connected
           </Button>
         ) : (
-          <ButtonLink href={`/organizations/${organizationId}/integrations/connect/${connector.key}`} tone="primary" size="small">
+          <ButtonLink href={`/organizations/${organizationId}/settings/connections/connect/${connector.key}`} tone="primary" size="small">
             Connect
           </ButtonLink>
         )}

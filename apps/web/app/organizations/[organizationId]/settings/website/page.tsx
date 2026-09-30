@@ -5,6 +5,7 @@ import { areaLabel } from '@/lib/navigation';
 import { HomepageEditor } from '@/features/public-site/homepage-editor';
 import { CommunicationProfileForm } from '@/features/communications/communication-profile-form';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { homepageEditorState } from '@/lib/domain/public-site/public-site';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -20,6 +21,7 @@ export default async function WebsiteSettingsPage({ params }: PageProps<'/organi
 
   return <SettingsPageFrame>
     <PageHeader title="Website" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} description="Edit a private draft, review the exact rendered page, then publish deliberately. Profile and brand remain in Public presence." />
+    <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
     {mayManage && state ? <>
       <HomepageEditor organizationId={organizationId} working={state?.working ?? null} published={state?.published ?? null} />
       <CommunicationProfileForm organizationId={organizationId} siteId={state.siteId} initial={{enabled:Boolean(profileValue),displayName:profileValue?.displayName??'Assistant',greeting:profileValue?.greeting??'Hi — how can I help?',instructions:profileValue?.instructions??'',handoffMessage:profileValue?.handoffMessage??'Thanks — a member of our team will follow up.',handoffDestination:''}} />

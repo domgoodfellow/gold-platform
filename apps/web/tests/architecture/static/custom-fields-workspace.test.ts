@@ -2,9 +2,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { CUSTOM_FIELD_ENTITIES } from '@/lib/domain/fields/field-definitions';
-import { resolveFieldEntity } from '@/app/organizations/[organizationId]/fields/field-entities';
+import { resolveFieldEntity } from '@/app/organizations/[organizationId]/settings/custom-fields/field-entities';
 
-const FIELDS = fileURLToPath(new URL('../../../app/organizations/[organizationId]/fields', import.meta.url));
+const FIELDS = fileURLToPath(new URL('../../../app/organizations/[organizationId]/settings/custom-fields', import.meta.url));
 const CUSTOM_FIELDS = fileURLToPath(new URL('../../../features/custom-fields/configuration', import.meta.url));
 
 describe('Custom Fields entity views are URL-backed', () => {
@@ -82,7 +82,7 @@ describe('Custom Fields boundary: features/custom-fields owns presentation, the 
   });
 
   it('reaches its Server Actions from the route it does not own, never a copy of its own', () => {
-    expect(form).toContain("from '@/app/organizations/[organizationId]/fields/actions'");
+    expect(form).toContain("from '@/app/organizations/[organizationId]/settings/custom-fields/actions'");
   });
 
   it('keeps actions.ts, field-entities.ts and page.tsx route-owned', () => {

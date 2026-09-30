@@ -44,10 +44,10 @@ describe('sibling views are navigation, not page actions', () => {
   });
 
   it('Team renders ViewNav for Members, Invitations and Roles, with nothing but views in it', () => {
-    const page = read(`${ORG}/roles/page.tsx`);
+    const page = read(`${ORG}/settings/access/access-page.tsx`);
     expect(page).toContain('<ViewNav');
     expect(page).not.toContain('TeamViewTabs');
-    expect(() => read(`${ORG}/roles/team-view-tabs.tsx`)).toThrow();
+    expect(() => read(`${ORG}/settings/access/team-view-tabs.tsx`)).toThrow();
     const nav = page.slice(page.indexOf('<ViewNav'), page.indexOf('/>', page.indexOf('views={[')));
     expect(nav).not.toMatch(/Trigger|CreateRoleSheet|<Button/);
   });
@@ -73,7 +73,7 @@ describe('the page header owns the page’s actions; the toolbar owns search and
   });
 
   it('Team puts the create action for the active view in PageHeader.actions', () => {
-    const page = read(`${ORG}/roles/page.tsx`);
+    const page = read(`${ORG}/settings/access/access-page.tsx`);
     const header = page.slice(page.indexOf('<PageHeader'), page.indexOf('<ViewNav'));
     expect(header).toContain('actions={');
     expect(header).toContain("view === 'roles' ? <CreateRoleSheet organizationId={organizationId} /> : <AddMemberTrigger />");
@@ -85,7 +85,7 @@ describe('an empty collection explains state; it does not repeat the header’s 
   it('no page whose header already creates the record passes an emptyAction', () => {
     for (const file of [
       'customers/page.tsx',
-      'roles/page.tsx',
+      'settings/access/access-page.tsx',
       'resources/page.tsx',
       'locations/page.tsx',
       'assets/page.tsx',
@@ -201,7 +201,7 @@ describe('Badge: tenant statuses are neutral; GOLD-owned facts may carry a tone'
   });
 
   it('the spec states the rule the code follows', () => {
-    expect(spec).toContain('GOLD-owned facts');
+    expect(spec).toContain('GildOps-owned facts');
     expect(spec).toContain('Tenant-authored statuses stay neutral');
   });
 });

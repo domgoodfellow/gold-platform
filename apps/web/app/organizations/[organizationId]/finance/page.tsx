@@ -39,7 +39,7 @@ export default async function FinancePage({
 
   const overview = await financeOverview(db, { organizationId, currency: organization.currency });
   const planPath = `/organizations/${organizationId}/settings/plan`;
-  const connectionsPath = `/organizations/${organizationId}/integrations?view=browse`;
+  const connectionsPath = `/organizations/${organizationId}/settings/connections/apps`;
 
   const subscriptionValue = overview.subscription
     ? overview.subscription.planLabel
@@ -76,7 +76,7 @@ export default async function FinancePage({
         <EmptyState className="mt-6">Nothing financial has been recorded for this business yet.</EmptyState>
       ) : (
         <WidgetGrid className="mt-6">
-          <Widget title="Subscription" value={subscriptionValue} note={subscriptionNote} href={planPath} />
+          <Widget title="Plan & usage" value={subscriptionValue} note={subscriptionNote} href={planPath} />
 
           <Widget title="Usage allowances" href={planPath}>
             {overview.quotas.length === 0 ? (

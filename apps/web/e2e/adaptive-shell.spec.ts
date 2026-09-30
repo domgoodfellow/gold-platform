@@ -72,7 +72,7 @@ test.describe('a tenant colleague with a reduced role', () => {
 
   test('is still refused the roles page by the server when the URL is typed', async ({ page }) => {
     const { organizationId } = loadDemoContext();
-    await page.goto(`/organizations/${organizationId}/roles`);
+    await page.goto(`/organizations/${organizationId}/settings/access/members`);
     // The page loads (it is read-only for them) but offers no way to change a role: hiding the row was courtesy.
     await expect(page.getByRole('button', { name: 'New role' })).toHaveCount(0);
   });

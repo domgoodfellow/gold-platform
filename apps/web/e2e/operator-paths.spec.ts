@@ -28,7 +28,7 @@ test.describe('People & Roles — reassigning an existing member', () => {
     page,
   }) => {
     const ctx = loadDemoContext();
-    await page.goto(`/organizations/${ctx.organizationId}/roles`);
+    await page.goto(`/organizations/${ctx.organizationId}/settings/access/members`);
 
     const row = page.getByRole('row', { name: 'Joris Bakker' });
     await expect(row).toBeVisible();
@@ -56,7 +56,7 @@ test.describe('People & Roles — reassigning an existing member', () => {
     page,
   }) => {
     const ctx = loadDemoContext();
-    await page.goto(`/organizations/${ctx.organizationId}/roles`);
+    await page.goto(`/organizations/${ctx.organizationId}/settings/access/members`);
 
     const row = page.getByRole('row', { name: 'Sanne de Vries' });
     await expect(row).toBeVisible();
@@ -79,7 +79,7 @@ test.describe('People & Roles — a caller without role.manage', () => {
 
   test('sees roles as labels, never as an editable control', async ({ page }) => {
     const ctx = loadDemoContext();
-    await page.goto(`/organizations/${ctx.organizationId}/roles`);
+    await page.goto(`/organizations/${ctx.organizationId}/settings/access/members`);
 
     await expect(page.getByRole('combobox', { name: 'Role' })).toHaveCount(0);
     const row = page.getByRole('row', { name: 'Joris Bakker' });

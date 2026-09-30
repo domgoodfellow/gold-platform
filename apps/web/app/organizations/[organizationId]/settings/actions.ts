@@ -136,7 +136,7 @@ export async function disconnectPaymentAccountAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/pricing`);
+  revalidatePath(`/organizations/${organizationId}/settings/pricing`);
   return { error: null };
 }
 

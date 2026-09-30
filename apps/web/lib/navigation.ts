@@ -112,6 +112,8 @@ export type ModuleConfiguration = {
    * routes, so a module configured there needs to say which.
    */
   path?: string;
+  /** User-facing destination when a module is configured on a named Settings child page. */
+  label?: string;
   /** An `id` on the resolved page, when that page is not itself the whole of the configuration. */
   section?: string;
 };
@@ -148,7 +150,7 @@ export const MODULES = [
     label: 'Billing',
     description:
       'A price book, quotes, invoices and payments. A business that invoices somewhere else runs without this and keeps every job it recorded.',
-    configuredAt: { segment: 'pricing' },
+    configuredAt: { segment: 'settings', path: 'pricing', label: 'Pricing' },
   },
   {
     key: 'assets',
@@ -234,7 +236,7 @@ export const MODULES = [
     // Configured inside Pricing's own "Getting paid" section — a card collects against an
     // invoice Billing produced, so this declares the dependency rather than leaving a link
     // pointing at an area a second switch could hide without saying so.
-    configuredAt: { segment: 'pricing', section: 'getting-paid' },
+    configuredAt: { segment: 'settings', path: 'pricing', section: 'getting-paid', label: 'Pricing' },
     requires: 'billing',
   },
   {
@@ -250,7 +252,7 @@ export const MODULES = [
     label: 'Connections',
     description:
       'Connect GildOps to the apps and files a business already uses, and bring their data in. A business that enters everything by hand runs without this.',
-    configuredAt: { segment: 'integrations' },
+    configuredAt: { segment: 'settings', path: 'connections', label: 'Connections' },
   },
 ] as const satisfies readonly Module[];
 
@@ -434,16 +436,16 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'general', path: 'settings/general', permission: ['organization.manage'] },
   { key: 'work-configuration', workspace: 'field', path: 'work/configuration', permission: ['field.manage'] },
   { key: 'schedule-configuration', workspace: 'field', path: 'schedule/configuration', permission: ['field.manage'] },
-  { key: 'pricing', workspace: 'finance', path: 'pricing', entitledBy: 'pricing', permission: ['price.manage'] },
-  { key: 'custom-fields', path: 'fields', permission: ['field.manage'] },
+  { key: 'pricing', workspace: 'finance', path: 'settings/pricing', entitledBy: 'pricing', permission: ['price.manage'] },
+  { key: 'custom-fields', path: 'settings/custom-fields', permission: ['field.manage'] },
   // Entitled through Calls, permitted through field.manage: configuring outcomes and stages is not making calls.
   { key: 'call-setup', workspace: 'comms', path: 'calls#setup', entitledBy: 'calls', permission: ['field.manage'] },
-  { key: 'team', path: 'roles', permission: ['role.manage'] },
+  { key: 'team', path: 'settings/access', permission: ['role.manage'] },
   { key: 'branding', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
   { key: 'website', workspace: 'studio', path: 'settings/website', permission: ['organization.manage'] },
   { key: 'domains', workspace: 'studio', path: 'settings/domains', permission: ['organization.manage'] },
   { key: 'communications', workspace: 'comms', path: 'settings/communications', permission: ['organization.manage'] },
-  { key: 'integrations', path: 'integrations', entitledBy: 'integrations', permission: ['integration.manage'] },
+  { key: 'integrations', path: 'settings/connections', entitledBy: 'integrations', permission: ['integration.manage'] },
   { key: 'features', path: 'settings/features', permission: ['feature.manage'] },
   { key: 'plan', path: 'settings/plan', permission: ['billing.manage'] },
   // Setup is kernel. Launching is `organization.manage`; asking for a drafted setup is
@@ -588,7 +590,7 @@ export function moduleConfiguration(
   return {
     href: `${areaHref(organizationId, module.configuredAt.segment)}${path}${anchor}`,
     // Unreachable in a build that passes `navigation.test.ts` — here so a mistake renders as a plain word rather than throwing.
-    label: area?.label ?? module.configuredAt.segment,
+    label: module.configuredAt.label ?? area?.label ?? module.configuredAt.segment,
   };
 }
 

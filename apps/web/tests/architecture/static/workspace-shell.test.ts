@@ -453,7 +453,7 @@ describe('the page-header contract — the page, not the workspace header, owns 
 
     // A page's identity is its PageHeader, a RecordHeader-based header component, or a feature
     // that renders one (Home, the customer record). A pure redirect renders nothing at all.
-    const identity = /<PageHeader|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage/;
+    const identity = /<PageHeader|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage/;
     for (const page of pages) {
       const source = readFileSync(page, 'utf8');
       const label = page.slice(root.length);

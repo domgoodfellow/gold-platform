@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/containers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { ButtonLink } from '@/components/controls/button';
 import { listProviderBindings, listProviderResources } from '@/lib/domain/providers/bindings';
 import { callingNumber } from '@/lib/domain/reception/telephony';
@@ -39,7 +40,7 @@ export default async function CommunicationsPage({
   params,
 }: PageProps<'/organizations/[organizationId]/settings/communications'>) {
   const { organizationId } = await params;
-  const { db } = await requireOrganization(organizationId);
+  const { db, organization } = await requireOrganization(organizationId);
 
   const [bindings, resources, selectedNumber] = await Promise.all([
     listProviderBindings(db, { organizationId }),
@@ -54,6 +55,7 @@ export default async function CommunicationsPage({
   return (
     <SettingsPageFrame>
       <PageHeader title="Communications" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
+      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
       <Hint className="mt-1">
         The phone and email this business communicates through. Never what any of it costs GildOps,
         and never a secret. Apps a business connects itself are under Integrations.

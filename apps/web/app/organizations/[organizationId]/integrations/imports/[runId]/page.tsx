@@ -24,7 +24,7 @@ export default async function ImportRunPage({
 
   return (
     <>
-      <PageHeader title="Import" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/integrations` }]} />
+      <PageHeader title="Import" crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/settings/connections` }]} />
       <ImportRunDetail
         organizationId={organizationId}
         runId={runId}

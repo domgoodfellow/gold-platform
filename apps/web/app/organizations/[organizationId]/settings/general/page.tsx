@@ -4,6 +4,7 @@ import { areaLabel } from '@/lib/navigation';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { requireOrganization } from '@/lib/route/organization';
 import { OrganizationSettingsForm } from '@/features/tenancy/organization-settings-form';
+import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,7 @@ export default async function GeneralSettingsPage({
   return (
     <SettingsPageFrame>
       <PageHeader title="General" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
+      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
       <Hint className="mt-1">
         This business&rsquo;s name, where it operates and what it trades in. Changing the
         currency does not reinterpret what past jobs cost, and changing the timezone does not

@@ -24,7 +24,7 @@ export function FieldEntityNav({
       views={CUSTOM_FIELD_ENTITIES.map((entity) => ({
         key: entity,
         label: CUSTOM_FIELD_ENTITY_LABELS[entity],
-        href: `/organizations/${organizationId}/fields?entity=${entity}`,
+        href: `/organizations/${organizationId}/settings/custom-fields?entity=${entity}`,
       }))}
     />
   );

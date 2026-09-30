@@ -4,6 +4,7 @@ import { areaLabel } from '@/lib/navigation';
 import { Section, SectionHeading } from '@/components/containers/section';
 import { ProfileForm } from '@/features/public-profile/profile-form';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { listBookableTypes } from '@/lib/domain/booking/booking';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
@@ -40,6 +41,7 @@ export default async function BrandingSettingsPage({
         crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]}
         description="What customers see before they book, and how this business looks."
       />
+      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
 
       <Section id="public-page" className="scroll-mt-6">
         <SectionHeading>Public page</SectionHeading>

@@ -100,7 +100,7 @@ export function ConnectedApps({
                     ) : null}
                     <div>
                       <Link
-                        href={`/organizations/${organizationId}/integrations/${connection.id}`}
+                        href={`/organizations/${organizationId}/settings/connections/${connection.id}`}
                         className="font-medium underline-offset-4 hover:underline"
                       >
                         {connector?.name ?? connection.connectorKey}
