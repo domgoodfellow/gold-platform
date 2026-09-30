@@ -7,7 +7,8 @@ import { acceptCommercialProposal, buildCommercialProposal, markCommercialPropos
 import { createCustomer, getCustomer } from '@/lib/domain/customers/customers';
 import { upsertDiscoverySnapshotAnswers } from '@/lib/domain/customers/discovery-snapshots';
 import { claimProposalInvite, createProposalInvite } from '@/lib/domain/customers/proposal-invites';
-import { getProposalHandoff, handoffAcceptedProposal } from '@/lib/domain/customers/proposal-handoff';
+import { getFoundingHandoff, getProposalHandoff, handoffAcceptedProposal } from '@/lib/domain/customers/proposal-handoff';
+import { currentPlanAssignment, listOrganizationPlanAgreements } from '@/lib/domain/catalogue/organization-plans';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
@@ -39,6 +40,9 @@ describe('handing off an accepted proposal', () => {
   let repUserId: string;
   let customerId: string;
   let acceptedProposalId: string;
+  let ownerEmail: string;
+  let ownerPassword: string;
+  let planId: string;
 
   beforeAll(async () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
@@ -60,8 +64,9 @@ describe('handing off an accepted proposal', () => {
 
     // The prospect's own owner-to-be must already have an account (provision_organization's own
     // precondition) — a real one, not anonymous, and reachable by an email on the customer row.
-    const ownerEmail = `owner-${randomUUID().slice(0, 8)}@example.test`;
-    const { error: ownerCreateError } = await admin.auth.admin.createUser({ email: ownerEmail, password: `pw-${randomUUID()}`, email_confirm: true });
+    ownerEmail = `owner-${randomUUID().slice(0, 8)}@example.test`;
+    ownerPassword = `pw-${randomUUID()}`;
+    const { error: ownerCreateError } = await admin.auth.admin.createUser({ email: ownerEmail, password: ownerPassword, email_confirm: true });
     if (ownerCreateError) throw ownerCreateError;
 
     customerId = await createCustomer(repDb, { organizationId: gildOpsOrgId, name: 'Handoff Prospect Co', email: ownerEmail });
@@ -72,6 +77,7 @@ describe('handing off an accepted proposal', () => {
     });
 
     const start = await getPlan(repDb, 'start');
+    planId = start!.id;
     const built = await buildCommercialProposal(repDb, {
       organizationId: gildOpsOrgId,
       customerId,
@@ -140,6 +146,55 @@ describe('handing off an accepted proposal', () => {
     const handoff = await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
     expect(handoff).not.toBeNull();
     expect(handoff!.proposalId).toBe(acceptedProposalId);
+  });
+
+  it('entitles the created business to the accepted Plan, at the accepted price', async () => {
+    const handoff = await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
+    const createdOrganizationId = handoff!.createdOrganizationId;
+
+    const assignment = await currentPlanAssignment(repDb, { organizationId: createdOrganizationId });
+    expect(assignment).not.toBeNull();
+    expect(assignment!.planId).toBe(planId);
+    expect(assignment!.periodEnd).toBe('9999-12-31');
+
+    const agreements = await listOrganizationPlanAgreements(repDb, { organizationId: createdOrganizationId, planId });
+    expect(agreements).toHaveLength(1);
+    expect(agreements[0].currency).toBe('CAD');
+    expect(agreements[0].amountMinor).toBeGreaterThan(0);
+  });
+
+  it('the founded business can read its own handoff; an unrelated third organization cannot', async () => {
+    const handoff = await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
+    const createdOrganizationId = handoff!.createdOrganizationId;
+
+    const ownerDb = anonClient();
+    const { error: signInError } = await ownerDb.auth.signInWithPassword({ email: ownerEmail, password: ownerPassword });
+    if (signInError) throw signInError;
+
+    const foundersOwnRead = await getFoundingHandoff(ownerDb, { organizationId: createdOrganizationId });
+    expect(foundersOwnRead).not.toBeNull();
+    expect(foundersOwnRead!.id).toBe(handoff!.id);
+    expect(foundersOwnRead!.createdOrganizationId).toBe(createdOrganizationId);
+
+    // A third organization, member of neither the selling org nor the one this handoff founded —
+    // RLS refuses it the row entirely, not merely the query's own `created_organization_id` filter.
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+    const strangerEmail = `stranger-${randomUUID().slice(0, 8)}@example.test`;
+    const strangerPassword = `pw-${randomUUID()}`;
+    const { error: strangerCreateError } = await admin.auth.admin.createUser({
+      email: strangerEmail,
+      password: strangerPassword,
+      email_confirm: true,
+    });
+    if (strangerCreateError) throw strangerCreateError;
+    const strangerOrgId = (await foundBusiness({ ownerEmail: strangerEmail, name: 'Unrelated Co', currency: 'CAD' })) as string;
+
+    const strangerDb = anonClient();
+    const { error: strangerSignInError } = await strangerDb.auth.signInWithPassword({ email: strangerEmail, password: strangerPassword });
+    if (strangerSignInError) throw strangerSignInError;
+
+    expect(await getFoundingHandoff(strangerDb, { organizationId: createdOrganizationId })).toBeNull();
+    expect(strangerOrgId).not.toBe(createdOrganizationId);
   });
 
   it('refuses to hand off a proposal that was never accepted', async () => {

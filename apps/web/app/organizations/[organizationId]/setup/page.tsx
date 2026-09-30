@@ -9,10 +9,12 @@ import {
   currentConfigurationProposal,
   listConfigurationProposals,
 } from '@/lib/domain/configuration/proposals';
+import { getFoundingHandoff } from '@/lib/domain/customers/proposal-handoff';
 import { computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { requireOrganization } from '@/lib/route/organization';
 import { DescribeForm } from '@/features/setup/describe-form';
+import { FoundingHandoff } from '@/features/setup/founding-handoff';
 import { LaunchForm } from '@/features/setup/launch-form';
 import { ProposalHistory } from '@/features/setup/proposal-history';
 import { ProposalReview } from '@/features/setup/proposal-review';
@@ -40,12 +42,13 @@ export default async function SetupPage({
   const { db, organization } = await requireOrganization(organizationId);
   const inSetup = organization.operationalState === 'setup';
 
-  const [overview, proposal, history, canDraft, usableModules] = await Promise.all([
+  const [overview, proposal, history, canDraft, usableModules, foundingHandoff] = await Promise.all([
     computeSetupOverview(db, { organizationId }),
     currentConfigurationProposal(db, { organizationId }),
     listConfigurationProposals(db, { organizationId }),
     canDraftConfiguration(),
     listUsableModules(db, { organizationId }),
+    getFoundingHandoff(db, { organizationId }),
   ]);
 
   // Asking for a proposal is its own authority; applying one is not, because every step of
@@ -69,6 +72,8 @@ export default async function SetupPage({
       />
 
       <div className="space-y-4">
+        {foundingHandoff ? <FoundingHandoff handoff={foundingHandoff} /> : null}
+
         {inSetup ? <SetupProgressCard overview={overview} /> : null}
 
         <SetupAreaList areas={overview.areas} />

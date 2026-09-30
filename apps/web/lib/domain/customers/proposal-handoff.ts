@@ -78,6 +78,25 @@ export async function getProposalHandoff(
 }
 
 /**
+ * The handoff a business was itself founded from, read from inside that business — the other
+ * side of `getProposalHandoff`, which reads from inside the *selling* organization. Null for
+ * every organically founded organization, which is most of them; the row simply doesn't exist,
+ * never a permission question. A member of neither organization sees neither row (RLS).
+ */
+export async function getFoundingHandoff(
+  db: Db,
+  input: { organizationId: string },
+): Promise<AcceptedProposalHandoff | null> {
+  const { data, error } = await db
+    .from('customer_proposal_handoffs')
+    .select('id, organization_id, customer_id, proposal_id, created_organization_id, discovery_snapshot, accepted_configuration, commercial_terms, created_at, created_by')
+    .eq('created_organization_id', input.organizationId)
+    .maybeSingle();
+  if (error) throw new DomainError(error.message, 'proposal_handoff.get_failed');
+  return data ? toHandoff(data) : null;
+}
+
+/**
  * Create the prospect's own business from an accepted proposal, and record having done so.
  *
  * One atomic call. Safe to call again for the same proposal — a prior success is returned
