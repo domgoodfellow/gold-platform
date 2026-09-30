@@ -64,14 +64,17 @@ describe('GOLD owner who is also a platform operator', () => {
   it('sees the business workspaces GOLD is entitled to', () => {
     expect(keys(sections, 'home')).toEqual(['home']);
     // One row per registered workspace that has a reachable area, in the order a customer meets
-    // them. Service and AI are registered and have no page, so they draw no row. Finance and
-    // Studio each have one page (Home), so they draw a plain row with no children. Insights is
-    // not a workspace row at all (D66) — it is reached contextually.
+    // them. Service and AI are registered and have no page, so they draw no row. Studio has one
+    // page (Home), so it draws a plain row with no children. Finance also has one AREA page
+    // (Home), but this platform operator's own `platform.commercial` permission adds a second,
+    // GOLD-only child (Plans & Add-ons), so Finance is an expandable row for them though it would
+    // be a plain row for an ordinary member. Insights is not a workspace row at all (D66) — it is
+    // reached contextually.
     expect(topLevel(sections, 'workspaces')).toEqual(['workspace-sales', 'workspace-comms', 'workspace-finance', 'workspace-automations', 'workspace-field', 'workspace-studio']);
     expect(keys(sections, 'workspaces')).toEqual([
       'workspace-sales', 'customers', 'pipeline',
       'workspace-comms', 'calls', 'comms-messages', 'comms-numbers',
-      'workspace-finance',
+      'workspace-finance', 'finance-plans',
       'workspace-automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets',
       'workspace-studio',
@@ -87,13 +90,23 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(row('workspace-sales').href).toBe(`/organizations/${ORG}/sales`);
     expect(row('workspace-comms').href).toBe(`/organizations/${ORG}/comms`);
     expect(row('workspace-automations').href).toBe(`/organizations/${ORG}/automations`);
-    // Finance and Studio each have exactly one reachable area, so they are plain rows: no children, no chevron.
-    expect(row('workspace-finance').children).toBeUndefined();
-    expect(row('workspace-finance').heading).toBeUndefined();
+    // For this platform operator, Finance is expandable: Home plus Plans & Add-ons.
+    expect(row('workspace-finance').children?.map((page) => page.key)).toEqual(['finance-plans']);
+    expect(row('workspace-finance').heading).toBe(true);
     expect(row('workspace-finance').href).toBe(`/organizations/${ORG}/finance`);
+    expect(row('workspace-finance').children?.find((page) => page.key === 'finance-plans')?.href).toBe(`/organizations/${ORG}/finance/plans`);
+    // Studio still has exactly one reachable area, so it stays a plain row: no children, no chevron.
     expect(row('workspace-studio').children).toBeUndefined();
     expect(row('workspace-studio').heading).toBeUndefined();
     expect(row('workspace-studio').href).toBe(`/organizations/${ORG}/studio`);
+  });
+
+  it('is a plain row without Plans & Add-ons for a member with no platform authority', () => {
+    const noPlatform = project(ALL_CAPABILITIES, { platform: null });
+    const row = noPlatform.flatMap((section) => section.items).find((item) => item.key === 'workspace-finance')!;
+    expect(row.children).toBeUndefined();
+    expect(row.heading).toBeUndefined();
+    expect(keys(noPlatform, 'workspaces')).not.toContain('finance-plans');
   });
 
   it('sees organization administration, item by item', () => {
@@ -290,18 +303,19 @@ describe('the phone renders the same projection', () => {
     expect(primary.map((item) => item.key)).toEqual(['home', 'customers', 'work', 'schedule']);
     // Every other workspace here has a Home plus at least one other page, so each is a heading over
     // its pages — never a loose "Workspaces" group, and never Home listed again as one of them.
-    // Finance and Studio each have one page and no children, so they are loose items under the
-    // section's own "Workspaces" heading rather than a heading of their own — the same rule a
-    // parent with pages follows, applied to a workspace with none.
+    // For this platform operator Finance now has one too (Plans & Add-ons), so it joins them; Studio
+    // still has only its one page, so it stays a loose item under the section's own "Workspaces"
+    // heading — the same rule a parent with pages follows, applied to a workspace with none.
     expect(more.map((section) => section.label)).toEqual([
-      null, 'Workspaces', 'Sales', 'Communications', 'Automations', 'Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
+      null, 'Workspaces', 'Sales', 'Communications', 'Finance', 'Automations', 'Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
     ]);
     expect(more[0].items.map((item) => item.key)).toEqual(['library']);
-    expect(more[1].items.map((item) => item.key)).toEqual(['workspace-finance', 'workspace-studio']);
+    expect(more[1].items.map((item) => item.key)).toEqual(['workspace-studio']);
     expect(more[2].items.map((item) => item.key)).toEqual(['pipeline']);
     expect(more[3].items.map((item) => item.key)).toEqual(['calls', 'comms-messages', 'comms-numbers']);
-    expect(more[4].items.map((item) => item.label)).toEqual(['Rules', 'Messages', 'Activity']);
-    expect(more[5].items.map((item) => item.key)).toEqual(['resources', 'locations', 'assets']);
+    expect(more[4].items.map((item) => item.key)).toEqual(['finance-plans']);
+    expect(more[5].items.map((item) => item.label)).toEqual(['Rules', 'Messages', 'Activity']);
+    expect(more[6].items.map((item) => item.key)).toEqual(['resources', 'locations', 'assets']);
   });
 
   it('loses and adds nothing: the bar and More together are exactly the desktop projection', () => {
@@ -321,7 +335,7 @@ describe('the phone renders the same projection', () => {
     ]);
     // Platform's own pages lead More; GOLD's workspaces follow. Ten Platform destinations and every workspace never share the bar.
     expect(platform.more.map((section) => section.label)).toEqual([
-      'Catalog', 'Commercial', 'Infrastructure', null, 'Workspaces', 'Sales', 'Communications', 'Automations', 'Field', 'Business',
+      'Catalog', 'Commercial', 'Infrastructure', null, 'Workspaces', 'Sales', 'Communications', 'Finance', 'Automations', 'Field', 'Business',
     ]);
     const phone = pagesOf([...platform.primary, ...platform.more.flatMap((section) => section.items)]);
     expect(phone).toEqual(pagesOf(projectedItems(sections)));
@@ -379,7 +393,7 @@ describe('the current item', () => {
     // Plans & Add-ons moved to Finance (D25's Catalogue/Plan split); the old address is a redirect
     // stub, no longer a registered destination, so the longest remaining match is Products.
     expect(activeItemKey(sections, platformHref(ORG, 'catalog/plans/base'))).toBe('platform-products');
-    expect(activeItemKey(sections, `/organizations/${ORG}/finance/plans/base`)).toBe('workspace-finance');
+    expect(activeItemKey(sections, `/organizations/${ORG}/finance/plans/base`)).toBe('finance-plans');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog'))).toBe('platform-products');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog/families/comms'))).toBe('platform-products');
     expect(activeItemKey(sections, platformHref(ORG))).toBe('platform-overview');
