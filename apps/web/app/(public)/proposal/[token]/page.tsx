@@ -125,7 +125,7 @@ export default async function ProposalPage({ params }: PageProps<'/proposal/[tok
         {proposal.notes ? <p className="mt-3 text-sm text-subtle">{proposal.notes}</p> : null}
 
         {proposal.status === 'sent' ? (
-          <RespondForm token={token} proposalId={proposal.id} customerId={proposal.customerId} organizationId={organizationId} />
+          <RespondForm token={token} proposalId={proposal.id} />
         ) : proposal.status === 'accepted' ? (
           <p className="mt-4 text-sm text-success">Accepted {new Date(proposal.acceptedAt!).toLocaleDateString()}.</p>
         ) : proposal.status === 'declined' ? (

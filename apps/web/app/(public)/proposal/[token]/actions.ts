@@ -6,17 +6,15 @@ import {
   acceptCommercialProposal,
   declineCommercialProposal,
 } from '@/lib/domain/customers/commercial-proposals';
-import { recommendConfiguration } from '@/lib/domain/customers/configuration-recommendation';
-import { getDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import { DomainError } from '@/lib/domain/errors';
 
 export type RespondToProposalState = { error: string | null };
 
 /**
- * Accept, as the customer this proposal was sent to. The recommended configuration is computed
- * here, under this same session, from the discovery snapshot it can already read — a receipt of
- * what this page showed, not a value the form itself supplies (I19: the read is the permission
- * check, so the compute happens on the same side of it).
+ * Accept, as the customer this proposal was sent to. What gets recorded as accepted is this
+ * proposal's own `proposed_configuration` snapshot, copied server-side inside
+ * `accept_commercial_proposal` itself (C1 closeout) — this action supplies nothing but which
+ * proposal, so there is no configuration value here for a request to shape.
  */
 export async function acceptProposalAction(
   _previous: RespondToProposalState,
@@ -25,14 +23,9 @@ export async function acceptProposalAction(
   const db = await getDb();
   const token = String(formData.get('token') ?? '');
   const proposalId = String(formData.get('proposalId') ?? '');
-  const customerId = String(formData.get('customerId') ?? '');
-  const organizationId = String(formData.get('organizationId') ?? '');
-
-  const snapshot = await getDiscoverySnapshot(db, { organizationId, customerId });
-  const recommendation = await recommendConfiguration(db, { answers: snapshot?.answers ?? {} });
 
   try {
-    await acceptCommercialProposal(db, { proposalId, acceptedConfiguration: recommendation });
+    await acceptCommercialProposal(db, { proposalId });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;

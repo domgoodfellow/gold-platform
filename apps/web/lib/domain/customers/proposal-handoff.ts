@@ -1,22 +1,21 @@
 import type { Json } from '@/lib/db/database.types';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
-import { getCommercialProposal } from '@/lib/domain/customers/commercial-proposals';
-import { getCustomer } from '@/lib/domain/customers/customers';
 import {
   discoverySnapshotCompleteness,
-  getDiscoverySnapshot,
   unresolvedDiscoveryRequirements,
   type DiscoverySnapshotAnswers,
 } from '@/lib/domain/customers/discovery-snapshots';
-import { provisionOrganization } from '@/lib/domain/platform/provision';
-import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
  * Slice 10, the terminal boundary: "Create this business in GildOps," from one accepted
  * commercial proposal. Owner membership and default modules are already `provisionOrganization`'s
  * own doing (D29) — this hands off the rest of what the plan asked for and stops. Agreement,
  * Entitlements, Initial configuration, Readiness and Launch are Conversation 2's, not built here.
+ *
+ * `hand_off_accepted_proposal` (C1 closeout) is one atomic, idempotent SQL door: provisioning and
+ * recording the handoff either both happen or neither does, and a repeat call for a proposal
+ * already handed off returns the business already created rather than erroring or duplicating it.
  */
 export type AcceptedProposalHandoff = {
   id: string;
@@ -81,93 +80,41 @@ export async function getProposalHandoff(
 /**
  * Create the prospect's own business from an accepted proposal, and record having done so.
  *
- * Two acts, not one transaction (D32's precedent: `applyConfigurationProposal` isn't atomic
- * either). `provisionOrganization` is its own privileged, self-contained write — staff-only,
- * checked live, same door every other founded business goes through — and it either succeeds
- * whole or fails whole before this function's own row is ever written. If recording the handoff
- * fails afterward, the business still exists; a caller can be told to retry recording it without
- * risking a second business for one acceptance (the table's own unique constraint refuses that
- * regardless).
+ * One atomic call. Safe to call again for the same proposal — a prior success is returned
+ * unchanged; a prior failure left nothing behind to retry around, because the whole thing rolled
+ * back with it. Never creates a second business for one acceptance.
  */
 export async function handoffAcceptedProposal(
   db: Db,
-  input: { organizationId: string; proposalId: string; timezone?: string },
+  input: { organizationId: string; proposalId: string },
 ): Promise<AcceptedProposalHandoff> {
-  const actor = await requireActor(db);
-
-  const existing = await getProposalHandoff(db, input);
-  if (existing) {
-    throw new DomainError('This proposal has already been handed off.', 'proposal_handoff.already_handed_off');
-  }
-
-  const proposal = await getCommercialProposal(db, input);
-  if (!proposal) {
-    throw new DomainError('No such proposal, or you may not act on it.', 'proposal_handoff.proposal_not_found');
-  }
-  if (proposal.status !== 'accepted') {
-    throw new DomainError('Only an accepted proposal can be handed off.', 'proposal_handoff.not_accepted');
-  }
-
-  const customer = await getCustomer(db, { organizationId: input.organizationId, customerId: proposal.customerId });
-  if (!customer) {
-    throw new DomainError('No such customer.', 'proposal_handoff.customer_not_found');
-  }
-  if (!customer.email) {
-    throw new DomainError(
-      'This customer has no email on file — the owner needs an address to sign in with.',
-      'proposal_handoff.owner_email_required',
-    );
-  }
-
-  const snapshot = await getDiscoverySnapshot(db, { organizationId: input.organizationId, customerId: proposal.customerId });
-
-  const createdOrganizationId = await provisionOrganization(db, {
-    ownerEmail: customer.email,
-    // The business's own name, never a word the platform chose (D6) — the same name it was
-    // recorded under from the first intake.
-    name: customer.name,
-    displayName: 'Owner',
-    currency: proposal.currency,
-    timezone: input.timezone,
-  });
-
-  const commercialTerms: Json = {
-    planId: proposal.planId,
-    planLabel: proposal.planLabel,
-    addons: proposal.addons.map((addon) => ({ addonPlanId: addon.addonPlanId, label: addon.label, priceMinor: addon.priceMinor })),
-    currency: proposal.currency,
-    billingInterval: proposal.billingInterval,
-    planPriceMinor: proposal.planPriceMinor,
-    addonPriceMinor: proposal.addonPriceMinor,
-    discountMinor: proposal.discountMinor,
-    discountReason: proposal.discountReason,
-    version: proposal.version,
-  };
-
-  const { data, error } = await db
-    .from('customer_proposal_handoffs')
-    .insert({
-      organization_id: input.organizationId,
-      customer_id: proposal.customerId,
-      proposal_id: proposal.id,
-      created_organization_id: createdOrganizationId,
-      discovery_snapshot: (snapshot?.answers ?? {}) as Json,
-      accepted_configuration: proposal.acceptedConfiguration,
-      commercial_terms: commercialTerms,
-      created_by: actor.id,
-    })
-    .select('id, organization_id, customer_id, proposal_id, created_organization_id, discovery_snapshot, accepted_configuration, commercial_terms, created_at, created_by')
-    .single();
+  const { error } = await db.rpc('hand_off_accepted_proposal', { p_proposal_id: input.proposalId });
 
   if (error) {
-    if (error.code === '23505') {
-      throw new DomainError('This proposal has already been handed off.', 'proposal_handoff.already_handed_off');
+    // The SQL door raises every refusal as 42501 (create_booking's own precedent), so the
+    // message — not the SQLSTATE — is what tells a staff caller which one happened. Unlike a
+    // stranger holding a token, there is no adversarial reason to blur these for a signed-in
+    // caller who already cleared organization membership to get here.
+    if (error.code === '42501') {
+      if (error.message.includes('only platform staff')) {
+        throw new DomainError(error.message, 'proposal_handoff.not_staff');
+      }
+      if (error.message.includes('only an accepted proposal')) {
+        throw new DomainError(error.message, 'proposal_handoff.not_accepted');
+      }
+      throw new DomainError(error.message, 'proposal_handoff.forbidden');
     }
-    throw new DomainError(
-      `The business was created (${createdOrganizationId}) but recording the handoff failed: ${error.message}`,
-      'proposal_handoff.record_failed',
-    );
+    if (error.code === '23514') {
+      throw new DomainError(error.message, 'proposal_handoff.owner_email_required');
+    }
+    throw new DomainError(error.message, 'proposal_handoff.failed');
   }
 
-  return toHandoff(data);
+  const handoff = await getProposalHandoff(db, input);
+  if (!handoff) {
+    // Unreachable in practice — the RPC above either raised or committed the row it just wrote —
+    // but a null here would otherwise look like success to a caller expecting a value back.
+    throw new DomainError('The handoff could not be read back after creating it.', 'proposal_handoff.read_back_failed');
+  }
+  return handoff;
 }

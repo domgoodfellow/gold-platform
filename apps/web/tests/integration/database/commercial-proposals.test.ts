@@ -9,6 +9,7 @@ import {
   markCommercialProposalSent,
 } from '@/lib/domain/customers/commercial-proposals';
 import { createCustomer } from '@/lib/domain/customers/customers';
+import { upsertDiscoverySnapshotAnswers } from '@/lib/domain/customers/discovery-snapshots';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
@@ -83,6 +84,39 @@ describe('commercial proposals', () => {
     expect(proposal.supersedesId).toBeNull();
     expect(proposal.addons).toHaveLength(2);
     expect(commercialProposalTotalMinor(proposal)).toBe(49900 + 3500 + 500);
+  });
+
+  it('snapshots the authoritative proposed configuration at build time (C1 closeout)', async () => {
+    await upsertDiscoverySnapshotAnswers(alice.db, {
+      organizationId: alice.organizationId,
+      customerId: aliceCustomerId,
+      patch: { bookingIntake: { value: 'Books online.', status: 'confirmed', source: 'Owner' } },
+    });
+
+    const proposal = await buildCommercialProposal(alice.db, {
+      organizationId: alice.organizationId,
+      customerId: aliceCustomerId,
+      planId: startPlanId,
+      addonPlanIds: [],
+      currency: 'CAD',
+      billingInterval: 'month',
+    });
+
+    const proposed = proposal.proposedConfiguration as { recommended: { featureKey: string }[] } | null;
+    expect(proposed).not.toBeNull();
+    expect(proposed!.recommended.map((entry) => entry.featureKey)).toContain('booking');
+
+    // A later change to the discovery snapshot does not reach back and change what an already
+    // built proposal shows (I8) — a fresh read of the same row still carries the old snapshot.
+    await upsertDiscoverySnapshotAnswers(alice.db, {
+      organizationId: alice.organizationId,
+      customerId: aliceCustomerId,
+      patch: { customerSelfService: { value: '', status: 'not_applicable', source: 'Owner' } },
+    });
+    const reread = (await listCommercialProposals(alice.db, { organizationId: alice.organizationId, customerId: aliceCustomerId })).find(
+      (entry) => entry.id === proposal.id,
+    )!;
+    expect(reread.proposedConfiguration).toEqual(proposal.proposedConfiguration);
   });
 
   it('refuses an add-on that does not belong to the chosen plan', async () => {

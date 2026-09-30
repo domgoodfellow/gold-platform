@@ -123,16 +123,15 @@ describe('a prospect reviewing their own commercial proposal', () => {
     const db = anonClient();
     await claimProposalInvite(db, { token });
 
-    await acceptCommercialProposal(db, {
-      proposalId: sentProposalId,
-      acceptedConfiguration: { recommended: [{ featureKey: 'booking', label: 'Booking' }] },
-    });
+    await acceptCommercialProposal(db, { proposalId: sentProposalId });
 
     const proposals = await listCommercialProposalsForExternalCustomer(db);
     const accepted = proposals.find((p) => p.id === sentProposalId)!;
     expect(accepted.status).toBe('accepted');
     expect(accepted.acceptedAt).not.toBeNull();
     expect(accepted.acceptedBy).not.toBeNull();
+    // Copied from the proposal's own snapshot, not from anything the caller supplied (C1 closeout).
+    expect(accepted.acceptedConfiguration).toEqual(accepted.proposedConfiguration);
   });
 
   it('refuses to accept a proposal that is not open for a response', async () => {
@@ -142,7 +141,7 @@ describe('a prospect reviewing their own commercial proposal', () => {
 
     // Already accepted by the previous test.
     await expect(
-      acceptCommercialProposal(db, { proposalId: sentProposalId, acceptedConfiguration: {} }),
+      acceptCommercialProposal(db, { proposalId: sentProposalId }),
     ).rejects.toMatchObject({ code: 'commercial_proposals.accept_forbidden' });
   });
 

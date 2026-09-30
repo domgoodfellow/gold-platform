@@ -85,7 +85,7 @@ describe('handing off an accepted proposal', () => {
     const token = await createProposalInvite(repDb, { customerId });
     const visitor = anonClient();
     await claimProposalInvite(visitor, { token });
-    await acceptCommercialProposal(visitor, { proposalId: built.id, acceptedConfiguration: { recommended: [] } });
+    await acceptCommercialProposal(visitor, { proposalId: built.id });
 
     acceptedProposalId = built.id;
   });
@@ -93,7 +93,7 @@ describe('handing off an accepted proposal', () => {
   it('refuses a caller who is not platform staff', async () => {
     await expect(
       handoffAcceptedProposal(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId }),
-    ).rejects.toMatchObject({ code: 'platform.provision_failed' });
+    ).rejects.toMatchObject({ code: 'proposal_handoff.not_staff' });
   });
 
   it('creates the business, records the handoff, and leaves the GildOps customer untouched', async () => {
@@ -121,10 +121,19 @@ describe('handing off an accepted proposal', () => {
     expect(newOrg?.name).toBe('Handoff Prospect Co');
   });
 
-  it('refuses a second handoff for the same proposal', async () => {
-    await expect(
-      handoffAcceptedProposal(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId }),
-    ).rejects.toMatchObject({ code: 'proposal_handoff.already_handed_off' });
+  it('is idempotent: a second call for the same proposal returns the same business rather than creating another', async () => {
+    const first = await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
+    const second = await handoffAcceptedProposal(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
+
+    expect(second.createdOrganizationId).toBe(first!.createdOrganizationId);
+    expect(second.id).toBe(first!.id);
+
+    const { count } = await repDb
+      .from('customer_proposal_handoffs')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', gildOpsOrgId)
+      .eq('proposal_id', acceptedProposalId);
+    expect(count).toBe(1);
   });
 
   it('reads the handoff back by proposal id', async () => {

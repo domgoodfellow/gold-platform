@@ -10,13 +10,9 @@ const INITIAL: RespondToProposalState = { error: null };
 export function RespondForm({
   token,
   proposalId,
-  customerId,
-  organizationId,
 }: {
   token: string;
   proposalId: string;
-  customerId: string;
-  organizationId: string;
 }) {
   const [acceptState, acceptFormAction, acceptPending] = useActionState(acceptProposalAction, INITIAL);
   const [declineState, declineFormAction, declinePending] = useActionState(declineProposalAction, INITIAL);
@@ -27,8 +23,6 @@ export function RespondForm({
         <form action={acceptFormAction}>
           <input type="hidden" name="token" value={token} />
           <input type="hidden" name="proposalId" value={proposalId} />
-          <input type="hidden" name="customerId" value={customerId} />
-          <input type="hidden" name="organizationId" value={organizationId} />
           <Button type="submit" disabled={acceptPending || declinePending}>
             {acceptPending ? 'Accepting…' : 'Accept'}
           </Button>

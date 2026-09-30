@@ -2,6 +2,8 @@ import type { Json } from '@/lib/db/database.types';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { currentPlanPrice, getPlanById, listPlanAddonIds, listPlanPrices } from '@/lib/domain/catalogue/plans';
+import { recommendConfiguration } from '@/lib/domain/customers/configuration-recommendation';
+import { getDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 export type CommercialProposalStatus = 'draft' | 'sent' | 'accepted' | 'declined';
@@ -33,6 +35,7 @@ export type CommercialProposal = {
   acceptedBy: string | null;
   acceptedAt: string | null;
   acceptedConfiguration: Json | null;
+  proposedConfiguration: Json | null;
   declinedBy: string | null;
   declinedAt: string | null;
   addons: CommercialProposalAddon[];
@@ -44,7 +47,7 @@ export function commercialProposalTotalMinor(proposal: Pick<CommercialProposal, 
 }
 
 const PROPOSAL_COLUMNS =
-  'id, organization_id, customer_id, plan_id, plan_label, currency, billing_interval, plan_price_minor, addon_price_minor, discount_minor, discount_reason, notes, status, version, supersedes_id, created_at, created_by, accepted_by, accepted_at, accepted_configuration, declined_by, declined_at';
+  'id, organization_id, customer_id, plan_id, plan_label, currency, billing_interval, plan_price_minor, addon_price_minor, discount_minor, discount_reason, notes, status, version, supersedes_id, created_at, created_by, accepted_by, accepted_at, accepted_configuration, proposed_configuration, declined_by, declined_at';
 
 type ProposalRow = {
   id: string;
@@ -67,6 +70,7 @@ type ProposalRow = {
   accepted_by: string | null;
   accepted_at: string | null;
   accepted_configuration: Json | null;
+  proposed_configuration: Json | null;
   declined_by: string | null;
   declined_at: string | null;
 };
@@ -93,6 +97,7 @@ function toProposal(row: ProposalRow, addons: CommercialProposalAddon[]): Commer
     acceptedBy: row.accepted_by,
     acceptedAt: row.accepted_at,
     acceptedConfiguration: row.accepted_configuration,
+    proposedConfiguration: row.proposed_configuration,
     declinedBy: row.declined_by,
     declinedAt: row.declined_at,
     addons,
@@ -242,6 +247,13 @@ export async function buildCommercialProposal(db: Db, input: BuildCommercialProp
   const previous = existing[0] ?? null;
   const version = (previous?.version ?? 0) + 1;
 
+  // The authoritative recommendation, snapshotted now rather than left to be recomputed (and
+  // possibly disagree with itself) later — the same reasoning `plan_price_minor` already holds
+  // to, applied to configuration. Acceptance copies this back out; nothing downstream computes
+  // its own second answer to "what was proposed" (I4, I8).
+  const snapshot = await getDiscoverySnapshot(db, { organizationId: input.organizationId, customerId: input.customerId });
+  const proposedConfiguration = await recommendConfiguration(db, { answers: snapshot?.answers ?? {} });
+
   const { data, error } = await db
     .from('customer_commercial_proposals')
     .insert({
@@ -258,6 +270,7 @@ export async function buildCommercialProposal(db: Db, input: BuildCommercialProp
       notes: input.notes?.trim() ?? '',
       version,
       supersedes_id: previous?.id ?? null,
+      proposed_configuration: proposedConfiguration as unknown as Json,
       created_by: actor.id,
     })
     .select(PROPOSAL_COLUMNS)
@@ -299,19 +312,13 @@ export async function markCommercialProposalSent(db: Db, input: { organizationId
 
 /**
  * Accept a proposal as the customer it was sent to — the door only a recognized external
- * customer holding a valid, unrevoked proposal invite can open. `acceptedConfiguration` is
- * computed by the caller's own session (which can already read the catalogue and its own
- * discovery snapshot) and stored as a receipt of what was shown, the same trust
- * `configuration_proposals.result` already carries.
+ * customer holding a valid, unrevoked proposal invite can open. `accepted_configuration` is
+ * copied server-side from this proposal's own `proposed_configuration` snapshot (C1 closeout) —
+ * never a value this function's own caller could shape, so accepting always records exactly what
+ * was proposed, not whatever a request happened to carry.
  */
-export async function acceptCommercialProposal(
-  db: Db,
-  input: { proposalId: string; acceptedConfiguration: Json },
-): Promise<void> {
-  const { error } = await db.rpc('accept_commercial_proposal', {
-    p_proposal_id: input.proposalId,
-    p_accepted_configuration: input.acceptedConfiguration,
-  });
+export async function acceptCommercialProposal(db: Db, input: { proposalId: string }): Promise<void> {
+  const { error } = await db.rpc('accept_commercial_proposal', { p_proposal_id: input.proposalId });
   if (error) {
     if (error.code === '42501') {
       throw new DomainError('This proposal is not open for a response.', 'commercial_proposals.accept_forbidden');

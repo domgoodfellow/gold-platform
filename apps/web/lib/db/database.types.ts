@@ -1809,6 +1809,7 @@ export type Database = {
           plan_id: string
           plan_label: string
           plan_price_minor: number
+          proposed_configuration: Json | null
           status: string
           supersedes_id: string | null
           version: number
@@ -1833,6 +1834,7 @@ export type Database = {
           plan_id: string
           plan_label: string
           plan_price_minor: number
+          proposed_configuration?: Json | null
           status?: string
           supersedes_id?: string | null
           version: number
@@ -1857,6 +1859,7 @@ export type Database = {
           plan_id?: string
           plan_label?: string
           plan_price_minor?: number
+          proposed_configuration?: Json | null
           status?: string
           supersedes_id?: string | null
           version?: number
@@ -8325,7 +8328,7 @@ export type Database = {
     }
     Functions: {
       accept_commercial_proposal: {
-        Args: { p_accepted_configuration: Json; p_proposal_id: string }
+        Args: { p_proposal_id: string }
         Returns: undefined
       }
       accept_invitation: {
@@ -8745,6 +8748,10 @@ export type Database = {
       grant_plan_product: {
         Args: { p_plan_id: string; p_product_key: string }
         Returns: undefined
+      }
+      hand_off_accepted_proposal: {
+        Args: { p_proposal_id: string }
+        Returns: string
       }
       hostname_binding: {
         Args: { p_hostname: string }
