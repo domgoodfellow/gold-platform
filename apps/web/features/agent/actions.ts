@@ -17,9 +17,7 @@ import {
 } from '@/lib/domain/assistant/attachments';
 import { resolveAgentViewing } from './agent-context';
 import { requireOrganization } from '@/lib/route/organization';
-import { requirePlatformScope } from '@/lib/route/platform';
 import { canAnswerQuestions } from '@/lib/domain/assistant/questions';
-import { canAnswerPlatformQuestions } from '@/lib/domain/assistant/platform-questions';
 
 /**
  * What an Agent action hands back. `runs` is the transcript of the conversation it touched,
@@ -61,11 +59,6 @@ export async function loadAgentBootstrapAction(organizationId: string): Promise<
     if (error instanceof DomainError) return { error: error.message, canAnswer: false, conversations: [], initialConversation: null };
     throw error;
   }
-}
-
-export async function loadPlatformAgentAvailabilityAction(goldId: string): Promise<boolean> {
-  await requirePlatformScope(goldId);
-  return canAnswerPlatformQuestions();
 }
 
 /**

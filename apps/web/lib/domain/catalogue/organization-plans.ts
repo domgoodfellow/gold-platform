@@ -247,6 +247,29 @@ export type RecordPlanQuotaOverrideInput = {
   note?: string;
 };
 
+/** Every override this organization has recorded, append-only — the History counterpart to `organizationEffectiveQuotas`'s current view. */
+export async function listOrganizationPlanQuotaOverrides(
+  db: Db,
+  input: { organizationId: string },
+): Promise<PlanQuotaOverride[]> {
+  const { data, error } = await db
+    .from('organization_plan_quota_overrides')
+    .select('id, organization_id, plan_id, allowance_key, included_quantity, hard_limit, effective_from, note')
+    .eq('organization_id', input.organizationId)
+    .order('effective_from', { ascending: false });
+  if (error) throw new DomainError(error.message, 'organization_plans.quota_overrides_failed');
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    organizationId: row.organization_id,
+    planId: row.plan_id,
+    allowanceKey: row.allowance_key,
+    includedQuantity: Number(row.included_quantity),
+    hardLimit: row.hard_limit === null ? null : Number(row.hard_limit),
+    effectiveFrom: row.effective_from,
+    note: row.note,
+  }));
+}
+
 export async function recordPlanQuotaOverride(db: Db, input: RecordPlanQuotaOverrideInput): Promise<string> {
   const { data, error } = await db.rpc('record_plan_quota_override', {
     p_organization_id: input.organizationId,

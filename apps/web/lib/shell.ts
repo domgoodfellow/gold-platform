@@ -136,29 +136,37 @@ const BUSINESS_ITEMS: readonly { key: string; label: string; target: string }[] 
 
 /**
  * The Platform section, from the one registry: the destinations the caller's permissions reach,
- * nested as the registry says: Catalog, Commercial and Infrastructure are headings that open their
- * first page. A heading none of whose pages the caller reaches is not drawn, and a heading opens the
- * first of its pages, so it is a link as well as a disclosure.
+ * nested beneath one workspace-style parent row — Platform itself, the same shape a workspace
+ * takes in `workspaceItems()` below (a row that is both a link to its own Home and a disclosure
+ * over its pages). Its Home is the root destination (`PLATFORM_DESTINATIONS`'s `overview`), never
+ * repeated as a child beneath its own parent — the same rule every workspace's Home already
+ * follows. Catalog, Commercial and Infrastructure are headings one level further in, each opening
+ * its own first page; a heading none of whose pages the caller reaches is not drawn. A permission
+ * set that reaches nothing produces no row at all.
  */
 function projectPlatform(organizationId: string, permissions: ReadonlySet<PlatformCapability>): NavItem[] {
   const destinations = platformDestinationsFor(permissions);
+  if (destinations.length === 0) return [];
+
   const item = (destination: PlatformDestination): NavItem => ({
     key: `platform-${destination.key}`,
     label: destination.label,
     href: platformHref(organizationId, destination.path),
     section: 'platform',
-    ...(destination.path === '' ? { exact: true } : {}),
   });
 
-  const items: NavItem[] = [];
+  const children: NavItem[] = [];
   const groupsDrawn = new Set<string>();
   for (const destination of destinations) {
+    // The root is the parent row's own destination, represented by the row itself — never a
+    // second "Overview" child beneath it.
+    if (destination.path === '') continue;
     if (destination.under) {
       if (groupsDrawn.has(destination.under)) continue;
       groupsDrawn.add(destination.under);
       const group = PLATFORM_GROUPS.find((candidate) => candidate.key === destination.under)!;
       const pages = destinations.filter((candidate) => candidate.under === group.key).map(item);
-      items.push({
+      children.push({
         key: `platform-group-${group.key}`,
         label: group.label,
         href: pages[0].href,
@@ -168,9 +176,19 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
       });
       continue;
     }
-    items.push(item(destination));
+    children.push(item(destination));
   }
-  return items;
+
+  const root: NavItem = {
+    key: 'platform',
+    label: 'Platform',
+    href: platformHref(organizationId, ''),
+    section: 'platform',
+  };
+  // Somebody holding only `platform.health` reaches the overview and nothing else: a plain row,
+  // never a chevron over an empty disclosure — the same rule a workspace with one reachable area
+  // follows.
+  return [children.length === 0 ? root : { ...root, heading: true, children }];
 }
 
 /**
@@ -305,19 +323,24 @@ export const PHONE_PRIMARY_WORKSPACES = 3;
  * frequent work stays one tap away however the sidebar nests it — and everything else behind one
  * More menu, grouped as the desktop groups it.
  *
- * **In Platform:** the bar carries a way back to Home and the Platform destinations; the pages
- * under Catalog, Commercial and Infrastructure and all of GOLD's own workspaces sit behind More.
- * Ten Platform destinations and every workspace never share one bar.
+ * **In Platform:** the bar carries a way back to Home and Platform's own first-level destinations
+ * — Organizations, Catalog, Commercial, Infrastructure, unwrapped from the one Platform row the
+ * sidebar nests them under — and everything beneath those (a group's own pages, and all of GOLD's
+ * own workspaces) sits behind More. Ten Platform destinations and every workspace never share one
+ * bar.
  */
 export function projectPhone(
   sections: readonly ShellSection[],
   options: { platformActive?: boolean } = {},
 ): { primary: NavItem[]; more: ShellSection[] } {
   const home = sections.find((section) => section.key === 'home')?.items ?? [];
-  const platformItems = sections.find((section) => section.key === 'platform')?.items ?? [];
+  const platformRoot = sections.find((section) => section.key === 'platform')?.items[0];
 
-  if (options.platformActive && platformItems.length > 0) {
-    const primary = [...home, ...platformItems];
+  if (options.platformActive && platformRoot) {
+    // The Platform row itself is never a primary button beside its own destinations — the same
+    // "never repeat Home as a child" rule, read the other way round: its children are what a thumb
+    // reaches first, and a `platformRoot` with none (just `platform.health`) falls back to itself.
+    const primary = [...home, ...(platformRoot.children ?? [platformRoot])];
     return { primary, more: phoneMore(sections, new Set(primary.map((item) => item.key)), true) };
   }
 
@@ -328,10 +351,38 @@ export function projectPhone(
 }
 
 /**
- * Everything the bar does not carry, as flat sections. A parent with pages becomes a section
- * headed by its own name, holding its overview (unless the bar already links to it) and whichever
- * pages the bar left out.
+ * Everything beneath one list of items the bar does not carry: items with no children of their own
+ * stay loose, under whichever heading is calling this (a section's own label, or recursively a
+ * parent's), and an item with children becomes its own named group, holding its own overview
+ * (unless the bar already links to it, or it has none to repeat) and whichever of its children the
+ * bar left out — themselves expanded the same way, so a group nested inside a group (Platform's
+ * Catalog, Commercial and Infrastructure, one level inside Platform's own row) surfaces as its own
+ * entry exactly as a top-level one would, to any depth, with no case built for Platform by name.
  */
+function expand(
+  items: readonly NavItem[],
+  inBar: ReadonlySet<string>,
+): { loose: NavItem[]; groups: { label: string; items: NavItem[] }[] } {
+  const loose: NavItem[] = [];
+  const groups: { label: string; items: NavItem[] }[] = [];
+
+  for (const item of items) {
+    if (!item.children) {
+      if (!inBar.has(item.key)) loose.push(item);
+      continue;
+    }
+    const nested = expand(item.children, inBar);
+    const overview: NavItem[] =
+      inBar.has(item.key) || item.heading ? [] : [{ ...item, label: 'Overview', children: undefined }];
+    const own = [...overview, ...nested.loose];
+    if (own.length > 0) groups.push({ label: item.label, items: own });
+    groups.push(...nested.groups);
+  }
+
+  return { loose, groups };
+}
+
+/** Everything the bar does not carry, as flat sections — one per `expand` group, grouped under each section it came from. */
 function phoneMore(
   sections: readonly ShellSection[],
   inBar: ReadonlySet<string>,
@@ -341,25 +392,11 @@ function phoneMore(
 
   for (const section of sections) {
     if (section.key === 'home') continue;
-    const loose: NavItem[] = [];
-    const parents: ShellSection[] = [];
-
-    for (const item of section.items) {
-      if (!item.children) {
-        if (!inBar.has(item.key)) loose.push(item);
-        continue;
-      }
-      const pages = item.children.filter((page) => !inBar.has(page.key));
-      const overview: NavItem[] =
-        inBar.has(item.key) || item.heading ? [] : [{ ...item, label: 'Overview', children: undefined }];
-      const items = [...overview, ...pages];
-      if (items.length > 0) parents.push({ key: section.key, label: item.label, items });
-    }
-
-    // One list under the section's own heading, then a list per parent: a section's name is never
+    const { loose, groups } = expand(section.items, inBar);
+    // One list under the section's own heading, then a list per group: a section's name is never
     // printed twice in the same menu.
     if (loose.length > 0) out.push({ key: section.key, label: section.label, items: loose });
-    out.push(...parents);
+    out.push(...groups.map((group) => ({ key: section.key, label: group.label, items: group.items })));
   }
 
   if (!platformFirst) return out;

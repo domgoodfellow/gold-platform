@@ -95,7 +95,16 @@ beforeAll(async () => {
   //
   // A usage event now records the provider rate it was costed with, and that reference is a
   // foreign key, so the rate cannot be deleted while an event still points at it. The events that
-  // do are this suite's own residue from that earlier run and go first.
+  // do are this suite's own residue from that earlier run and go first — and so does the cost
+  // breakdown a later migration started recording per event, which points back at it the same way.
+  await pg.query(
+    `delete from public.usage_cost_components
+      where usage_event_id in (
+        select id from public.usage_events
+         where provider_rate_id in (
+           select id from public.platform_provider_rates
+            where provider_key = 'twilio' and meter_id = 'voice_minutes'))`,
+  );
   await pg.query(
     `delete from public.usage_events
       where provider_rate_id in (

@@ -56,13 +56,6 @@ const RECOVERY_USERS = [
 
 const GUARD = /\brequireOrganization(ForBillingRecovery)?\(/;
 
-// `features/agent/actions.ts` hosts one platform-scoped action beside its organization ones:
-// Platform Agent's own lazy bootstrap (Slice 12), which proves `requirePlatformScope` rather than
-// a business's service access — the same exception the Platform console itself already has
-// (`RECOVERY_USERS` above), because asking whether Platform Agent may answer is not a question
-// about an organization's own subscription.
-const PLATFORM_SCOPED_ACTIONS = ['loadPlatformAgentAvailabilityAction'];
-
 describe('service access is enforced by every server action inside a business', () => {
   it('finds the action files, so the rule is not passing over an empty tree', () => {
     expect(actionFiles.length).toBeGreaterThan(20);
@@ -76,10 +69,6 @@ describe('service access is enforced by every server action inside a business', 
       const chunks = source.split(/^export async function /m).slice(1);
       for (const chunk of chunks) {
         const name = chunk.split('(')[0];
-        if (PLATFORM_SCOPED_ACTIONS.includes(name)) {
-          expect(chunk).toMatch(/\brequirePlatformScope\(/);
-          continue;
-        }
         if (!GUARD.test(chunk)) unguarded.push(`${file}: ${name}`);
       }
     }

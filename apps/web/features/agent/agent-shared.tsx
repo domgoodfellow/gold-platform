@@ -40,13 +40,14 @@ import { runEvents, type RunEvent } from './run-events';
 import { formatRecent } from './recent-time';
 
 /**
- * The Agent presentation grammar, shared by Tenant scope and Platform scope alike (constraints.md
- * — the shell/context correction). The panel is a conversation, top to bottom:
+ * The Agent presentation grammar. The panel is a conversation, top to bottom:
  *
  *   workspace rail header (owned by `WorkspaceRightRail`) → conversation header → transcript → composer
  *
- * Neither scope gets its own chat UI; only the data and the capability check differ, supplied by
- * `TenantAgentRail`/`PlatformAgentRail`.
+ * `TenantAgentRail` is the one chat UI, mounted for the whole organization shell — Platform routes
+ * included, since Platform is a scope inside the same organization rather than a second one.
+ * `AgentUnavailable` below is the shared fallback surface for a rail with no answering capability
+ * behind it yet (`account-agent-rail.tsx`).
  */
 
 /** The four-region column. The transcript is the only thing in it that scrolls. */

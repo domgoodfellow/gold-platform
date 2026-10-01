@@ -123,7 +123,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   team: UserCog,
   connections: Plug,
   plan: CreditCard,
-  'platform-overview': LayoutDashboard,
+  platform: LayoutDashboard,
   'platform-organizations': Building2,
   'platform-products': Package,
   'platform-group-catalog': Blocks,
@@ -139,12 +139,66 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
 };
 
 /**
+ * A page nested inside a row that is itself nested inside a row — Platform's Catalog, Commercial
+ * and Infrastructure, one level beneath the Platform row itself. The same link-and-disclosure
+ * shape as `NavRow`, in `SidebarMenuSub`'s vocabulary instead of `SidebarMenu`'s, and recursive
+ * through `NavItem.children` rather than a case built for these three groups by name — a fourth
+ * nested group needs nothing new here.
+ */
+function NavSubRow({ item, active, expanded }: { item: NavItem; active: string | null; expanded: boolean }) {
+  const current = item.key === active;
+  const inside = itemContains(item, active) || expanded;
+  const [open, setOpen] = useState(inside);
+  const [wasInside, setWasInside] = useState(inside);
+  if (inside !== wasInside) {
+    setWasInside(inside);
+    if (inside) setOpen(true);
+  }
+
+  const link = (
+    <SidebarMenuSubButton asChild isActive={current} className={item.children ? 'flex-1' : undefined}>
+      <Link href={item.href} aria-current={current ? 'page' : undefined}>
+        <span>{item.label}</span>
+      </Link>
+    </SidebarMenuSubButton>
+  );
+
+  if (!item.children) return <SidebarMenuSubItem>{link}</SidebarMenuSubItem>;
+
+  return (
+    <SidebarMenuSubItem>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <div className="flex items-center gap-1">
+          {link}
+          <CollapsibleTrigger
+            aria-label={`${open ? 'Collapse' : 'Expand'} ${item.label}`}
+            className={cx(
+              FOCUS_RING,
+              'flex size-6 shrink-0 items-center justify-center rounded text-sidebar-foreground transition-transform hover:bg-sidebar-accent data-[state=open]:rotate-90',
+            )}
+          >
+            <ChevronRight aria-hidden size={14} />
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent>
+          <SidebarMenuSub className="mx-2 mt-1">
+            {item.children.map((child) => (
+              <NavSubRow key={child.key} item={child} active={active} expanded={expanded} />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </Collapsible>
+    </SidebarMenuSubItem>
+  );
+}
+
+/**
  * One row of the sidebar. A leaf is a link. A row with pages is a link **and** a disclosure: the
- * row goes to the workspace's own overview (or, for a Platform heading that has no page of its own,
- * to its first page) so the collapsed icon rail — which cannot show children — still reaches
- * somewhere real, and the chevron beside it opens the pages. The branch a person is inside is open,
- * and opens itself when they navigate into it from elsewhere; otherwise it stays as they left it.
- * Platform is the exception that opens every group at once while somebody is inside it.
+ * row goes to the workspace's own overview (or, for Platform, to its own root) so the collapsed
+ * icon rail — which cannot show children — still reaches somewhere real, and the chevron beside it
+ * opens the pages. The branch a person is inside is open, and opens itself when they navigate into
+ * it from elsewhere; otherwise it stays as they left it. Platform is the exception that opens every
+ * group at once, down through `NavSubRow`, while somebody is inside it.
  */
 function NavRow({ item, active, expanded }: { item: NavItem; active: string | null; expanded: boolean }) {
   const Icon = NAV_ICONS[item.key];
@@ -186,18 +240,9 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
         </CollapsibleTrigger>
         <CollapsibleContent>
           <SidebarMenuSub>
-            {item.children.map((child) => {
-              const childCurrent = child.key === active;
-              return (
-                <SidebarMenuSubItem key={child.key}>
-                  <SidebarMenuSubButton asChild isActive={childCurrent}>
-                    <Link href={child.href} aria-current={childCurrent ? 'page' : undefined}>
-                      <span>{child.label}</span>
-                    </Link>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              );
-            })}
+            {item.children.map((child) => (
+              <NavSubRow key={child.key} item={child} active={active} expanded={expanded} />
+            ))}
           </SidebarMenuSub>
         </CollapsibleContent>
       </SidebarMenuItem>

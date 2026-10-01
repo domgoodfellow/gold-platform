@@ -47,6 +47,7 @@ export function SetResourceStatusForm({ organizationId }: { organizationId: stri
   return <form action={action} className="flex max-w-sm flex-col gap-2"><input type="hidden" name="organizationId" value={organizationId} /><TextInput name="resourceId" required placeholder="Resource ID" /><SelectInput name="status" required aria-label="Status"><option value="">Status…</option><option value="active">Active / verified</option><option value="pending">Pending</option><option value="failed">Failed</option><option value="disabled">Disabled</option></SelectInput><TextInput name="errorDetail" placeholder="Error detail, if failed" /><ErrorText>{state.error}</ErrorText>{state.recorded ? <p className="text-sm text-muted-foreground">Recorded.</p> : null}<Button type="submit" size="small" className="w-fit" disabled={pending}>{pending ? 'Recording…' : 'Update resource'}</Button></form>;
 }
 
+/** The base-Plan control: `kind=plan` only. An Add-on is a separate, stacking decision — see `ManageAddonsSheet`. */
 export function AssignPlanSheet({ organizationId, plans }: { organizationId: string; plans: Option[] }) {
   const [state, action, pending] = useActionState(recordPlanAssignmentAction, PLAN_ASSIGNMENT_INITIAL);
   const [open, setOpen] = useState(false);
@@ -60,16 +61,17 @@ export function AssignPlanSheet({ organizationId, plans }: { organizationId: str
       </PageDrawerTrigger>
       <PageDrawerContent>
         <PageDrawerHeader>
-          <PageDrawerTitle>Assign a Plan</PageDrawerTitle>
+          <PageDrawerTitle>Assign a base Plan</PageDrawerTitle>
           <PageDrawerDescription>
-            The Plan determines entitlement. Available entitled features are active by default;
+            The base Plan determines entitlement. Available entitled features are active by default;
             the organization can switch them off. Provider-backed features may still need setup.
+            A new assignment does not end an existing one on an overlapping period — end it first.
           </PageDrawerDescription>
         </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">
           <input type="hidden" name="organizationId" value={organizationId} />
           <SelectInput name="planId" required aria-label="Plan">
-            <option value="">Choose a Plan or Add-on…</option>
+            <option value="">Choose a Plan…</option>
             {plans.map((plan) => (
               <option key={plan.value} value={plan.value}>
                 {plan.label}
@@ -92,6 +94,58 @@ export function AssignPlanSheet({ organizationId, plans }: { organizationId: str
   );
 }
 
+/**
+ * The Add-on control: `kind=addon` only, stacking freely alongside the base Plan rather than
+ * replacing it. Reuses `recordPlanAssignmentAction` — the same effective-dated write a base Plan
+ * assignment uses, over the same `organization_plan_assignments` table; only the offered list of
+ * Plans differs. There is currently no domain operation to end an Add-on assignment early — see
+ * the History list for what is currently assigned.
+ */
+export function ManageAddonsSheet({ organizationId, addons }: { organizationId: string; addons: Option[] }) {
+  const [state, action, pending] = useActionState(recordPlanAssignmentAction, PLAN_ASSIGNMENT_INITIAL);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
+        <Button type="button" tone="secondary" size="small">
+          Manage Add-ons
+        </Button>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>Add an Add-on</PageDrawerTitle>
+          <PageDrawerDescription>
+            Add-ons stack alongside the base Plan rather than replacing it. Ending one early is not
+            yet a supported operation here.
+          </PageDrawerDescription>
+        </PageDrawerHeader>
+        <form action={action} className="flex flex-col gap-3 px-4">
+          <input type="hidden" name="organizationId" value={organizationId} />
+          <SelectInput name="planId" required aria-label="Add-on">
+            <option value="">Choose an Add-on…</option>
+            {addons.map((addon) => (
+              <option key={addon.value} value={addon.value}>
+                {addon.label}
+              </option>
+            ))}
+          </SelectInput>
+          <div className="grid grid-cols-2 gap-2">
+            <TextInput name="periodStart" type="date" required aria-label="Period start" />
+            <TextInput name="periodEnd" type="date" required aria-label="Period end" defaultValue="9999-12-31" />
+          </div>
+          <TextInput name="note" placeholder="Note (optional)" />
+          <ErrorText role="alert">{state.error}</ErrorText>
+          {state.recorded ? <Hint role="status">Added.</Hint> : null}
+          <Button type="submit" size="small" className="w-fit" disabled={pending}>
+            {pending ? 'Adding…' : 'Add'}
+          </Button>
+        </form>
+      </PageDrawerContent>
+    </PageDrawer>
+  );
+}
+
 export function RecordCommercialTermForm({ organizationId, products }: { organizationId: string; products: Option[] }) {
   const [state, action, pending] = useActionState(recordCommercialTermAction, TERM_INITIAL);
   return <form action={action} className="flex max-w-sm flex-col gap-2"><input type="hidden" name="organizationId" value={organizationId} /><SelectInput name="productKey" required aria-label="Product"><option value="">What was sold…</option>{products.map((product) => <option key={product.value} value={product.value}>{product.label}</option>)}</SelectInput><div className="grid grid-cols-2 gap-2"><TextInput name="periodStart" type="date" required aria-label="Period start" /><TextInput name="periodEnd" type="date" required aria-label="Period end" /></div><div className="flex gap-2"><TextInput name="priceMinor" type="number" min={0} step={1} required placeholder="Minor units" /><TextInput name="currency" maxLength={3} placeholder="USD" className="w-24" /></div><ErrorText>{state.error}</ErrorText>{state.recorded ? <p className="text-sm text-muted-foreground">Recorded.</p> : null}<Button type="submit" size="small" className="w-fit" disabled={pending}>{pending ? 'Recording…' : 'Record term'}</Button></form>;
@@ -104,5 +158,5 @@ export function RecordPlanAgreementSheet({ organizationId, planId, planLabel, cu
 
 export function RecordQuotaOverrideSheet({ organizationId, planId, quotas }: { organizationId: string; planId: string; quotas: Array<{ allowanceKey: string; label: string; includedQuantity: number }> }) {
   const [state, action, pending] = useActionState(recordPlanQuotaOverrideAction, QUOTA_OVERRIDE_INITIAL);
-  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" tone="secondary" size="small">Add quota override</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Record quota override</PageDrawerTitle><PageDrawerDescription>Appends an organization-specific value. The Plan default remains visible.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-3 px-4"><input type="hidden" name="organizationId" value={organizationId} /><input type="hidden" name="planId" value={planId} /><SelectInput name="allowanceKey" required aria-label="Allowance"><option value="">Choose allowance…</option>{quotas.map((quota) => <option key={quota.allowanceKey} value={quota.allowanceKey}>{quota.label} · Plan default {quota.includedQuantity.toLocaleString()}</option>)}</SelectInput><TextInput name="includedQuantity" type="number" min="0" required aria-label="Included quantity" /><TextInput name="hardLimit" type="number" min="0" aria-label="Hard limit" placeholder="No hard limit" /><TextInput name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0,10)} aria-label="Effective from" /><TextInput name="note" placeholder="Commercial provenance" /><ErrorText>{state.error}</ErrorText>{state.recorded ? <Hint>Override recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Recording…' : 'Record override'}</Button></form></PageDrawerContent></PageDrawer>;
+  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" tone="secondary" size="small">Add allowance override</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Record allowance override</PageDrawerTitle><PageDrawerDescription>Appends an organization-specific value. The Plan default remains visible.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-3 px-4"><input type="hidden" name="organizationId" value={organizationId} /><input type="hidden" name="planId" value={planId} /><SelectInput name="allowanceKey" required aria-label="Allowance"><option value="">Choose allowance…</option>{quotas.map((quota) => <option key={quota.allowanceKey} value={quota.allowanceKey}>{quota.label} · Plan default {quota.includedQuantity.toLocaleString()}</option>)}</SelectInput><TextInput name="includedQuantity" type="number" min="0" required aria-label="Included quantity" /><TextInput name="hardLimit" type="number" min="0" aria-label="Hard limit" placeholder="No hard limit" /><TextInput name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0,10)} aria-label="Effective from" /><TextInput name="note" placeholder="Commercial provenance" /><ErrorText>{state.error}</ErrorText>{state.recorded ? <Hint>Override recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Recording…' : 'Record override'}</Button></form></PageDrawerContent></PageDrawer>;
 }

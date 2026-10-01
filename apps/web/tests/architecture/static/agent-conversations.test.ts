@@ -9,7 +9,8 @@ import { formatsFor } from '@/lib/domain/files/formats';
  * Agent header → conversation header → transcript → composer, with no tabs; the transcript is the
  * shared Message Scroller and the only thing that scrolls; Context and Configure are composer
  * popovers that show only what exists; a question's result reaches the rail whichever page asked
- * it; and Platform Agent has no way to answer through a business.
+ * it; and the same organization Agent stays mounted everywhere inside the shell, Platform routes
+ * included, rather than forking by pathname into a second implementation.
  */
 
 const WEB = fileURLToPath(new URL('../../..', import.meta.url));
@@ -20,16 +21,14 @@ const between = (source: string, from: string, to: string) => source.slice(sourc
 
 const shared = read('features/agent/agent-shared.tsx');
 const tenantRail = read('features/agent/tenant-agent-rail.tsx');
-const platformRail = read('features/agent/platform-agent-rail.tsx');
 const actions = read('features/agent/actions.ts');
 const layout = read('features/shell/organization-shell.tsx');
 const questions = read('lib/domain/assistant/questions.ts');
-const platformQuestions = read('lib/domain/assistant/platform-questions.ts');
 const rightRail = read('components/panels/workspace-right-rail.tsx');
 
 describe('the Agent grammar is header → conversation header → transcript → composer', () => {
   it('has no Chat / Context / Activity tabs and no presentation abstraction for them', () => {
-    for (const source of [shared, tenantRail, platformRail]) {
+    for (const source of [shared, tenantRail]) {
       expect(code(source)).not.toMatch(/AgentTabs|TabsTrigger|TabsList|components\/tabs|AgentActivityList|AgentContextList/);
     }
   });
@@ -272,7 +271,14 @@ describe('the shell holds no Agent transcript, and the rail fetches its own on f
   it('the shell never reads a conversation, a run, or whether the Agent can answer', () => {
     // Eager shell-time Agent data was the N+1 the lazy bootstrap replaced (Phase C, Slice 12):
     // every organization page load once paid for History and a transcript nobody had opened yet.
-    expect(code(layout)).not.toMatch(/listAgentConversationSummaries|listAgentConversationRuns|canAnswerQuestions|canAnswerPlatformQuestions/);
+    expect(code(layout)).not.toMatch(/listAgentConversationSummaries|listAgentConversationRuns|canAnswerQuestions/);
+  });
+
+  it('mounts the one organization Agent unconditionally — no pathname fork, no second implementation', () => {
+    expect(code(layout)).not.toMatch(/RouteAwareAgent|PlatformAgentRail|inPlatformScope/);
+    const agentProp = layout.slice(layout.indexOf('agent={'), layout.indexOf('}\n      >'));
+    expect(agentProp).toContain('<TenantAgentRail');
+    expect(agentProp).not.toContain('<RouteAwareAgent');
   });
 
   it('TenantAgentRail\'s shell-time props are static only — no eager canAnswer, conversations or transcript', () => {
@@ -287,7 +293,7 @@ describe('the shell holds no Agent transcript, and the rail fetches its own on f
     expect(actions).toContain('export async function loadAgentBootstrapAction');
     const bootstrap = actions.slice(
       actions.indexOf('export async function loadAgentBootstrapAction'),
-      actions.indexOf('export async function loadPlatformAgentAvailabilityAction'),
+      actions.indexOf('export async function askAction'),
     );
     expect(bootstrap).toContain('listAgentConversationSummaries(db, { organizationId })');
     expect(bootstrap.match(/listAgentConversationRuns\(/g)?.length).toBe(1);
@@ -301,13 +307,6 @@ describe('the shell holds no Agent transcript, and the rail fetches its own on f
     expect(tenantRail).toContain('everOpened');
     expect(tenantRail).toContain('loadAgentBootstrapAction(organizationId)');
     expect(tenantRail).toMatch(/if \(!everOpened\) return null;|if \(!everOpened\)/);
-  });
-
-  it('the Platform Agent proves its own platform scope and defers the same way', () => {
-    expect(actions).toContain('export async function loadPlatformAgentAvailabilityAction');
-    expect(actions).toContain('requirePlatformScope(goldId)');
-    expect(platformRail).toContain('everOpened');
-    expect(platformRail).toContain('loadPlatformAgentAvailabilityAction(goldId)');
   });
 
   it('never filters by author in TypeScript — the policy is the boundary', () => {
@@ -332,41 +331,7 @@ describe('a question’s result reaches the rail from any page', () => {
   });
 });
 
-describe('Platform Agent has no organization-backed shortcut', () => {
-  it('reads no conversation, composer, action or tenant answering code', () => {
-    const source = code(platformRail);
-    expect(source).not.toMatch(/askAction|openConversationAction|decideAction/);
-    expect(source).not.toMatch(/AgentConversationHeader|AgentComposer|AgentTranscript|conversationId|listAgentConversation/);
-    expect(source).not.toContain('@/lib/domain/assistant/questions');
-    expect(source).not.toContain('organizationId:');
-  });
-
-  it('stays honestly unavailable until a platform-scoped endpoint exists', () => {
-    const source = code(platformQuestions);
-    expect(source).toMatch(/return false;/);
-    expect(source).not.toMatch(/import /);
-    expect(source).not.toContain('askQuestion');
-    expect(source).not.toContain('agent_conversations');
-    expect(code(platformRail)).toContain('<AgentUnavailable configureHref={configureHref} />');
-  });
-
-  it('the shell hands the Platform Agent no organization and no conversation, and mounts one Agent by route', () => {
-    const shell = code(read('features/shell/organization-shell.tsx'));
-    const platformElement = shell.slice(shell.indexOf('<PlatformAgentRail'), shell.indexOf('/>', shell.indexOf('<PlatformAgentRail')));
-    expect(platformElement).toContain("platformHref(organizationId, 'providers')");
-    expect(platformElement).not.toMatch(/conversation|organizationName|timezone|mayAsk/i);
-    // Built only for an operator inside GOLD's own organization; everywhere else the tenant Agent is the only one.
-    expect(shell).toMatch(/platform && platform\.size > 0 \? \(\s*<PlatformAgentRail/);
-
-    const host = code(read('features/agent/route-aware-agent.tsx'));
-    expect(host).toContain('inPlatformScope(pathname)');
-    // A choice between two elements, never both: two mounted rails would race to register the one panel.
-    expect(host).toMatch(/\? platform : organization/);
-    expect(host).not.toMatch(/<TenantAgentRail|<PlatformAgentRail|listAgentConversation/);
-  });
-});
-
-describe('the chat components live in @gold/ui, on GOLD’s roles', () => {
+describe("the chat components live in @gold/ui, on GOLD's roles", () => {
   const ui = (name: string) => readFileSync(`${UI}/src/components/${name}.tsx`, 'utf8');
   const manifest = JSON.parse(readFileSync(`${UI}/package.json`, 'utf8')) as { exports: Record<string, string> };
 

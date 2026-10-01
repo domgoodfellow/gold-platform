@@ -12,9 +12,6 @@ import { CompactAccountMenu } from '@/components/navigation/account-menu';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
-import { PlatformAgentRail } from '@/features/agent/platform-agent-rail';
-import { RouteAwareAgent } from '@/features/agent/route-aware-agent';
-import { platformHref } from '@/lib/platform-navigation';
 
 /**
  * The one application shell, for one organization. Everything beneath `/organizations/{id}` renders
@@ -49,7 +46,7 @@ export async function OrganizationShell({
   const locked = !access.permitted;
   // A locked business runs none of the workspace reads below — no feature resolution and no
   // Agent transcript — because none of it is drawn.
-  const { platform, brand, email, switchable, sections, settingsOffered } = await loadOrganizationShellModel(db, {
+  const { brand, email, switchable, sections, settingsOffered } = await loadOrganizationShellModel(db, {
     organizationId,
     capabilities: organization.capabilities,
     locked,
@@ -57,11 +54,10 @@ export async function OrganizationShell({
   // The shell loads a bounded list of titles and one transcript — the most recent conversation.
   // Any other transcript is fetched when somebody opens it from History.
 
-  // Platform authority is read only for GOLD's own organization, and only for staff. Everywhere
-  // else it is `null`, so the projection cannot produce a Platform section beside a customer's work.
-  // The Platform Agent exists only where Platform does. Both Agents are built here and one is
-  // mounted, by route (`RouteAwareAgent`): the shell cannot know the path, and neither Agent may
-  // borrow the other's scope.
+  // Platform is a route scope inside this same organization (`/organizations/{goldId}/platform/**`),
+  // never a second organization: the Agent stays the one built for this business throughout,
+  // including on a Platform page, rather than forking by pathname into a second implementation with
+  // a wider, cross-tenant answering scope it does not have.
 
   // `requireOrganization` already proved a session exists; this is a second, deliberately
   // separate read of the same session for the one extra fact the shell shows (I11's minimal
@@ -172,24 +168,12 @@ export async function OrganizationShell({
         }
         agent={
           locked ? null : (
-            <RouteAwareAgent
-              organization={
-                <TenantAgentRail
-                  organizationId={organizationId}
-                  organizationName={organization.name}
-                  timezone={organization.timezone}
-                  mayAsk={organization.capabilities.includes('assistant.ask')}
-                  canManageConnections={organization.capabilities.includes('integration.manage')}
-                />
-              }
-              platform={
-                platform && platform.size > 0 ? (
-                  <PlatformAgentRail
-                    goldId={organizationId}
-                    configureHref={platformHref(organizationId, 'providers')}
-                  />
-                ) : null
-              }
+            <TenantAgentRail
+              organizationId={organizationId}
+              organizationName={organization.name}
+              timezone={organization.timezone}
+              mayAsk={organization.capabilities.includes('assistant.ask')}
+              canManageConnections={organization.capabilities.includes('integration.manage')}
             />
           )
         }

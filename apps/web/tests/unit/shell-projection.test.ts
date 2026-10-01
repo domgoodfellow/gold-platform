@@ -114,21 +114,17 @@ describe('GOLD owner who is also a platform operator', () => {
   });
 
   it('sees every authorized Platform destination, and only through the projection', () => {
+    // The root destination is the Platform row itself, never a `platform-overview` child.
     const destinations = keys(sections, 'platform').filter((key) => !key.startsWith('platform-group-'));
-    expect(destinations).toEqual(PLATFORM_DESTINATIONS.map((destination) => `platform-${destination.key}`).sort((a, b) => destinations.indexOf(a) - destinations.indexOf(b)));
-    expect(destinations.sort()).toEqual(PLATFORM_DESTINATIONS.map((destination) => `platform-${destination.key}`).sort());
+    const expected = PLATFORM_DESTINATIONS.map((destination) => (destination.path === '' ? 'platform' : `platform-${destination.key}`));
+    expect(destinations.sort()).toEqual(expected.sort());
   });
 
-  it('nests Platform as Catalog, Commercial and Infrastructure, beneath the same GOLD workspaces', () => {
-    expect(topLevel(sections, 'platform')).toEqual([
-      'platform-overview',
-      'platform-organizations',
-      'platform-group-catalog',
-      'platform-group-commercial',
-      'platform-group-infrastructure',
-    ]);
+  it('nests Platform as one row, holding Organizations and Catalog, Commercial and Infrastructure', () => {
+    // Platform is a single workspace-style parent at the top level — its own Home, never a repeated child.
+    expect(topLevel(sections, 'platform')).toEqual(['platform']);
     expect(keys(sections, 'platform')).toEqual([
-      'platform-overview',
+      'platform',
       'platform-organizations',
       'platform-group-catalog',
       'platform-products',
@@ -145,6 +141,10 @@ describe('GOLD owner who is also a platform operator', () => {
       'platform-ai-runtime',
       'platform-failures',
     ]);
+    const platform = sections.flatMap((section) => section.items).find((item) => item.key === 'platform')!;
+    expect(platform.label).toBe('Platform');
+    expect(platform.href).toBe(platformHref(ORG, ''));
+    expect(platform.heading).toBe(true);
     // Platform is an added section: GOLD's own workspaces are all still there.
     expect(keys(sections, 'workspaces')).toContain('customers');
   });
@@ -198,18 +198,18 @@ describe('GOLD sales member in the same organization', () => {
 describe('a platform member with limited platform permissions', () => {
   it('sees only the destinations their permissions reach', () => {
     const providersOnly = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.providers']) });
-    expect(keys(providersOnly, 'platform')).toEqual(['platform-group-infrastructure', 'platform-providers', 'platform-ai-runtime']);
+    expect(keys(providersOnly, 'platform')).toEqual(['platform', 'platform-group-infrastructure', 'platform-providers', 'platform-ai-runtime']);
 
     const commercial = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.commercial']) });
-    expect(keys(commercial, 'platform')).toEqual(['platform-group-commercial', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-billing']);
+    expect(keys(commercial, 'platform')).toEqual(['platform', 'platform-group-commercial', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-billing']);
 
     const catalogue = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.catalogue']) });
-    expect(keys(catalogue, 'platform')).toEqual(['platform-group-catalog', 'platform-products', 'platform-meters', 'platform-connectors']);
+    expect(keys(catalogue, 'platform')).toEqual(['platform', 'platform-group-catalog', 'platform-products', 'platform-meters', 'platform-connectors']);
   });
 
   it('does not gain full platform administration, nor organization administration, from one permission', () => {
     const limited = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.organizations']) });
-    expect(keys(limited, 'platform')).toEqual(['platform-organizations']);
+    expect(keys(limited, 'platform')).toEqual(['platform', 'platform-organizations']);
     expect(keys(limited, 'business')).toEqual([]);
   });
 
@@ -307,7 +307,7 @@ describe('the phone renders the same projection', () => {
     // still has only its one page, so it stays a loose item under the section's own "Workspaces"
     // heading — the same rule a parent with pages follows, applied to a workspace with none.
     expect(more.map((section) => section.label)).toEqual([
-      null, 'Workspaces', 'CRM', 'Communications', 'Finance', 'Automations', 'Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
+      null, 'Workspaces', 'CRM', 'Communications', 'Finance', 'Automations', 'Field', 'Business', 'Platform', 'Catalog', 'Commercial', 'Infrastructure',
     ]);
     expect(more[0].items.map((item) => item.key)).toEqual(['library']);
     expect(more[1].items.map((item) => item.key)).toEqual(['workspace-studio']);
@@ -316,6 +316,11 @@ describe('the phone renders the same projection', () => {
     expect(more[4].items.map((item) => item.key)).toEqual(['finance-plans']);
     expect(more[5].items.map((item) => item.label)).toEqual(['Rules', 'Messages', 'Activity']);
     expect(more[6].items.map((item) => item.key)).toEqual(['resources', 'locations', 'assets']);
+    expect(more[7].items.map((item) => item.key)).toEqual(['team', 'connections', 'plan']);
+    // Platform, unwrapped one level: Organizations loose beneath the Platform heading itself
+    // (never a repeated "Overview"), Catalog/Commercial/Infrastructure each their own entry.
+    expect(more[8].items.map((item) => item.key)).toEqual(['platform-organizations']);
+    expect(more[9].items.map((item) => item.key)).toEqual(['platform-products', 'platform-meters', 'platform-connectors']);
   });
 
   it('loses and adds nothing: the bar and More together are exactly the desktop projection', () => {
@@ -325,9 +330,10 @@ describe('the phone renders the same projection', () => {
 
   it('inside Platform presents Platform: a way back to Home, the Platform destinations, and the rest behind More', () => {
     const platform = projectPhone(sections, { platformActive: true });
+    // Platform's own row is never a primary button beside its own children — the same "never
+    // repeated as a child" rule, the other way round: its destinations are what leads the bar.
     expect(platform.primary.map((item) => item.key)).toEqual([
       'home',
-      'platform-overview',
       'platform-organizations',
       'platform-group-catalog',
       'platform-group-commercial',
@@ -396,7 +402,7 @@ describe('the current item', () => {
     expect(activeItemKey(sections, `/organizations/${ORG}/finance/plans/base`)).toBe('finance-plans');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog'))).toBe('platform-products');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog/families/comms'))).toBe('platform-products');
-    expect(activeItemKey(sections, platformHref(ORG))).toBe('platform-overview');
+    expect(activeItemKey(sections, platformHref(ORG))).toBe('platform');
     expect(activeItemKey(sections, platformHref(ORG, 'organizations/x/usage'))).toBe('platform-organizations');
   });
 
@@ -424,14 +430,15 @@ describe('the current item', () => {
   });
 
   it('inside Platform the group holding the current page is the one that is open, and a heading yields to its first page', () => {
-    const platformItems = sections.find((section) => section.key === 'platform')!.items;
-    const commercial = platformItems.find((item) => item.key === 'platform-group-commercial')!;
-    const infrastructure = platformItems.find((item) => item.key === 'platform-group-infrastructure')!;
+    const platformRoot = sections.find((section) => section.key === 'platform')!.items[0];
+    const commercial = platformRoot.children!.find((item) => item.key === 'platform-group-commercial')!;
+    const infrastructure = platformRoot.children!.find((item) => item.key === 'platform-group-infrastructure')!;
     const active = activeItemKey(sections, platformHref(ORG, 'pricing'));
     expect(active).toBe('platform-pricing');
     expect(itemContains(commercial, active)).toBe(true);
     expect(itemContains(infrastructure, active)).toBe(false);
-    // The Overview is the root of the whole Platform tree and marks itself only, never a page beneath it.
+    // Platform itself is the root of the whole tree and contains everything beneath it.
+    expect(itemContains(platformRoot, active)).toBe(true);
     expect(activeItemKey(sections, platformHref(ORG, 'providers/twilio'))).toBe('platform-providers');
   });
 
@@ -503,13 +510,13 @@ describe('the permission gradient: operating work, then business administration,
       name: 'platform staff with partial permissions',
       sections: project(ALL_CAPABILITIES, { platform: partial }),
       sectionKeys: ['home', 'library', 'workspaces', 'business', 'platform'],
-      platformTop: ['platform-group-catalog'],
+      platformTop: ['platform'],
     },
     {
       name: 'platform owner',
       sections: project(ALL_CAPABILITIES, { platform: allPlatform }),
       sectionKeys: ['home', 'library', 'workspaces', 'business', 'platform'],
-      platformTop: ['platform-overview', 'platform-organizations', 'platform-group-catalog', 'platform-group-commercial', 'platform-group-infrastructure'],
+      platformTop: ['platform'],
     },
   ];
 
@@ -537,7 +544,9 @@ describe('the permission gradient: operating work, then business administration,
   });
 
   it('partial platform permissions reach only their own group, in registry order', () => {
-    const catalog = personas[3].sections.find((section) => section.key === 'platform')!.items[0];
+    const platformRoot = personas[3].sections.find((section) => section.key === 'platform')!.items[0];
+    const catalog = platformRoot.children![0];
+    expect(catalog.key).toBe('platform-group-catalog');
     expect(catalog.children?.map((page) => page.key)).toEqual(['platform-products', 'platform-meters', 'platform-connectors']);
   });
 
