@@ -20,7 +20,10 @@ const WEB_FEATURES = fileURLToPath(new URL('../../../features', import.meta.url)
 const WEB_ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 
 describe('Settings, as the Configuration Center (source scan)', () => {
-  const settings = readFileSync(`${ROUTES}/settings/page.tsx`, 'utf8');
+  // The Configuration Center is `/settings/organization` — the organization directory
+  // `SettingsIndex` renders. `/settings` itself is the landing page, a chooser between five
+  // destinations (Organization among them), not the configuration map.
+  const settings = readFileSync(`${ROUTES}/settings/organization/page.tsx`, 'utf8');
   const frame = readFileSync(
     fileURLToPath(new URL('../../../features/settings/settings-page-frame.tsx', import.meta.url)),
     'utf8',

@@ -1,13 +1,13 @@
 import { Hint } from '@/components/controls/inputs';
-import { areaLabel } from '@/lib/navigation';
+import { PageHeader } from '@/components/headers/page-header';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { ProfileForm } from '@/features/public-profile/profile-form';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
-import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { listBookableTypes } from '@/lib/domain/booking/booking';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { requireOrganization } from '@/lib/route/organization';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { updateProfileAction } from '../actions';
 import { BrandForm, LogoForm } from '@/features/branding/brand-forms';
 
@@ -35,11 +35,12 @@ export default async function BrandingSettingsPage({
 
   return (
     <SettingsPageFrame>
-      <SettingsScopeNav
-        organizationId={organizationId}
-        active="organization"
+      <PageHeader
         title="Branding"
-        crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]}
+        crumbs={[
+          { label: 'Settings', href: settingsLandingHref(organizationId) },
+          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+        ]}
       />
 
       <Section id="public-page" className="scroll-mt-6">

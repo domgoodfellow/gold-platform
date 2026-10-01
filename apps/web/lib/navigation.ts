@@ -243,6 +243,10 @@ export const MODULES = [
     description:
       'A record of every call, the words this business uses for how one went, and the stages a relationship moves through. A business that keeps its pipeline somewhere else runs without this and keeps every customer it recorded.',
     // Dialer and pipeline are one module deliberately — a pipeline with no calls is a hand-kept list; calls with no pipeline are a log nobody reads twice.
+    // `ModuleConfiguration` names one destination; this module truthfully has two (Communications'
+    // `call-setup` and CRM's `sales-stages`, split from the single combined Settings entry they
+    // used to share). Pointed at the larger of the two rather than widened to carry both — a
+    // follow-up architecture issue, not solved here.
     configuredAt: { segment: 'calls', section: 'setup' },
   },
   {
@@ -440,8 +444,11 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'schedule-configuration', workspace: 'field', path: 'schedule/configuration', permission: ['field.manage'] },
   { key: 'pricing', workspace: 'finance', path: 'settings/pricing', entitledBy: 'pricing', permission: ['price.manage'] },
   { key: 'custom-fields', path: 'settings/custom-fields', permission: ['field.manage'] },
-  // Entitled through Calls, permitted through field.manage: configuring outcomes and stages is not making calls.
-  { key: 'call-setup', workspace: 'communications', path: 'calls#setup', entitledBy: 'calls', permission: ['field.manage'] },
+  // Entitled through Pipeline, permitted through field.manage: naming stages is not moving a customer between them.
+  { key: 'sales-stages', workspace: 'crm', path: 'settings/sales-stages', entitledBy: 'pipeline', permission: ['field.manage'] },
+  // Entitled through Calls, permitted through field.manage: configuring outcomes and routing is not making calls.
+  // A dedicated settings route, never `calls#setup` — a fragment into an operational page is not a canonical destination.
+  { key: 'call-setup', workspace: 'communications', path: 'settings/calls', entitledBy: 'calls', permission: ['field.manage'] },
   { key: 'team', path: 'settings/access', permission: ['role.manage'] },
   { key: 'branding', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
   { key: 'domains', workspace: 'studio', path: 'settings/domains', permission: ['organization.manage'] },

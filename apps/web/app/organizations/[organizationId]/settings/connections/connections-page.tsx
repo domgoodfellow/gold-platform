@@ -1,4 +1,5 @@
 import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/headers/page-header';
 import { listConnections } from '@/lib/domain/integrations/connections';
 import {
   connectorCategories,
@@ -9,10 +10,10 @@ import {
 import { listResources } from '@/lib/domain/integrations/resources';
 import { listImportRuns } from '@/lib/domain/integrations/import-runs';
 import { requireOrganization } from '@/lib/route/organization';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { ConnectorCatalogue } from '@/features/integrations/catalogue/connector-catalogue';
 import { ConnectedApps } from '@/features/integrations/connections/connected-apps';
 import { IntegrationsNav } from '@/features/integrations/integrations-nav';
-import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 
 export const dynamic = 'force-dynamic';
@@ -63,15 +64,13 @@ export async function ConnectionsPage({
 
   return (
     <SettingsPageFrame>
-      <SettingsScopeNav
-        organizationId={organizationId}
-        active="connections"
+      <PageHeader
         title={view === 'connected' ? 'Connections' : 'Browse apps'}
         crumbs={view === 'connected'
-          ? [{ label: 'Settings', href: `/organizations/${organizationId}/settings` }]
+          ? [{ label: 'Settings', href: settingsLandingHref(organizationId) }]
           : [
-              { label: 'Settings', href: `/organizations/${organizationId}/settings` },
-              { label: 'Connections', href: `/organizations/${organizationId}/settings/connections` },
+              { label: 'Settings', href: settingsLandingHref(organizationId) },
+              { label: 'Connections', href: settingsScopeHref('connections', organizationId) },
             ]}
       />
       <IntegrationsNav organizationId={organizationId} current={view} />

@@ -114,8 +114,8 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
 export const NAV_ICONS: Record<string, LucideIcon> = {
   ...AREA_ICONS,
   // A workspace row is drawn with its Product's mark; its pages, in the phone sheet, with their own.
-  'workspace-sales': Users,
-  'workspace-comms': Phone,
+  'workspace-crm': Users,
+  'workspace-communications': Phone,
   'workspace-finance': CircleDollarSign,
   'workspace-automations': Zap,
   'workspace-field': Wrench,

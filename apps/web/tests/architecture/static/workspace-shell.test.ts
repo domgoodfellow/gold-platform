@@ -442,13 +442,12 @@ describe('the page-header contract — the page, not the workspace header, owns 
     expect(pages.length).toBeGreaterThan(20);
 
     // A page's identity is PageHeader or one of the Phase B screen patterns (CollectionHeader,
-    // WorkspaceHome, SettingsScopeNav/SettingsHeader, StatePage), a RecordHeader-based header
-    // component, or a feature that renders one (Home, the customer record). A pure redirect
-    // renders nothing at all.
+    // WorkspaceHome, StatePage), a RecordHeader-based header component, or a feature that renders
+    // one (Home, the customer record). A pure redirect renders nothing at all.
     // Phase C's loader+Screen route pairs (Slice 9) put the identity component one file down, in
     // the Screen the page delegates to, rather than inline in the page itself — the same shape
     // `CustomerDetail`/`HomeDashboard` already had: a feature component that renders the real one.
-    const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<SettingsScopeNav|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage|<PlanDetailScreen|<OrganizationCommercialScreen|<CatalogFamilyScreen|<TwilioProviderScreen|<PlanUsageScreen|<WorkItemDetailScreen/;
+    const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage|<PlanDetailScreen|<OrganizationCommercialScreen|<CatalogFamilyScreen|<TwilioProviderScreen|<PlanUsageScreen|<WorkItemDetailScreen/;
     for (const page of pages) {
       const source = readFileSync(page, 'utf8');
       const label = page.slice(root.length);

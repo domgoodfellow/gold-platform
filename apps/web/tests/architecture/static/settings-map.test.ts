@@ -128,6 +128,30 @@ describe('configuring is not operating', () => {
     expect(configTargetOffered(setup, { ...nothingEntitled, capabilities: new Set<Capability>(['configuration.propose']) })).toBe(true);
     expect(configTargetOffered(setup, { ...nothingEntitled, capabilities: new Set<Capability>(['call.place']) })).toBe(false);
   });
+
+  // "Calls and sales stages" used to be one combined Settings entry that pointed at Communications
+  // and never actually reached stage configuration. Split: `call-setup` stays Communications' own
+  // door (now a real `/settings/calls` route, never `calls#setup`); `sales-stages` is CRM's.
+  it('splits sales stages out as its own CRM-owned target, never routed through Communications', () => {
+    const salesStages = configTarget('sales-stages');
+    expect(salesStages.workspace).toBe('crm');
+    expect(salesStages.path).toBe('settings/sales-stages');
+    expect(salesStages.entitledBy).toBe('pipeline');
+    expect(AREAS.some((area) => area.segment === 'pipeline')).toBe(true);
+
+    const configureOnly = { ...everythingEntitled, capabilities: new Set<Capability>(['field.manage']) };
+    expect(configTargetOffered(salesStages, configureOnly)).toBe(true);
+    // customer.update is Pipeline's operating capability (moving a customer between stages), never its configuring one.
+    const operateOnly = { ...everythingEntitled, capabilities: new Set<Capability>(['customer.update']) };
+    expect(configTargetOffered(salesStages, operateOnly)).toBe(false);
+    const everyPermissionNoProduct = { ...nothingEntitled, capabilities: allPermissions };
+    expect(configTargetOffered(salesStages, everyPermissionNoProduct)).toBe(false);
+  });
+
+  it('keeps Call setup a real Settings route, not an operational page plus a URL fragment', () => {
+    expect(callSetup.path).toBe('settings/calls');
+    expect(callSetup.path).not.toContain('#');
+  });
 });
 
 describe('offered entries and sections', () => {

@@ -1,8 +1,8 @@
 import { DividedList, Section, SectionHeading } from '@/components/surfaces/section';
-import { areaLabel } from '@/lib/navigation';
+import { PageHeader } from '@/components/headers/page-header';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
-import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import {
   listCatalogFeatures,
   listCatalogModules,
@@ -50,11 +50,12 @@ export default async function FeaturesSettingsPage({
 
   return (
     <SettingsPageFrame>
-      <SettingsScopeNav
-        organizationId={organizationId}
-        active="organization"
+      <PageHeader
         title="Features"
-        crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]}
+        crumbs={[
+          { label: 'Settings', href: settingsLandingHref(organizationId) },
+          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+        ]}
       />
       <Hint className="mt-1">
         What this business is entitled to, and what it has switched off. An entitled feature is

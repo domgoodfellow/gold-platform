@@ -1,4 +1,5 @@
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
+import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
 import { Disclosure } from '@/components/surfaces/card';
@@ -9,10 +10,10 @@ import { listModuleSettings } from '@/lib/domain/tenancy/modules';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { requireOrganization } from '@/lib/route/organization';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { ChooseCurrencyForm, CreatePriceItemForm, EditPriceItemForm } from '@/features/pricing/price-forms';
 import { PaymentAccountRow } from '@/features/pricing/payment-account-row';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
-import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,11 +44,12 @@ export default async function PricingPage({
 
   return (
     <SettingsPageFrame>
-      <SettingsScopeNav
-        organizationId={organizationId}
-        active="organization"
+      <PageHeader
         title={areaLabel('pricing')}
-        crumbs={[{ label: 'Settings', href: `/organizations/${organizationId}/settings` }]}
+        crumbs={[
+          { label: 'Settings', href: settingsLandingHref(organizationId) },
+          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+        ]}
       />
       <Section>
         <SectionHeading>Services &amp; pricing</SectionHeading>

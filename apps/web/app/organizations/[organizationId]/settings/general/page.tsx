@@ -1,9 +1,9 @@
 import { Hint } from '@/components/controls/inputs';
-import { areaLabel } from '@/lib/navigation';
+import { PageHeader } from '@/components/headers/page-header';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { requireOrganization } from '@/lib/route/organization';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { OrganizationSettingsForm } from '@/features/tenancy/organization-settings-form';
-import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,11 +22,12 @@ export default async function GeneralSettingsPage({
 
   return (
     <SettingsPageFrame>
-      <SettingsScopeNav
-        organizationId={organizationId}
-        active="organization"
+      <PageHeader
         title="General"
-        crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]}
+        crumbs={[
+          { label: 'Settings', href: settingsLandingHref(organizationId) },
+          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+        ]}
       />
       <Hint className="mt-1">
         This business&rsquo;s name, where it operates and what it trades in. Changing the

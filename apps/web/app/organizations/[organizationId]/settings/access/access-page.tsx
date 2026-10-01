@@ -1,11 +1,12 @@
 import { Hint } from '@/components/controls/inputs';
+import { PageHeader } from '@/components/headers/page-header';
 import { ViewNav } from '@/components/navigation/view-nav';
-import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { listInvitationDeliveryStatus, listPendingInvitations } from '@/lib/domain/tenancy/invitations';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireOrganization } from '@/lib/route/organization';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { AddMemberSheetProvider, AddMemberTrigger } from '@/features/team/add-member-sheet';
 import { CreateRoleSheet } from '@/features/team/create-role-sheet';
 import { InvitationsTable } from '@/features/team/invitations-table';
@@ -46,13 +47,11 @@ export async function AccessPage({
   return (
     <SettingsPageFrame>
       <AddMemberSheetProvider organizationId={organizationId} roles={roles}>
-      <SettingsScopeNav
-        organizationId={organizationId}
-        active="access"
+      <PageHeader
         title={view === 'members' ? 'Members' : view === 'invitations' ? 'Invitations' : 'Roles'}
         crumbs={[
-          { label: 'Settings', href: `/organizations/${organizationId}/settings` },
-          { label: 'Access', href: `/organizations/${organizationId}/settings/access` },
+          { label: 'Settings', href: settingsLandingHref(organizationId) },
+          { label: 'Access', href: settingsScopeHref('access', organizationId) },
         ]}
         actions={
           mayManage ? (

@@ -1,11 +1,12 @@
 import { areaLabel } from '@/lib/navigation';
+import { PageHeader } from '@/components/headers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';
 import { FieldEntityNav } from '@/features/custom-fields/configuration/field-entity-nav';
 import { resolveFieldEntity } from './field-entities';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
-import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,11 +25,12 @@ export default async function FieldsPage({
 
   return (
     <SettingsPageFrame>
-      <SettingsScopeNav
-        organizationId={organizationId}
-        active="organization"
+      <PageHeader
         title={areaLabel('fields')}
-        crumbs={[{ label: 'Settings', href: `/organizations/${organizationId}/settings` }]}
+        crumbs={[
+          { label: 'Settings', href: settingsLandingHref(organizationId) },
+          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+        ]}
       />
       <FieldEntityNav organizationId={organizationId} entityType={entityType} />
       <EntityFieldsConfiguration

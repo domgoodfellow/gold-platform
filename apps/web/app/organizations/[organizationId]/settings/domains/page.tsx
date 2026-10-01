@@ -1,13 +1,13 @@
 import { Hint } from '@/components/controls/inputs';
-import { areaLabel } from '@/lib/navigation';
+import { PageHeader } from '@/components/headers/page-header';
 import { ConnectDomainDialog } from '@/features/domains/connect-domain-dialog';
 import { DomainsList } from '@/features/domains/domains-list';
 import { ManagedAddress } from '@/features/domains/managed-address';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
-import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { getManagedHostname, listDomains, platformPublicDomain } from '@/lib/domain/domains/domains';
 import { listConnectedDnsZones } from '@/lib/domain/domains/dns-zones';
 import { requireOrganization } from '@/lib/route/organization';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,11 +25,12 @@ export default async function DomainsSettingsPage({ params }: PageProps<'/organi
 
   return (
     <SettingsPageFrame>
-      <SettingsScopeNav
-        organizationId={organizationId}
-        active="organization"
+      <PageHeader
         title="Domains"
-        crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]}
+        crumbs={[
+          { label: 'Settings', href: settingsLandingHref(organizationId) },
+          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+        ]}
         actions={
           mayManage ? (
             <ConnectDomainDialog organizationId={organizationId} platformZone={zone} cloudflareZones={cloudflareZones} />

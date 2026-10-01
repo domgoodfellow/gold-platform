@@ -22,8 +22,8 @@ import { settingsScopeHref } from '@/lib/route/settings';
  * The truthful, shared person/session menu, one implementation for every shell's sidebar footer.
  * Represents the PERSON, not where they are operating — cross-context navigation (switching
  * business, entering Platform Administration) is `ContextSwitcher`'s job alone. Settings is one
- * destination (Organization, Account, Access, Connections and Plan & usage are scopes inside it,
- * `SettingsScopeNav`), so this menu offers exactly one Settings entry rather than a Business/Account
+ * landing page with five destinations chosen from it (Organization, Account, Access, Connections
+ * and Plan & usage), so this menu offers exactly one Settings entry rather than a Business/Account
  * split — landing on Organization when a business is offered, on Account otherwise.
  */
 

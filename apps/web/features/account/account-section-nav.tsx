@@ -6,9 +6,9 @@ import { cx, FOCUS_RING } from '@/components/class-names';
 import { PERSONAL_SECTIONS, personalSettingsHref } from '@/lib/route/personal-settings';
 
 /**
- * Account's own second-level nav — Profile, Security & sign-in — one level in from the Settings
- * scope tab bar (`SettingsScopeNav`) every scope shares. The scope line lives in that shared bar;
- * this draws only the sections beneath it, so the two are never said twice.
+ * Account's own local nav — Profile, Security & sign-in — rendered beneath each page's own
+ * `PageHeader` (breadcrumb + title), the same position every other Settings scope's local nav
+ * sits in (Access's Members/Invitations/Roles `ViewNav`, Connections' `IntegrationsNav`).
  */
 export function AccountSectionNav({ organizationId }: { organizationId: string | null }) {
   const pathname = usePathname();

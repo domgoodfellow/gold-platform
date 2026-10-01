@@ -1,15 +1,16 @@
 import { notFound } from 'next/navigation';
 import { ButtonLink } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
+import { PageHeader } from '@/components/headers/page-header';
 import { ConnectionDetail } from '@/features/integrations/connections/connection-detail';
 import { CheckConnectionForm, DisconnectForm } from '@/features/integrations/connections/connection-controls';
 import { getConnection } from '@/lib/domain/integrations/connections';
 import { connectorLogoUrl, getConnector, isConnectable } from '@/lib/domain/integrations/connectors';
 import { listResources } from '@/lib/domain/integrations/resources';
 import { requireOrganization } from '@/lib/route/organization';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { usesSignIn } from '@/lib/adapters/integrations';
 import { listGrantedResourceIds } from '@/lib/domain/integrations/assistant-grants';
-import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 
 export const dynamic = 'force-dynamic';
@@ -37,13 +38,11 @@ export default async function ConnectionDetailPage({
 
   return (
     <SettingsPageFrame>
-      <SettingsScopeNav
-        organizationId={organizationId}
-        active="connections"
+      <PageHeader
         title={name}
         crumbs={[
-          { label: 'Settings', href: `/organizations/${organizationId}/settings` },
-          { label: 'Connections', href: `/organizations/${organizationId}/settings/connections` },
+          { label: 'Settings', href: settingsLandingHref(organizationId) },
+          { label: 'Connections', href: settingsScopeHref('connections', organizationId) },
         ]}
         meta={
           <Badge tone={connection.status === 'active' || connection.status === 'connecting' ? 'success' : 'neutral'}>

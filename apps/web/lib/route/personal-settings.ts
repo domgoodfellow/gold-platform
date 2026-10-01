@@ -1,3 +1,5 @@
+import { settingsLandingHref } from './settings';
+
 /**
  * Personal settings: the signed-in person's identity and sign-in, owned by the user and never by
  * whichever business is selected (D45). This is the one place its addresses are written, so the
@@ -13,12 +15,15 @@ export const PERSONAL_SECTIONS = [
 export type PersonalSection = (typeof PERSONAL_SECTIONS)[number]['key'];
 
 /**
- * The breadcrumb ancestor for every Personal settings page: a plain label, since "Account" has no
- * landing page of its own distinct from Profile (which occupies `PERSONAL_SETTINGS_ROOT`) — the
- * same reason a Platform sidebar group stays unlinked. `PageHeader` appends the current page.
+ * The breadcrumb ancestors for every Personal settings page: Settings (the landing chooser,
+ * honouring the `?org=` hint the same way the rest of Settings does) and Account (this scope's
+ * own root, Profile). `PageHeader` appends the current page.
  */
-export function personalSettingsAncestry(): { label: string }[] {
-  return [{ label: 'Settings' }, { label: 'Account' }];
+export function personalSettingsAncestry(organizationId?: string | null): { label: string; href?: string }[] {
+  return [
+    { label: 'Settings', href: settingsLandingHref(organizationId ?? null) },
+    { label: 'Account', href: personalSettingsHref('profile', organizationId) },
+  ];
 }
 
 /**

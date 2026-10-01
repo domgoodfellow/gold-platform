@@ -1,12 +1,12 @@
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
-import { areaLabel } from '@/lib/navigation';
+import { PageHeader } from '@/components/headers/page-header';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
-import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { ButtonLink } from '@/components/controls/button';
 import { listProviderBindings, listProviderResources } from '@/lib/domain/providers/bindings';
 import { callingNumber } from '@/lib/domain/reception/telephony';
 import { requireOrganization } from '@/lib/route/organization';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { AddEmailDomainForm } from '@/features/communications/email-domain-form';
 import { CommunicationProfileForm } from '@/features/communications/communication-profile-form';
 import { homepageEditorState } from '@/lib/domain/public-site/public-site';
@@ -62,11 +62,12 @@ export default async function CommunicationsPage({
 
   return (
     <SettingsPageFrame>
-      <SettingsScopeNav
-        organizationId={organizationId}
-        active="organization"
+      <PageHeader
         title="Communications"
-        crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]}
+        crumbs={[
+          { label: 'Settings', href: settingsLandingHref(organizationId) },
+          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+        ]}
       />
       <Hint className="mt-1">
         The phone and email this business communicates through. Never what any of it costs GildOps,

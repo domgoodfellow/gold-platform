@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react';
-import { AccountSectionNav } from '@/features/account/account-section-nav';
 import { GlobalFallbackShell } from '@/features/account/global-fallback-shell';
 import { OrganizationShell } from '@/features/shell/organization-shell';
-import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { readLastOrganizationId } from '@/lib/route/landing';
 import { loadPersonContext } from '@/lib/route/person-context';
@@ -28,7 +26,8 @@ export async function PersonalSettingsShell({
 }: {
   /** The `?org=` hint. Honoured only if the caller is genuinely a member of that business. */
   returnOrganizationId?: string;
-  children: (person: { email: string; hasPassword: boolean }) => ReactNode;
+  /** `organizationId` is the verified origin — honoured only if it is genuinely a membership — so a page can render `AccountSectionNav` with it after its own `PageHeader`, the same order every other Settings scope uses. */
+  children: (person: { email: string; hasPassword: boolean; organizationId: string | null }) => ReactNode;
 }) {
   const { email, hasPassword, organizations: myOrganizations } = await loadPersonContext();
   const hinted = returnOrganizationId
@@ -39,9 +38,7 @@ export async function PersonalSettingsShell({
 
   const body = (
     <SettingsPageFrame>
-      <SettingsScopeNav organizationId={origin?.id ?? null} active="account" />
-      <AccountSectionNav organizationId={origin?.id ?? null} />
-      {children({ email, hasPassword })}
+      {children({ email, hasPassword, organizationId: origin?.id ?? null })}
     </SettingsPageFrame>
   );
 

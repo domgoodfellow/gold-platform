@@ -14,9 +14,10 @@ import { CreateOutcomeForm } from './outcome-settings';
 import { RoutingSection } from './routing-section';
 
 /**
- * Communications' one Configure surface (`call-setup`, `calls#setup`). Eight sections, each a
- * concern the work order named — most are truthful "not yet" states rather than editable
- * controls, because a control with nothing behind it is worse than no control (D31).
+ * Communications' one Configure surface, opened from the Calls workspace's own header and from
+ * the Settings map's `call-setup` entry (`/settings/calls`) alike — one component, two doors.
+ * Eight sections, each a concern the work order named — most are truthful "not yet" states rather
+ * than editable controls, because a control with nothing behind it is worse than no control (D31).
  */
 export function VoiceSettingsSheet({ organizationId, number, outcomes, routes, numbers, members, mayManageIdentity, mayConfigureOutcomes, role }: {
   organizationId: string;

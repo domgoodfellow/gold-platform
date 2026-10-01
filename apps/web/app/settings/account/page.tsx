@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/headers/page-header';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
+import { AccountSectionNav } from '@/features/account/account-section-nav';
 import { PersonalSettingsShell } from '@/features/account/personal-settings-shell';
 import { personalSettingsAncestry } from '@/lib/route/personal-settings';
 
@@ -12,9 +13,10 @@ export default async function ProfilePage({ searchParams }: PageProps<'/settings
 
   return (
     <PersonalSettingsShell returnOrganizationId={typeof org === 'string' ? org : undefined}>
-      {({ email }) => (
+      {({ email, organizationId }) => (
         <>
-          <PageHeader title="Profile" crumbs={personalSettingsAncestry()} />
+          <PageHeader title="Profile" crumbs={personalSettingsAncestry(organizationId)} />
+          <AccountSectionNav organizationId={organizationId} />
           <Section>
             <SectionHeading>Email</SectionHeading>
             <Hint className="mt-2">{email}</Hint>

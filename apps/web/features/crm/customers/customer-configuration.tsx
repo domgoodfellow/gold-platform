@@ -16,11 +16,11 @@ export type CustomerConfigurationData = {
 
 /**
  * What a customer carries beyond its name, and — when Communications/Voice is on — the pipeline
- * a relationship moves through. The same component from the Customers page's Configure rail and
- * Settings → Data & automation (contract: one configuration surface, every host — the Work
- * pattern, generalized). Its two concerns are stacked sections, not tabs: Configure is one
- * surface's contextual configuration, and a stack needs no nested navigation. Pipeline reuses `StageSettingsSheet`, the same trigger the Pipeline
- * board's own header already offers, rather than a second stage-editing surface.
+ * a relationship moves through. Rendered in the Customers page's own Configure rail. Its two
+ * concerns are stacked sections, not tabs: Configure is one surface's contextual configuration,
+ * and a stack needs no nested navigation. Pipeline reuses `StageSettingsSheet`, the same trigger
+ * the Pipeline board's own header and the dedicated "Sales stages" Settings page both open,
+ * rather than a second stage-editing surface.
  */
 export function CustomerConfiguration({
   organizationId,

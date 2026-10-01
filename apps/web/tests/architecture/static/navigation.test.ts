@@ -17,7 +17,7 @@ import {
   type Module,
 } from '@/lib/navigation';
 import { SETTINGS_SECTIONS } from '@/features/settings/settings-map';
-import { AREA_ICONS } from '@/app/organizations/[organizationId]/org-shell';
+import { AREA_ICONS, NAV_ICONS } from '@/app/organizations/[organizationId]/org-shell';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
 /**
@@ -84,6 +84,14 @@ describe('the operator shell navigation', () => {
     // render blank rather than failing loudly.
     for (const area of AREAS.filter((entry) => entry.sidebar !== false)) {
       expect(AREA_ICONS[area.segment], `"${area.segment}" has no rail icon`).toBeDefined();
+    }
+  });
+
+  it('gives every registered workspace row an icon — a canonical key with no NAV_ICONS entry renders blank in the collapsed rail, the phone bar and More', () => {
+    // Only a workspace with a Home page draws a row at all (`projectShell`); Marketing, Support
+    // and AI register no `home` yet and so project no `workspace-*` key to carry an icon.
+    for (const workspace of WORKSPACES.filter((entry) => entry.home)) {
+      expect(NAV_ICONS[`workspace-${workspace.key}`], `"workspace-${workspace.key}" has no nav icon`).toBeDefined();
     }
   });
 

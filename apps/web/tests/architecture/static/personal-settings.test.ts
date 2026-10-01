@@ -81,12 +81,14 @@ describe('scope stays honest in both directions', () => {
     }
   });
 
-  it('Account is a scope tab, not a section duplicated inside the Organization index (D71)', () => {
-    const orgSettings = read('app/organizations/[organizationId]/settings/page.tsx');
-    expect(orgSettings).toContain('<SettingsScopeNav');
-    expect(orgSettings).not.toContain('PersonalSettingsEntries');
-    const shell = read('features/account/personal-settings-shell.tsx');
-    expect(shell).toContain('<SettingsScopeNav');
+  it('Account is a Settings landing destination, not a section duplicated inside the Organization index (D71)', () => {
+    const landing = read('app/organizations/[organizationId]/settings/page.tsx');
+    expect(landing).toContain('<SettingsLanding');
+    expect(landing).not.toContain('PersonalSettingsEntries');
+    const organizationDirectory = read('app/organizations/[organizationId]/settings/organization/page.tsx');
+    expect(organizationDirectory).not.toContain('PersonalSettingsEntries');
+    // The retired global tab bar is gone outright, not merely unused.
+    expect(() => read('features/settings/settings-scope-nav.tsx')).toThrow();
   });
 
   it('the shell no longer special-cases the Personal settings address — Settings is not a permanent sidebar row to mark current', () => {
@@ -98,10 +100,11 @@ describe('scope stays honest in both directions', () => {
     expect(shell).toContain('myOrganizations.find((organization) => organization.id === returnOrganizationId)');
   });
 
-  it('personal ownership is explicit while organization identity comes from its active Settings scope', () => {
+  it('personal ownership is explicit, and Organization is its own Settings landing destination', () => {
     expect(read('app/settings/account/page.tsx')).toContain('belongs to you, not to any business');
-    const organization = read('app/organizations/[organizationId]/settings/page.tsx');
-    expect(organization).toContain('active="organization"');
+    const landing = read('app/organizations/[organizationId]/settings/page.tsx');
+    expect(landing).toContain("title={areaLabel('settings')}");
+    const organization = read('app/organizations/[organizationId]/settings/organization/page.tsx');
     expect(organization).toContain('title="Organization"');
   });
 });

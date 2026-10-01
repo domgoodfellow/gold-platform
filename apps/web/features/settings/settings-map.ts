@@ -60,7 +60,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     title: 'Customers & data',
     entries: [
       entry('custom-fields', 'Custom fields', 'The extra details this business records about its customers, jobs and places.'),
-      entry('call-setup', 'Calls and sales stages', 'The words this business uses for how a call went, and the stages a relationship moves through.'),
+      entry('sales-stages', 'Sales stages', 'The stages a relationship moves through, in order.'),
     ],
   },
   {
@@ -83,6 +83,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     title: 'Connections',
     entries: [
       entry('communications', 'Phone and email', 'The phone numbers and email address this business sends from.'),
+      entry('call-setup', 'Call setup', 'The words this business uses for how a call went, routing, and caller identity.'),
       entry('integrations', 'Apps and files', 'The outside apps this business connects, and the data it brings in.'),
     ],
   },
