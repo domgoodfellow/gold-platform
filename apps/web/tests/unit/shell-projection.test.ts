@@ -70,10 +70,10 @@ describe('GOLD owner who is also a platform operator', () => {
     // GOLD-only child (Plans & Add-ons), so Finance is an expandable row for them though it would
     // be a plain row for an ordinary member. Insights is not a workspace row at all (D66) — it is
     // reached contextually.
-    expect(topLevel(sections, 'workspaces')).toEqual(['workspace-sales', 'workspace-comms', 'workspace-finance', 'workspace-automations', 'workspace-field', 'workspace-studio']);
+    expect(topLevel(sections, 'workspaces')).toEqual(['workspace-crm', 'workspace-communications', 'workspace-finance', 'workspace-automations', 'workspace-field', 'workspace-studio']);
     expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-sales', 'customers', 'pipeline',
-      'workspace-comms', 'calls', 'comms-messages', 'comms-numbers',
+      'workspace-crm', 'customers', 'pipeline',
+      'workspace-communications', 'calls', 'comms-messages', 'comms-numbers',
       'workspace-finance', 'finance-plans',
       'workspace-automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets',
@@ -82,13 +82,13 @@ describe('GOLD owner who is also a platform operator', () => {
     const row = (key: string) => sections.flatMap((section) => section.items).find((item) => item.key === key)!;
     // The parent's own destination is the workspace's Home, never repeated as a child beneath it.
     expect(row('workspace-field').children?.map((page) => page.key)).toEqual(['work', 'schedule', 'resources', 'locations', 'assets']);
-    expect(row('workspace-sales').children?.map((page) => page.key)).toEqual(['customers', 'pipeline']);
+    expect(row('workspace-crm').children?.map((page) => page.key)).toEqual(['customers', 'pipeline']);
     expect(row('workspace-automations').children?.map((page) => page.label)).toEqual(['Rules', 'Messages', 'Activity']);
-    expect(row('workspace-comms').children?.map((page) => page.key)).toEqual(['calls', 'comms-messages', 'comms-numbers']);
+    expect(row('workspace-communications').children?.map((page) => page.key)).toEqual(['calls', 'comms-messages', 'comms-numbers']);
     expect(row('workspace-field').label).toBe('Field');
     expect(row('workspace-field').href).toBe(`/organizations/${ORG}/field`);
-    expect(row('workspace-sales').href).toBe(`/organizations/${ORG}/sales`);
-    expect(row('workspace-comms').href).toBe(`/organizations/${ORG}/comms`);
+    expect(row('workspace-crm').href).toBe(`/organizations/${ORG}/sales`);
+    expect(row('workspace-communications').href).toBe(`/organizations/${ORG}/comms`);
     expect(row('workspace-automations').href).toBe(`/organizations/${ORG}/automations`);
     // For this platform operator, Finance is expandable: Home plus Plans & Add-ons.
     expect(row('workspace-finance').children?.map((page) => page.key)).toEqual(['finance-plans']);
@@ -174,7 +174,7 @@ describe('GOLD sales member in the same organization', () => {
 
   it('uses GOLD as an ordinary business: sales, customers and calls', () => {
     expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-sales', 'customers', 'pipeline', 'workspace-comms', 'calls', 'comms-messages', 'comms-numbers', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio',
+      'workspace-crm', 'customers', 'pipeline', 'workspace-communications', 'calls', 'comms-messages', 'comms-numbers', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio',
     ]);
   });
 
@@ -240,7 +240,7 @@ describe('tenant ordinary member', () => {
   const technician = project(preset('technician'));
 
   it('sees the operational workspaces their business has, and nothing administrative', () => {
-    expect(keys(technician, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
+    expect(keys(technician, 'workspaces')).toEqual(['workspace-crm', 'customers', 'pipeline', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
     expect(keys(technician, 'business')).toEqual([]);
     expect(keys(technician, 'platform')).toEqual([]);
   });
@@ -248,7 +248,7 @@ describe('tenant ordinary member', () => {
   it('a viewer with no capability at all still gets the kernel, and no administration', () => {
     const viewer = project(preset('viewer'));
     expect(keys(viewer, 'home')).toEqual(['home']);
-    expect(keys(viewer, 'workspaces')).toEqual(['workspace-sales', 'customers', 'pipeline', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
+    expect(keys(viewer, 'workspaces')).toEqual(['workspace-crm', 'customers', 'pipeline', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
     expect(keys(viewer, 'business')).toEqual([]);
   });
 });
@@ -278,7 +278,7 @@ describe('entitlement absent', () => {
     // Assets is a module: without it Field has the rest of its pages, and no more. No modules: no
     // Pipeline, so Sales has just Home and the kernel Customers; the Home is never a child.
     expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-sales', 'customers', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'workspace-studio',
+      'workspace-crm', 'customers', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'workspace-studio',
     ]);
     // Connections is a product too: no Integrations entitlement, no item — Team and Plan remain.
     expect(keys(sections, 'business')).toEqual(['team', 'plan']);
@@ -307,7 +307,7 @@ describe('the phone renders the same projection', () => {
     // still has only its one page, so it stays a loose item under the section's own "Workspaces"
     // heading — the same rule a parent with pages follows, applied to a workspace with none.
     expect(more.map((section) => section.label)).toEqual([
-      null, 'Workspaces', 'Sales', 'Communications', 'Finance', 'Automations', 'Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
+      null, 'Workspaces', 'CRM', 'Communications', 'Finance', 'Automations', 'Field', 'Business', 'Platform administration', 'Catalog', 'Commercial', 'Infrastructure',
     ]);
     expect(more[0].items.map((item) => item.key)).toEqual(['library']);
     expect(more[1].items.map((item) => item.key)).toEqual(['workspace-studio']);
@@ -335,7 +335,7 @@ describe('the phone renders the same projection', () => {
     ]);
     // Platform's own pages lead More; GOLD's workspaces follow. Ten Platform destinations and every workspace never share the bar.
     expect(platform.more.map((section) => section.label)).toEqual([
-      'Catalog', 'Commercial', 'Infrastructure', null, 'Workspaces', 'Sales', 'Communications', 'Finance', 'Automations', 'Field', 'Business',
+      'Catalog', 'Commercial', 'Infrastructure', null, 'Workspaces', 'CRM', 'Communications', 'Finance', 'Automations', 'Field', 'Business',
     ]);
     const phone = pagesOf([...platform.primary, ...platform.more.flatMap((section) => section.items)]);
     expect(phone).toEqual(pagesOf(projectedItems(sections)));
@@ -410,7 +410,7 @@ describe('the current item', () => {
     }
     // Home is never a child, so its own address marks the parent — not a separate 'field' leaf.
     expect(activeItemKey(sections, `/organizations/${ORG}/field`)).toBe('workspace-field');
-    expect(itemContains(items.find((item) => item.key === 'workspace-sales')!, 'work')).toBe(false);
+    expect(itemContains(items.find((item) => item.key === 'workspace-crm')!, 'work')).toBe(false);
     // A page of a bigger route activates itself, not the page it is nested under.
     expect(activeItemKey(sections, `/organizations/${ORG}/customers/pipeline`)).toBe('pipeline');
     expect(activeItemKey(sections, `/organizations/${ORG}/customers/abc`)).toBe('customers');

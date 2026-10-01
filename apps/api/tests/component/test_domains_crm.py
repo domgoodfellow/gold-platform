@@ -17,7 +17,7 @@ from app.domains.crm.stages import (
     ChangeCustomerStageResult,
     change_customer_stage,
 )
-from app.domains.errors import DomainError, NotFoundError, ValidationError
+from app.errors import DomainError, NotFoundError, ValidationError
 
 SETTINGS = DomainSettings(supabase_url="http://db.test", supabase_publishable_key="anon")
 ORG = "11111111-1111-4111-8111-111111111111"

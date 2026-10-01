@@ -156,7 +156,10 @@ describe('the phone bar is one projection with a More menu', () => {
 
   it('Platform is offered only from server-resolved facts, inside the one shell', () => {
     const org = read('features/shell/organization-shell.tsx');
-    expect(org).toContain('staff && gold ? await platformPermissions(db) : null');
+    // Phase C (Slice 12) moved this read, with the rest of the shell's coordinating reads, out of
+    // the layout component into one application-layer function the layout calls once.
+    const orgShellModel = read('lib/application/shell/organization-shell.ts');
+    expect(orgShellModel).toContain('staff && gold ? await platformPermissions(db) : null');
     expect(org).not.toMatch(/platformStaff=|isGoldInternal=/);
   });
 

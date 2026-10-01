@@ -79,7 +79,7 @@ describe('the conversation header', () => {
 
   it('an unsaved conversation is titled New chat, and New chat is an unsaved state that focuses the composer', () => {
     expect(tenantRail).toContain(": 'New chat';");
-    const newChat = between(tenantRail, 'function newChat', 'if (!canAnswer)');
+    const newChat = between(tenantRail, 'function newChat', '}\n\n  const title');
     expect(newChat).toContain("setView({ kind: 'new' })");
     expect(newChat).toContain('composer.current?.focus()');
     expect(newChat).not.toMatch(/Action\(|createAgentConversation/);
@@ -268,13 +268,46 @@ describe('Context and Configure are composer popovers, and inspection only', () 
   });
 });
 
-describe('the shell loads a bounded list and one transcript', () => {
-  it('reads summaries and only the latest transcript, never every run', () => {
-    expect(layout).toContain('listAgentConversationSummaries(db, { organizationId })');
-    expect(layout.match(/listAgentConversationRuns\(/g)).toHaveLength(1);
-    expect(layout).not.toContain('listAgentRuns');
+describe('the shell holds no Agent transcript, and the rail fetches its own on first open', () => {
+  it('the shell never reads a conversation, a run, or whether the Agent can answer', () => {
+    // Eager shell-time Agent data was the N+1 the lazy bootstrap replaced (Phase C, Slice 12):
+    // every organization page load once paid for History and a transcript nobody had opened yet.
+    expect(code(layout)).not.toMatch(/listAgentConversationSummaries|listAgentConversationRuns|canAnswerQuestions|canAnswerPlatformQuestions/);
+  });
+
+  it('TenantAgentRail\'s shell-time props are static only — no eager canAnswer, conversations or transcript', () => {
+    const shell = code(layout);
+    const element = shell.slice(shell.indexOf('<TenantAgentRail'), shell.indexOf('/>', shell.indexOf('<TenantAgentRail')));
+    expect(element).not.toMatch(/canAnswer|conversations|initialConversation/);
+    expect(element).toMatch(/organizationId/);
+    expect(element).toMatch(/mayAsk/);
+  });
+
+  it('fetches summaries and only the latest transcript lazily, from one bootstrap action, never every run', () => {
+    expect(actions).toContain('export async function loadAgentBootstrapAction');
+    const bootstrap = actions.slice(
+      actions.indexOf('export async function loadAgentBootstrapAction'),
+      actions.indexOf('export async function loadPlatformAgentAvailabilityAction'),
+    );
+    expect(bootstrap).toContain('listAgentConversationSummaries(db, { organizationId })');
+    expect(bootstrap.match(/listAgentConversationRuns\(/g)?.length).toBe(1);
+    expect(actions).not.toContain('listAgentRuns');
     expect(questions).not.toMatch(/export async function listAgentRuns/);
     expect(questions).toMatch(/CONVERSATION_RUN_LIMIT = \d+/);
+  });
+
+  it('the rail defers that fetch until the panel has actually been opened once', () => {
+    expect(tenantRail).toContain('agentOpen');
+    expect(tenantRail).toContain('everOpened');
+    expect(tenantRail).toContain('loadAgentBootstrapAction(organizationId)');
+    expect(tenantRail).toMatch(/if \(!everOpened\) return null;|if \(!everOpened\)/);
+  });
+
+  it('the Platform Agent proves its own platform scope and defers the same way', () => {
+    expect(actions).toContain('export async function loadPlatformAgentAvailabilityAction');
+    expect(actions).toContain('requirePlatformScope(goldId)');
+    expect(platformRail).toContain('everOpened');
+    expect(platformRail).toContain('loadPlatformAgentAvailabilityAction(goldId)');
   });
 
   it('never filters by author in TypeScript — the policy is the boundary', () => {
@@ -288,9 +321,9 @@ describe('a question’s result reaches the rail from any page', () => {
     expect(tenantRail).toContain("setView({ kind: 'opened'");
   });
 
-  it('still refreshes the whole organization layout, never one page', () => {
-    expect(actions).toContain("revalidatePath(`/organizations/${organizationId}`, 'layout')");
-    expect(code(actions)).not.toMatch(/\/ask\b/);
+  it('hands History its refreshed state directly, rather than revalidating a layout the rail no longer depends on', () => {
+    expect(code(actions)).not.toMatch(/revalidatePath/);
+    expect(tenantRail).toContain('setConversationList(result.conversations)');
   });
 
   it('shows the question at once with a Thinking note until it is answered', () => {

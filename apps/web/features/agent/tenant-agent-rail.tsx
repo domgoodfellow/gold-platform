@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Checkbox } from '@gold/ui/components/checkbox';
 import { SlidersHorizontal, Info } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
-import { useAgentContent } from '@/components/panels/workspace-right-rail';
+import { useAgentContent, useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import {
   AgentComposer,
   AgentContextFacts,
@@ -30,6 +30,7 @@ import {
 import {
   askAction,
   decideAction,
+  loadAgentBootstrapAction,
   openConversationAction,
   removeAttachmentAction,
   uploadAttachmentAction,
@@ -83,6 +84,9 @@ function TenantAgentPanel({
   initialConversation: InitialConversation | null;
 }) {
   const [view, setView] = useState<View>({ kind: 'default' });
+  // Lifted from the bootstrap read so a write can hand History its own refreshed state directly,
+  // rather than this panel going stale until it is unmounted and re-bootstrapped.
+  const [conversationList, setConversationList] = useState(conversations);
   const [askError, setAskError] = useState<string | null>(null);
   const [decideError, setDecideError] = useState<string | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<{ text: string; attachments: AgentAttachment[] } | null>(null);
@@ -118,6 +122,7 @@ function TenantAgentPanel({
     if (!result.error && result.conversationId && result.runs) {
       setView({ kind: 'opened', conversationId: result.conversationId, runs: result.runs });
     }
+    if (!result.error && result.conversations) setConversationList(result.conversations);
   }
 
   const [, askFormAction, asking] = useActionState(
@@ -223,7 +228,7 @@ function TenantAgentPanel({
   }
 
   const title = shown
-    ? (conversations.find((conversation) => conversation.id === shown.id)?.title ??
+    ? (conversationList.find((conversation) => conversation.id === shown.id)?.title ??
       deriveConversationTitle(shown.runs.at(-1)?.question ?? 'New chat'))
     : 'New chat';
 
@@ -247,7 +252,7 @@ function TenantAgentPanel({
     <AgentPanelFrame>
       <AgentConversationHeader
         title={title}
-        conversations={conversations}
+        conversations={conversationList}
         currentId={shown?.id ?? null}
         onOpen={openConversation}
         onNewChat={newChat}
@@ -348,50 +353,88 @@ function TenantAgentPanel({
   );
 }
 
-/** Registers the Agent rail's content for Tenant scope, once, at the organization shell root, so
+/**
+ * Registers the Agent rail's content for Tenant scope, once, at the organization shell root, so
  * it survives every page's own mount/unmount as somebody navigates the business. Renders nothing
- * itself. */
+ * itself.
+ *
+ * Shell-time props are static only — `organizationId`, `organizationName`, `timezone`, `mayAsk`
+ * and `canManageConnections` are facts the shell already read for the page around it. Everything
+ * an open conversation needs (`canAnswer`, History, the latest transcript) is a *conversation*
+ * fact, not a shell one, and is fetched here lazily, from `loadAgentBootstrapAction`, the first
+ * time the panel is actually opened — this component mounts on every page regardless of whether
+ * Agent is ever opened, so fetching eagerly here would be the same N+1-on-every-page-load the shell
+ * was just relieved of, moved one component down rather than removed.
+ */
 export function TenantAgentRail(props: {
   organizationId: string;
   organizationName: string;
   timezone: string;
-  canAnswer: boolean;
   mayAsk: boolean;
   canManageConnections: boolean;
-  conversations: AgentConversationSummary[];
-  initialConversation: InitialConversation | null;
 }) {
-  const {
-    organizationId,
-    organizationName,
-    timezone,
-    canAnswer,
-    mayAsk,
-    canManageConnections,
-    conversations,
-    initialConversation,
-  } = props;
+  const { organizationId, organizationName, timezone, mayAsk, canManageConnections } = props;
+
+  // The same lazy-mount rule `AgentPanel` applies to whether the panel's content is shown at all:
+  // here it gates whether this rail's own data fetch ever runs. `agentOpen` flips as soon as
+  // somebody opens the panel; `everOpened` keeps the fetch from repeating on every close/reopen.
+  const { agentOpen } = useWorkspaceRail();
+  const [everOpened, setEverOpened] = useState(false);
+  if (agentOpen && !everOpened) setEverOpened(true);
+
+  const [bootstrap, setBootstrap] = useState<{
+    error: string | null;
+    canAnswer: boolean;
+    conversations: AgentConversationSummary[];
+    initialConversation: InitialConversation | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!everOpened || bootstrap) return;
+    let active = true;
+    void loadAgentBootstrapAction(organizationId).then((result) => {
+      if (active) setBootstrap(result);
+    });
+    return () => {
+      active = false;
+    };
+  }, [everOpened, bootstrap, organizationId]);
 
   // Memoized so `useAgentContent`'s effect — keyed on this element's identity — runs once rather
   // than on every re-render this component takes as a `RailContext` consumer (it re-renders
   // whenever *any* rail state changes, including its own registration taking effect). Keyed by
   // business so a selection never outlives switching to another one.
-  const content = useMemo(
-    () => (
+  const content = useMemo(() => {
+    if (!everOpened) return null;
+    if (!bootstrap) {
+      return (
+        <AgentPanelFrame>
+          <div role="status" className="flex flex-1 items-center justify-center text-sm text-muted">
+            Loading…
+          </div>
+        </AgentPanelFrame>
+      );
+    }
+    // A bootstrap error (the session no longer belongs to this business, say) is treated the same
+    // way a deployment that cannot answer is: the conversation grammar stays — History, the
+    // composer, the transcript — and only asking goes off. A separate "Agent unavailable" surface
+    // for this would say something different from what `canAnswer` already says everywhere else
+    // in this panel.
+    return (
       <TenantAgentPanel
         key={organizationId}
         organizationId={organizationId}
         organizationName={organizationName}
         timezone={timezone}
-        canAnswer={canAnswer}
+        canAnswer={bootstrap.error === null && bootstrap.canAnswer}
         mayAsk={mayAsk}
         canManageConnections={canManageConnections}
-        conversations={conversations}
-        initialConversation={initialConversation}
+        conversations={bootstrap.conversations}
+        initialConversation={bootstrap.initialConversation}
       />
-    ),
-    [organizationId, organizationName, timezone, canAnswer, mayAsk, canManageConnections, conversations, initialConversation],
-  );
+    );
+  }, [everOpened, bootstrap, organizationId, organizationName, timezone, mayAsk, canManageConnections]);
+
   useAgentContent(content);
   return null;
 }

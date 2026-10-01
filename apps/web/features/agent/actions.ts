@@ -1,11 +1,12 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import {
   askQuestion,
   decideOnAction,
   listAgentConversationRuns,
+  listAgentConversationSummaries,
+  type AgentConversationSummary,
   type AgentRun,
 } from '@/lib/domain/assistant/questions';
 import { DomainError } from '@/lib/domain/errors';
@@ -16,6 +17,9 @@ import {
 } from '@/lib/domain/assistant/attachments';
 import { resolveAgentViewing } from './agent-context';
 import { requireOrganization } from '@/lib/route/organization';
+import { requirePlatformScope } from '@/lib/route/platform';
+import { canAnswerQuestions } from '@/lib/domain/assistant/questions';
+import { canAnswerPlatformQuestions } from '@/lib/domain/assistant/platform-questions';
 
 /**
  * What an Agent action hands back. `runs` is the transcript of the conversation it touched,
@@ -27,7 +31,42 @@ export type AskActionState = {
   error: string | null;
   conversationId?: string;
   runs?: AgentRun[];
+  conversations?: AgentConversationSummary[];
 };
+
+export type AgentBootstrapState = {
+  error: string | null;
+  canAnswer: boolean;
+  conversations: AgentConversationSummary[];
+  initialConversation: { id: string; runs: AgentRun[] } | null;
+};
+
+export async function loadAgentBootstrapAction(organizationId: string): Promise<AgentBootstrapState> {
+  const { db } = await requireOrganization(organizationId);
+  try {
+    const [conversations, canAnswer] = await Promise.all([
+      listAgentConversationSummaries(db, { organizationId }),
+      canAnswerQuestions(),
+    ]);
+    const latest = conversations[0];
+    return {
+      error: null,
+      canAnswer,
+      conversations,
+      initialConversation: latest
+        ? { id: latest.id, runs: await listAgentConversationRuns(db, { organizationId, conversationId: latest.id }) }
+        : null,
+    };
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message, canAnswer: false, conversations: [], initialConversation: null };
+    throw error;
+  }
+}
+
+export async function loadPlatformAgentAvailabilityAction(goldId: string): Promise<boolean> {
+  await requirePlatformScope(goldId);
+  return canAnswerPlatformQuestions();
+}
 
 /**
  * One write, and it is a question.
@@ -43,9 +82,8 @@ export async function askAction(
   _previous: AskActionState,
   formData: FormData,
 ): Promise<AskActionState> {
-  const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
+  const { db } = await requireOrganization(organizationId);
   const conversationId = String(formData.get('conversationId') ?? '') || null;
   // Where the person is comes from the path, re-derived here against navigation's own areas — a
   // label the browser sent would be a sentence somebody else wrote into the prompt. The Configure
@@ -70,15 +108,13 @@ export async function askAction(
         organizationId,
         conversationId: run.conversationId,
       }),
+      conversations: await listAgentConversationSummaries(db, { organizationId }),
     };
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;
   }
 
-  // The Agent rail is mounted by the organization layout, so its History list (order and titles)
-  // is refreshed there, on whichever page the question was asked from.
-  revalidatePath(`/organizations/${organizationId}`, 'layout');
   return state;
 }
 
@@ -91,8 +127,7 @@ export async function openConversationAction(
   organizationId: string,
   conversationId: string,
 ): Promise<AskActionState> {
-  await requireOrganization(organizationId);
-  const db = await getDb();
+  const { db } = await requireOrganization(organizationId);
 
   try {
     const runs = await listAgentConversationRuns(db, { organizationId, conversationId });
@@ -155,9 +190,8 @@ export async function decideAction(
   _previous: AskActionState,
   formData: FormData,
 ): Promise<AskActionState> {
-  const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
+  const { db } = await requireOrganization(organizationId);
 
   let state: AskActionState;
   try {
@@ -172,13 +206,15 @@ export async function decideAction(
         organizationId,
         conversationId: run.conversationId,
       }),
+      conversations: await listAgentConversationSummaries(db, { organizationId }),
     };
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;
   }
 
-  // The Agent rail is mounted by the organization layout, so its history is refreshed there.
-  revalidatePath(`/organizations/${organizationId}`, 'layout');
+  // The rail holds its own History state once it has loaded, from its first-open bootstrap; this
+  // result carries the refreshed conversation list back to it directly, so nothing here revalidates
+  // a layout the rail no longer depends on to see its own write.
   return state;
 }

@@ -5,7 +5,7 @@ import { SectionHeading } from '@/components/surfaces/section';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { Widget, WidgetGrid } from '@/components/display/widget';
-import type { PlatformOverview as PlatformOverviewData } from '@/lib/domain/platform/overview';
+import type { PlatformOverview as PlatformOverviewData } from '@/lib/application/platform/platform-overview';
 
 /**
  * The Platform overview, the landing screen. An area dashboard in the `ui-spec.md` §2b sense — the same

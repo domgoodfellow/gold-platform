@@ -19,9 +19,9 @@ import json
 import pytest
 
 from app.core.config import ProviderOperationsSettings
-from app.domains.errors import NotFoundError, ValidationError
-from app.domains.web_delivery import domains as ops
-from app.domains.web_delivery.domains import (
+from app.errors import NotFoundError, ValidationError
+from app.services.web_delivery import operations as ops
+from app.services.web_delivery.operations import (
     HostnameUnavailableError,
     ProviderRefusedError,
     ProviderUnavailableError,

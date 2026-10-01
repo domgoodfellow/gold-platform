@@ -215,12 +215,13 @@ export async function getCatalogFeature(db: Db, featureId: string): Promise<Cata
   return data ? toFeature(data) : null;
 }
 
-export async function listRuntimeMappings(db: Db, featureId: string): Promise<RuntimeMapping[]> {
-  const { data, error } = await db
+export async function listRuntimeMappings(db: Db, featureId?: string): Promise<RuntimeMapping[]> {
+  let query = db
     .from('platform_catalog_runtime_mappings')
     .select('id, feature_id, mapping_kind, mapping_value, note')
-    .eq('feature_id', featureId)
     .order('mapping_kind');
+  if (featureId) query = query.eq('feature_id', featureId);
+  const { data, error } = await query;
   if (error) throw new DomainError(error.message, 'catalogue.runtime_mappings_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -248,11 +249,12 @@ export async function listFeaturesByRuntimeMapping(
   });
 }
 
-export async function listFeatureDependencies(db: Db, featureId: string): Promise<FeatureDependency[]> {
-  const { data, error } = await db
+export async function listFeatureDependencies(db: Db, featureId?: string): Promise<FeatureDependency[]> {
+  let query = db
     .from('platform_catalog_feature_dependencies')
-    .select('feature_id, requires_feature_id')
-    .eq('feature_id', featureId);
+    .select('feature_id, requires_feature_id');
+  if (featureId) query = query.eq('feature_id', featureId);
+  const { data, error } = await query;
   if (error) throw new DomainError(error.message, 'catalogue.dependencies_failed');
   return (data ?? []).map((row) => ({ featureId: row.feature_id, requiresFeatureId: row.requires_feature_id }));
 }

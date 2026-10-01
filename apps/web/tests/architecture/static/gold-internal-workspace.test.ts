@@ -9,6 +9,9 @@ const read = (path: string) => readFileSync(`${WEB}/${path}`, 'utf8');
 describe('GOLD Internal operating context composition', () => {
   const helper = read('lib/domain/tenancy/gold-internal.ts');
   const shell = read('features/shell/organization-shell.tsx');
+  // Phase C (Slice 12) moved this read, with the rest of the shell's coordinating reads, out of
+  // the layout component into one application-layer function the layout calls once.
+  const shellModel = read('lib/application/shell/organization-shell.ts');
   const renderers = readFileSync(`${ORG}/org-shell.tsx`, 'utf8');
 
   it('identifies only current base-plan assignments for actual memberships, never a business name', () => {
@@ -26,9 +29,9 @@ describe('GOLD Internal operating context composition', () => {
 
   it('asks of the organization being drawn whether it is GOLD, by plan, never by the person', () => {
     expect(helper).toContain('export async function isGoldInternalOrganization');
-    expect(shell).toContain('isGoldInternalOrganization(db, { organizationId })');
+    expect(shellModel).toContain('isGoldInternalOrganization(db, { organizationId })');
     // Platform permissions are read only when both are true, and are null everywhere else.
-    expect(shell).toContain('staff && gold ? await platformPermissions(db) : null');
+    expect(shellModel).toContain('staff && gold ? await platformPermissions(db) : null');
   });
 
   it('renders Platform beneath the one organization shell — no second shell exists', () => {

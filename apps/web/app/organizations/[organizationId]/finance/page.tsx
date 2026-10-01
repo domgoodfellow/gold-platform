@@ -2,7 +2,7 @@ import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { DividedList, EmptyState } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Widget, WidgetGrid } from '@/components/display/widget';
-import { financeOverview } from '@/lib/domain/finance/finance-overview';
+import { financeOverview } from '@/lib/application/finance/finance-overview';
 import { platformPermissions } from '@/lib/domain/platform/permissions';
 import { isGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import { formatMoney } from '@/lib/domain/work-items/consumption';

@@ -22,8 +22,8 @@ import httpx
 from app.auth import CallerContext
 from app.core import db
 from app.core.config import IntegrationSettings
-from app.domains.errors import DomainError, NotFoundError, ValidationError
-from app.domains.integrations.state import StateInvalid, sign_state, verify_state
+from app.errors import DomainError, NotFoundError, ValidationError
+from app.services.integrations.state import StateInvalid, sign_state, verify_state
 from app.connectors import oauth_app_for, oauth_provider_for
 from app.connectors.base import OAuthApp, OAuthProvider, Tokens
 from app.providers.providers import UpstreamRefused

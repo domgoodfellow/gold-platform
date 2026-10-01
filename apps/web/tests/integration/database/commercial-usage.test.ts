@@ -133,6 +133,13 @@ async function openAndCharge(caller: Tenant, durationSeconds: number): Promise<s
   });
   if (error) throw error;
 
+  // `open_call` starts the call `ringing`; in production the carrier's own `completed` callback
+  // (`record_call_event`) is what moves it to `completed` before `app.charge_for_call` ever
+  // runs — `app.charge_for_call` returns silently, charging nothing, for a call that is not
+  // `completed` yet. Written directly here, over the same connection the migrations themselves
+  // run on, standing in for that callback without a signed webhook payload.
+  await pg.query(`update public.calls set status = 'completed', ended_at = now() where id = $1`, [callId]);
+
   // Only a carrier callback (`record_call_event`) reaches `app.charge_for_call` in production;
   // called directly here, over the same connection the migrations themselves run on, to test it
   // without also standing up a signed webhook payload.

@@ -115,6 +115,18 @@ export async function getTenant(db: Db, organizationId: string): Promise<Tenant 
   return data ? toTenant(data) : null;
 }
 
+/** A bounded platform read for callers that already hold tenant identifiers. */
+export async function listTenantsByIds(db: Db, organizationIds: string[]): Promise<Tenant[]> {
+  if (organizationIds.length === 0) return [];
+  await requireActor(db);
+  const { data, error } = await db
+    .from('platform_tenants')
+    .select('id, name, created_at, timezone, currency, slug, module_keys, last_activity_at, operational_state')
+    .in('id', [...new Set(organizationIds)]);
+  if (error) throw new DomainError(error.message, 'platform.tenants_failed');
+  return (data ?? []).map(toTenant).filter((tenant): tenant is Tenant => tenant !== null);
+}
+
 /** A screenful several times over, not a claim about how many tenants there will be. */
 export const TENANT_PAGE = 200;
 

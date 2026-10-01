@@ -57,7 +57,8 @@ describe('canonical Settings route contract', () => {
     expect(read('app/organizations/[organizationId]/settings/pricing/page.tsx')).toContain("label: 'Settings'");
     expect(read('app/organizations/[organizationId]/settings/access/access-page.tsx')).toContain("label: 'Access'");
     expect(read('app/organizations/[organizationId]/settings/connections/[connectionId]/page.tsx')).toContain("label: 'Connections'");
-    expect(read('app/organizations/[organizationId]/settings/plan/page.tsx')).toContain('title="Plan & usage"');
+    // Phase C (Slice 9) moved this route's identity into the Screen its thin page delegates to.
+    expect(read('features/settings/plan-usage-screen.tsx')).toContain('title="Plan & usage"');
   });
 
   it('keeps legacy routes as direct redirects to final canonical destinations', () => {

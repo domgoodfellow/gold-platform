@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler
 from app.auth import AuthError, require_caller
 from app.core.config import load_domain_settings
 from app.domains.communications.voice.wrap_up import WrapUpCallCommand, wrap_up_call
-from app.domains.errors import DomainError
+from app.errors import DomainError
 
 
 class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name

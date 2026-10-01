@@ -90,8 +90,8 @@ async function fulfilment(organizationId: string, number: string, accountForBind
   return { bindingId: binding[0].id as string, resourceId: resource[0].id as string };
 }
 
-async function retailAt(meter: string, moment: string) {
-  const { rows } = await pg.query('select * from app.retail_rate_at($1, $2, $3::timestamptz)', [meter, CURRENCY, moment]);
+async function retailAt(meter: string, moment: string, organizationId = tenant.organizationId) {
+  const { rows } = await pg.query('select * from app.retail_rate_at($1, $2, $3, $4::timestamptz)', [meter, CURRENCY, organizationId, moment]);
   return rows[0] as { id: string; unit_amount_micros: string } | undefined;
 }
 
@@ -263,13 +263,48 @@ describe('retail rate resolution', () => {
   it('answers nothing for a moment before any price, and nothing for a meter or currency with none', async () => {
     expect(await retailAt('voice_minutes', at(-3 * DAY))).toBeUndefined();
     expect(await retailAt('email_send', at(0))).toBeUndefined();
-    const { rows } = await pg.query(`select * from app.retail_rate_at('voice_minutes', 'XZZ', now())`);
+    const { rows } = await pg.query(`select * from app.retail_rate_at('voice_minutes', 'XZZ', $1, now())`, [tenant.organizationId]);
     expect(rows).toEqual([]);
   });
 
   it('reads the currency without regard to case', async () => {
-    const { rows } = await pg.query(`select * from app.retail_rate_at('voice_minutes', $1, now())`, [CURRENCY.toLowerCase()]);
+    const { rows } = await pg.query(`select * from app.retail_rate_at('voice_minutes', $1, $2, now())`, [CURRENCY.toLowerCase(), tenant.organizationId]);
     expect(rows).toHaveLength(1);
+  });
+
+  it('never resolves another organization\'s negotiated rate, even one that would otherwise sort first (20261028000001)', async () => {
+    // A negotiated rate for `other`, dated after every global row above — if `app.retail_rate_at`
+    // ever went back to ignoring the organization it is pricing for, this is exactly what would
+    // leak: `tenant`'s own usage priced at a rate GOLD only agreed with a different business.
+    // A negotiated rate needs a Plan to be negotiated under
+    // (`platform_retail_rates_organization_needs_plan`); created directly, over the same raw
+    // connection the rest of this suite's setup uses, since the staff-only recording door also
+    // requires a real Plan assignment this test has no other reason to stand up.
+    const { rows: ownerRows } = await pg.query(`select created_by from public.organizations where id = $1`, [other.organizationId]);
+    const { rows: planRows } = await pg.query(
+      `insert into public.platform_plans (key, kind, label, created_by) values ($1, 'plan', 'Negotiated test plan', $2) returning id`,
+      [`negotiated_${randomUUID().slice(0, 8)}`, ownerRows[0].created_by],
+    );
+    await pg.query(
+      `insert into public.platform_retail_rates
+         (meter_id, currency, unit_amount_micros, approval_state, effective_from, source, organization_id, plan_id)
+       values ('voice_minutes', $1, 1, 'approved', $2::timestamptz, 'usage-economics.test.ts', $3, $4)`,
+      [CURRENCY, at(3 * DAY), other.organizationId, planRows[0].id],
+    );
+    // A negotiated rate is scoped to a Plan as well as an organization (the check constraint
+    // above), so resolving it for real usage also needs `other` to currently hold that Plan.
+    await pg.query(
+      `insert into public.organization_plan_assignments (organization_id, plan_id, plan_kind, period_start, period_end, assigned_by)
+       values ($1, $2, 'plan', '2020-01-01', '9999-12-31', $3)`,
+      [other.organizationId, planRows[0].id, ownerRows[0].created_by],
+    );
+
+    // `tenant` still resolves the platform default — the negotiated row belongs to `other`.
+    expect(Number((await retailAt('voice_minutes', at(4 * DAY), tenant.organizationId))?.unit_amount_micros)).toBe(9_000_000);
+    // `other` resolves its own negotiated rate once it has started.
+    expect(Number((await retailAt('voice_minutes', at(4 * DAY), other.organizationId))?.unit_amount_micros)).toBe(1);
+    // Before it starts, `other` still falls back to the platform default like anyone else.
+    expect(Number((await retailAt('voice_minutes', at(2.5 * DAY), other.organizationId))?.unit_amount_micros)).toBe(9_000_000);
   });
 
   it('cannot hold two rates for one meter, currency and moment, whatever their state', async () => {
@@ -288,7 +323,7 @@ describe('retail rate resolution', () => {
   });
 
   it('is offered to a member as the effective rate per meter, and to nobody who belongs to no business', async () => {
-    const member = await tenant.db.rpc('effective_retail_rates', { p_currency: CURRENCY });
+    const member = await tenant.db.rpc('effective_retail_rates', { p_currency: CURRENCY, p_organization_id: tenant.organizationId });
     expect(member.error).toBeNull();
     const byMeter = Object.fromEntries(((member.data ?? []) as Array<{ meter_id: string; unit_amount_micros: number }>).map((row) => [row.meter_id, Number(row.unit_amount_micros)]));
     expect(byMeter.voice_minutes).toBe(7_000_000);
@@ -297,7 +332,7 @@ describe('retail rate resolution', () => {
 
     const visitor = createClient(SUPABASE_URL, ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
     await visitor.auth.signInAnonymously();
-    const none = await visitor.rpc('effective_retail_rates', { p_currency: CURRENCY });
+    const none = await visitor.rpc('effective_retail_rates', { p_currency: CURRENCY, p_organization_id: tenant.organizationId });
     expect(none.data).toEqual([]);
   });
 

@@ -648,7 +648,10 @@ describe('a switch leads to its inputs', () => {
     // the product reality audit rather than caught at the time — the asset picker and badge
     // rendered regardless of whether a business had switched Assets off at all.
     const work = `${readFileSync(`${ROUTES}/work/page.tsx`, 'utf8')}\n${readFileSync(`${WEB_ROOT}/features/work/work-list.tsx`, 'utf8')}`;
-    const workItem = `${readFileSync(`${ROUTES}/work/[workItemId]/page.tsx`, 'utf8')}\n${readFileSync(`${WEB_ROOT}/features/work/work-item-sections.tsx`, 'utf8')}`;
+    // Phase C (Slice 9) split the work item route into a loader (where `enabledModules` is read)
+    // and a Screen/sections/edit-sheet (where `assetsEnabled` is consumed) the thin page
+    // delegates to.
+    const workItem = `${readFileSync(`${WEB_ROOT}/lib/application/work/work-item-detail.ts`, 'utf8')}\n${readFileSync(`${WEB_ROOT}/features/work/work-item-sections.tsx`, 'utf8')}\n${readFileSync(`${WEB_ROOT}/features/work/edit-work-item-sheet.tsx`, 'utf8')}`;
 
     expect(work).toContain("enabledModules.has('assets')");
     expect(work, 'the create-work-item form is not told whether assets are enabled').toContain(

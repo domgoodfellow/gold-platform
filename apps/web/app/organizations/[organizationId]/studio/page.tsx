@@ -2,7 +2,7 @@ import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { DividedList, EmptyState, SectionHeading } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Widget, WidgetGrid } from '@/components/display/widget';
-import { studioOverview } from '@/lib/domain/studio/studio-overview';
+import { studioOverview } from '@/lib/application/studio/studio-overview';
 import { workspaceLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 

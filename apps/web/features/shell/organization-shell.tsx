@@ -2,20 +2,11 @@ import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { LockedOrgSidebar, OrgNavBar, OrgSidebar } from '@/app/organizations/[organizationId]/org-shell';
 import { BrandStyle } from '@/features/branding/brand-style';
-import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
+import { logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
-import { isPlatformStaff } from '@/lib/domain/platform/tenants';
-import { platformPermissions } from '@/lib/domain/platform/permissions';
-import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import { isGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
-import {
-  activeModuleKeys,
-  availableFeatureKeys,
-  organizationResolvedFeatureStates,
-} from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
-import { businessSettingsOffered, projectShell } from '@/lib/shell';
+import { loadOrganizationShellModel } from '@/lib/application/shell/organization-shell';
 import { CompactContextSwitcher } from '@/components/navigation/context-switcher';
 import { CompactAccountMenu } from '@/components/navigation/account-menu';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
@@ -24,12 +15,6 @@ import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
 import { PlatformAgentRail } from '@/features/agent/platform-agent-rail';
 import { RouteAwareAgent } from '@/features/agent/route-aware-agent';
 import { platformHref } from '@/lib/platform-navigation';
-import { canAnswerPlatformQuestions } from '@/lib/domain/assistant/platform-questions';
-import {
-  canAnswerQuestions,
-  listAgentConversationRuns,
-  listAgentConversationSummaries,
-} from '@/lib/domain/assistant/questions';
 
 /**
  * The one application shell, for one organization. Everything beneath `/organizations/{id}` renders
@@ -64,49 +49,25 @@ export async function OrganizationShell({
   const locked = !access.permitted;
   // A locked business runs none of the workspace reads below — no feature resolution and no
   // Agent transcript — because none of it is drawn.
-  const [featureStates, myOrganizations, staff, { data: userData }, conversations, canAnswer, gold] =
-    await Promise.all([
-      locked ? Promise.resolve([]) : organizationResolvedFeatureStates(db, { organizationId }),
-      listMyOrganizations(db),
-      isPlatformStaff(db),
-      db.auth.getUser(),
-      locked ? Promise.resolve([]) : listAgentConversationSummaries(db, { organizationId }),
-      canAnswerQuestions(),
-      isGoldInternalOrganization(db, { organizationId }),
-    ]);
+  const { platform, brand, email, switchable, sections, settingsOffered } = await loadOrganizationShellModel(db, {
+    organizationId,
+    capabilities: organization.capabilities,
+    locked,
+  });
   // The shell loads a bounded list of titles and one transcript — the most recent conversation.
   // Any other transcript is fetched when somebody opens it from History.
-  const latestConversation = conversations[0];
-  const initialConversation = latestConversation
-    ? {
-        id: latestConversation.id,
-        runs: await listAgentConversationRuns(db, {
-          organizationId,
-          conversationId: latestConversation.id,
-        }),
-      }
-    : null;
 
   // Platform authority is read only for GOLD's own organization, and only for staff. Everywhere
   // else it is `null`, so the projection cannot produce a Platform section beside a customer's work.
-  const platform = staff && gold ? await platformPermissions(db) : null;
   // The Platform Agent exists only where Platform does. Both Agents are built here and one is
   // mounted, by route (`RouteAwareAgent`): the shell cannot know the path, and neither Agent may
   // borrow the other's scope.
-  const canAnswerPlatform = platform && platform.size > 0 ? await canAnswerPlatformQuestions() : false;
-  const enabledModules = activeModuleKeys(featureStates);
-  const featureAvailability = availableFeatureKeys(featureStates);
-  const capabilities = new Set(organization.capabilities);
-  const sections = projectShell({ organizationId, enabledModules, featureAvailability, capabilities, platform });
-  const settingsOffered = businessSettingsOffered({ enabledModules, featureAvailability, capabilities });
 
   // `requireOrganization` already proved a session exists; this is a second, deliberately
   // separate read of the same session for the one extra fact the shell shows (I11's minimal
   // `Actor` shape carries only an id).
-  const email = userData.user?.email ?? '';
   // Read here rather than per-screen, since a brand belongs to the shell — every page inside
   // inherits these roles and never has to know whose colour it's rendering.
-  const brand = await getBrand(db, { organizationId });
 
   async function signOutAction() {
     'use server';
@@ -145,13 +106,6 @@ export async function OrganizationShell({
   // the phone bar's first item both read this and nothing else, so neither can outlive Launch. It
   // is the lifecycle fact already on the organization — the shell prints no progress, so it runs
   // no readiness query; the Setup page owns the count and `launchOrganization` the guard.
-  const switchable = myOrganizations.map((org) => ({
-    id: org.id,
-    name: org.name,
-    role: org.role,
-    operationalState: org.operationalState,
-  }));
-
   const sidebar = locked ? (
     <LockedOrgSidebar
       organizationId={organizationId}
@@ -224,17 +178,14 @@ export async function OrganizationShell({
                   organizationId={organizationId}
                   organizationName={organization.name}
                   timezone={organization.timezone}
-                  canAnswer={canAnswer}
                   mayAsk={organization.capabilities.includes('assistant.ask')}
                   canManageConnections={organization.capabilities.includes('integration.manage')}
-                  conversations={conversations}
-                  initialConversation={initialConversation}
                 />
               }
               platform={
                 platform && platform.size > 0 ? (
                   <PlatformAgentRail
-                    canAnswer={canAnswerPlatform}
+                    goldId={organizationId}
                     configureHref={platformHref(organizationId, 'providers')}
                   />
                 ) : null

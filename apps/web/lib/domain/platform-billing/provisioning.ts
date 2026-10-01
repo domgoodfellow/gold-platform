@@ -14,8 +14,29 @@ export type ProvisionedPlanPrice = {
   priceReference: string;
 };
 
+export type ProvisionedPlanPriceRow = ProvisionedPlanPrice & { planPriceId: string };
+
 function toProvisioned(row: { product_reference: string; price_reference: string }): ProvisionedPlanPrice {
   return { productReference: row.product_reference, priceReference: row.price_reference };
+}
+
+/** One bounded read for a known set of prices. RLS remains the authority for row visibility. */
+export async function listProvisionedPlanPrices(
+  db: Db,
+  input: { planPriceIds: string[]; environment: 'sandbox' | 'live' },
+): Promise<ProvisionedPlanPriceRow[]> {
+  if (input.planPriceIds.length === 0) return [];
+  const { data, error } = await db
+    .from('platform_plan_provider_prices')
+    .select('plan_price_id, product_reference, price_reference')
+    .in('plan_price_id', input.planPriceIds)
+    .eq('environment', input.environment);
+  if (error) throw new DomainError(error.message, 'platform_billing.provisioned_prices_read_failed');
+  return (data ?? []).map((row) => ({
+    planPriceId: row.plan_price_id,
+    productReference: row.product_reference,
+    priceReference: row.price_reference,
+  }));
 }
 
 export async function getProvisionedPlanPrice(

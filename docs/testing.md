@@ -13,12 +13,21 @@ A test answers each independently. Do not fold them into one hierarchy.
 | Level | It proves | Manifest category |
 |---|---|---|
 | Unit | One function or a small group, in-process, nothing external | `unit`, `python-unit` |
-| Component | A coherent piece with its outer boundary faked | `component`, `python-component` |
+| Component (string) | A coherent piece rendered to a string server-side, with its outer boundary faked | `component`, `python-component` |
+| Component (DOM) | The same piece, mounted in jsdom with `@testing-library/react`: focus, keyboard, ARIA state as the accessibility tree actually computes it, and a semantic a11y pass via `axe-core` (`tests/support/axe.ts`) | `component` |
 | Integration | Real GOLD layers together. Today that means the database: domain layer, Postgres, RLS | `database-integration` |
 | Contract | The shape at a boundary: a webhook signature, a vendor's request and reply. Offline; a vendor-sandbox contract is its own category | `offline-contract`, `python-contract`; `provider-contract` |
 | Architecture | A rule about the code, build or schema, not a business behaviour | `architecture-static`, `architecture-db` |
-| End to end | A durable journey through a real browser and the running app | `playwright-acceptance` |
+| End to end (acceptance) | A durable journey through a real browser and the running app | `playwright-acceptance` |
+| End to end (visual) | A pixel baseline at desktop/tablet/phone width for a small set of representative patterns — spacing, alignment, density, responsive composition, never a business rule | `playwright-visual` |
 | Smoke | The smallest check that a running deployment is alive | `playwright-smoke` |
+| Manual browser review | What no automated layer below this one claims: genuinely subjective visual judgement, a first look at a brand-new screen, a provider-unconfigured empty state nobody has scripted yet. `CLAUDE.md`'s own rule — open it on `pnpm demo` data and say which of "screen" or "test" you did | none — never automated, and never skipped by claiming a lower level covers it |
+
+Component (DOM) and component (string) share one category and one directory
+(`tests/component/`) because they answer the same question — one coherent piece, outer boundary
+faked — at two depths; the file's own choice of `// @vitest-environment jsdom` (DOM) or
+`renderToStaticMarkup` (string) is what differs, not its category. A `.test.ts` file renders to a
+string; a `.test.tsx` file mounts.
 
 **2. Execution requirement: what must be running?** Fixed by the category, never by the folder.
 
@@ -26,7 +35,7 @@ A test answers each independently. Do not fold them into one hierarchy.
 |---|---|
 | Nothing | `unit`, `component`, `architecture-static`, `offline-contract`, all `python-*` |
 | Local Supabase (`pnpm db:start`) | `architecture-db`, `database-integration` |
-| The running app, and an account | `playwright-acceptance` (plus seeded demo data), `playwright-smoke` |
+| The running app, and an account | `playwright-acceptance` (plus seeded demo data), `playwright-smoke`, `playwright-visual` (plus seeded demo data) |
 | A vendor sandbox and its credentials | `provider-contract` |
 
 **3. Concerns: what is it about?** Free tags in the manifest, several per file: `tenancy`,
@@ -45,6 +54,7 @@ Run from the repository root. A tier is a set of categories; `test-manifest.json
 | **Local integration** | `pnpm test:local` | architecture-db, database-integration | local Supabase |
 | **Gate** | `pnpm check` | typecheck, lint, all of Vitest, build, all of pytest | local Supabase |
 | **E2E** | `pnpm test:e2e` | Playwright acceptance | Supabase, `pnpm demo:fresh`, `pnpm dev` |
+| **Visual** | `pnpm test:visual` | Playwright pixel baselines, three viewports each | Supabase, `pnpm demo:fresh`, `pnpm dev` |
 | **Smoke** | `pnpm test:smoke` | the deployment check | a running app, one account |
 | **Provider** | `pnpm test:provider` | vendor-sandbox contracts. None exist: it prints `NOT CONFIGURED`, exits 0, and verified no vendor | sandbox credentials |
 
@@ -75,7 +85,7 @@ else.
 | `apps/web/tests/architecture/database/` | `architecture-db` |
 | `apps/web/tests/integration/database/` | `database-integration` |
 | `apps/web/tests/support/` | not tests: `setup.ts`, `founding.ts` (import `@/tests/support/founding`) |
-| `apps/web/e2e/`, `apps/web/e2e/smoke/` | `playwright-acceptance`, `playwright-smoke` |
+| `apps/web/e2e/`, `apps/web/e2e/smoke/`, `apps/web/e2e/visual/` | `playwright-acceptance`, `playwright-smoke`, `playwright-visual` |
 | `apps/api/tests/{unit,component,contract}/` | `python-unit`, `python-component`, `python-contract` |
 
 **Naming.** The folder carries the level, so the file carries the subject: `economics.test.ts`,
@@ -88,7 +98,9 @@ A file that reads source with a relative path is depth-sensitive; moving one mea
 Put the file in the category's directory and add one entry to `test-manifest.json` (`category`, at
 least one `concerns` tag, a `note` if it holds a second kind of test). Then, in order:
 
-1. Does it open a browser? `playwright-acceptance`; `playwright-smoke` only for the deployment check.
+1. Does it open a browser? `playwright-smoke` only for the deployment check; `playwright-visual`
+   only for a pixel baseline with no assertion but the image diff itself; otherwise
+   `playwright-acceptance`.
 2. Does it call a real vendor sandbox? `provider-contract`, and it must skip itself without its credentials.
 3. Does it need real Postgres or Supabase Auth? A schema, grant or catalogue rule with no business
    behaviour is `architecture-db`; anything else is `database-integration`.
@@ -115,6 +127,7 @@ does, and say so in `note`.
 | Main | merge to `main` | the same, so a green main is a green gate |
 | Nightly | schedule | `e2e` against a freshly seeded local stack |
 | Deployment smoke | manual, after a deploy | `smoke` against `SMOKE_BASE_URL` with `SMOKE_EMAIL`/`SMOKE_PASSWORD` |
+| Visual | none yet, run by hand | `pnpm test:visual` against a local `pnpm demo:fresh` + `pnpm dev` — never a PR gate (`gate: false`); a baseline diff is a prompt for a person to look |
 | Provider | none yet | `pnpm test:provider` with sandbox secrets, scheduled, never on a PR |
 
 `.github/workflows/ci.yml` defines these, and it has **not been run on GitHub**: its YAML parses, its
@@ -189,19 +202,33 @@ Why each **P** and **—** is graded so:
   constraint is held at the database, which is where the rule lives.
 - **Public site / intake E2E P:** the preview link is walked; an anonymous visitor submitting an
   inquiry or a booking is not.
-- **UI / accessibility P:** one component file renders to a string (no DOM, no focus, no keyboard);
-  the architecture files that check UI conventions do so by reading source. Nothing measures accessibility by
-  behaviour. This is active remediation work (the Phase A frontend-architecture reset), not settled debt.
+- **UI / accessibility P:** `@testing-library/react` + `@testing-library/user-event` + `axe-core`
+  (Phase C, Slice 13) now mount four representative shared patterns in jsdom and assert real
+  rendered behaviour — `FormField` (label/error association, `aria-invalid`), `ConfirmSubmit`
+  (focus moving into the dialog, Escape cancelling, the confirm action staying one explicit click
+  away), `ViewModeSwitcher` (Tab order, Enter/Space activation, `aria-pressed`), and the Agent
+  trigger/panel's lazy-mount lifecycle (`tests/component/{form-field,confirm-submit,view-mode-
+  switcher,agent-trigger}.test.tsx`, each environment-overridden to jsdom per file — the global
+  environment stays `node`). `tests/support/axe.ts` runs a real `axe-core` pass on each, with the
+  jsdom-unprovable rule categories (colour contrast, anything needing actual layout) explicitly
+  disabled rather than silently reported as passing. This is representative coverage of shared
+  primitives, not exhaustive coverage of every screen — most of this repository's UI conventions
+  are still held only by the architecture-static source scans below, and a DOM test is owed to a
+  pattern only once a real regression or a new shared primitive asks for one, the same bar as
+  everywhere else in this codebase.
+- **E2E visual:** `playwright-visual` (`pnpm test:visual`, never in the gate) now holds pixel
+  baselines at desktop/tablet/phone width for one instance each of a workspace home, a collection
+  board, Organization Settings, an authenticated 404/`StatePage`, a record/detail page and one
+  Platform control-plane page. A baseline drifts with design intent; a diff is a prompt for a
+  person to look, not a build failure, which is why this stays outside `pnpm check`.
 
 **Architecture-static is for** dependency direction, layer ownership, forbidden authority,
 route/source-of-truth rules, semantic token ownership, and structural contracts actually provable
-from source. **Component/browser verification is for** interaction, focus, keyboard behavior,
-layout, responsive behavior, visual hierarchy, overflow, clipping, drawers, dialogs, and actual
-accessibility behavior. **Visual verification is for** spacing, alignment, hierarchy, density and
-responsive composition. A source-string assertion proves none of the second or third group; do not
-write one that claims to. No new browser/component-test system is installed to close this gap yet
-— that is a later verification slice — but architecture-static tests stop pretending to cover it in
-the meantime.
+from source. **Component (DOM) is for** interaction, focus, keyboard behavior, ARIA state as
+rendered, and semantic accessibility rules `axe-core` can actually evaluate without a layout
+engine. **Visual (`playwright-visual`) is for** spacing, alignment, hierarchy, density,
+responsive composition and colour contrast — everything jsdom cannot compute. A source-string
+assertion proves none of the DOM or visual group; do not write one that claims to.
 - **Voice, softphone:** call history renders; there is no browser softphone to test (M9/M14).
 
 ## Asymmetries found, and what was done
@@ -214,6 +241,6 @@ the meantime.
 | Adapter mocks with no contract: card payments, transactional email, geocoding, browser telephone token | **Closed** for these four. See *Contract P* for what remains |
 | Credential-minting boundary `browserTelephoneToken` had no test | **Partly closed.** The minted token is pinned; the domain function around it is not |
 | Duplicate assertions at the expensive level: `documents.spec.ts` uploads to three records; four read-only `catalog-plans` render checks; `portal-payments.spec.ts` list checks | **Open.** Fold into one journey each once the rule is held lower; changing e2e was out of scope |
-| Source-scan files assert UI behaviour by matching text | **Open.** Real component tests need a DOM harness this repo does not have |
+| Source-scan files assert UI behaviour by matching text | **Partly closed.** The DOM harness now exists (`@testing-library/react` + `axe-core`, Slice 13) and holds four representative shared patterns by rendered behaviour; most source-scan files still assert the rest of the UI by matching text, each owed a DOM test only when it is the one that regresses or a new shared primitive needs one |
 | Python argument names (`p_...`) were not checked against the database functions' parameters | **Closed.** `apps/api/tests/rpc_contract.json` is held to `pg_proc` (overloads and defaults handled) by `python-rpc-surface.test.ts` and to the Python source by `test_rpc_contract.py`. Types are deliberately not compared |
 | E2E with no underlying authorization test | **None found.** Every mutating spec (`operator-paths`, `platform-catalog`, `feature-navigation-gate`) has a database test for its rule |

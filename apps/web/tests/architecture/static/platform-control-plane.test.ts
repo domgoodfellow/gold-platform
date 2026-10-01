@@ -33,7 +33,10 @@ describe('platform control-plane scope boundaries', () => {
   it('keeps tenant commercial and provider tasks in their tenant routes', () => {
     const commercial = source('app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/commercial/page.tsx');
     const providers = source('app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/providers/page.tsx');
-    expect(commercial).toContain('listOrganizationTerms');
+    // Phase C (Slice 9) moved the commercial route's read into its application-layer loader; the
+    // page itself now only resolves params, guards and renders the Screen with that loader's model.
+    const commercialModel = source('lib/application/platform/organization-commercial.ts');
+    expect(commercialModel).toContain('listOrganizationTerms');
     expect(commercial).not.toContain('RecordProviderRateForm');
     expect(commercial).not.toContain('RecordRetailRateForm');
     expect(providers).toContain('listProviderBindings');
@@ -71,6 +74,12 @@ describe('platform control-plane scope boundaries', () => {
       // Plans & Add-ons is spelled as a link into Finance, GOLD's own workspace, the same
       // "read from the route, spelled into a link" allowance as `platformHref(goldId,`.
       /\/organizations\/\$\{goldId\}\/finance\//g,
+      // Phase C's loader+Screen pairs (Slice 9) take `goldId` as a prop, destructured and typed
+      // inline on one line rather than one-per-line — the same "read from the route, spelled into
+      // a link" fact as the patterns above, just written where a single-expression component
+      // signature puts it.
+      /\{ goldId,/g,
+      /goldId: string[;,]/g,
     ];
     const files: string[] = [];
     const walk = (dir: string) => {

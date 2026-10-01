@@ -23,7 +23,7 @@ import httpx
 
 from app.core import db
 from app.core.config import ProviderOperationsSettings
-from app.domains.errors import DomainError, NotFoundError, ValidationError
+from app.errors import DomainError, NotFoundError, ValidationError
 from app.providers.providers import HostnameUnavailable, MalformedAnswer, UpstreamRefused, domain_hosting_for
 
 PROVIDER_UNAVAILABLE_MESSAGE = (

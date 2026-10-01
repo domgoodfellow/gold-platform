@@ -140,6 +140,42 @@ export async function listWorkItems(
   );
 }
 
+/** One authoritative record read for detail surfaces that already know the work-item id. */
+export async function getWorkItem(
+  db: Db,
+  input: { organizationId: string; workItemId: string },
+): Promise<WorkItem | null> {
+  const { data: row, error } = await db
+    .from('work_items')
+    .select(WORK_ITEM_SELECT)
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.workItemId)
+    .maybeSingle();
+  if (error) throw new DomainError(error.message, 'work_items.read_failed');
+  if (!row) return null;
+
+  const type = one(row.type);
+  const status = one(row.status);
+  if (!type || !status) return null;
+  const customer = one(row.customer);
+  const location = one(row.location);
+  const resource = one(row.resource);
+  const asset = one(row.asset);
+  return {
+    id: row.id,
+    title: row.title,
+    type: { id: type.id, label: type.name },
+    status: { id: status.id, label: status.name },
+    customer: customer ? { id: customer.id, label: customer.name } : null,
+    location: location ? { id: location.id, label: location.label } : null,
+    resource: resource ? { id: resource.id, label: resource.name } : null,
+    asset: asset ? { id: asset.id, label: asset.name } : null,
+    window: parseWindow(row.scheduled_during as string | null),
+    custom: (row.custom ?? {}) as CustomValues,
+    createdAt: row.created_at,
+  };
+}
+
 /**
  * Record a unit of work.
  *

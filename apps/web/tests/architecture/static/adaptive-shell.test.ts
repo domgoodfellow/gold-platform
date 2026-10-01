@@ -127,11 +127,15 @@ describe('hiding a navigation item is never the security boundary', () => {
 describe('the projection is the only eligibility rule', () => {
   const projection = code(read('lib/shell.ts'));
   const shell = code(read('features/shell/organization-shell.tsx'));
+  // Phase C (Slice 12) moved the shell's own coordinating reads — `projectShell` among them —
+  // out of the layout component into one application-layer function the layout calls once and
+  // destructures; the layout still hands the one result to every renderer.
+  const shellModel = code(read('lib/application/shell/organization-shell.ts'));
   const renderers = code(read('app/organizations/[organizationId]/org-shell.tsx'));
   const more = code(read('components/navigation/more-menu.tsx'));
 
   it('is called once, by the shell, and its result is handed to every renderer', () => {
-    expect(shell.match(/projectShell\(/g)).toHaveLength(1);
+    expect(shellModel.match(/projectShell\(/g)).toHaveLength(1);
     expect(shell).toContain('sections={sections}');
     expect(shell).toMatch(/<OrgNavBar[^>]*sections=\{sections\}/);
   });
@@ -151,7 +155,7 @@ describe('the projection is the only eligibility rule', () => {
   });
 
   it('gives Platform to the shell only where the organization is GOLD’s own and the person is staff', () => {
-    expect(shell).toContain('staff && gold ? await platformPermissions(db) : null');
+    expect(shellModel).toContain('staff && gold ? await platformPermissions(db) : null');
   });
 
   it('draws every section from the same list on desktop, tablet and phone', () => {

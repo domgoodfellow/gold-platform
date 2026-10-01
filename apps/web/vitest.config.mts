@@ -13,7 +13,7 @@ const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../../test-manif
 // what `pnpm test` and `pnpm check` do — the glob finds every file, so a test nobody classified
 // still runs there and `tests/architecture/static/test-manifest.test.ts` is what fails for it.
 function includeFor(categories: string | undefined): string[] {
-  if (!categories) return ['tests/**/*.test.ts'];
+  if (!categories) return ['tests/**/*.test.{ts,tsx}'];
   const wanted = categories.split(',');
   return Object.entries(manifest.files)
     .filter(([path, entry]) => path.startsWith('apps/web/tests/') && wanted.includes(entry.category))

@@ -78,6 +78,13 @@
       "gate": false,
       "description": "The smallest deployed-shaped check: app answers, login renders, a session works, the shell loads."
     },
+    "playwright-visual": {
+      "runner": "playwright",
+      "dir": "apps/web/e2e/visual",
+      "requires": "running-app",
+      "gate": false,
+      "description": "Pixel baselines at desktop/tablet/phone widths for a small set of representative patterns — spacing, alignment and responsive composition, never a business rule. Never in the default run: a baseline drifts with design intent, not with correctness, and a diff here is a prompt to look, not a build failure."
+    },
     "provider-contract": {
       "runner": "vitest",
       "dir": "apps/web/tests/provider-contract",
@@ -105,6 +112,9 @@
     ],
     "smoke": [
       "playwright-smoke"
+    ],
+    "visual": [
+      "playwright-visual"
     ],
     "provider": [
       "provider-contract"
@@ -255,6 +265,12 @@
       ],
       "note": "Vercel's Domains API, offline: register/config/verify/remove and normalize()."
     },
+    "apps/api/tests/unit/test_architecture_boundaries.py": {
+      "category": "python-unit",
+      "concerns": [
+        "architecture"
+      ]
+    },
     "apps/api/tests/unit/test_automation_tick.py": {
       "category": "python-unit",
       "concerns": [
@@ -267,6 +283,13 @@
       "concerns": [
         "identity",
         "navigation"
+      ]
+    },
+    "apps/web/e2e/agent-lifecycle.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "ai",
+        "ui"
       ]
     },
     "apps/web/e2e/settings-routes.spec.ts": {
@@ -385,6 +408,47 @@
       "concerns": [
         "auth",
         "availability"
+      ]
+    },
+    "apps/web/e2e/visual/collection-board.spec.ts": {
+      "category": "playwright-visual",
+      "concerns": [
+        "ui",
+        "crm"
+      ]
+    },
+    "apps/web/e2e/visual/not-found.spec.ts": {
+      "category": "playwright-visual",
+      "concerns": [
+        "ui"
+      ]
+    },
+    "apps/web/e2e/visual/organization-settings.spec.ts": {
+      "category": "playwright-visual",
+      "concerns": [
+        "ui",
+        "settings"
+      ]
+    },
+    "apps/web/e2e/visual/platform-control-plane.spec.ts": {
+      "category": "playwright-visual",
+      "concerns": [
+        "ui",
+        "platform"
+      ]
+    },
+    "apps/web/e2e/visual/work-item-detail.spec.ts": {
+      "category": "playwright-visual",
+      "concerns": [
+        "ui",
+        "work"
+      ]
+    },
+    "apps/web/e2e/visual/workspace-home.spec.ts": {
+      "category": "playwright-visual",
+      "concerns": [
+        "ui",
+        "crm"
       ]
     },
     "apps/web/e2e/work-relationships.spec.ts": {
@@ -517,6 +581,12 @@
       "concerns": [
         "ui",
         "security"
+      ]
+    },
+    "apps/web/tests/architecture/static/application-layer-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "architecture"
       ]
     },
     "apps/web/tests/architecture/static/feature-ownership-boundary.test.ts": {
@@ -810,6 +880,14 @@
         "ui"
       ]
     },
+    "apps/web/tests/component/agent-trigger.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "ai",
+        "accessibility"
+      ]
+    },
     "apps/web/tests/component/collection-presentation.test.ts": {
       "category": "component",
       "concerns": [
@@ -818,7 +896,28 @@
         "settings"
       ]
     },
+    "apps/web/tests/component/confirm-submit.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "accessibility"
+      ]
+    },
+    "apps/web/tests/component/form-field.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "accessibility"
+      ]
+    },
     "apps/web/tests/component/ui-components.test.ts": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "accessibility"
+      ]
+    },
+    "apps/web/tests/component/view-mode-switcher.test.tsx": {
       "category": "component",
       "concerns": [
         "ui",

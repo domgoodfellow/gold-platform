@@ -81,12 +81,13 @@ export async function creditBalance(
  */
 export async function listRates(
   db: Db,
-  input: { currency: string | null },
+  input: { organizationId: string; currency: string | null },
 ): Promise<Rate[]> {
   if (!input.currency) return [];
 
   const { data, error } = await db.rpc('effective_retail_rates', {
     p_currency: input.currency,
+    p_organization_id: input.organizationId,
   });
 
   if (error) {
@@ -119,7 +120,7 @@ export async function communicationsAccount(
 ): Promise<{ balanceMinor: number; rates: Rate[]; priced: boolean }> {
   const [balanceMinor, rates] = await Promise.all([
     creditBalance(db, input),
-    listRates(db, { currency: input.currency }),
+    listRates(db, { organizationId: input.organizationId, currency: input.currency }),
   ]);
 
   return { balanceMinor, rates, priced: rates.length > 0 };

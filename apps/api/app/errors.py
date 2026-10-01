@@ -1,4 +1,4 @@
-"""The error vocabulary every domain command translates a database refusal into.
+"""The error vocabulary every runtime command translates a database refusal into.
 
 **One place this translation happens, so a second command does not reinvent it differently.** A
 browser must never see a raw SQLSTATE or a PostgREST body -- that is exactly the "raw SQL/

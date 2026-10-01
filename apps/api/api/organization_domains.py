@@ -16,8 +16,8 @@ from http.server import BaseHTTPRequestHandler
 
 from app.auth import AuthError, require_caller
 from app.core.config import load_provider_operations_settings
-from app.domains.errors import DomainError
-from app.domains.web_delivery.domains import run_domain_command
+from app.errors import DomainError
+from app.services.web_delivery.operations import run_domain_command
 
 
 class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name

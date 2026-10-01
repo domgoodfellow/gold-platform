@@ -72,7 +72,10 @@ if (command === 'api') {
 const playwrightFiles = filesFor('playwright');
 if (playwrightFiles.length > 0) {
   const web = playwrightFiles.map((path) => path.replace(/^apps\/web\//, ''));
-  const config = command === 'smoke' ? ['--config', 'playwright.smoke.config.ts'] : [];
+  const config =
+    command === 'smoke' ? ['--config', 'playwright.smoke.config.ts']
+    : command === 'visual' ? ['--config', 'playwright.visual.config.ts']
+    : [];
   run(`playwright: ${categories.join(', ')} (${web.length} files)`, 'pnpm', ['--filter', '@gold/web', 'exec', 'playwright', 'test', ...config, ...web, ...extra]);
   ran++;
 }

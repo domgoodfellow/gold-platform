@@ -1,6 +1,6 @@
 import { PlatformOverview } from '@/features/platform/platform-overview';
 import { getDb } from '@/lib/db/server';
-import { platformOverview } from '@/lib/domain/platform/overview';
+import { platformOverview } from '@/lib/application/platform/platform-overview';
 import { requirePlatformArea } from '@/lib/route/platform';
 
 export const dynamic = 'force-dynamic';

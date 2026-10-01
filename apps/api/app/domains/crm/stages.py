@@ -31,7 +31,7 @@ from dataclasses import dataclass
 
 from app.core.caller import CommandFailed, call_command
 from app.core.config import DomainSettings
-from app.domains.errors import DomainError, from_command_failure
+from app.errors import DomainError, from_command_failure
 
 
 @dataclass(frozen=True)

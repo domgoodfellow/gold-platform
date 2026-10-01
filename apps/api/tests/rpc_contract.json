@@ -23,7 +23,7 @@
     "can_manage_integrations": {
       "role": "authenticated",
       "callers": [
-        "app/domains/integrations/operations.py"
+        "app/services/integrations/operations.py"
       ],
       "sends": [
         "p_organization_id"
@@ -63,7 +63,7 @@
     "disconnect_integration": {
       "role": "authenticated",
       "callers": [
-        "app/domains/integrations/operations.py"
+        "app/services/integrations/operations.py"
       ],
       "sends": [
         "p_connection_id",
@@ -229,7 +229,7 @@
     "record_integration_connection": {
       "role": "authenticated",
       "callers": [
-        "app/domains/integrations/operations.py"
+        "app/services/integrations/operations.py"
       ],
       "sends": [
         "p_account_label",
@@ -377,7 +377,7 @@
     "can_manage_custom_domains": {
       "role": "authenticated",
       "callers": [
-        "app/domains/web_delivery/domains.py"
+        "app/services/web_delivery/operations.py"
       ],
       "sends": [
         "p_organization_id"
@@ -386,7 +386,7 @@
     "release_custom_domain": {
       "role": "authenticated",
       "callers": [
-        "app/domains/web_delivery/domains.py"
+        "app/services/web_delivery/operations.py"
       ],
       "sends": [
         "p_domain_id",

@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { describe, expect, it } from 'vitest';
-import { platformOverview } from '@/lib/domain/platform/overview';
+import { platformOverview } from '@/lib/application/platform/platform-overview';
 import { launchOrganization } from '@/lib/domain/tenancy/lifecycle';
 import { createOrganization } from '@/lib/domain/tenancy/organizations';
 import { asPlatformStaff } from '@/tests/support/founding';

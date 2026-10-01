@@ -100,13 +100,22 @@ describe('SECURITY DEFINER functions in app', () => {
 
 describe('objects removed as dead surface stay removed', () => {
   it('has none of the functions that had no caller', async () => {
+    // `public.sync_phone_number` is deliberately not named here any more: `20261006000004`
+    // dropped it as dead, but `20261013000001` (Work Order 3) recreated it under the same name
+    // to close the audit gap on `phone_numbers`' one real writer — origin and `created_by` on
+    // every row. `phone-numbers.test.ts` and `messaging.test.ts` both call it as that one real
+    // writer, so re-listing it here would be asserting the thing this slice built back in should
+    // stay gone, which is the opposite of what happened. It still has no caller from application
+    // code (`apps/web`/`apps/api`) — only from these two integration tests — which is a real,
+    // separate gap: the Twilio provisioning flow that creates the underlying provider resource
+    // does not yet call this to make the number usable. Flagged rather than invented here.
     const { rows } = await pg.query(
       `select n.nspname || '.' || p.proname as name
          from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where (n.nspname, p.proname) in (
           ('public', 'store_integration_secret'), ('public', 'retail_rate_at'),
           ('public', 'add_runtime_mapping'), ('public', 'remove_runtime_mapping'),
-          ('public', 'sync_phone_number'), ('public', 'release_phone_number_assignment'),
+          ('public', 'release_phone_number_assignment'),
           ('public', 'set_user_phone_number_preference'), ('app', 'enable_default_modules'))`,
     );
     expect(rows).toEqual([]);

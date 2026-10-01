@@ -176,6 +176,22 @@ export async function listPlanProductGrants(db: Db, planId: string): Promise<str
   return (data ?? []).map((row) => (row.product as unknown as { key: string }).key);
 }
 
+export type PlanProductGrant = { planId: string; productKey: string };
+
+/** Canonical grant rows for several Plans; grouping belongs to the application caller. */
+export async function listPlanProductGrantsForPlans(db: Db, planIds: string[]): Promise<PlanProductGrant[]> {
+  if (planIds.length === 0) return [];
+  const { data, error } = await db
+    .from('platform_plan_product_grants')
+    .select('plan_id, product:platform_catalog_products!inner(key)')
+    .in('plan_id', [...new Set(planIds)]);
+  if (error) throw new DomainError(error.message, 'plans.product_grants_failed');
+  return (data ?? []).map((row) => ({
+    planId: row.plan_id,
+    productKey: (row.product as unknown as { key: string }).key,
+  }));
+}
+
 export async function listPlanModuleGrants(db: Db, planId: string): Promise<string[]> {
   const { data, error } = await db
     .from('platform_plan_module_grants')
@@ -201,6 +217,19 @@ export async function planEntitledFeatureIds(db: Db, planId: string): Promise<Se
   const { data, error } = await db.rpc('plan_entitled_features', { p_plan_id: planId });
   if (error) throw new DomainError(error.message, 'plans.entitled_features_failed');
   return new Set((data ?? []).map((row: { feature_id: string }) => row.feature_id));
+}
+
+export type PlanEntitledFeature = { planId: string; featureId: string };
+
+/** Bulk door over the same authoritative SQL calculation as `planEntitledFeatureIds`. */
+export async function planEntitledFeatureIdsForPlans(db: Db, planIds: string[]): Promise<PlanEntitledFeature[]> {
+  if (planIds.length === 0) return [];
+  const { data, error } = await db.rpc('plan_entitled_features_bulk', { p_plan_ids: [...new Set(planIds)] });
+  if (error) throw new DomainError(error.message, 'plans.entitled_features_failed');
+  return (data ?? []).map((row: { plan_id: string; feature_id: string }) => ({
+    planId: row.plan_id,
+    featureId: row.feature_id,
+  }));
 }
 
 export async function grantPlanProduct(db: Db, input: { planId: string; productKey: string }): Promise<void> {

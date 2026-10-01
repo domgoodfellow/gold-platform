@@ -18,6 +18,7 @@ import {
   listPlanPrices,
   listPlanQuotas,
   planEntitledFeatureIds,
+  planEntitledFeatureIdsForPlans,
   recordPlanPrice,
   setPlanFeatureOverride,
   setPlanQuota,
@@ -243,6 +244,38 @@ describe('Plans and Add-ons', () => {
     entitled = await planEntitledFeatureIds(staff, planId);
     expect(entitled.has(outbound.id)).toBe(false);
     expect(entitled.has(transcription.id)).toBe(true);
+  });
+
+  it('resolves several Plans in bulk identically to calling the single-plan resolver once per Plan', async () => {
+    // `plan_entitled_features_bulk` (20260930000002) exists so a catalogue page reading many
+    // Plans' entitlement is one query rather than one-per-Plan; it reuses `plan_entitled_features`
+    // per plan via `cross join lateral` rather than re-deriving precedence, so this proves the two
+    // doors agree rather than re-testing override > module grant > product grant itself.
+    const planKeyA = `bulk_a_${randomUUID().slice(0, 8)}`;
+    const planKeyB = `bulk_b_${randomUUID().slice(0, 8)}`;
+    const planIdA = await createPlan(staff, { key: planKeyA, kind: 'plan', label: 'Bulk A', description: '', billable: true });
+    const planIdB = await createPlan(staff, { key: planKeyB, kind: 'plan', label: 'Bulk B', description: '', billable: true });
+
+    await grantPlanProduct(staff, { planId: planIdA, productKey: 'comms' });
+    const voiceModule = (await listCatalogModules(staff)).find((m) => m.key === 'voice')!;
+    const features = await listCatalogFeatures(staff, { moduleId: voiceModule.id });
+    const outbound = features.find((f) => f.key === 'outbound_calling')!; // available
+    // B gets no product grant at all, so its resolved set should be empty — proving the bulk door
+    // does not leak one Plan's grants into another's row.
+    await setPlanFeatureOverride(staff, { planId: planIdB, featureId: outbound.id, included: true });
+
+    const [singleA, singleB] = await Promise.all([
+      planEntitledFeatureIds(staff, planIdA),
+      planEntitledFeatureIds(staff, planIdB),
+    ]);
+    const bulk = await planEntitledFeatureIdsForPlans(staff, [planIdA, planIdB]);
+    const bulkByPlan = new Map<string, Set<string>>();
+    for (const row of bulk) bulkByPlan.set(row.planId, (bulkByPlan.get(row.planId) ?? new Set()).add(row.featureId));
+
+    expect(singleA.has(outbound.id)).toBe(true);
+    expect(singleB.has(outbound.id)).toBe(true); // feature-level override, no product grant needed
+    expect([...(bulkByPlan.get(planIdA) ?? [])].sort()).toEqual([...singleA].sort());
+    expect([...(bulkByPlan.get(planIdB) ?? [])].sort()).toEqual([...singleB].sort());
   });
 
   it('lets an Add-on stack alongside a base Plan, but refuses two overlapping base Plans', async () => {

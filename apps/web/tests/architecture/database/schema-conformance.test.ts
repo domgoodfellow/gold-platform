@@ -80,7 +80,7 @@ describe('schema conformance', () => {
         order by t.relname, i.relname`,
     );
 
-    // **Five exceptions, and they share one rule rather than being separate lapses.**
+    // **Six exceptions, and they share one rule rather than being separate lapses.**
     //
     // I2 exists so one tenant's uniqueness cannot block another's: two businesses must both be
     // able to call a status "Booked". Every index below is the opposite question — **an
@@ -106,8 +106,22 @@ describe('schema conformance', () => {
     //     the invitation hash: a browser arrives holding a hostname, with no tenant in hand to
     //     scope it by, so it must be unique across every claim or resolution would have to guess
     //     which business `shop.example.com` means. Only an unreleased claim counts.
+    //   * `platform_retail_rates_id_meter_currency_unique` is the inverse case: not an outsider's
+    //     secret, but a row that may belong to *no* tenant at all. `platform_retail_rates` gained
+    //     an optional `organization_id` in `20261018000001` for a negotiated override; most rows
+    //     are still the platform-default rate, shared by every business, with `organization_id`
+    //     null. This constraint exists only so `usage_events_retail_rate_matches` (I18's own named
+    //     exception, below) has a composite key to point at, and `id` already makes it globally
+    //     collision-proof regardless of tenant — leading it with `organization_id` would buy
+    //     nothing I2 exists to prevent, since no two tenants' rows can collide here either way.
+    //     `20261028000001` records why forcing the alternative would actually be wrong: it would
+    //     require every usage event to match a retail-rate row carrying its *own* organization_id,
+    //     but the row nearly every usage event prices against is the shared default, whose
+    //     `organization_id` is null by construction — a composite FK on that shape could never
+    //     match a real tenant id against a null, so it would refuse to record usage the moment no
+    //     negotiated rate existed for that tenant, which is the common case.
     //
-    // Named individually rather than excluded by a pattern, so a sixth cannot arrive quietly
+    // Named individually rather than excluded by a pattern, so a seventh cannot arrive quietly
     // by matching a rule somebody loosened. A new entry here should have to argue for itself.
     expect(rows).toEqual([
       {
@@ -134,6 +148,11 @@ describe('schema conformance', () => {
         table_name: 'organization_invitations',
         index_name: 'organization_invitations_token_hash_unique',
         first: 'token_hash',
+      },
+      {
+        table_name: 'platform_retail_rates',
+        index_name: 'platform_retail_rates_id_meter_currency_unique',
+        first: 'id',
       },
     ]);
   });
@@ -297,7 +316,19 @@ describe('schema conformance', () => {
           )`,
     );
 
-    expect(rows).toEqual([]);
+    // **One exception, for the reason `platform_retail_rates_id_meter_currency_unique` is named
+    // above (I2), the same fact seen from the referencing side.** `usage_events_retail_rate_matches`
+    // points at a row that may belong to no tenant at all — the shared platform-default rate —
+    // not at another tenant's own row. Composite-with-`organization_id` would require that shared
+    // row's `organization_id` (null) to equal the usage event's own (never null), which can never
+    // be true; every usage event once no negotiated rate exists for its organization — the common
+    // case — would then be refused rather than recorded. `20261028000001` records the full
+    // reasoning and the real bug its investigation found (`app.retail_rate_at` resolving with no
+    // regard to organization at all, which is what RLS cannot catch on this side either, since the
+    // function runs as its own definer rather than through a row a policy could refuse).
+    expect(rows).toEqual([
+      { constraint_name: 'usage_events_retail_rate_matches', table_name: 'usage_events' },
+    ]);
   });
 
   it('catches a plain reference between tenant-owned tables', async () => {

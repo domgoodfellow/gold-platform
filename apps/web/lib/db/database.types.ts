@@ -8939,6 +8939,13 @@ export type Database = {
           feature_id: string
         }[]
       }
+      plan_entitled_features_bulk: {
+        Args: { p_plan_ids: string[] }
+        Returns: {
+          feature_id: string
+          plan_id: string
+        }[]
+      }
       plan_price_provider_reference: {
         Args: {
           p_environment: string

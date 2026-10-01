@@ -18,6 +18,7 @@
     "test:api": "node scripts/test.mjs api",
     "test:e2e": "node scripts/test.mjs e2e",
     "test:smoke": "node scripts/test.mjs smoke",
+    "test:visual": "node scripts/test.mjs visual",
     "demo": "pnpm --filter @gold/web demo",
     "demo:fresh": "pnpm db:reset && pnpm --filter @gold/web demo",
     "db:link": "supabase link",

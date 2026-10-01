@@ -1,4 +1,4 @@
-"""Business commands, orchestrated once and reachable from more than one caller.
+"""Provider-independent, caller-independent business commands.
 
 **What lives here.** A command a person, an AI tool, or a worker might all want to perform the
 same way -- moving a customer's stage, writing up a call -- gets exactly one implementation, in
@@ -7,10 +7,10 @@ That module decides nothing RLS or a narrow database function would not decide a
 later; it exists so the decision has one caller-independent home, on the same terms `app/ai`
 already reaches Postgres on (D17, D34) rather than as a new authority of its own.
 
-**What does not.** A vendor's shape (`app/providers/**`), a model's tool loop (`app/ai/**`),
-and the database's own authorization (RLS, a check constraint, a `security definer` function)
-are each somebody else's job. A domain module here never imports an integration and never mints
-its own credential -- it forwards the caller's token and calls one narrow RPC.
+**What does not.** HTTP parsing and auth live in ``api``. Orchestration across authenticated
+state, machine credentials, persistence and external calls lives in ``app.services``. Vendor
+dialects live in ``app.providers`` and ``app.connectors``. A domain module here imports none of
+those boundaries; it forwards the caller's token and calls a narrow database command.
 
 **Incremental on purpose.** Most of this platform's business rules still live in
 `apps/web/lib/domain/**`, in TypeScript, and stay there -- moving everything here would be the

@@ -19,10 +19,10 @@ import pytest
 
 from app.auth import CallerContext
 from app.core.config import IntegrationSettings
-from app.domains.errors import NotFoundError, ValidationError
-from app.domains.integrations import operations as ops
-from app.domains.integrations.operations import ProviderRefusedError, operate
-from app.domains.integrations.state import StateInvalid, sign_state, verify_state
+from app.errors import NotFoundError, ValidationError
+from app.services.integrations import operations as ops
+from app.services.integrations.operations import ProviderRefusedError, operate
+from app.services.integrations.state import StateInvalid, sign_state, verify_state
 
 SETTINGS = IntegrationSettings(
     supabase_url="http://db.test",

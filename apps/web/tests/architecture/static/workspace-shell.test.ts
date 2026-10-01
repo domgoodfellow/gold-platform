@@ -23,6 +23,10 @@ const contextSwitcher = readFileSync(`${WEB}/components/navigation/context-switc
 const accountMenu = readFileSync(`${WEB}/components/navigation/account-menu.tsx`, 'utf8');
 // The shell every organization page renders in — Platform included, which is a sub-scope of GOLD's own organization.
 const organizationLayout = readFileSync(`${WEB}/features/shell/organization-shell.tsx`, 'utf8');
+// Phase C's application layer (Slice 9/12): the shell's own reads — switchable organizations,
+// Business settings' offer, feature/platform resolution — were moved out of the layout component
+// into one coordinating function the layout merely calls and destructures.
+const organizationShellModel = readFileSync(`${WEB}/lib/application/shell/organization-shell.ts`, 'utf8');
 const organizationLayoutRoute = readFileSync(`${WEB}/app/organizations/[organizationId]/layout.tsx`, 'utf8');
 const platformLayout = readFileSync(`${WEB}/app/organizations/[organizationId]/platform/layout.tsx`, 'utf8');
 const legacyPlatformEntry = readFileSync(`${WEB}/app/platform/[[...path]]/page.tsx`, 'utf8');
@@ -185,12 +189,12 @@ describe('the Business phone header — compact controls wired to the right slot
     expect(contextBlock).toContain('mark={mark}');
     expect(contextBlock).toMatch(/kind:\s*'business'/);
     expect(contextBlock).toContain('organizations={switchable}');
-    expect(organizationLayout).toMatch(/const switchable = myOrganizations\.map/);
+    expect(organizationShellModel).toMatch(/myOrganizations\.map/);
     expect(contextBlock).not.toContain('platformStaff=');
   });
 
   it('the compact account menu knows whether Business settings has anything to offer', () => {
-    expect(organizationLayout).toContain('businessSettingsOffered(');
+    expect(organizationShellModel).toContain('businessSettingsOffered(');
     const beforeActionsBlock = organizationLayout.slice(
       organizationLayout.indexOf('beforeActions={'),
       organizationLayout.indexOf('/>', organizationLayout.indexOf('beforeActions={')),
@@ -441,7 +445,10 @@ describe('the page-header contract — the page, not the workspace header, owns 
     // WorkspaceHome, SettingsScopeNav/SettingsHeader, StatePage), a RecordHeader-based header
     // component, or a feature that renders one (Home, the customer record). A pure redirect
     // renders nothing at all.
-    const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<SettingsScopeNav|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage/;
+    // Phase C's loader+Screen route pairs (Slice 9) put the identity component one file down, in
+    // the Screen the page delegates to, rather than inline in the page itself — the same shape
+    // `CustomerDetail`/`HomeDashboard` already had: a feature component that renders the real one.
+    const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<SettingsScopeNav|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage|<PlanDetailScreen|<OrganizationCommercialScreen|<CatalogFamilyScreen|<TwilioProviderScreen|<PlanUsageScreen|<WorkItemDetailScreen/;
     for (const page of pages) {
       const source = readFileSync(page, 'utf8');
       const label = page.slice(root.length);

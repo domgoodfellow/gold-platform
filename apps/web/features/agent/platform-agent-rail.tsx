@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useAgentContent } from '@/components/panels/workspace-right-rail';
+import { useEffect, useMemo, useState } from 'react';
+import { useAgentContent, useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import { AgentEmptyConversation, AgentPanelFrame, AgentUnavailable } from './agent-shared';
+import { loadPlatformAgentAvailabilityAction } from './actions';
 
 /**
  * Registers the Agent rail's content for Platform scope. Its own component, not the tenant one
@@ -13,14 +14,42 @@ import { AgentEmptyConversation, AgentPanelFrame, AgentUnavailable } from './age
  * comment) — so this renders the real "Agent unavailable" surface, pointed at
  * the Providers page (`configureHref`), rather than a composer with nothing behind it.
  *
- * `canAnswer` comes from `canAnswerPlatformQuestions()`, read by the organization shell exactly as
- * `TenantAgentRail` reads `canAnswerQuestions()` — always `false` today, so the panel is always the
- * unavailable surface in practice. The other branch is where a platform-scoped conversation lands
- * the moment one exists, without this component needing to change shape again.
+ * `canAnswer` is read lazily, from `loadPlatformAgentAvailabilityAction`, the first time the panel
+ * is actually opened — the same first-open rule `TenantAgentRail` applies, and for the same
+ * reason: this component mounts on every Platform page regardless of whether Agent is ever opened.
+ * It is always `false` today, so the panel is always the unavailable surface in practice. The
+ * other branch is where a platform-scoped conversation lands the moment one exists, without this
+ * component needing to change shape again.
  */
-export function PlatformAgentRail({ canAnswer, configureHref }: { canAnswer: boolean; configureHref: string }) {
-  const content = useMemo(
-    () => (
+export function PlatformAgentRail({ goldId, configureHref }: { goldId: string; configureHref: string }) {
+  const { agentOpen } = useWorkspaceRail();
+  const [everOpened, setEverOpened] = useState(false);
+  if (agentOpen && !everOpened) setEverOpened(true);
+
+  const [canAnswer, setCanAnswer] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!everOpened || canAnswer !== null) return;
+    let active = true;
+    void loadPlatformAgentAvailabilityAction(goldId).then((result) => {
+      if (active) setCanAnswer(result);
+    });
+    return () => {
+      active = false;
+    };
+  }, [everOpened, canAnswer, goldId]);
+
+  const content = useMemo(() => {
+    if (!everOpened) return null;
+    if (canAnswer === null) {
+      return (
+        <AgentPanelFrame>
+          <div role="status" className="flex flex-1 items-center justify-center text-sm text-muted">
+            Loading…
+          </div>
+        </AgentPanelFrame>
+      );
+    }
+    return (
       <AgentPanelFrame>
         {canAnswer ? (
           <AgentEmptyConversation
@@ -31,9 +60,8 @@ export function PlatformAgentRail({ canAnswer, configureHref }: { canAnswer: boo
           <AgentUnavailable configureHref={configureHref} />
         )}
       </AgentPanelFrame>
-    ),
-    [canAnswer, configureHref],
-  );
+    );
+  }, [everOpened, canAnswer, configureHref]);
 
   useAgentContent(content);
   return null;

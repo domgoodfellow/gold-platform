@@ -21,7 +21,7 @@ import httpx
 
 from app.core.config import ProviderOperationsSettings
 from app.core.db import read_provider_account_credential, record_provider_account_verification
-from app.domains.errors import DomainError, NotFoundError, ValidationError
+from app.errors import DomainError, NotFoundError, ValidationError
 from app.providers.providers import UpstreamRefused, operations_for
 
 

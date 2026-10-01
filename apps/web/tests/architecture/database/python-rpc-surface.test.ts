@@ -52,6 +52,7 @@ function calledFromPython(): string[] {
     /_integration_rpc\(\s*settings,\s*"([a-z_0-9]+)"/g, // the integration door helper
     /_post\(\s*settings,\s*"([a-z_0-9]+)"/g, //          the automation runner's helper
     /function="([a-z_0-9]+)"/g, //                        a tool or a domain command's declaration
+    /\b_rpc\(\s*settings,\s*token,\s*"([a-z_0-9]+)"/g, // communications/routing.py's own RPC helper
   ];
   for (const file of pythonFiles(join(API, 'app'))) {
     const source = readFileSync(file, 'utf8');

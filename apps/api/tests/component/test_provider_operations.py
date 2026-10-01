@@ -15,9 +15,9 @@ from pathlib import Path
 import pytest
 
 from app.core.config import ProviderOperationsSettings
-from app.domains.errors import NotFoundError, ValidationError
-from app.domains.providers import operations as ops
-from app.domains.providers.operations import OperateCommand, ProviderRefusedError, operate
+from app.errors import NotFoundError, ValidationError
+from app.services.providers import operations as ops
+from app.services.providers.operations import OperateCommand, ProviderRefusedError, operate
 from app.providers.twilio import accounts as twilio
 
 SETTINGS = ProviderOperationsSettings(
