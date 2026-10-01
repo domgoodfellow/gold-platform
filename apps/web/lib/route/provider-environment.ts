@@ -11,7 +11,6 @@
  */
 export function credentialEnvironmentState(providerKey: string): 'configured' | 'not_configured' | 'not_implemented' {
   if (providerKey === 'anthropic') return process.env.ANTHROPIC_API_KEY ? 'configured' : 'not_configured';
-  if (providerKey === 'resend') return process.env.RESEND_API_KEY ? 'configured' : 'not_configured';
   return 'not_implemented';
 }
 
@@ -21,5 +20,9 @@ export function credentialEnvironmentState(providerKey: string): 'configured' | 
  * same reason `credentialEnvironmentState` is: naming which providers this platform built account
  * UI for is a fact about this deployment's routes, never something `lib/domain/` may say (I15).
  * Named once so the Providers list and a Provider's own detail route agree.
+ *
+ * `resend` joined this set once platform email moved onto `platform_provider_accounts` (D62,
+ * work order 1 §6); `RESEND_API_KEY`/`PLATFORM_EMAIL_FROM_ADDRESS` are the bootstrap fallback
+ * `app.services.platform_email` tries when no account is recorded, never a second UI for it.
  */
-export const GENERIC_ACCOUNT_PROVIDER_KEYS = new Set(['openai', 'anthropic', 'google', 'vercel']);
+export const GENERIC_ACCOUNT_PROVIDER_KEYS = new Set(['openai', 'anthropic', 'google', 'vercel', 'resend']);

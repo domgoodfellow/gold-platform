@@ -7,7 +7,7 @@ import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/i
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { inviteMemberAction, type InviteMemberState } from '@/app/organizations/[organizationId]/settings/access/actions';
 
-const INITIAL: InviteMemberState = { error: null, link: null };
+const INITIAL: InviteMemberState = { error: null, link: null, emailSent: null };
 
 /**
  * The shared Add Member Sheet owns the bounded creation surface; this component owns only the
@@ -29,7 +29,11 @@ export function InviteMemberForm({
   if (state.link) {
     return (
       <div className="mt-4 flex flex-col gap-3">
-        <Hint>Invitation created. Copy this link if you&rsquo;d like to send it yourself:</Hint>
+        <Hint>
+          {state.emailSent
+            ? 'Invitation created and emailed. You can also copy the link below:'
+            : 'Invitation created. Copy this link to send it yourself:'}
+        </Hint>
         <CopyField value={state.link} label="Invitation link" copiedMessage="Invitation link copied" />
       </div>
     );

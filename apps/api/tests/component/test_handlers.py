@@ -30,6 +30,8 @@ import api.ai_ask as ai_ask
 import api.automation_tick as automation_tick
 import api.crm_change_customer_stage as crm_change_customer_stage
 import api.integration_operations as integration_operations
+import api.invitation_email as invitation_email
+import api.invitation_email_webhook as invitation_email_webhook
 import api.organization_domains as organization_domains
 import api.provider_operations as provider_operations
 import api.public_chat as public_chat
@@ -299,6 +301,29 @@ class TestProcessorWebhooks:
         assert call(module, "POST", body=b"{}")[0] == 404
 
 
+class TestInvitationEmailWebhook:
+    """`verify_signature`'s own correctness (every header, every failure mode, the timestamp
+    tolerance) is `test_resend_webhook.py`'s subject; this proves only that the handler calls it
+    before anything is recorded."""
+
+    def test_refuses_without_a_valid_signature_and_writes_nothing(self, monkeypatch) -> None:
+        monkeypatch.setattr(invitation_email_webhook, "load_invitation_email_webhook_settings", lambda: SETTINGS)
+        recorded = Sink()
+        monkeypatch.setattr(invitation_email_webhook, "record_invitation_delivery_event", recorded)
+        body = json.dumps({"type": "email.delivered", "data": {"email_id": "m1"}}).encode()
+
+        for headers in ({}, {"svix-id": "x", "svix-timestamp": "1", "svix-signature": "v1,deadbeef"}):
+            status, text = call(invitation_email_webhook, "POST", headers=headers, body=body)
+            assert (status, text) == (400, "rejected")
+
+        assert recorded.calls == []
+
+    def test_a_deployment_with_no_webhook_configured_answers_404(self, monkeypatch) -> None:
+        monkeypatch.setattr(invitation_email_webhook, "load_invitation_email_webhook_settings", lambda: None)
+
+        assert call(invitation_email_webhook, "POST", body=b"{}")[0] == 404
+
+
 # --- the scheduler's tick: a shared secret, or nothing runs --------------------------------------
 
 
@@ -337,6 +362,7 @@ PEOPLE = [
     (integration_operations, "load_integration_settings", "operate"),
     (provider_operations, "load_provider_operations_settings", "operate"),
     (organization_domains, "load_provider_operations_settings", "run_domain_command"),
+    (invitation_email, "load_provider_operations_settings", "send_invitation_email"),
 ]
 
 

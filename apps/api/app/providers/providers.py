@@ -59,4 +59,8 @@ def operations_for(provider_key: str) -> dict[str, Operation] | None:
         from app.providers.vercel.domains import OPERATIONS
 
         return OPERATIONS
+    if provider_key == "resend":
+        from app.providers.resend.accounts import OPERATIONS
+
+        return OPERATIONS
     return None

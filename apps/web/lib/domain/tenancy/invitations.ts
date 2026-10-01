@@ -114,6 +114,78 @@ export async function revokeInvitation(db: Db, input: { id: string }): Promise<v
 }
 
 /**
+ * Rotates a pending invitation onto a fresh token and a fresh seven-day window (D33's own
+ * invariant, restated: `token_hash` is a single column, so the old link stops validating the
+ * instant this commits — issuing a new one cannot be undone). Returns the one-time plaintext
+ * token, exactly as `inviteMember` does, to build the new link.
+ */
+export async function reissueInvitation(db: Db, input: { id: string }): Promise<string> {
+  await requireActor(db);
+
+  const { data, error } = await db.rpc('reissue_invitation', { p_id: input.id });
+
+  if (error) {
+    if (error.code === '42501') {
+      throw new DomainError('You cannot send that invitation again.', 'invitations.reissue_forbidden');
+    }
+    if (error.code === '22023') {
+      throw new DomainError('That invitation can no longer be sent again.', 'invitations.reissue_invalid');
+    }
+    throw new DomainError(error.message, 'invitations.reissue_failed');
+  }
+
+  return data as string;
+}
+
+export const INVITATION_DELIVERY_STATES = [
+  'queued',
+  'sent',
+  'delivered',
+  'delayed',
+  'bounced',
+  'failed',
+  'suppressed',
+] as const;
+export type InvitationDeliveryState = (typeof INVITATION_DELIVERY_STATES)[number];
+
+export type InvitationDeliveryStatus = {
+  state: InvitationDeliveryState;
+  detail: string | null;
+  occurredAt: string;
+};
+
+/**
+ * Each pending invitation's latest delivery fact, keyed by invitation id — never summarised onto
+ * the invitation row itself (`invitation_deliveries`' own table comment): an invitation's
+ * `accepted_at`/`revoked_at` is a fact about the recipient, this is a fact about the mail.
+ */
+export async function listInvitationDeliveryStatus(
+  db: Db,
+  input: { organizationId: string },
+): Promise<Map<string, InvitationDeliveryStatus>> {
+  const { data, error } = await db
+    .from('invitation_deliveries')
+    .select('invitation_id, state, detail, occurred_at')
+    .eq('organization_id', input.organizationId)
+    .order('occurred_at', { ascending: false });
+
+  if (error) {
+    throw new DomainError(error.message, 'invitations.delivery_read_failed');
+  }
+
+  const latest = new Map<string, InvitationDeliveryStatus>();
+  for (const row of data ?? []) {
+    if (latest.has(row.invitation_id)) continue; // ordered newest-first: the first row per id wins
+    latest.set(row.invitation_id, {
+      state: row.state as InvitationDeliveryState,
+      detail: row.detail,
+      occurredAt: row.occurred_at,
+    });
+  }
+  return latest;
+}
+
+/**
  * Claims an invitation. Unlike the portal's `claimPortalInvite`, this never signs anyone in
  * anonymously — accepting a role requires being the genuine account the invitation named, so the
  * caller must already be signed in (or have just signed up) as themselves before this is called.

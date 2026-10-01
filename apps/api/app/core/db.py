@@ -35,6 +35,7 @@ import httpx
 
 from app.core.config import (
     IntegrationSettings,
+    InvitationEmailWebhookSettings,
     PlatformBillingSettings,
     ProviderOperationsSettings,
     Settings,
@@ -474,6 +475,55 @@ def record_provider_account_verification(
         raise RuntimeError(f"record_provider_account_verification failed: {response.status_code}")
 
 
+def default_platform_provider_account(settings: ProviderOperationsSettings, *, provider_key: str) -> str | None:
+    """The default active account id for one provider, or `None`. See `_provider_headers` below for
+    the same machine identity every other `provider_operator` door in this module mints."""
+    token = machine_token(settings.supabase_jwt_secret, role=PROVIDER_ROLE, sub=PROVIDER_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/default_platform_provider_account",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={"p_provider_key": provider_key},
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"default_platform_provider_account failed: {response.status_code}")
+    return response.json() or None
+
+
+def record_invitation_delivery(
+    settings: ProviderOperationsSettings,
+    *,
+    organization_id: str,
+    invitation_id: str,
+    recipient: str,
+    state: str,
+    provider_message_id: str | None,
+    detail: str | None,
+) -> None:
+    """What apps/api got back immediately after asking a provider to send one invitation's email.
+    Same role as the credential read that made the send possible (`provider_operator`)."""
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/record_invitation_delivery",
+        headers=_provider_headers(settings),
+        json={
+            "p_organization_id": organization_id,
+            "p_invitation_id": invitation_id,
+            "p_recipient": recipient,
+            "p_state": state,
+            "p_provider_message_id": provider_message_id,
+            "p_detail": detail,
+        },
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"record_invitation_delivery failed: {response.status_code}")
+
+
 # --- a business's custom domain: three more doors on the same role, and no table grant ----------
 #
 # The same machine identity and the same trust path as the account doors above: `apps/api` proves
@@ -644,3 +694,48 @@ def replace_integration_resources(settings: IntegrationSettings, *, connection_i
 
 def clear_integration_credential(settings: IntegrationSettings, *, connection_id: str) -> None:
     _integration_rpc(settings, "clear_integration_credential", {"p_connection_id": connection_id})
+
+
+INVITATION_EMAIL_WEBHOOK_ROLE = "invitation_email_webhook"
+
+# The invitation-email-delivery integration's own auth.users row, fixed in
+# 20261102000001_resend_is_a_provider_account_and_invitations_report_delivery.sql. No email, no
+# password, like every other webhook actor.
+INVITATION_EMAIL_WEBHOOK_ACTOR = "00000000-0000-4000-8000-0000000000a6"
+
+
+def record_invitation_delivery_event(
+    settings: InvitationEmailWebhookSettings,
+    *,
+    provider_message_id: str,
+    state: str,
+    detail: str | None,
+    payload: dict,
+    payload_hash: str,
+) -> str | None:
+    """One Resend callback about one invitation email, applied through `invitation_email_webhook`'s
+    one door. Organization and invitation are both derived inside the function from the provider's
+    own message id -- never from anything this handler could otherwise have been asked to trust."""
+    token = machine_token(
+        settings.supabase_jwt_secret, role=INVITATION_EMAIL_WEBHOOK_ROLE, sub=INVITATION_EMAIL_WEBHOOK_ACTOR
+    )
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/record_invitation_delivery_event",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "p_provider_message_id": provider_message_id,
+            "p_state": state,
+            "p_detail": detail,
+            "p_payload": payload,
+            "p_payload_hash": payload_hash,
+        },
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"record_invitation_delivery_event failed: {response.status_code}")
+    return response.json()

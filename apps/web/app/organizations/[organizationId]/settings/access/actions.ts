@@ -3,10 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { InviteMemberSchema } from '@gold/schemas';
 import { platformEmailSender } from '@/lib/adapters/email';
+import { requireAccessToken } from '@/lib/api/client';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { addMember } from '@/lib/domain/tenancy/members';
-import { inviteMember, revokeInvitation } from '@/lib/domain/tenancy/invitations';
+import { inviteMember, listPendingInvitations, reissueInvitation, revokeInvitation } from '@/lib/domain/tenancy/invitations';
 import { assignRole, createRole, updateRoleCapabilities } from '@/lib/domain/tenancy/roles';
 import { requestOrigin } from '@/lib/route/origin';
 import { requireOrganization } from '@/lib/route/organization';
@@ -97,7 +98,12 @@ export async function addMemberAction(
   return { error: null, created: true };
 }
 
-export type InviteMemberState = { error: string | null; link: string | null };
+export type InviteMemberState = {
+  error: string | null;
+  link: string | null;
+  /** `null` until a send was attempted; distinguishes "created and sent" from "created, copy this link" (work order 1 §10). */
+  emailSent: boolean | null;
+};
 
 export async function inviteMemberAction(
   _previous: InviteMemberState,
@@ -113,15 +119,18 @@ export async function inviteMemberAction(
     roleId: formData.get('roleId'),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'That invitation is not valid.', link: null };
+    return { error: parsed.error.issues[0]?.message ?? 'That invitation is not valid.', link: null, emailSent: null };
   }
 
   let token: string;
+  let invitationId: string;
   try {
     token = await inviteMember(db, parsed.data);
+    const pending = await listPendingInvitations(db, { organizationId });
+    invitationId = pending.find((invitation) => invitation.email === parsed.data.email)?.id ?? '';
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message, link: null };
+      return { error: error.message, link: null, emailSent: null };
     }
     throw error;
   }
@@ -136,21 +145,59 @@ export async function inviteMemberAction(
 
   // Best-effort: an invite that could not be emailed is still a real invite. The link is always
   // shown regardless, exactly as `create_portal_invite`'s own token is shown so it can be resent.
-  const sender = await platformEmailSender();
-  if (sender) {
+  let emailSent = false;
+  if (invitationId) {
     try {
-      await sender.send({
-        to: parsed.data.email,
-        subject: "You've been invited to join a business on GildOps",
-        text: `You've been invited to join a business on GildOps. Open this link to accept:\n\n${link}\n\nIf you weren't expecting this, you can ignore it.`,
-      });
+      const sender = await platformEmailSender({ token: await requireAccessToken(db) });
+      const receipt = await sender?.sendInvitationEmail({ organizationId, invitationId, link });
+      emailSent = receipt?.sent ?? false;
     } catch {
       // Swallowed on purpose — the copyable link below is the fallback, not a second attempt.
     }
   }
 
   revalidatePath(`/organizations/${organizationId}/settings/access`);
-  return { error: null, link };
+  return { error: null, link, emailSent };
+}
+
+export type ReissueInvitationState = { error: string | null; link: string | null; emailSent: boolean | null };
+
+/**
+ * Resend: a fresh token, a fresh link, a fresh send attempt — never the original plaintext, which
+ * no longer exists anywhere to resend (D33). The old link stops working the instant this commits.
+ */
+export async function reissueInvitationAction(
+  _previous: ReissueInvitationState,
+  formData: FormData,
+): Promise<ReissueInvitationState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const invitationId = String(formData.get('id') ?? '');
+  await requireOrganization(organizationId);
+
+  let token: string;
+  try {
+    token = await reissueInvitation(db, { id: invitationId });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message, link: null, emailSent: null };
+    }
+    throw error;
+  }
+
+  const link = `${await requestOrigin()}/organizations/accept-invite/${token}`;
+
+  let emailSent = false;
+  try {
+    const sender = await platformEmailSender({ token: await requireAccessToken(db) });
+    const receipt = await sender?.sendInvitationEmail({ organizationId, invitationId, link });
+    emailSent = receipt?.sent ?? false;
+  } catch {
+    // Swallowed on purpose, the same reason inviteMemberAction's own send is.
+  }
+
+  revalidatePath(`/organizations/${organizationId}/settings/access`);
+  return { error: null, link, emailSent };
 }
 
 export type AssignRoleState = { error: string | null };

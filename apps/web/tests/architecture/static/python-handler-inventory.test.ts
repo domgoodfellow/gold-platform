@@ -48,6 +48,8 @@ const INVENTORY: { file: string; route: string; trust: keyof typeof TRUST }[] = 
   { file: 'sms_inbound', route: '/sms/inbound', trust: 'twilio-signature' },
   { file: 'sms_status', route: '/sms/status', trust: 'twilio-signature' },
   { file: 'public_chat', route: '/public_chat', trust: 'shared-key' },
+  { file: 'invitation_email', route: '/invitations/email', trust: 'bearer-token' },
+  { file: 'invitation_email_webhook', route: '/webhooks/invitation-email', trust: 'twilio-signature' },
 ];
 
 const files = readdirSync(join(API, 'api')).filter((name) => name.endsWith('.py'));

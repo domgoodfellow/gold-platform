@@ -291,6 +291,42 @@ def load_voice_settings() -> VoiceSettings | None:
     return VoiceSettings(**values)  # type: ignore[arg-type]
 
 
+@dataclass(frozen=True)
+class InvitationEmailWebhookSettings:
+    """What hearing from Resend about an invitation email needs.
+
+    A fifth webhook dataclass, the same reasoning every one before it gives: a deployment that
+    sends invitations and never configured delivery callbacks is an ordinary deployment, not a
+    half-broken one. `signing_secret` is Resend's own Svix signing secret for this one webhook
+    destination -- never `SUPABASE_JWT_SECRET`, which signs the token for `invitation_email_webhook`
+    after the signature below has already been checked, not instead of checking it.
+    """
+
+    supabase_url: str
+    supabase_publishable_key: str
+    # Signs a 60-second token for `invitation_email_webhook`, which holds no grant on any table
+    # and one execute. Not the service-role key, which D14 refuses.
+    supabase_jwt_secret: str
+    # Resend signs every callback with this (a Svix webhook secret, `whsec_...`). Without it the
+    # endpoint below would accept anything, which is a stranger writing delivery state for a
+    # business's invitations.
+    signing_secret: str
+
+
+def load_invitation_email_webhook_settings() -> InvitationEmailWebhookSettings | None:
+    values = {
+        "supabase_url": os.environ.get("SUPABASE_URL"),
+        "supabase_publishable_key": _publishable_key(),
+        "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
+        "signing_secret": os.environ.get("RESEND_WEBHOOK_SECRET"),
+    }
+
+    if not all(values.values()):
+        return None
+
+    return InvitationEmailWebhookSettings(**values)  # type: ignore[arg-type]
+
+
 def environment_warnings() -> list[str]:
     """Partial configuration this deployment's own graceful-degradation rules cannot see.
 

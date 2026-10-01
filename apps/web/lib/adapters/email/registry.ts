@@ -2,21 +2,18 @@ import type { PlatformEmailSender } from './index';
 
 /**
  * Which implementation this deployment uses — the only file outside an implementation that
- * names one. Null when unconfigured: the invite still gets created and its link still gets
- * shown to copy, exactly as `apps/api/app/channels/registry.py:sender_for` treats an
- * unconfigured tenant channel — a deployment with no email set up is a complete deployment, not
- * a broken one.
+ * names one. `null` when this deployment has no API to relay to, the same `D31` reasoning
+ * `apps/web/lib/adapters/domains/registry.ts` already gives for a hosting credential: a
+ * deployment with no `apps/api` configured sends no platform email, and the invitation it creates
+ * still gets its copyable link.
  *
- * A deliberately separate credential and sender address from a tenant's own channel
- * (`RESEND_API_KEY`/`MESSAGE_FROM_ADDRESS` in `apps/api`), even though both may end up pointing
- * at the same Resend account in practice — GOLD's own platform mail must never be confused with
- * a tenant's metered, billed sends.
+ * Takes the caller's own token, the same shape `domainProvider({ token })` already holds — this
+ * adapter forwards it to `apps/api`, which proves the caller may act on the one invitation named,
+ * never trusting a recipient or a subject line this deployment did not derive itself.
  */
-export async function platformEmailSender(): Promise<PlatformEmailSender | null> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const sender = process.env.PLATFORM_EMAIL_FROM_ADDRESS;
-  if (!apiKey || !sender) return null;
+export async function platformEmailSender(input: { token: string }): Promise<PlatformEmailSender | null> {
+  if (!process.env.GOLD_API_URL) return null;
 
-  const { resendPlatformEmailSender } = await import('./resend');
-  return resendPlatformEmailSender({ apiKey, sender });
+  const { goldApiPlatformEmailSender } = await import('./gold-api');
+  return goldApiPlatformEmailSender(input);
 }

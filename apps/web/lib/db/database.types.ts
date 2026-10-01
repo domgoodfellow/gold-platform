@@ -3108,6 +3108,70 @@ export type Database = {
           },
         ]
       }
+      invitation_deliveries: {
+        Row: {
+          detail: string | null
+          id: string
+          invitation_id: string
+          occurred_at: string
+          organization_id: string
+          payload: Json
+          payload_hash: string
+          provider_message_id: string | null
+          recipient: string
+          source: string
+          state: string
+        }
+        Insert: {
+          detail?: string | null
+          id?: string
+          invitation_id: string
+          occurred_at?: string
+          organization_id: string
+          payload?: Json
+          payload_hash: string
+          provider_message_id?: string | null
+          recipient: string
+          source: string
+          state: string
+        }
+        Update: {
+          detail?: string | null
+          id?: string
+          invitation_id?: string
+          occurred_at?: string
+          organization_id?: string
+          payload?: Json
+          payload_hash?: string
+          provider_message_id?: string | null
+          recipient?: string
+          source?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitation_deliveries_invitation_same_org"
+            columns: ["organization_id", "invitation_id"]
+            isOneToOne: false
+            referencedRelation: "organization_invitations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invitation_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitation_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_lines: {
         Row: {
           currency: string
@@ -8716,6 +8780,10 @@ export type Database = {
         Args: { p_proposal_id: string }
         Returns: undefined
       }
+      default_platform_provider_account: {
+        Args: { p_provider_key: string }
+        Returns: string
+      }
       detach_plan_addon: {
         Args: { p_addon_plan_id: string; p_plan_id: string }
         Returns: undefined
@@ -8725,7 +8793,7 @@ export type Database = {
         Returns: undefined
       }
       effective_retail_rates: {
-        Args: { p_at?: string; p_currency: string }
+        Args: { p_at?: string; p_currency: string; p_organization_id: string }
         Returns: {
           currency: string
           meter_id: string
@@ -9285,6 +9353,28 @@ export type Database = {
         }
         Returns: string
       }
+      record_invitation_delivery: {
+        Args: {
+          p_detail?: string
+          p_invitation_id: string
+          p_organization_id: string
+          p_payload_hash?: string
+          p_provider_message_id?: string
+          p_recipient: string
+          p_state: string
+        }
+        Returns: string
+      }
+      record_invitation_delivery_event: {
+        Args: {
+          p_detail: string
+          p_payload: Json
+          p_payload_hash: string
+          p_provider_message_id: string
+          p_state: string
+        }
+        Returns: string
+      }
       record_message_delivery: {
         Args: { p_detail: string; p_id: string; p_sent: boolean }
         Returns: undefined
@@ -9575,6 +9665,7 @@ export type Database = {
         }
         Returns: string
       }
+      reissue_invitation: { Args: { p_id: string }; Returns: string }
       release_custom_domain: {
         Args: { p_domain_id: string; p_organization_id: string }
         Returns: undefined

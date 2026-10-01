@@ -55,6 +55,36 @@ def resend_sender(*, api_key: str, sender: str) -> Sender:
     return _Sender()
 
 
+def send_platform_email(*, api_key: str, sender: str, to: str, subject: str, text: str) -> dict:
+    """GOLD's own transactional email -- an invitation, never a tenant's own message (the same
+    split `resend_sender` above draws, one axis over). Returns Resend's own message id so a later
+    webhook can be correlated back to this one send; `resend_sender`'s `Sent` carries none because
+    no channel delivery needs that correlation today.
+
+    Never raises for a provider refusal: `{"ok", "external_id", "detail"}` is the whole answer, so
+    the caller can record what happened rather than lose it to an exception.
+    """
+    try:
+        response = httpx.post(
+            API,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"from": sender, "to": [to], "subject": subject, "text": text},
+            timeout=15.0,
+        )
+    except httpx.HTTPError as failure:
+        return {"ok": False, "external_id": None, "detail": f"Resend could not be reached: {type(failure).__name__}"}
+
+    if response.status_code >= 400:
+        return {"ok": False, "external_id": None, "detail": _reason(response)}
+
+    try:
+        body = response.json()
+    except ValueError:
+        body = {}
+    message_id = body.get("id") if isinstance(body, dict) else None
+    return {"ok": True, "external_id": str(message_id) if message_id else None, "detail": None}
+
+
 def _reason(response: httpx.Response) -> str:
     """The provider's own words, kept short. Never our interpretation of them."""
     try:

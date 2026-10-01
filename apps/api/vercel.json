@@ -78,6 +78,14 @@
     {
       "source": "/public_chat",
       "destination": "/api/public_chat"
+    },
+    {
+      "source": "/invitations/email",
+      "destination": "/api/invitation_email"
+    },
+    {
+      "source": "/webhooks/invitation-email",
+      "destination": "/api/invitation_email_webhook"
     }
   ],
   "crons": [

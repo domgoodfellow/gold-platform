@@ -432,6 +432,42 @@
         "p_ssl_state",
         "p_verification_state"
       ]
+    },
+    "default_platform_provider_account": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_provider_key"
+      ]
+    },
+    "record_invitation_delivery": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_detail",
+        "p_invitation_id",
+        "p_organization_id",
+        "p_provider_message_id",
+        "p_recipient",
+        "p_state"
+      ]
+    },
+    "record_invitation_delivery_event": {
+      "role": "invitation_email_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_detail",
+        "p_payload",
+        "p_payload_hash",
+        "p_provider_message_id",
+        "p_state"
+      ]
     }
   }
 }

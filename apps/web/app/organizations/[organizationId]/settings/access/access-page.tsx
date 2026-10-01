@@ -2,7 +2,7 @@ import { Hint } from '@/components/controls/inputs';
 import { ViewNav } from '@/components/navigation/view-nav';
 import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
-import { listPendingInvitations } from '@/lib/domain/tenancy/invitations';
+import { listInvitationDeliveryStatus, listPendingInvitations } from '@/lib/domain/tenancy/invitations';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireOrganization } from '@/lib/route/organization';
@@ -36,10 +36,11 @@ export async function AccessPage({
   const { db, organization } = context;
   const mayManage = organization.capabilities.includes('role.manage');
 
-  const [roles, members, invitations] = await Promise.all([
+  const [roles, members, invitations, deliveryStatus] = await Promise.all([
     listRoles(db, { organizationId }),
     listMembers(db, { organizationId }),
     listPendingInvitations(db, { organizationId }),
+    listInvitationDeliveryStatus(db, { organizationId }),
   ]);
 
   return (
@@ -95,6 +96,7 @@ export async function AccessPage({
           <InvitationsTable
             organizationId={organizationId}
             invitations={invitations}
+            deliveryStatus={deliveryStatus}
             mayManage={mayManage}
           />
         </div>

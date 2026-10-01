@@ -33,8 +33,10 @@ platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and acces
 | `POST /sms/inbound` | `api/sms_inbound.py` | Twilio signature. Records an inbound text and applies STOP/START through the Messaging machine role. |
 | `POST /sms/status` | `api/sms_status.py` | Twilio signature. Records a message's delivery status through the Messaging machine role. |
 | `POST /public_chat` | `api/public_chat.py` | Shared server-to-server key (`x-gold-public-chat-key`) from `apps/web` only; the same answer as "not configured" on any mismatch. Public-site assistant. |
+| `POST /invitations/email` | `api/invitation_email.py` | Bearer token; the caller must be able to see the pending invitation named, proved by RLS. Sends or resends its email through GOLD's own Resend account (or the environment bootstrap fallback) — never a caller-supplied recipient, subject or body. |
+| `POST /webhooks/invitation-email` | `api/invitation_email_webhook.py` | Resend's Svix-shaped signature over the raw body. Records a delivery event through the narrow invitation-email machine role; derives the organization and invitation from the provider's own message id. |
 
-18 deployable handlers, one file each. Vercel also serves every file under `api/` at its
+20 deployable handlers, one file each. Vercel also serves every file under `api/` at its
 physical `/api/<name>` path, so a rewrite is the documented route, not the only reachable one.
 `tests/architecture/static/python-handler-inventory.test.ts` holds this table, `vercel.json`, the
 files in `api/` and the handler tests to one another.
@@ -61,7 +63,9 @@ names in the API Vercel project for hosted environments; do not upload the file.
 | `SUPABASE_JWT_SECRET` | payment, automation and Voice machine roles ONLY | Temporary legacy, very high-risk server secret. Used exclusively by `app/core/db.py` and `app/core/runner.py` to mint short-lived machine tokens — never by `app/auth`, which authoritatively verifies a human token either locally against Supabase's JWKS (asymmetric-signing-key tokens) or by asking Supabase's own Auth server (legacy HS256 tokens), and needs no shared secret for either. Without it the machine-role handlers remain unconfigured. Never substitute a service-role or `sb_secret_` key. |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook | Endpoint- and environment-specific signing secret. |
 | `CRON_SECRET` | automation tick | Random shared secret; Vercel Cron normally invokes Production. |
-| `RESEND_API_KEY`, `MESSAGE_FROM_ADDRESS` | tenant-channel email | Separate operational concern from Web's platform invitation email configuration. |
+| `RESEND_API_KEY`, `MESSAGE_FROM_ADDRESS` | tenant-channel email | Separate operational concern from platform invitation email below — a different purse, a different sender identity (D40). |
+| `RESEND_API_KEY`, `PLATFORM_EMAIL_FROM_ADDRESS` | platform invitation email, bootstrap fallback | Tried only when no `resend` row in `platform_provider_accounts` is both active, default and holds a credential; `app.services.platform_email` prefers the account (D62). `RESEND_API_KEY` is shared by name with the tenant-channel row above, but the two paths never combine a tenant's message with GOLD's own. |
+| `RESEND_WEBHOOK_SECRET` | the invitation-email webhook | Resend's own Svix signing secret for this one destination (`whsec_...`). Without it the endpoint is unconfigured, same as every other webhook here with no secret. |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `MESSAGE_FROM_NUMBER` | messaging and Voice callbacks | Deployment/provider configuration; tenant resources increasingly live in provider bindings. |
 | `ANTHROPIC_API_KEY` | hosted model fallback | Optional. |
 | `ASSISTANT_BASE_URL`, `ASSISTANT_MODEL`, `ASSISTANT_API_KEY` | OpenAI-compatible model binding | Base URL and model are paired; key is optional for providers that do not need one. Local endpoints are useful in development but remain Platform Context configuration. |

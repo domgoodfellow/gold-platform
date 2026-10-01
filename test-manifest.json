@@ -212,6 +212,14 @@
       ],
       "note": "Component, despite the filename: every boundary is patched. \"Integration\" names the product feature."
     },
+    "apps/api/tests/component/test_platform_email_operations.py": {
+      "category": "python-component",
+      "concerns": [
+        "providers",
+        "security"
+      ],
+      "note": "send_invitation_email: the recipient always comes from the invitation row, the account is tried before the environment, every outcome is recorded. The vendor boundary (send_platform_email) is replaced."
+    },
     "apps/api/tests/component/test_provider_operations.py": {
       "category": "python-component",
       "concerns": [
@@ -241,6 +249,28 @@
         "integrations",
         "providers"
       ]
+    },
+    "apps/api/tests/contract/test_resend_accounts.py": {
+      "category": "python-contract",
+      "concerns": [
+        "providers"
+      ],
+      "note": "GOLD's own Resend account: whether the stored credential works, offline."
+    },
+    "apps/api/tests/contract/test_resend_platform_email.py": {
+      "category": "python-contract",
+      "concerns": [
+        "providers"
+      ],
+      "note": "send_platform_email: the platform-email-specific Resend call that returns a provider message id, offline."
+    },
+    "apps/api/tests/contract/test_resend_webhook.py": {
+      "category": "python-contract",
+      "concerns": [
+        "providers",
+        "security"
+      ],
+      "note": "Resend's Svix-shaped signature (every header, a tampered body, a stale timestamp, a wrong secret) and the event-to-state mapping, offline."
     },
     "apps/api/tests/contract/test_rpc_contract.py": {
       "category": "python-contract",
@@ -947,13 +977,14 @@
         "providers"
       ]
     },
-    "apps/web/tests/contract/resend-email.test.ts": {
+    "apps/web/tests/contract/platform-email.test.ts": {
       "category": "offline-contract",
       "concerns": [
         "communications",
         "providers",
         "security"
-      ]
+      ],
+      "note": "The relay to apps/api's /invitation_email: what is sent (never a subject or body, only an id and a link), and the unconfigured-deployment null. Names no vendor — apps/api's own suite covers the Resend call."
     },
     "apps/web/tests/contract/stripe-payments.test.ts": {
       "category": "offline-contract",
@@ -1248,6 +1279,15 @@
       "concerns": [
         "integrations"
       ]
+    },
+    "apps/web/tests/integration/database/invitation-delivery.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "tenancy",
+        "providers",
+        "security"
+      ],
+      "note": "Reissue rotates the token and the expiry; invitation_deliveries tenant isolation; provider_operator/invitation_email_webhook hold no table grant and exactly the narrow doors; the webhook's own correlation by provider message id and its payload-hash dedupe."
     },
     "apps/web/tests/integration/database/invitations.test.ts": {
       "category": "database-integration",
