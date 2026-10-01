@@ -182,6 +182,14 @@
       ],
       "note": "The routing resolver's own branching over a faked transport — business hours, ring strategies, fallback, cycle rejection, callback affinity, outbound AUTO/MANUAL."
     },
+    "apps/api/tests/component/test_dns_operations.py": {
+      "category": "python-component",
+      "concerns": [
+        "integrations",
+        "providers"
+      ],
+      "note": "ensure_required_records: which connected zone answers, unchanged/created/updated/conflict. The vendor boundary (app.services.dns.cloudflare) is replaced, the same shape test_web_delivery_domains.py holds for app.providers.vercel.domains."
+    },
     "apps/api/tests/component/test_handlers.py": {
       "category": "python-component",
       "concerns": [
@@ -218,6 +226,14 @@
         "security"
       ],
       "note": "Replaces app.providers.vercel.domains and the db.py machine-role callers; the database half is organization-domains.test.ts."
+    },
+    "apps/api/tests/contract/test_cloudflare_connector.py": {
+      "category": "python-contract",
+      "concerns": [
+        "integrations",
+        "providers"
+      ],
+      "note": "Cloudflare's own handshake and zone discovery, offline -- the same shape test_connectors.py holds for the other six."
     },
     "apps/api/tests/contract/test_connectors.py": {
       "category": "python-contract",

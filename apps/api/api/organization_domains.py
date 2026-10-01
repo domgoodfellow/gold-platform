@@ -15,7 +15,7 @@ import json
 from http.server import BaseHTTPRequestHandler
 
 from app.auth import AuthError, require_caller
-from app.core.config import load_provider_operations_settings
+from app.core.config import load_integration_settings, load_provider_operations_settings
 from app.errors import DomainError
 from app.services.web_delivery.operations import run_domain_command
 
@@ -54,6 +54,9 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
                 command=str(body.get("command") or "").strip(),
                 organization_id=str(body.get("organization_id") or "").strip(),
                 domain_id=str(body.get("domain_id") or "").strip(),
+                # `None` on a deployment with no OAuth connectors configured: the automated DNS
+                # bridge is simply unavailable then, and the manual path is unaffected.
+                dns_settings=load_integration_settings(),
             )
         except DomainError as failure:
             self._reply(failure.status, {"error": str(failure), "code": failure.code})

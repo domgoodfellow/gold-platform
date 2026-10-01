@@ -20,6 +20,7 @@ _REGISTRY: dict[str, tuple[str, str, str]] = {
     "notion": ("app.connectors.notion", "Notion", "NOTION_OAUTH"),
     "slack": ("app.connectors.slack", "Slack", "SLACK_OAUTH"),
     "dropbox": ("app.connectors.dropbox", "Dropbox", "DROPBOX_OAUTH"),
+    "cloudflare": ("app.connectors.cloudflare", "Cloudflare", "CLOUDFLARE_OAUTH"),
 }
 
 

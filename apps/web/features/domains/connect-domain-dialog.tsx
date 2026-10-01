@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from '@/components/controls/confirm-submit';
 import { checkDomainAction, connectDomainAction } from '@/app/organizations/[organizationId]/settings/domains/actions';
+import { isDnsAutomated } from '@/lib/domain/domains/dns-zones';
 import { DOMAIN_SURFACES } from '@/lib/domain/domains/presentation';
 import { connectDomainFlow, INITIAL_FLOW, type FlowState } from './connect-domain-flow';
 import { DnsRecordTable } from './dns-record-table';
@@ -29,9 +30,11 @@ import { DomainStateBadge } from './domain-status';
 export function ConnectDomainDialog({
   organizationId,
   platformZone,
+  cloudflareZones,
 }: {
   organizationId: string;
   platformZone: string | null;
+  cloudflareZones: string[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -69,7 +72,7 @@ export function ConnectDomainDialog({
         <Button type="button">Connect domain</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
-        <ConnectDomainStep state={state} platformZone={platformZone} dispatch={dispatch} />
+        <ConnectDomainStep state={state} platformZone={platformZone} cloudflareZones={cloudflareZones} dispatch={dispatch} />
       </DialogContent>
     </Dialog>
   );
@@ -81,10 +84,12 @@ type Dispatch = (event: Parameters<typeof connectDomainFlow>[1]) => void;
 export function ConnectDomainStep({
   state,
   platformZone,
+  cloudflareZones,
   dispatch,
 }: {
   state: FlowState;
   platformZone: string | null;
+  cloudflareZones: string[];
   dispatch: Dispatch;
 }) {
   switch (state.step) {
@@ -183,9 +188,13 @@ export function ConnectDomainStep({
               {state.hostname} <DomainStateBadge presentation="pending_dns" />
             </DialogTitle>
             <DialogDescription>
-              {state.rechecked
-                ? 'Checked again: DNS for this domain does not point here yet. Make sure these records are published exactly as shown. Changes can take a while to spread.'
-                : 'Publish these records at your DNS host, then check again.'}
+              {isDnsAutomated(state.hostname, cloudflareZones)
+                ? state.rechecked
+                  ? 'Checked again: DNS is still settling. GildOps is publishing these records through your connected Cloudflare account — this can take a few minutes.'
+                  : 'DNS is managed through your connected Cloudflare account. GildOps is publishing these records automatically.'
+                : state.rechecked
+                  ? 'Checked again: DNS for this domain does not point here yet. Make sure these records are published exactly as shown. Changes can take a while to spread.'
+                  : 'Publish these records at your DNS host, then check again.'}
             </DialogDescription>
           </DialogHeader>
           <DnsRecordTable records={state.records} />

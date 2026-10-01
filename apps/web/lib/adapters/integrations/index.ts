@@ -16,7 +16,7 @@
  * deployment has an API to relay to; whether the API holds the vendor's client registration is the
  * API's own answer, given plainly when a person presses Connect.
  */
-const NEEDS_API = new Set<string>(['google_workspace', 'microsoft_365', 'hubspot', 'notion', 'slack', 'dropbox']);
+const NEEDS_API = new Set<string>(['google_workspace', 'microsoft_365', 'hubspot', 'notion', 'slack', 'dropbox', 'cloudflare']);
 
 export function isConnectorImplemented(key: string): boolean {
   return NEEDS_API.has(key) && Boolean(process.env.GOLD_API_URL);

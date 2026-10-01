@@ -3,6 +3,7 @@ import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import type { CustomDomain } from '@/lib/domain/domains/domains';
+import { isDnsAutomated } from '@/lib/domain/domains/dns-zones';
 import { DOMAIN_SURFACES, domainPresentation } from '@/lib/domain/domains/presentation';
 import { DnsRecordTable } from './dns-record-table';
 import { DomainRowActions } from './domain-row-actions';
@@ -21,10 +22,12 @@ export function DomainsList({
   organizationId,
   domains,
   mayManage,
+  cloudflareZones,
 }: {
   organizationId: string;
   domains: CustomDomain[];
   mayManage: boolean;
+  cloudflareZones: string[];
 }) {
   const waiting = domains.filter((domain) => domainPresentation(domain) === 'pending_dns' && domain.dnsRecords.length > 0);
 
@@ -87,13 +90,20 @@ export function DomainsList({
         />
       </div>
 
-      {waiting.map((domain) => (
-        <div key={domain.id} className="mt-6 flex flex-col gap-2">
-          <h3 className="text-sm font-medium">Records to publish for {domain.hostname}</h3>
-          <Hint>Add these at the company that manages DNS for this domain, then press Check again.</Hint>
-          <DnsRecordTable records={domain.dnsRecords} />
-        </div>
-      ))}
+      {waiting.map((domain) => {
+        const automated = isDnsAutomated(domain.hostname, cloudflareZones);
+        return (
+          <div key={domain.id} className="mt-6 flex flex-col gap-2">
+            <h3 className="text-sm font-medium">Records for {domain.hostname}</h3>
+            <Hint>
+              {automated
+                ? 'DNS is managed through your connected Cloudflare account. GildOps is publishing these records automatically — this can take a few minutes. Press Check again to confirm.'
+                : 'Add these at the company that manages DNS for this domain, then press Check again.'}
+            </Hint>
+            <DnsRecordTable records={domain.dnsRecords} />
+          </div>
+        );
+      })}
     </Section>
   );
 }

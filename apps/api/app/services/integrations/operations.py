@@ -22,6 +22,7 @@ import httpx
 from app.auth import CallerContext
 from app.core import db
 from app.core.config import IntegrationSettings
+from app.core.postgrest import caller_rest
 from app.errors import DomainError, NotFoundError, ValidationError
 from app.services.integrations.state import StateInvalid, sign_state, verify_state
 from app.connectors import oauth_app_for, oauth_provider_for
@@ -41,20 +42,7 @@ class ProviderRefusedError(DomainError):
 
 def _rest(settings: IntegrationSettings, caller: CallerContext, method: str, path: str, **kwargs) -> httpx.Response:
     """A call to PostgREST under the caller's own token -- RLS answers, not this runtime."""
-    response = httpx.request(
-        method,
-        f"{settings.supabase_url}/rest/v1/{path}",
-        headers={
-            "apikey": settings.supabase_publishable_key,
-            "Authorization": f"Bearer {caller.token}",
-            "Content-Type": "application/json",
-        },
-        timeout=10.0,
-        **kwargs,
-    )
-    if response.status_code >= 400:
-        raise DomainError("That could not be completed.")
-    return response
+    return caller_rest(settings.supabase_url, settings.supabase_publishable_key, caller.token, method, path, **kwargs)
 
 
 def _require_manage(settings: IntegrationSettings, caller: CallerContext, organization_id: str) -> None:

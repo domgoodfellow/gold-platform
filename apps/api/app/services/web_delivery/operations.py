@@ -22,9 +22,11 @@ from dataclasses import asdict
 import httpx
 
 from app.core import db
-from app.core.config import ProviderOperationsSettings
+from app.core.config import IntegrationSettings, ProviderOperationsSettings
+from app.core.postgrest import caller_rest
 from app.errors import DomainError, NotFoundError, ValidationError
 from app.providers.providers import HostnameUnavailable, MalformedAnswer, UpstreamRefused, domain_hosting_for
+from app.services.dns.operations import ensure_required_records
 
 PROVIDER_UNAVAILABLE_MESSAGE = (
     "Custom domains are not available on this deployment yet: GildOps has no hosting account configured."
@@ -54,20 +56,7 @@ class HostnameUnavailableError(DomainError):
 
 def _rest(settings: ProviderOperationsSettings, token: str, method: str, path: str, **kwargs) -> httpx.Response:
     """A call to PostgREST under the caller's own token -- RLS answers, not this runtime."""
-    response = httpx.request(
-        method,
-        f"{settings.supabase_url}/rest/v1/{path}",
-        headers={
-            "apikey": settings.supabase_publishable_key,
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        },
-        timeout=10.0,
-        **kwargs,
-    )
-    if response.status_code >= 400:
-        raise DomainError("That could not be completed.")
-    return response
+    return caller_rest(settings.supabase_url, settings.supabase_publishable_key, token, method, path, **kwargs)
 
 
 def _domain(settings: ProviderOperationsSettings, token: str, organization_id: str, domain_id: str) -> dict:
@@ -118,6 +107,35 @@ def _hosting(row: dict):
     return hosting
 
 
+def _bridge_dns(
+    dns_settings: IntegrationSettings | None,
+    hosting,
+    credential: dict,
+    token: str,
+    organization_id: str,
+    row: dict,
+    status,
+):
+    """When the provider still needs DNS, try this business's own connected Cloudflare zone before
+    handing the manual records back. Best-effort: any failure here leaves `status` exactly as the
+    provider last answered, and the manual path is unaffected (work order 1, section 3)."""
+    if dns_settings is None or status.configuration_state != "dns_required" or not status.dns_records:
+        return status
+
+    outcome = ensure_required_records(
+        dns_settings, token=token, organization_id=organization_id, hostname=row["hostname"], records=status.dns_records
+    )
+    if not outcome.applied:
+        return status
+
+    try:
+        return hosting.check(credential, row["hostname"])
+    except (HostnameUnavailable, MalformedAnswer, UpstreamRefused):
+        # The provider's own recheck is the fact of record; a refused recheck just means the
+        # original answer still stands, not that the DNS write failed.
+        return status
+
+
 def _unavailable(settings: ProviderOperationsSettings, organization_id: str, row: dict) -> ProviderUnavailableError:
     db.record_custom_domain_registration(
         settings,
@@ -138,6 +156,7 @@ def connect_domain(
     organization_id: str,
     domain_id: str,
     hostname: str | None = None,
+    dns_settings: IntegrationSettings | None = None,
 ) -> dict:
     """Attach a pending domain at the provider and record where it stands."""
     row = _domain(settings, token, organization_id, domain_id)
@@ -183,6 +202,8 @@ def connect_domain(
         failed("provider_refused", str(refusal))
         raise ProviderRefusedError(str(refusal)) from refusal
 
+    status = _bridge_dns(dns_settings, hosting, credential, token, organization_id, row, status)
+
     db.record_custom_domain_registration(
         settings,
         organization_id=organization_id,
@@ -209,12 +230,13 @@ def check_domain(
     token: str,
     organization_id: str,
     domain_id: str,
+    dns_settings: IntegrationSettings | None = None,
 ) -> dict:
     """Ask the provider again. A domain that was never registered is registered instead: a
     recheck after a failed first attempt is what a person means by pressing it."""
     row = _domain(settings, token, organization_id, domain_id)
     if not row.get("provider_resource_id"):
-        return connect_domain(settings, token=token, organization_id=organization_id, domain_id=domain_id)
+        return connect_domain(settings, token=token, organization_id=organization_id, domain_id=domain_id, dns_settings=dns_settings)
 
     credential = _credential(settings, organization_id, row)
     if credential is None:
@@ -268,6 +290,8 @@ def check_domain(
     except UpstreamRefused as refusal:
         keep("provider_refused", str(refusal))
         raise ProviderRefusedError(str(refusal)) from refusal
+
+    status = _bridge_dns(dns_settings, hosting, credential, token, organization_id, row, status)
 
     db.set_custom_domain_verification(
         settings,
@@ -326,9 +350,12 @@ def run_domain_command(
     command: str,
     organization_id: str,
     domain_id: str,
+    dns_settings: IntegrationSettings | None = None,
 ) -> dict:
     """Dispatch by name. Anything but the three is refused before anything is read."""
     run = COMMANDS.get(command)
     if run is None:
         raise ValidationError("Unknown command.")
-    return run(settings, token=token, organization_id=organization_id, domain_id=domain_id)
+    if run is remove_domain:
+        return run(settings, token=token, organization_id=organization_id, domain_id=domain_id)
+    return run(settings, token=token, organization_id=organization_id, domain_id=domain_id, dns_settings=dns_settings)
