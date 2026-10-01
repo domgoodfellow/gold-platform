@@ -217,7 +217,7 @@ navigation from this catalogue table.
 | Product | Owns |
 |---|---|
 | Gild Sales | Commercial Sales capability family; contributes relationship and pipeline Features to CRM. |
-| Gild Service | Planned catalogue family with Features only, `unlisted`; any future cases/requests surface composes into CRM unless evidence establishes another operator need. |
+| Gild Service | Planned catalogue family with Features only, `unlisted`; case and request resolution surfaces belong to Support while relationship state remains in CRM. |
 | Gild Comms | Voice, SMS and Email. |
 | Gild Finance | Tenant pricing and Price Book, quotes, invoices, payments and job economics. This is separate from GildOps' own Plans, subscriptions and billing. |
 | Gild AI (catalogue key `agents`) | Intelligence capabilities: assistants, chatbots, knowledge, conversations, tools/actions, models/runtime, evaluations and AI usage. |

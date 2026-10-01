@@ -2182,9 +2182,9 @@ database identifiers and old changelog entries keep their legacy names.
 | **Rate limit** | How fast, whatever was bought; abuse protection | an allowance |
 | **Provider readiness** | Whether GildOps can technically fulfil it | an entitlement |
 
-A workspace maps to one catalogue row today (`WORKSPACES[].product`). That is a fact about the
-registry, not the definition: Insights maps to a row that is not sellable, and two workspaces named
-below have no catalogue row yet.
+At the time of D67, a workspace mapped to one catalogue row through `WORKSPACES[].product`. D68
+superseded that implementation: the field no longer exists because Product-to-workspace mapping is
+many-to-many through Features.
 
 **Records are canonical once; workspaces project them.** A Customer, Document, Inventory item, Call
 or Work item is one record. The owning workspace has its canonical page; any other workspace shows a
@@ -2198,15 +2198,15 @@ with its own loading, error and empty states.
 | Owns | Workspace |
 |---|---|
 | Relationship acquisition and progression: customers, pipeline, qualification, follow-up and intake state | **CRM** |
-| Channels and conversation history: voice, dialer, numbers, SMS, email, recordings, transcripts, call outcomes, delivery state, the Voice Agent as a channel | **Comms** |
+| Channels and conversation history: voice, dialer, numbers, SMS, email, recordings, transcripts, call outcomes, delivery state, the Voice Agent as a channel | **Communications** |
 | Performing work: jobs, scheduling, dispatch, resources, locations, field execution, operational assets | **Field** (D66's name; *Operations* is the concept) |
 | Money: price book, quotes, invoices, payments, credits, job economics | **Finance** |
 | Rules, triggers, conditions, sequences, run history | **Automations** |
 | Intelligence: agents, assistants, models, knowledge, conversations, runtime, usage | **AI** |
 | Public presence: website, forms, booking entry, portal, brand, domains | **Studio** |
 | Cross-domain analysis over the one reporting aggregate | **Insights capability**: cross-cutting, not an owner workspace |
-| Cases, requests, complaints | **CRM** when built; Service may remain a catalogue family, not an operator workspace |
-| Audiences, segments, campaigns, journeys, lifecycle policy | **Marketing**: target workspace; not built or registered today |
+| Cases, requests, complaints | **Support**: canonical workspace; not yet visible because no operating surface exists |
+| Audiences, segments, campaigns, journeys, lifecycle policy | **Marketing**: canonical workspace; not yet visible because no operating surface exists |
 | Products sold, SKUs, variants, catalogues, orders, promotions | **Commerce**: not built, not registered |
 
 Home is the cross-workspace cockpit and is not a workspace. Customers, Documents, Knowledge,
@@ -2215,11 +2215,9 @@ workspaces and are not workspaces. Inventory is shared: a service business may h
 Commerce, and Field consumes it; Commerce sells items and never owns the stock. A lead is a stage of
 a customer (*Decided, not yet built*), so CRM and Marketing share one person record.
 
-**Target is not visibility (D68).** Marketing is a target workspace even though current code has no
-registered workspace, catalogue entitlement mapping or page for it. A row still waits for a real,
-reachable page; architectural existence does not wait for a Product. Commerce remains undecided and
-unregistered. Field is not renamed: a rename moves the catalogue key (`field`), routes and tests
-together, and nothing depends on the word *Operations*.
+**Target is not visibility (D68).** Marketing and Support are registered canonical workspaces even
+though neither has a page. A row still waits for a real, reachable surface; architectural existence
+does not wait for a Product. Commerce remains undecided and unregistered.
 
 **Invocation.** Another workspace *invokes* a capability and never re-implements it. A CRM customer
 shows Call, Email and Message that open the same Comms capability with the customer as context; there
@@ -2308,7 +2306,8 @@ configuration such as the Voice Agent. Not built; the information architecture i
    is the concept and Field is today's implementation of it.
 3. *"Workspaces are the Gild Products"* (`ui-spec.md` §1) becomes *are surfaces of them*.
 
-**Findings on main at this decision.** The answers a later slice starts from.
+**Historical findings at the time of D67.** D68 and later implementation supersede the workspace
+registry statements below; the remaining runtime findings retain their value as dated evidence.
 
 1. **Service** is a planned Product with planned Features only, unlisted, and a registered workspace
    with no page. No case object exists.
@@ -2368,32 +2367,39 @@ readiness probe, AI usage metering, the Guide, Public Assistant and Voice Agent 
 assignment, Marketing, Commerce, Service, the related-record components, the `reception` split. Each
 is a later slice or milestone and none has its first caller yet.
 
-**Holds.** Nothing new. Already pinned: `navigation.test.ts` and `gild-taxonomy.test.ts` (the nine
-workspaces, each mapped to a real catalogue row, none drawn without a page), `usage-boundary.test.ts`
+**Holds.** Nothing new. Already pinned: `navigation.test.ts` (no workspace drawn without a page),
+`usage-boundary.test.ts`
 (one usage writer), `provider-accounts.test.ts` (credentials), and `agent-conversations.test.ts` (the
 Configure link, on record above as wrong). The rest of this decision is definition with no test.
 
-### D68 — Operator workspaces compose capabilities; canonical records, Insights and Library remain shared
+### D68 — Operator workspaces compose capabilities; canonical records, Insights, Library and Administration remain shared
 
-**Decision.** The target operator workspaces are exactly **CRM, Communications, Marketing,
-Finance, AI, Automations, Field and Studio**. This is an operator taxonomy — where a person goes to
-do a kind of work — and is independent of the commercial catalogue. A Product may contribute
-Features to several workspaces, and a workspace may compose Features from several Products.
-Therefore Sales and Service may remain catalogue Products or families without becoming operator
-workspaces. Plan ≠ Product ≠ Module ≠ Feature ≠ Workspace ≠ Page.
+**Decision.** The canonical operator workspace identities are exactly **CRM, Communications,
+Marketing, Support, Finance, AI, Automations, Field and Studio**. This is an operator taxonomy —
+where a person goes to perform a kind of ongoing work — and is independent of the commercial
+catalogue. A Product may contribute Features to several workspaces, and a workspace may compose
+Features from several Products. Sales and Service may remain catalogue Products or families
+without becoming operator workspaces. Plan ≠ Product ≠ Module ≠ Feature ≠ Workspace ≠ Page.
 
-**Target and implementation are separate facts.** `apps/web/lib/navigation.ts` still describes the
-current implementation: Sales and Customer Experience remain registered, Marketing is absent,
-and some target workspaces have no Home. That registry is not the target architecture. Conversely,
-a target workspace does not earn a visible row until it has a real, reachable page. Documentation
-must label current-state evidence and target architecture rather than forcing either to impersonate
-the other.
+Canonical keys are stable architectural identities used by routes, permissions, capability
+mappings, analytics and cross-workspace contracts. Their default labels are `crm` → CRM,
+`communications` → Communications, `marketing` → Marketing, `support` → Support, `finance` →
+Finance, `ai` → AI, `automations` → Automations, `field` → Field and `studio` → Studio. A future
+organization terminology override changes presentation only; it does not change ownership or the
+canonical key.
+
+**Target and implementation are separate facts.** `apps/web/lib/navigation.ts` registers all nine
+canonical identities, but a workspace earns a visible row only when at least one real, reachable
+operating surface names it. CRM currently uses the legacy `/sales` Home route; Marketing, Support
+and AI have no Home. Documentation, implementation state and the commercial catalogue must remain
+separate facts rather than forcing any one to impersonate another.
 
 | Target area | Canonical responsibility | Current implementation |
 |---|---|---|
-| **CRM** | customers, relationship intent and state, pipeline, qualification, follow-up and intake progression | Sales Home, Customers and Pipeline provide much of the present surface; the workspace has not been renamed |
+| **CRM** | customers, leads, relationship state, pipeline, qualification, intake, opportunities and relationship follow-up | CRM Home still uses `/sales`; Customers and Pipeline provide much of the present surface |
 | **Communications** | calls, voice, email, messaging, threads, delivery state, numbers and routing | Home and Calls are present |
-| **Marketing** | campaigns, audiences, acquisition and lifecycle intent | no registered workspace or route |
+| **Marketing** | audiences, segmentation, acquisition, campaigns, lifecycle journeys, promotional consent and attribution | registered canonical identity; no route or visible row |
+| **Support** | cases, requests, complaints, queues, assignment, escalation, service-level policy and resolution | registered canonical identity; no route or visible row |
 | **Finance** | tenant/customer pricing, quotes, invoices, payments and job economics | Home is present, kernel like Sales and Field's; Pricing stays a Settings-only configuration target, and per-record finance lives on the job screen |
 | **AI** | assistants, business-intelligence interaction, knowledge and tool configuration | Agent rail/runtime only; no Home |
 | **Automations** | durable rules, triggers, sequences and workflow execution | Home, Rules, Messages and Activity are present |
@@ -2401,17 +2407,27 @@ the other.
 | **Studio** | authoring and publishing website, forms, brand and portal experiences | Home summarizes public-surface status; Website, Forms, Brand and Portal remain configuration reached from Settings, not yet real pages |
 
 **Canonical records and projections.** A business record exists canonically once. Customers,
-invoices, conversations/threads, work items, documents, genuinely shared forms and genuinely
-shared reusable templates may appear in several workspaces without becoming several records. A
+support cases, invoices, payments, conversations/threads, calls, work items, documents, assets,
+resources and automation runs may appear in several workspaces without becoming several records. A
 projection reads canonical state, may add context-specific secondary data and authorized actions,
 and links to the canonical or owning destination. It never copies authoritative state, acquires
 ownership or reproduces the record's business rules.
 
 **Ownership does not follow invocation.** CRM may invoke Communications to contact a customer;
 Marketing may consume Studio content and Communications delivery; Finance may send an invoice
-through Communications; Automations may invoke every domain; AI may use permitted domain tools.
-The invoked implementation remains owned by its canonical domain. AI reasons and invokes;
-Automations owns durable orchestration.
+through Communications; Support may reply through Communications; Automations may invoke every
+domain; AI may use permitted domain tools. The invoked implementation remains owned by its
+canonical domain. Communications owns talking; CRM owns relationship state; Support owns problem
+resolution; Marketing owns acquisition and promotional/lifecycle intent; Finance owns
+tenant/customer money; Scheduling owns time/resource commitment; AI reasons and invokes;
+Automations owns durable orchestration; Studio owns authored customer-facing experiences.
+
+**CRM, Support and Communications remain separate.** A customer relationship and a support case
+are each canonical and related. CRM may summarize a customer's open cases but does not own their
+lifecycle. A communication is not automatically a support case: Communications owns the channel
+and conversation history, while Support owns durable assignment, priority, escalation, service
+targets and resolution. There remains one SMS thread, email thread or call history rather than a
+Support-specific copy.
 
 **Workspace Home contract.** The workspace-row body opens its canonical Home. Its chevron only
 expands or collapses children and does not navigate. Home is never repeated as a child and
@@ -2424,7 +2440,7 @@ reachable, and a page's Insights support mode may link to them. Route existence 
 workspace or sidebar section.
 
 **Library is shared organization infrastructure, not a workspace.** Its target collections are
-Files, Templates, Media and Knowledge. It has its own `AREA_GROUPS` row, ruled apart from Home and
+Files, Media, Templates, Knowledge, Collections, Sources and Trash. It has its own `AREA_GROUPS` row, ruled apart from Home and
 Workspaces, and a shell at `/organizations/{id}/library` with an empty-state page for each target
 collection plus Collections, Sources and Trash — but record-attached Documents remain the only
 files that exist; an organization-wide Library collection does not. A generalized Form or Template
@@ -2445,9 +2461,19 @@ organization shell (D60) transfers no ownership and creates no special tenant.
 — what work is **about**. Their relationship on a work item does not make either a projection of
 the other.
 
-**Holds today.** The current shell already treats a workspace parent destination as its Home and
-does not repeat Home among children. Insights already has a real route with `sidebar: false`. The
-remaining target/current differences are implementation debt, not permission to restore D66's IA.
+**Administration and shared engines are not workspaces.** Organization Settings configures the
+environment in which workspaces operate: business settings, team, roles, permissions, connections,
+provider configuration, Features, Plan and usage, onboarding, terminology and workspace
+configuration. Platform Administration is a separate SaaS/operator scope. Scheduling, Search,
+Events, Identity, usage metering, provisioning, permissions and reporting aggregates remain shared
+engines even when several workspaces invoke them.
+
+**Migration rule.** Sales migrates to CRM; Customer Experience is removed as a workspace identity;
+Marketing and Support gain rows only with their first real operating surfaces; partial workspaces
+gain Homes and child pages incrementally; canonical keys stay stable if displayed terminology
+changes. The current shell treats a workspace parent destination as Home, never repeats Home among
+children, and keeps Insights as a real `sidebar: false` route. No documentation-only decision may
+create an empty row, and no implementation slice may redefine the taxonomy locally.
 
 ### D69 — GildOps naming and technical namespaces migrate forward, never by rewriting history
 

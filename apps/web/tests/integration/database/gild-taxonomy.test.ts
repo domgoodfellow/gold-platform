@@ -94,8 +94,16 @@ describe('the Gild Product set', () => {
     expect(Object.fromEntries(rows.map((row) => [row.module, row.product]))).toEqual(MODULE_HOME);
   });
 
-  it('has a Product for every navigation workspace, so the sidebar cannot name one the catalogue lacks', () => {
-    for (const workspace of WORKSPACES) expect([...GILD_PRODUCT_KEYS, 'workspace'] as readonly string[]).toContain(workspace.product);
+  it('keeps operator workspace identity independent of catalogue Product identity', () => {
+    for (const workspace of WORKSPACES) expect(workspace).not.toHaveProperty('product');
+  });
+
+  it('maps workspaces only to canonical catalogue Features', async () => {
+    const { rows } = await pg.query<{ key: string }>('select key from public.platform_catalog_features');
+    const featureKeys = new Set(rows.map((row) => row.key));
+    for (const workspace of WORKSPACES) {
+      for (const key of workspace.featureKeys) expect(featureKeys.has(key), `${workspace.key} → ${key}`).toBe(true);
+    }
   });
 });
 

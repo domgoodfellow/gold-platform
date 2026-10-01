@@ -50,7 +50,7 @@ export default async function CommsPage({ params }: PageProps<'/organizations/[o
   const empty = calls.total === 0 && numbers.length === 0;
 
   return (
-    <WorkspaceHome title={workspaceLabel('comms')}>
+    <WorkspaceHome title={workspaceLabel('communications')}>
       {empty ? (
         <EmptyState
           title="Nothing recorded in Communications yet"

@@ -128,7 +128,7 @@ describe('the operator shell navigation', () => {
 
   it('makes a page of a workspace a child, never a peer: every page names a real workspace', () => {
     // `Area.workspace` is what stops Work, Schedule, Resources, Locations and Assets being five peers
-    // of Customers. A workspace is a Product with pages, so nesting is one level.
+    // of Customers. A workspace has pages independently of the commercial catalogue.
     for (const area of AREAS.filter((entry) => entry.workspace)) {
       expect(WORKSPACES.some((workspace) => workspace.key === area.workspace), `"${area.segment}" names a workspace that is not one`).toBe(true);
       // Owned is not drawn: an owned area with no sidebar row (Pricing, owned by Finance) is configuration.
@@ -141,30 +141,34 @@ describe('the operator shell navigation', () => {
     // never a flag on the workspace and never an entitlement. Insights is not registered here at
     // all — it is cross-cutting, not a ninth workspace (D66).
     expect(WORKSPACES.map((workspace) => workspace.key)).toEqual([
-      'sales', 'service', 'comms', 'finance', 'ai', 'automations', 'field', 'studio',
+      'crm', 'communications', 'marketing', 'support', 'finance', 'ai', 'automations', 'field', 'studio',
     ]);
     const withAPage = (key: string) => AREAS.some((area) => area.workspace === key && area.group === 'workspaces' && area.sidebar !== false);
     expect(WORKSPACES.filter((workspace) => withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
-      'sales', 'comms', 'finance', 'automations', 'field', 'studio',
+      'crm', 'communications', 'finance', 'automations', 'field', 'studio',
     ]);
     // Registered, not yet visible. Delete a key here in the same change that gives it a real page.
     expect(WORKSPACES.filter((workspace) => !withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
-      'service', 'ai',
+      'marketing', 'support', 'ai',
     ]);
   });
 
-  it('names every workspace without a Gild prefix, Service as Customer Experience and Comms as Communications', () => {
+  it('uses the nine stable canonical workspace identities and default labels', () => {
     const label = (key: string) => WORKSPACES.find((workspace) => workspace.key === key)?.label;
     expect(label('ai')).toBe('AI');
-    expect(label('service')).toBe('Customer Experience');
-    expect(label('comms')).toBe('Communications');
-    expect(label('sales')).toBe('Sales');
+    expect(label('crm')).toBe('CRM');
+    expect(label('communications')).toBe('Communications');
+    expect(label('marketing')).toBe('Marketing');
+    expect(label('support')).toBe('Support');
     expect(label('automations')).toBe('Automations');
     expect(label('field')).toBe('Field');
     for (const workspace of WORKSPACES) {
       expect(workspace.key).not.toBe('agents');
       expect(workspace.key).not.toBe('workspace');
       expect(workspace.key).not.toBe('insights');
+      expect(workspace.key).not.toBe('sales');
+      expect(workspace.key).not.toBe('service');
+      expect(workspace.key).not.toBe('comms');
       expect(workspace.label).not.toMatch(/^Gild /);
       expect(workspace.label).not.toMatch(/agents|workspace/i);
     }
@@ -172,8 +176,8 @@ describe('the operator shell navigation', () => {
 
   it('gives every workspace an owner-side map: pages and configuration name the workspace that owns them', () => {
     const owner = (segment: string) => AREAS.find((area) => area.segment === segment)?.workspace;
-    expect(['sales', 'customers', 'pipeline'].map(owner)).toEqual(['sales', 'sales', 'sales']);
-    expect(['comms', 'calls', 'comms-messages', 'comms-numbers'].map(owner)).toEqual(['comms', 'comms', 'comms', 'comms']);
+    expect(['sales', 'customers', 'pipeline'].map(owner)).toEqual(['crm', 'crm', 'crm']);
+    expect(['comms', 'calls', 'comms-messages', 'comms-numbers'].map(owner)).toEqual(['communications', 'communications', 'communications', 'communications']);
     expect(['automations', 'automation-rules'].map(owner)).toEqual(['automations', 'automations']);
     expect(owner('pricing')).toBe('finance');
     // Insights is cross-cutting, not a workspace (D66) — it belongs to no one workspace either.
@@ -186,7 +190,7 @@ describe('the operator shell navigation', () => {
     const configOwner = (key: string) => CONFIG_TARGETS.find((target) => target.key === key)?.workspace;
     expect(configOwner('branding')).toBe('studio');
     expect(configOwner('pricing')).toBe('finance');
-    expect(configOwner('communications')).toBe('comms');
+    expect(configOwner('communications')).toBe('communications');
     expect(configOwner('team')).toBeUndefined();
     // Website earned its own operating page (D68): it is an `Area`, not a `ConfigTarget`, and the
     // Settings map names nothing by this key any more.
@@ -879,7 +883,7 @@ describe('the organization shell taxonomy', () => {
     // Registered workspaces, in the order a customer meets them, with no Gild prefix and no ninth
     // Insights row. Which of them draw a row is a fact about pages.
     expect(WORKSPACES.map((workspace) => workspace.label)).toEqual([
-      'Sales', 'Customer Experience', 'Communications', 'Finance', 'AI', 'Automations', 'Field', 'Studio',
+      'CRM', 'Communications', 'Marketing', 'Support', 'Finance', 'AI', 'Automations', 'Field', 'Studio',
     ]);
   });
 

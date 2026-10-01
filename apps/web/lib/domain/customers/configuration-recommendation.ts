@@ -133,16 +133,15 @@ export type WorkspacePreview = {
 };
 
 /**
- * The recommended set, grouped by the real operator workspace it would appear under — the same
- * `WORKSPACES` array the actual sidebar reads, never a second, prospect-facing copy of that list.
- * A catalogue Product with no matching workspace (`workspace`, the shared cross-cutting Gild
- * Workspace behind reporting/dashboards) contributes nothing here — it draws no sidebar row of
- * its own either (`lib/navigation.ts`).
+ * The recommended set, grouped by the canonical operator workspaces whose capability maps name
+ * each Feature. This is Feature-to-workspace rather than Product-to-workspace: one Product may
+ * contribute to several workspaces and one workspace may compose several Products. Workspaces
+ * with no matching recommendation draw no empty preview row.
  */
 export function previewByWorkspace(recommended: readonly ConfigurationRecommendationEntry[]): WorkspacePreview[] {
   return WORKSPACES.map((workspace) => ({
     workspace: workspace.key,
     label: workspace.label,
-    entries: recommended.filter((entry) => entry.productKey === workspace.product),
+    entries: recommended.filter((entry) => (workspace.featureKeys as readonly string[]).includes(entry.featureKey)),
   })).filter((preview) => preview.entries.length > 0);
 }

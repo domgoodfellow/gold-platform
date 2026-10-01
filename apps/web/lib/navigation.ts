@@ -35,20 +35,17 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 export type AreaGroup = 'home' | 'library' | 'workspaces' | 'settings';
 
 /**
- * The **registered** workspaces: the eight a business has today, whether or not each has an
- * operating surface yet. A workspace is where an operator does a kind of work — never a data
- * owner, Product, Plan, Module, Feature or permission (D67). Marketing and Commerce are named
- * there and not registered: each waits for a catalogue Product to map to. Registered is not visible. A workspace draws a row in the sidebar only
+ * The nine canonical operator workspaces, whether or not each has an operating surface yet. A
+ * workspace is where an operator does a kind of work — never a Product, Plan, Module, Feature or
+ * permission (D68). Registered is not visible. A workspace draws a row in the sidebar only
  * when at least one page names it (`Area.workspace`) and that page is reachable to this person
- * (`projectShell`), so Service and AI are registered here and absent from
+ * (`projectShell`), so Marketing, Support and AI are registered here and absent from
  * navigation until a real page arrives. Navigation never leads to an empty placeholder, and
  * readiness is a fact about the pages, never a flag on the workspace or an entitlement.
  *
- * Product ≠ Module ≠ Feature ≠ Workspace ≠ Page. `product` is the catalogue row whose Features
- * this workspace is the surface of (`platform_catalog_products.key`, D46/D61), which
- * `gild-taxonomy.test.ts` checks. It is a separate word because the catalogue still names two of
- * them `agents` and `service` (the catalogue's own label stays "Gild ..."; only the operator-facing
- * `label` here dropped the prefix), and a workspace's name is not the catalogue's key.
+ * Plan ≠ Product ≠ Module ≠ Feature ≠ Workspace ≠ Page. No Product key is stored here: Products
+ * and workspaces have a many-to-many relationship. `featureKeys` records the current capability
+ * contribution used by operator previews; it is not a commercial ownership claim.
  *
  * `label` is what an operator reads; it carries no `Gild ` prefix (that is the catalogue's own
  * naming, kept there deliberately — D67 restated: operator vocabulary and catalogue identity are
@@ -62,14 +59,15 @@ export type AreaGroup = 'home' | 'library' | 'workspaces' | 'settings';
  * Order is the order a customer meets them.
  */
 export const WORKSPACES = [
-  { key: 'sales', label: 'Sales', product: 'sales', home: 'sales' },
-  { key: 'service', label: 'Customer Experience', product: 'service', home: undefined },
-  { key: 'comms', label: 'Communications', product: 'comms', home: 'comms' },
-  { key: 'finance', label: 'Finance', product: 'finance', home: 'finance' },
-  { key: 'ai', label: 'AI', product: 'agents', home: undefined },
-  { key: 'automations', label: 'Automations', product: 'automations', home: 'automations' },
-  { key: 'field', label: 'Field', product: 'field', home: 'field' },
-  { key: 'studio', label: 'Studio', product: 'studio', home: 'studio' },
+  { key: 'crm', label: 'CRM', home: 'sales', featureKeys: ['customer_profile', 'contacts', 'relationships', 'ownership_assignment', 'pipeline', 'configurable_stages', 'qualification_state', 'follow_ups', 'booking_intake'] },
+  { key: 'communications', label: 'Communications', home: 'comms', featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions', 'inbound_sms', 'outbound_sms', 'number_inventory', 'caller_id'] },
+  { key: 'marketing', label: 'Marketing', home: undefined, featureKeys: [] },
+  { key: 'support', label: 'Support', home: undefined, featureKeys: [] },
+  { key: 'finance', label: 'Finance', home: 'finance', featureKeys: ['price_book', 'quote_creation', 'quote_to_invoice', 'invoices', 'invoice_history', 'card_payments', 'connected_processor', 'adjustments_credits'] },
+  { key: 'ai', label: 'AI', home: undefined, featureKeys: ['agent_tools'] },
+  { key: 'automations', label: 'Automations', home: 'automations', featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  { key: 'field', label: 'Field', home: 'field', featureKeys: ['resource_records', 'assignment', 'locations', 'weather_aware_dispatch', 'assets'] },
+  { key: 'studio', label: 'Studio', home: 'studio', featureKeys: ['pages_sections', 'draft_review_publish', 'seo_metadata', 'booking', 'portal_auth', 'portal_history'] },
 ] as const;
 
 export type WorkspaceKey = (typeof WORKSPACES)[number]['key'];
@@ -340,9 +338,9 @@ export const AREAS: readonly Area[] = [
   // Sales. Home is the workspace's own parent destination — kernel, like Customers, so the row is
   // always there — and is never repeated as a child beneath it. Pipeline is the CRM stages view,
   // offered where the business has it (the reception module).
-  { segment: 'sales', label: 'Sales', group: 'workspaces', workspace: 'sales' },
-  { segment: 'customers', label: 'Customers', group: 'workspaces', workspace: 'sales', phone: true },
-  { segment: 'pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'sales', route: 'customers/pipeline', module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
+  { segment: 'sales', label: 'CRM', group: 'workspaces', workspace: 'crm' },
+  { segment: 'customers', label: 'Customers', group: 'workspaces', workspace: 'crm', phone: true },
+  { segment: 'pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'crm', route: 'customers/pipeline', module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
   // Communications. Home carries the same entitlement as Calls, the one channel implemented, so
   // the workspace draws no row for a business without it. The specific Voice features Calls is —
   // not the pipeline features that share the `reception` module key (D46's many-to-many seam, and
@@ -351,10 +349,10 @@ export const AREAS: readonly Area[] = [
   // catalogue Features it is actually the surface for, so a deployment where those Features are
   // still `planned` in the catalogue (SMS today) shows the page and says so truthfully rather
   // than riding along on the `reception` module the way an unqualified module gate would.
-  { segment: 'comms', label: 'Communications', group: 'workspaces', workspace: 'comms', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
-  { segment: 'calls', label: 'Calls', group: 'workspaces', workspace: 'comms', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
-  { segment: 'comms-messages', label: 'Text messages', group: 'workspaces', workspace: 'comms', route: 'comms/messages', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_sms', 'outbound_sms'] },
-  { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'comms', route: 'comms/numbers', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['number_inventory', 'caller_id'] },
+  { segment: 'comms', label: 'Communications', group: 'workspaces', workspace: 'communications', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
+  { segment: 'calls', label: 'Calls', group: 'workspaces', workspace: 'communications', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
+  { segment: 'comms-messages', label: 'Text messages', group: 'workspaces', workspace: 'communications', route: 'comms/messages', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_sms', 'outbound_sms'] },
+  { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'communications', route: 'comms/numbers', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['number_inventory', 'caller_id'] },
   // Finance: what money is moving through this business, and what it is paying GildOps for —
   // kernel, like Sales and Field's own Home, so a member sees it regardless of role. Its only
   // page for now (D68's discipline against a row with nothing behind it); Billing, Usage or
@@ -443,11 +441,11 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'pricing', workspace: 'finance', path: 'settings/pricing', entitledBy: 'pricing', permission: ['price.manage'] },
   { key: 'custom-fields', path: 'settings/custom-fields', permission: ['field.manage'] },
   // Entitled through Calls, permitted through field.manage: configuring outcomes and stages is not making calls.
-  { key: 'call-setup', workspace: 'comms', path: 'calls#setup', entitledBy: 'calls', permission: ['field.manage'] },
+  { key: 'call-setup', workspace: 'communications', path: 'calls#setup', entitledBy: 'calls', permission: ['field.manage'] },
   { key: 'team', path: 'settings/access', permission: ['role.manage'] },
   { key: 'branding', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
   { key: 'domains', workspace: 'studio', path: 'settings/domains', permission: ['organization.manage'] },
-  { key: 'communications', workspace: 'comms', path: 'settings/communications', permission: ['organization.manage'] },
+  { key: 'communications', workspace: 'communications', path: 'settings/communications', permission: ['organization.manage'] },
   { key: 'integrations', path: 'settings/connections', entitledBy: 'integrations', permission: ['integration.manage'] },
   { key: 'features', path: 'settings/features', permission: ['feature.manage'] },
   { key: 'plan', path: 'settings/plan', permission: ['billing.manage'] },
@@ -650,10 +648,6 @@ export function workspaceAncestry(organizationId: string, segment: string): { la
 }
 
 /**
- * Marketing is an intended operator workspace — authoring and running campaigns that bring
- * customers in, distinct from Studio (authoring and publishing the public site and reusable
- * experiences) and from Sales (working relationships once they exist). It has no catalogue Product
- * yet, so it is not registered here: `WORKSPACES` names only what a Product backs (D67). It
- * arrives in a catalogue/domain slice of its own, never mapped onto Studio's or another Product's
- * key in the meantime.
+ * Marketing and Support are canonical identities even before either has a reachable page. Their
+ * registration creates no sidebar row; `projectShell` derives visibility from real areas.
  */

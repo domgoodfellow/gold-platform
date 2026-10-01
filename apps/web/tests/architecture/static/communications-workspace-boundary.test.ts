@@ -24,7 +24,7 @@ const PROVIDER_VOCABULARY = /twilio|account[_ ]?sid|auth[_ ]?token|twiml/i;
 
 describe('Communications workspace boundaries', () => {
   it('registers Calls, Messages and Numbers as sibling pages of the Communications workspace', () => {
-    const pages = AREAS.filter((area) => area.workspace === 'comms').map((area) => area.segment);
+    const pages = AREAS.filter((area) => area.workspace === 'communications').map((area) => area.segment);
     expect(pages).toEqual(['comms', 'calls', 'comms-messages', 'comms-numbers']);
   });
 

@@ -5,6 +5,17 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Operator navigation adopts the canonical D68 workspace identities
+
+The workspace registry now uses the stable canonical keys CRM, Communications, Marketing,
+Support, Finance, AI, Automations, Field and Studio independently of catalogue Product keys. The
+existing `/sales` surface becomes CRM without breaking its URL, and the existing `/comms` surface
+is owned by canonical Communications. Customer Experience is no longer a workspace identity;
+Marketing, Support and AI remain invisible until each has a real reachable Home. Capability
+preview grouping now maps catalogue Features to workspaces many-to-many rather than treating a
+Product as a workspace, while Insights, Library and both administration scopes remain outside the
+workspace registry.
+
 ### Communications usage reaches auditable vendor unit economics
 
 The canonical usage ledger now separates tenant-facing commercial meters from provider cost

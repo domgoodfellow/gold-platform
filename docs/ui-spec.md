@@ -127,9 +127,12 @@ Home
 
 Library
 ├── Files
-├── Templates
 ├── Media
-└── Knowledge
+├── Templates
+├── Knowledge
+├── Collections
+├── Sources
+└── Trash
 
 Workspaces
 ├── CRM
@@ -137,8 +140,7 @@ Workspaces
 │   ├── Customers
 │   ├── Pipeline
 │   ├── Inbox
-│   ├── Cases / Requests  (future)
-│   └── Feedback          (future)
+│   └── Opportunities / follow-up
 ├── Communications
 │   ├── Home
 │   ├── Calls / Voice
@@ -151,6 +153,12 @@ Workspaces
 │   ├── Audiences
 │   ├── Content
 │   └── Forms / landing-page usage
+├── Support
+│   ├── Home
+│   ├── Cases / Requests
+│   ├── Queues
+│   ├── Escalations
+│   └── Service levels
 ├── Finance
 │   ├── Home
 │   ├── Invoices
@@ -186,8 +194,8 @@ Platform Administration  ← GildOps organization + platform authority only
 ```
 
 Only implemented, entitled, permitted and reachable destinations are drawn. This target is not a
-claim that every row exists on current `main`: Sales still fronts the present CRM surface;
-Marketing is absent; Finance, AI and Studio are partial; Library has no organization collection.
+claim that every row exists on current `main`: CRM still uses the legacy `/sales` Home route;
+Marketing and Support have no operating surface; AI is partial; Library has no organization collection.
 Insights has real deep routes but is cross-cutting and therefore has no workspace row or permanent
 section. Target architecture and current navigation are separate facts (D68).
 
@@ -241,8 +249,8 @@ modules — so no section is named for one. These are named for what an operator
 | Section | Holds | Why |
 |---|---|---|
 | (Home) | Home | What matters in this business right now — set apart, first |
-| Library | Files, Templates, Media, Knowledge | Shared organization infrastructure; current implementation has record-attached Documents but no organization collection |
-| Workspaces | CRM, Communications, Marketing, Finance, AI, Automations, Field, Studio | Where an operator does one kind of ongoing work. Current rows are derived only from real reachable pages; the target set is independent of catalogue Products |
+| Library | Files, Media, Templates, Knowledge, Collections, Sources, Trash | Shared organization infrastructure; current implementation has record-attached Documents but no organization collection |
+| Workspaces | CRM, Communications, Marketing, Support, Finance, AI, Automations, Field, Studio | Where an operator does one kind of ongoing work. Current rows are derived only from real reachable pages; the target set is independent of catalogue Products |
 | (Settings) | Settings | Where the business is configured — set apart by the rule above it |
 
 **Workspace interaction contract.** The row body opens the workspace's canonical **Home**. The

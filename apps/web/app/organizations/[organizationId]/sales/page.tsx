@@ -40,7 +40,7 @@ export default async function SalesPage({ params }: PageProps<'/organizations/[o
   const empty = customers.total === 0;
 
   return (
-    <WorkspaceHome title={workspaceLabel('sales')}>
+    <WorkspaceHome title={workspaceLabel('crm')}>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpis.map((kpi) => (
           <KpiCard key={kpi.key} kpi={kpi} />

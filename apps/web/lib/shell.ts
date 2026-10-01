@@ -38,7 +38,7 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  * Communications has no calling workspace for its owner, and a member without `call.place` does not
  * operate calling in a business that has it.
  *
- * The shape is a hierarchy: a **workspace** is where an operator uses a Product (`WORKSPACES`), and
+ * The shape is a hierarchy: a **workspace** is where an operator performs ongoing work (`WORKSPACES`), and
  * its **pages** are the areas that name it (`Area.workspace`). A Plan grants capabilities, a Product
  * groups them, a workspace is where they are used and a page is one task in it — four different
  * things, and only the last two are navigation. One real page makes the workspace a plain row;
@@ -196,7 +196,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
 
   const inGroup = (group: Area['group']) => AREAS.filter((area) => area.group === group && operable(area));
 
-  // A workspace is a Product with pages: each page still gated by its own module and capability, so
+  // A workspace composes pages and capabilities independently of Products: each page is still gated by its own module and capability, so
   // a business without Assets has a Field without that page. The parent row's own destination is
   // the workspace's canonical Home (`WORKSPACES[].home`), never the first child — a Home is never
   // repeated as a child beneath its own parent. What the row is is decided by how many areas are
