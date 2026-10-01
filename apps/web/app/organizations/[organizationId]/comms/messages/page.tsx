@@ -1,5 +1,5 @@
 import { AppPage } from '@/components/layout/app-page';
-import { PageHeader } from '@/components/headers/page-header';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { MessagesInbox } from '@/features/communications/messaging/messages-inbox';
 import { listPhoneNumbers } from '@/lib/domain/reception/numbers';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
@@ -23,10 +23,9 @@ export default async function CommsMessagesPage({
 
   return (
     <AppPage>
-      <PageHeader
+      <CollectionHeader
         title={areaLabel('comms-messages')}
         crumbs={workspaceAncestry(organizationId, 'comms-messages')}
-        description="Text conversations with customers."
       />
       <MessagesInbox
         organizationId={organizationId}

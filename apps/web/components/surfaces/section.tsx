@@ -1,4 +1,5 @@
-import type { ComponentProps, ElementType } from 'react';
+import type { ComponentProps, ElementType, ReactNode } from 'react';
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@gold/ui/components/empty';
 import { Hint } from '../controls/inputs';
 import { cx } from '../class-names';
 
@@ -47,10 +48,53 @@ export function DividedList<T extends ElementType = 'ul'>({
 }
 
 /**
- * Application state, not advice (ui-spec §8) — "no customers yet", never "add your first
- * customer". It carries no action: an empty collection explains state and does not repeat a
- * create control the page or drawer already shows continuously.
+ * An empty state describes the truth and may offer concise, honest next-step guidance
+ * (`docs/ui-spec.md` §8) — never misleading, manipulative or a duplicate of a create control the
+ * page already shows continuously.
+ *
+ * Two scales, chosen by what is given. Plain `children` with nothing else — "No matching rows",
+ * "Nothing metered recently" — renders as inline `Hint` text: a filtered or minor zero-content
+ * region does not deserve a bordered box. Passing `title` (optionally with `description`, `media`
+ * or `action`) renders the full `@gold/ui` `Empty` composition for a major zero-content region —
+ * "This workspace has never been configured" — where the action, if any, stays visually attached
+ * to the message rather than drifting to a header's `justify-between` far edge.
  */
-export function EmptyState({ className, ...props }: ComponentProps<typeof Hint>) {
-  return <Hint {...props} className={className} />;
+export function EmptyState({
+  title,
+  description,
+  media,
+  action,
+  children,
+  className,
+  ...hintProps
+}: {
+  title?: ReactNode;
+  description?: ReactNode;
+  media?: ReactNode;
+  action?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+} & Omit<ComponentProps<typeof Hint>, 'title' | 'children' | 'className'>) {
+  if (!title && !media && !action) {
+    return (
+      <Hint className={className} {...hintProps}>
+        {children}
+      </Hint>
+    );
+  }
+  return (
+    <Empty className={className}>
+      <EmptyHeader>
+        {media ? <EmptyMedia>{media}</EmptyMedia> : null}
+        {title ? <EmptyTitle>{title}</EmptyTitle> : null}
+        {description ? <EmptyDescription>{description}</EmptyDescription> : null}
+      </EmptyHeader>
+      {children || action ? (
+        <EmptyContent>
+          {children}
+          {action}
+        </EmptyContent>
+      ) : null}
+    </Empty>
+  );
 }

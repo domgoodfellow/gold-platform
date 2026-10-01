@@ -1,6 +1,5 @@
-import { AppPage } from '@/components/layout/app-page';
+import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { KpiCard, type Kpi } from '@/components/surfaces/kpi-card';
-import { PageHeader } from '@/components/headers/page-header';
 import { EmptyState, GroupHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { listCalls } from '@/lib/domain/reception/calls';
@@ -51,13 +50,12 @@ export default async function CommsPage({ params }: PageProps<'/organizations/[o
   const empty = calls.total === 0 && numbers.length === 0;
 
   return (
-    <AppPage>
-      <PageHeader
-        title={workspaceLabel('comms')}
-        description="Calling activity, follow-up and the identity this business calls from."
-      />
+    <WorkspaceHome title={workspaceLabel('comms')}>
       {empty ? (
-        <EmptyState>Nothing has been recorded in Communications yet.</EmptyState>
+        <EmptyState
+          title="Nothing recorded in Communications yet"
+          description="Calls, numbers and conversations for this business will show here."
+        />
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {kpis.map((kpi) => (
@@ -75,6 +73,6 @@ export default async function CommsPage({ params }: PageProps<'/organizations/[o
           </ul>
         </section>
       ) : null}
-    </AppPage>
+    </WorkspaceHome>
   );
 }

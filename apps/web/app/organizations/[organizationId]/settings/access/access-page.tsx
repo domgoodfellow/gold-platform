@@ -1,5 +1,4 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/headers/page-header';
 import { ViewNav } from '@/components/navigation/view-nav';
 import { SettingsScopeNav } from '@/features/settings/settings-scope-nav';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
@@ -46,7 +45,9 @@ export async function AccessPage({
   return (
     <SettingsPageFrame>
       <AddMemberSheetProvider organizationId={organizationId} roles={roles}>
-      <PageHeader
+      <SettingsScopeNav
+        organizationId={organizationId}
+        active="access"
         title={view === 'members' ? 'Members' : view === 'invitations' ? 'Invitations' : 'Roles'}
         crumbs={[
           { label: 'Settings', href: `/organizations/${organizationId}/settings` },
@@ -58,7 +59,6 @@ export async function AccessPage({
           ) : null
         }
       />
-      <SettingsScopeNav organizationId={organizationId} active="access" />
       <ViewNav
         label="Access views"
         current={view}

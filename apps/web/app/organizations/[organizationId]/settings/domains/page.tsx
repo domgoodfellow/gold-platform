@@ -1,5 +1,4 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { ConnectDomainDialog } from '@/features/domains/connect-domain-dialog';
 import { DomainsList } from '@/features/domains/domains-list';
@@ -24,13 +23,13 @@ export default async function DomainsSettingsPage({ params }: PageProps<'/organi
 
   return (
     <SettingsPageFrame>
-      <PageHeader
+      <SettingsScopeNav
+        organizationId={organizationId}
+        active="organization"
         title="Domains"
         crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]}
-        description="Where customers reach this business: its GildOps address, and any domain it owns and has connected."
         actions={mayManage ? <ConnectDomainDialog organizationId={organizationId} platformZone={zone} /> : undefined}
       />
-      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
       {mayManage ? (
         <>
           <ManagedAddress address={address} generalHref={`/organizations/${organizationId}/settings/general`} />

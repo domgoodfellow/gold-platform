@@ -2,6 +2,7 @@ import { Lock } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@gold/ui/components/alert';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
+import { Hint } from '@/components/controls/inputs';
 import {
   InsightsViewNav,
   ReportFilters,
@@ -52,7 +53,7 @@ export default async function ReportsPage({
   if (!organization.capabilities.includes('report.read')) {
     return (
       <AppPage>
-        <PageHeader title={areaLabel('insights')} description="What this business has invoiced, and what its work has consumed." />
+        <PageHeader title={areaLabel('insights')} />
         <Alert className="mt-8">
           <Lock aria-hidden />
           <AlertTitle>Your role, {organization.role}, cannot see this business&apos;s figures</AlertTitle>
@@ -132,18 +133,13 @@ export default async function ReportsPage({
 
   return (
     <AppPage>
-      <PageHeader
-        title={areaLabel('insights')}
-        description={
-          <>
-            What this business has invoiced, and what its work has consumed. Dated by the day on the
-            invoice and the day the cost was incurred — not the day either was typed in. Times read
-            in {organization.timezone}.
-          </>
-        }
-      />
+      <PageHeader title={areaLabel('insights')} />
       <InsightsViewNav organizationId={organizationId} current="reports" />
       {navigation}
+      <Hint className="mb-4 block">
+        Dated by the day on the invoice and the day the cost was incurred — not the day either was
+        typed in. Times read in {organization.timezone}.
+      </Hint>
       <ReportFilters
         grouping={grouping}
         period={preset}

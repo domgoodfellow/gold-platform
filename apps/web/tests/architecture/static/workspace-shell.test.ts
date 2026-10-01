@@ -402,14 +402,15 @@ describe('the page-header contract — the page, not the workspace header, owns 
     expect(code(workspaceShell)).not.toMatch(/PageHeader|<h1/);
   });
 
-  it('PageHeader is one server-safe composition: one <h1>, description, meta, actions, and crumbs sent to the workspace bar', () => {
+  it('PageHeader is one server-safe composition: one <h1>, meta, actions, and a published location — and no generic description', () => {
     expect(pageHeader).not.toContain("'use client'");
     expect(code(pageHeader).match(/<h1\b/g)).toHaveLength(1);
-    expect(pageHeader).toContain('<PageCrumbs');
+    expect(pageHeader).toContain('<PageLocation');
     expect(code(pageHeader)).not.toContain('<Breadcrumb');
-    for (const prop of ['title', 'crumbs', 'description', 'meta', 'actions']) {
+    for (const prop of ['title', 'crumbs', 'meta', 'actions']) {
       expect(pageHeader, `PageHeader takes ${prop}`).toMatch(new RegExp(`\\b${prop}\\b`));
     }
+    expect(code(pageHeader), 'PageHeader no longer takes a generic description').not.toMatch(/\bdescription\b/);
   });
 
   it('PageHeader is presentation only — no domain, authorization or width knowledge', () => {
@@ -436,9 +437,11 @@ describe('the page-header contract — the page, not the workspace header, owns 
     walk(root);
     expect(pages.length).toBeGreaterThan(20);
 
-    // A page's identity is its PageHeader, a RecordHeader-based header component, or a feature
-    // that renders one (Home, the customer record). A pure redirect renders nothing at all.
-    const identity = /<PageHeader|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage/;
+    // A page's identity is PageHeader or one of the Phase B screen patterns (CollectionHeader,
+    // WorkspaceHome, SettingsScopeNav/SettingsHeader, StatePage), a RecordHeader-based header
+    // component, or a feature that renders one (Home, the customer record). A pure redirect
+    // renders nothing at all.
+    const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<SettingsScopeNav|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage/;
     for (const page of pages) {
       const source = readFileSync(page, 'utf8');
       const label = page.slice(root.length);
@@ -453,15 +456,15 @@ describe('the page-header contract — the page, not the workspace header, owns 
 
 describe('Resources — the reference page for the workspace/page hierarchy', () => {
   const [beforeHeader, headerOnward] = [
-    resourcesPage.slice(0, resourcesPage.indexOf('<PageHeader')),
-    resourcesPage.slice(resourcesPage.indexOf('<PageHeader')),
+    resourcesPage.slice(0, resourcesPage.indexOf('<CollectionHeader')),
+    resourcesPage.slice(resourcesPage.indexOf('<CollectionHeader')),
   ];
   const headerBlock = headerOnward.slice(0, headerOnward.indexOf('/>\n', headerOnward.indexOf('actions=')));
 
-  it('renders one PageHeader, titled from the navigation entry, inside AppPage', () => {
-    expect(resourcesPage.match(/<PageHeader\b/g)).toHaveLength(1);
+  it('renders one CollectionHeader, titled from the navigation entry, inside AppPage', () => {
+    expect(resourcesPage.match(/<CollectionHeader\b/g)).toHaveLength(1);
     expect(resourcesPage).toContain("title={areaLabel('resources')}");
-    expect(resourcesPage.indexOf('<AppPage')).toBeLessThan(resourcesPage.indexOf('<PageHeader'));
+    expect(resourcesPage.indexOf('<AppPage')).toBeLessThan(resourcesPage.indexOf('<CollectionHeader'));
     expect(resourcesPage).not.toContain('<h1');
     expect(resourcesPage).not.toContain('PageChromeRegistrar');
   });
@@ -487,7 +490,7 @@ describe('Resources — the reference page for the workspace/page hierarchy', ()
   });
 });
 
-describe('Business area roots with an Add action keep it in their PageHeader', () => {
+describe('Business area roots with an Add action keep it in their CollectionHeader', () => {
   it('Resources, Locations, Customers and Assets no longer render PageHeading or register chrome', () => {
     for (const area of ['resources', 'locations', 'customers', 'assets']) {
       const source = readFileSync(
@@ -495,11 +498,11 @@ describe('Business area roots with an Add action keep it in their PageHeader', (
         'utf8',
       );
       expect(source, `${area}/page.tsx should not import PageHeading`).not.toContain('PageHeading');
-      expect(source, `${area}/page.tsx should render PageHeader`).toContain('<PageHeader');
+      expect(source, `${area}/page.tsx should render CollectionHeader`).toContain('<CollectionHeader');
     }
   });
 
-  it('each area’s primary "Add" action sits in the PageHeader actions, not a body header row', () => {
+  it('each area’s primary "Add" action sits in the CollectionHeader actions, not a body header row', () => {
     const triggers: Record<string, string> = {
       resources: 'CreateResourceTrigger',
       locations: 'CreateLocationTrigger',
@@ -511,19 +514,19 @@ describe('Business area roots with an Add action keep it in their PageHeader', (
         `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
         'utf8',
       );
-      const start = source.indexOf('<PageHeader');
+      const start = source.indexOf('<CollectionHeader');
       const header = source.slice(start, source.indexOf('\n        />', start));
-      expect(header, `${area}/page.tsx should place ${trigger} in PageHeader actions`).toContain(trigger);
+      expect(header, `${area}/page.tsx should place ${trigger} in CollectionHeader actions`).toContain(trigger);
     }
   });
 });
 
-describe('Platform pages render their own PageHeader', () => {
-  it('the Catalog and Overview pages render PageHeader and no PageHeading', () => {
+describe('Platform pages render their own page identity', () => {
+  it('the Catalog page renders PageHeader and the Overview page renders WorkspaceHome, neither a PageHeading', () => {
     expect(platformCatalogPage).not.toContain('PageHeading');
     expect(platformCatalogPage).toContain('<PageHeader');
     expect(platformOverview).not.toContain('PageHeading');
-    expect(platformOverview).toContain('<PageHeader');
+    expect(platformOverview).toContain('<WorkspaceHome');
   });
 
   it('the legacy flat SKU list reads as "Line items" under Catalog, never a second "Products"', () => {
@@ -640,9 +643,11 @@ describe('organization page composition', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('a page never places a support mode: only PageHeader renders one, after the business actions', () => {
+  it('a page never places a support mode: only a screen pattern renders one, after the business actions', () => {
     const renderers = sources.filter((path) => /<SupportTrigger\b/.test(read(path)));
-    expect(renderers.map((path) => path.slice(WEB.length))).toEqual(['/components/headers/page-header.tsx']);
+    expect(renderers.map((path) => path.slice(WEB.length)).sort()).toEqual(
+      ['/components/headers/page-header.tsx', '/components/patterns/collection-header.tsx', '/components/patterns/workspace-home.tsx'].sort(),
+    );
     const header = code(read(`${WEB}/components/headers/page-header.tsx`));
     expect(header.indexOf('{actions}')).toBeGreaterThan(-1);
     expect(header.indexOf('{actions}')).toBeLessThan(header.indexOf('<SupportTrigger mode="activity" />'));
@@ -684,12 +689,18 @@ describe('the breadcrumb contract — every page publishes a location, ancestors
     expect(workspaceCrumbs).toContain('export function WorkspaceCrumbSlot()');
   });
 
-  it('PageHeader always publishes a trail — no length guard stands between crumbs and the portal', () => {
+  it('PageHeader always publishes a trail through PageLocation — no length guard stands between crumbs and the portal', () => {
     const source = code(pageHeader);
-    // The historical guard this slice removes: rendering `PageCrumbs` only when ancestors exist.
+    // The historical guard this slice removes: rendering the location only when ancestors exist.
     expect(source).not.toMatch(/crumbs\s*&&\s*crumbs\.length/);
     expect(source).not.toMatch(/crumbs\.length === 0\s*\?\s*null/);
-    expect(source).toContain('<PageCrumbs crumbs={crumbs ?? []} current={breadcrumbLabel ?? title} />');
+    expect(source).toContain('<PageLocation crumbs={crumbs} current={breadcrumbLabel ?? title} />');
+  });
+
+  it('PageLocation composes PageCrumbs and nothing else — no visible chrome of its own', () => {
+    const pageLocation = code(readFileSync(`${WEB}/components/navigation/page-location.tsx`, 'utf8'));
+    expect(pageLocation).toContain('<PageCrumbs crumbs={crumbs ?? []} current={current} />');
+    expect(pageLocation).not.toMatch(/<h1|className=/);
   });
 
   it('PageCrumbs takes a required `current` and always renders once mounted in the slot — no ancestor-count escape hatch', () => {
@@ -751,12 +762,12 @@ describe('the breadcrumb contract — every page publishes a location, ancestors
     expect(recordHeader).toContain('crumbs={crumbs.slice(0, -1)}');
   });
 
-  it('no page renders PageCrumbs directly — only PageHeader does, so every page goes through one contract', () => {
+  it('no page renders PageCrumbs directly — only PageLocation does, so every page goes through one contract', () => {
     const offenders: string[] = [];
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         if (entry.isDirectory()) walk(`${dir}/${entry.name}`);
-        else if (/\.tsx$/.test(entry.name) && entry.name !== 'page-header.tsx' && readFileSync(`${dir}/${entry.name}`, 'utf8').includes('<PageCrumbs')) {
+        else if (/\.tsx$/.test(entry.name) && entry.name !== 'page-location.tsx' && readFileSync(`${dir}/${entry.name}`, 'utf8').includes('<PageCrumbs')) {
           offenders.push(`${dir}/${entry.name}`.slice(WEB.length));
         }
       }

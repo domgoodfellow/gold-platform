@@ -11,36 +11,14 @@ export type SettingsScopeKey = 'organization' | 'account' | 'access' | 'connecti
 export type SettingsScope = {
   key: SettingsScopeKey;
   label: string;
-  /** One sentence, said once by the tab bar rather than repeated by every page under it. */
-  scopeCopy: (organizationName?: string) => string;
 };
 
 export const SETTINGS_SCOPES: readonly SettingsScope[] = [
-  {
-    key: 'organization',
-    label: 'Organization',
-    scopeCopy: (name) => `Settings that apply to everyone in ${name ?? 'this business'}.`,
-  },
-  {
-    key: 'account',
-    label: 'Account',
-    scopeCopy: () => 'Your profile and sign-in, the same in every business.',
-  },
-  {
-    key: 'access',
-    label: 'Access',
-    scopeCopy: () => 'Who works here, and what each role may do.',
-  },
-  {
-    key: 'connections',
-    label: 'Connections',
-    scopeCopy: () => 'The apps, phone numbers and data sources this business connects.',
-  },
-  {
-    key: 'plan',
-    label: 'Plan & usage',
-    scopeCopy: () => 'This business’s plan, usage and billing.',
-  },
+  { key: 'organization', label: 'Organization' },
+  { key: 'account', label: 'Account' },
+  { key: 'access', label: 'Access' },
+  { key: 'connections', label: 'Connections' },
+  { key: 'plan', label: 'Plan & usage' },
 ] as const;
 
 /**

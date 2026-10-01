@@ -1,5 +1,4 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { requireOrganization } from '@/lib/route/organization';
@@ -23,8 +22,12 @@ export default async function GeneralSettingsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader title="General" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
-      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
+      <SettingsScopeNav
+        organizationId={organizationId}
+        active="organization"
+        title="General"
+        crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]}
+      />
       <Hint className="mt-1">
         This business&rsquo;s name, where it operates and what it trades in. Changing the
         currency does not reinterpret what past jobs cost, and changing the timezone does not

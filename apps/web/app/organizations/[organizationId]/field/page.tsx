@@ -1,6 +1,5 @@
-import { AppPage } from '@/components/layout/app-page';
+import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { KpiCard, type Kpi } from '@/components/surfaces/kpi-card';
-import { PageHeader } from '@/components/headers/page-header';
 import { EmptyState } from '@/components/surfaces/section';
 import {
   activeModuleKeys,
@@ -64,13 +63,12 @@ export default async function FieldPage({ params }: PageProps<'/organizations/[o
   const empty = kpis.every((kpi) => kpi.value === 0);
 
   return (
-    <AppPage>
-      <PageHeader
-        title={workspaceLabel('field')}
-        description="Where work is planned and done: the jobs, when they happen, and what they are done with and where."
-      />
+    <WorkspaceHome title={workspaceLabel('field')}>
       {empty ? (
-        <EmptyState>Nothing has been recorded in Field yet.</EmptyState>
+        <EmptyState
+          title="Nothing recorded in Field yet"
+          description="Work, Schedule, Resources, Locations and Equipment & Assets will show here once this business has them."
+        />
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           {kpis.map((kpi) => (
@@ -78,6 +76,6 @@ export default async function FieldPage({ params }: PageProps<'/organizations/[o
           ))}
         </div>
       )}
-    </AppPage>
+    </WorkspaceHome>
   );
 }

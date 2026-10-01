@@ -1,5 +1,6 @@
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
+import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { WidgetPanel } from '@/components/display/widget';
 import { CallHistory } from '@/features/communications/voice/call-history';
 import { VoiceOverview } from '@/features/communications/voice/voice-overview';
@@ -56,28 +57,26 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
   }
 
   return (
-    <AppPage>
-      <PageHeader
-        title={areaLabel('calls')}
-        crumbs={workspaceAncestry(organizationId, 'calls')}
-        description="Calling activity, follow-up and the identity this business calls from."
-        actions={
-          <div id="setup" className="scroll-mt-20">
-            <VoiceSettingsSheet
-              organizationId={organizationId}
-              number={number}
-              outcomes={outcomes}
-              routes={routes}
-              numbers={numbers}
-              members={members.map((member) => ({ id: member.id, displayName: member.displayName }))}
-              mayManageIdentity={organization.capabilities.includes('organization.manage')}
-              mayConfigureOutcomes={organization.capabilities.includes('field.manage')}
-              role={organization.role}
-            />
-          </div>
-        }
-      />
+    <WorkspaceHome
+      title={areaLabel('calls')}
+      crumbs={workspaceAncestry(organizationId, 'calls')}
+      actions={
+        <div id="setup" className="scroll-mt-20">
+          <VoiceSettingsSheet
+            organizationId={organizationId}
+            number={number}
+            outcomes={outcomes}
+            routes={routes}
+            numbers={numbers}
+            members={members.map((member) => ({ id: member.id, displayName: member.displayName }))}
+            mayManageIdentity={organization.capabilities.includes('organization.manage')}
+            mayConfigureOutcomes={organization.capabilities.includes('field.manage')}
+            role={organization.role}
+          />
+        </div>
+      }
+    >
       <VoiceOverview organizationId={organizationId} calls={calls} todaysCalls={todaysCalls} customers={customers} stages={stages} />
-    </AppPage>
+    </WorkspaceHome>
   );
 }

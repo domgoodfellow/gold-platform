@@ -14,14 +14,13 @@ export default async function ProfilePage({ searchParams }: PageProps<'/settings
     <PersonalSettingsShell returnOrganizationId={typeof org === 'string' ? org : undefined}>
       {({ email }) => (
         <>
-          <PageHeader
-            title="Profile"
-            crumbs={personalSettingsAncestry()}
-            description="Your identity. It belongs to you, not to any business, and applies in every business you belong to."
-          />
+          <PageHeader title="Profile" crumbs={personalSettingsAncestry()} />
           <Section>
             <SectionHeading>Email</SectionHeading>
             <Hint className="mt-2">{email}</Hint>
+            <Hint className="mt-4 block">
+              Your identity. It belongs to you, not to any business, and applies in every business you belong to.
+            </Hint>
           </Section>
         </>
       )}

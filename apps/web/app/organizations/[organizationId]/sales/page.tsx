@@ -1,6 +1,5 @@
-import { AppPage } from '@/components/layout/app-page';
+import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { KpiCard, type Kpi } from '@/components/surfaces/kpi-card';
-import { PageHeader } from '@/components/headers/page-header';
 import { EmptyState } from '@/components/surfaces/section';
 import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { listCustomers } from '@/lib/domain/customers/customers';
@@ -27,34 +26,33 @@ export default async function SalesPage({ params }: PageProps<'/organizations/[o
   ]);
 
   const href = (segment: string) => areaHref(organizationId, segment);
-  const kpis: Kpi[] = [{ key: 'customers', label: areaLabel('customers'), value: customers.total, href: href('customers') }];
-  if (reception) {
-    kpis.push({
+  const kpis: Kpi[] = [
+    { key: 'customers', label: areaLabel('customers'), value: customers.total, href: href('customers') },
+    {
       key: 'pipeline',
       label: areaLabel('pipeline'),
-      value: stages.length,
-      note: 'stages named',
+      value: reception ? stages.length : '—',
+      note: reception ? 'stages named' : 'Communications/Voice is off',
       href: href('pipeline'),
-    });
-  }
+    },
+  ];
 
   const empty = customers.total === 0;
 
   return (
-    <AppPage>
-      <PageHeader
-        title={workspaceLabel('sales')}
-        description="Who this business works for, and where each relationship has got to."
-      />
+    <WorkspaceHome title={workspaceLabel('sales')}>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {kpis.map((kpi) => (
+          <KpiCard key={kpi.key} kpi={kpi} />
+        ))}
+      </div>
       {empty ? (
-        <EmptyState>Nothing has been recorded in Sales yet.</EmptyState>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {kpis.map((kpi) => (
-            <KpiCard key={kpi.key} kpi={kpi} />
-          ))}
-        </div>
-      )}
-    </AppPage>
+        <EmptyState
+          className="mt-8"
+          title="Nothing recorded in Sales yet"
+          description="Customers you add, and the Pipeline tracking where each one has got to, will show here."
+        />
+      ) : null}
+    </WorkspaceHome>
   );
 }

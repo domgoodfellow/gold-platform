@@ -1,5 +1,5 @@
 import { AppPage } from '@/components/layout/app-page';
-import { PageHeader } from '@/components/headers/page-header';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { EmptyState } from '@/components/surfaces/section';
 import { buildPipelineColumns, PipelineBoard } from '@/features/crm/sales/pipeline-board';
 import { CustomerStageControl } from '@/features/crm/sales/stage-control';
@@ -28,32 +28,33 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
 
   return (
     <AppPage>
-      <PageHeader
+      <CollectionHeader
         title={areaLabel('pipeline')}
         crumbs={workspaceAncestry(organizationId, 'pipeline')}
-        description="Where each relationship has got to."
         actions={
           reception ? (
             <StageSettingsSheet organizationId={organizationId} stages={stages} mayConfigure={organization.capabilities.includes('field.manage')} role={organization.role} />
           ) : null
         }
       />
-
-
       {!reception ? (
-        <EmptyState className="mt-6">Switch Communications/Voice on to name a pipeline for this business.</EmptyState>
+        <EmptyState
+          title="Pipeline is not available"
+          description="Switch Communications/Voice on before this business can name pipeline stages."
+        />
       ) : stages.length === 0 ? (
-        <EmptyState className="mt-6">No stages named.</EmptyState>
+        <EmptyState
+          title="No stages named"
+          description="Use Stage settings to define the stages this business moves customer relationships through."
+        />
       ) : (
-        <div className="mt-6">
-          <PipelineBoard
-            columns={buildPipelineColumns(stages, customers)}
-            customerHref={(id) => `/organizations/${organizationId}/customers/${id}`}
-            renderStageControl={mayMoveCustomers ? (person) => (
-              <CustomerStageControl organizationId={organizationId} customerId={person.id} customerName={person.name} currentStageId={stageById.get(person.id) ?? null} stages={stages} />
-            ) : undefined}
-          />
-        </div>
+        <PipelineBoard
+          columns={buildPipelineColumns(stages, customers)}
+          customerHref={(id) => `/organizations/${organizationId}/customers/${id}`}
+          renderStageControl={mayMoveCustomers ? (person) => (
+            <CustomerStageControl organizationId={organizationId} customerId={person.id} customerName={person.name} currentStageId={stageById.get(person.id) ?? null} stages={stages} />
+          ) : undefined}
+        />
       )}
     </AppPage>
   );

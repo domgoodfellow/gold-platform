@@ -1,5 +1,5 @@
 import { AppPage } from '@/components/layout/app-page';
-import { PageHeader } from '@/components/headers/page-header';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { Hint } from '@/components/controls/inputs';
 import { NumberList } from '@/features/communications/numbers/number-list';
 import { listPhoneNumberAssignments, listPhoneNumbers } from '@/lib/domain/reception/numbers';
@@ -33,10 +33,9 @@ export default async function CommsNumbersPage({
 
   return (
     <AppPage>
-      <PageHeader
+      <CollectionHeader
         title={areaLabel('comms-numbers')}
         crumbs={workspaceAncestry(organizationId, 'comms-numbers')}
-        description="The phone numbers this business has, and who is currently dialling from each one."
       />
       <NumberList organizationId={organizationId} numbers={numbers} assignedCount={assignedCount} />
       <Hint className="mt-4">Adding a number here is not available yet.</Hint>

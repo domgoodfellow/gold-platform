@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/headers/page-header';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { areaLabel } from '@/lib/navigation';
 import { ButtonLink } from '@/components/controls/button';
 import { IntegrationsNav } from '@/features/integrations/integrations-nav';
@@ -27,10 +27,9 @@ export default async function ImportRunsPage({
 
   return (
     <>
-      <PageHeader
+      <CollectionHeader
         title="Imports"
         crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/settings/connections` }]}
-        description="Every import this business has run, newest first."
         actions={
           organization.capabilities.includes('integration.manage') ? (
             <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">

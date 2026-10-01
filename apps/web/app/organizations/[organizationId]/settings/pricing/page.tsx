@@ -1,6 +1,5 @@
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { areaLabel } from '@/lib/navigation';
-import { PageHeader } from '@/components/headers/page-header';
 import { Hint } from '@/components/controls/inputs';
 import { Disclosure } from '@/components/surfaces/card';
 import { DataTable } from '@/components/display/table';
@@ -44,12 +43,12 @@ export default async function PricingPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader
+      <SettingsScopeNav
+        organizationId={organizationId}
+        active="organization"
         title={areaLabel('pricing')}
         crumbs={[{ label: 'Settings', href: `/organizations/${organizationId}/settings` }]}
-        description="What this business sells, and how it collects payment."
       />
-      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
       <Section>
         <SectionHeading>Services &amp; pricing</SectionHeading>
         <Hint className="mt-1">

@@ -351,27 +351,36 @@ with it, so that bar is a sibling of the sidebar rather than a second `<nav>` in
 
 ## 2a. The header
 
-**Two layers, and they answer different questions.** The sticky `WorkspaceHeader` answers *which
-application, and where in it* (the breadcrumb trail) and holds global utilities. The `PageHeader` inside the page answers *which
-page or record am I on* and holds that page's controls. They were one bar once, which put
-*Resources*, *Add resource* and *Configure* — all about one page — on the same row as *Agent*,
-which is about the workspace. A control belongs to the layer whose scope it has.
+**Three things, not two, and they answer different questions.** The sticky `WorkspaceHeader`
+answers *which application, and where in it* (the breadcrumb trail) and holds global utilities.
+`PageLocation` (`components/navigation/page-location.tsx`) is the one thing that publishes a
+page's location into that trail — nothing else, no visible chrome. A screen pattern — `PageHeader`
+or one of `components/patterns/`'s archetypes (§2d) — answers *which page or record am I on, and
+what can I do here*, composing `PageLocation` alongside whatever visible identity the task needs.
+They were one bar once, which put *Resources*, *Add resource* and *Configure* — all about one page
+— on the same row as *Agent*, which is about the workspace; then `PageHeader` itself became the
+one shape every screen was forced through, which produced its own sameness (§2d). A control
+belongs to the layer whose scope it has, and a screen's visible identity belongs to the pattern its
+task calls for.
 
 **`WorkspaceHeader` — global, sticky.** It carries its own background: the page moves underneath
 it, and a transparent bar shows rows sliding through the text. It holds the persistent breadcrumb
 location and no title, status or page action.
 
-Ownership is durable, not a page-by-page convention: **every** `PageHeader` publishes a trail —
-`ancestors + current page` — into the workspace bar automatically, even when it has no ancestors.
-There is no page with nothing to say here. The current page is always the trail's final,
-non-linked segment (the shared `Breadcrumb` primitives' current-page role); an ancestor is a link
-only where it names a real destination someone can navigate to, and plain text otherwise (a
-heading with no page of its own, such as a Platform sidebar group). Ancestry itself is read from
-the existing navigation registries — `workspaceAncestry` from `WORKSPACES`/`AREAS`, `platformAncestry`
-from `PLATFORM_DESTINATIONS`/`PLATFORM_GROUPS` — never a page's own hand-written string, and never
-a pathname-to-title lookup. Because publishing is unconditional, location stays visible in the
-sticky header while the page beneath it scrolls, on every authenticated route: an organization
-workspace, Platform, or Account.
+Ownership is durable, not a page-by-page convention: **every** navigable screen publishes a trail —
+`ancestors + current page` — into the workspace bar automatically, through `PageLocation`, even
+when it has no ancestors. There is no page with nothing to say here. `PageHeader` composes
+`PageLocation` internally, so its callers get this for free; a screen pattern that draws its own
+identity (`CollectionHeader`, `WorkspaceHome`, `SettingsHeader`, `StatePage`) composes
+`PageLocation` itself instead. The current page is always the trail's final, non-linked segment
+(the shared `Breadcrumb` primitives' current-page role); an ancestor is a link only where it names
+a real destination someone can navigate to, and plain text otherwise (a heading with no page of its
+own, such as a Platform sidebar group). Ancestry itself is read from the existing navigation
+registries — `workspaceAncestry` from `WORKSPACES`/`AREAS`, `platformAncestry` from
+`PLATFORM_DESTINATIONS`/`PLATFORM_GROUPS` — never a page's own hand-written string, and never a
+pathname-to-title lookup. Because publishing is unconditional, location stays visible in the sticky
+header while the page beneath it scrolls, on every authenticated route: an organization workspace,
+Platform, or Account.
 
 | | What | Which widths |
 |---|---|---|
@@ -381,11 +390,16 @@ workspace, Platform, or Account.
 | Right, before Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
 | Right, furthest | Agent | all — always the last control in the row |
 
-**`PageHeader` — the page's identity, inside its `AppPage`.** The page's single `<h1>`, an optional description and metadata line, and the page's actions at the
-right (wrapping below the title on a narrow screen). It shares the canvas the content below it
-sits on; `AppPage` still owns width. It is a Server Component and knows no domain: a page hands it
-whatever actions it offers. **One primary action per page**, then secondary ones — Resources is
-*Add resource* with *Configure* beside it, and the empty state does not repeat it (§8).
+**`PageHeader` — one available page identity, inside its `AppPage`, not the required one.** The
+page's single `<h1>`, an optional metadata line, and the page's actions at the right (wrapping
+below the title on a narrow screen). It shares the canvas the content below it sits on; `AppPage`
+still owns width. It is a Server Component and knows no domain: a page hands it whatever actions it
+offers. **It carries no generic `description` prop.** A sentence restating what a screen is for,
+placed under every title whether or not it earned the space, was the single largest cause of
+"every screen looks like the same template" (§2d) — explanatory text now gets classified per
+screen rather than defaulting into this slot. **One primary action per page is a strong default**,
+then secondary ones — Resources is *Add resource* with *Configure* beside it — not a law a task
+needing several high-priority controls must contort itself around (§6).
 
 **The page-support rail belongs to the page, with three modes.** A page may offer *Activity*
 (what recently changed here), *Insights* (a few numbers, with a link into Insights) and
@@ -400,10 +414,11 @@ reuses the reporting aggregates and never computes its own. A Configure panel th
 repeat a Settings form links to the Settings owner instead.
 
 **The area's `<h1>` is still one string.** `navigation.ts` supplies the navigation entry and the
-heading both — an area's root page reads it with `areaLabel(segment)` instead of writing it again.
-A detail route is *in* an area and not *at* it, so it writes its own title (a job's title is a
-tenant's words) and passes the way back as `PageHeader` crumbs; `RecordHeader` keeps its older
-props and renders the same `PageHeader`. Every page renders exactly one page identity.
+heading both — an area's root page reads it with `areaLabel(segment)` instead of writing it again,
+whichever pattern draws it. A detail route is *in* an area and not *at* it, so it writes its own
+title (a job's title is a tenant's words) and passes the way back as crumbs; `RecordHeader` keeps
+its older props and renders `PageHeader`. Every page renders exactly one page identity — through
+`PageHeader` or one `components/patterns/` archetype, never both, and never none.
 
 **Context switching belongs to the context switcher, and only to it.** One identity, zero or
 more memberships, and one current context. The menu's header is the current context and its list
@@ -435,6 +450,49 @@ Insights, Configure*. Agent stays in the workspace header.
 
 **A drawer's chrome is one compact band** (`DRAWER_HEADER` in `workspace-geometry.ts`), the same
 for Configure and every create or edit form.
+
+---
+
+## 2d. Screen patterns, and what retired the universal grammar
+
+**The problem Phase B corrected.** Nearly every screen rendered the same shape — a title, a muted
+one-line sentence restating what the screen was for, then whitespace or content — because
+`PageHeader`'s `description` prop was the default slot for *any* explanatory text, and every page
+reached for it whether or not the sentence earned its place. A workspace Home, a collection, a
+settings scope and a 404 all looked like the same template with different words. The fix is not a
+richer `PageHeader`; it is recognizing that these are different tasks that should look recognizably
+different while sharing tokens, controls and shell geometry.
+
+`components/patterns/` holds the first five archetypes, each a thin composition over
+`PageLocation`, `AppPage` and the shared controls — never a second business-rule layer:
+
+| Pattern | File | Owns | Never |
+|---|---|---|---|
+| Workspace Home | `workspace-home.tsx` | What is happening, what can I do, where can I go — title, actions, then real content (KPIs, widgets, destinations). An empty workspace still renders its structure with a real empty state inside it | A restated-purpose sentence under the title |
+| Collection/Board | `collection-header.tsx` | Compact identity and controls, then the collection or board promptly — tighter spacing than `PageHeader`, no description slot at all | A large introductory block above the work surface |
+| Record | `headers/record-header.tsx` (renders `PageHeader`) | A record's name, status and metadata via `meta`, actions, relationships | Being forced into the Collection or Workspace Home shape |
+| Settings/Configuration | `settings-header.tsx`, via `features/settings/settings-scope-nav.tsx` | The active scope's name as the page's `<h1>`, the scope tabs beneath it as one visual unit | A title followed by a disconnected scope sentence — `description` here is reserved for a scope whose name genuinely does not say enough (Organization vs Account) |
+| State/Exception | `state.tsx` (`StatePage`) | A 404, an unavailable business, a refusal, a paused subscription — title, description, media and a recovery action kept in the same centred column | `PageHeader`, or an action pulled to a far edge by `justify-between` |
+
+Each is a **pattern/default**, not a law (`docs/constraints.md` D23's four rule classes): a future
+operational canvas, communication workspace or builder is a sixth archetype this layer does not yet
+need to name, and nothing here forbids it.
+
+**Explanatory text is classified, not relocated.** Deleting `description` did not create a new
+`<PageDescription>` slot immediately beneath every `<h1>` — that would be the same mistake under a
+new name. Each sentence that used to live there was judged on its own: deleted where the content
+below it already said as much (most collection pages), turned into `meta` where it was really short
+factual status (a date, a timezone, a connection's state), moved into a `Hint` beside the specific
+control or section it explains (an import's upload instructions, a platform jargon term), or kept
+as a pattern's own `description` where a scope's or state's name genuinely does not say enough.
+
+**Empty states carry real content now.** `EmptyState` (`components/surfaces/section.tsx`) renders
+plain `Hint` text when given only `children` — "No matching rows" does not deserve a bordered box —
+and the full `@gold/ui` `Empty` composition (title, description, media, action) when given a
+`title`. Scale follows context: a filtered collection's empty state stays a line of text; a
+workspace that has never recorded anything gets the fuller treatment. The former rule — an empty
+state may carry no action at all — is retired; what remains is not duplicating a create control the
+page already shows continuously.
 
 ---
 

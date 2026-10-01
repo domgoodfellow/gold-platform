@@ -1,6 +1,6 @@
 import { AppPage } from '@/components/layout/app-page';
 import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
-import { PageHeader } from '@/components/headers/page-header';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { AssetConfiguration } from '@/features/assets/configuration/asset-configuration';
 import { AssetTable } from '@/features/assets/asset-table';
 import { CreateAssetSheetProvider, CreateAssetTrigger } from '@/features/assets/create-asset-sheet';
@@ -53,10 +53,9 @@ export default async function AssetsPage({
           asset.create in the database (constraints.md: hiding a UI element is not
           authorization).
         */}
-        <PageHeader
+        <CollectionHeader
           title={areaLabel('assets')}
           crumbs={workspaceAncestry(organizationId, 'assets')}
-          description="What work is about — machines, vehicles, properties, customer-owned equipment."
           actions={mayAdd ? <CreateAssetTrigger /> : null}
           configure={mayConfigure}
         />

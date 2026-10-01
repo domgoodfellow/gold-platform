@@ -25,7 +25,6 @@ export default async function ModulesPage({ params }: PageProps<'/organizations/
       <PageHeader
         title="Modules"
         crumbs={[...platformAncestry(goldId, 'products'), { label: 'Products', href: platformHref(goldId, 'catalog') }]}
-        description="Available code capabilities. A catalogue row can sell a module, but creating a new software module remains a development change."
       />
       <div>
         <DataTable

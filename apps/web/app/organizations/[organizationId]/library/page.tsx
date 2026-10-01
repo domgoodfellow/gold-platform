@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { AppPage } from '@/components/layout/app-page';
-import { PageHeader } from '@/components/headers/page-header';
+import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { DividedList } from '@/components/surfaces/section';
 import { FOCUS_RING } from '@/components/class-names';
 import { LibraryNav } from '@/features/library/library-nav';
@@ -36,11 +35,7 @@ export default async function LibraryPage({
   const destinations = LIBRARY_SECTIONS.filter((section) => section.key !== 'home');
 
   return (
-    <AppPage>
-      <PageHeader
-        title={areaLabel('library')}
-        description="Files, media, templates and knowledge shared across this business's workspaces."
-      />
+    <WorkspaceHome title={areaLabel('library')}>
       <LibraryNav organizationId={organizationId} active="home" />
 
       <DividedList className="border-y border-border">
@@ -59,6 +54,6 @@ export default async function LibraryPage({
           </li>
         ))}
       </DividedList>
-    </AppPage>
+    </WorkspaceHome>
   );
 }

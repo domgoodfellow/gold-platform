@@ -1,4 +1,3 @@
-import { PageHeader } from '@/components/headers/page-header';
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
@@ -72,12 +71,13 @@ export default async function PlanAndUsagePage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader
+      <SettingsScopeNav
+        organizationId={organizationId}
+        active="plan"
         title="Plan & usage"
         crumbs={[{ label: 'Settings', href: `/organizations/${organizationId}/settings` }]}
         actions={<ButtonLink href={`/organizations/${organizationId}/settings/features`}>Manage features</ButtonLink>}
       />
-      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="plan" />
 
       <Section className="mt-8">
         <SectionHeading>Plan</SectionHeading>

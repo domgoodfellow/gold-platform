@@ -60,19 +60,14 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
 
   return (
     <AppPage>
-      <PageHeader
-        title="Billing"
-        crumbs={platformAncestry(goldId, 'billing')}
-        description={
-          <>
-            GildOps&rsquo;s own subscription book. Plans and prices are managed at{' '}
-            <Link href={`/organizations/${goldId}/finance/plans`} className="underline underline-offset-4">
-              Finance → Plans
-            </Link>
-            .
-          </>
-        }
-      />
+      <PageHeader title="Billing" crumbs={platformAncestry(goldId, 'billing')} />
+      <Hint className="mb-4 block">
+        Plans and prices are managed at{' '}
+        <Link href={`/organizations/${goldId}/finance/plans`} className="underline underline-offset-4">
+          Finance → Plans
+        </Link>
+        .
+      </Hint>
 
       {!provider ? (
         <EmptyState className="mt-6">

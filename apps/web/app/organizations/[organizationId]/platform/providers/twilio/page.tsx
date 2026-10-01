@@ -64,7 +64,6 @@ export default async function TwilioProviderPage({ params, searchParams }: PageP
       <PageHeader
         title="Twilio"
         crumbs={[...platformAncestry(goldId, 'providers'), { label: 'Providers', href: platformHref(goldId, 'providers') }]}
-        description="Telephony infrastructure GildOps operates for every organization: the parent account, the subaccount each organization runs inside, and the numbers beneath it."
         meta={
           <span className="inline-flex items-center gap-2">
             <ReadinessBadge state={readiness.state} />

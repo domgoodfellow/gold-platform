@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
-import { AppPage } from '@/components/layout/app-page';
+import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { KpiCard, type Kpi } from '@/components/surfaces/kpi-card';
-import { PageHeader } from '@/components/headers/page-header';
 import { EmptyState } from '@/components/surfaces/section';
 import { requireOrganization } from '@/lib/route/organization';
 import { listAutomationRules, listAutomationRuns } from '@/lib/domain/automation/rules';
@@ -47,13 +46,12 @@ export default async function AutomationsPage({
   const empty = kpis.every((kpi) => kpi.value === 0);
 
   return (
-    <AppPage>
-      <PageHeader
-        title={workspaceLabel('automations')}
-        description="Rules this business writes: when something happens, if a job looks a certain way, do this."
-      />
+    <WorkspaceHome title={workspaceLabel('automations')}>
       {empty ? (
-        <EmptyState>Nothing has been recorded in Automations yet.</EmptyState>
+        <EmptyState
+          title="Nothing recorded in Automations yet"
+          description="A rule's trigger, conditions and actions will show here once this business writes one."
+        />
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {kpis.map((kpi) => (
@@ -61,6 +59,6 @@ export default async function AutomationsPage({
           ))}
         </div>
       )}
-    </AppPage>
+    </WorkspaceHome>
   );
 }

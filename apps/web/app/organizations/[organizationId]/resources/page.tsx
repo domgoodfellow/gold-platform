@@ -1,6 +1,6 @@
 import { AppPage } from '@/components/layout/app-page';
 import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
-import { PageHeader } from '@/components/headers/page-header';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { ResourceConfiguration } from '@/features/resources/configuration/resource-configuration';
 import { ResourceTable } from '@/features/resources/resource-table';
 import { CreateResourceSheetProvider, CreateResourceTrigger } from '@/features/resources/create-resource-sheet';
@@ -41,10 +41,9 @@ export default async function ResourcesPage({
           resource.create in the database, so a caller who reaches the action anyway is
           refused there (constraints.md: hiding a UI element is not authorization).
         */}
-        <PageHeader
+        <CollectionHeader
           title={areaLabel('resources')}
           crumbs={workspaceAncestry(organizationId, 'resources')}
-          description="People, vehicles and equipment that work is scheduled against."
           actions={mayAdd ? <CreateResourceTrigger /> : null}
           configure={mayConfigure}
         />

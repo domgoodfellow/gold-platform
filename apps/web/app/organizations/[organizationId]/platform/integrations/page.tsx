@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
 import { ButtonLink } from '@/components/controls/button';
+import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { getDb } from '@/lib/db/server';
@@ -23,9 +24,9 @@ export default async function PlatformIntegrationsPage({ params }: PageProps<'/o
       <PageHeader
         title="Connectors"
         crumbs={platformAncestry(goldId, 'connectors')}
-        description="The kinds of outside app GildOps supports, which a business then connects. Who GildOps buys infrastructure from is under Providers."
         actions={<ButtonLink href={platformHref(goldId, 'integrations/new')} size="small">New connector</ButtonLink>}
       />
+      <Hint className="mb-4 block">Who GildOps buys infrastructure from is under Providers.</Hint>
       <DataTable
         rows={connectors}
         rowKey={(connector) => connector.key}

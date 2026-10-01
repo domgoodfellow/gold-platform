@@ -33,7 +33,7 @@ export default async function InsightsPage({
   if (!organization.capabilities.includes('report.read')) {
     return (
       <AppPage>
-        <PageHeader title={areaLabel('insights')} description="Saved dashboards and reports across this business." />
+        <PageHeader title={areaLabel('insights')} />
         <Alert className="mt-8">
           <Lock aria-hidden />
           <AlertTitle>Your role, {organization.role}, cannot see this business&apos;s figures</AlertTitle>
@@ -72,13 +72,7 @@ export default async function InsightsPage({
     <AppPage>
       <PageHeader
         title={areaLabel('insights')}
-        description={
-          open ? (
-            <>{open.name} · figures worked out now, in {organization.timezone}.</>
-          ) : (
-            'Saved dashboards and reports across this business.'
-          )
-        }
+        meta={open ? <>{open.name} · figures worked out now, in {organization.timezone}.</> : null}
       />
       <InsightsViewNav organizationId={organizationId} current="overview" />
       <DashboardNavigation organizationId={organizationId} dashboards={dashboards} openDashboardId={open?.id} />

@@ -1,4 +1,3 @@
-import { PageHeader } from '@/components/headers/page-header';
 import { Hint } from '@/components/controls/inputs';
 import { listConnections } from '@/lib/domain/integrations/connections';
 import {
@@ -64,7 +63,9 @@ export async function ConnectionsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader
+      <SettingsScopeNav
+        organizationId={organizationId}
+        active="connections"
         title={view === 'connected' ? 'Connections' : 'Browse apps'}
         crumbs={view === 'connected'
           ? [{ label: 'Settings', href: `/organizations/${organizationId}/settings` }]
@@ -73,7 +74,6 @@ export async function ConnectionsPage({
               { label: 'Connections', href: `/organizations/${organizationId}/settings/connections` },
             ]}
       />
-      <SettingsScopeNav organizationId={organizationId} active="connections" />
       <IntegrationsNav organizationId={organizationId} current={view} />
       {oauthError ? (
         <Hint className="mt-4 block" role="alert">

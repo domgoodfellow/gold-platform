@@ -80,7 +80,7 @@ export default async function SetupPage({
     <AppPage>
       <PageHeader
         title="Organization readiness"
-        description={
+        meta={
           inSetup
             ? `Complete the required setup for ${organization.name}.`
             : 'This business is live. These are the areas setup covers, for when one needs changing.'

@@ -98,8 +98,10 @@ describe('scope stays honest in both directions', () => {
     expect(shell).toContain('myOrganizations.find((organization) => organization.id === returnOrganizationId)');
   });
 
-  it('each side says whose it is', () => {
+  it('personal ownership is explicit while organization identity comes from its active Settings scope', () => {
     expect(read('app/settings/account/page.tsx')).toContain('belongs to you, not to any business');
-    expect(read('lib/route/settings.ts')).toContain('Settings that apply to everyone in');
+    const organization = read('app/organizations/[organizationId]/settings/page.tsx');
+    expect(organization).toContain('active="organization"');
+    expect(organization).toContain('title="Organization"');
   });
 });

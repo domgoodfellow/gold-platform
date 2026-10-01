@@ -1,7 +1,7 @@
 import { AppPage } from '@/components/layout/app-page';
 import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
 import { SupportRegistrar } from '@/components/panels/support-registrar';
-import { PageHeader } from '@/components/headers/page-header';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { ButtonLink } from '@/components/controls/button';
 import {
   CreateCustomerSheetProvider,
@@ -58,10 +58,9 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
   return (
     <AppPage>
       <CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions}>
-        <PageHeader
+        <CollectionHeader
           title={areaLabel('customers')}
           crumbs={workspaceAncestry(organizationId, 'customers')}
-          description="People and businesses this organization works for."
           actions={!emptyCollection ? (
             <>
               {mayImport ? (

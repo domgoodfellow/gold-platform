@@ -16,11 +16,7 @@ export default async function SecurityPage({ searchParams }: PageProps<'/setting
     <PersonalSettingsShell returnOrganizationId={typeof org === 'string' ? org : undefined}>
       {({ hasPassword }) => (
         <>
-          <PageHeader
-            title="Security & sign-in"
-            crumbs={personalSettingsAncestry()}
-            description="How you sign in. These settings protect your identity everywhere you use GildOps."
-          />
+          <PageHeader title="Security & sign-in" crumbs={personalSettingsAncestry()} />
           <Section>
             <SectionHeading>Password</SectionHeading>
             {hasPassword ? (

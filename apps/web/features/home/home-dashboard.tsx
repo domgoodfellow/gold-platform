@@ -123,7 +123,7 @@ export function HomeDashboard({ data, readiness }: { data: HomeData; readiness?:
     <AppPage>
       <PageHeader
         title={areaLabel('home')}
-        description={<><time dateTime={data.date}>{formatBusinessDate(data.date)}</time> · {timezone}</>}
+        meta={<><time dateTime={data.date}>{formatBusinessDate(data.date)}</time> · {timezone}</>}
       />
 
       <div className="flex flex-col gap-4">

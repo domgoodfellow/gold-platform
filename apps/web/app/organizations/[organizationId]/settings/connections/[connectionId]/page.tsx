@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { PageHeader } from '@/components/headers/page-header';
 import { ButtonLink } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { ConnectionDetail } from '@/features/integrations/connections/connection-detail';
@@ -38,7 +37,9 @@ export default async function ConnectionDetailPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader
+      <SettingsScopeNav
+        organizationId={organizationId}
+        active="connections"
         title={name}
         crumbs={[
           { label: 'Settings', href: `/organizations/${organizationId}/settings` },
@@ -74,7 +75,6 @@ export default async function ConnectionDetailPage({
           </>
         }
       />
-      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="connections" />
       <ConnectionDetail
         organizationId={organizationId}
         connectionId={connectionId}

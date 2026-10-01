@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
-import { AppPage } from '@/components/layout/app-page';
+import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { SectionHeading } from '@/components/surfaces/section';
-import { PageHeader } from '@/components/headers/page-header';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { Widget, WidgetGrid } from '@/components/display/widget';
@@ -26,14 +25,8 @@ export function PlatformOverview({
   const totalFailures = failures.operational + failures.providerReconciliation;
 
   return (
-    <AppPage>
-      <PageHeader
-        title="Overview"
-        crumbs={platformAncestry(goldId, 'overview')}
-        description="The state of every business running on GildOps."
-      />
-
-      <WidgetGrid className="mt-6">
+    <WorkspaceHome title="Overview" crumbs={platformAncestry(goldId, 'overview')}>
+      <WidgetGrid>
         <Widget
           title="Organizations"
           value={organizations.total}
@@ -98,6 +91,6 @@ export function PlatformOverview({
           />
         </div>
       </section>
-    </AppPage>
+    </WorkspaceHome>
   );
 }

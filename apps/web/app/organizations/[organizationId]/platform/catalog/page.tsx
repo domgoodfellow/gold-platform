@@ -105,7 +105,7 @@ export default async function CatalogPage({ params }: PageProps<'/organizations/
 
   return (
     <AppPage>
-      <PageHeader title="Products" crumbs={platformAncestry(goldId, 'products')} description="What Gild offers, as a customer would recognize it: eight Products, each a coherent set of Modules and Features." />
+      <PageHeader title="Products" crumbs={platformAncestry(goldId, 'products')} />
 
       <div className="flex flex-wrap gap-3 text-sm">
         <Link href={`/organizations/${goldId}/finance/plans`} className="underline underline-offset-4">

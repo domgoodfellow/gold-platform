@@ -2,6 +2,7 @@ import { requirePlatformArea } from '@/lib/route/platform';
 import { platformAncestry } from '@/lib/platform-navigation';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
+import { Hint } from '@/components/controls/inputs';
 import { getDb } from '@/lib/db/server';
 import { listProviders } from '@/lib/domain/commercial/catalogue';
 import { listProviderServices } from '@/lib/domain/providers/services';
@@ -49,11 +50,10 @@ export default async function AiRuntimePage({ params }: PageProps<'/organization
 
   return (
     <AppPage>
-      <PageHeader
-        title="AI Runtime"
-        crumbs={platformAncestry(goldId, 'ai-runtime')}
-        description="Which Provider Service, Provider Account and model answers each AI capability. An unassigned capability keeps this deployment's existing default; an assigned one never silently falls back to another vendor."
-      />
+      <PageHeader title="AI Runtime" crumbs={platformAncestry(goldId, 'ai-runtime')} />
+      <Hint className="mb-4 block">
+        An unassigned capability keeps this deployment&rsquo;s existing default; an assigned one never silently falls back to another vendor.
+      </Hint>
       <AiRuntimeWorkspace assignments={assignments} services={services} accounts={accounts} />
     </AppPage>
   );

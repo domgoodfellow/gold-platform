@@ -1,7 +1,7 @@
 import { Disclosure } from '@/components/surfaces/card';
 import { AppPage } from '@/components/layout/app-page';
 import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
-import { PageHeader } from '@/components/headers/page-header';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { LocationConfiguration } from '@/features/locations/configuration/location-configuration';
 import { CreateLocationSheetProvider, CreateLocationTrigger } from '@/features/locations/create-location-sheet';
 import { LinkCustomerLocationForm } from '@/features/locations/link-customer-location-form';
@@ -47,10 +47,9 @@ export default async function LocationsPage({
           location.create in the database, so a caller who reaches the action anyway is
           refused there.
         */}
-        <PageHeader
+        <CollectionHeader
           title={areaLabel('locations')}
           crumbs={workspaceAncestry(organizationId, 'locations')}
-          description="Places where this organization works, and the customers they serve."
           actions={mayAdd ? <CreateLocationTrigger /> : null}
           configure={mayConfigure}
         />

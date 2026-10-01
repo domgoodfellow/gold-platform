@@ -16,6 +16,7 @@ stay in `lib/domain/` and `features/`.
 | `layout/` | Cross-feature page/shell geometry |
 | `navigation/` | Shared application navigation and context controls |
 | `headers/` | Shared workspace/page/record identity compositions |
+| `patterns/` | Reusable GildOps task-level screen compositions — Workspace Home, Collection/Board, Settings, State/Exception — above `headers/`/`panels`/`surfaces` and below `features/`. A screen's *recognizable task shape*, never its business content |
 | `panels/` | Shared rail/drawer/support-panel infrastructure |
 | `surfaces/` | Shared application presentation surfaces |
 | `feedback/` | Cross-feature fallback/feedback presentation |

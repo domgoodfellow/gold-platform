@@ -1,14 +1,18 @@
 import type { ReactNode } from 'react';
 import { cx } from '../class-names';
-import { PageCrumbs, type Crumb } from '../navigation/workspace-crumbs';
+import { PageLocation, type PageLocationCrumb } from '../navigation/page-location';
 import { SupportTrigger } from '../panels/workspace-right-rail';
 
-export type PageHeaderCrumb = Crumb;
+export type PageHeaderCrumb = PageLocationCrumb;
 
 /**
- * The one page/record identity: which page am I on, and what can I do to it. It sits inside the
- * page's own `AppPage`, so it shares the canvas its content sits on and is never full-bleed;
- * `WorkspaceHeader` above it is the global bar and holds none of this.
+ * One available page-identity composition — title, optional metadata, actions and support modes —
+ * built on `PageLocation` (`docs/ui-spec.md` §2a). It is not the required representation of every
+ * page: a screen pattern under `components/patterns/` may publish `PageLocation` directly and draw
+ * its own identity where this generic title-row shape does not fit the task.
+ *
+ * It sits inside the page's own `AppPage`, so it shares the canvas its content sits on and is
+ * never full-bleed; `WorkspaceHeader` above it is the global bar and holds none of this.
  *
  * A Server Component on purpose — a page passes whatever interactive actions it wants
  * (`CreateResourceTrigger`) as children of `actions`, and only those are client code.
@@ -27,12 +31,17 @@ export type PageHeaderCrumb = Crumb;
  * current-page label is `breadcrumbLabel` when given, else `title` itself; the override exists
  * only for a title that is visually richer (an icon, a status pill) than the plain text a
  * breadcrumb should show.
+ *
+ * **There is no generic `description` prop.** A sentence restating what a screen is for, placed
+ * under every title whether or not it earned the space, is exactly the sameness Phase B retires —
+ * see `docs/ui-spec.md` §2a and §2d. Explanatory text belongs beside the content it explains, in a
+ * workspace-home's own structure, or nowhere; `meta` remains for short factual metadata (a
+ * schedule window, a status), never a restated purpose sentence.
  */
 export function PageHeader({
   title,
   crumbs,
   breadcrumbLabel,
-  description,
   meta,
   actions,
   activity = false,
@@ -44,7 +53,6 @@ export function PageHeader({
   crumbs?: PageHeaderCrumb[];
   /** Overrides the current-page breadcrumb label; defaults to `title`. */
   breadcrumbLabel?: ReactNode;
-  description?: ReactNode;
   /** Short, secondary facts about the record — a schedule window, a status — under the title. */
   meta?: ReactNode;
   /** Business actions, in reading order. Never Configure — see `configure`. */
@@ -61,9 +69,8 @@ export function PageHeader({
   return (
     <header className={cx('flex flex-wrap items-start justify-between gap-x-4 gap-y-3', className ?? 'mb-6')}>
       <div className="min-w-0 flex-1 basis-64">
-        <PageCrumbs crumbs={crumbs ?? []} current={breadcrumbLabel ?? title} />
+        <PageLocation crumbs={crumbs} current={breadcrumbLabel ?? title} />
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {description ? <p className="mt-1 max-w-3xl text-sm text-muted">{description}</p> : null}
         {meta ? <div className="mt-1 text-sm text-muted">{meta}</div> : null}
       </div>
       {actions || activity || insights || configure ? (

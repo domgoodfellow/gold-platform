@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/headers/page-header';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { requireOrganization } from '@/lib/route/organization';
 import { listAutomationRules } from '@/lib/domain/automation/rules';
 import { reviewAutomationRules } from '@/lib/domain/automation/review';
@@ -47,10 +47,9 @@ export default async function AutomationRulesPage({
 
   return (
     <>
-      <PageHeader
+      <CollectionHeader
         title={areaLabel('automation-rules')}
         crumbs={workspaceAncestry(organizationId, 'automation-rules')}
-        description="Every condition has to hold — two rules is how you say “or”."
         actions={mayManage ? <NewAutomationSheet organizationId={organizationId} /> : null}
       />
       <RulesTable organizationId={organizationId} rules={rules} warnings={warnings} mayManage={mayManage} />

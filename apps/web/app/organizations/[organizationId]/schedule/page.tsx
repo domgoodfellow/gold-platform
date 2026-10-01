@@ -87,7 +87,7 @@ export default async function SchedulePage({
       <PageHeader
         title={areaLabel('schedule')}
         crumbs={workspaceAncestry(organizationId, 'schedule')}
-        description={
+        meta={
           <>
             Times shown in {organization.timezone} ·{' '}
             <Link

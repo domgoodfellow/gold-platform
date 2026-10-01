@@ -1,5 +1,4 @@
-import { AppPage } from '@/components/layout/app-page';
-import { PageHeader } from '@/components/headers/page-header';
+import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { DividedList, EmptyState } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Widget, WidgetGrid } from '@/components/display/widget';
@@ -73,22 +72,19 @@ export default async function FinancePage({
     overview.financialConnections.length === 0;
 
   return (
-    <AppPage>
-      <PageHeader
-        title={workspaceLabel('finance')}
-        description="What money is moving through this business, and what it's paying GildOps for."
-        actions={
-          <div className="flex gap-2">
-            {canManagePlans ? <ButtonLink href={`/organizations/${organizationId}/finance/plans`} tone="secondary">Plans &amp; Add-ons</ButtonLink> : null}
-            <ButtonLink href={planPath}>Manage plan &amp; billing</ButtonLink>
-          </div>
-        }
-      />
-
+    <WorkspaceHome
+      title={workspaceLabel('finance')}
+      actions={
+        <div className="flex gap-2">
+          {canManagePlans ? <ButtonLink href={`/organizations/${organizationId}/finance/plans`} tone="secondary">Plans &amp; Add-ons</ButtonLink> : null}
+          <ButtonLink href={planPath}>Manage plan &amp; billing</ButtonLink>
+        </div>
+      }
+    >
       {empty ? (
-        <EmptyState className="mt-6">Nothing financial has been recorded for this business yet.</EmptyState>
+        <EmptyState title="Nothing financial recorded yet" description="A plan, a connection or any usage for this business will show here." />
       ) : (
-        <WidgetGrid className="mt-6">
+        <WidgetGrid>
           <Widget title="Plan & usage" value={subscriptionValue} note={subscriptionNote} href={planPath} />
 
           <Widget title="Usage allowances" href={planPath}>
@@ -148,6 +144,6 @@ export default async function FinancePage({
           </Widget>
         </WidgetGrid>
       )}
-    </AppPage>
+    </WorkspaceHome>
   );
 }

@@ -1,4 +1,3 @@
-import { PageHeader } from '@/components/headers/page-header';
 import { EmptyState } from '@/components/surfaces/section';
 import { SettingsIndex } from '@/features/settings/settings-index';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
@@ -33,8 +32,12 @@ export default async function SettingsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader title="Organization" crumbs={[{ label: 'Settings' }]} />
-      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
+      <SettingsScopeNav
+        organizationId={organizationId}
+        active="organization"
+        title="Organization"
+        crumbs={[{ label: 'Settings' }]}
+      />
       {sections.length === 0 ? (
         <EmptyState>Your role, {organization.role}, does not configure anything in this business.</EmptyState>
       ) : (

@@ -29,7 +29,6 @@ export default async function StudioWebsitePage({ params }: PageProps<'/organiza
       <PageHeader
         title={areaLabel('studio-website')}
         crumbs={workspaceAncestry(organizationId, 'studio-website')}
-        description="Edit a private draft, review the exact rendered page, then publish deliberately."
       />
       {mayManage && state ? (
         <WebsiteWorkbench

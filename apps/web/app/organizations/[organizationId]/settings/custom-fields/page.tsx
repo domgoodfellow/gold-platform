@@ -1,5 +1,4 @@
 import { areaLabel } from '@/lib/navigation';
-import { PageHeader } from '@/components/headers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';
@@ -25,12 +24,12 @@ export default async function FieldsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader
+      <SettingsScopeNav
+        organizationId={organizationId}
+        active="organization"
         title={areaLabel('fields')}
         crumbs={[{ label: 'Settings', href: `/organizations/${organizationId}/settings` }]}
-        description="What this business records beyond the platform&rsquo;s own fields."
       />
-      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
       <FieldEntityNav organizationId={organizationId} entityType={entityType} />
       <EntityFieldsConfiguration
         organizationId={organizationId}

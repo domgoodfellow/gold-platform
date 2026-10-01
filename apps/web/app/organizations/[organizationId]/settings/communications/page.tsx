@@ -1,5 +1,4 @@
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
-import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
@@ -63,8 +62,12 @@ export default async function CommunicationsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader title="Communications" crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]} />
-      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
+      <SettingsScopeNav
+        organizationId={organizationId}
+        active="organization"
+        title="Communications"
+        crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]}
+      />
       <Hint className="mt-1">
         The phone and email this business communicates through. Never what any of it costs GildOps,
         and never a secret. Apps a business connects itself are under Integrations.

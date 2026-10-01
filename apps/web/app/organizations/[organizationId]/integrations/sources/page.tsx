@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/headers/page-header';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { areaLabel } from '@/lib/navigation';
 import { IntegrationsNav } from '@/features/integrations/integrations-nav';
 import { SourcesTable } from '@/features/integrations/sources/sources-table';
@@ -25,10 +25,9 @@ export default async function IntegrationSourcesPage({
 
   return (
     <>
-      <PageHeader
+      <CollectionHeader
         title="Data sources"
         crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/settings/connections` }]}
-        description="Every sheet, file or feed selected from a connection, across every connector."
       />
       <IntegrationsNav organizationId={organizationId} current="sources" />
       <div className="mt-6">

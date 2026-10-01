@@ -61,7 +61,6 @@ export default async function ProviderDetailPage({
       <PageHeader
         title={provider.label}
         crumbs={[...platformAncestry(goldId, 'providers'), { label: 'Providers', href: platformHref(goldId, 'providers') }]}
-        description="Infrastructure GildOps operates to deliver capabilities — each service's own implementation and vendor state, and what GildOps uses it for. Credentials are never read or displayed here."
         meta={<ProviderIcon providerKey={provider.key} label={provider.label} size="large" />}
         configure={hasAccountModel}
       />

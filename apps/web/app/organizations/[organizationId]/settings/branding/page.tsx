@@ -1,5 +1,4 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { ProfileForm } from '@/features/public-profile/profile-form';
@@ -36,12 +35,12 @@ export default async function BrandingSettingsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader
+      <SettingsScopeNav
+        organizationId={organizationId}
+        active="organization"
         title="Branding"
         crumbs={[{ label: areaLabel('settings'), href: `/organizations/${organizationId}/settings` }]}
-        description="What customers see before they book, and how this business looks."
       />
-      <SettingsScopeNav organizationId={organizationId} organizationName={organization.name} active="organization" />
 
       <Section id="public-page" className="scroll-mt-6">
         <SectionHeading>Public page</SectionHeading>

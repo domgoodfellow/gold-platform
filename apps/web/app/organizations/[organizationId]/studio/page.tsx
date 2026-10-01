@@ -1,5 +1,4 @@
-import { AppPage } from '@/components/layout/app-page';
-import { PageHeader } from '@/components/headers/page-header';
+import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { DividedList, EmptyState, SectionHeading } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Widget, WidgetGrid } from '@/components/display/widget';
@@ -62,20 +61,17 @@ export default async function StudioPage({ params }: PageProps<'/organizations/[
   const brandNote = overview.brand.accentConfigured ? 'Custom colour set' : 'Using the platform look';
 
   return (
-    <AppPage>
-      <PageHeader
-        title={workspaceLabel('studio')}
-        description="Build and manage what customers see and interact with."
-        actions={
-          <>
-            <ButtonLink tone="primary" href={websitePath}>Edit website</ButtonLink>
-            {overview.publicUrl ? (
-              <ButtonLink tone="secondary" href={overview.publicUrl} target="_blank" rel="noreferrer">View site</ButtonLink>
-            ) : null}
-          </>
-        }
-      />
-
+    <WorkspaceHome
+      title={workspaceLabel('studio')}
+      actions={
+        <>
+          <ButtonLink tone="primary" href={websitePath}>Edit website</ButtonLink>
+          {overview.publicUrl ? (
+            <ButtonLink tone="secondary" href={overview.publicUrl} target="_blank" rel="noreferrer">View site</ButtonLink>
+          ) : null}
+        </>
+      }
+    >
       <SectionHeading>Public surfaces</SectionHeading>
       <WidgetGrid className="mt-3">
         <Widget title="Website" value={websiteValue} note={websiteNote} href={websitePath} />
@@ -110,6 +106,6 @@ export default async function StudioPage({ params }: PageProps<'/organizations/[
           </DividedList>
         </section>
       ) : null}
-    </AppPage>
+    </WorkspaceHome>
   );
 }

@@ -53,7 +53,7 @@ export default async function PhoneNumberDetailPage({
       <PageHeader
         title={number.label ? `${number.e164} (${number.label})` : number.e164}
         crumbs={[...workspaceAncestry(organizationId, 'comms-numbers'), { label: areaLabel('comms-numbers'), href: `/organizations/${organizationId}/comms/numbers` }]}
-        description="Capabilities, assignment and status for this number."
+        meta={<Badge tone={LIFECYCLE_TONE[number.lifecycle]}>{number.lifecycle}</Badge>}
       />
 
       <section>
