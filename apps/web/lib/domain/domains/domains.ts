@@ -199,6 +199,21 @@ export async function checkDomain(db: Db, input: { organizationId: string; domai
 }
 
 /**
+ * The one consequential DNS mutation: ensures the required records through this business's own
+ * connected zone, then rechecks the hosting provider. Reached only from the review step a person
+ * has already seen — `dnsAutomation.available` on an earlier `connectDomain`/`checkDomain` answer
+ * (work order 1 closeout, section 3).
+ */
+export async function applyDnsAutomation(db: Db, input: { organizationId: string; domainId: string }): Promise<DomainOutcome> {
+  const provider = domainProvider({ token: await requireAccessToken(db) });
+  try {
+    return outcomeFrom(input.domainId, await provider.applyAutomation(input));
+  } catch (failure) {
+    return failureOutcome(input.domainId, failure);
+  }
+}
+
+/**
  * Let go of a hostname. One the provider accepted is detached there first, by `apps/api`, which
  * releases the row as the person asking; one it never accepted has nothing upstream and is
  * released here through the same database door.

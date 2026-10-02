@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { DomainError } from '@/lib/domain/errors';
 import {
+  applyDnsAutomation,
   checkDomain,
   connectDomain,
   removeDomain,
@@ -56,11 +57,41 @@ export async function checkDomainAction(input: { organizationId: string; domainI
   }
 }
 
+/**
+ * "Apply and verify", pressed only after a person has reviewed exactly which records this would
+ * publish (work order 1 closeout, section 3) — the one action in this file that writes DNS.
+ */
+export async function applyDnsAutomationAction(input: { organizationId: string; domainId: string }): Promise<DomainActionResult> {
+  const { db } = await requireOrganization(input.organizationId);
+  try {
+    const outcome = await applyDnsAutomation(db, input);
+    refresh(input.organizationId);
+    return { ok: true, outcome };
+  } catch (error) {
+    return { ok: false, message: words(error) };
+  }
+}
+
 export async function recheckDomainAction(_: DomainCommandState, form: FormData): Promise<DomainCommandState> {
   const organizationId = String(form.get('organizationId') ?? '');
   const { db } = await requireOrganization(organizationId);
   try {
     const outcome = await checkDomain(db, { organizationId, domainId: String(form.get('domainId') ?? '') });
+    refresh(organizationId);
+    if (outcome.kind === 'active' || outcome.kind === 'pending_dns') return { error: null, done: true };
+    return { error: outcome.message, done: false };
+  } catch (error) {
+    return { error: words(error), done: false };
+  }
+}
+
+/** The same action, as a `DomainCommandState` form action — what the Domains list's standalone
+ * "Apply and verify" button uses for an already-pending domain, rather than the dialog's flow. */
+export async function applyDnsAutomationFormAction(_: DomainCommandState, form: FormData): Promise<DomainCommandState> {
+  const organizationId = String(form.get('organizationId') ?? '');
+  const { db } = await requireOrganization(organizationId);
+  try {
+    const outcome = await applyDnsAutomation(db, { organizationId, domainId: String(form.get('domainId') ?? '') });
     refresh(organizationId);
     if (outcome.kind === 'active' || outcome.kind === 'pending_dns') return { error: null, done: true };
     return { error: outcome.message, done: false };

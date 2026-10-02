@@ -1274,6 +1274,14 @@
       ],
       "note": "Also scans apps/web for credential names."
     },
+    "apps/web/tests/integration/database/integration-resource-authority.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "integrations",
+        "security"
+      ],
+      "note": "A tenant session cannot insert or edit a connection-scoped integration_resources row (cloudflare_zone, cloudflare_dns_record, or any other provider-discovered type) through any path; integration_operator can; the ordinary tenant-owned import-file flow is unaffected."
+    },
     "apps/web/tests/integration/database/integrations.test.ts": {
       "category": "database-integration",
       "concerns": [

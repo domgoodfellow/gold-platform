@@ -1,4 +1,4 @@
-import type { DnsRecord } from '@/lib/adapters/domains';
+import type { DnsAutomation, DnsRecord } from '@/lib/adapters/domains';
 import type { DomainOutcome } from '@/lib/domain/domains/domains';
 import type { DomainSurface } from '@/lib/domain/domains/presentation';
 import { checkHostname, HOSTNAME_PROBLEM } from '@/lib/domain/domains/hostname';
@@ -18,9 +18,20 @@ export type DomainActionResult = { ok: true; outcome: DomainOutcome } | { ok: fa
 export type FlowState =
   | { step: 'hostname'; hostname: string; problem: string | null }
   | { step: 'surface'; hostname: string; surface: DomainSurface }
-  | { step: 'working'; hostname: string; surface: DomainSurface; action: 'connect' | 'check'; domainId: string | null }
-  /** `rechecked`: the provider has been asked again and DNS still does not point here — misconfigured. */
-  | { step: 'dns'; hostname: string; surface: DomainSurface; domainId: string; records: DnsRecord[]; rechecked: boolean }
+  | { step: 'working'; hostname: string; surface: DomainSurface; action: 'connect' | 'check' | 'apply'; domainId: string | null }
+  /** `rechecked`: the provider has been asked again and DNS still does not point here — misconfigured.
+   * `dnsAutomation`: whether this business's own connected zone could publish these records instead
+   * of a person doing it by hand — the review step, offered only when `available` (work order 1
+   * closeout, section 3). */
+  | {
+      step: 'dns';
+      hostname: string;
+      surface: DomainSurface;
+      domainId: string;
+      records: DnsRecord[];
+      rechecked: boolean;
+      dnsAutomation: DnsAutomation;
+    }
   | { step: 'active'; hostname: string; domainId: string }
   | { step: 'conflict'; hostname: string; message: string }
   | { step: 'unavailable'; hostname: string; surface: DomainSurface; domainId: string | null; message: string }
@@ -33,6 +44,7 @@ export type FlowEvent =
   | { type: 'back' }
   | { type: 'submit' }
   | { type: 'recheck' }
+  | { type: 'apply' }
   | { type: 'answered'; result: DomainActionResult }
   | { type: 'reset' };
 
@@ -70,6 +82,12 @@ export function connectDomainFlow(state: FlowState, event: FlowEvent): FlowState
       }
       return state;
 
+    case 'apply':
+      if (state.step === 'dns' && state.dnsAutomation.available) {
+        return { step: 'working', hostname: state.hostname, surface: state.surface, action: 'apply', domainId: state.domainId };
+      }
+      return state;
+
     case 'answered': {
       if (state.step !== 'working') return state;
       const { hostname, surface } = state;
@@ -86,7 +104,8 @@ export function connectDomainFlow(state: FlowState, event: FlowEvent): FlowState
             surface,
             domainId: outcome.domainId,
             records: outcome.standing.dnsRecords,
-            rechecked: state.action === 'check',
+            rechecked: state.action !== 'connect',
+            dnsAutomation: outcome.standing.dnsAutomation,
           };
         case 'conflict':
           return { step: 'conflict', hostname, message: outcome.message };

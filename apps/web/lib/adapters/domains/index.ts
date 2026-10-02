@@ -21,6 +21,18 @@ export type DnsRecord = {
   value: string;
 };
 
+/**
+ * Whether this business's own connected DNS (Cloudflare today) *could* answer for a hostname that
+ * still needs DNS — read-only, computed fresh on every `connect`/`check`. Never implies anything
+ * has been written: that is `applyAutomation` alone, pressed explicitly after a person reviews
+ * exactly what would change (work order 1 closeout, section 3).
+ */
+export type DnsAutomation = {
+  available: boolean;
+  connectionId: string | null;
+  zoneName: string | null;
+};
+
 export type DomainStanding = {
   domainId: string;
   hostname: string;
@@ -28,6 +40,7 @@ export type DomainStanding = {
   verificationState: DomainVerificationState;
   certificateState: DomainCertificateState;
   dnsRecords: DnsRecord[];
+  dnsAutomation: DnsAutomation;
 };
 
 export type DomainProvider = {
@@ -35,6 +48,12 @@ export type DomainProvider = {
   connect(input: { organizationId: string; domainId: string }): Promise<DomainStanding>;
   /** Ask again — after DNS was published, say. Registers a domain that never was. */
   check(input: { organizationId: string; domainId: string }): Promise<DomainStanding>;
+  /**
+   * The one consequential DNS mutation: ensures the required records through this business's own
+   * connected zone, then rechecks the hosting provider. Only reachable once `dnsAutomation.available`
+   * was already true on an earlier `connect`/`check` — the review step, pressed.
+   */
+  applyAutomation(input: { organizationId: string; domainId: string }): Promise<DomainStanding>;
   /** Detach it, and release the row as the person asking. */
   remove(input: { organizationId: string; domainId: string }): Promise<void>;
 };

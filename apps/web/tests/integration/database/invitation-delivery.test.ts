@@ -2,7 +2,14 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { acceptInvitation, inviteMember, listPendingInvitations, reissueInvitation, revokeInvitation } from '@/lib/domain/tenancy/invitations';
+import {
+  acceptInvitation,
+  inviteMember,
+  listInvitationDeliveryStatus,
+  listPendingInvitations,
+  reissueInvitation,
+  revokeInvitation,
+} from '@/lib/domain/tenancy/invitations';
 import { listRoles } from '@/lib/domain/tenancy/roles';
 import { foundBusiness } from '@/tests/support/founding';
 
@@ -69,7 +76,6 @@ async function asInvitationEmailWebhook<T>(run: () => Promise<T>): Promise<T> {
 let admin: Actor;
 let stranger: Actor;
 let organizationId: string;
-let otherOrganizationId: string;
 let roleId: string;
 
 describe('invitation reissue and delivery', () => {
@@ -84,7 +90,9 @@ describe('invitation reissue and delivery', () => {
     stranger = await signUp('deliv-stranger');
 
     organizationId = await foundBusiness({ ownerEmail: admin.email, name: `Delivery ${randomUUID().slice(0, 6)}`, currency: 'EUR' });
-    otherOrganizationId = await foundBusiness({ ownerEmail: stranger.email, name: `Elsewhere ${randomUUID().slice(0, 6)}`, currency: 'EUR' });
+    // stranger's own, separate organization -- the value is never read back; its existence is
+    // what makes stranger a genuine outsider to `organizationId` below.
+    await foundBusiness({ ownerEmail: stranger.email, name: `Elsewhere ${randomUUID().slice(0, 6)}`, currency: 'EUR' });
 
     const [founding] = await listRoles(admin.db, { organizationId });
     roleId = founding.id;
@@ -233,8 +241,8 @@ describe('invitation reissue and delivery', () => {
         `select
            has_function_privilege('authenticated', 'public.record_invitation_delivery(uuid,uuid,text,text,text,text,text)', 'execute') as send_authenticated,
            has_function_privilege('provider_operator', 'public.record_invitation_delivery(uuid,uuid,text,text,text,text,text)', 'execute') as send_operator,
-           has_function_privilege('authenticated', 'public.record_invitation_delivery_event(text,text,text,jsonb,text)', 'execute') as webhook_authenticated,
-           has_function_privilege('invitation_email_webhook', 'public.record_invitation_delivery_event(text,text,text,jsonb,text)', 'execute') as webhook_operator,
+           has_function_privilege('authenticated', 'public.record_invitation_delivery_event(text,text,text,jsonb,text,timestamptz)', 'execute') as webhook_authenticated,
+           has_function_privilege('invitation_email_webhook', 'public.record_invitation_delivery_event(text,text,text,jsonb,text,timestamptz)', 'execute') as webhook_operator,
            has_function_privilege('authenticated', 'public.default_platform_provider_account(text)', 'execute') as default_authenticated,
            has_function_privilege('provider_operator', 'public.default_platform_provider_account(text)', 'execute') as default_operator`,
       );
@@ -323,6 +331,89 @@ describe('invitation reissue and delivery', () => {
         [organizationId, hash],
       );
       expect(count[0].n).toBe(1);
+    });
+  });
+
+  // --- chronology: a delayed or retried callback cannot regress a newer delivery state ----------
+
+  describe('delivery state is ordered by the provider\'s own event time, not ingestion order', () => {
+    it('a late-arriving retry of an older sent event does not regress an already-recorded delivered state', async () => {
+      const invitee = `chrono-${randomUUID().slice(0, 8)}@example.test`;
+      await inviteMember(admin.db, { organizationId, email: invitee, roleId });
+      const pending = await listPendingInvitations(admin.db, { organizationId });
+      const invitation = pending.find((i) => i.email === invitee)!;
+      const messageId = `re_chrono_${randomUUID()}`;
+      // Relative to real "now": the initial send row's own occurred_at is set at insert time, so
+      // these must be chronologically after it, not a fixed historical date.
+      const sentAt = new Date(Date.now() + 60_000).toISOString();
+      const deliveredAt = new Date(Date.now() + 120_000).toISOString();
+
+      await asProviderOperator(() =>
+        pg.query(`select public.record_invitation_delivery($1, $2, $3, 'sent', $4, null)`, [organizationId, invitation.id, invitee, messageId]),
+      );
+
+      // "sent" arrives (its own event time: sentAt)...
+      await asInvitationEmailWebhook(() =>
+        pg.query(
+          `select public.record_invitation_delivery_event($1, 'sent', null, '{}'::jsonb, $2, $3::timestamptz)`,
+          [messageId, `hash-sent-${randomUUID()}`, sentAt],
+        ),
+      );
+      // ...then "delivered" arrives (its own event time: deliveredAt, later)...
+      await asInvitationEmailWebhook(() =>
+        pg.query(
+          `select public.record_invitation_delivery_event($1, 'delivered', null, '{}'::jsonb, $2, $3::timestamptz)`,
+          [messageId, `hash-delivered-${randomUUID()}`, deliveredAt],
+        ),
+      );
+      // ...then a *retry* of the original "sent" callback reaches GildOps last of all (ingested
+      // now, well after "delivered" was ingested), but it still describes the same sentAt moment.
+      await asInvitationEmailWebhook(() =>
+        pg.query(
+          `select public.record_invitation_delivery_event($1, 'sent', null, '{}'::jsonb, $2, $3::timestamptz)`,
+          [messageId, `hash-sent-retry-${randomUUID()}`, sentAt],
+        ),
+      );
+
+      const status = await listInvitationDeliveryStatus(admin.db, { organizationId });
+      expect(status.get(invitation.id)?.state).toBe('delivered');
+    });
+
+    it('the same chronology holds for a terminal bounce arriving before a delayed retry of an earlier state', async () => {
+      const invitee = `chrono-term-${randomUUID().slice(0, 8)}@example.test`;
+      await inviteMember(admin.db, { organizationId, email: invitee, roleId });
+      const pending = await listPendingInvitations(admin.db, { organizationId });
+      const invitation = pending.find((i) => i.email === invitee)!;
+      const messageId = `re_chrono_term_${randomUUID()}`;
+
+      const delayedAt = new Date(Date.now() + 60_000).toISOString();
+      const bouncedAt = new Date(Date.now() + 120_000).toISOString();
+
+      await asProviderOperator(() =>
+        pg.query(`select public.record_invitation_delivery($1, $2, $3, 'sent', $4, null)`, [organizationId, invitation.id, invitee, messageId]),
+      );
+      await asInvitationEmailWebhook(() =>
+        pg.query(
+          `select public.record_invitation_delivery_event($1, 'delayed', null, '{}'::jsonb, $2, $3::timestamptz)`,
+          [messageId, `hash-delayed-${randomUUID()}`, delayedAt],
+        ),
+      );
+      await asInvitationEmailWebhook(() =>
+        pg.query(
+          `select public.record_invitation_delivery_event($1, 'bounced', 'mailbox full', '{}'::jsonb, $2, $3::timestamptz)`,
+          [messageId, `hash-bounced-${randomUUID()}`, bouncedAt],
+        ),
+      );
+      // A retry of the *delayed* event, ingested last, but describing an earlier moment than the bounce.
+      await asInvitationEmailWebhook(() =>
+        pg.query(
+          `select public.record_invitation_delivery_event($1, 'delayed', null, '{}'::jsonb, $2, $3::timestamptz)`,
+          [messageId, `hash-delayed-retry-${randomUUID()}`, delayedAt],
+        ),
+      );
+
+      const status = await listInvitationDeliveryStatus(admin.db, { organizationId });
+      expect(status.get(invitation.id)).toMatchObject({ state: 'bounced', detail: 'mailbox full' });
     });
   });
 });

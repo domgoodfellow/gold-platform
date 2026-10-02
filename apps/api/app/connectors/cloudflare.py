@@ -7,15 +7,42 @@ the authorization can reach, exactly like every other connector; writing a DNS r
 separate, narrower capability in `app.services.dns`, reached only through an active connection
 this file produced.
 
-Read-only discovery scopes plus the one write scope DNS record management needs. `zone:read` and
-`dns_records:read` are what `resources()` and a later reconciliation read with; `dns_records:edit`
-is the one write scope requested, and nothing wider -- no account-level admin, no billing, no
-other product's scope.
+**Scopes are Cloudflare's own OAuth permission-group names, not a guess.** Cloudflare's OAuth
+client documentation states plainly: "OAuth scope names correspond to Cloudflare API token
+permission names," in the dotted `{resource}.{read|write}` shape its own examples use
+(`zone.read`, `user-details.read`, `workers-scripts.write`). `zone.read` is what `resources()`
+discovers zones with; `dns.read`/`dns.write` are the paired permission group `app.services.dns`
+reads and writes records through; `user-details.read` is what `account()` names the signed-in
+person with. No account-wide or billing scope, because nothing here calls an `/accounts` endpoint.
+**Confirm against a live client before relying on this**: Cloudflare's own canonical source is the
+authenticated `GET /client/v4/oauth/scopes` endpoint, which this deployment cannot call without a
+Cloudflare API token already in hand, and at least one open Cloudflare-side report describes the
+"DNS Read" consent name not reliably covering the zone DNS-records endpoint in every case.
+
+**Confidential client: PKCE is optional, not required.** Cloudflare requires PKCE only for a
+public client with no client secret (`none` token-endpoint auth); this connector authenticates
+with GildOps' own client secret (`client_secret_post`, the base contract's `_token_request`), the
+row the documentation calls out as the one combination PKCE is optional for.
 """
 
 from __future__ import annotations
 
+import httpx
+
 from app.connectors.base import Account, OAuthProvider
+from app.providers.providers import MalformedAnswer, UpstreamRefused
+
+API = "https://api.cloudflare.com/client/v4"
+
+
+def cloudflare_error_message(body: dict, status_code: int) -> str:
+    """Cloudflare's own words from its `errors` array, kept short (I25) -- the one place both this
+    connector and `app.services.dns.cloudflare` read that shape from, so neither collapses a
+    refusal to a bare status code where the vendor said something more useful."""
+    errors = body.get("errors") if isinstance(body, dict) else None
+    if isinstance(errors, list) and errors and isinstance(errors[0], dict):
+        return str(errors[0].get("message") or f"status {status_code}")[:300]
+    return f"status {status_code}"
 
 
 class Cloudflare(OAuthProvider):
@@ -24,10 +51,27 @@ class Cloudflare(OAuthProvider):
     authorize_endpoint = "https://dash.cloudflare.com/oauth2/auth"
     token_endpoint = "https://dash.cloudflare.com/oauth2/token"
     # Permission-group scopes, least privilege for DNS discovery and reconciliation only.
-    scopes = ("account:read", "zone:read", "dns_records:read", "dns_records:edit", "user:read")
+    scopes = ("zone.read", "dns.read", "dns.write", "user-details.read")
+
+    def _call(self, method: str, url: str, access_token: str, params: dict | None = None) -> dict:
+        try:
+            response = httpx.request(
+                method, url, headers={"Authorization": f"Bearer {access_token}"}, params=params, timeout=15.0
+            )
+        except httpx.HTTPError as failure:
+            raise UpstreamRefused(f"cloudflare could not be reached: {type(failure).__name__}") from failure
+        try:
+            body = response.json()
+        except ValueError as failure:
+            raise MalformedAnswer("Cloudflare answered with something that is not JSON.") from failure
+        if not isinstance(body, dict):
+            raise MalformedAnswer("Cloudflare answered with an unexpected shape.")
+        if response.status_code >= 400 or body.get("success") is False:
+            raise UpstreamRefused(f"Cloudflare refused the request: {cloudflare_error_message(body, response.status_code)}")
+        return body
 
     def account(self, access_token: str) -> Account:
-        me = self._get("https://api.cloudflare.com/client/v4/user", access_token)
+        me = self._call("GET", f"{API}/user", access_token)
         result = me.get("result") if isinstance(me.get("result"), dict) else {}
         label = result.get("email") or result.get("username") or "Cloudflare account"
         return Account(label=str(label))
@@ -37,10 +81,8 @@ class Cloudflare(OAuthProvider):
         found: list[dict] = []
         page = 1
         while True:
-            answer = self._get(
-                "https://api.cloudflare.com/client/v4/zones",
-                access_token,
-                {"page": str(page), "per_page": "50", "status": "active"},
+            answer = self._call(
+                "GET", f"{API}/zones", access_token, {"page": str(page), "per_page": "50", "status": "active"}
             )
             for zone in answer.get("result") or []:
                 if not isinstance(zone, dict) or not zone.get("id") or not zone.get("name"):

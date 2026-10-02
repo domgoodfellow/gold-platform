@@ -123,7 +123,7 @@ describe('nothing signed in can read a credential', () => {
     expect(direct.error).not.toBeNull();
   });
 
-  it('holds no table grant and exactly five executes for the machine role', async () => {
+  it('holds no table grant and exactly six executes for the machine role', async () => {
     const tables = await pg.query("select 1 from information_schema.role_table_grants where grantee = 'integration_operator'");
     expect(tables.rowCount).toBe(0);
     const columns = await pg.query("select 1 from information_schema.column_privileges where grantee = 'integration_operator' and table_schema = 'public'");
@@ -131,10 +131,14 @@ describe('nothing signed in can read a credential', () => {
     const routines = await pg.query(
       "select routine_name from information_schema.routine_privileges where grantee = 'integration_operator' and routine_schema = 'public' order by 1",
     );
+    // `record_managed_integration_resource` joined the other five once the DNS bridge needed a
+    // single-resource upsert door, so a tenant's own forwarded token never has to write a
+    // connection-scoped resource (work order 1 closeout, section 2).
     expect(routines.rows.map((row) => row.routine_name)).toEqual([
       'clear_integration_credential',
       'read_integration_credential',
       'record_integration_health',
+      'record_managed_integration_resource',
       'replace_integration_resources',
       'store_integration_credential',
     ]);

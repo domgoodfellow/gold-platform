@@ -20,12 +20,14 @@ import pytest
 
 from app.core.config import IntegrationSettings, ProviderOperationsSettings
 from app.errors import NotFoundError, ValidationError
+from app.services.dns.operations import AutomationPreview as DnsAutomationPreview
 from app.services.dns.operations import EnsureResult as DnsEnsureResult
 from app.services.web_delivery import operations as ops
 from app.services.web_delivery.operations import (
     HostnameUnavailableError,
     ProviderRefusedError,
     ProviderUnavailableError,
+    apply_dns_automation,
     check_domain,
     connect_domain,
     remove_domain,
@@ -138,7 +140,7 @@ def connect(**kwargs) -> dict:
 # --- who may act ---------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("command", [connect_domain, check_domain, remove_domain])
+@pytest.mark.parametrize("command", [connect_domain, check_domain, remove_domain, apply_dns_automation])
 def test_a_caller_who_may_not_manage_domains_never_causes_the_credential_to_be_read(monkeypatch, command) -> None:
     world = World(monkeypatch, manage=False)
 
@@ -209,6 +211,7 @@ def test_a_hostname_needing_dns_is_registered_with_the_records_to_publish_and_no
         "verification_state": "verifying",
         "ssl_state": "pending",
         "dns_records": CNAME,
+        "dns_automation": {"available": False, "connectionId": None, "zoneName": None},
     }
 
 
@@ -391,14 +394,13 @@ def test_a_domain_never_registered_is_released_without_asking_the_provider(monke
     assert world.reads == []
 
 
-# --- the Cloudflare DNS bridge (work order 1, section 3) ------------------------------------------
+# --- the DNS review step (work order 1 closeout, section 3) ---------------------------------------
 #
-# `app.services.dns.ensure_required_records` is the vendor boundary here, the same way
-# `app.providers.vercel.domains` is above -- what the capability itself does is proven in
-# `test_dns_operations.py`. This only proves the sequencing: a deployment with no DNS settings, or
-# one whose business has no connected zone, behaves exactly as it did before this bridge existed;
-# one that applied every record gets a second, authoritative Vercel recheck before anything is
-# recorded.
+# `connect`/`check` never write a DNS record themselves any more -- they only *offer* a review,
+# `dns_automation`, built from a read-only preview (`app.services.dns.preview_automation`, mocked
+# directly here; its own real resolution is `test_dns_operations.py`'s subject). The one
+# consequential mutation is `apply_dns_automation`, reached only once a person presses "Apply and
+# verify" after seeing exactly what would change.
 
 DNS_SETTINGS = IntegrationSettings(
     supabase_url="http://db.test", supabase_publishable_key="anon", supabase_jwt_secret="signing",
@@ -406,70 +408,157 @@ DNS_SETTINGS = IntegrationSettings(
 )
 
 
-def test_with_no_dns_settings_the_manual_path_is_unaffected(monkeypatch) -> None:
+def test_with_no_dns_settings_no_review_is_offered_and_nothing_is_previewed(monkeypatch) -> None:
     world = World(monkeypatch)
     world.answers(monkeypatch, connect=dns_required())
-    monkeypatch.setattr(ops, "ensure_required_records", lambda *a, **kw: pytest.fail("not asked"))
+    monkeypatch.setattr(ops, "preview_automation", lambda *a, **kw: pytest.fail("not asked"))
 
     result = connect_domain(SETTINGS, token="caller-token", organization_id=ORG, domain_id=DOMAIN, dns_settings=None)
 
     assert result["configuration_state"] == "dns_required"
+    assert result["dns_automation"] == {"available": False, "connectionId": None, "zoneName": None}
 
 
-def test_a_business_with_no_connected_zone_falls_through_to_the_manual_records(monkeypatch) -> None:
-    world = World(monkeypatch)
-    world.answers(monkeypatch, connect=dns_required())
-    monkeypatch.setattr(ops, "ensure_required_records", lambda *a, **kw: DnsEnsureResult(applied=False, connection_id=None, zone_name=None))
-
-    result = connect_domain(SETTINGS, token="caller-token", organization_id=ORG, domain_id=DOMAIN, dns_settings=DNS_SETTINGS)
-
-    assert result["configuration_state"] == "dns_required"
-    assert result["dns_records"] == CNAME
-    assert world.provider == [("connect", "shop.example.com")]  # never a second call: nothing was applied
-
-
-def test_every_record_applied_through_cloudflare_earns_an_immediate_recheck(monkeypatch) -> None:
-    world = World(monkeypatch)
-    world.answers(monkeypatch, connect=dns_required(), check=VERIFIED)
-    applied = []
-
-    def ensure(settings, *, token, organization_id, hostname, records):
-        applied.append((organization_id, hostname, records))
-        return DnsEnsureResult(applied=True, connection_id="conn-1", zone_name="example.com")
-
-    monkeypatch.setattr(ops, "ensure_required_records", ensure)
-
-    result = connect_domain(SETTINGS, token="caller-token", organization_id=ORG, domain_id=DOMAIN, dns_settings=DNS_SETTINGS)
-
-    assert applied == [(ORG, "shop.example.com", CNAME)]
-    assert world.provider == [("connect", "shop.example.com"), ("check", "shop.example.com")]
-    assert result["verification_state"] == "verified"
-    assert world.registrations[0]["configuration_state"] == "satisfied"
-    assert world.verifications[0]["verification_state"] == "verified"
-
-
-def test_a_refused_recheck_after_applying_leaves_the_original_answer(monkeypatch) -> None:
+def test_connect_never_writes_dns_itself_even_when_automation_is_available(monkeypatch) -> None:
     world = World(monkeypatch)
     world.answers(monkeypatch, connect=dns_required())
     monkeypatch.setattr(
-        vercel, "check", lambda credential, hostname: (_ for _ in ()).throw(UpstreamRefused("Vercel refused the request (500): busy"))
+        ops, "preview_automation", lambda *a, **kw: DnsAutomationPreview(available=True, connection_id="conn-1", zone_name="example.com")
     )
-    monkeypatch.setattr(ops, "ensure_required_records", lambda *a, **kw: DnsEnsureResult(applied=True, connection_id="conn-1", zone_name="example.com"))
+    monkeypatch.setattr(ops, "ensure_required_records", lambda *a, **kw: pytest.fail("connect must never write"))
 
     result = connect_domain(SETTINGS, token="caller-token", organization_id=ORG, domain_id=DOMAIN, dns_settings=DNS_SETTINGS)
 
-    # The applied write is real; only the recheck was refused, so the original dns_required answer
-    # still stands rather than the whole connect attempt failing.
+    assert result["configuration_state"] == "dns_required"
+    assert result["dns_records"] == CNAME
+    assert result["dns_automation"] == {"available": True, "connectionId": "conn-1", "zoneName": "example.com"}
+    assert world.provider == [("connect", "shop.example.com")]  # never a second call: nothing was written
+
+
+def test_a_business_with_no_connected_zone_sees_no_review_offered(monkeypatch) -> None:
+    world = World(monkeypatch)
+    world.answers(monkeypatch, connect=dns_required())
+    monkeypatch.setattr(ops, "preview_automation", lambda *a, **kw: DnsAutomationPreview(available=False, connection_id=None, zone_name=None))
+
+    result = connect_domain(SETTINGS, token="caller-token", organization_id=ORG, domain_id=DOMAIN, dns_settings=DNS_SETTINGS)
+
+    assert result["dns_automation"] == {"available": False, "connectionId": None, "zoneName": None}
+
+
+def test_a_verified_domain_is_never_offered_a_review(monkeypatch) -> None:
+    world = World(monkeypatch)
+    world.answers(monkeypatch, connect=VERIFIED)
+    monkeypatch.setattr(ops, "preview_automation", lambda *a, **kw: pytest.fail("nothing to preview"))
+
+    result = connect_domain(SETTINGS, token="caller-token", organization_id=ORG, domain_id=DOMAIN, dns_settings=DNS_SETTINGS)
+
+    assert result["verification_state"] == "verified"
+    assert result["dns_automation"] == {"available": False, "connectionId": None, "zoneName": None}
+
+
+# --- apply_dns_automation: the one consequential mutation, pressed explicitly ----------------------
+
+
+def apply(**kwargs) -> dict:
+    return apply_dns_automation(SETTINGS, token="caller-token", organization_id=ORG, domain_id=DOMAIN, **kwargs)
+
+
+def _stub_preview(monkeypatch) -> None:
+    """`_view`'s own trailing preview (so a still-`dns_required` result can offer Review again) is
+    not what these tests are about; the real resolution is `test_dns_operations.py`'s subject."""
+    monkeypatch.setattr(
+        ops, "preview_automation", lambda *a, **kw: DnsAutomationPreview(available=True, connection_id="conn-1", zone_name="example.com")
+    )
+
+
+def test_apply_refuses_a_domain_never_registered_with_the_provider(monkeypatch) -> None:
+    world = World(monkeypatch)  # registered=False by default: no provider_resource_id
+
+    with pytest.raises(ValidationError):
+        apply(dns_settings=DNS_SETTINGS)
+
+    assert world.reads == []
+
+
+def test_apply_refuses_with_no_hosting_account_and_keeps_the_state(monkeypatch) -> None:
+    world = World(monkeypatch, registered=True, state="verifying", account=None)
+
+    with pytest.raises(ProviderUnavailableError):
+        apply(dns_settings=DNS_SETTINGS)
+
+    assert world.verifications[0]["verification_state"] == "verifying"
+    assert world.verifications[0]["error_code"] == "provider_unavailable"
+
+
+def test_apply_rechecks_fresh_ensures_through_the_connected_zone_then_rechecks_again(monkeypatch) -> None:
+    world = World(monkeypatch, registered=True, state="verifying")
+    ensured = []
+
+    def ensure(settings, *, token, organization_id, hostname, records):
+        ensured.append((organization_id, hostname, records))
+        return DnsEnsureResult(applied=True, connection_id="conn-1", zone_name="example.com")
+
+    # The *first* check (what "Apply" re-asks before writing) says dns_required; the *second*,
+    # after ensuring, reports verified.
+    checks = {"n": 0}
+
+    def two_checks(credential, hostname):
+        checks["n"] += 1
+        return dns_required() if checks["n"] == 1 else VERIFIED
+
+    monkeypatch.setattr(vercel, "check", two_checks)
+    monkeypatch.setattr(ops, "ensure_required_records", ensure)
+    _stub_preview(monkeypatch)
+
+    result = apply(dns_settings=DNS_SETTINGS)
+
+    assert checks["n"] == 2
+    assert ensured == [(ORG, "shop.example.com", CNAME)]
+    assert result["verification_state"] == "verified"
+    assert world.verifications[-1]["verification_state"] == "verified"
+
+
+def test_apply_with_nothing_to_ensure_records_the_fresh_check_and_never_rechecks_twice(monkeypatch) -> None:
+    world = World(monkeypatch, registered=True, state="verifying")
+    checks = []
+    monkeypatch.setattr(vercel, "check", lambda credential, hostname: checks.append(1) or dns_required())
+    monkeypatch.setattr(ops, "ensure_required_records", lambda *a, **kw: DnsEnsureResult(applied=False, connection_id=None, zone_name=None))
+    _stub_preview(monkeypatch)
+
+    result = apply(dns_settings=DNS_SETTINGS)
+
+    assert len(checks) == 1  # no second recheck when nothing was applied
+    assert result["configuration_state"] == "dns_required"
+
+
+def test_apply_with_a_refused_second_recheck_keeps_the_first_checks_own_answer(monkeypatch) -> None:
+    world = World(monkeypatch, registered=True, state="verifying")
+    monkeypatch.setattr(ops, "ensure_required_records", lambda *a, **kw: DnsEnsureResult(applied=True, connection_id="conn-1", zone_name="example.com"))
+
+    calls = {"n": 0}
+
+    def flaky_check(credential, hostname):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return dns_required()
+        raise UpstreamRefused("Vercel refused the request (500): busy")
+
+    monkeypatch.setattr(vercel, "check", flaky_check)
+    _stub_preview(monkeypatch)
+
+    result = apply(dns_settings=DNS_SETTINGS)
+
+    assert calls["n"] == 2
     assert result["configuration_state"] == "dns_required"
     assert result["dns_records"] == CNAME
 
 
-def test_a_verified_domain_is_never_offered_to_the_dns_bridge(monkeypatch) -> None:
-    world = World(monkeypatch)
-    world.answers(monkeypatch, connect=VERIFIED)
+def test_apply_already_satisfied_records_as_such_without_ensuring_anything(monkeypatch) -> None:
+    world = World(monkeypatch, registered=True, state="verifying")
+    world.answers(monkeypatch, check=VERIFIED)
     monkeypatch.setattr(ops, "ensure_required_records", lambda *a, **kw: pytest.fail("nothing to ensure"))
 
-    result = connect_domain(SETTINGS, token="caller-token", organization_id=ORG, domain_id=DOMAIN, dns_settings=DNS_SETTINGS)
+    result = apply(dns_settings=DNS_SETTINGS)
 
     assert result["verification_state"] == "verified"
 

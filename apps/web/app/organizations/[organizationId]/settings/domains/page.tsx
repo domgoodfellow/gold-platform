@@ -33,7 +33,7 @@ export default async function DomainsSettingsPage({ params }: PageProps<'/organi
         ]}
         actions={
           mayManage ? (
-            <ConnectDomainDialog organizationId={organizationId} platformZone={zone} cloudflareZones={cloudflareZones} />
+            <ConnectDomainDialog organizationId={organizationId} platformZone={zone} />
           ) : undefined
         }
       />

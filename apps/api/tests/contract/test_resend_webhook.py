@@ -11,6 +11,7 @@ import base64
 import hashlib
 import hmac
 import json
+from datetime import datetime, timezone
 
 import pytest
 
@@ -89,17 +90,52 @@ def test_a_malformed_timestamp_is_refused() -> None:
     ],
 )
 def test_every_tracked_event_type_maps_to_golds_own_state(event_type, state) -> None:
-    event = parse_event({"type": event_type, "data": {"email_id": "m1"}})
-    assert event == {"message_id": "m1", "state": state, "detail": None}
+    event = parse_event({"type": event_type, "created_at": "2026-01-02T03:04:05.000Z", "data": {"email_id": "m1"}})
+    assert event["message_id"] == "m1"
+    assert event["state"] == state
+    assert event["event_at"] == datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
 
 
-def test_a_bounce_carries_the_providers_own_reason() -> None:
-    event = parse_event({"type": "email.bounced", "data": {"email_id": "m1", "reason": "mailbox full"}})
+# Nested detail paths confirmed against Resend's own documented example payload for each event
+# (resend.com/docs/webhooks/emails/<event>) -- never a flat `data.reason`, which is not the shape
+# any of these events actually use.
+
+
+def test_a_bounce_carries_the_providers_own_bounce_message() -> None:
+    event = parse_event({"type": "email.bounced", "data": {"email_id": "m1", "bounce": {"message": "mailbox full", "type": "Permanent"}}})
     assert event["detail"] == "mailbox full"
+
+
+def test_a_failure_carries_the_providers_own_reason() -> None:
+    event = parse_event({"type": "email.failed", "data": {"email_id": "m1", "failed": {"reason": "reached_daily_quota"}}})
+    assert event["detail"] == "reached_daily_quota"
+
+
+def test_a_suppression_carries_the_providers_own_message() -> None:
+    event = parse_event({"type": "email.suppressed", "data": {"email_id": "m1", "suppressed": {"message": "on the account-level suppression list"}}})
+    assert event["detail"] == "on the account-level suppression list"
+
+
+def test_delivery_delayed_and_sent_and_delivered_carry_no_detail_today() -> None:
+    for event_type in ("email.sent", "email.delivered", "email.delivery_delayed"):
+        event = parse_event({"type": event_type, "data": {"email_id": "m1"}})
+        assert event["detail"] is None
+
+
+def test_a_flat_reason_field_outside_the_documented_nested_shape_is_not_read() -> None:
+    # A bounce with the detail in the wrong place (the old, incorrect assumption) must not leak
+    # through as if it were the real bounce.message.
+    event = parse_event({"type": "email.bounced", "data": {"email_id": "m1", "reason": "mailbox full"}})
+    assert event["detail"] is None
 
 
 def test_an_untracked_event_type_is_ignored_not_refused() -> None:
     assert parse_event({"type": "email.clicked", "data": {"email_id": "m1"}}) is None
+
+
+def test_a_missing_or_malformed_created_at_leaves_event_at_null() -> None:
+    assert parse_event({"type": "email.sent", "data": {"email_id": "m1"}})["event_at"] is None
+    assert parse_event({"type": "email.sent", "created_at": "not a date", "data": {"email_id": "m1"}})["event_at"] is None
 
 
 def test_an_event_with_no_message_id_is_ignored() -> None:

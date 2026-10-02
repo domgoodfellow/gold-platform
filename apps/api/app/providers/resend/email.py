@@ -61,6 +61,11 @@ def send_platform_email(*, api_key: str, sender: str, to: str, subject: str, tex
     webhook can be correlated back to this one send; `resend_sender`'s `Sent` carries none because
     no channel delivery needs that correlation today.
 
+    **A 2xx with no message id is not a successful send.** Nothing could ever correlate a later
+    `email.sent`/`email.bounced`/... callback back to it, which makes it operationally identical to
+    a send that never reached Resend at all -- so it is refused here rather than recorded as `ok`
+    with a null id (work order 1 closeout, section 6).
+
     Never raises for a provider refusal: `{"ok", "external_id", "detail"}` is the whole answer, so
     the caller can record what happened rather than lose it to an exception.
     """
@@ -82,7 +87,13 @@ def send_platform_email(*, api_key: str, sender: str, to: str, subject: str, tex
     except ValueError:
         body = {}
     message_id = body.get("id") if isinstance(body, dict) else None
-    return {"ok": True, "external_id": str(message_id) if message_id else None, "detail": None}
+    if not message_id:
+        return {
+            "ok": False,
+            "external_id": None,
+            "detail": "Resend answered with no message id, so this send cannot be correlated with its own delivery.",
+        }
+    return {"ok": True, "external_id": str(message_id), "detail": None}
 
 
 def _reason(response: httpx.Response) -> str:

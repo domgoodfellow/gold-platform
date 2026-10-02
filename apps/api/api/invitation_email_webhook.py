@@ -35,11 +35,12 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
         # The **raw** bytes, read once and never parsed first -- a signature is over bytes, and
         # anything that re-serialises before verifying checks a signature against a body nobody sent.
         raw = self.rfile.read(length)
+        svix_id = self.headers.get("svix-id")
 
         try:
             verify_signature(
                 secret=settings.signing_secret,
-                svix_id=self.headers.get("svix-id"),
+                svix_id=svix_id,
                 svix_timestamp=self.headers.get("svix-timestamp"),
                 svix_signature=self.headers.get("svix-signature"),
                 body=raw,
@@ -61,10 +62,11 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             self._reply(200, "ignored")
             return
 
-        # The retry guard: the same bytes delivered twice hash the same, so a repeated callback is
-        # a no-op at the database rather than a second row (record_invitation_delivery_event's own
-        # `on conflict`).
-        payload_hash = hashlib.sha256(raw).hexdigest()
+        # The retry guard: Svix's own delivery id is the stable identity for one callback attempt
+        # (section 5) -- preferred over hashing the body, which would treat a byte-for-byte
+        # identical but logically distinct event as a duplicate by accident. `svix_id` is already
+        # proven non-empty by `verify_signature` above.
+        payload_hash = hashlib.sha256(svix_id.encode()).hexdigest()  # type: ignore[union-attr]
 
         recorded = record_invitation_delivery_event(
             settings,
@@ -73,6 +75,7 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             detail=event["detail"],
             payload=body,
             payload_hash=payload_hash,
+            event_at=event["event_at"],
         )
 
         # None is a verified event about a message id this platform has no record of sending.

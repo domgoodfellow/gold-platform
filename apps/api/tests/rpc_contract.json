@@ -296,6 +296,19 @@
         "p_request_id"
       ]
     },
+    "record_managed_integration_resource": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_connection_id",
+        "p_display_name",
+        "p_external_id",
+        "p_metadata",
+        "p_resource_type"
+      ]
+    },
     "replace_integration_resources": {
       "role": "integration_operator",
       "callers": [
@@ -463,6 +476,7 @@
       ],
       "sends": [
         "p_detail",
+        "p_event_at",
         "p_payload",
         "p_payload_hash",
         "p_provider_message_id",

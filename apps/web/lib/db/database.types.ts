@@ -3117,6 +3117,7 @@ export type Database = {
           organization_id: string
           payload: Json
           payload_hash: string
+          provider_event_at: string | null
           provider_message_id: string | null
           recipient: string
           source: string
@@ -3130,6 +3131,7 @@ export type Database = {
           organization_id: string
           payload?: Json
           payload_hash: string
+          provider_event_at?: string | null
           provider_message_id?: string | null
           recipient: string
           source: string
@@ -3143,6 +3145,7 @@ export type Database = {
           organization_id?: string
           payload?: Json
           payload_hash?: string
+          provider_event_at?: string | null
           provider_message_id?: string | null
           recipient?: string
           source?: string
@@ -9368,10 +9371,21 @@ export type Database = {
       record_invitation_delivery_event: {
         Args: {
           p_detail: string
+          p_event_at?: string
           p_payload: Json
           p_payload_hash: string
           p_provider_message_id: string
           p_state: string
+        }
+        Returns: string
+      }
+      record_managed_integration_resource: {
+        Args: {
+          p_connection_id: string
+          p_display_name: string
+          p_external_id: string
+          p_metadata?: Json
+          p_resource_type: string
         }
         Returns: string
       }

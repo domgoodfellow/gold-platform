@@ -5,12 +5,16 @@ control panel.** `app.services.web_delivery` asks `ensure_required_records` for 
 records a provider named; this resolves which connected zone answers for that hostname, reads what
 is there, and writes only what is missing or only what GildOps itself already wrote once.
 
-**Ownership, provable.** A DNS record this runtime creates or updates is recorded as an
-`integration_resources` row under the connection that created it -- `resource_type
+**Ownership, provable and not tenant-forgeable.** A DNS record this runtime creates or updates is
+recorded as an `integration_resources` row under the connection that created it -- `resource_type
 'cloudflare_dns_record'`, `external_id` the vendor's own record id. A record already at the vendor
 with no such row is somebody else's, or nobody's doing GildOps can prove, and is refused rather
-than silently replaced. The same `integration_operator` door that reads an OAuth credential
-anywhere else in this repository (D56) is the only way the access token is read here too.
+than silently replaced. Neither that row nor the `cloudflare_zone` rows this reads to resolve a
+zone can be manufactured by a tenant session: `integration_resources_insert`/`_update` admit only a
+row with no `connection_id` (an uploaded file, D63); anything connection-scoped is written only
+through `integration_operator`, via `record_managed_integration_resource` here and
+`replace_integration_resources` for discovery -- the same role that reads the OAuth credential the
+write itself used.
 
 **Best-effort, on purpose.** The authoritative outcome is still the hosting provider's own recheck
 (`app.providers.vercel.domains.check`, called again by the caller once this returns). A DNS write
@@ -28,7 +32,6 @@ from app.core import db
 from app.core.config import IntegrationSettings
 from app.core.postgrest import caller_rest
 from app.connectors import oauth_app_for, oauth_provider_for
-from app.errors import DomainError
 from app.providers.providers import UpstreamRefused
 from app.services.dns import cloudflare
 
@@ -170,41 +173,31 @@ def _owned_record_id(
 
 def _record_provenance(
     settings: IntegrationSettings,
-    token: str,
     *,
-    organization_id: str,
     connection_id: str,
     zone_name: str,
     hostname: str,
     record: dict,
     external_id: str,
-    resource_id: str | None,
 ) -> None:
-    """Best-effort: the hosting provider's own recheck is still the fact of record (module header).
-    Losing this row only makes a future run treat the vendor's existing answer as unowned, which is
-    the safe direction to fail in -- it is refused rather than overwritten, never the other way."""
-    payload = {
-        "organization_id": organization_id,
-        "connection_id": connection_id,
-        "resource_type": _RECORD_RESOURCE_TYPE,
-        "external_id": external_id,
-        "display_name": f"{record['type']} {record['name']}",
-        "metadata": {"type": record["type"], "name": record["name"], "value": record["value"], "zone": zone_name, "hostname": hostname},
-    }
+    """Through `integration_operator`, never the caller's own forwarded token (work order 1
+    closeout, section 2): a tenant session cannot insert or edit a connection-scoped resource at
+    all, so this is the only door, and it is the same role that read the access token the write
+    itself used. Best-effort: the hosting provider's own recheck is still the fact of record
+    (module header). Losing this row only makes a future run treat the vendor's existing answer as
+    unowned, which is the safe direction to fail in -- refused rather than overwritten, never the
+    other way.
+    """
     try:
-        if resource_id is None:
-            caller_rest(settings.supabase_url, settings.supabase_publishable_key, token, "POST", "integration_resources", json=payload)
-        else:
-            caller_rest(
-                settings.supabase_url,
-                settings.supabase_publishable_key,
-                token,
-                "PATCH",
-                "integration_resources",
-                params={"id": f"eq.{resource_id}"},
-                json={"metadata": payload["metadata"], "display_name": payload["display_name"]},
-            )
-    except DomainError:
+        db.record_managed_integration_resource(
+            settings,
+            connection_id=connection_id,
+            resource_type=_RECORD_RESOURCE_TYPE,
+            external_id=external_id,
+            display_name=f"{record['type']} {record['name']}",
+            metadata={"type": record["type"], "name": record["name"], "value": record["value"], "zone": zone_name, "hostname": hostname},
+        )
+    except RuntimeError:
         pass
 
 
@@ -243,8 +236,8 @@ def _ensure_one(
         except UpstreamRefused as failure:
             return RecordOutcome(record_type, name, value, "failed", str(failure))
         _record_provenance(
-            settings, token, organization_id=organization_id, connection_id=connection_id, zone_name=zone_name,
-            hostname=hostname, record={"type": record_type, "name": name, "value": value}, external_id=str(updated["id"]), resource_id=owned_id,
+            settings, connection_id=connection_id, zone_name=zone_name, hostname=hostname,
+            record={"type": record_type, "name": name, "value": value}, external_id=str(updated["id"]),
         )
         return RecordOutcome(record_type, name, value, "updated")
 
@@ -253,10 +246,39 @@ def _ensure_one(
     except UpstreamRefused as failure:
         return RecordOutcome(record_type, name, value, "failed", str(failure))
     _record_provenance(
-        settings, token, organization_id=organization_id, connection_id=connection_id, zone_name=zone_name,
-        hostname=hostname, record={"type": record_type, "name": name, "value": value}, external_id=str(created["id"]), resource_id=None,
+        settings, connection_id=connection_id, zone_name=zone_name, hostname=hostname,
+        record={"type": record_type, "name": name, "value": value}, external_id=str(created["id"]),
     )
     return RecordOutcome(record_type, name, value, "created")
+
+
+@dataclass(frozen=True)
+class AutomationPreview:
+    """Whether a connected Cloudflare zone could answer for this hostname -- read-only, no write
+    at all, so a caller can offer a review step before the first consequential DNS mutation
+    (work order 1 closeout, section 3) rather than writing immediately."""
+
+    available: bool
+    connection_id: str | None
+    zone_name: str | None
+
+
+def preview_automation(
+    settings: IntegrationSettings | None, *, token: str, organization_id: str, hostname: str
+) -> AutomationPreview:
+    if settings is None:
+        return AutomationPreview(available=False, connection_id=None, zone_name=None)
+
+    zone = _zone_for_hostname(settings, token, organization_id, hostname)
+    if zone is None:
+        return AutomationPreview(available=False, connection_id=None, zone_name=None)
+
+    # A matching zone with no usable credential is not "available" -- nothing for Review to offer
+    # that Apply could actually do.
+    if not _held_access_token(settings, zone["connection_id"]):
+        return AutomationPreview(available=False, connection_id=zone["connection_id"], zone_name=zone["display_name"])
+
+    return AutomationPreview(available=True, connection_id=zone["connection_id"], zone_name=zone["display_name"])
 
 
 def ensure_required_records(

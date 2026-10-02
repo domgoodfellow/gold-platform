@@ -6,6 +6,7 @@ import { Button } from '@/components/controls/button';
 import { ErrorText } from '@/components/controls/inputs';
 import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import {
+  applyDnsAutomationFormAction,
   recheckDomainAction,
   removeDomainAction,
   setPrimaryDomainAction,
@@ -22,21 +23,25 @@ function useCommand(action: typeof recheckDomainAction, success: string) {
   return { state, run, pending };
 }
 
-/** Recheck, make primary, and remove — each a form with the ids hidden in it, the refusal in words. */
+/** Recheck, apply (when this business's own connected DNS can publish the records), make primary,
+ * and remove — each a form with the ids hidden in it, the refusal in words. */
 export function DomainRowActions({
   organizationId,
   domainId,
   hostname,
   canRecheck,
+  canApply,
   canMakePrimary,
 }: {
   organizationId: string;
   domainId: string;
   hostname: string;
   canRecheck: boolean;
+  canApply: boolean;
   canMakePrimary: boolean;
 }) {
   const recheck = useCommand(recheckDomainAction, 'Checked with the hosting provider.');
+  const apply = useCommand(applyDnsAutomationFormAction, `Publishing DNS for ${hostname}.`);
   const primary = useCommand(setPrimaryDomainAction, `${hostname} is now the primary domain.`);
   const remove = useCommand(removeDomainAction, `${hostname} removed.`);
   const removeFormId = `remove-domain-${useId().replace(/:/g, '')}`;
@@ -59,6 +64,14 @@ export function DomainRowActions({
             </Button>
           </form>
         ) : null}
+        {canApply ? (
+          <form action={apply.run}>
+            {hidden}
+            <Button type="submit" size="small" disabled={apply.pending}>
+              {apply.pending ? 'Publishing…' : 'Apply and verify'}
+            </Button>
+          </form>
+        ) : null}
         {canMakePrimary ? (
           <form action={primary.run}>
             {hidden}
@@ -77,7 +90,7 @@ export function DomainRowActions({
           ariaLabel={`Remove ${hostname}`}
         />
       </div>
-      <ErrorText>{recheck.state.error ?? primary.state.error ?? remove.state.error}</ErrorText>
+      <ErrorText>{recheck.state.error ?? apply.state.error ?? primary.state.error ?? remove.state.error}</ErrorText>
     </div>
   );
 }

@@ -165,24 +165,29 @@ export async function listInvitationDeliveryStatus(
 ): Promise<Map<string, InvitationDeliveryStatus>> {
   const { data, error } = await db
     .from('invitation_deliveries')
-    .select('invitation_id, state, detail, occurred_at')
-    .eq('organization_id', input.organizationId)
-    .order('occurred_at', { ascending: false });
+    .select('invitation_id, state, detail, occurred_at, provider_event_at')
+    .eq('organization_id', input.organizationId);
 
   if (error) {
     throw new DomainError(error.message, 'invitations.delivery_read_failed');
   }
 
-  const latest = new Map<string, InvitationDeliveryStatus>();
+  // Current status is whichever row's own moment -- Resend's own `provider_event_at` when a
+  // webhook reported one, this platform's ingestion `occurred_at` otherwise -- is the latest. A
+  // delayed or retried callback for an older event can arrive after a newer one already landed;
+  // ordering by when this platform *heard* a row rather than the moment it describes would let
+  // that regress an already-current state (work order 1 closeout, section 4).
+  const latest = new Map<string, { effectiveAt: string; status: InvitationDeliveryStatus }>();
   for (const row of data ?? []) {
-    if (latest.has(row.invitation_id)) continue; // ordered newest-first: the first row per id wins
+    const effectiveAt = row.provider_event_at ?? row.occurred_at;
+    const current = latest.get(row.invitation_id);
+    if (current && current.effectiveAt >= effectiveAt) continue;
     latest.set(row.invitation_id, {
-      state: row.state as InvitationDeliveryState,
-      detail: row.detail,
-      occurredAt: row.occurred_at,
+      effectiveAt,
+      status: { state: row.state as InvitationDeliveryState, detail: row.detail, occurredAt: effectiveAt },
     });
   }
-  return latest;
+  return new Map([...latest].map(([invitationId, entry]) => [invitationId, entry.status]));
 }
 
 /**

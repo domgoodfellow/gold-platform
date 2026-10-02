@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import httpx
 
+from app.connectors.cloudflare import cloudflare_error_message
 from app.providers.providers import MalformedAnswer, UpstreamRefused
 
 API = "https://api.cloudflare.com/client/v4"
@@ -36,18 +37,11 @@ def _body(response: httpx.Response) -> dict:
     return body
 
 
-def _message(body: dict, response: httpx.Response) -> str:
-    errors = body.get("errors")
-    if isinstance(errors, list) and errors and isinstance(errors[0], dict):
-        return str(errors[0].get("message") or f"status {response.status_code}")[:300]
-    return f"status {response.status_code}"
-
-
 def _ok(method: str, url: str, access_token: str, *, params: dict | None = None, json: dict | None = None) -> dict:
     response = _send(method, url, access_token, params=params, json=json)
     body = _body(response)
     if response.status_code >= 400 or body.get("success") is not True:
-        raise UpstreamRefused(f"Cloudflare refused the request: {_message(body, response)}")
+        raise UpstreamRefused(f"Cloudflare refused the request: {cloudflare_error_message(body, response.status_code)}")
     return body
 
 

@@ -1,5 +1,5 @@
 import { callDomainCommand } from '@/lib/api/client';
-import type { DnsRecord, DomainProvider, DomainStanding } from './index';
+import type { DnsAutomation, DnsRecord, DomainProvider, DomainStanding } from './index';
 
 type Answer = {
   domain_id: string;
@@ -8,6 +8,7 @@ type Answer = {
   verification_state: DomainStanding['verificationState'];
   ssl_state: DomainStanding['certificateState'];
   dns_records: DnsRecord[];
+  dns_automation?: { available: boolean; connectionId: string | null; zoneName: string | null };
 };
 
 function standing(answer: Answer): DomainStanding {
@@ -18,7 +19,12 @@ function standing(answer: Answer): DomainStanding {
     verificationState: answer.verification_state,
     certificateState: answer.ssl_state,
     dnsRecords: answer.dns_records ?? [],
+    dnsAutomation: toAutomation(answer.dns_automation),
   };
+}
+
+function toAutomation(raw: Answer['dns_automation']): DnsAutomation {
+  return { available: raw?.available ?? false, connectionId: raw?.connectionId ?? null, zoneName: raw?.zoneName ?? null };
 }
 
 /**
@@ -30,7 +36,7 @@ function standing(answer: Answer): DomainStanding {
  * translates that command's JSON into the capability's types.
  */
 export function goldApiDomainProvider(input: { token: string }): DomainProvider {
-  function run<T>(command: 'connect' | 'check' | 'remove', target: { organizationId: string; domainId: string }): Promise<T> {
+  function run<T>(command: 'connect' | 'check' | 'remove' | 'apply_dns', target: { organizationId: string; domainId: string }): Promise<T> {
     return callDomainCommand<T>('/organizations/domains', {
       token: input.token,
       body: { command, organization_id: target.organizationId, domain_id: target.domainId },
@@ -40,6 +46,7 @@ export function goldApiDomainProvider(input: { token: string }): DomainProvider 
   return {
     connect: async (target) => standing(await run<Answer>('connect', target)),
     check: async (target) => standing(await run<Answer>('check', target)),
+    applyAutomation: async (target) => standing(await run<Answer>('apply_dns', target)),
     remove: async (target) => {
       await run('remove', target);
     },

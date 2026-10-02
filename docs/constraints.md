@@ -645,6 +645,25 @@ about where a vendor's name may live. `tests/integration/database/integrations.t
 the same file never duplicates a customer), tenancy isolation, capability refusal, and that
 disconnecting a connection never reaches a customer already imported through it.
 
+**Built, second slice — Cloudflare, and the axis it bridges without crossing.** Cloudflare is the
+first OAuth connector on this axis: the tenant authorizes at Cloudflare, GOLD stores a reference
+(`integration_connections`) and never the tenant's token outside Vault. `integration_resources`
+rows this connector *observes* (a zone, a DNS record it reads) are not the same fact as a row a
+tenant uploads — a tenant session with `integration.manage` could otherwise `insert`/`update`
+`cloudflare_zone`/`cloudflare_dns_record` rows directly and forge provenance nothing ever checked
+with Cloudflare at all. `integration_resources_insert`/`_update` now require `connection_id is
+null` in both `using` and `with check`: a tenant may still write a connection-less row (an
+uploaded file, D63), but a connector-observed one is written only through
+`record_managed_integration_resource`, a new `integration_operator` door, the same narrow-door
+shape D56's other four already use. **This axis never merges with Vercel's.** A custom domain's
+*hosting* credential is GOLD's own (`20261010000001`, D54/D62's axis: GOLD registers the hostname
+and asks Vercel to serve it) — a fact about GOLD's infrastructure, not the tenant's. Cloudflare is
+the tenant's own DNS, the other axis entirely. The two meet at exactly one read-only question —
+*could this business's connected zone answer for this hostname* (`preview_automation`) — and at
+exactly one write a person has explicitly asked for after reviewing the records
+(`apply_dns_automation`); nothing ever writes DNS as a side effect of registering or checking a
+hostname with Vercel.
+
 ### D34 — A tool is a function in Postgres, run under the caller's own token
 
 **Decision.** Every AI tool is a `stable`, `security invoker` Postgres function. Python holds only
@@ -1123,11 +1142,15 @@ set. A binding can be `active` with no external account at all — Resend's shap
 account with a business's own domain named beneath it.
 
 **Vault, enabled for exactly one kind of fact.** GOLD's own master credentials (a Twilio account
-SID and auth token, a Resend platform key) stay deployment environment secrets, unchanged (D54 adds an opt-in, Vault-held account beside them) — D14
-already refused a database as the place a person reads those from, and Vault existing does not
-reopen that. What Vault holds is narrower: a credential *this platform generates* per
-organization — today, a Twilio subaccount's own API key secret — that must be retained for a
-future server-side use and never existed in any deployment's environment to begin with.
+SID and auth token) stay deployment environment secrets, unchanged — D14 already refused a
+database as the place a person reads those from, and Vault existing does not reopen that. What
+Vault holds is narrower: a credential *this platform generates* per organization — today, a
+Twilio subaccount's own API key secret — that must be retained for a future server-side use and
+never existed in any deployment's environment to begin with. A Resend platform key is no longer
+this category: D62 gave it an opt-in `platform_provider_accounts` row, Vault-held exactly like an
+AI runtime provider's, and `app.services.platform_email` prefers that account once staff have set
+one active and credentialed; the environment variable (`RESEND_API_KEY`) remains only as the
+bootstrap fallback before that.
 
 **The write door that only ever writes.** `public.store_provider_secret` is the one function
 that ever calls `vault.create_secret` or `vault.update_secret` (rotation reuses the same vault
@@ -1914,6 +1937,13 @@ nothing else. OpenAI, Anthropic and Google (`GENERIC_ACCOUNT_PROVIDER_KEYS`) use
 than growing a second table; Twilio keeps its own bespoke binding/resource path (D44), because it
 alone needs one. `provider_operator` gained a third execute, `resolve_ai_runtime_assignment`,
 alongside the two D54 already named — same role, same narrowness, no table grant added.
+Vercel and Resend joined the same set afterward (`GENERIC_ACCOUNT_PROVIDER_KEYS`), for two
+unrelated consumers rather than an AI capability: Vercel's row is the hosting credential GOLD uses
+to register a tenant's own custom domain on the tenant's behalf (D33's bridge, above), and Resend's
+is GOLD's own platform invitation email. Both read the same "Default" and "Verified" status the AI
+providers already show; the page names no AI-runtime section for either, because
+`platform_provider_services.kind = 'runtime'` is what that section is actually gated on, not the
+provider key.
 
 **AI Runtime assignment** (`platform_ai_runtime_assignments`) is the platform-global choice of
 which implemented Provider Service, Provider Account and model answers one current AI capability —

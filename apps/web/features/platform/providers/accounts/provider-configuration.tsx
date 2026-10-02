@@ -23,7 +23,18 @@ function when(value: string | null): string {
  * No "Provisioning" section: nothing here is provisioned per organization. GOLD holds one account
  * and every assignment naming it answers from it directly (`app.ai.runtime`).
  */
-export function ProviderConfiguration({ providerKey, account }: { providerKey: string; account?: ProviderAccount }) {
+const DEFAULT_ACCOUNT_HINT = 'The account an AI runtime assignment uses when more than one exists for this provider.';
+
+export function ProviderConfiguration({
+  providerKey,
+  account,
+  defaultAccountHint = DEFAULT_ACCOUNT_HINT,
+}: {
+  providerKey: string;
+  account?: ProviderAccount;
+  /** Overridden for a provider with no AI-runtime assignment at all (work order 1 closeout, §7) — "default" still means something without that sentence naming a capability this provider does not have. */
+  defaultAccountHint?: string;
+}) {
   if (!account) {
     return (
       <div className="flex flex-col gap-4">
@@ -63,7 +74,7 @@ export function ProviderConfiguration({ providerKey, account }: { providerKey: s
 
       <section className="flex flex-col gap-3">
         <GroupHeading>Default</GroupHeading>
-        <Hint>The account an AI runtime assignment uses when more than one exists for this provider.</Hint>
+        <Hint>{defaultAccountHint}</Hint>
         {account.isDefault ? (
           <Badge>Default account</Badge>
         ) : account.status === 'active' ? (

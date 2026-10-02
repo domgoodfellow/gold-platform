@@ -26,7 +26,7 @@ from app.core.config import IntegrationSettings, ProviderOperationsSettings
 from app.core.postgrest import caller_rest
 from app.errors import DomainError, NotFoundError, ValidationError
 from app.providers.providers import HostnameUnavailable, MalformedAnswer, UpstreamRefused, domain_hosting_for
-from app.services.dns.operations import ensure_required_records
+from app.services.dns.operations import ensure_required_records, preview_automation
 
 PROVIDER_UNAVAILABLE_MESSAGE = (
     "Custom domains are not available on this deployment yet: GildOps has no hosting account configured."
@@ -96,8 +96,18 @@ def _credential(settings: ProviderOperationsSettings, organization_id: str, row:
     return credential
 
 
-def _view(row: dict, status) -> dict:
-    return {"domain_id": row["id"], "hostname": row["hostname"], **asdict(status)}
+def _view(row: dict, status, *, dns_settings: IntegrationSettings | None = None, token: str | None = None, organization_id: str | None = None) -> dict:
+    """GildOps' own vocabulary for a domain's standing, plus -- only when DNS is still needed --
+    whether a connected Cloudflare zone *could* answer for it. Read-only: this never writes a
+    record. A caller offers the review step on `dns_automation.available`; nothing here applies
+    anything (work order 1 closeout, section 3)."""
+    view = {"domain_id": row["id"], "hostname": row["hostname"], **asdict(status)}
+    if status.configuration_state == "dns_required" and status.dns_records and dns_settings is not None:
+        preview = preview_automation(dns_settings, token=token, organization_id=organization_id, hostname=row["hostname"])
+        view["dns_automation"] = {"available": preview.available, "connectionId": preview.connection_id, "zoneName": preview.zone_name}
+    else:
+        view["dns_automation"] = {"available": False, "connectionId": None, "zoneName": None}
+    return view
 
 
 def _hosting(row: dict):
@@ -105,35 +115,6 @@ def _hosting(row: dict):
     if hosting is None:
         raise ProviderUnavailableError(PROVIDER_UNAVAILABLE_MESSAGE)
     return hosting
-
-
-def _bridge_dns(
-    dns_settings: IntegrationSettings | None,
-    hosting,
-    credential: dict,
-    token: str,
-    organization_id: str,
-    row: dict,
-    status,
-):
-    """When the provider still needs DNS, try this business's own connected Cloudflare zone before
-    handing the manual records back. Best-effort: any failure here leaves `status` exactly as the
-    provider last answered, and the manual path is unaffected (work order 1, section 3)."""
-    if dns_settings is None or status.configuration_state != "dns_required" or not status.dns_records:
-        return status
-
-    outcome = ensure_required_records(
-        dns_settings, token=token, organization_id=organization_id, hostname=row["hostname"], records=status.dns_records
-    )
-    if not outcome.applied:
-        return status
-
-    try:
-        return hosting.check(credential, row["hostname"])
-    except (HostnameUnavailable, MalformedAnswer, UpstreamRefused):
-        # The provider's own recheck is the fact of record; a refused recheck just means the
-        # original answer still stands, not that the DNS write failed.
-        return status
 
 
 def _unavailable(settings: ProviderOperationsSettings, organization_id: str, row: dict) -> ProviderUnavailableError:
@@ -202,8 +183,6 @@ def connect_domain(
         failed("provider_refused", str(refusal))
         raise ProviderRefusedError(str(refusal)) from refusal
 
-    status = _bridge_dns(dns_settings, hosting, credential, token, organization_id, row, status)
-
     db.record_custom_domain_registration(
         settings,
         organization_id=organization_id,
@@ -221,7 +200,7 @@ def connect_domain(
             ssl_state=status.ssl_state,
             dns_records=status.dns_records,
         )
-    return _view(row, status)
+    return _view(row, status, dns_settings=dns_settings, token=token, organization_id=organization_id)
 
 
 def check_domain(
@@ -291,7 +270,72 @@ def check_domain(
         keep("provider_refused", str(refusal))
         raise ProviderRefusedError(str(refusal)) from refusal
 
-    status = _bridge_dns(dns_settings, hosting, credential, token, organization_id, row, status)
+    db.set_custom_domain_verification(
+        settings,
+        organization_id=organization_id,
+        domain_id=row["id"],
+        verification_state=status.verification_state,
+        configuration_state=status.configuration_state,
+        ssl_state=status.ssl_state,
+        dns_records=status.dns_records,
+    )
+    return _view(row, status, dns_settings=dns_settings, token=token, organization_id=organization_id)
+
+
+def apply_dns_automation(
+    settings: ProviderOperationsSettings,
+    *,
+    token: str,
+    organization_id: str,
+    domain_id: str,
+    dns_settings: IntegrationSettings | None = None,
+) -> dict:
+    """The one consequential DNS mutation, performed only when a person presses "Apply and
+    verify" after reviewing exactly what will change -- never automatically inside `connect`/
+    `check` (work order 1 closeout, section 3). Re-asks the hosting provider fresh rather than
+    trusting records a client may have been shown a while ago, ensures them through the business's
+    own connected zone, and rechecks once more before recording anything."""
+    row = _domain(settings, token, organization_id, domain_id)
+    if not row.get("provider_resource_id"):
+        raise ValidationError("This domain has not been registered with the hosting provider yet.")
+
+    credential = _credential(settings, organization_id, row)
+    if credential is None:
+        db.set_custom_domain_verification(
+            settings,
+            organization_id=organization_id,
+            domain_id=row["id"],
+            verification_state=row["verification_state"],
+            configuration_state=None,
+            ssl_state=None,
+            dns_records=None,
+            error_code="provider_unavailable",
+            error_message=PROVIDER_UNAVAILABLE_MESSAGE,
+        )
+        raise ProviderUnavailableError(PROVIDER_UNAVAILABLE_MESSAGE)
+    hosting = _hosting(row)
+
+    try:
+        status = hosting.check(credential, row["hostname"])
+    except HostnameUnavailable as refusal:
+        db.set_custom_domain_verification(
+            settings, organization_id=organization_id, domain_id=row["id"], verification_state="failed",
+            configuration_state=None, ssl_state=None, dns_records=None,
+            error_code="hostname_unavailable", error_message=str(refusal),
+        )
+        raise HostnameUnavailableError(str(refusal)) from refusal
+    except (MalformedAnswer, UpstreamRefused) as refusal:
+        raise ProviderRefusedError(str(refusal)) from refusal
+
+    if status.configuration_state == "dns_required" and status.dns_records:
+        outcome = ensure_required_records(
+            dns_settings, token=token, organization_id=organization_id, hostname=row["hostname"], records=status.dns_records
+        )
+        if outcome.applied:
+            try:
+                status = hosting.check(credential, row["hostname"])
+            except (HostnameUnavailable, MalformedAnswer, UpstreamRefused):
+                pass  # The provider's own recheck is the fact of record; keep what it last said.
 
     db.set_custom_domain_verification(
         settings,
@@ -302,7 +346,7 @@ def check_domain(
         ssl_state=status.ssl_state,
         dns_records=status.dns_records,
     )
-    return _view(row, status)
+    return _view(row, status, dns_settings=dns_settings, token=token, organization_id=organization_id)
 
 
 def remove_domain(
@@ -340,6 +384,7 @@ COMMANDS = {
     "connect": connect_domain,
     "check": check_domain,
     "remove": remove_domain,
+    "apply_dns": apply_dns_automation,
 }
 
 
@@ -352,7 +397,7 @@ def run_domain_command(
     domain_id: str,
     dns_settings: IntegrationSettings | None = None,
 ) -> dict:
-    """Dispatch by name. Anything but the three is refused before anything is read."""
+    """Dispatch by name. Anything but the four is refused before anything is read."""
     run = COMMANDS.get(command)
     if run is None:
         raise ValidationError("Unknown command.")

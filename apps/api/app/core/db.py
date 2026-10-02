@@ -29,6 +29,7 @@ import hashlib
 import hmac
 import json
 import time
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import httpx
@@ -692,6 +693,31 @@ def replace_integration_resources(settings: IntegrationSettings, *, connection_i
     )
 
 
+def record_managed_integration_resource(
+    settings: IntegrationSettings,
+    *,
+    connection_id: str,
+    resource_type: str,
+    external_id: str,
+    display_name: str,
+    metadata: dict,
+) -> str:
+    """Records or corrects one provider-observed resource -- the single-resource sibling of
+    `replace_integration_resources`'s bulk resync, for a caller (`app.services.dns`) that ensures
+    one record at a time and must never mark every other resource under the connection stale."""
+    return _integration_rpc(
+        settings,
+        "record_managed_integration_resource",
+        {
+            "p_connection_id": connection_id,
+            "p_resource_type": resource_type,
+            "p_external_id": external_id,
+            "p_display_name": display_name,
+            "p_metadata": metadata,
+        },
+    )  # type: ignore[return-value]
+
+
 def clear_integration_credential(settings: IntegrationSettings, *, connection_id: str) -> None:
     _integration_rpc(settings, "clear_integration_credential", {"p_connection_id": connection_id})
 
@@ -712,10 +738,14 @@ def record_invitation_delivery_event(
     detail: str | None,
     payload: dict,
     payload_hash: str,
+    event_at: datetime | None = None,
 ) -> str | None:
     """One Resend callback about one invitation email, applied through `invitation_email_webhook`'s
     one door. Organization and invitation are both derived inside the function from the provider's
-    own message id -- never from anything this handler could otherwise have been asked to trust."""
+    own message id -- never from anything this handler could otherwise have been asked to trust.
+    `event_at` is the provider's own timestamp for the event (`app.providers.resend.webhook`'s
+    `parse_event`), kept apart from when this platform heard it so a delayed callback cannot
+    regress a newer delivery state."""
     token = machine_token(
         settings.supabase_jwt_secret, role=INVITATION_EMAIL_WEBHOOK_ROLE, sub=INVITATION_EMAIL_WEBHOOK_ACTOR
     )
@@ -733,6 +763,7 @@ def record_invitation_delivery_event(
             "p_detail": detail,
             "p_payload": payload,
             "p_payload_hash": payload_hash,
+            "p_event_at": event_at.isoformat() if event_at is not None else None,
         },
         timeout=10.0,
     )

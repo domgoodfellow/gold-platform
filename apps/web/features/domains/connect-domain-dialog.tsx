@@ -14,8 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/controls/confirm-submit';
-import { checkDomainAction, connectDomainAction } from '@/app/organizations/[organizationId]/settings/domains/actions';
-import { isDnsAutomated } from '@/lib/domain/domains/dns-zones';
+import { applyDnsAutomationAction, checkDomainAction, connectDomainAction } from '@/app/organizations/[organizationId]/settings/domains/actions';
 import { DOMAIN_SURFACES } from '@/lib/domain/domains/presentation';
 import { connectDomainFlow, INITIAL_FLOW, type FlowState } from './connect-domain-flow';
 import { DnsRecordTable } from './dns-record-table';
@@ -30,11 +29,9 @@ import { DomainStateBadge } from './domain-status';
 export function ConnectDomainDialog({
   organizationId,
   platformZone,
-  cloudflareZones,
 }: {
   organizationId: string;
   platformZone: string | null;
-  cloudflareZones: string[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -44,9 +41,11 @@ export function ConnectDomainDialog({
     if (state.step !== 'working') return;
     let cancelled = false;
     const request =
-      state.action === 'check' && state.domainId
-        ? checkDomainAction({ organizationId, domainId: state.domainId })
-        : connectDomainAction({ organizationId, hostname: state.hostname, surface: state.surface });
+      state.action === 'apply' && state.domainId
+        ? applyDnsAutomationAction({ organizationId, domainId: state.domainId })
+        : state.action === 'check' && state.domainId
+          ? checkDomainAction({ organizationId, domainId: state.domainId })
+          : connectDomainAction({ organizationId, hostname: state.hostname, surface: state.surface });
     request
       .then((result) => {
         if (!cancelled) dispatch({ type: 'answered', result });
@@ -72,7 +71,7 @@ export function ConnectDomainDialog({
         <Button type="button">Connect domain</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
-        <ConnectDomainStep state={state} platformZone={platformZone} cloudflareZones={cloudflareZones} dispatch={dispatch} />
+        <ConnectDomainStep state={state} platformZone={platformZone} dispatch={dispatch} />
       </DialogContent>
     </Dialog>
   );
@@ -84,12 +83,10 @@ type Dispatch = (event: Parameters<typeof connectDomainFlow>[1]) => void;
 export function ConnectDomainStep({
   state,
   platformZone,
-  cloudflareZones,
   dispatch,
 }: {
   state: FlowState;
   platformZone: string | null;
-  cloudflareZones: string[];
   dispatch: Dispatch;
 }) {
   switch (state.step) {
@@ -174,7 +171,11 @@ export function ConnectDomainStep({
           <DialogHeader>
             <DialogTitle>{state.hostname}</DialogTitle>
             <DialogDescription>
-              {state.action === 'check' ? 'Checking with the hosting provider…' : 'Registering with the hosting provider…'}
+              {state.action === 'apply'
+                ? 'Publishing DNS through your connected account, then checking with the hosting provider…'
+                : state.action === 'check'
+                  ? 'Checking with the hosting provider…'
+                  : 'Registering with the hosting provider…'}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -188,10 +189,10 @@ export function ConnectDomainStep({
               {state.hostname} <DomainStateBadge presentation="pending_dns" />
             </DialogTitle>
             <DialogDescription>
-              {isDnsAutomated(state.hostname, cloudflareZones)
+              {state.dnsAutomation.available
                 ? state.rechecked
-                  ? 'Checked again: DNS is still settling. GildOps is publishing these records through your connected Cloudflare account — this can take a few minutes.'
-                  : 'DNS is managed through your connected Cloudflare account. GildOps is publishing these records automatically.'
+                  ? `Checked again: DNS is still settling. These are the records GildOps would publish through your connected ${state.dnsAutomation.zoneName ?? 'Cloudflare'} account.`
+                  : `This domain's DNS is reachable through your connected ${state.dnsAutomation.zoneName ?? 'Cloudflare'} account. Review the records below, then press Apply and verify to publish them — nothing is written until you do.`
                 : state.rechecked
                   ? 'Checked again: DNS for this domain does not point here yet. Make sure these records are published exactly as shown. Changes can take a while to spread.'
                   : 'Publish these records at your DNS host, then check again.'}
@@ -202,7 +203,10 @@ export function ConnectDomainStep({
             <DialogClose asChild>
               <Button type="button" tone="secondary">Finish later</Button>
             </DialogClose>
-            <Button type="button" onClick={() => dispatch({ type: 'recheck' })}>Check again</Button>
+            <Button type="button" tone="secondary" onClick={() => dispatch({ type: 'recheck' })}>Check again</Button>
+            {state.dnsAutomation.available ? (
+              <Button type="button" onClick={() => dispatch({ type: 'apply' })}>Apply and verify</Button>
+            ) : null}
           </DialogFooter>
         </div>
       );

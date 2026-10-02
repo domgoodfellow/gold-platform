@@ -39,37 +39,35 @@ class Response:
 
 
 class World:
-    """The caller's own PostgREST reads/writes, and the connection's stored credential."""
+    """The caller's own PostgREST reads, the connection's stored credential, and the
+    integration_operator-only door that records provenance -- never a caller-forwarded write
+    (work order 1 closeout, section 2: a tenant session holds no insert/update on a
+    connection-scoped resource at all)."""
 
     def __init__(self, monkeypatch, *, zones=None, owned: dict[str, str] | None = None) -> None:
         self.zones = zones if zones is not None else [
             {"id": ZONE_RESOURCE, "connection_id": CONNECTION, "external_id": "zone-1", "display_name": "example.com"}
         ]
         self.owned = owned or {}  # cloudflare record id -> our resource id
-        self.inserted: list[dict] = []
-        self.patched: list[tuple[str, dict]] = []
+        self.recorded: list[dict] = []
         self.credential_secret: str | None = json.dumps({"access_token": "cf-access", "refresh_token": "cf-refresh", "expires_at": 9_999_999_999})
 
         monkeypatch.setattr(ops, "caller_rest", self._rest)
         monkeypatch.setattr(ops.db, "read_integration_credential", self._read_credential)
+        monkeypatch.setattr(ops.db, "record_managed_integration_resource", self._record_managed)
 
     def _rest(self, url, key, token, method, path, **kwargs):
         assert token == TOKEN
-        if method == "GET" and path == "integration_connections":
+        assert method == "GET", f"a tenant-forwarded token must never write {path}"
+        if path == "integration_connections":
             return Response(200, [{"id": CONNECTION}])
-        if method == "GET" and path == "integration_resources":
+        if path == "integration_resources":
             params = kwargs["params"]
             if params["resource_type"] == "eq.cloudflare_zone":
                 return Response(200, self.zones)
             external_id = params["external_id"].removeprefix("eq.")
             owner = self.owned.get(external_id)
             return Response(200, [{"id": owner}] if owner else [])
-        if method == "POST" and path == "integration_resources":
-            self.inserted.append(kwargs["json"])
-            return Response(201, kwargs["json"])
-        if method == "PATCH" and path == "integration_resources":
-            self.patched.append((kwargs["params"]["id"], kwargs["json"]))
-            return Response(204, None)
         raise AssertionError(f"unexpected call {method} {path} {kwargs}")
 
     def _read_credential(self, settings, *, connection_id):
@@ -77,6 +75,19 @@ class World:
         if self.credential_secret is None:
             return None
         return {"secret": self.credential_secret}
+
+    def _record_managed(self, settings, *, connection_id, resource_type, external_id, display_name, metadata):
+        assert connection_id == CONNECTION
+        self.recorded.append(
+            {
+                "connection_id": connection_id,
+                "resource_type": resource_type,
+                "external_id": external_id,
+                "display_name": display_name,
+                "metadata": metadata,
+            }
+        )
+        return "new-resource-id"
 
 
 def test_a_business_with_no_cloudflare_connection_is_not_applied(monkeypatch):
@@ -116,7 +127,7 @@ def test_an_identical_existing_record_is_left_alone(monkeypatch):
     )
     assert result.applied is True
     assert result.results == [ops.RecordOutcome("CNAME", "shop.example.com", "cname.vercel-dns.com", "unchanged")]
-    assert world.inserted == []
+    assert world.recorded == []
 
 
 def test_an_absent_record_is_created_and_recorded_as_owned(monkeypatch):
@@ -129,9 +140,8 @@ def test_an_absent_record_is_created_and_recorded_as_owned(monkeypatch):
     )
     assert result.applied is True
     assert result.results[0].outcome == "created"
-    assert world.inserted == [
+    assert world.recorded == [
         {
-            "organization_id": ORG,
             "connection_id": CONNECTION,
             "resource_type": "cloudflare_dns_record",
             "external_id": "rec-new",
@@ -151,7 +161,15 @@ def test_a_record_this_runtime_already_owns_is_corrected(monkeypatch):
     )
     assert result.applied is True
     assert result.results[0].outcome == "updated"
-    assert world.patched == [("eq.our-resource-1", {"metadata": {"type": "CNAME", "name": "shop.example.com", "value": "cname.vercel-dns.com", "zone": "example.com", "hostname": "shop.example.com"}, "display_name": "CNAME shop.example.com"})]
+    assert world.recorded == [
+        {
+            "connection_id": CONNECTION,
+            "resource_type": "cloudflare_dns_record",
+            "external_id": "rec-old",
+            "display_name": "CNAME shop.example.com",
+            "metadata": {"type": "CNAME", "name": "shop.example.com", "value": "cname.vercel-dns.com", "zone": "example.com", "hostname": "shop.example.com"},
+        }
+    ]
 
 
 def test_a_conflicting_record_this_runtime_does_not_own_is_refused_not_overwritten(monkeypatch):
@@ -166,7 +184,7 @@ def test_a_conflicting_record_this_runtime_does_not_own_is_refused_not_overwritt
     assert result.applied is False
     assert result.results[0].outcome == "conflict"
     assert update_calls == []  # never touched
-    assert world.inserted == [] and world.patched == []
+    assert world.recorded == []
 
 
 def test_with_no_credential_stored_nothing_is_applied(monkeypatch):

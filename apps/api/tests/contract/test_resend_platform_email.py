@@ -63,3 +63,24 @@ def test_a_500_is_still_a_refusal_here_unlike_the_tenant_channel(monkeypatch) ->
     monkeypatch.setattr(httpx, "post", lambda *a, **kw: Reply({"message": "upstream exploded"}, status=502))
     result = send_platform_email(api_key="k", sender="s", to="t", subject="s", text="t")
     assert result["ok"] is False
+
+
+def test_a_2xx_with_no_message_id_is_not_a_successful_send(monkeypatch) -> None:
+    # Nothing could ever correlate a later webhook back to this send without an id -- treated as
+    # a refusal, never recorded as ok with a null provider_message_id (work order 1 closeout, §6).
+    monkeypatch.setattr(httpx, "post", lambda *a, **kw: Reply({}))
+
+    result = send_platform_email(api_key="k", sender="s", to="t", subject="s", text="t")
+
+    assert result["ok"] is False
+    assert result["external_id"] is None
+    assert "no message id" in result["detail"]
+
+
+def test_a_2xx_with_an_empty_string_id_is_also_not_a_successful_send(monkeypatch) -> None:
+    monkeypatch.setattr(httpx, "post", lambda *a, **kw: Reply({"id": ""}))
+
+    result = send_platform_email(api_key="k", sender="s", to="t", subject="s", text="t")
+
+    assert result["ok"] is False
+    assert result["external_id"] is None

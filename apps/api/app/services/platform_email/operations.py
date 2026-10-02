@@ -94,7 +94,10 @@ def send_invitation_email(
         organization_id=organization_id,
         invitation_id=invitation_id,
         recipient=to,
-        state="sent" if result["ok"] else "failed",
+        # `queued`, not `sent`: Resend's synchronous 2xx means it was accepted into Resend's own
+        # send pipeline, never that it actually left -- `email.sent` is the provider's own later
+        # word for that, and is what advances this (work order 1 closeout, section 6).
+        state="queued" if result["ok"] else "failed",
         provider_message_id=result.get("external_id"),
         detail=result.get("detail"),
     )

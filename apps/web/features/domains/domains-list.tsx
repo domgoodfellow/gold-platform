@@ -81,6 +81,7 @@ export function DomainsList({
                       domainId={domain.id}
                       hostname={domain.hostname}
                       canRecheck={presentation !== 'conflict'}
+                      canApply={presentation === 'pending_dns' && isDnsAutomated(domain.hostname, cloudflareZones)}
                       canMakePrimary={presentation === 'active' && !domain.isPrimary}
                     />
                   );

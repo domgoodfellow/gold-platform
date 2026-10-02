@@ -109,7 +109,8 @@ def test_an_account_with_a_credential_is_tried_before_the_environment(monkeypatc
     send()
 
     assert world.sends[0]["api_key"] == "re_account_key"
-    assert world.deliveries[0]["state"] == "sent"
+    # queued, not sent: Resend's own email.sent webhook is what advances this later.
+    assert world.deliveries[0]["state"] == "queued"
     assert world.deliveries[0]["provider_message_id"] == "re_1"
 
 

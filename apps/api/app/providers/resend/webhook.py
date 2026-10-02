@@ -12,6 +12,7 @@ import base64
 import hashlib
 import hmac
 import time
+from datetime import datetime, timezone
 
 # How old a callback may be before it is treated as a replay rather than a late delivery.
 _TOLERANCE_SECONDS = 300
@@ -66,15 +67,50 @@ _EVENT_STATE = {
     "email.suppressed": "suppressed",
 }
 
+# Where each event's own useful words live, confirmed against Resend's current documented example
+# payload for each event (`resend.com/docs/webhooks/emails/<event>`) -- never the whole raw body,
+# which is kept in the append-only record instead, not surfaced to a person (section 5: do not
+# leak an entire raw provider response into a user-facing error). `email.sent`, `email.delivered`
+# and `email.delivery_delayed` carry no such nested object in Resend's current documented shape.
+_DETAIL_PATH = {
+    "email.bounced": ("bounce", "message"),
+    "email.failed": ("failed", "reason"),
+    "email.suppressed": ("suppressed", "message"),
+}
+
+
+def _detail(event_type: str, data: dict) -> str | None:
+    path = _DETAIL_PATH.get(event_type)
+    if path is None:
+        return None
+    nested = data.get(path[0])
+    if not isinstance(nested, dict):
+        return None
+    value = nested.get(path[1])
+    return str(value)[:500] if isinstance(value, str) and value else None
+
+
+def _event_at(body: dict) -> datetime | None:
+    """Resend's own `created_at` for the event -- not when this platform heard about it. `None`
+    for a missing or unparseable value; the caller falls back to its own ingestion time."""
+    raw = body.get("created_at")
+    if not isinstance(raw, str):
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except ValueError:
+        return None
+
 
 def parse_event(body: dict) -> dict | None:
-    """Resend's own event shape, turned into `{message_id, state, detail}` -- or `None` for an
-    event type this platform does not track (D56: the vendor's shape goes no further than this
-    file). A webhook handler records nothing for `None`, which is a 200, not a refusal: an event
-    this platform does not act on is not a failure to understand it."""
+    """Resend's own event shape, turned into `{message_id, state, detail, event_at}` -- or `None`
+    for an event type this platform does not track (D56: the vendor's shape goes no further than
+    this file). A webhook handler records nothing for `None`, which is a 200, not a refusal: an
+    event this platform does not act on is not a failure to understand it."""
     if not isinstance(body, dict):
         return None
-    state = _EVENT_STATE.get(str(body.get("type") or ""))
+    event_type = str(body.get("type") or "")
+    state = _EVENT_STATE.get(event_type)
     if state is None:
         return None
     data = body.get("data")
@@ -83,5 +119,9 @@ def parse_event(body: dict) -> dict | None:
     message_id = data.get("email_id")
     if not message_id:
         return None
-    reason = data.get("reason") if isinstance(data.get("reason"), str) else None
-    return {"message_id": str(message_id), "state": state, "detail": reason}
+    return {
+        "message_id": str(message_id),
+        "state": state,
+        "detail": _detail(event_type, data),
+        "event_at": _event_at(body),
+    }
