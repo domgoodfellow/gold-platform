@@ -4930,6 +4930,33 @@ export type Database = {
           },
         ]
       }
+      platform_allowance_counters: {
+        Row: {
+          allowance_key: string
+          counter_argument: string | null
+          counter_key: string
+          created_at: string
+          label: string
+          note: string
+        }
+        Insert: {
+          allowance_key: string
+          counter_argument?: string | null
+          counter_key: string
+          created_at?: string
+          label: string
+          note?: string
+        }
+        Update: {
+          allowance_key?: string
+          counter_argument?: string | null
+          counter_key?: string
+          created_at?: string
+          label?: string
+          note?: string
+        }
+        Relationships: []
+      }
       platform_billing_checkout_sessions: {
         Row: {
           environment: string
@@ -5527,22 +5554,31 @@ export type Database = {
       }
       platform_meters: {
         Row: {
+          aggregation: string
           created_at: string
           description: string
           id: string
+          label: string
           unit: string
+          writer: string | null
         }
         Insert: {
+          aggregation?: string
           created_at?: string
           description: string
           id: string
+          label: string
           unit: string
+          writer?: string | null
         }
         Update: {
+          aggregation?: string
           created_at?: string
           description?: string
           id?: string
+          label?: string
           unit?: string
+          writer?: string | null
         }
         Relationships: []
       }
@@ -7441,6 +7477,14 @@ export type Database = {
       }
       usage_events: {
         Row: {
+          allowance_consumed_before: number | null
+          allowance_included_applied: number | null
+          allowance_included_total: number | null
+          allowance_key: string | null
+          allowance_overage_quantity: number | null
+          allowance_window_basis: string | null
+          allowance_window_end: string | null
+          allowance_window_start: string | null
           billing_period: string | null
           created_at: string
           customer_charge_micros: number | null
@@ -7467,6 +7511,14 @@ export type Database = {
           source_record_id: string | null
         }
         Insert: {
+          allowance_consumed_before?: number | null
+          allowance_included_applied?: number | null
+          allowance_included_total?: number | null
+          allowance_key?: string | null
+          allowance_overage_quantity?: number | null
+          allowance_window_basis?: string | null
+          allowance_window_end?: string | null
+          allowance_window_start?: string | null
           billing_period?: string | null
           created_at?: string
           customer_charge_micros?: number | null
@@ -7493,6 +7545,14 @@ export type Database = {
           source_record_id?: string | null
         }
         Update: {
+          allowance_consumed_before?: number | null
+          allowance_included_applied?: number | null
+          allowance_included_total?: number | null
+          allowance_key?: string | null
+          allowance_overage_quantity?: number | null
+          allowance_window_basis?: string | null
+          allowance_window_end?: string | null
+          allowance_window_start?: string | null
           billing_period?: string | null
           created_at?: string
           customer_charge_micros?: number | null
@@ -8454,6 +8514,34 @@ export type Database = {
         Args: { p_organization_id: string; p_route_id: string }
         Returns: number
       }
+      allowance_decision: {
+        Args: {
+          p_allowance_key: string
+          p_at?: string
+          p_organization_id: string
+          p_requested_quantity?: number
+        }
+        Returns: {
+          allowance_key: string
+          consumed: number
+          detail: string
+          enforcement: string
+          governed: boolean
+          hard_limit: number
+          included: number
+          included_applied: number
+          label: string
+          overage_applied: number
+          overage_behavior: string
+          permitted: boolean
+          remaining: number
+          result: string
+          unit: string
+          window_basis: string
+          window_ends_at: string
+          window_starts_at: string
+        }[]
+      }
       apply_import_run: {
         Args: { p_organization_id: string; p_run_id: string }
         Returns: undefined
@@ -8886,6 +8974,38 @@ export type Database = {
         }
         Returns: string
       }
+      organization_allowance_state: {
+        Args: {
+          p_allowance_key?: string
+          p_at?: string
+          p_organization_id: string
+        }
+        Returns: {
+          allowance_key: string
+          allowance_type: string
+          configuration_error: string
+          consumed: number
+          contributions: Json
+          enforcement: string
+          hard_limit: number
+          included: number
+          label: string
+          meter_id: string
+          overage_behavior: string
+          overage_policy: string
+          overage_quantity: number
+          period: string
+          remaining: number
+          reserved: number
+          reset_semantics: string
+          service_class: string
+          state: string
+          unit: string
+          window_basis: string
+          window_ends_at: string
+          window_starts_at: string
+        }[]
+      }
       organization_commercial_summary: {
         Args: { p_from?: string; p_organization_id: string; p_to?: string }
         Returns: {
@@ -8976,6 +9096,15 @@ export type Database = {
       organization_usage_detail: {
         Args: { p_organization_id: string }
         Returns: {
+          allowance_consumed_before: number
+          allowance_included_applied: number
+          allowance_included_total: number
+          allowance_key: string
+          allowance_overage_quantity: number
+          allowance_state: string
+          allowance_window_basis: string
+          allowance_window_end: string
+          allowance_window_start: string
           awaiting_reconciliation: boolean
           customer_charge_micros: number
           customer_currency: string
@@ -9103,6 +9232,14 @@ export type Database = {
           p_to?: string
         }
         Returns: {
+          allowance_included_applied: number
+          allowance_included_total: number
+          allowance_key: string
+          allowance_overage_quantity: number
+          allowance_state: string
+          allowance_window_basis: string
+          allowance_window_end: string
+          allowance_window_start: string
           component_count: number
           cost_state: string
           customer_charge_micros: number
@@ -9114,6 +9251,8 @@ export type Database = {
           organization_name: string
           quantity: number
           reporting_currency: string
+          retail_rate_id: string
+          retail_state: string
           source_domain: string
           source_record_id: string
           usage_event_id: string

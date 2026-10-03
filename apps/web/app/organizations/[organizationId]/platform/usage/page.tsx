@@ -72,7 +72,7 @@ export default async function UsageEconomicsPage({
         </SelectInput>
         <SelectInput name="meter" defaultValue={meterId} aria-label="Meter" size="small">
           <option value="">All meters</option>
-          {meters.map((meter) => <option key={meter.id} value={meter.id}>{meter.description}</option>)}
+          {meters.map((meter) => <option key={meter.id} value={meter.id}>{meter.label}</option>)}
         </SelectInput>
         <SelectInput name="provider" defaultValue={providerKey} aria-label="Provider" size="small">
           <option value="">All providers</option>
@@ -102,8 +102,11 @@ export default async function UsageEconomicsPage({
           empty="No usage for this period."
           columns={[
             { key: 'organization', header: 'Organization', emphasis: 'primary', cell: (event) => <UsageEventDrawer event={event} components={components.get(event.id) ?? []} meterUnit={meterById.get(event.meterId)?.unit ?? 'unit'} /> },
-            { key: 'meter', header: 'Meter', cell: (event) => event.meterId.replaceAll('_', ' ') },
+            { key: 'meter', header: 'Meter', cell: (event) => meterById.get(event.meterId)?.label ?? event.meterId },
             { key: 'usage', header: 'Usage', numeric: true, cell: (event) => formatUsage(event.quantity, meterById.get(event.meterId)?.unit ?? 'unit') },
+            { key: 'included', header: 'Included', numeric: true, cell: (event) => event.allowanceKey === null ? '—' : formatUsage(event.includedQuantity ?? 0, meterById.get(event.meterId)?.unit ?? 'unit') },
+            { key: 'billable', header: 'Billable', numeric: true, cell: (event) => formatUsage(event.allowanceKey === null ? event.quantity : (event.overageQuantity ?? 0), meterById.get(event.meterId)?.unit ?? 'unit') },
+            { key: 'charge', header: 'Customer charge', numeric: true, cell: (event) => event.retailState === 'priced' ? formatMicrosMoney(event.customerChargeMicros, event.customerCurrency, 4) : event.retailState === 'no_currency' ? 'No currency' : 'Unpriced' },
             { key: 'cost', header: 'Known cost', numeric: true, cell: (event) => event.costState === 'unknown' ? (event.knownCostMicros > 0 ? `${formatMicrosMoney(event.knownCostMicros, event.reportingCurrency)} + unknown` : '—') : formatMicrosMoney(event.knownCostMicros, event.reportingCurrency) },
             { key: 'status', header: 'Status', cell: (event) => event.costState === 'unknown' ? 'Cost unknown' : event.costState },
             { key: 'occurred', header: 'Occurred', emphasis: 'secondary', cell: (event) => new Date(event.occurredAt).toLocaleString() },

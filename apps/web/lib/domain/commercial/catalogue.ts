@@ -13,8 +13,18 @@ import { DomainError } from '@/lib/domain/errors';
 
 export type Meter = {
   id: string;
+  /** What this meter is called where a person reads it. One string, never spelled from the id. */
+  label: string;
   unit: string;
   description: string;
+  /** How readings combine over an allowance window — `app.allowance_consumption` obeys it. */
+  aggregation: 'sum' | 'high_water';
+  /**
+   * The function that records usage on this meter, or null for a meter that is vocabulary only.
+   * **Defining a meter is not the same claim as recording it** — a Plan allowance over a meter
+   * with no writer would promise tracking that does not happen.
+   */
+  writer: string | null;
 };
 
 export type Provider = {
@@ -103,12 +113,28 @@ export function microsToMinor(micros: number): number {
 export async function listMeters(db: Db): Promise<Meter[]> {
   const { data, error } = await db
     .from('platform_meters')
-    .select('id, unit, description')
-    .order('id');
+    .select('id, label, unit, description, aggregation, writer')
+    .order('label');
 
   if (error) throw new DomainError(error.message, 'commercial.meters_failed');
 
-  return data ?? [];
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    label: row.label,
+    unit: row.unit,
+    description: row.description,
+    aggregation: row.aggregation as Meter['aggregation'],
+    writer: row.writer,
+  }));
+}
+
+/**
+ * Which meters something actually records, and which are vocabulary only. Derived from each
+ * meter's own `writer`, which an architecture test checks against `pg_proc` — so "this is
+ * tracked" is a claim the schema can be held to rather than one a document makes.
+ */
+export function meterIsRecorded(meter: Meter): boolean {
+  return meter.writer !== null;
 }
 
 /** Who GOLD can pay for a unit of a meter — decoupled on purpose (D43's correction): two

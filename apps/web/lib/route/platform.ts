@@ -3,7 +3,12 @@ import { cache } from 'react';
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import type { Db } from '@/lib/db/types';
-import { platformPermissions, type PlatformCapability } from '@/lib/domain/platform/permissions';
+import { DomainError } from '@/lib/domain/errors';
+import {
+  PLATFORM_CAPABILITY_LABELS,
+  platformPermissions,
+  type PlatformCapability,
+} from '@/lib/domain/platform/permissions';
 import { findGoldInternalOrganization, isGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import { listMyOrganizations, type Organization } from '@/lib/domain/tenancy/organizations';
 import { platformDestinationsFor, platformHref } from '@/lib/platform-navigation';
@@ -95,4 +100,35 @@ export function revalidatePlatform(): void {
 export function revalidateFinance(): void {
   revalidatePath('/organizations/[organizationId]/finance', 'layout');
   revalidatePlatform();
+}
+
+/**
+ * The capability guard a Platform **server action** runs for itself.
+ *
+ * `requirePlatformArea` is the route-shaped guard: it answers `notFound()`/`redirect()`, which a
+ * server action that wraps its work in a try/catch would swallow into an error message. This one
+ * proves the same three facts and throws a `DomainError` an action can report:
+ *
+ *   GildOps' own organization, resolved from the caller's own memberships and GildOps' current
+ *     Plan — never from a `goldId` a form supplied, which is a parameter the caller chose (D17);
+ *   membership of it, which is what resolving it from those memberships establishes;
+ *   the permission, read live from the caller's own `platform_staff` row (D45).
+ *
+ * **UI visibility is not an authorization boundary.** Every canonical commercial mutation calls
+ * this before it writes, and the function behind it checks `app.require_platform_capability`
+ * again — the screen hiding a control is courtesy, these two are the boundary.
+ */
+export async function requirePlatformCapability(required: PlatformCapability): Promise<string> {
+  const goldId = await callerGoldInternalOrganizationId();
+  if (!goldId) {
+    throw new DomainError('Only GildOps platform staff may do this.', 'platform.capability_denied');
+  }
+  const permissions = await platformPermissions(await getDb());
+  if (!permissions.has(required)) {
+    throw new DomainError(
+      `This needs the "${PLATFORM_CAPABILITY_LABELS[required]}" platform permission.`,
+      'platform.capability_denied',
+    );
+  }
+  return goldId;
 }

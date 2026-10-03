@@ -6,6 +6,8 @@ import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { settingsLandingHref } from '@/lib/route/settings';
 import type { PlanUsageModel } from '@/lib/application/settings/plan-usage';
 import { ManageBillingButton, SubscribeButton } from '@/features/settings/platform-billing-forms';
+import { AllowanceMeter } from '@/features/catalogue/allowance-meter';
+import type { UsageEvent } from '@/lib/domain/commercial/usage';
 
 function formatMinor(amountMinor: number, currency: string | null): string {
   if (!currency) return String(amountMinor);
@@ -16,6 +18,36 @@ function formatMinor(amountMinor: number, currency: string | null): string {
   }
 }
 
+
+/**
+ * How much of one reading the plan covered. Reads the split `app.record_usage` stored at the
+ * moment the usage occurred — nothing is recomputed here against today's plan, which is what
+ * keeps an old reading saying what it said when it happened (I8).
+ */
+function usageSplit(entry: UsageEvent): string {
+  switch (entry.allowanceApplication) {
+    case 'included':
+      return 'included in the plan';
+    case 'partly_included':
+      return `${entry.includedQuantity?.toLocaleString('en-CA')} included · ${entry.overageQuantity?.toLocaleString('en-CA')} additional`;
+    case 'overage':
+      return 'additional usage';
+    default:
+      return '';
+  }
+}
+
+/**
+ * Three different financial facts, never one zero: covered by the allowance, rated at nothing, or
+ * carrying no rate at all.
+ */
+function usageCharge(entry: UsageEvent, format: (minor: number, currency: string | null) => string): string {
+  if (entry.retailState === 'no_currency') return 'No currency set';
+  if (entry.retailState === 'no_rate') return 'Not priced yet';
+  if (entry.customerChargeMinor === 0 && entry.allowanceApplication === 'included') return 'No extra charge';
+  return format(entry.customerChargeMinor ?? 0, entry.customerCurrency);
+}
+
 /**
  * What this business is entitled to use, what GOLD has recorded selling it, what it used, and
  * what that cost it — never what it cost GOLD, and never a margin (`constraints.md` D43). A
@@ -23,8 +55,8 @@ function formatMinor(amountMinor: number, currency: string | null): string {
  * one `navigation.ts` also owns.
  */
 export function PlanUsageScreen({ organizationId, currency, model }: { organizationId: string; currency: string | null; model: PlanUsageModel }) {
-  const { terms, usage, account, basePlan, addonPlans, quotas, productLabel, billingProvider,
-    subscription, subscribablePrice, canManageBilling } = model;
+  const { terms, usage, account, basePlan, addonPlans, allowances, meterLabel, productLabel,
+    billingProvider, subscription, subscribablePrice, canManageBilling } = model;
 
   return (
     <SettingsPageFrame>
@@ -92,19 +124,15 @@ export function PlanUsageScreen({ organizationId, currency, model }: { organizat
         </Section>
       ) : null}
 
-      {quotas.length > 0 ? (
+      {allowances.length > 0 ? (
         <Section className="mt-8">
-          <SectionHeading>Usage allowances</SectionHeading>
+          <SectionHeading>What’s included</SectionHeading>
+          <Hint className="mt-1">
+            What this business’s plan allows, how much of it has been used, and when it resets.
+          </Hint>
           <DividedList as="div" className="mt-2">
-            {quotas.map((quota) => (
-              <div key={`${quota.planKey}-${quota.allowanceKey}`} className="flex flex-wrap items-baseline gap-x-3 py-2 text-sm">
-                <span className="font-medium">{quota.label}</span>
-                <span className="text-muted">
-                  {quota.includedQuantity.toLocaleString()} {quota.unit}
-                  {quota.period !== 'none' ? ` / ${quota.period}` : ''}
-                </span>
-                {quota.overridden ? <span className="text-xs text-subtle">(adjusted for this business)</span> : null}
-              </div>
+            {allowances.map((allowance) => (
+              <AllowanceMeter key={allowance.allowanceKey} state={allowance} />
             ))}
           </DividedList>
         </Section>
@@ -145,9 +173,10 @@ export function PlanUsageScreen({ organizationId, currency, model }: { organizat
                 <span className="tabular-nums text-subtle">
                   {new Date(entry.occurredAt).toLocaleString('en-CA')}
                 </span>
-                <span className="font-medium">{entry.meterId}</span>
-                <span>{entry.quantity}</span>
-                <span className="tabular-nums">{entry.customerChargeMinor === null ? 'Not priced yet' : formatMinor(entry.customerChargeMinor, entry.customerCurrency)}</span>
+                <span className="font-medium">{meterLabel.get(entry.meterId) ?? entry.meterId}</span>
+                <span className="tabular-nums">{entry.quantity.toLocaleString('en-CA')}</span>
+                <span className="text-xs text-subtle">{usageSplit(entry)}</span>
+                <span className="tabular-nums">{usageCharge(entry, formatMinor)}</span>
               </div>
             ))}
           </DividedList>

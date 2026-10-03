@@ -58,12 +58,21 @@ describe('SECURITY DEFINER functions in app', () => {
         'is_organization_member',
         'is_platform_staff',
         'require_platform_staff',
+        // The same pair, narrowed to one named platform permission rather than platform-staff
+        // membership in general (Work Order A0) — `has_platform_capability` for a policy
+        // predicate, `require_platform_capability` for a door's own body.
+        'has_platform_capability',
+        'require_platform_capability',
         // Called by invoker functions (`open_call`, `set_calling_number`, the entitlement readers)
         // and by one policy (`publishes_bookings`).
         'may_spend_on',
         'phone_number_owner',
         'plan_grants_feature',
         'publishes_bookings',
+        // `open_call`'s own gate, one layer under `may_spend_on`: an allowance and the prepaid
+        // purse are two separate questions, and this is the one that answers both at once with
+        // enough provenance to tell a caller which refused it.
+        'spend_decision',
       ].sort(),
     );
   });

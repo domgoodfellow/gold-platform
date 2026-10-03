@@ -1,8 +1,19 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import type { AllowanceApplication, RetailState } from './usage';
 
 export type CostState = 'estimated' | 'reconciled' | 'unknown';
 
+/**
+ * One usage event, read as two independent accounts and never as one blended rate:
+ *
+ *   **the customer's** — which allowance governed it, how much of it that allowance included,
+ *     how much was therefore billable, and the retail charge that produced;
+ *   **GildOps'** — the provider components beneath it, the known COGS and its cost state.
+ *
+ * Both come from `platform_usage_economics`, staff-only, so neither half can reach a tenant
+ * screen through this type.
+ */
 export type EconomicsEvent = {
   id: string;
   organizationId: string;
@@ -14,6 +25,16 @@ export type EconomicsEvent = {
   sourceRecordId: string | null;
   customerCurrency: string | null;
   customerChargeMicros: number | null;
+  /** The customer side: allowance, the split of this event's quantity, and the rating state. */
+  allowanceKey: string | null;
+  allowanceIncludedTotal: number | null;
+  includedQuantity: number | null;
+  overageQuantity: number | null;
+  allowanceWindow: { startsAt: string | null; endsAt: string | null; basis: string | null };
+  allowanceApplication: AllowanceApplication;
+  retailState: RetailState;
+  retailRateId: string | null;
+  /** GildOps' side. */
   componentCount: number;
   knownCostMicros: number;
   reportingCurrency: string | null;
@@ -72,6 +93,21 @@ export async function listEconomicsEvents(
     sourceRecordId: row.source_record_id,
     customerCurrency: row.customer_currency,
     customerChargeMicros: row.customer_charge_micros === null ? null : Number(row.customer_charge_micros),
+    allowanceKey: row.allowance_key,
+    allowanceIncludedTotal:
+      row.allowance_included_total === null ? null : Number(row.allowance_included_total),
+    includedQuantity:
+      row.allowance_included_applied === null ? null : Number(row.allowance_included_applied),
+    overageQuantity:
+      row.allowance_overage_quantity === null ? null : Number(row.allowance_overage_quantity),
+    allowanceWindow: {
+      startsAt: row.allowance_window_start,
+      endsAt: row.allowance_window_end,
+      basis: row.allowance_window_basis,
+    },
+    allowanceApplication: row.allowance_state as AllowanceApplication,
+    retailState: row.retail_state as RetailState,
+    retailRateId: row.retail_rate_id,
     componentCount: Number(row.component_count),
     knownCostMicros: Number(row.known_cost_micros),
     reportingCurrency: row.reporting_currency,

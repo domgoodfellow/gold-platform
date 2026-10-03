@@ -14,21 +14,65 @@ import { DomainError } from '@/lib/domain/errors';
  * (I10).
  */
 
+/**
+ * Why this event's charge is what it is, on the rate axis. Unchanged vocabulary: `priced` covers
+ * a price of nothing, which is a different fact from having no rate at all.
+ */
+export type RetailState = 'priced' | 'no_currency' | 'no_rate';
+
+/**
+ * How much of the event the allowance covered — the axis that is *not* about the rate. Read with
+ * `retailState` it tells three financial facts apart that one zero used to hide: usage that was
+ * **included** (covered, so nothing to charge), usage that was **zero-priced** (rated, at
+ * nothing) and usage that is **unpriced** (no rate at all).
+ */
+export type AllowanceApplication = 'included' | 'partly_included' | 'overage' | 'ungoverned';
+
 export type UsageEvent = {
   id: string;
   organizationId: string;
   meterId: string;
+  /** The usage that happened, always in full — never only the chargeable part. */
   quantity: number;
   occurredAt: string;
-  /** What the tenant trades in — never GOLD's own cost, and never a provider's billing currency. Null when the business has not said. */
+  /** What the tenant trades in — never GildOps' own cost, and never a provider's billing currency. Null when the business has not said. */
   customerCurrency: string | null;
   /**
-   * The retail charge, in minor units — never GOLD's own cost. **Null means not priced**, which is
-   * not the same as a price of zero: the business has no currency, or the meter has no rate.
+   * The retail charge, in minor units — never GildOps' own cost. **Null means not priced**, which
+   * is not the same as a price of zero: the business has no currency, or the meter has no rate.
    */
   customerChargeMinor: number | null;
+  /** The allowance that governed this event, or null when none in the package did. */
+  allowanceKey: string | null;
+  /** Of this event's quantity: what the allowance covered, and what was therefore billable. */
+  includedQuantity: number | null;
+  overageQuantity: number | null;
+  /** The window the split was decided in, and which fact fixed its boundaries. */
+  window: { startsAt: string | null; endsAt: string | null; basis: string | null };
+  retailState: RetailState;
+  allowanceApplication: AllowanceApplication;
   note: string;
 };
+
+/**
+ * Both derivations live here rather than in two screens. Neither invents a number: each reads
+ * columns `app.record_usage` wrote at the moment the usage occurred.
+ */
+function retailState(row: { customer_charge_micros: unknown; customer_currency: string | null }): RetailState {
+  if (row.customer_charge_micros !== null) return 'priced';
+  return row.customer_currency === null ? 'no_currency' : 'no_rate';
+}
+
+function allowanceApplication(row: {
+  allowance_key: string | null;
+  allowance_included_applied: string | number | null;
+  allowance_overage_quantity: string | number | null;
+}): AllowanceApplication {
+  if (row.allowance_key === null) return 'ungoverned';
+  if (Number(row.allowance_overage_quantity) === 0) return 'included';
+  if (Number(row.allowance_included_applied) === 0) return 'overage';
+  return 'partly_included';
+}
 
 /** Tenant-safe: selects only the columns `usage_events` grants `authenticated`. */
 export async function listUsageEvents(
@@ -37,7 +81,7 @@ export async function listUsageEvents(
 ): Promise<UsageEvent[]> {
   const { data, error } = await db
     .from('usage_events')
-    .select('id, organization_id, meter_id, quantity, occurred_at, customer_currency, customer_charge_micros, note')
+    .select('id, organization_id, meter_id, quantity, occurred_at, customer_currency, customer_charge_micros, note, allowance_key, allowance_included_applied, allowance_overage_quantity, allowance_window_start, allowance_window_end, allowance_window_basis')
     .eq('organization_id', input.organizationId)
     .order('occurred_at', { ascending: false })
     .limit(input.limit ?? 100);
@@ -53,6 +97,16 @@ export async function listUsageEvents(
     customerCurrency: row.customer_currency,
     customerChargeMinor:
       row.customer_charge_micros === null ? null : Math.round(Number(row.customer_charge_micros) / 1_000_000),
+    allowanceKey: row.allowance_key,
+    includedQuantity: row.allowance_included_applied === null ? null : Number(row.allowance_included_applied),
+    overageQuantity: row.allowance_overage_quantity === null ? null : Number(row.allowance_overage_quantity),
+    window: {
+      startsAt: row.allowance_window_start,
+      endsAt: row.allowance_window_end,
+      basis: row.allowance_window_basis,
+    },
+    retailState: retailState(row),
+    allowanceApplication: allowanceApplication(row),
     note: row.note,
   }));
 }
@@ -135,7 +189,16 @@ export type UsageEventDetail = {
   /** Null means not priced, which is different from a price of zero — see `retailState`. */
   customerChargeMinor: number | null;
   /** Priced (a price of nothing included), or why it is not: no currency, or no rate. */
-  retailState: 'priced' | 'no_currency' | 'no_rate';
+  retailState: RetailState;
+  /** The allowance that governed it, the window the split was decided in, and the split itself. */
+  allowanceKey: string | null;
+  allowanceIncludedTotal: number | null;
+  allowanceConsumedBefore: number | null;
+  includedQuantity: number | null;
+  overageQuantity: number | null;
+  allowanceWindow: { startsAt: string | null; endsAt: string | null; basis: string | null };
+  /** The allowance axis, orthogonal to `retailState` — see `AllowanceApplication`. */
+  allowanceApplication: AllowanceApplication;
   /** Costed by a provider rate, not costed yet, or carrying no provider cost at all. */
   providerState: 'costed' | 'uncosted' | 'not_applicable';
   /** How the usage was carried: the business's own binding, GOLD's account, or not recorded. */
@@ -179,7 +242,22 @@ export async function organizationUsageDetail(
     customerCurrency: row.customer_currency,
     customerChargeMinor:
       row.customer_charge_micros === null ? null : Math.round(Number(row.customer_charge_micros) / 1_000_000),
-    retailState: row.retail_state as UsageEventDetail['retailState'],
+    retailState: row.retail_state as RetailState,
+    allowanceKey: row.allowance_key,
+    allowanceIncludedTotal:
+      row.allowance_included_total === null ? null : Number(row.allowance_included_total),
+    allowanceConsumedBefore:
+      row.allowance_consumed_before === null ? null : Number(row.allowance_consumed_before),
+    includedQuantity:
+      row.allowance_included_applied === null ? null : Number(row.allowance_included_applied),
+    overageQuantity:
+      row.allowance_overage_quantity === null ? null : Number(row.allowance_overage_quantity),
+    allowanceWindow: {
+      startsAt: row.allowance_window_start,
+      endsAt: row.allowance_window_end,
+      basis: row.allowance_window_basis,
+    },
+    allowanceApplication: row.allowance_state as AllowanceApplication,
     providerState: row.provider_state as UsageEventDetail['providerState'],
     fulfilledThrough: row.fulfilled_through as UsageEventDetail['fulfilledThrough'],
     awaitingReconciliation: row.awaiting_reconciliation,

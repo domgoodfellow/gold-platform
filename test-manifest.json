@@ -1038,6 +1038,14 @@
       ],
       "note": "Also reads apps/api/app/ai/tools.py."
     },
+    "apps/web/tests/integration/database/allowances.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "catalogue",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/assets.test.ts": {
       "category": "database-integration",
       "concerns": [

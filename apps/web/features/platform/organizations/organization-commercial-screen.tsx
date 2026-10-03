@@ -2,6 +2,7 @@ import { platformHref } from '@/lib/platform-navigation';
 import { AppPage } from '@/components/layout/app-page';
 import { GroupHeading, SectionHeading } from '@/components/surfaces/section';
 import { DataTable } from '@/components/display/table';
+import { AllowanceMeter } from '@/features/catalogue/allowance-meter';
 import { Badge } from '@/components/display/data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
@@ -214,6 +215,11 @@ export function OrganizationCommercialScreen({
                     <dt className="text-xs text-muted-foreground">Overage</dt>
                     <dd className="text-right text-xs">{allowance.overageBehavior ? OVERAGE_BEHAVIOR_LABEL[allowance.overageBehavior] : '—'}</dd>
                   </dl>
+                  {allowance.runtime ? (
+                    <div className="mt-2 border-t border-border pt-1">
+                      <AllowanceMeter state={allowance.runtime} className="py-0" />
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

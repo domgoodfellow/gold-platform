@@ -18,6 +18,10 @@ import {
   type PlanQuotaOverride,
   type ResolvedFeatureState,
 } from '@/lib/domain/catalogue/organization-plans';
+import {
+  organizationAllowanceStates,
+  type OrganizationAllowanceState,
+} from '@/lib/domain/commercial/allowances';
 
 /**
  * The Organization Commercial Account: one compositional read model over the canonical
@@ -57,6 +61,16 @@ export type OrganizationAllowance = {
     effective: number;
   };
   overridden: boolean;
+  /**
+   * What is actually being consumed against this allowance right now — the resolver's own
+   * answer, the same one `app.record_usage` and `open_call` enforce against. Null for a
+   * configured allowance the runtime resolver returns no state for.
+   *
+   * **Configuration and consumption stay separate concepts.** The fields above are what was
+   * agreed; this is what is happening. They are shown side by side and never merged into one
+   * number, because "1,500 SMS included" and "1,082 used" answer different questions.
+   */
+  runtime: OrganizationAllowanceState | null;
 };
 
 export type CommercialFeatureGroup = {
@@ -110,7 +124,14 @@ async function buildAllowances(
   input: { organizationId: string },
   planById: Map<string, Plan>,
 ): Promise<OrganizationAllowance[]> {
-  const effective = await organizationEffectiveQuotas(db, { organizationId: input.organizationId });
+  // The raw contributions (one row per contributing Plan, with the override applied) stay the
+  // provenance this screen is for; the resolved runtime state is read alongside them rather than
+  // replacing them, and neither is derived from the other here.
+  const [effective, runtimeStates] = await Promise.all([
+    organizationEffectiveQuotas(db, { organizationId: input.organizationId }),
+    organizationAllowanceStates(db, { organizationId: input.organizationId }),
+  ]);
+  const runtimeByKey = new Map(runtimeStates.map((state) => [state.allowanceKey, state]));
   const planByKey = new Map([...planById.values()].map((plan) => [plan.key, plan]));
   const planIds = [...new Set(effective.map((quota) => planByKey.get(quota.planKey)?.id).filter((id): id is string => Boolean(id)))];
   const quotasByPlan = new Map(await Promise.all(planIds.map(async (planId) => [planId, await listPlanQuotas(db, planId)] as const)));
@@ -134,6 +155,7 @@ async function buildAllowances(
         effective: quota.includedQuantity,
       },
       overridden: quota.overridden,
+      runtime: runtimeByKey.get(quota.allowanceKey) ?? null,
     };
   });
 }
