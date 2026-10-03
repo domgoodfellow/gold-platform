@@ -1,7 +1,17 @@
-import { EmptyState } from '@/components/surfaces/section';
+import { ButtonLink } from '@/components/controls/button';
 import type { ResourceSchedule } from '@/lib/domain/scheduling/availability';
-import { clipWindow, zonedTimeToInstant, type Window } from '@/lib/domain/scheduling/window';
+import { clipWindow, todayInZone, type Window } from '@/lib/domain/scheduling/window';
+import {
+  computeDisplayAxisBounds,
+  hourMarksFor,
+  makeAxisScale,
+  PX_PER_HOUR,
+} from './calendar-geometry';
+import { formatHourLabel } from './calendar-format';
 import { ScheduleEvent } from './schedule-event';
+
+/** The lane header row's own height (`h-9`, every lane and the time rail alike) — what the "now" line's pixel offset has to clear before the hour axis itself begins. */
+const LANE_HEADER_PX = 36;
 
 /**
  * "What is each Resource doing today, and when?" — a time axis on the left, one lane per visible
@@ -9,195 +19,168 @@ import { ScheduleEvent } from './schedule-event';
  * once, a lane never has to lay out an overlap: every booking gets its own absolutely-positioned
  * block, offset and sized from its real instants, and nothing here recomputes whether two of them
  * collide.
- */
-
-const PX_PER_HOUR = 56;
-const HOUR_MS = 3_600_000;
-
-function hourParts(instant: string, timeZone: string): { date: string; hour: number; minute: number } {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date(instant));
-  const field = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
-  return { date: `${field('year')}-${field('month')}-${field('day')}`, hour: Number(field('hour')) % 24, minute: Number(field('minute')) };
-}
-
-/** The start of the tenant's own clock-hour an instant falls in — the timeline's lower bound. */
-function floorToHour(instant: string, timeZone: string): string {
-  const { date, hour } = hourParts(instant, timeZone);
-  return zonedTimeToInstant(date, `${String(hour).padStart(2, '0')}:00`, timeZone);
-}
-
-/**
- * The start of the next tenant clock-hour, unless the instant already lands exactly on one —
- * the timeline's upper bound. Stepping by real time from here across a DST transition can drift
- * the label by an hour on that one day of the year; the events themselves are always positioned
- * from real instants regardless, so only a gridline label could ever be affected.
- */
-function ceilToHour(instant: string, timeZone: string): string {
-  const { date, hour, minute } = hourParts(instant, timeZone);
-  const floor = zonedTimeToInstant(date, `${String(hour).padStart(2, '0')}:00`, timeZone);
-  return minute === 0 ? floor : new Date(new Date(floor).getTime() + HOUR_MS).toISOString();
-}
-
-function formatHourLabel(instant: string, timeZone: string): string {
-  return new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit' }).format(new Date(instant));
-}
-
-/**
- * What the timeline spans — real anchors only, never an invented business day. `open` counts as
- * an anchor only when the business has actually said something (`showOpen`); an unconfigured
- * schedule's default "whole day" is not a claim worth drawing a 24-hour axis around, so an
- * otherwise-empty day falls through to the empty state instead.
  *
- * Bookings contribute their *display* window — clipped to this tenant calendar day — never the
- * canonical one: a booking that spans midnight would otherwise pull the axis (and the day's own
- * events) past the day it is being drawn for.
+ * The board itself is never replaced by prose (`CLAUDE.md`'s empty-state rules): zero Resources,
+ * zero bookings and unconfigured hours each change what is drawn *inside* the grid, never whether
+ * the grid exists.
  */
-function computeAxisBounds(open: Window[], resources: ResourceSchedule[], within: Window, showOpen: boolean): Window | null {
-  const candidates: Window[] = showOpen ? [...open] : [];
-  for (const entry of resources) {
-    for (const booking of entry.booked) {
-      const displayed = clipWindow(booking.window, within);
-      if (displayed) candidates.push(displayed);
-    }
-  }
-  if (candidates.length === 0) return null;
-
-  return {
-    startsAt: candidates.reduce((min, window) => (window.startsAt < min ? window.startsAt : min), candidates[0].startsAt),
-    endsAt: candidates.reduce((max, window) => (window.endsAt > max ? window.endsAt : max), candidates[0].endsAt),
-  };
-}
 
 export function DaySchedule({
   organizationId,
+  date,
   within,
   open,
   resources,
   hasConfiguredHours,
   timezone,
+  resourcesHref,
+  mayAddResource,
 }: {
   organizationId: string;
+  date: string;
   /** This tenant calendar day's own bounds (`ScheduleDay.within`) — what a booking's display window is clipped to. */
   within: Window;
-  /** This day's own open periods, from `ScheduleDay.open` — used only to decide whether there is anything to anchor an otherwise-empty day's axis to. */
+  /** This day's own open periods, from `ScheduleDay.open`. */
   open: Window[];
   resources: ResourceSchedule[];
-  /** Whether this business has configured opening hours anywhere at all — see `computeAxisBounds`. */
+  /** Whether this business has configured opening hours anywhere at all. */
   hasConfiguredHours: boolean;
   timezone: string;
+  resourcesHref: string;
+  mayAddResource: boolean;
 }) {
-  if (resources.length === 0) {
-    return (
-      <EmptyState className="mt-6">
-        Nothing to schedule against yet. A resource is whoever or whatever work occupies for a
-        window — a technician, a van, a machine.
-      </EmptyState>
-    );
-  }
-
-  const showOpen = hasConfiguredHours;
-  const bounds = computeAxisBounds(open, resources, within, showOpen);
-
-  if (!bounds) {
-    return (
-      <EmptyState className="mt-6">
-        {hasConfiguredHours
-          ? 'Closed — no hours are configured for this day, and nothing is scheduled.'
-          : 'Nothing is scheduled, and this business has not set opening hours — there is nothing yet to anchor a timeline to.'}
-      </EmptyState>
-    );
-  }
-
-  const start = floorToHour(bounds.startsAt, timezone);
-  const end = ceilToHour(bounds.endsAt, timezone);
-  const totalMs = Math.max(new Date(end).getTime() - new Date(start).getTime(), HOUR_MS);
-  const hourCount = Math.round(totalMs / HOUR_MS);
-  const hourMarks = Array.from({ length: hourCount + 1 }, (_, index) =>
-    new Date(new Date(start).getTime() + index * HOUR_MS).toISOString(),
-  );
+  const { bounds, hasRealContent } = computeDisplayAxisBounds({
+    date,
+    timeZone: timezone,
+    within,
+    open,
+    resources,
+    hasConfiguredHours,
+  });
+  const { marks: hourMarks, hourCount } = hourMarksFor(bounds);
   const laneHeight = hourCount * PX_PER_HOUR;
+  const { offsetPct, heightPct } = makeAxisScale(bounds);
 
-  const offsetPct = (instant: string) => ((new Date(instant).getTime() - new Date(start).getTime()) / totalMs) * 100;
-  const heightPct = (from: string, to: string) => ((new Date(to).getTime() - new Date(from).getTime()) / totalMs) * 100;
+  const closedDay = hasConfiguredHours && open.length === 0;
+
+  // The "now" line — a presentation-only marker, drawn only on the day actually being viewed and
+  // only when the current instant falls inside the axis being drawn; it asserts nothing about
+  // availability and reads no state back.
+  const now = new Date().toISOString();
+  const showNowLine = date === todayInZone(timezone) && now >= bounds.startsAt && now <= bounds.endsAt;
+  const nowTopPx = LANE_HEADER_PX + (offsetPct(now) / 100) * laneHeight;
 
   return (
-    <div className="mt-6 overflow-x-auto">
-      <p className="mb-2 text-xs text-muted">
-        Shaded time is that resource&rsquo;s own free time, and advisory (I6) — the exclusion
-        constraint decides at the moment of booking.
-      </p>
-      <div className="flex" style={{ width: 'max-content' }}>
-        <div className="w-14 shrink-0">
-          <div className="h-8" aria-hidden />
-          <div className="relative" style={{ height: `${laneHeight}px` }}>
-            {hourMarks.map((mark, index) => (
-              <div
-                key={mark}
-                className="absolute right-2 -translate-y-1/2 text-xs tabular-nums text-muted"
-                style={{ top: `${(index / hourCount) * 100}%` }}
-              >
-                {formatHourLabel(mark, timezone)}
-              </div>
-            ))}
-          </div>
-        </div>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-1 pb-2 text-xs text-muted">
+        <span>Shaded time is that resource&rsquo;s own free time, and advisory — the exclusion constraint decides at the moment of booking.</span>
+        {!hasRealContent ? <span className="shrink-0 text-subtle">Showing a default {formatHourLabel(bounds.startsAt, timezone)}–{formatHourLabel(bounds.endsAt, timezone)} range</span> : null}
+      </div>
 
-        {resources.map((entry) => (
-          <div key={entry.resource.id} className="w-44 shrink-0 border-l border-border">
-            <div className="flex h-8 items-end truncate px-2 pb-1 text-sm font-medium">{entry.resource.name}</div>
-            <div className="relative border-t border-border" style={{ height: `${laneHeight}px` }}>
-              {hourMarks.slice(1, -1).map((mark) => (
+      {closedDay ? (
+        <div className="border-b border-border bg-hover/60 px-3 py-1.5 text-xs text-muted">Closed — no hours are configured for this day.</div>
+      ) : !hasConfiguredHours ? (
+        <div className="flex items-center justify-between gap-3 border-b border-border bg-hover/60 px-3 py-1.5 text-xs text-muted">
+          <span>Opening hours not configured — every displayed hour is shown, none is claimed as open.</span>
+        </div>
+      ) : null}
+
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="relative flex min-w-full">
+          {showNowLine ? (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute left-14 right-0 z-20 flex items-center"
+              style={{ top: `${nowTopPx}px` }}
+            >
+              <span className="-ml-1 size-2 shrink-0 rounded-full bg-accent" />
+              <span className="h-px flex-1 bg-accent" />
+            </div>
+          ) : null}
+
+          <div className="sticky left-0 z-10 w-14 shrink-0 bg-background">
+            <div className="h-9" aria-hidden />
+            <div className="relative" style={{ height: `${laneHeight}px` }}>
+              {hourMarks.map((mark, index) => (
                 <div
                   key={mark}
-                  aria-hidden
-                  className="absolute inset-x-0 border-t border-border/60"
-                  style={{ top: `${offsetPct(mark)}%` }}
-                />
+                  className="absolute right-2 -translate-y-1/2 text-xs tabular-nums text-muted"
+                  style={{ top: `${(index / hourCount) * 100}%` }}
+                >
+                  {formatHourLabel(mark, timezone)}
+                </div>
               ))}
-
-              {entry.free.map((window, index) => (
-                <div
-                  key={index}
-                  aria-hidden
-                  className="absolute inset-x-0.5 rounded bg-hover"
-                  style={{ top: `${offsetPct(window.startsAt)}%`, height: `${heightPct(window.startsAt, window.endsAt)}%` }}
-                />
-              ))}
-
-              {entry.booked.map((booking) => {
-                // The appointment as it appears on *this* day — a booking that spans midnight
-                // is clipped to the day's own bounds for geometry only; `booking.window` (the
-                // canonical, unclipped appointment) still reaches `ScheduleEvent` for its full
-                // description.
-                const displayed = clipWindow(booking.window, within) ?? booking.window;
-                return (
-                  <ScheduleEvent
-                    key={booking.workItemId}
-                    organizationId={organizationId}
-                    workItemId={booking.workItemId}
-                    title={booking.title}
-                    window={booking.window}
-                    displayWindow={displayed}
-                    timezone={timezone}
-                    variant="block"
-                    style={{
-                      top: `${offsetPct(displayed.startsAt)}%`,
-                      height: `${Math.max(heightPct(displayed.startsAt, displayed.endsAt), 2.5)}%`,
-                    }}
-                  />
-                );
-              })}
             </div>
           </div>
-        ))}
+
+          {resources.length === 0 ? (
+            <div className="flex min-w-0 flex-1 flex-col border-l border-border">
+              <div className="h-9" aria-hidden />
+              <div className="relative flex flex-1 items-center justify-center border-t border-border" style={{ height: `${laneHeight}px` }}>
+                <div className="flex flex-col items-center gap-2 px-6 text-center">
+                  <p className="text-sm font-medium">No resources configured</p>
+                  <p className="max-w-xs text-xs text-muted">
+                    Add a technician, vehicle, room or equipment Resource to schedule work against.
+                  </p>
+                  {mayAddResource ? (
+                    <ButtonLink href={resourcesHref} size="small" className="mt-1">
+                      Add resource
+                    </ButtonLink>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : (
+            resources.map((entry) => (
+              <div key={entry.resource.id} className="flex min-w-44 flex-1 basis-44 flex-col border-l border-border">
+                <div className="flex h-9 items-end truncate px-2 pb-1 text-sm font-medium">{entry.resource.name}</div>
+                <div className="relative border-t border-border" style={{ height: `${laneHeight}px` }}>
+                  {hourMarks.slice(1, -1).map((mark) => (
+                    <div
+                      key={mark}
+                      aria-hidden
+                      className="absolute inset-x-0 border-t border-border/60"
+                      style={{ top: `${offsetPct(mark)}%` }}
+                    />
+                  ))}
+
+                  {entry.free.map((window, index) => (
+                    <div
+                      key={index}
+                      aria-hidden
+                      className="absolute inset-x-0.5 rounded bg-hover"
+                      style={{ top: `${offsetPct(window.startsAt)}%`, height: `${heightPct(window.startsAt, window.endsAt)}%` }}
+                    />
+                  ))}
+
+                  {entry.booked.map((booking) => {
+                    // The appointment as it appears on *this* day — a booking that spans
+                    // midnight is clipped to the day's own bounds for geometry only;
+                    // `booking.window` (the canonical, unclipped appointment) still reaches
+                    // `ScheduleEvent` for its full description.
+                    const displayed = clipWindow(booking.window, within) ?? booking.window;
+                    return (
+                      <ScheduleEvent
+                        key={booking.workItemId}
+                        organizationId={organizationId}
+                        workItemId={booking.workItemId}
+                        title={booking.title}
+                        window={booking.window}
+                        displayWindow={displayed}
+                        timezone={timezone}
+                        variant="block"
+                        style={{
+                          top: `${offsetPct(displayed.startsAt)}%`,
+                          height: `${Math.max(heightPct(displayed.startsAt, displayed.endsAt), 2.5)}%`,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

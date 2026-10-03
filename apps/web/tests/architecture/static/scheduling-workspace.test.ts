@@ -47,7 +47,7 @@ describe('Day and Week are URL-backed, not React memory', () => {
   });
 
   it('an invalid or missing view resolves to Day, and an invalid or missing date resolves to today in the organization’s timezone', () => {
-    expect(urlModule).toContain("return value === 'week' ? 'week' : 'day';");
+    expect(urlModule).toContain("VIEWS.includes(value as ScheduleView) ? (value as ScheduleView) : 'day'");
     expect(page).toContain('todayInZone(organization.timezone)');
   });
 
@@ -60,10 +60,36 @@ describe('Day and Week are URL-backed, not React memory', () => {
     }
   });
 
-  it('does not add a Month view', () => {
-    for (const file of ['schedule-view-nav.tsx', 'schedule-url.ts']) {
-      expect(read(`${CALENDAR}/${file}`)).not.toMatch(/month/i);
+  it('Day, Week and Month are all URL-backed views, not React memory', () => {
+    const urlModule2 = read(`${CALENDAR}/schedule-url.ts`);
+    expect(urlModule2).toContain("export type ScheduleView = 'day' | 'week' | 'month';");
+    expect(read(`${CALENDAR}/schedule-view-nav.tsx`)).toContain("key: 'month'");
+  });
+});
+
+describe('Month is a real, persistent board — a coarser projection of the same Work Items', () => {
+  it('month-schedule.tsx exists, feature-owned, with no calendar entity and no second availability algorithm', () => {
+    expect(existsSync(`${CALENDAR}/month-schedule.tsx`)).toBe(true);
+    const month = read(`${CALENDAR}/month-schedule.tsx`);
+    expect(month).not.toMatch(/from\(['"]calendar['"]\)/);
+    expect(month).not.toMatch(/freeWindows|openWindows/);
+  });
+
+  it('the route builds a 42-day Monday-first grid for Month, through the same listScheduleDays every other view uses', () => {
+    const page = read(`${ROUTES}/schedule/page.tsx`);
+    expect(page).toContain("length: 42");
+    expect(page).toContain('startOfMonth(date)');
+  });
+
+  it('the shadcn Calendar is not imported by any Schedule board', () => {
+    for (const file of ['day-schedule.tsx', 'week-schedule.tsx', 'month-schedule.tsx']) {
+      expect(read(`${CALENDAR}/${file}`)).not.toMatch(/@gold\/ui\/components\/calendar/);
     }
+  });
+
+  it('no heavy third-party scheduling/calendar dependency is introduced', () => {
+    const packageJson = read(`${WEB}/package.json`);
+    expect(packageJson).not.toMatch(/fullcalendar|react-big-calendar|daypilot|syncfusion/i);
   });
 });
 
@@ -313,5 +339,94 @@ describe('field.manage stays the authority for opening hours — unchanged in th
     const page = read(`${ROUTES}/schedule/page.tsx`);
     expect(page).toContain("organization.capabilities.includes('field.manage')");
     expect(page).not.toContain('schedule.manage');
+  });
+});
+
+describe('the Schedule canvas exists and fills the workspace even when there is nothing to show', () => {
+  it('zero-Resource Day renders the timeline grid, with onboarding inside it rather than a page-replacing EmptyState', () => {
+    const day = code(read(`${CALENDAR}/day-schedule.tsx`));
+    // The old defect: an early `return <EmptyState>…` before the grid is ever drawn.
+    expect(day).not.toMatch(/if \(resources\.length === 0\)\s*{?\s*return\s*\(?\s*<EmptyState/);
+    expect(day).toContain('No resources configured');
+    expect(day).toContain('resources.length === 0');
+  });
+
+  it('zero-event Week still renders seven day surfaces rather than one replacing sentence', () => {
+    const week = code(read(`${CALENDAR}/week-schedule.tsx`));
+    expect(week).not.toMatch(/if \(total === 0\)\s*{?\s*return\s*\(?\s*<EmptyState/);
+    expect(week).not.toContain('Nothing scheduled this week');
+    expect(week).toContain('days.map((day)');
+  });
+
+  it('zero-event Month still renders the six-week grid', () => {
+    const month = read(`${CALENDAR}/month-schedule.tsx`);
+    expect(month).toContain('weeks.map(');
+    expect(month).not.toMatch(/if \([\s\S]{0,40}=== 0\)\s*{?\s*return\s*\(?\s*<EmptyState/);
+  });
+
+  it('Day draws a presentation-only default range rather than refusing to draw an axis at all', () => {
+    const geometry = read(`${CALENDAR}/calendar-geometry.ts`);
+    expect(geometry).toContain('DISPLAY_DAY_START_HOUR');
+    expect(geometry).toContain('DISPLAY_DAY_END_HOUR');
+    expect(geometry).toContain('export function computeDisplayAxisBounds(');
+    // The display default is pixels/presentation, not a change to the availability calculation.
+    const availability = read(`${WEB}/lib/domain/scheduling/availability.ts`);
+    expect(availability).not.toMatch(/DISPLAY_DAY_START_HOUR|DISPLAY_DAY_END_HOUR/);
+  });
+});
+
+describe('Day no longer sizes itself to its own contents as the primary layout strategy', () => {
+  it('drops width: max-content as the row sizing contract', () => {
+    const day = read(`${CALENDAR}/day-schedule.tsx`);
+    expect(day).not.toMatch(/width:\s*['"]max-content['"]/);
+  });
+
+  it('Resource lanes are flexible, not permanently fixed to one width', () => {
+    const day = read(`${CALENDAR}/day-schedule.tsx`);
+    // The old defect: a lane hardcoded to exactly `w-44 shrink-0`, with no grow at all.
+    expect(day).not.toContain('w-44 shrink-0');
+    expect(day).toMatch(/flex-1/);
+  });
+});
+
+describe('the Schedule workspace and every board fill the available height through a real flex chain', () => {
+  it('schedule-workspace.tsx composes a min-h-0/flex-1 column, not a fixed or arbitrary pixel height', () => {
+    const workspace = read(`${CALENDAR}/schedule-workspace.tsx`);
+    expect(workspace).toMatch(/min-h-0/);
+    expect(workspace).toMatch(/flex-1/);
+    expect(workspace).not.toMatch(/min-h-\[\d+px\]/);
+  });
+
+  it('every board file avoids an arbitrary large fixed pixel min-height', () => {
+    for (const file of ['day-schedule.tsx', 'week-schedule.tsx', 'month-schedule.tsx', 'schedule-workspace.tsx']) {
+      expect(read(`${CALENDAR}/${file}`)).not.toMatch(/min-h-\[\d{3,}px\]/);
+    }
+  });
+
+  it('the shared app shell gives a page a real viewport-bound height to fill, rather than growing unbounded', () => {
+    const shell = read(`${WEB}/components/layout/app-shell.tsx`);
+    expect(shell).toMatch(/h-svh/);
+    expect(shell).toMatch(/overflow-y-auto/);
+  });
+
+  it('the Schedule page opts into that height chain explicitly, through AppPage', () => {
+    const page = read(`${ROUTES}/schedule/page.tsx`);
+    const match = /<AppPage className="([^"]*)"/.exec(page);
+    expect(match, 'AppPage should carry an explicit className').not.toBeNull();
+    expect(match![1]).toMatch(/flex-1/);
+    expect(match![1]).toMatch(/min-h-0/);
+  });
+});
+
+describe('Month navigates coherently and keeps the resource filter and URL-backed state', () => {
+  it('a month cell links to Day for that date through scheduleHref, carrying the active resource filter', () => {
+    const month = read(`${CALENDAR}/month-schedule.tsx`);
+    expect(month).toContain("scheduleHref(organizationId, { view: 'day', date: day.date, resourceIds })");
+  });
+
+  it('shiftMonth is pure calendar-date arithmetic, reused by the toolbar for Month’s Previous/Next', () => {
+    const window = read(`${WEB}/lib/domain/scheduling/window.ts`);
+    expect(window).toContain('export function shiftMonth(');
+    expect(read(`${CALENDAR}/schedule-toolbar.tsx`)).toContain('shiftMonth(');
   });
 });

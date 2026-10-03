@@ -5,14 +5,16 @@
  * three facts at once rather than one control silently dropping what another had set.
  */
 
-export type ScheduleView = 'day' | 'week';
+export type ScheduleView = 'day' | 'week' | 'month';
 
 type QueryValue = string | readonly string[] | undefined;
+
+const VIEWS: readonly ScheduleView[] = ['day', 'week', 'month'];
 
 /** Missing or unrecognised resolves to Day — never a 404 for a mistyped query string. */
 export function parseScheduleView(raw: QueryValue): ScheduleView {
   const value = Array.isArray(raw) ? raw[0] : raw;
-  return value === 'week' ? 'week' : 'day';
+  return VIEWS.includes(value as ScheduleView) ? (value as ScheduleView) : 'day';
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;

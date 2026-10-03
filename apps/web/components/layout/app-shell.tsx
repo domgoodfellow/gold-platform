@@ -32,18 +32,23 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-svh overflow-hidden">
       {/* `sidebar`, `header` and `bottomBar` are elements the calling layout created on the server. When
           the payload is large enough to stream in more than one piece they arrive as lazy siblings, which
           trips React's dev key check exactly as `agent` does in `WorkspaceShell`; a keyed wrapper is the
           same answer, and changes nothing that renders. */}
       <Fragment key="sidebar">{sidebar}</Fragment>
-      <SidebarInset className="min-w-0">
+      {/* `h-svh overflow-hidden` above fixes the wrapper to the viewport, so a page that opts into
+          filling it (a flex column down to `flex-1 min-h-0`, as Schedule does) gets a real
+          available height to fill rather than an auto-growing one. Every other page is
+          unaffected: `min-h-0 overflow-y-auto` below just moves its scrollbar from the document
+          to this `main`, which looks identical. */}
+      <SidebarInset className="min-h-0 overflow-y-auto">
         <Fragment key="header">{header}</Fragment>
         {/* Beneath the workspace header, beside the page: the page drawer lives here, so it starts
             under the header and the page stays visible next to it. */}
-        <div className="flex min-w-0 flex-1">
-          <div className={cx('min-w-0 flex-1', PAGE_PADDING, bottomBar ? 'pb-24 md:pb-6' : undefined)}>
+        <div className="flex min-h-0 min-w-0 flex-1">
+          <div className={cx('flex min-h-0 min-w-0 flex-1 flex-col', PAGE_PADDING, bottomBar ? 'pb-24 md:pb-6' : undefined)}>
             {children}
           </div>
           <PagePanel />

@@ -24,6 +24,7 @@ export function ScheduleViewNav({
       views={[
         { key: 'day', label: 'Day', href: scheduleHref(organizationId, { view: 'day', date, resourceIds }) },
         { key: 'week', label: 'Week', href: scheduleHref(organizationId, { view: 'week', date, resourceIds }) },
+        { key: 'month', label: 'Month', href: scheduleHref(organizationId, { view: 'month', date, resourceIds }) },
       ]}
     />
   );

@@ -186,3 +186,23 @@ export function shiftDate(date: string, days: number): string {
   const [year, month, day] = date.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
+
+/**
+ * A calendar date, `months` calendar months later (or earlier). A day past the target month's
+ * last day clamps to it (31 Jan + 1 month is 28 or 29 Feb, never 3 March) — the same rule every
+ * calendar app applies, rather than overflowing into a different day of the week.
+ */
+export function shiftMonth(date: string, months: number): string {
+  const [year, month, day] = date.split('-').map(Number);
+  const total = month - 1 + months;
+  const targetYear = year + Math.floor(total / 12);
+  const targetMonth = ((total % 12) + 12) % 12;
+  const daysInTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(targetYear, targetMonth, Math.min(day, daysInTargetMonth))).toISOString().slice(0, 10);
+}
+
+/** The first of the calendar month a date falls in. */
+export function startOfMonth(date: string): string {
+  const [year, month] = date.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10);
+}

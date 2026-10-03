@@ -11,7 +11,7 @@ import {
 } from '@/features/scheduling/calendar/schedule-url';
 import { listScheduleDays } from '@/lib/domain/scheduling/availability';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
-import { isoDayOfWeek, shiftDate, todayInZone } from '@/lib/domain/scheduling/window';
+import { isoDayOfWeek, shiftDate, startOfMonth, todayInZone } from '@/lib/domain/scheduling/window';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -38,16 +38,29 @@ export default async function SchedulePage({
   const query = await searchParams;
   const { db, organization } = await requireOrganization(organizationId);
 
+  const today = todayInZone(organization.timezone);
   const view = parseScheduleView(query.view);
-  const date = parseScheduleDate(query.on, todayInZone(organization.timezone));
+  const date = parseScheduleDate(query.on, today);
   const selectedResourceIds = parseScheduleResourceIds(query.resource);
 
   // Week is the ISO week (Monday first) containing the selected day — the same numbering
   // opening hours already use, so there is one answer to "which day is that" across the feature.
   const weekStart = shiftDate(date, -(isoDayOfWeek(date) - 1));
-  const dates = view === 'week' ? Array.from({ length: 7 }, (_, index) => shiftDate(weekStart, index)) : [date];
+  // Month is a coarser projection of the same Work Items: six full ISO weeks (42 tenant calendar
+  // days, Monday first) spanning the viewed month plus whatever lead/trail days complete the
+  // grid — never a second availability calculation, and never a calendar entity.
+  const monthStart = startOfMonth(date);
+  const monthGridStart = shiftDate(monthStart, -(isoDayOfWeek(monthStart) - 1));
+  const dates =
+    view === 'week'
+      ? Array.from({ length: 7 }, (_, index) => shiftDate(weekStart, index))
+      : view === 'month'
+        ? Array.from({ length: 42 }, (_, index) => shiftDate(monthGridStart, index))
+        : [date];
 
   const mayConfigure = organization.capabilities.includes('field.manage');
+  const mayAddResource = organization.capabilities.includes('resource.create');
+  const resourcesHref = `/organizations/${organizationId}/resources`;
 
   // Hours are read for every viewer, not only one who may configure them: whether this business
   // has configured anything at all changes what Day view is honest to draw (see `DaySchedule`).
@@ -66,7 +79,7 @@ export default async function SchedulePage({
   }));
 
   return (
-    <AppPage>
+    <AppPage className="flex h-full min-h-0 flex-1 flex-col">
       {mayConfigure ? (
         <ConfigureRegistrar
           title="Schedule configuration"
@@ -105,11 +118,15 @@ export default async function SchedulePage({
         organizationId={organizationId}
         view={view}
         date={date}
+        today={today}
         timezone={organization.timezone}
         days={visibleDays}
+        monthDate={monthStart}
         allResources={allResources}
         selectedResourceIds={selectedResourceIds}
         hasConfiguredHours={hours.length > 0}
+        resourcesHref={resourcesHref}
+        mayAddResource={mayAddResource}
       />
     </AppPage>
   );
