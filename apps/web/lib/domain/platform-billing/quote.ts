@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { getPlanById, listPlanPrices, listPlanQuotas } from '@/lib/domain/catalogue/plans';
+import { currentPlanPrice, getPlanById, listPlanPrices, listPlanQuotas } from '@/lib/domain/catalogue/plans';
 import {
   currentAddonAssignments,
   currentPlanAssignment,
@@ -15,11 +15,19 @@ import { DomainError } from '@/lib/domain/errors';
 
 export type PurchaseQuoteLine = {
   sourceType: 'plan' | 'addon';
+  /** The Plan or Add-on's own `platform_plans.id` -- what a provider price is provisioned against. */
   sourceId: string;
   label: string;
   quantity: number;
   amountMinor: number;
   billingInterval: 'month' | 'year' | 'one_time';
+  /** Which table resolved this price -- decides which provider-price mapping checkout reads
+   * (`plan_price_provider_reference` for a standard price, the agreement-specific mapping for a
+   * negotiated one). Never both; never guessed from the amount. */
+  priceSource: 'agreement' | 'standard';
+  /** The standard price's own `platform_plan_prices.id`, when `priceSource` is `'standard'` --
+   * null for an agreement-priced line, which has no such row to point to. */
+  planPriceId: string | null;
 };
 
 export type PurchaseQuoteBlocker = { code: string; message: string };
@@ -83,6 +91,8 @@ export async function buildOrganizationPurchaseQuote(
         });
       } else {
         currency = price.currency;
+        const standardPrices = await listPlanPrices(db, baseAssignment.planId);
+        const standardPrice = currentPlanPrice(standardPrices, { currency: price.currency, billingInterval: 'month' });
         recurring.push({
           sourceType: 'plan',
           sourceId: baseAssignment.planId,
@@ -90,6 +100,8 @@ export async function buildOrganizationPurchaseQuote(
           quantity: 1,
           amountMinor: price.amountMinor,
           billingInterval: 'month',
+          priceSource: price.source,
+          planPriceId: price.source === 'standard' ? standardPrice?.id ?? null : null,
         });
       }
     }
@@ -129,6 +141,7 @@ export async function buildOrganizationPurchaseQuote(
     }
     currency = currency ?? price.currency;
 
+    const standardPrice = currentPlanPrice(prices, { currency: price.currency, billingInterval });
     const line: PurchaseQuoteLine = {
       sourceType: 'addon',
       sourceId: assignment.planId,
@@ -136,6 +149,8 @@ export async function buildOrganizationPurchaseQuote(
       quantity: 1,
       amountMinor: price.amountMinor,
       billingInterval,
+      priceSource: price.source,
+      planPriceId: price.source === 'standard' ? standardPrice?.id ?? null : null,
     };
 
     if (billingInterval === 'one_time') {

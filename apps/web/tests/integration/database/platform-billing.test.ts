@@ -3,14 +3,14 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createPlan, getPlan, recordPlanPrice } from '@/lib/domain/catalogue/plans';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { recordPlanAgreement, recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { createRole } from '@/lib/domain/tenancy/roles';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { ensurePlatformBillingCustomer } from '@/lib/domain/platform-billing/customers';
 import { beginPlatformBillingCheckout } from '@/lib/domain/platform-billing/checkout';
 import { beginPlatformBillingPortalSession } from '@/lib/domain/platform-billing/portal';
 import { getOrganizationSubscription } from '@/lib/domain/platform-billing/subscriptions';
-import { provisionPlanPrice } from '@/lib/domain/platform-billing/provisioning';
+import { provisionAgreementPlanPrice, provisionPlanPrice } from '@/lib/domain/platform-billing/provisioning';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 
 /**
@@ -481,6 +481,146 @@ describe('starting a subscription (Checkout)', () => {
     expect(new Date(rows[0].expires_at).getTime()).toBeGreaterThan(Date.now());
 
     fetchSpy.mockRestore();
+  });
+});
+
+describe('multi-line checkout and negotiated prices', () => {
+  /** Provisions a billable Add-on/Price/provider-price mapping, returning the plan key. */
+  async function seedProvisionedAddon(
+    billingInterval: 'month' | 'one_time' = 'month',
+    currency = 'CAD',
+  ): Promise<{ planId: string; priceId: string }> {
+    const key = `addon_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    const planId = await createPlan(staff, { key, kind: 'addon', label: `Addon ${key}`, description: '', billable: true });
+    const priceId = await recordPlanPrice(staff, { planId, currency, amountMinor: 1_500, billingInterval });
+
+    const fetchSpy = mockStripeFetch({
+      '/v1/products': { id: `prod_${randomUUID().slice(0, 8)}` },
+      '/v1/prices': { id: `price_${randomUUID().slice(0, 8)}` },
+    });
+    await provisionPlanPrice(staff, { planId, planPriceId: priceId });
+    fetchSpy.mockRestore();
+
+    return { planId, priceId };
+  }
+
+  it('sends one Stripe line item per Plan and Add-on currently assigned to the business', async () => {
+    const org = await newTenant('checkout-multiline');
+    const { planKey, planId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
+    const { planId: addonPlanId } = await seedProvisionedAddon();
+    await assignPlan(org.organizationId, addonPlanId);
+
+    let checkoutBody = '';
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
+      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: 'cus_multiline_1' }), { status: 200 });
+      if (url.includes('/v1/checkout/sessions')) {
+        checkoutBody = String(init?.body ?? '');
+        return new Response(JSON.stringify({ id: 'cs_multi_1', url: 'https://checkout.stripe.test/cs_multi_1' }), {
+          status: 200,
+        });
+      }
+      throw new Error(`unexpected stripe fetch: ${url}`);
+    });
+
+    await beginPlatformBillingCheckout(org.db, {
+      organizationId: org.organizationId,
+      planKey,
+      organizationName: 'Multiline Co',
+      organizationEmail: null,
+      currency: 'CAD',
+      successUrl: 'https://app.test/success',
+      cancelUrl: 'https://app.test/cancel',
+    });
+
+    const params = new URLSearchParams(checkoutBody);
+    expect(params.get('line_items[0][price]')).toBeTruthy();
+    expect(params.get('line_items[1][price]')).toBeTruthy();
+    expect(params.get('line_items[0][price]')).not.toBe(params.get('line_items[1][price]'));
+    expect(params.get('line_items[2][price]')).toBeNull();
+
+    fetchSpy.mockRestore();
+  });
+
+  it('provisions and resolves an organization-specific negotiated price, never the Plan’s own standard one', async () => {
+    const org = await newTenant('checkout-agreement');
+    const agreementPlanKey = `agreement_${randomUUID().replace(/-/g, '').slice(0, 10)}`;
+    const planId = await createPlan(staff, {
+      key: agreementPlanKey,
+      kind: 'plan',
+      label: 'Agreement Plan',
+      description: '',
+      billable: true,
+    });
+    await assignPlan(org.organizationId, planId);
+    // No standard price at all -- only a negotiated one for this organization.
+    await recordPlanAgreement(staff, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 42_000 });
+
+    const fetchSpy = mockStripeFetch({
+      '/v1/products': { id: `prod_agreement_${randomUUID().slice(0, 8)}` },
+      '/v1/prices': { id: `price_agreement_${randomUUID().slice(0, 8)}` },
+    });
+    const provisioned = await provisionAgreementPlanPrice(staff, { organizationId: org.organizationId, planId, billingInterval: 'month' });
+    fetchSpy.mockRestore();
+    expect(provisioned.priceReference).toMatch(/^price_agreement_/);
+
+    // Idempotent: a second provisioning call reads the row back rather than asking again.
+    const { spy, calls } = spyOnStripeCalls();
+    const second = await provisionAgreementPlanPrice(staff, { organizationId: org.organizationId, planId, billingInterval: 'month' });
+    expect(second.priceReference).toBe(provisioned.priceReference);
+    expect(calls).toEqual([]);
+    spy.mockRestore();
+
+    let checkoutBody = '';
+    const checkoutFetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
+      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: 'cus_agreement_1' }), { status: 200 });
+      if (url.includes('/v1/checkout/sessions')) {
+        checkoutBody = String(init?.body ?? '');
+        return new Response(JSON.stringify({ id: 'cs_agreement_1', url: 'https://checkout.stripe.test/cs_agreement_1' }), {
+          status: 200,
+        });
+      }
+      throw new Error(`unexpected stripe fetch: ${url}`);
+    });
+
+    await beginPlatformBillingCheckout(org.db, {
+      organizationId: org.organizationId,
+      planKey: agreementPlanKey,
+      organizationName: 'Agreement Co',
+      organizationEmail: null,
+      currency: 'CAD',
+      successUrl: 'https://app.test/success',
+      cancelUrl: 'https://app.test/cancel',
+    });
+
+    const params = new URLSearchParams(checkoutBody);
+    expect(params.get('line_items[0][price]')).toBe(provisioned.priceReference);
+
+    checkoutFetch.mockRestore();
+  });
+
+  it('is staff-only — a tenant cannot provision an agreement price directly through the door', async () => {
+    const planId = await createPlan(staff, {
+      key: `agreement_forge_${randomUUID().replace(/-/g, '').slice(0, 8)}`,
+      kind: 'plan',
+      label: 'Forged Agreement Plan',
+      description: '',
+      billable: true,
+    });
+
+    const { error } = await tenant.db.rpc('record_agreement_provider_price', {
+      p_organization_id: tenant.organizationId,
+      p_plan_id: planId,
+      p_environment: 'sandbox',
+      p_billing_interval: 'month',
+      p_product_reference: 'prod_forged',
+      p_price_reference: 'price_forged',
+    });
+    expect(error).toBeTruthy();
   });
 });
 

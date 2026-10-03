@@ -1,9 +1,10 @@
 import { platformBillingProvider } from '@/lib/adapters/platform-billing';
 import type { Db } from '@/lib/db/types';
 import { currentPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
-import { getPlan, listPlanPrices } from '@/lib/domain/catalogue/plans';
+import { getPlan } from '@/lib/domain/catalogue/plans';
 import { DomainError } from '@/lib/domain/errors';
 import { ensurePlatformBillingCustomer } from '@/lib/domain/platform-billing/customers';
+import { resolveCheckoutLineItems } from '@/lib/domain/platform-billing/line-items';
 import { buildOrganizationPurchaseQuote } from '@/lib/domain/platform-billing/quote';
 import { getOrganizationSubscription } from '@/lib/domain/platform-billing/subscriptions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
@@ -43,39 +44,9 @@ export async function beginPlatformBillingCheckout(
     );
   }
 
-  const prices = await listPlanPrices(db, plan.id);
-  const price = prices.find((p) => p.approvalState === 'approved' && p.currency === input.currency);
-  if (!price) {
-    throw new DomainError(
-      `GildOps has not priced ${plan.label} in ${input.currency}.`,
-      'platform_billing.no_price_for_currency',
-    );
-  }
-
   const provider = await platformBillingProvider();
   if (!provider) {
     throw new DomainError('Billing is not configured for this deployment.', 'platform_billing.not_configured');
-  }
-
-  const { data: priceReference, error: mappingError } = await db.rpc('plan_price_provider_reference', {
-    p_organization_id: input.organizationId,
-    p_plan_price_id: price.id,
-    p_environment: provider.environment,
-  });
-  if (mappingError) {
-    if (mappingError.code === '42501') {
-      throw new DomainError(
-        'Only this business’s own billing manager can start a subscription.',
-        'platform_billing.forbidden',
-      );
-    }
-    throw new DomainError(mappingError.message, 'platform_billing.price_lookup_failed');
-  }
-  if (!priceReference) {
-    throw new DomainError(
-      `${plan.label} has not been provisioned with the billing provider yet — ask platform staff to provision this price.`,
-      'platform_billing.price_not_provisioned',
-    );
   }
 
   const existing = await getOrganizationSubscription(db, { organizationId: input.organizationId });
@@ -92,6 +63,22 @@ export async function beginPlatformBillingCheckout(
   if (quote.blockers.length > 0) {
     throw new DomainError(quote.blockers[0]!.message, `platform_billing.${quote.blockers[0]!.code}`);
   }
+  if (quote.currency !== input.currency) {
+    throw new DomainError(
+      `GildOps has not priced ${plan.label} in ${input.currency}.`,
+      'platform_billing.no_price_for_currency',
+    );
+  }
+
+  const quoteLines = [...quote.recurring, ...quote.dueNow];
+  const resolvedLines = await resolveCheckoutLineItems(db, {
+    organizationId: input.organizationId,
+    environment: provider.environment,
+    lines: quoteLines,
+  });
+  const lineItems = resolvedLines.map((line) => ({ priceId: line.priceReference, quantity: line.quantity }));
+
+  const baseLine = quote.recurring.find((line) => line.sourceType === 'plan' && line.sourceId === plan.id);
 
   const customer = await ensurePlatformBillingCustomer(db, {
     organizationId: input.organizationId,
@@ -107,7 +94,7 @@ export async function beginPlatformBillingCheckout(
     .insert({
       organization_id: input.organizationId,
       environment: provider.environment,
-      plan_price_id: price.id,
+      plan_price_id: baseLine?.planPriceId ?? null,
       requested_by: actor.id,
       quote_snapshot: quote,
       quote_version: quote.commercialConfigurationVersion,
@@ -130,7 +117,7 @@ export async function beginPlatformBillingCheckout(
   try {
     started = await provider.createCheckoutSession({
       customerId: customer.customerReference,
-      priceId: priceReference,
+      lineItems,
       requestId: session.id,
       organizationId: input.organizationId,
       successUrl: input.successUrl,

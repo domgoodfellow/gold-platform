@@ -18,9 +18,12 @@ export type PlatformBillingCustomer = {
   customerId: string;
 };
 
+export type CheckoutLineItemRequest = { priceId: string; quantity: number };
+
 export type CheckoutSessionRequest = {
   customerId: string;
-  priceId: string;
+  /** One or more provider prices -- a base Plan plus any Add-ons, resolved entirely server-side (work order C §7). */
+  lineItems: CheckoutLineItemRequest[];
   /** Our own correlation token, handed to the provider as an idempotency key. */
   requestId: string;
   organizationId: string;

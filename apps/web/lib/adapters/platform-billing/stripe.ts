@@ -81,6 +81,15 @@ export function stripePlatformBillingProvider(config: { secret: string }): Platf
     },
 
     async createCheckoutSession(input: CheckoutSessionRequest): Promise<CheckoutSessionStarted> {
+      if (input.lineItems.length === 0) {
+        throw new Error('stripe checkout session requires at least one line item');
+      }
+      const lineItemFields: Record<string, string> = {};
+      input.lineItems.forEach((item, index) => {
+        lineItemFields[`line_items[${index}][price]`] = item.priceId;
+        lineItemFields[`line_items[${index}][quantity]`] = String(item.quantity);
+      });
+
       const session = await post<{ id?: string; url?: string }>(
         '/checkout/sessions',
         config.secret,
@@ -90,8 +99,7 @@ export function stripePlatformBillingProvider(config: { secret: string }): Platf
           customer: input.customerId,
           success_url: input.successUrl,
           cancel_url: input.cancelUrl,
-          'line_items[0][price]': input.priceId,
-          'line_items[0][quantity]': '1',
+          ...lineItemFields,
           // Our own correlation token, handed out and (for the browser's own return trip only —
           // never trusted as payment proof, Phase 7) handed back.
           client_reference_id: input.organizationId,

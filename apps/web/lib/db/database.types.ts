@@ -4202,6 +4202,64 @@ export type Database = {
           },
         ]
       }
+      organization_plan_agreement_provider_prices: {
+        Row: {
+          billing_interval: string
+          environment: string
+          id: string
+          organization_id: string
+          plan_id: string
+          price_reference: string
+          product_reference: string
+          provisioned_at: string
+          provisioned_by: string | null
+        }
+        Insert: {
+          billing_interval: string
+          environment: string
+          id?: string
+          organization_id: string
+          plan_id: string
+          price_reference: string
+          product_reference: string
+          provisioned_at?: string
+          provisioned_by?: string | null
+        }
+        Update: {
+          billing_interval?: string
+          environment?: string
+          id?: string
+          organization_id?: string
+          plan_id?: string
+          price_reference?: string
+          product_reference?: string
+          provisioned_at?: string
+          provisioned_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_plan_agreement_provider_price_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_plan_agreement_provider_price_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_plan_agreement_provider_prices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_plan_agreements: {
         Row: {
           amount_minor: number
@@ -5080,7 +5138,7 @@ export type Database = {
           expires_at: string | null
           id: string
           organization_id: string
-          plan_price_id: string
+          plan_price_id: string | null
           provider_reference: string | null
           quote_snapshot: Json | null
           quote_version: string | null
@@ -5092,7 +5150,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           organization_id: string
-          plan_price_id: string
+          plan_price_id?: string | null
           provider_reference?: string | null
           quote_snapshot?: Json | null
           quote_version?: string | null
@@ -5104,7 +5162,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           organization_id?: string
-          plan_price_id?: string
+          plan_price_id?: string | null
           provider_reference?: string | null
           quote_snapshot?: Json | null
           quote_version?: string | null
@@ -9373,6 +9431,15 @@ export type Database = {
         Args: { p_at?: string; p_organization_id: string }
         Returns: boolean
       }
+      organization_plan_agreement_provider_price_reference: {
+        Args: {
+          p_billing_interval: string
+          p_environment: string
+          p_organization_id: string
+          p_plan_id: string
+        }
+        Returns: string
+      }
       organization_plan_price:
         | {
             Args: {
@@ -9690,6 +9757,17 @@ export type Database = {
           provider_key: string
           secret: string
         }[]
+      }
+      record_agreement_provider_price: {
+        Args: {
+          p_billing_interval: string
+          p_environment: string
+          p_organization_id: string
+          p_plan_id: string
+          p_price_reference: string
+          p_product_reference: string
+        }
+        Returns: string
       }
       record_ai_runtime_assignment: {
         Args: {
