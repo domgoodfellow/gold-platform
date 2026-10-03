@@ -12,6 +12,8 @@ import { getProposalHandoff, type AcceptedProposalHandoff } from '@/lib/domain/c
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { listLocationsForCustomer } from '@/lib/domain/locations/locations';
+import { mapConfig } from '@/lib/adapters/maps/config';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listPortalInvites } from '@/lib/domain/portal/portal';
 import { listCustomerCalls } from '@/lib/domain/reception/calls';
@@ -30,7 +32,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
   if (!customer) notFound();
 
   const origin = await requestOrigin();
-  const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work, discoverySnapshot, commercialProposals, proposalInvites, plans, addonPlans] = await Promise.all([
+  const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work, locations, discoverySnapshot, commercialProposals, proposalInvites, plans, addonPlans] = await Promise.all([
     listDocuments(db, { organizationId, attachedTo: { entity: 'customer', id: customerId } }),
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
     listCustomerTimeline(db, { organizationId, customerId }),
@@ -40,6 +42,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
     listCustomerCalls(db, { organizationId, customerId }),
     listCustomerInvoices(db, { organizationId, customerId }),
     listWorkItems(db, { organizationId, customerId }),
+    listLocationsForCustomer(db, { organizationId, customerId }),
     getDiscoverySnapshot(db, { organizationId, customerId }),
     listCommercialProposals(db, { organizationId, customerId }),
     listProposalInvites(db, { organizationId, customerId }),
@@ -76,6 +79,8 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
         documents={documents}
         timeline={timeline}
         work={work}
+        locations={locations}
+        mapStyleUrl={mapConfig()?.styleUrl ?? null}
         calls={calls}
         invoices={invoices}
         invites={invites}

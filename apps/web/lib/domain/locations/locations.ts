@@ -38,44 +38,50 @@ const LABEL_MAX = 200;
 const ADDRESS_MAX = 500;
 const ACCESS_NOTES_MAX = 2000;
 
+type LocationRow = {
+  id: string;
+  label: string;
+  address: string;
+  access_notes: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  custom: CustomValues | null;
+  created_at: string;
+};
+
+const LOCATION_COLUMNS = 'id, label, address, access_notes, latitude, longitude, custom, created_at' as const;
+
+function one<T>(value: T | T[] | null): T | undefined {
+  if (value === null) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+}
+
 /**
- * Locations belonging to one organization, each with the customers served there.
+ * Attaches "who is served here" to a set of already-fetched location rows — the one place that
+ * join happens, shared by every caller that needs it (`listLocations`, `getLocation`,
+ * `listLocationsForCustomer`) rather than each repeating it.
  *
  * The link is read in a second query rather than as a PostgREST embed. The foreign keys on
- * `customer_locations` are composite — `(organization_id, customer_id)` — which is what makes
- * a cross-tenant link unrepresentable, and it also means an embed would need a constraint
- * hint on every call. Two queries and a join here is the plainer thing, and the join is over
- * rows RLS has already restricted to this caller's tenants.
+ * `customer_locations` are composite — `(organization_id, customer_id)` — which is what makes a
+ * cross-tenant link unrepresentable, and it also means an embed would need a constraint hint on
+ * every call. Two queries and a join here is the plainer thing, and the join is over rows RLS has
+ * already restricted to this caller's tenants.
  */
-export async function listLocations(
+async function attachCustomers(
   db: Db,
-  input: { organizationId: string; limit?: number },
-): Promise<Counted<Location>> {
-  const { data, error, count } = await db
-    .from('locations')
-    .select('id, label, address, access_notes, latitude, longitude, custom, created_at', {
-      count: 'exact',
-    })
-    .eq('organization_id', input.organizationId)
-    .order('created_at', { ascending: false })
-    .limit(input.limit ?? LIST_LIMIT);
+  organizationId: string,
+  rows: LocationRow[],
+): Promise<Location[]> {
+  if (rows.length === 0) return [];
 
-  if (error) {
-    throw new DomainError(error.message, 'locations.list_failed');
-  }
-
-  const locations = data ?? [];
-  if (locations.length === 0) {
-    return counted([], count);
-  }
-
-  const { data: links, error: linkError } = await db
+  const { data: links, error } = await db
     .from('customer_locations')
     .select('location_id, customers!customer_locations_customer_same_org (id, name)')
-    .eq('organization_id', input.organizationId);
+    .eq('organization_id', organizationId)
+    .in('location_id', rows.map((row) => row.id));
 
-  if (linkError) {
-    throw new DomainError(linkError.message, 'locations.links_failed');
+  if (error) {
+    throw new DomainError(error.message, 'locations.links_failed');
   }
 
   const byLocation = new Map<string, LinkedCustomer[]>();
@@ -90,29 +96,80 @@ export async function listLocations(
     byLocation.set(link.location_id, existing);
   }
 
-  return counted(
-    locations.map((row) => ({
-      id: row.id,
-      label: row.label,
-      address: row.address,
-      accessNotes: row.access_notes,
-      // The database refuses half a point (`locations_coordinates_are_complete`), so one test
-      // covers both columns rather than two that could disagree.
-      coordinates:
-        row.latitude !== null && row.longitude !== null
-          ? { latitude: row.latitude, longitude: row.longitude }
-          : null,
-      custom: (row.custom ?? {}) as CustomValues,
-      customers: (byLocation.get(row.id) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
-      createdAt: row.created_at,
-    })),
-    count,
-  );
+  return rows.map((row) => ({
+    id: row.id,
+    label: row.label,
+    address: row.address,
+    accessNotes: row.access_notes,
+    // The database refuses half a point (`locations_coordinates_are_complete`), so one test
+    // covers both columns rather than two that could disagree.
+    coordinates:
+      row.latitude !== null && row.longitude !== null
+        ? { latitude: row.latitude, longitude: row.longitude }
+        : null,
+    custom: (row.custom ?? {}) as CustomValues,
+    customers: (byLocation.get(row.id) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
+    createdAt: row.created_at,
+  }));
 }
 
-function one<T>(value: T | T[] | null): T | undefined {
-  if (value === null) return undefined;
-  return Array.isArray(value) ? value[0] : value;
+/**
+ * Locations belonging to one organization, each with the customers served there.
+ */
+export async function listLocations(
+  db: Db,
+  input: { organizationId: string; limit?: number },
+): Promise<Counted<Location>> {
+  const { data, error, count } = await db
+    .from('locations')
+    .select(LOCATION_COLUMNS, { count: 'exact' })
+    .eq('organization_id', input.organizationId)
+    .order('created_at', { ascending: false })
+    .limit(input.limit ?? LIST_LIMIT);
+
+  if (error) {
+    throw new DomainError(error.message, 'locations.list_failed');
+  }
+
+  const locations = await attachCustomers(db, input.organizationId, (data ?? []) as LocationRow[]);
+  return counted(locations, count);
+}
+
+/**
+ * The locations one customer is served from — the reverse of `listLocations`' own linkage, read
+ * through the same `customer_locations` junction (D-restated: a site can serve several
+ * customers, so this is "which of this organization's locations name this customer", never a
+ * column on `customers`).
+ */
+export async function listLocationsForCustomer(
+  db: Db,
+  input: { organizationId: string; customerId: string },
+): Promise<Location[]> {
+  const { data: links, error: linkError } = await db
+    .from('customer_locations')
+    .select('location_id')
+    .eq('organization_id', input.organizationId)
+    .eq('customer_id', input.customerId);
+
+  if (linkError) {
+    throw new DomainError(linkError.message, 'locations.links_failed');
+  }
+
+  const locationIds = (links ?? []).map((link) => link.location_id);
+  if (locationIds.length === 0) return [];
+
+  const { data, error } = await db
+    .from('locations')
+    .select(LOCATION_COLUMNS)
+    .eq('organization_id', input.organizationId)
+    .in('id', locationIds)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new DomainError(error.message, 'locations.list_failed');
+  }
+
+  return attachCustomers(db, input.organizationId, (data ?? []) as LocationRow[]);
 }
 
 /**
@@ -128,7 +185,7 @@ export async function getLocation(
 ): Promise<Location | null> {
   const { data, error } = await db
     .from('locations')
-    .select('id, label, address, access_notes, latitude, longitude, custom, created_at')
+    .select(LOCATION_COLUMNS)
     .eq('organization_id', input.organizationId)
     .eq('id', input.locationId)
     .maybeSingle();
@@ -138,35 +195,8 @@ export async function getLocation(
   }
   if (!data) return null;
 
-  const { data: links, error: linkError } = await db
-    .from('customer_locations')
-    .select('customers!customer_locations_customer_same_org (id, name)')
-    .eq('organization_id', input.organizationId)
-    .eq('location_id', input.locationId);
-
-  if (linkError) {
-    throw new DomainError(linkError.message, 'locations.links_failed');
-  }
-
-  const customers = (links ?? [])
-    .map((link) => one(link.customers))
-    .filter((customer): customer is { id: string; name: string } => customer !== undefined)
-    .map((customer) => ({ id: customer.id, name: customer.name }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  return {
-    id: data.id,
-    label: data.label,
-    address: data.address,
-    accessNotes: data.access_notes,
-    coordinates:
-      data.latitude !== null && data.longitude !== null
-        ? { latitude: data.latitude, longitude: data.longitude }
-        : null,
-    custom: (data.custom ?? {}) as CustomValues,
-    customers,
-    createdAt: data.created_at,
-  };
+  const [location] = await attachCustomers(db, input.organizationId, [data as LocationRow]);
+  return location;
 }
 
 /**

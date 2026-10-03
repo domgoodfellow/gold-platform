@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { Disclosure } from '@/components/surfaces/card';
+import { Hint } from '@/components/controls/inputs';
 import { AppPage } from '@/components/layout/app-page';
 import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
 import { CollectionHeader } from '@/components/patterns/collection-header';
@@ -39,6 +41,18 @@ export default async function LocationsPage({
   const mayConfigure = organization.capabilities.includes('field.manage');
   const styleUrl = mapConfig()?.styleUrl ?? null;
 
+  // A customer's own sites, read through the link CRM already reads (`CustomerLocationsSection`'s
+  // "View all") — filtered in memory rather than a second query, since this route already loads
+  // every location and its linked customers for the List/Map toggle regardless.
+  const filterCustomerId = typeof query.customer === 'string' ? query.customer : undefined;
+  const filterCustomer = filterCustomerId
+    ? customers.find((customer) => customer.id === filterCustomerId)
+    : undefined;
+  const visibleLocations = filterCustomerId
+    ? locations.filter((location) => location.customers.some((customer) => customer.id === filterCustomerId))
+    : locations;
+  const clearFilterHref = `/organizations/${organizationId}/locations${view === 'map' ? '?view=map' : ''}`;
+
   return (
     <AppPage>
       <CreateLocationSheetProvider organizationId={organizationId} definitions={definitions}>
@@ -69,6 +83,17 @@ export default async function LocationsPage({
 
         <LocationsViewNav organizationId={organizationId} view={view} />
 
+        {filterCustomerId ? (
+          <Hint className="mt-3 flex items-center justify-between gap-3">
+            <span>
+              Showing locations for {filterCustomer?.name ?? 'this customer'} ({visibleLocations.length})
+            </span>
+            <Link href={clearFilterHref} className="shrink-0 underline underline-offset-4">
+              Show all locations
+            </Link>
+          </Hint>
+        ) : null}
+
         {view === 'list' ? (
           <>
             {/*
@@ -90,7 +115,7 @@ export default async function LocationsPage({
             <div>
               <LocationTable
                 organizationId={organizationId}
-                locations={locations}
+                locations={visibleLocations}
                 definitions={definitions}
                 mayEdit={mayAdd}
                 mayLookUp={geocoding !== null}
@@ -100,7 +125,7 @@ export default async function LocationsPage({
         ) : (
           <LocationMapLoader
             organizationId={organizationId}
-            locations={locations}
+            locations={visibleLocations}
             mapStyleUrl={styleUrl}
             mayEdit={mayAdd}
             mayLookUp={geocoding !== null}

@@ -7,6 +7,7 @@ import {
   createLocation,
   linkCustomerLocation,
   listLocations,
+  listLocationsForCustomer,
   setLocationCoordinates,
 } from '@/lib/domain/locations/locations';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
@@ -263,6 +264,38 @@ describe('locations', () => {
     for (const event of data!) {
       expect(event.actor_id).toBe(alice.userId);
     }
+  });
+
+  it('reads a customer’s own sites — CRM’s side of the same junction Locations itself reads', async () => {
+    const mine = await listLocationsForCustomer(alice.db, {
+      organizationId: alice.organizationId,
+      customerId: aliceCustomerId,
+    });
+    expect(mine.map((l) => l.address)).toEqual(['1 Alice Way']);
+  });
+
+  it('answers empty, not an error, for a customer served from nowhere', async () => {
+    const unlinked = await createCustomer(alice.db, {
+      organizationId: alice.organizationId,
+      name: 'No Sites Yet Ltd',
+    });
+
+    const theirs = await listLocationsForCustomer(alice.db, {
+      organizationId: alice.organizationId,
+      customerId: unlinked,
+    });
+    expect(theirs).toEqual([]);
+  });
+
+  it('cannot read another tenant’s customer-to-location link by naming its id', async () => {
+    // Bob's own organization, but Alice's customer id — the composite foreign keys make the
+    // underlying link unrepresentable, so there is nothing to find rather than something
+    // visible that a check denies.
+    const acrossTheWall = await listLocationsForCustomer(bob.db, {
+      organizationId: bob.organizationId,
+      customerId: aliceCustomerId,
+    });
+    expect(acrossTheWall).toEqual([]);
   });
 });
 

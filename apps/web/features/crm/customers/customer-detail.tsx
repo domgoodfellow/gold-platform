@@ -22,6 +22,7 @@ import type { DiscoverySnapshot } from '@/lib/domain/customers/discovery-snapsho
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import type { StoredDocument } from '@/lib/domain/documents/documents';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
+import type { Location } from '@/lib/domain/locations/locations';
 import type { PortalInvite } from '@/lib/domain/portal/portal';
 import type { Call } from '@/lib/domain/reception/calls';
 import type { TimelineEntry } from '@/lib/domain/timeline/timeline';
@@ -33,6 +34,7 @@ import {
 } from '@/app/organizations/[organizationId]/customers/[customerId]/actions';
 import { CustomerFinancialSummary } from './customer-financial-summary';
 import { CustomerHeader } from './customer-header';
+import { CustomerLocationsSection } from './customer-locations-section';
 import { CustomerRelatedWork } from './customer-related-work';
 
 export function CustomerDetail({
@@ -44,6 +46,8 @@ export function CustomerDetail({
   documents,
   timeline,
   work,
+  locations,
+  mapStyleUrl,
   calls,
   invoices,
   invites,
@@ -70,6 +74,9 @@ export function CustomerDetail({
   documents: StoredDocument[];
   timeline: TimelineEntry[];
   work: WorkItem[];
+  locations: Location[];
+  /** Null when this deployment has not configured a basemap. */
+  mapStyleUrl: string | null;
   calls: Call[];
   invoices: Invoice[];
   invites: PortalInvite[];
@@ -100,6 +107,7 @@ export function CustomerDetail({
           <TabsTrigger value="commercial">Commercial proposal</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="work">Work</TabsTrigger>
+          <TabsTrigger value="locations">Locations</TabsTrigger>
           {features.voice ? <TabsTrigger value="calls">Calls</TabsTrigger> : null}
           <TabsTrigger value="documents">Documents</TabsTrigger>
           {features.billing ? <TabsTrigger value="invoices">Invoices</TabsTrigger> : null}
@@ -149,6 +157,14 @@ export function CustomerDetail({
         </TabsContent>
         <TabsContent value="activity" className="mt-6"><ActivityList timeline={timeline} timezone={timezone} /></TabsContent>
         <TabsContent value="work" className="mt-6"><CustomerRelatedWork organizationId={organizationId} work={work} /></TabsContent>
+        <TabsContent value="locations" className="mt-6">
+          <CustomerLocationsSection
+            organizationId={organizationId}
+            customerId={customer.id}
+            locations={locations}
+            mapStyleUrl={mapStyleUrl}
+          />
+        </TabsContent>
         {features.voice ? <TabsContent value="calls" className="mt-6"><CallHistory calls={calls} empty="No calls with this customer." />{permissions.call ? null : <Hint className="mt-4">Your role, {role}, cannot call customers.</Hint>}</TabsContent> : null}
         <TabsContent value="documents" className="mt-6"><DocumentsSection organizationId={organizationId} documents={documents} mayAttach={permissions.attach} roleLabel={role} uploadAction={uploadCustomerDocumentAction} hiddenFields={{ organizationId, customerId: customer.id }} className="mt-0" /></TabsContent>
         {features.billing ? <TabsContent value="invoices" className="mt-6"><CustomerFinancialSummary organizationId={organizationId} invoices={invoices} timezone={timezone} /></TabsContent> : null}

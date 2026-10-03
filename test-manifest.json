@@ -659,6 +659,15 @@
       ],
       "note": "Also runs a pure entity resolver."
     },
+    "apps/web/tests/architecture/static/customer-locations.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "crm",
+        "customers",
+        "locations",
+        "map"
+      ]
+    },
     "apps/web/tests/architecture/static/dashboard.test.ts": {
       "category": "architecture-static",
       "concerns": [
