@@ -123,7 +123,7 @@ describe('Schedule composes feature-owned scheduling UI', () => {
 describe('Week does not force seven Resource-lane columns, and narrows to an agenda', () => {
   it('Week groups by day, not by Resource column', () => {
     const week = read(`${CALENDAR}/week-schedule.tsx`);
-    expect(week).toContain('lg:grid-cols-7');
+    expect(week).toContain('md:grid-cols-7');
     expect(week).not.toMatch(/resources\.map[\s\S]{0,80}resources\.map/);
   });
 

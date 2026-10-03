@@ -42,7 +42,14 @@ export function WeekSchedule({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-7 lg:gap-0 lg:divide-x lg:divide-border">
+      {/*
+        `md:`, not `lg:` — a seven-column week must read as a real calendar on anything desktop-
+        or tablet-sized; only a genuinely phone-narrow viewport falls back to the stacked agenda.
+        `md:auto-rows-fr` on a `md:flex-1` grid is what lets the single row of cells fill the
+        canvas instead of sizing to its own (short) content and leaving the rest of the canvas
+        blank — the same defect the fixed-pixel axis in Day avoids with `minHeight` + stretch.
+      */}
+      <div className="grid grid-cols-1 gap-3 md:min-h-0 md:flex-1 md:auto-rows-fr md:grid-cols-7 md:gap-0 md:divide-x md:divide-border">
         {days.map((day) => {
           const events = eventsFor(day);
           const isToday = day.date === today;
@@ -50,18 +57,18 @@ export function WeekSchedule({
             <div
               key={day.date}
               className={cx(
-                'flex min-h-40 flex-col gap-2 border-b border-border p-2 last:border-b-0 lg:min-h-64 lg:border-b-0 lg:last:border-b-0',
+                'flex min-h-40 flex-col gap-2 border-b border-border p-2 last:border-b-0 md:min-h-0 md:border-b-0 md:last:border-b-0',
                 isToday && 'bg-hover/40',
               )}
             >
-              <div className={cx('flex items-baseline justify-between text-sm font-medium', isToday && 'text-accent')}>
+              <div className={cx('flex shrink-0 items-baseline justify-between text-sm font-medium', isToday && 'text-accent')}>
                 <span>{formatDayHeader(day.date)}</span>
                 {isToday ? <span className="text-xs font-normal uppercase tracking-wide text-accent">Today</span> : null}
               </div>
               {events.length === 0 ? (
                 <p className="text-xs text-muted">Nothing scheduled.</p>
               ) : (
-                <ul className="flex flex-col gap-1.5 overflow-y-auto">
+                <ul className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
                   {events.map((event) => (
                     <li key={event.workItemId}>
                       <ScheduleEvent

@@ -86,7 +86,14 @@ export function DaySchedule({
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-auto">
-        <div className="relative flex min-w-full">
+        {/*
+          `h-full` here is what lets every lane below stretch to fill the canvas rather than
+          sizing to its own hour count: each lane sets `minHeight` (never `height`), so the
+          default flex cross-axis stretch makes it exactly this row's height — which is the full
+          canvas — whenever that is taller than the hour axis needs, and the hour axis's own
+          floor otherwise, with the scroll container above taking over for the overflow.
+        */}
+        <div className="relative flex h-full min-w-full">
           {showNowLine ? (
             <div
               aria-hidden
@@ -98,9 +105,9 @@ export function DaySchedule({
             </div>
           ) : null}
 
-          <div className="sticky left-0 z-10 w-14 shrink-0 bg-background">
-            <div className="h-9" aria-hidden />
-            <div className="relative" style={{ height: `${laneHeight}px` }}>
+          <div className="sticky left-0 z-10 flex h-full w-14 shrink-0 flex-col bg-background">
+            <div className="h-9 shrink-0" aria-hidden />
+            <div className="relative flex-1" style={{ minHeight: `${laneHeight}px` }}>
               {hourMarks.map((mark, index) => (
                 <div
                   key={mark}
@@ -115,8 +122,11 @@ export function DaySchedule({
 
           {resources.length === 0 ? (
             <div className="flex min-w-0 flex-1 flex-col border-l border-border">
-              <div className="h-9" aria-hidden />
-              <div className="relative flex flex-1 items-center justify-center border-t border-border" style={{ height: `${laneHeight}px` }}>
+              <div className="h-9 shrink-0" aria-hidden />
+              <div
+                className="relative flex flex-1 items-center justify-center border-t border-border"
+                style={{ minHeight: `${laneHeight}px` }}
+              >
                 <div className="flex flex-col items-center gap-2 px-6 text-center">
                   <p className="text-sm font-medium">No resources configured</p>
                   <p className="max-w-xs text-xs text-muted">
@@ -133,8 +143,8 @@ export function DaySchedule({
           ) : (
             resources.map((entry) => (
               <div key={entry.resource.id} className="flex min-w-44 flex-1 basis-44 flex-col border-l border-border">
-                <div className="flex h-9 items-end truncate px-2 pb-1 text-sm font-medium">{entry.resource.name}</div>
-                <div className="relative border-t border-border" style={{ height: `${laneHeight}px` }}>
+                <div className="flex h-9 shrink-0 items-end truncate px-2 pb-1 text-sm font-medium">{entry.resource.name}</div>
+                <div className="relative flex-1 border-t border-border" style={{ minHeight: `${laneHeight}px` }}>
                   {hourMarks.slice(1, -1).map((mark) => (
                     <div
                       key={mark}
