@@ -303,12 +303,13 @@ export async function organizationEffectiveEntitlements(
 
 export async function organizationPlanPrice(
   db: Db,
-  input: { organizationId: string; planId: string; at?: string },
+  input: { organizationId: string; planId: string; at?: string; billingInterval?: 'month' | 'year' | 'one_time' },
 ): Promise<EffectivePrice | null> {
   const { data, error } = await db.rpc('organization_plan_price', {
     p_organization_id: input.organizationId,
     p_plan_id: input.planId,
     p_at: input.at ?? new Date().toISOString(),
+    p_billing_interval: input.billingInterval ?? 'month',
   });
   if (error) throw new DomainError(error.message, 'organization_plans.plan_price_failed');
   const row = (data ?? [])[0] as { amount_minor: string | number; currency: string; source: string } | undefined;

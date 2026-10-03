@@ -1497,6 +1497,14 @@
       ],
       "note": "Stripe HTTP is stubbed with fetch spies; not a provider contract."
     },
+    "apps/web/tests/integration/database/platform-billing-quote.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "commercial",
+        "catalogue"
+      ]
+    },
     "apps/web/tests/integration/database/platform-overview.test.ts": {
       "category": "database-integration",
       "concerns": [

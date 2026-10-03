@@ -8,6 +8,7 @@ import type { PlanUsageModel } from '@/lib/application/settings/plan-usage';
 import { ManageBillingButton, SubscribeButton } from '@/features/settings/platform-billing-forms';
 import { AllowanceMeter } from '@/features/catalogue/allowance-meter';
 import type { UsageEvent } from '@/lib/domain/commercial/usage';
+import type { PurchaseQuote } from '@/lib/domain/platform-billing/quote';
 
 function formatMinor(amountMinor: number, currency: string | null): string {
   if (!currency) return String(amountMinor);
@@ -49,14 +50,56 @@ function usageCharge(entry: UsageEvent, format: (minor: number, currency: string
 }
 
 /**
+ * Exactly what this checkout is about to buy, before the business leaves for the billing
+ * provider's own page (work order C §5) — never a "Success!" before the provider confirms, and
+ * never a total this screen computed itself (the quote is the one computation).
+ */
+function PurchaseReview({ quote }: { quote: PurchaseQuote }) {
+  return (
+    <div className="mt-3 rounded-md border border-line p-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted">Review before you pay</p>
+      <DividedList className="mt-2">
+        {[...quote.recurring, ...quote.dueNow].map((line, index) => (
+          <div key={`${line.sourceType}-${line.sourceId}-${index}`} className="flex items-center justify-between py-1.5 text-sm">
+            <span>
+              {line.label}
+              {line.billingInterval === 'one_time' ? <span className="text-muted"> · one time</span> : null}
+            </span>
+            <span className="font-medium">{formatMinor(line.amountMinor * line.quantity, quote.currency)}</span>
+          </div>
+        ))}
+      </DividedList>
+      <div className="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm">
+        <span className="text-muted">Due now</span>
+        <span className="font-medium">{formatMinor(quote.dueNowTotalMinor, quote.currency)}</span>
+      </div>
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted">Then recurring</span>
+        <span className="font-medium">{formatMinor(quote.recurringTotalMinor, quote.currency)} / month</span>
+      </div>
+    </div>
+  );
+}
+
+/**
  * What this business is entitled to use, what GOLD has recorded selling it, what it used, and
  * what that cost it — never what it cost GOLD, and never a margin (`constraints.md` D43). A
  * detail route under Settings, so it writes its own heading rather than
  * one `navigation.ts` also owns.
  */
-export function PlanUsageScreen({ organizationId, currency, model }: { organizationId: string; currency: string | null; model: PlanUsageModel }) {
+export function PlanUsageScreen({
+  organizationId,
+  currency,
+  model,
+  checkoutReturn,
+}: {
+  organizationId: string;
+  currency: string | null;
+  model: PlanUsageModel;
+  checkoutReturn?: 'success' | 'canceled' | null;
+}) {
   const { terms, usage, account, basePlan, addonPlans, allowances, meterLabel, productLabel,
-    billingProvider, subscription, subscribablePrice, canManageBilling } = model;
+    billingProvider, subscription, subscribablePrice, quote, canManageBilling } = model;
 
   return (
     <SettingsPageFrame>
@@ -65,6 +108,16 @@ export function PlanUsageScreen({ organizationId, currency, model }: { organizat
         crumbs={[{ label: 'Settings', href: settingsLandingHref(organizationId) }]}
         actions={<ButtonLink href={`/organizations/${organizationId}/settings/features`}>Manage features</ButtonLink>}
       />
+
+      {checkoutReturn === 'canceled' ? (
+        <Hint className="mt-4">Checkout was canceled — nothing was charged.</Hint>
+      ) : checkoutReturn === 'success' ? (
+        <Hint className="mt-4">
+          {subscription && ['active', 'trialing'].includes(subscription.status)
+            ? 'Subscription confirmed.'
+            : 'Checkout returned — waiting for billing confirmation…'}
+        </Hint>
+      ) : null}
 
       <Section className="mt-8">
         <SectionHeading>Plan</SectionHeading>
@@ -106,6 +159,7 @@ export function PlanUsageScreen({ organizationId, currency, model }: { organizat
           ) : basePlan && subscribablePrice ? (
             <div className="mt-2 text-sm">
               <p className="text-muted">Not yet subscribed.</p>
+              {quote ? <PurchaseReview quote={quote} /> : null}
               {canManageBilling ? (
                 <div className="mt-3">
                   <SubscribeButton organizationId={organizationId} planKey={basePlan.key} planLabel={basePlan.label} />

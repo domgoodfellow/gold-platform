@@ -9,6 +9,7 @@ import { listPlans, listPlanPrices } from '@/lib/domain/catalogue/plans';
 import { currentAddonAssignments, currentPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { platformBillingProvider } from '@/lib/adapters/platform-billing';
 import { getOrganizationSubscription } from '@/lib/domain/platform-billing/subscriptions';
+import { buildOrganizationPurchaseQuote, type PurchaseQuote } from '@/lib/domain/platform-billing/quote';
 
 /**
  * What this business is entitled to use, how much of it is left, what it has used and what that
@@ -36,11 +37,21 @@ export async function loadPlanUsage(db: Db, input: { organizationId: string; cur
     billingProvider ? getOrganizationSubscription(db, { organizationId }) : Promise.resolve(null),
     basePlan ? listPlanPrices(db, basePlan.id) : Promise.resolve([]),
   ]);
+  const subscribablePrice = input.currency
+    ? basePlanPrices.find((price) => price.approvalState === 'approved' && price.currency === input.currency)
+    : undefined;
+  // The review-before-pay quote (work order C §5) -- only built when there is actually a purchase
+  // in front of this business: no provider configured, or already subscribed, means nothing to
+  // review.
+  const quote: PurchaseQuote | null =
+    billingProvider && !subscription && basePlan && subscribablePrice
+      ? await buildOrganizationPurchaseQuote(db, { organizationId })
+      : null;
   return {
     terms, products, usage, account, basePlanAssignment, addonAssignments, allowances, basePlan, addonPlans,
     meterLabel: new Map(meters.map((meter) => [meter.id, meter.label])),
     productLabel: new Map(products.map((product) => [product.key, product.label])), billingProvider, subscription,
-    subscribablePrice: input.currency ? basePlanPrices.find((price) => price.approvalState === 'approved' && price.currency === input.currency) : undefined,
+    subscribablePrice, quote,
     canManageBilling: input.capabilities.includes('billing.manage'),
   };
 }

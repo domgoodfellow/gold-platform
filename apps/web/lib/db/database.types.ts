@@ -5077,28 +5077,37 @@ export type Database = {
       platform_billing_checkout_sessions: {
         Row: {
           environment: string
+          expires_at: string | null
           id: string
           organization_id: string
           plan_price_id: string
           provider_reference: string | null
+          quote_snapshot: Json | null
+          quote_version: string | null
           requested_at: string
           requested_by: string
         }
         Insert: {
           environment: string
+          expires_at?: string | null
           id?: string
           organization_id: string
           plan_price_id: string
           provider_reference?: string | null
+          quote_snapshot?: Json | null
+          quote_version?: string | null
           requested_at?: string
           requested_by: string
         }
         Update: {
           environment?: string
+          expires_at?: string | null
           id?: string
           organization_id?: string
           plan_price_id?: string
           provider_reference?: string | null
+          quote_snapshot?: Json | null
+          quote_version?: string | null
           requested_at?: string
           requested_by?: string
         }

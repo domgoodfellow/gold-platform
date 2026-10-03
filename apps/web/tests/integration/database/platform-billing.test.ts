@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createPlan, getPlan, recordPlanPrice } from '@/lib/domain/catalogue/plans';
+import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { createRole } from '@/lib/domain/tenancy/roles';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { ensurePlatformBillingCustomer } from '@/lib/domain/platform-billing/customers';
@@ -141,6 +142,17 @@ function spyOnStripeCalls(): { spy: ReturnType<typeof vi.spyOn>; calls: string[]
     return new Response(JSON.stringify({ id: 'unexpected' }), { status: 200 });
   });
   return { spy, calls };
+}
+
+/** Checkout now purchases only the Plan currently assigned to the business (work order C §3). */
+async function assignPlan(organizationId: string, planId: string): Promise<void> {
+  await recordPlanAssignment(staff, {
+    organizationId,
+    planId,
+    periodStart: new Date().toISOString().slice(0, 10),
+    periodEnd: '9999-12-31',
+    note: 'platform-billing.test.ts',
+  });
 }
 
 /** Provisions a billable Plan/Price/provider-price mapping, returning the plan key. */
@@ -327,7 +339,9 @@ describe('one Stripe-shaped Customer per organization', () => {
 
 describe('starting a subscription (Checkout)', () => {
   it('resolves the configured Plan to its provisioned price, and uses subscription mode', async () => {
-    const { planKey } = await seedProvisionedPlan();
+    const org = await newTenant('checkout-resolve');
+    const { planKey, planId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
 
     let checkoutBody = '';
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
@@ -341,8 +355,8 @@ describe('starting a subscription (Checkout)', () => {
       throw new Error(`unexpected stripe fetch: ${url}`);
     });
 
-    const result = await beginPlatformBillingCheckout(tenant.db, {
-      organizationId: tenant.organizationId,
+    const result = await beginPlatformBillingCheckout(org.db, {
+      organizationId: org.organizationId,
       planKey,
       organizationName: 'Tenant Co',
       organizationEmail: null,
@@ -360,17 +374,41 @@ describe('starting a subscription (Checkout)', () => {
     fetchSpy.mockRestore();
   });
 
+  it('refuses a Plan not currently assigned to this business, even if it is sellable and priced', async () => {
+    const org = await newTenant('checkout-unassigned');
+    const { planKey } = await seedProvisionedPlan();
+    // Deliberately no assignPlan() -- this business has never been given this Plan.
+    const { spy, calls } = spyOnStripeCalls();
+
+    await expect(
+      beginPlatformBillingCheckout(org.db, {
+        organizationId: org.organizationId,
+        planKey,
+        organizationName: 'Tenant Co',
+        organizationEmail: null,
+        currency: 'CAD',
+        successUrl: 'https://app.test/success',
+        cancelUrl: 'https://app.test/cancel',
+      }),
+    ).rejects.toMatchObject({ code: 'platform_billing.plan_not_assigned' });
+
+    expect(calls).toEqual([]);
+    spy.mockRestore();
+  });
+
   it('refuses a Plan the browser names that has no provisioned price', async () => {
+    const org = await newTenant('checkout-unprovisioned');
     const key = `unprovisioned_${randomUUID().replace(/-/g, '').slice(0, 10)}`;
     const planId = await createPlan(staff, { key, kind: 'plan', label: 'Unprovisioned', description: '', billable: true });
     await recordPlanPrice(staff, { planId, currency: 'CAD', amountMinor: 1_000, billingInterval: 'month' });
+    await assignPlan(org.organizationId, planId);
     void (await getPlan(staff, key)); // sanity: the plan itself resolves — only its provider price is missing
 
     const { spy, calls } = spyOnStripeCalls();
 
     await expect(
-      beginPlatformBillingCheckout(tenant.db, {
-        organizationId: tenant.organizationId,
+      beginPlatformBillingCheckout(org.db, {
+        organizationId: org.organizationId,
         planKey: key,
         organizationName: 'Tenant Co',
         organizationEmail: null,
@@ -385,12 +423,15 @@ describe('starting a subscription (Checkout)', () => {
   });
 
   it('refuses a member with no billing.manage, before the provider is ever asked', async () => {
-    const { planKey } = await seedProvisionedPlan();
+    const org = await newTenant('checkout-nobilling');
+    const { planKey, planId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
+    const member = await restrictedMember(org, 'no-billing-checkout');
     const { spy, calls } = spyOnStripeCalls();
 
     await expect(
-      beginPlatformBillingCheckout(noBillingMember.db, {
-        organizationId: noBillingMember.organizationId,
+      beginPlatformBillingCheckout(member.db, {
+        organizationId: org.organizationId,
         planKey,
         organizationName: 'Tenant Co',
         organizationEmail: null,
@@ -404,8 +445,10 @@ describe('starting a subscription (Checkout)', () => {
     spy.mockRestore();
   });
 
-  it('records the checkout attempt before asking the provider, and corrects it with the provider reference afterward', async () => {
-    const { planKey } = await seedProvisionedPlan();
+  it('records the checkout attempt before asking the provider, including the quote it was shown, and corrects it with the provider reference afterward', async () => {
+    const org = await newTenant('checkout-record');
+    const { planKey, planId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
@@ -416,8 +459,8 @@ describe('starting a subscription (Checkout)', () => {
       throw new Error(`unexpected stripe fetch: ${url}`);
     });
 
-    await beginPlatformBillingCheckout(tenant.db, {
-      organizationId: tenant.organizationId,
+    await beginPlatformBillingCheckout(org.db, {
+      organizationId: org.organizationId,
       planKey,
       organizationName: 'Tenant Co',
       organizationEmail: null,
@@ -427,11 +470,15 @@ describe('starting a subscription (Checkout)', () => {
     });
 
     const { rows } = await pg.query(
-      `select provider_reference from public.platform_billing_checkout_sessions
+      `select provider_reference, quote_snapshot, quote_version, expires_at
+         from public.platform_billing_checkout_sessions
         where organization_id = $1 order by requested_at desc limit 1`,
-      [tenant.organizationId],
+      [org.organizationId],
     );
     expect(rows[0].provider_reference).toBe('cs_record_1');
+    expect(rows[0].quote_snapshot?.recurring?.length).toBeGreaterThan(0);
+    expect(rows[0].quote_version).toBeTruthy();
+    expect(new Date(rows[0].expires_at).getTime()).toBeGreaterThan(Date.now());
 
     fetchSpy.mockRestore();
   });

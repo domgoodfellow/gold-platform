@@ -1,8 +1,10 @@
 import { platformBillingProvider } from '@/lib/adapters/platform-billing';
 import type { Db } from '@/lib/db/types';
+import { currentPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { getPlan, listPlanPrices } from '@/lib/domain/catalogue/plans';
 import { DomainError } from '@/lib/domain/errors';
 import { ensurePlatformBillingCustomer } from '@/lib/domain/platform-billing/customers';
+import { buildOrganizationPurchaseQuote } from '@/lib/domain/platform-billing/quote';
 import { getOrganizationSubscription } from '@/lib/domain/platform-billing/subscriptions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -28,6 +30,17 @@ export async function beginPlatformBillingCheckout(
   const plan = await getPlan(db, input.planKey);
   if (!plan || plan.kind !== 'plan' || plan.saleStatus !== 'active' || !plan.billable) {
     throw new DomainError('That Plan is not available to subscribe to.', 'platform_billing.plan_unavailable');
+  }
+
+  // Checkout purchases the organization's already-approved package -- it is never a catalogue
+  // browse (work order C §3). Which Plan a business may subscribe to stays a staff-assigned
+  // entitlement fact, enforced here rather than only in the one Plan the settings screen offers.
+  const assignment = await currentPlanAssignment(db, { organizationId: input.organizationId });
+  if (!assignment || assignment.planId !== plan.id) {
+    throw new DomainError(
+      'This is not the Plan currently assigned to this business.',
+      'platform_billing.plan_not_assigned',
+    );
   }
 
   const prices = await listPlanPrices(db, plan.id);
@@ -73,6 +86,13 @@ export async function beginPlatformBillingCheckout(
     );
   }
 
+  // The quote is what the review step showed; it is captured onto the session row below so a
+  // package change the browser raced past is detectable rather than silently re-priced.
+  const quote = await buildOrganizationPurchaseQuote(db, { organizationId: input.organizationId });
+  if (quote.blockers.length > 0) {
+    throw new DomainError(quote.blockers[0]!.message, `platform_billing.${quote.blockers[0]!.code}`);
+  }
+
   const customer = await ensurePlatformBillingCustomer(db, {
     organizationId: input.organizationId,
     email: input.organizationEmail,
@@ -89,6 +109,9 @@ export async function beginPlatformBillingCheckout(
       environment: provider.environment,
       plan_price_id: price.id,
       requested_by: actor.id,
+      quote_snapshot: quote,
+      quote_version: quote.commercialConfigurationVersion,
+      expires_at: quote.expiresAt,
     })
     .select('id')
     .single();
