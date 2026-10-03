@@ -1212,12 +1212,21 @@ choice of domain, the same shape as choosing a calling number. `public.record_or
 is `security definer` only because there is no RLS policy yet on these two tables to lean on (D40's
 "staff hold no table grant" extends to every role, tenant included, on the *new* tables), checking
 `organization.manage` inline exactly as `telephony_settings_insert` already does declaratively.
-Verifying a domain, once bound, is staff's own door (`set_provider_resource_status`) until a real
-Resend-facing verification check exists to widen that grant — the same deferral D43 already made
-for reconciliation's machine role.
+**Resolved.** The deferral this paragraph originally named — verification left to staff's own hand
+(`set_provider_resource_status`) until a real Resend-facing check existed — closed with
+`20261106000001_a_business_proves_its_own_sending_domain.sql`. `record_organization_email_domain`
+keeps naming the domain the tenant door above describes; what the provider actually says about it
+is now `record_email_domain_provisioning`'s alone, `provider_operator`-only and holding no grant
+to staff or the tenant either — D54's shape, extended from reading a credential to writing the
+state that credential's own calls confirm, rather than D43's staff-recorded reconciliation. The
+provider adapter (`app.providers.resend.domains`) creates the domain at Resend, reads the DNS
+records it requires, and asks Resend to recheck them; `app.services.email_provisioning.operations`
+sequences that against this business's own connected DNS (`app.services.dns`) exactly as the
+pre-existing Vercel custom-domain path already does, and `active` is written only once Resend
+itself says so — never because a form was submitted or a record was published.
 
-**Not built here.** Actually calling Resend's or Twilio's verification/status APIs to confirm a
-domain or a number automatically; a per-organization Deepgram, ElevenLabs or model-inference
+**Not built here.** Actually calling Twilio's verification/status APIs to confirm a number
+automatically; a per-organization Deepgram, ElevenLabs or model-inference
 account of any kind (D43's provider vocabulary already lets usage name one without a binding, and
 nothing yet needs more); a browser voice token signed by a business's *own* generated API key
 rather than GOLD's master one — the deeper secret-resolution-at-the-moment-of-signing problem,

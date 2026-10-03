@@ -622,6 +622,61 @@ def set_custom_domain_verification(
         raise RuntimeError(f"set_custom_domain_verification failed: {response.status_code}")
 
 
+# --- a business's sending domain: two more doors on the same role, and no table grant ----------
+#
+# The same machine identity and the same trust path as the custom-domain doors above:
+# `app.services.email_provisioning` proves under the caller's own token that this person may manage
+# this business's email, and only then asks which GildOps account answers, reads its credential and
+# records what the provider said. Recording the provisioning outcome is this role's alone so that
+# neither a tenant nor a staff token can mark a sending domain usable that no provider checked.
+
+
+def email_domain_provider_account(settings: ProviderOperationsSettings, *, organization_id: str) -> str | None:
+    """The GildOps provider account that answers for this business's sending domains, or `None`."""
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/email_domain_provider_account",
+        headers=_provider_headers(settings),
+        json={"p_organization_id": organization_id},
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"email_domain_provider_account failed: {response.status_code}")
+    return response.json() or None
+
+
+def record_email_domain_provisioning(
+    settings: ProviderOperationsSettings,
+    *,
+    organization_id: str,
+    resource_id: str,
+    status: str,
+    provider_domain_id: str | None = None,
+    provider_status: str | None = None,
+    dns_records: list[dict] | None = None,
+    error_code: str | None = None,
+    error_message: str | None = None,
+) -> None:
+    """What the provider said about a sending domain the tenant already named. Creates nothing: a
+    resource that does not exist is a refusal, not a new row."""
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/record_email_domain_provisioning",
+        headers=_provider_headers(settings),
+        json={
+            "p_organization_id": organization_id,
+            "p_resource_id": resource_id,
+            "p_status": status,
+            "p_provider_domain_id": provider_domain_id,
+            "p_provider_status": provider_status,
+            "p_dns_records": dns_records,
+            "p_error_code": error_code,
+            "p_error_message": error_message,
+        },
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"record_email_domain_provisioning failed: {response.status_code}")
+
+
 INTEGRATION_ROLE = "integration_operator"
 
 # The integration-credentials integration's own `auth.users` row, fixed in

@@ -7,10 +7,8 @@ import {
   getProviderBinding,
   listProviderBindings,
   listProviderResources,
-  recordOrganizationEmailDomain,
   recordProviderResource,
   setProviderBindingStatus,
-  setProviderResourceStatus,
   storeProviderSecret,
 } from '@/lib/domain/providers/bindings';
 import { setCallingNumber } from '@/lib/domain/reception/telephony';
@@ -300,30 +298,6 @@ describe("a tenant configures only what is already bound to it", () => {
     // A number nobody has ever bound to anybody stays exactly as free-text-settable as before
     // this slice — most businesses on this deployment have provisioned nothing yet.
     await setCallingNumber(tenant.db, { organizationId: tenant.organizationId, number: freshNumber() });
-  });
-
-  it("lets a business name its own sending domain, and keeps one business's domain out of another's list", async () => {
-    const domain = `mail-${randomUUID().slice(0, 8)}.example.test`;
-    const resourceId = await recordOrganizationEmailDomain(tenant.db, {
-      organizationId: tenant.organizationId,
-      domain,
-    });
-    expect(resourceId).toBeTruthy();
-
-    const mine = await listProviderResources(tenant.db, { organizationId: tenant.organizationId, providerKey: 'resend' });
-    expect(mine.some((resource) => resource.externalId === domain)).toBe(true);
-
-    const othersView = await listProviderResources(other.db, { organizationId: tenant.organizationId });
-    expect(othersView).toHaveLength(0);
-
-    // Verification is staff's own narrow door, not the tenant's.
-    await expect(
-      setProviderResourceStatus(tenant.db, { organizationId: tenant.organizationId, resourceId, status: 'active' }),
-    ).rejects.toThrow();
-
-    await setProviderResourceStatus(staff, { organizationId: tenant.organizationId, resourceId, status: 'active' });
-    const verified = await listProviderResources(tenant.db, { organizationId: tenant.organizationId, providerKey: 'resend' });
-    expect(verified.find((resource) => resource.id === resourceId)?.status).toBe('active');
   });
 });
 

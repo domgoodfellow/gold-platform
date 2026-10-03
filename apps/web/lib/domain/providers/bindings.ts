@@ -299,35 +299,3 @@ export async function storeProviderSecret(
 
   if (error) throw staffWriteError(error, 'store a provider secret');
 }
-
-/**
- * A business naming its own sending domain beneath GOLD's one Resend account. Tenant-initiated,
- * unlike everything above — the same shape as `setCallingNumber`, and gated the same way
- * (`organization.manage`) rather than by platform staff, because Resend has no per-tenant
- * subaccount for staff to provision first.
- */
-export async function recordOrganizationEmailDomain(
-  db: Db,
-  input: { organizationId: string; domain: string },
-): Promise<string> {
-  const domain = input.domain.trim().toLowerCase();
-  if (domain === '') {
-    throw new DomainError('A sending domain is required.', 'providers.domain_invalid');
-  }
-
-  const { data, error } = await db.rpc('record_organization_email_domain', {
-    p_organization_id: input.organizationId,
-    p_domain: domain,
-  });
-
-  if (error) {
-    throw new DomainError(
-      error.code === '42501'
-        ? 'Your role cannot configure this business’s sending domain.'
-        : error.message,
-      'providers.domain_failed',
-    );
-  }
-
-  return data as string;
-}

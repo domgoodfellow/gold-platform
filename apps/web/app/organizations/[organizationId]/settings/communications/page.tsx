@@ -7,19 +7,12 @@ import { listProviderBindings, listProviderResources } from '@/lib/domain/provid
 import { callingNumber } from '@/lib/domain/reception/telephony';
 import { requireOrganization } from '@/lib/route/organization';
 import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
-import { AddEmailDomainForm } from '@/features/communications/email-domain-form';
+import { configTarget } from '@/lib/navigation';
 import { CommunicationProfileForm } from '@/features/communications/communication-profile-form';
 import { homepageEditorState } from '@/lib/domain/public-site/public-site';
 import type { Db } from '@/lib/db/types';
 
 export const dynamic = 'force-dynamic';
-
-const RESEND_STATUS_WORD: Record<string, string> = {
-  pending: 'Verification required',
-  active: 'Verified',
-  failed: 'Failed',
-  disabled: 'Disabled',
-};
 
 /**
  * The communication services GOLD runs for this business — never GOLD's vendor accounts, and
@@ -58,7 +51,6 @@ export default async function CommunicationsPage({
 
   const twilioBinding = bindings.find((row) => row.providerKey === 'twilio') ?? null;
   const numbers = resources.filter((resource) => resource.resourceType === 'twilio_phone_number');
-  const domains = resources.filter((resource) => resource.resourceType === 'resend_domain');
 
   return (
     <SettingsPageFrame>
@@ -70,8 +62,9 @@ export default async function CommunicationsPage({
         ]}
       />
       <Hint className="mt-1">
-        The phone and email this business communicates through. Never what any of it costs GildOps,
-        and never a secret. Apps a business connects itself are under Integrations.
+        The phone GildOps runs for this business, and how its website answers a visitor. Never
+        what any of it costs GildOps, and never a secret. Apps a business connects itself are
+        under Integrations.
       </Hint>
 
       <Section className="mt-8">
@@ -109,22 +102,17 @@ export default async function CommunicationsPage({
       <Section className="mt-8">
         <SectionHeading>Email</SectionHeading>
         <Hint className="mt-1">
-          GildOps sends every automated message from one address until a domain of your own is
-          verified beneath it.
+          The domain this business sends email from, and what it still needs to be verified, is
+          configured on its own page.
         </Hint>
-        {domains.length === 0 ? (
-          <EmptyState className="mt-2">No sending domain configured.</EmptyState>
-        ) : (
-          <DividedList as="div" className="mt-2">
-            {domains.map((domain) => (
-              <div key={domain.id} className="flex flex-wrap items-baseline gap-x-3 py-2 text-sm">
-                <span className="font-medium">{domain.externalId}</span>
-                <span className="text-subtle">{RESEND_STATUS_WORD[domain.status] ?? domain.status}</span>
-              </div>
-            ))}
-          </DividedList>
-        )}
-        <AddEmailDomainForm organizationId={organizationId} />
+        <ButtonLink
+          href={`/organizations/${organizationId}/${configTarget('email').path}`}
+          tone="text"
+          size="small"
+          className="mt-2 w-fit"
+        >
+          Open Email settings &rarr;
+        </ButtonLink>
       </Section>
 
       {site ? (

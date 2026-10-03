@@ -82,8 +82,9 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     key: 'connections',
     title: 'Connections',
     entries: [
-      entry('communications', 'Phone and email', 'The phone numbers and email address this business sends from.'),
+      entry('communications', 'Phone and messaging', 'The phone numbers this business has, and how its website answers a visitor.'),
       entry('call-setup', 'Call setup', 'The words this business uses for how a call went, routing, and caller identity.'),
+      entry('email', 'Email', 'The domain this business sends email from, and what it still needs to be verified.'),
       entry('integrations', 'Apps and files', 'The outside apps this business connects, and the data it brings in.'),
     ],
   },

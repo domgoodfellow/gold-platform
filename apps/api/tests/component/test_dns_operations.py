@@ -133,7 +133,7 @@ def test_an_identical_existing_record_is_left_alone(monkeypatch):
 def test_an_absent_record_is_created_and_recorded_as_owned(monkeypatch):
     world = World(monkeypatch)
     monkeypatch.setattr(ops.cloudflare, "list_records", lambda token, zone_id, *, name, record_type: [])
-    monkeypatch.setattr(ops.cloudflare, "create_record", lambda token, zone_id, *, record_type, name, value: {"id": "rec-new"})
+    monkeypatch.setattr(ops.cloudflare, "create_record", lambda token, zone_id, *, record_type, name, value, priority=None: {"id": "rec-new"})
     result = ops.ensure_required_records(
         SETTINGS, token=TOKEN, organization_id=ORG, hostname="shop.example.com",
         records=[{"type": "CNAME", "name": "shop.example.com", "value": "cname.vercel-dns.com"}],
@@ -154,7 +154,7 @@ def test_an_absent_record_is_created_and_recorded_as_owned(monkeypatch):
 def test_a_record_this_runtime_already_owns_is_corrected(monkeypatch):
     world = World(monkeypatch, owned={"rec-old": "our-resource-1"})
     monkeypatch.setattr(ops.cloudflare, "list_records", lambda token, zone_id, *, name, record_type: [{"id": "rec-old", "content": "stale-target.example.net"}])
-    monkeypatch.setattr(ops.cloudflare, "update_record", lambda token, zone_id, record_id, *, record_type, name, value: {"id": record_id})
+    monkeypatch.setattr(ops.cloudflare, "update_record", lambda token, zone_id, record_id, *, record_type, name, value, priority=None: {"id": record_id})
     result = ops.ensure_required_records(
         SETTINGS, token=TOKEN, organization_id=ORG, hostname="shop.example.com",
         records=[{"type": "CNAME", "name": "shop.example.com", "value": "cname.vercel-dns.com"}],
@@ -170,6 +170,63 @@ def test_a_record_this_runtime_already_owns_is_corrected(monkeypatch):
             "metadata": {"type": "CNAME", "name": "shop.example.com", "value": "cname.vercel-dns.com", "zone": "example.com", "hostname": "shop.example.com"},
         }
     ]
+
+
+# --- MX, whose preference is part of the record rather than decoration -------------------------
+#
+# Added when sending-domain provisioning became the second caller of this capability: an email
+# provider asks for an MX record for its bounce subdomain, and an MX with the right target and the
+# wrong preference is a different record, not a correct one.
+
+
+def test_an_mx_record_is_created_with_the_preference_the_provider_asked_for(monkeypatch):
+    world = World(monkeypatch)
+    created = []
+    monkeypatch.setattr(ops.cloudflare, "list_records", lambda token, zone_id, *, name, record_type: [])
+    monkeypatch.setattr(
+        ops.cloudflare,
+        "create_record",
+        lambda token, zone_id, *, record_type, name, value, priority=None: created.append(priority) or {"id": "rec-mx"},
+    )
+
+    result = ops.ensure_required_records(
+        SETTINGS, token=TOKEN, organization_id=ORG, hostname="shop.example.com",
+        records=[{"type": "MX", "name": "send.shop.example.com", "value": "feedback-smtp.example.net", "priority": 10}],
+    )
+
+    assert created == [10]
+    assert result.results[0].outcome == "created"
+
+
+def test_an_mx_with_the_right_target_and_the_wrong_preference_is_not_already_correct(monkeypatch):
+    world = World(monkeypatch, owned={"rec-mx": "our-resource-1"})
+    updated = []
+    monkeypatch.setattr(
+        ops.cloudflare,
+        "list_records",
+        lambda token, zone_id, *, name, record_type: [{"id": "rec-mx", "content": "feedback-smtp.example.net", "priority": 20}],
+    )
+    monkeypatch.setattr(
+        ops.cloudflare,
+        "update_record",
+        lambda token, zone_id, record_id, *, record_type, name, value, priority=None: updated.append(priority) or {"id": record_id},
+    )
+
+    result = ops.ensure_required_records(
+        SETTINGS, token=TOKEN, organization_id=ORG, hostname="shop.example.com",
+        records=[{"type": "MX", "name": "send.shop.example.com", "value": "feedback-smtp.example.net", "priority": 10}],
+    )
+
+    assert updated == [10]
+    assert result.results[0].outcome == "updated"
+
+
+def test_a_record_with_no_preference_sends_cloudflare_no_priority_field_at_all(monkeypatch):
+    # Cloudflare refuses a priority on a type that has none, so it must be absent rather than null.
+    assert ops.cloudflare._payload("CNAME", "shop.example.com", "target.example.net", None) == {
+        "type": "CNAME", "name": "shop.example.com", "content": "target.example.net", "ttl": 1,
+    }
+    assert ops.cloudflare._payload("MX", "send.example.com", "mx.example.net", 10)["priority"] == 10
 
 
 def test_a_conflicting_record_this_runtime_does_not_own_is_refused_not_overwritten(monkeypatch):

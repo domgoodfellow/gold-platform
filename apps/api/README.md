@@ -26,6 +26,7 @@ platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and acces
 | `POST /integrations/operate` | `api/integration_operations.py` | Bearer token; the caller must be able to manage integrations for that business. OAuth handshake and disconnect. |
 | `POST /providers/operate` | `api/provider_operations.py` | Bearer token; platform staff only, proved by RLS. Operates GOLD's own provider account. |
 | `POST /organizations/domains` | `api/organization_domains.py` | Bearer token; the caller must hold `organization.manage` in that business, proved by RLS. Connects, rechecks or removes a custom domain at GildOps' hosting provider. |
+| `POST /organizations/email-domains` | `api/organization_email_domains.py` | Bearer token; the caller must hold `organization.manage` in that business, proved by RLS. Creates, rechecks, publishes DNS for or releases a sending domain at GildOps' email provider. |
 | `POST /voice/inbound` | `api/voice_inbound.py` | Twilio signature. Declines the call; a number with no configured behaviour says nothing of its own. |
 | `POST /voice/outbound` | `api/voice_outbound.py` | Twilio signature. Returns the conference instructions for the room the web app created. |
 | `POST /voice/status` | `api/voice_status.py` | Twilio signature. Records a call's status through the Voice machine role. |
@@ -36,7 +37,7 @@ platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and acces
 | `POST /invitations/email` | `api/invitation_email.py` | Bearer token; the caller must be able to see the pending invitation named, proved by RLS. Sends or resends its email through GOLD's own Resend account (or the environment bootstrap fallback) — never a caller-supplied recipient, subject or body. |
 | `POST /webhooks/invitation-email` | `api/invitation_email_webhook.py` | Resend's Svix-shaped signature over the raw body. Records a delivery event through the narrow invitation-email machine role; derives the organization and invitation from the provider's own message id. |
 
-20 deployable handlers, one file each. Vercel also serves every file under `api/` at its
+21 deployable handlers, one file each. Vercel also serves every file under `api/` at its
 physical `/api/<name>` path, so a rewrite is the documented route, not the only reachable one.
 `tests/architecture/static/python-handler-inventory.test.ts` holds this table, `vercel.json`, the
 files in `api/` and the handler tests to one another.

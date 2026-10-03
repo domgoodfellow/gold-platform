@@ -3,12 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
-import { recordOrganizationEmailDomain } from '@/lib/domain/providers/bindings';
 import { requireOrganization } from '@/lib/route/organization';
-
-export type RecordDomainState = { error: string | null; recorded: boolean };
-
-export const RECORD_DOMAIN_INITIAL: RecordDomainState = { error: null, recorded: false };
 
 export type CommunicationProfileState = { error: string | null; success?: string };
 
@@ -42,26 +37,4 @@ export async function saveCommunicationProfileAction(_state: CommunicationProfil
   }
   revalidatePath(`/organizations/${organizationId}/settings/communications`);
   return { error: null, success: 'Website messaging saved.' };
-}
-
-export async function recordEmailDomainAction(
-  _previous: RecordDomainState,
-  formData: FormData,
-): Promise<RecordDomainState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
-
-  try {
-    await recordOrganizationEmailDomain(db, {
-      organizationId,
-      domain: String(formData.get('domain') ?? ''),
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message, recorded: false };
-    throw error;
-  }
-
-  revalidatePath(`/organizations/${organizationId}/settings/communications`);
-  return { error: null, recorded: true };
 }

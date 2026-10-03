@@ -25,6 +25,15 @@ class MalformedAnswer(UpstreamRefused):
     """The provider answered, but not in a shape its adapter can read."""
 
 
+class CredentialRejected(UpstreamRefused):
+    """The provider refused GildOps' own credential -- missing, invalid, restricted or suspended.
+
+    Kept apart from a plain refusal because the two mean opposite things to the business asking: a
+    rejected credential is GildOps' account being unusable, and must never reach a tenant as a
+    problem with the name it typed. A caller turns this into *the provider is unavailable*.
+    """
+
+
 def domain_hosting_for(provider_key: str):
     """The module that attaches a business's hostname at `provider_key`, or `None`.
 
@@ -33,6 +42,20 @@ def domain_hosting_for(provider_key: str):
     """
     if provider_key == "vercel":
         from app.providers.vercel import domains
+
+        return domains
+    return None
+
+
+def email_domains_for(provider_key: str):
+    """The module that proves a business's sending domain at `provider_key`, or `None`.
+
+    `app.services.email_provisioning` asks for it by the key the binding carries and never imports
+    a vendor (I15), exactly as `domain_hosting_for` above does for the hosting side. The module
+    answers `ensure`, `get`, `verify` and `remove`.
+    """
+    if provider_key == "resend":
+        from app.providers.resend import domains
 
         return domains
     return None

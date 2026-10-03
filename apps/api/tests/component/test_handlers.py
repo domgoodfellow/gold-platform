@@ -33,6 +33,7 @@ import api.integration_operations as integration_operations
 import api.invitation_email as invitation_email
 import api.invitation_email_webhook as invitation_email_webhook
 import api.organization_domains as organization_domains
+import api.organization_email_domains as organization_email_domains
 import api.provider_operations as provider_operations
 import api.public_chat as public_chat
 import api.routing_preview_inbound as routing_preview_inbound
@@ -362,6 +363,7 @@ PEOPLE = [
     (integration_operations, "load_integration_settings", "operate"),
     (provider_operations, "load_provider_operations_settings", "operate"),
     (organization_domains, "load_provider_operations_settings", "run_domain_command"),
+    (organization_email_domains, "load_provider_operations_settings", "run_email_domain_command"),
     (invitation_email, "load_provider_operations_settings", "send_invitation_email"),
 ]
 

@@ -1,6 +1,17 @@
 {
   "_about": "The named arguments apps/api sends to each database function, and the role it sends them as. `sends` is every name Python may send; `optional` is the subset it may leave out. Checked against Python by tests/contract/test_rpc_contract.py and against pg_proc by apps/web/tests/architecture/database/python-rpc-surface.test.ts. Change a database function's parameters, or a Python payload, and update this file with it. A function with `naming: bare` is called by a domain command that names its arguments without the `p_` prefix; app/core/caller.py adds it.",
   "functions": {
+    "advance_route_round_robin": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/communications/routing.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_organization_id",
+        "p_route_id"
+      ]
+    },
     "apply_platform_subscription_event": {
       "role": "platform_billing_webhook",
       "callers": [
@@ -18,6 +29,24 @@
         "p_price_reference",
         "p_status",
         "p_subscription_reference"
+      ]
+    },
+    "can_manage_custom_domains": {
+      "role": "authenticated",
+      "callers": [
+        "app/services/web_delivery/operations.py"
+      ],
+      "sends": [
+        "p_organization_id"
+      ]
+    },
+    "can_manage_email_domains": {
+      "role": "authenticated",
+      "callers": [
+        "app/services/email_provisioning/operations.py"
+      ],
+      "sends": [
+        "p_organization_id"
       ]
     },
     "can_manage_integrations": {
@@ -50,6 +79,16 @@
         "p_connection_id"
       ]
     },
+    "custom_domain_provider_account": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_domain_id",
+        "p_organization_id"
+      ]
+    },
     "customers_not_contacted": {
       "role": "authenticated",
       "callers": [
@@ -60,6 +99,15 @@
         "p_organization_id"
       ]
     },
+    "default_platform_provider_account": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_provider_key"
+      ]
+    },
     "disconnect_integration": {
       "role": "authenticated",
       "callers": [
@@ -67,6 +115,15 @@
       ],
       "sends": [
         "p_connection_id",
+        "p_organization_id"
+      ]
+    },
+    "email_domain_provider_account": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
         "p_organization_id"
       ]
     },
@@ -84,6 +141,17 @@
       "optional": [
         "p_from",
         "p_to"
+      ]
+    },
+    "organization_open_now": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/communications/routing.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_at",
+        "p_organization_id"
       ]
     },
     "places_to_watch": {
@@ -120,15 +188,6 @@
         "p_account_id"
       ]
     },
-    "resolve_ai_runtime_assignment": {
-      "role": "provider_operator",
-      "callers": [
-        "app/core/db.py"
-      ],
-      "sends": [
-        "p_capability"
-      ]
-    },
     "record_call_event": {
       "role": "voice_webhook",
       "callers": [
@@ -143,40 +202,6 @@
         "p_recording_url",
         "p_source",
         "p_status"
-      ]
-    },
-    "record_inbound_message": {
-      "role": "sms_webhook",
-      "callers": [
-        "app/core/db.py"
-      ],
-      "sends": [
-        "p_body",
-        "p_external_id",
-        "p_from_number",
-        "p_to_number"
-      ]
-    },
-    "record_message_status": {
-      "role": "sms_webhook",
-      "callers": [
-        "app/core/db.py"
-      ],
-      "sends": [
-        "p_external_id",
-        "p_failure_reason",
-        "p_status"
-      ]
-    },
-    "record_message_suppression": {
-      "role": "sms_webhook",
-      "callers": [
-        "app/core/db.py"
-      ],
-      "sends": [
-        "p_external_number",
-        "p_opted_out",
-        "p_to_number"
       ]
     },
     "record_call_outcome": {
@@ -194,26 +219,41 @@
         "p_status"
       ]
     },
-    "organization_open_now": {
-      "role": "authenticated",
+    "record_custom_domain_registration": {
+      "role": "provider_operator",
       "callers": [
-        "app/domains/communications/routing.py"
+        "app/core/db.py"
       ],
-      "naming": "bare",
       "sends": [
-        "p_at",
+        "p_configuration_state",
+        "p_dns_records",
+        "p_domain_id",
+        "p_error_code",
+        "p_error_message",
         "p_organization_id"
       ]
     },
-    "advance_route_round_robin": {
-      "role": "authenticated",
+    "record_email_domain_provisioning": {
+      "role": "provider_operator",
       "callers": [
-        "app/domains/communications/routing.py"
+        "app/core/db.py"
       ],
-      "naming": "bare",
       "sends": [
+        "p_dns_records",
+        "p_error_code",
+        "p_error_message",
         "p_organization_id",
-        "p_route_id"
+        "p_provider_domain_id",
+        "p_provider_status",
+        "p_resource_id",
+        "p_status"
+      ],
+      "optional": [
+        "p_dns_records",
+        "p_error_code",
+        "p_error_message",
+        "p_provider_domain_id",
+        "p_provider_status"
       ]
     },
     "record_external_readings": {
@@ -224,6 +264,18 @@
       "sends": [
         "p_location_id",
         "p_readings"
+      ]
+    },
+    "record_inbound_message": {
+      "role": "sms_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_body",
+        "p_external_id",
+        "p_from_number",
+        "p_to_number"
       ]
     },
     "record_integration_connection": {
@@ -250,6 +302,47 @@
         "p_scopes"
       ]
     },
+    "record_invitation_delivery": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_detail",
+        "p_invitation_id",
+        "p_organization_id",
+        "p_provider_message_id",
+        "p_recipient",
+        "p_state"
+      ]
+    },
+    "record_invitation_delivery_event": {
+      "role": "invitation_email_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_detail",
+        "p_event_at",
+        "p_payload",
+        "p_payload_hash",
+        "p_provider_message_id",
+        "p_state"
+      ]
+    },
+    "record_managed_integration_resource": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_connection_id",
+        "p_display_name",
+        "p_external_id",
+        "p_metadata",
+        "p_resource_type"
+      ]
+    },
     "record_message_delivery": {
       "role": "automation_runner",
       "callers": [
@@ -259,6 +352,28 @@
         "p_detail",
         "p_id",
         "p_sent"
+      ]
+    },
+    "record_message_status": {
+      "role": "sms_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_external_id",
+        "p_failure_reason",
+        "p_status"
+      ]
+    },
+    "record_message_suppression": {
+      "role": "sms_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_external_number",
+        "p_opted_out",
+        "p_to_number"
       ]
     },
     "record_platform_billing_notice": {
@@ -296,17 +411,24 @@
         "p_request_id"
       ]
     },
-    "record_managed_integration_resource": {
-      "role": "integration_operator",
+    "release_custom_domain": {
+      "role": "authenticated",
       "callers": [
-        "app/core/db.py"
+        "app/services/web_delivery/operations.py"
       ],
       "sends": [
-        "p_connection_id",
-        "p_display_name",
-        "p_external_id",
-        "p_metadata",
-        "p_resource_type"
+        "p_domain_id",
+        "p_organization_id"
+      ]
+    },
+    "release_organization_email_domain": {
+      "role": "authenticated",
+      "callers": [
+        "app/services/email_provisioning/operations.py"
+      ],
+      "sends": [
+        "p_organization_id",
+        "p_resource_id"
       ]
     },
     "replace_integration_resources": {
@@ -317,6 +439,15 @@
       "sends": [
         "p_connection_id",
         "p_resources"
+      ]
+    },
+    "resolve_ai_runtime_assignment": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_capability"
       ]
     },
     "run_due_automations": {
@@ -334,6 +465,22 @@
       "sends": [
         "p_days",
         "p_organization_id"
+      ]
+    },
+    "set_custom_domain_verification": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_configuration_state",
+        "p_dns_records",
+        "p_domain_id",
+        "p_error_code",
+        "p_error_message",
+        "p_organization_id",
+        "p_ssl_state",
+        "p_verification_state"
       ]
     },
     "store_integration_credential": {
@@ -385,102 +532,6 @@
       "optional": [
         "p_from",
         "p_to"
-      ]
-    },
-    "can_manage_custom_domains": {
-      "role": "authenticated",
-      "callers": [
-        "app/services/web_delivery/operations.py"
-      ],
-      "sends": [
-        "p_organization_id"
-      ]
-    },
-    "release_custom_domain": {
-      "role": "authenticated",
-      "callers": [
-        "app/services/web_delivery/operations.py"
-      ],
-      "sends": [
-        "p_domain_id",
-        "p_organization_id"
-      ]
-    },
-    "custom_domain_provider_account": {
-      "role": "provider_operator",
-      "callers": [
-        "app/core/db.py"
-      ],
-      "sends": [
-        "p_domain_id",
-        "p_organization_id"
-      ]
-    },
-    "record_custom_domain_registration": {
-      "role": "provider_operator",
-      "callers": [
-        "app/core/db.py"
-      ],
-      "sends": [
-        "p_configuration_state",
-        "p_dns_records",
-        "p_domain_id",
-        "p_error_code",
-        "p_error_message",
-        "p_organization_id"
-      ]
-    },
-    "set_custom_domain_verification": {
-      "role": "provider_operator",
-      "callers": [
-        "app/core/db.py"
-      ],
-      "sends": [
-        "p_configuration_state",
-        "p_dns_records",
-        "p_domain_id",
-        "p_error_code",
-        "p_error_message",
-        "p_organization_id",
-        "p_ssl_state",
-        "p_verification_state"
-      ]
-    },
-    "default_platform_provider_account": {
-      "role": "provider_operator",
-      "callers": [
-        "app/core/db.py"
-      ],
-      "sends": [
-        "p_provider_key"
-      ]
-    },
-    "record_invitation_delivery": {
-      "role": "provider_operator",
-      "callers": [
-        "app/core/db.py"
-      ],
-      "sends": [
-        "p_detail",
-        "p_invitation_id",
-        "p_organization_id",
-        "p_provider_message_id",
-        "p_recipient",
-        "p_state"
-      ]
-    },
-    "record_invitation_delivery_event": {
-      "role": "invitation_email_webhook",
-      "callers": [
-        "app/core/db.py"
-      ],
-      "sends": [
-        "p_detail",
-        "p_event_at",
-        "p_payload",
-        "p_payload_hash",
-        "p_provider_message_id",
-        "p_state"
       ]
     }
   }

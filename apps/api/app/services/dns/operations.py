@@ -216,13 +216,19 @@ def _ensure_one(
     record_type = str(record["type"]).upper()
     name = str(record["name"]).strip().lower().rstrip(".")
     value = str(record["value"]).strip()
+    # MX alone carries one, and two MX records with the same target and different preferences are
+    # two different records -- so it is part of what "already correct" means, not decoration.
+    priority = record.get("priority") if isinstance(record.get("priority"), int) else None
 
     try:
         existing = cloudflare.list_records(access_token, zone_id, name=name, record_type=record_type)
     except UpstreamRefused as failure:
         return RecordOutcome(record_type, name, value, "failed", str(failure))
 
-    match = next((r for r in existing if r.get("content") == value), None)
+    def correct(answer: dict) -> bool:
+        return answer.get("content") == value and (priority is None or answer.get("priority") == priority)
+
+    match = next((r for r in existing if correct(r)), None)
     if match is not None:
         return RecordOutcome(record_type, name, value, "unchanged")
 
@@ -232,7 +238,9 @@ def _ensure_one(
         if owned_id is None:
             return RecordOutcome(record_type, name, value, "conflict", "A different record already answers for this name.")
         try:
-            updated = cloudflare.update_record(access_token, zone_id, str(current["id"]), record_type=record_type, name=name, value=value)
+            updated = cloudflare.update_record(
+                access_token, zone_id, str(current["id"]), record_type=record_type, name=name, value=value, priority=priority
+            )
         except UpstreamRefused as failure:
             return RecordOutcome(record_type, name, value, "failed", str(failure))
         _record_provenance(
@@ -242,7 +250,9 @@ def _ensure_one(
         return RecordOutcome(record_type, name, value, "updated")
 
     try:
-        created = cloudflare.create_record(access_token, zone_id, record_type=record_type, name=name, value=value)
+        created = cloudflare.create_record(
+            access_token, zone_id, record_type=record_type, name=name, value=value, priority=priority
+        )
     except UpstreamRefused as failure:
         return RecordOutcome(record_type, name, value, "failed", str(failure))
     _record_provenance(

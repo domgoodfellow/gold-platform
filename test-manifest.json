@@ -83,7 +83,7 @@
       "dir": "apps/web/e2e/visual",
       "requires": "running-app",
       "gate": false,
-      "description": "Pixel baselines at desktop/tablet/phone widths for a small set of representative patterns — spacing, alignment and responsive composition, never a business rule. Never in the default run: a baseline drifts with design intent, not with correctness, and a diff here is a prompt to look, not a build failure."
+      "description": "Pixel baselines at desktop/tablet/phone widths for a small set of representative patterns \u2014 spacing, alignment and responsive composition, never a business rule. Never in the default run: a baseline drifts with design intent, not with correctness, and a diff here is a prompt to look, not a build failure."
     },
     "provider-contract": {
       "runner": "vitest",
@@ -137,22 +137,6 @@
       ],
       "note": "No-assignment falls back to the legacy default; an explicit assignment never fails over."
     },
-    "apps/api/tests/component/test_openai_answering.py": {
-      "category": "python-component",
-      "concerns": [
-        "ai",
-        "providers"
-      ],
-      "note": "Translation against a mocked SDK boundary, mirroring the Anthropic/dialect adapters' shape."
-    },
-    "apps/api/tests/component/test_google_answering.py": {
-      "category": "python-component",
-      "concerns": [
-        "ai",
-        "providers"
-      ],
-      "note": "Translation against a mocked SDK boundary; Part/Content construction runs against the real installed SDK."
-    },
     "apps/api/tests/component/test_auth.py": {
       "category": "python-component",
       "concerns": [
@@ -160,17 +144,18 @@
         "security"
       ]
     },
+    "apps/api/tests/component/test_dns_operations.py": {
+      "category": "python-component",
+      "concerns": [
+        "integrations",
+        "providers"
+      ],
+      "note": "ensure_required_records: which connected zone answers, unchanged/created/updated/conflict. The vendor boundary (app.services.dns.cloudflare) is replaced, the same shape test_web_delivery_domains.py holds for app.providers.vercel.domains."
+    },
     "apps/api/tests/component/test_domains_crm.py": {
       "category": "python-component",
       "concerns": [
         "crm"
-      ],
-      "note": "Domain command over a patched PostgREST call."
-    },
-    "apps/api/tests/component/test_domains_voice.py": {
-      "category": "python-component",
-      "concerns": [
-        "voice"
       ],
       "note": "Domain command over a patched PostgREST call."
     },
@@ -180,15 +165,31 @@
         "voice",
         "routing"
       ],
-      "note": "The routing resolver's own branching over a faked transport — business hours, ring strategies, fallback, cycle rejection, callback affinity, outbound AUTO/MANUAL."
+      "note": "The routing resolver's own branching over a faked transport \u2014 business hours, ring strategies, fallback, cycle rejection, callback affinity, outbound AUTO/MANUAL."
     },
-    "apps/api/tests/component/test_dns_operations.py": {
+    "apps/api/tests/component/test_domains_voice.py": {
       "category": "python-component",
       "concerns": [
-        "integrations",
+        "voice"
+      ],
+      "note": "Domain command over a patched PostgREST call."
+    },
+    "apps/api/tests/component/test_email_provisioning.py": {
+      "category": "python-component",
+      "concerns": [
+        "providers",
+        "communications",
+        "security"
+      ],
+      "note": "Authorization before the credential is read, every provider outcome recorded before it is returned, DNS written only when asked, and publishing DNS never recorded as verification."
+    },
+    "apps/api/tests/component/test_google_answering.py": {
+      "category": "python-component",
+      "concerns": [
+        "ai",
         "providers"
       ],
-      "note": "ensure_required_records: which connected zone answers, unchanged/created/updated/conflict. The vendor boundary (app.services.dns.cloudflare) is replaced, the same shape test_web_delivery_domains.py holds for app.providers.vercel.domains."
+      "note": "Translation against a mocked SDK boundary; Part/Content construction runs against the real installed SDK."
     },
     "apps/api/tests/component/test_handlers.py": {
       "category": "python-component",
@@ -211,6 +212,14 @@
         "integrations"
       ],
       "note": "Component, despite the filename: every boundary is patched. \"Integration\" names the product feature."
+    },
+    "apps/api/tests/component/test_openai_answering.py": {
+      "category": "python-component",
+      "concerns": [
+        "ai",
+        "providers"
+      ],
+      "note": "Translation against a mocked SDK boundary, mirroring the Anthropic/dialect adapters' shape."
     },
     "apps/api/tests/component/test_platform_email_operations.py": {
       "category": "python-component",
@@ -257,6 +266,14 @@
       ],
       "note": "GOLD's own Resend account: whether the stored credential works, offline."
     },
+    "apps/api/tests/contract/test_resend_domains.py": {
+      "category": "python-contract",
+      "concerns": [
+        "providers",
+        "communications"
+      ],
+      "note": "What GildOps sends the email provider's Domains API and how it reads the answers, including the three ways a retry arrives. Mocked HTTP; nothing leaves the process."
+    },
     "apps/api/tests/contract/test_resend_platform_email.py": {
       "category": "python-contract",
       "concerns": [
@@ -297,19 +314,19 @@
         "security"
       ]
     },
-    "apps/api/tests/contract/test_voice.py": {
-      "category": "python-contract",
-      "concerns": [
-        "voice",
-        "providers"
-      ]
-    },
     "apps/api/tests/contract/test_vercel_domains.py": {
       "category": "python-contract",
       "concerns": [
         "providers"
       ],
       "note": "Vercel's Domains API, offline: register/config/verify/remove and normalize()."
+    },
+    "apps/api/tests/contract/test_voice.py": {
+      "category": "python-contract",
+      "concerns": [
+        "voice",
+        "providers"
+      ]
     },
     "apps/api/tests/unit/test_architecture_boundaries.py": {
       "category": "python-unit",
@@ -331,26 +348,18 @@
         "navigation"
       ]
     },
-    "apps/web/e2e/agent-lifecycle.spec.ts": {
-      "category": "playwright-acceptance",
-      "concerns": [
-        "ai",
-        "ui"
-      ]
-    },
-    "apps/web/e2e/settings-routes.spec.ts": {
-      "category": "playwright-acceptance",
-      "concerns": [
-        "settings",
-        "navigation",
-        "routing"
-      ]
-    },
     "apps/web/e2e/adaptive-shell.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [
         "navigation",
         "security"
+      ]
+    },
+    "apps/web/e2e/agent-lifecycle.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "ai",
+        "ui"
       ]
     },
     "apps/web/e2e/automation.spec.ts": {
@@ -367,20 +376,6 @@
       ]
     },
     "apps/web/e2e/catalog-plans.spec.ts": {
-      "category": "playwright-acceptance",
-      "concerns": [
-        "commercial",
-        "platform"
-      ]
-    },
-    "apps/web/e2e/finance-economics.spec.ts": {
-      "category": "playwright-acceptance",
-      "concerns": [
-        "commercial",
-        "platform"
-      ]
-    },
-    "apps/web/e2e/package-economics.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [
         "commercial",
@@ -407,11 +402,25 @@
         "navigation"
       ]
     },
+    "apps/web/e2e/finance-economics.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "commercial",
+        "platform"
+      ]
+    },
     "apps/web/e2e/operator-paths.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [
         "rbac",
         "portal"
+      ]
+    },
+    "apps/web/e2e/package-economics.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "commercial",
+        "platform"
       ]
     },
     "apps/web/e2e/platform-catalog.spec.ts": {
@@ -440,6 +449,14 @@
       "concerns": [
         "navigation",
         "records"
+      ]
+    },
+    "apps/web/e2e/settings-routes.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "settings",
+        "navigation",
+        "routing"
       ]
     },
     "apps/web/e2e/setup-lifecycle.spec.ts": {
@@ -553,11 +570,24 @@
       ],
       "note": "I15 import and vocabulary scan. The payment_webhook grant checks now live in payment-webhook-role.test.ts."
     },
+    "apps/web/tests/architecture/static/adaptive-shell.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "ui",
+        "security"
+      ]
+    },
     "apps/web/tests/architecture/static/agent-conversations.test.ts": {
       "category": "architecture-static",
       "concerns": [
         "ai",
         "ui"
+      ]
+    },
+    "apps/web/tests/architecture/static/application-layer-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "architecture"
       ]
     },
     "apps/web/tests/architecture/static/auth-boundary.test.ts": {
@@ -566,6 +596,13 @@
         "security",
         "auth"
       ]
+    },
+    "apps/web/tests/architecture/static/auth-screens.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "auth"
+      ],
+      "note": "Reads the credential screens' source; renders nothing."
     },
     "apps/web/tests/architecture/static/automation-authority-boundary.test.ts": {
       "category": "architecture-static",
@@ -591,14 +628,6 @@
       ],
       "note": "Holds three CI properties by text; the workflow itself has not run on GitHub."
     },
-    "apps/web/tests/architecture/static/context-switcher.test.ts": {
-      "category": "architecture-static",
-      "concerns": [
-        "navigation",
-        "platform"
-      ],
-      "note": "Also runs pure route functions."
-    },
     "apps/web/tests/architecture/static/communications-workspace-boundary.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -606,6 +635,14 @@
         "voice",
         "providers"
       ]
+    },
+    "apps/web/tests/architecture/static/context-switcher.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "navigation",
+        "platform"
+      ],
+      "note": "Also runs pure route functions."
     },
     "apps/web/tests/architecture/static/crm-voice-feature-architecture.test.ts": {
       "category": "architecture-static",
@@ -621,37 +658,6 @@
         "ui"
       ],
       "note": "Also runs a pure entity resolver."
-    },
-    "apps/web/tests/architecture/static/adaptive-shell.test.ts": {
-      "category": "architecture-static",
-      "concerns": [
-        "ui",
-        "security"
-      ]
-    },
-    "apps/web/tests/architecture/static/application-layer-boundary.test.ts": {
-      "category": "architecture-static",
-      "concerns": [
-        "architecture"
-      ]
-    },
-    "apps/web/tests/architecture/static/feature-ownership-boundary.test.ts": {
-      "category": "architecture-static",
-      "concerns": [
-        "ui"
-      ]
-    },
-    "apps/web/tests/architecture/static/file-boundary.test.ts": {
-      "category": "architecture-static",
-      "concerns": [
-        "boundaries"
-      ]
-    },
-    "apps/web/tests/architecture/static/organization-home.test.ts": {
-      "category": "architecture-static",
-      "concerns": [
-        "ui"
-      ]
     },
     "apps/web/tests/architecture/static/dashboard.test.ts": {
       "category": "architecture-static",
@@ -673,20 +679,23 @@
         "security"
       ]
     },
+    "apps/web/tests/architecture/static/feature-ownership-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "ui"
+      ]
+    },
+    "apps/web/tests/architecture/static/file-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "boundaries"
+      ]
+    },
     "apps/web/tests/architecture/static/gold-internal-workspace.test.ts": {
       "category": "architecture-static",
       "concerns": [
         "platform",
         "navigation"
-      ]
-    },
-    "apps/web/tests/architecture/static/provider-connector-identity.test.ts": {
-      "category": "architecture-static",
-      "concerns": [
-        "providers",
-        "integrations",
-        "ui",
-        "maps"
       ]
     },
     "apps/web/tests/architecture/static/integrations-browse.test.ts": {
@@ -707,6 +716,22 @@
       "category": "architecture-static",
       "concerns": [
         "design-system"
+      ]
+    },
+    "apps/web/tests/architecture/static/locations-assets-workspace.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "locations",
+        "assets",
+        "navigation"
+      ]
+    },
+    "apps/web/tests/architecture/static/locations-map.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "locations",
+        "map",
+        "navigation"
       ]
     },
     "apps/web/tests/architecture/static/marketing-homepage.test.ts": {
@@ -747,23 +772,11 @@
         "work"
       ]
     },
-    "apps/web/tests/architecture/static/role-preset-not-classification.test.ts": {
+    "apps/web/tests/architecture/static/organization-home.test.ts": {
       "category": "architecture-static",
       "concerns": [
-        "security",
-        "auth",
-        "tenancy"
-      ],
-      "note": "Slice 0A. Role presets are templates only; nothing branches on a role/preset name."
-    },
-    "apps/web/tests/architecture/static/schedule-visibility-heuristic.test.ts": {
-      "category": "architecture-static",
-      "concerns": [
-        "security",
-        "scheduling",
-        "tenancy"
-      ],
-      "note": "Slice 0A. Guards against faking self/team schedule visibility via name, role, created_by or a custom field."
+        "ui"
+      ]
     },
     "apps/web/tests/architecture/static/organization-page-guard.test.ts": {
       "category": "architecture-static",
@@ -782,13 +795,6 @@
       ],
       "note": "Also runs pure route functions."
     },
-    "apps/web/tests/architecture/static/platform-control-plane.test.ts": {
-      "category": "architecture-static",
-      "concerns": [
-        "platform",
-        "commercial"
-      ]
-    },
     "apps/web/tests/architecture/static/platform-brand.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -796,12 +802,21 @@
       ],
       "note": "Reads source and the seeding migration; renders nothing."
     },
-    "apps/web/tests/architecture/static/auth-screens.test.ts": {
+    "apps/web/tests/architecture/static/platform-control-plane.test.ts": {
       "category": "architecture-static",
       "concerns": [
-        "auth"
-      ],
-      "note": "Reads the credential screens' source; renders nothing."
+        "platform",
+        "commercial"
+      ]
+    },
+    "apps/web/tests/architecture/static/provider-connector-identity.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "providers",
+        "integrations",
+        "ui",
+        "maps"
+      ]
     },
     "apps/web/tests/architecture/static/public-seo.test.ts": {
       "category": "architecture-static",
@@ -833,13 +848,23 @@
         "design-system"
       ]
     },
-    "apps/web/tests/architecture/static/service-access-boundary.test.ts": {
+    "apps/web/tests/architecture/static/role-preset-not-classification.test.ts": {
       "category": "architecture-static",
       "concerns": [
-        "billing",
-        "tenancy",
-        "security"
-      ]
+        "security",
+        "auth",
+        "tenancy"
+      ],
+      "note": "Slice 0A. Role presets are templates only; nothing branches on a role/preset name."
+    },
+    "apps/web/tests/architecture/static/schedule-visibility-heuristic.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "security",
+        "scheduling",
+        "tenancy"
+      ],
+      "note": "Slice 0A. Guards against faking self/team schedule visibility via name, role, created_by or a custom field."
     },
     "apps/web/tests/architecture/static/scheduling-workspace.test.ts": {
       "category": "architecture-static",
@@ -849,20 +874,12 @@
         "navigation"
       ]
     },
-    "apps/web/tests/architecture/static/locations-assets-workspace.test.ts": {
+    "apps/web/tests/architecture/static/service-access-boundary.test.ts": {
       "category": "architecture-static",
       "concerns": [
-        "locations",
-        "assets",
-        "navigation"
-      ]
-    },
-    "apps/web/tests/architecture/static/locations-map.test.ts": {
-      "category": "architecture-static",
-      "concerns": [
-        "locations",
-        "map",
-        "navigation"
+        "billing",
+        "tenancy",
+        "security"
       ]
     },
     "apps/web/tests/architecture/static/settings-configuration-center.test.ts": {
@@ -956,6 +973,14 @@
         "accessibility"
       ]
     },
+    "apps/web/tests/component/required-records-table.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "communications",
+        "providers"
+      ],
+      "note": "The provider's required DNS records render whole (a long DKIM key is never truncated), with MX priority and per-record verification status."
+    },
     "apps/web/tests/component/ui-components.test.ts": {
       "category": "component",
       "concerns": [
@@ -984,7 +1009,7 @@
         "providers",
         "security"
       ],
-      "note": "The relay to apps/api's /invitation_email: what is sent (never a subject or body, only an id and a link), and the unconfigured-deployment null. Names no vendor — apps/api's own suite covers the Resend call."
+      "note": "The relay to apps/api's /invitation_email: what is sent (never a subject or body, only an id and a link), and the unconfigured-deployment null. Names no vendor \u2014 apps/api's own suite covers the Resend call."
     },
     "apps/web/tests/contract/stripe-payments.test.ts": {
       "category": "offline-contract",
@@ -1100,28 +1125,13 @@
         "catalogue"
       ]
     },
-    "apps/web/tests/integration/database/package-economics.test.ts": {
+    "apps/web/tests/integration/database/catalogue-visibility.test.ts": {
       "category": "database-integration",
       "concerns": [
-        "commercial",
-        "catalogue",
-        "security"
-      ]
-    },
-    "apps/web/tests/integration/database/public-plan-catalog.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "commercial",
-        "catalogue",
-        "public"
-      ]
-    },
-    "apps/web/tests/integration/database/gild-taxonomy.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "commercial",
-        "catalogue"
-      ]
+        "security",
+        "commercial"
+      ],
+      "note": "Which platform tables each kind of caller may read."
     },
     "apps/web/tests/integration/database/checklist-templates.test.ts": {
       "category": "database-integration",
@@ -1167,6 +1177,19 @@
       ],
       "note": "Named for the credit purse and call cost, not messaging."
     },
+    "apps/web/tests/integration/database/conference.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
+      ]
+    },
+    "apps/web/tests/integration/database/configuration-recommendation.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "crm"
+      ]
+    },
     "apps/web/tests/integration/database/connector-catalogue.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1174,14 +1197,6 @@
         "platform"
       ],
       "note": "Also contains source scans."
-    },
-    "apps/web/tests/integration/database/provider-service-catalogue.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "providers",
-        "integrations",
-        "platform"
-      ]
     },
     "apps/web/tests/integration/database/consumption.test.ts": {
       "category": "database-integration",
@@ -1198,12 +1213,6 @@
         "tenancy"
       ],
       "note": "Also contains source scans."
-    },
-    "apps/web/tests/integration/database/configuration-recommendation.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "crm"
-      ]
     },
     "apps/web/tests/integration/database/counted.test.ts": {
       "category": "database-integration",
@@ -1235,6 +1244,15 @@
         "work"
       ]
     },
+    "apps/web/tests/integration/database/email-sending-domains.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "providers",
+        "communications",
+        "security"
+      ],
+      "note": "A tenant names and releases its own sending domain and nothing more; record_email_domain_provisioning is executable by no signed-in role, creates nothing, and refuses a cross-tenant row or a record shape nothing could publish; a failed domain returns to pending on a retry and a verified one never unverifies."
+    },
     "apps/web/tests/integration/database/feature-activation.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1258,6 +1276,13 @@
       "category": "database-integration",
       "concerns": [
         "fields"
+      ]
+    },
+    "apps/web/tests/integration/database/gild-taxonomy.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "catalogue"
       ]
     },
     "apps/web/tests/integration/database/gold-bootstrap.test.ts": {
@@ -1327,14 +1352,6 @@
       ],
       "note": "Cross-tenant and external DENY cases for organization_launch_blockers."
     },
-    "apps/web/tests/integration/database/catalogue-visibility.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "security",
-        "commercial"
-      ],
-      "note": "Which platform tables each kind of caller may read."
-    },
     "apps/web/tests/integration/database/lifecycle.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1360,6 +1377,13 @@
       "concerns": [
         "tenancy",
         "rbac"
+      ]
+    },
+    "apps/web/tests/integration/database/messaging.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
       ]
     },
     "apps/web/tests/integration/database/milestone-m1.test.ts": {
@@ -1431,24 +1455,20 @@
         "scheduling"
       ]
     },
-    "apps/web/tests/integration/database/routing.test.ts": {
+    "apps/web/tests/integration/database/organization-domains.test.ts": {
       "category": "database-integration",
       "concerns": [
-        "voice",
-        "security"
-      ]
+        "providers",
+        "security",
+        "public"
+      ],
+      "note": "One describe stubs nothing; the provider_operator writes go through raw SQL under `set local role`, like provider-accounts.test.ts."
     },
-    "apps/web/tests/integration/database/messaging.test.ts": {
+    "apps/web/tests/integration/database/package-economics.test.ts": {
       "category": "database-integration",
       "concerns": [
-        "voice",
-        "security"
-      ]
-    },
-    "apps/web/tests/integration/database/conference.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "voice",
+        "commercial",
+        "catalogue",
         "security"
       ]
     },
@@ -1459,15 +1479,6 @@
         "providers",
         "security"
       ]
-    },
-    "apps/web/tests/integration/database/organization-domains.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "providers",
-        "security",
-        "public"
-      ],
-      "note": "One describe stubs nothing; the provider_operator writes go through raw SQL under `set local role`, like provider-accounts.test.ts."
     },
     "apps/web/tests/integration/database/platform-billing.test.ts": {
       "category": "database-integration",
@@ -1531,6 +1542,22 @@
         "catalogue"
       ]
     },
+    "apps/web/tests/integration/database/proposal-handoff.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "crm",
+        "commercial",
+        "platform"
+      ]
+    },
+    "apps/web/tests/integration/database/proposal-invites.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "crm",
+        "commercial",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/proposals.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1555,6 +1582,14 @@
       ],
       "note": "One describe stubs Twilio fetch."
     },
+    "apps/web/tests/integration/database/provider-service-catalogue.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "providers",
+        "integrations",
+        "platform"
+      ]
+    },
     "apps/web/tests/integration/database/provisioning.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1562,27 +1597,19 @@
         "tenancy"
       ]
     },
-    "apps/web/tests/integration/database/proposal-handoff.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "crm",
-        "commercial",
-        "platform"
-      ]
-    },
-    "apps/web/tests/integration/database/proposal-invites.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "crm",
-        "commercial",
-        "security"
-      ]
-    },
     "apps/web/tests/integration/database/public-intake.test.ts": {
       "category": "database-integration",
       "concerns": [
         "public",
         "security"
+      ]
+    },
+    "apps/web/tests/integration/database/public-plan-catalog.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "catalogue",
+        "public"
       ]
     },
     "apps/web/tests/integration/database/public-profile.test.ts": {
@@ -1642,12 +1669,6 @@
         "resources"
       ]
     },
-    "apps/web/tests/integration/database/schedule-days.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "scheduling"
-      ]
-    },
     "apps/web/tests/integration/database/role-editing.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1658,6 +1679,19 @@
       "category": "database-integration",
       "concerns": [
         "rbac"
+      ]
+    },
+    "apps/web/tests/integration/database/routing.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
+      ]
+    },
+    "apps/web/tests/integration/database/schedule-days.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling"
       ]
     },
     "apps/web/tests/integration/database/scheduling.test.ts": {
@@ -1792,6 +1826,13 @@
         "security"
       ]
     },
+    "apps/web/tests/unit/landing.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "routing",
+        "lifecycle"
+      ]
+    },
     "apps/web/tests/unit/location-search.test.ts": {
       "category": "unit",
       "concerns": [
@@ -1807,31 +1848,32 @@
         "configuration"
       ]
     },
-    "apps/web/tests/unit/shell-projection.test.ts": {
-      "category": "unit",
-      "concerns": [
-        "ui",
-        "security"
-      ]
-    },
     "apps/web/tests/unit/platform-permissions-read.test.ts": {
       "category": "unit",
       "concerns": [
         "security"
       ]
     },
-    "apps/web/tests/unit/landing.test.ts": {
+    "apps/web/tests/unit/sending-domain-presentation.test.ts": {
       "category": "unit",
       "concerns": [
-        "routing",
-        "lifecycle"
-      ]
+        "communications",
+        "providers"
+      ],
+      "note": "The eight presentation states a sending domain reads as, and the sentence/badge for each; never confuses a refused account with a refused name."
     },
     "apps/web/tests/unit/service-access.test.ts": {
       "category": "unit",
       "concerns": [
         "billing",
         "tenancy"
+      ]
+    },
+    "apps/web/tests/unit/shell-projection.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "ui",
+        "security"
       ]
     }
   }

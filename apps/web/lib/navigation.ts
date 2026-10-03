@@ -453,6 +453,11 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'branding', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
   { key: 'domains', workspace: 'studio', path: 'settings/domains', permission: ['organization.manage'] },
   { key: 'communications', workspace: 'communications', path: 'settings/communications', permission: ['organization.manage'] },
+  // Proving a sending domain is infrastructure readiness, not a Communications operating act, so
+  // it is `organization.manage` like Domains rather than a messaging capability — and it is its
+  // own destination rather than a block inside Communications, because a lifecycle with DNS
+  // records, a review step and a verification check is not a field on somebody else's page.
+  { key: 'email', workspace: 'communications', path: 'settings/email', permission: ['organization.manage'] },
   { key: 'integrations', path: 'settings/connections', entitledBy: 'integrations', permission: ['integration.manage'] },
   { key: 'features', path: 'settings/features', permission: ['feature.manage'] },
   { key: 'plan', path: 'settings/plan', permission: ['billing.manage'] },

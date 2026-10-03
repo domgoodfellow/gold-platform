@@ -41,6 +41,7 @@ const INVENTORY: { file: string; route: string; trust: keyof typeof TRUST }[] = 
   { file: 'integration_operations', route: '/integrations/operate', trust: 'bearer-token' },
   { file: 'provider_operations', route: '/providers/operate', trust: 'bearer-token' },
   { file: 'organization_domains', route: '/organizations/domains', trust: 'bearer-token' },
+  { file: 'organization_email_domains', route: '/organizations/email-domains', trust: 'bearer-token' },
   { file: 'voice_inbound', route: '/voice/inbound', trust: 'twilio-signature' },
   { file: 'voice_outbound', route: '/voice/outbound', trust: 'twilio-signature' },
   { file: 'voice_status', route: '/voice/status', trust: 'twilio-signature' },

@@ -44,6 +44,10 @@
       "destination": "/api/organization_domains"
     },
     {
+      "source": "/organizations/email-domains",
+      "destination": "/api/organization_email_domains"
+    },
+    {
       "source": "/integrations/operate",
       "destination": "/api/integration_operations"
     },

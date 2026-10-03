@@ -8635,6 +8635,10 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: boolean
       }
+      can_manage_email_domains: {
+        Args: { p_organization_id: string }
+        Returns: boolean
+      }
       can_manage_integrations: {
         Args: { p_organization_id: string }
         Returns: boolean
@@ -8890,6 +8894,10 @@ export type Database = {
           meter_id: string
           unit_amount_micros: number
         }[]
+      }
+      email_domain_provider_account: {
+        Args: { p_organization_id: string }
+        Returns: string
       }
       end_support_session: { Args: { p_id: string }; Returns: undefined }
       external_card_payment_availability: {
@@ -9442,6 +9450,19 @@ export type Database = {
         }
         Returns: string
       }
+      record_email_domain_provisioning: {
+        Args: {
+          p_dns_records?: Json
+          p_error_code?: string
+          p_error_message?: string
+          p_organization_id: string
+          p_provider_domain_id?: string
+          p_provider_status?: string
+          p_resource_id: string
+          p_status: string
+        }
+        Returns: undefined
+      }
       record_external_readings: {
         Args: { p_location_id: string; p_readings: Json }
         Returns: number
@@ -9821,6 +9842,10 @@ export type Database = {
       reissue_invitation: { Args: { p_id: string }; Returns: string }
       release_custom_domain: {
         Args: { p_domain_id: string; p_organization_id: string }
+        Returns: undefined
+      }
+      release_organization_email_domain: {
+        Args: { p_organization_id: string; p_resource_id: string }
         Returns: undefined
       }
       remove_call_participant: {

@@ -57,25 +57,40 @@ def list_records(access_token: str, zone_id: str, *, name: str, record_type: str
     return [r for r in result if isinstance(r, dict)] if isinstance(result, list) else []
 
 
-def create_record(access_token: str, zone_id: str, *, record_type: str, name: str, value: str) -> dict:
-    body = _ok(
-        "POST",
-        f"{API}/zones/{zone_id}/dns_records",
-        access_token,
-        json={"type": record_type, "name": name, "content": value, "ttl": 1},
-    )
+def _payload(record_type: str, name: str, value: str, priority: int | None) -> dict:
+    """What Cloudflare is sent for one record. `priority` is MX's own required field and is
+    omitted entirely for every other type, which Cloudflare refuses to be given one for."""
+    payload: dict = {"type": record_type, "name": name, "content": value, "ttl": 1}
+    if priority is not None:
+        payload["priority"] = priority
+    return payload
+
+
+def create_record(
+    access_token: str, zone_id: str, *, record_type: str, name: str, value: str, priority: int | None = None
+) -> dict:
+    body = _ok("POST", f"{API}/zones/{zone_id}/dns_records", access_token, json=_payload(record_type, name, value, priority))
     result = body.get("result")
     if not isinstance(result, dict) or not result.get("id"):
         raise MalformedAnswer("Cloudflare's answer named no record id.")
     return result
 
 
-def update_record(access_token: str, zone_id: str, record_id: str, *, record_type: str, name: str, value: str) -> dict:
+def update_record(
+    access_token: str,
+    zone_id: str,
+    record_id: str,
+    *,
+    record_type: str,
+    name: str,
+    value: str,
+    priority: int | None = None,
+) -> dict:
     body = _ok(
         "PUT",
         f"{API}/zones/{zone_id}/dns_records/{record_id}",
         access_token,
-        json={"type": record_type, "name": name, "content": value, "ttl": 1},
+        json=_payload(record_type, name, value, priority),
     )
     result = body.get("result")
     if not isinstance(result, dict) or not result.get("id"):
