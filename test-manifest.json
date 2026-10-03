@@ -1146,6 +1146,14 @@
         "catalogue"
       ]
     },
+    "apps/web/tests/integration/database/commercial-costs-and-charges.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "commercial",
+        "catalogue",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/commercial-proposals.test.ts": {
       "category": "database-integration",
       "concerns": [

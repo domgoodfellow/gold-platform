@@ -12,6 +12,7 @@ import { TenantWorkspaceHeader } from '@/features/platform/tenant-workspace';
 import { deriveOrganizationFeatureState, EntitlementStatus, FeatureStatusBadges } from '@/features/catalogue/feature-badges';
 import { AssignPlanSheet, ManageAddonsSheet, RecordCommercialTermForm, RecordPlanAgreementSheet, RecordQuotaOverrideSheet } from '@/features/platform/organizations/forms';
 import { ButtonLink } from '@/components/controls/button';
+import type { OrganizationEconomicsModel } from '@/lib/application/finance/economics-overview';
 
 const OVERAGE_BEHAVIOR_LABEL: Record<string, string> = {
   metered: 'Metered',
@@ -57,11 +58,14 @@ export function OrganizationCommercialScreen({
   organizationId,
   model,
   canManageCommercial,
+  economics,
 }: {
   goldId: string;
   organizationId: string;
   model: OrganizationCommercialModel;
   canManageCommercial: boolean;
+  /** Null when the caller lacks `platform.commercial` — the Economics tab stays off rather than showing an empty one (D68's own discipline, one layer down). */
+  economics: OrganizationEconomicsModel | null;
 }) {
   const {
     tenant, basePlan, addons, pricing, recurringComponents, recurringTotal, features, allowances,
@@ -145,9 +149,42 @@ export function OrganizationCommercialScreen({
           <TabsTrigger value="entitlements">Entitlements</TabsTrigger>
           <TabsTrigger value="allowances">Allowances</TabsTrigger>
           <TabsTrigger value="agreements">Agreements</TabsTrigger>
+          {economics ? <TabsTrigger value="economics">Economics</TabsTrigger> : null}
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="legacy">Legacy</TabsTrigger>
         </TabsList>
+
+        {economics ? (
+          <TabsContent value="economics" className="mt-4">
+            <p className="text-xs text-muted-foreground">
+              {new Date(economics.period.start).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' })} ·
+              amounts in {economics.revenue.reportingCurrency}
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <EconomicsStat label="Customer obligation" value={formatMoney(economics.revenue.customerObligationMinor, economics.revenue.reportingCurrency)} />
+              <EconomicsStat label="Known cost-to-serve" value={formatMoney(Math.round(economics.cost.attributableKnownCogsMicros / 1_000_000), economics.cost.reportingCurrency)} />
+              <EconomicsStat label="Known contribution" value={formatMoney(economics.revenue.knownContributionMinor, economics.revenue.reportingCurrency)} />
+              <EconomicsStat
+                label="Cost coverage"
+                value={`${(economics.revenue.costCoverage * 100).toFixed(0)}%`}
+                tone={economics.revenue.costCoverage < 1 ? 'danger' : undefined}
+              />
+            </div>
+            {economics.storage ? (
+              <div className="mt-4 border-t border-border pt-3">
+                <AllowanceMeter state={economics.storage} className="py-0" />
+              </div>
+            ) : null}
+            <ButtonLink
+              href={`/organizations/${goldId}/finance/economics/${organizationId}`}
+              tone="text"
+              size="small"
+              className="mt-3"
+            >
+              Full economics detail →
+            </ButtonLink>
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="entitlements" className="mt-4 flex flex-col gap-6">
           {features.length === 0 ? (
@@ -390,5 +427,14 @@ export function OrganizationCommercialScreen({
         </TabsContent>
       </Tabs>
     </AppPage>
+  );
+}
+
+function EconomicsStat({ label, value, tone }: { label: string; value: string; tone?: 'danger' }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className={`font-medium tabular-nums ${tone === 'danger' ? 'text-danger' : ''}`}>{value}</dd>
+    </div>
   );
 }

@@ -53,6 +53,8 @@ export type PackageEconomicsResult = {
   usageRevenueMinor: number;
   totalRevenueMinor: number;
   knownProviderCogsMinor: number;
+  /** Storage and other infrastructure-attributable cost this scenario expects to incur — a real recorded rate applied to expected consumption, never a hard-coded vendor price (B6). */
+  infrastructureCogsMinor: number;
   manualDirectCogsMinor: number;
   totalKnownCogsMinor: number;
   grossContributionMinor: number | null;
@@ -94,6 +96,8 @@ type ProviderRate = {
   approval_state: string;
 };
 type FxRate = { base_currency: string; quote_currency: string; rate: number; effective_from: string; effective_to: string | null };
+/** The most recent known-real infrastructure cost rate per (provider, driver basis) — derived from an actually recorded platform_infrastructure_cost_components row, never a literal vendor price in code. */
+type InfrastructureRate = { providerKey: string; driverBasis: string; microsPerUnit: number; currency: string };
 type RetailRate = {
   id: string;
   meter_id: string;
@@ -128,6 +132,7 @@ type CalculationContext = {
   providerRates: ProviderRate[];
   fxRates: FxRate[];
   retailRates: RetailRate[];
+  infrastructureRates: InfrastructureRate[];
   policy: { target: number; warning: number; floor: number } | null;
   at: string;
 };
@@ -218,6 +223,7 @@ export function calculatePackageEconomics(
   candidateAmountMinor = context.basePriceMinor,
 ): PackageEconomicsResult {
   let knownProviderCogsMinor = 0;
+  let infrastructureCogsMicros = 0;
   let usageRevenueMinor = 0;
   let requiredComponents = 0;
   let knownComponents = 0;
@@ -231,6 +237,31 @@ export function calculatePackageEconomics(
     if (quota.meterId && quantity > 0) hasUsageAssumptions = true;
     let meterCostMicros = 0;
     const meterUnknown: string[] = [];
+
+    // A capacity allowance with no meter and a byte unit is storage: expected consumption times
+    // a real recorded infrastructure rate, never Supabase's current price typed into this file
+    // (B6, section 15). Any other capacity/recurring_resource allowance with no meter and no
+    // recorded rate simply carries no cost assumption here — nothing invents one.
+    if (!quota.meterId && quota.unit === 'byte' && quantity > 0) {
+      const rate = context.infrastructureRates.find((candidate) => candidate.driverBasis === 'byte_days');
+      if (rate) {
+        const converted = convertMicros(context, quantity * 30 * rate.microsPerUnit, rate.currency);
+        if (converted === null) meterUnknown.push(`${quota.label}: ${rate.currency}/${context.currency} FX`);
+        else infrastructureCogsMicros += converted;
+      } else {
+        meterUnknown.push(`${quota.label}: no recorded infrastructure rate`);
+      }
+      for (const item of meterUnknown) unknown.add(item);
+      meters.push({
+        allowanceKey: quota.allowanceKey, label: quota.label, meterId: null, unit: quota.unit,
+        allowance: quota.includedQuantity, expectedQuantity: quantity,
+        knownCogsMinor: rate ? Math.round((quantity * 30 * rate.microsPerUnit) / 1_000_000) : 0,
+        unknownComponents: meterUnknown, overageQuantity: Math.max(0, quantity - quota.includedQuantity),
+        overageRevenueMinor: 0, overageRateMicros: null, overageRateSource: null, provenance: quota.provenance,
+      });
+      continue;
+    }
+
     const models = quota.meterId ? context.costModels.filter((model) => model.meter_id === quota.meterId) : [];
     for (const model of models) {
       if (model.required) requiredComponents += 1;
@@ -279,7 +310,8 @@ export function calculatePackageEconomics(
 
   const recurringRevenueMinor = candidateAmountMinor + context.addonRevenueMinor;
   const totalRevenueMinor = recurringRevenueMinor + usageRevenueMinor;
-  const totalKnownCogsMinor = knownProviderCogsMinor + context.manualDirectCogsMinor;
+  const infrastructureCogsMinor = Math.round(infrastructureCogsMicros / 1_000_000);
+  const totalKnownCogsMinor = knownProviderCogsMinor + infrastructureCogsMinor + context.manualDirectCogsMinor;
   const unknownCosts = [...unknown];
   const complete = unknownCosts.length === 0;
   const contribution = complete ? totalRevenueMinor - totalKnownCogsMinor : null;
@@ -307,6 +339,7 @@ export function calculatePackageEconomics(
     usageRevenueMinor,
     totalRevenueMinor,
     knownProviderCogsMinor,
+    infrastructureCogsMinor,
     manualDirectCogsMinor: context.manualDirectCogsMinor,
     totalKnownCogsMinor,
     grossContributionMinor: contribution,
@@ -457,17 +490,37 @@ async function loadContext(db: Db, source: SimulationSource): Promise<Calculatio
   quotas = mergeQuotas(quotas);
 
   const meterIds = [...new Set(quotas.map((quota) => quota.meterId).filter((value): value is string => Boolean(value)))];
-  const [assumptionsResult, modelsResult, providerRatesResult, fxResult, retailResult, policyResult] = await Promise.all([
+  const needsInfrastructureRate = quotas.some((quota) => !quota.meterId && quota.unit === 'byte');
+  const [assumptionsResult, modelsResult, providerRatesResult, fxResult, retailResult, policyResult, infrastructureResult] = await Promise.all([
     db.from('platform_plan_utilization_assumptions').select('scenario,allowance_key,utilization,effective_from').eq('plan_id', planId).lte('effective_from', at).order('effective_from', { ascending: false }),
     meterIds.length ? db.from('platform_meter_cost_model_components').select('meter_id,component_key,provider_key,cost_meter_key,quantity_multiplier,region,direction,resource_type,required').in('meter_id', meterIds) : Promise.resolve({ data: [], error: null }),
     db.from('platform_provider_rates').select('provider_key,cost_meter_key,currency,unit_amount_micros,effective_from,effective_to,region,direction,resource_type,approval_state').lte('effective_from', at),
     db.from('platform_fx_rates').select('base_currency,quote_currency,rate,effective_from,effective_to').lte('effective_from', at),
     meterIds.length ? db.from('platform_retail_rates').select('id,meter_id,currency,unit_amount_micros,plan_id,organization_id,billing_interval,effective_from,effective_to,approval_state,source').in('meter_id', meterIds).eq('currency', currency).lte('effective_from', at) : Promise.resolve({ data: [], error: null }),
     db.from('platform_plan_margin_policies').select('target_margin,warning_margin,hard_floor_margin,effective_from').eq('plan_id', planId).eq('currency', currency).lte('effective_from', at).order('effective_from', { ascending: false }).limit(1).maybeSingle(),
+    // Storage's own effective infrastructure cost: the most recent real `byte_days`-driven
+    // infrastructure_attributable component recorded for any organization, never a literal price
+    // typed into this file (B6). Organization-less by design — a Plan scenario has no organization
+    // of its own to look a cost up against.
+    needsInfrastructureRate
+      ? db.from('platform_infrastructure_cost_components')
+          .select('provider_key,driver_basis,native_cost_micros,native_currency,driver_quantity,billing_period')
+          .eq('cost_category', 'infrastructure_attributable').eq('driver_basis', 'byte_days')
+          .not('driver_quantity', 'is', null).order('billing_period', { ascending: false }).limit(1)
+      : Promise.resolve({ data: [], error: null }),
   ]);
-  for (const result of [assumptionsResult, modelsResult, providerRatesResult, fxResult, retailResult, policyResult]) {
+  for (const result of [assumptionsResult, modelsResult, providerRatesResult, fxResult, retailResult, policyResult, infrastructureResult]) {
     if (result.error) throw new DomainError(result.error.message, 'package_economics.context_failed');
   }
+  const infrastructureRates: InfrastructureRate[] = (infrastructureResult.data ?? [])
+    .filter((row): row is NonNullable<typeof row> & { driver_basis: string; driver_quantity: number } =>
+      row.driver_basis !== null && row.driver_quantity !== null && Number(row.driver_quantity) > 0)
+    .map((row) => ({
+      providerKey: row.provider_key ?? '',
+      driverBasis: row.driver_basis,
+      microsPerUnit: Number(row.native_cost_micros) / Number(row.driver_quantity),
+      currency: row.native_currency,
+    }));
   const assumptions = new Map<string, number>();
   for (const row of assumptionsResult.data ?? []) {
     const key = `${row.scenario}:${row.allowance_key}`;
@@ -482,6 +535,7 @@ async function loadContext(db: Db, source: SimulationSource): Promise<Calculatio
     providerRates: (providerRatesResult.data ?? []).map((row) => ({ ...row, unit_amount_micros: Number(row.unit_amount_micros) })),
     fxRates: (fxResult.data ?? []).map((row) => ({ ...row, rate: Number(row.rate) })),
     retailRates: (retailResult.data ?? []).map((row) => ({ ...row, unit_amount_micros: Number(row.unit_amount_micros) })),
+    infrastructureRates,
     policy, at,
   };
 }

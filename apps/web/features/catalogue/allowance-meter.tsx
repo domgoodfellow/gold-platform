@@ -23,6 +23,29 @@ function formatQuantity(value: number): string {
   return value.toLocaleString('en-CA', { maximumFractionDigits: 2 });
 }
 
+const BYTE_UNITS: readonly { threshold: number; suffix: string }[] = [
+  { threshold: 1_000_000_000_000, suffix: 'TB' },
+  { threshold: 1_000_000_000, suffix: 'GB' },
+  { threshold: 1_000_000, suffix: 'MB' },
+  { threshold: 1_000, suffix: 'KB' },
+];
+
+/** A decimal byte count, scaled to the first unit it clears — "3.4 GB", never "3,400,000,000 byte". */
+function formatBytes(value: number): string {
+  const unit = BYTE_UNITS.find((candidate) => value >= candidate.threshold);
+  if (!unit) return `${Math.round(value).toLocaleString('en-CA')} B`;
+  return `${(value / unit.threshold).toLocaleString('en-CA', { maximumFractionDigits: 1 })} ${unit.suffix}`;
+}
+
+/**
+ * A quantity with its unit, in the one place every unit this allowance engine carries gets read.
+ * `byte` is the one unit a raw count is unreadable for; every other unit (minute, user, number,
+ * segment…) is said exactly as the Plan named it.
+ */
+function formatQuantityWithUnit(value: number, unit: string): string {
+  return unit === 'byte' ? formatBytes(value) : `${formatQuantity(value)} ${unit}`;
+}
+
 function formatResetDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
 }
@@ -89,7 +112,7 @@ export function AllowanceMeter({
       ) : state.consumed === null || state.included === null ? (
         <>
           <p className="mt-1 text-sm tabular-nums">
-            {state.included === null ? '—' : formatQuantity(state.included)} {state.unit} included
+            {state.included === null ? '—' : formatQuantityWithUnit(state.included, state.unit)} included
           </p>
           <p className="mt-0.5 text-xs text-subtle">
             {state.enforcement === 'unenforced'
@@ -100,7 +123,9 @@ export function AllowanceMeter({
       ) : (
         <>
           <p className="mt-1 text-sm tabular-nums">
-            {formatQuantity(state.consumed)} / {formatQuantity(state.included)} {state.unit}
+            {state.unit === 'byte'
+              ? `${formatBytes(state.consumed)} / ${formatBytes(state.included)}`
+              : `${formatQuantity(state.consumed)} / ${formatQuantity(state.included)} ${state.unit}`}
           </p>
           <div
             className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-border"
@@ -114,12 +139,12 @@ export function AllowanceMeter({
           <p className="mt-1 flex flex-wrap gap-x-3 text-xs">
             {over ? (
               <span className="text-muted tabular-nums">
-                {formatQuantity(state.overageQuantity)} additional {state.unit}
+                {formatQuantityWithUnit(state.overageQuantity, state.unit)} additional
                 {state.overageBehavior === 'metered' ? ' · charged on top' : ''}
               </span>
             ) : (
               <span className="text-muted tabular-nums">
-                {formatQuantity(Math.max(state.remaining ?? 0, 0))} {state.unit} remaining
+                {formatQuantityWithUnit(Math.max(state.remaining ?? 0, 0), state.unit)} remaining
               </span>
             )}
             <AllowanceResetNote state={state} />

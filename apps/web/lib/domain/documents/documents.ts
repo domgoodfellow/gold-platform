@@ -132,6 +132,12 @@ export async function uploadDocument(
     if (error.code === '23503') {
       throw new DomainError('No such record here to attach to.', 'documents.owner_not_found');
     }
+    // Distinguished by message, the same way `open_call` tells its own hard-limit refusal apart
+    // from every other 23514 check violation — `create_document`'s own storage-allowance check
+    // raises with this wording and no other 23514 here does.
+    if (error.code === '23514' && error.message.includes('storage limit')) {
+      throw new DomainError(error.message, 'documents.storage_limit_reached');
+    }
     throw new DomainError(error.message, 'documents.create_failed');
   }
 

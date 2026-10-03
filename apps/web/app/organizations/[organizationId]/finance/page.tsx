@@ -1,8 +1,9 @@
 import { WorkspaceHome } from '@/components/patterns/workspace-home';
-import { DividedList, EmptyState } from '@/components/surfaces/section';
+import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Widget, WidgetGrid } from '@/components/display/widget';
 import { financeOverview } from '@/lib/application/finance/finance-overview';
+import { loadPortfolioEconomics } from '@/lib/application/finance/economics-overview';
 import { platformPermissions } from '@/lib/domain/platform/permissions';
 import { isGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
@@ -47,6 +48,19 @@ export default async function FinancePage({
   // customer's own business, and only for the staff permission that already gates it.
   const isGoldInternal = await isGoldInternalOrganization(db, { organizationId });
   const canManagePlans = isGoldInternal && (await platformPermissions(db)).has('platform.commercial');
+  // GildOps' own portfolio economics (Work Order B, B8/B9): conditional operator capability
+  // inside GildOps' own organization, the same shape canManagePlans already is — never shown on
+  // an ordinary tenant's Finance Home, which has no provider cost or margin to show (D43).
+  const economics = canManagePlans ? await loadPortfolioEconomics(db) : null;
+  const economicsTotals = economics?.portfolio.reduce(
+    (sum, row) => ({
+      obligation: sum.obligation + row.customerObligationMinor,
+      knownCost: sum.knownCost + row.knownCostToServeMinor,
+      contribution: sum.contribution + row.knownContributionMinor,
+      worstCoverage: Math.min(sum.worstCoverage, row.costCoverage),
+    }),
+    { obligation: 0, knownCost: 0, contribution: 0, worstCoverage: 1 },
+  );
 
   const subscriptionValue = overview.subscription
     ? overview.subscription.planLabel
@@ -76,11 +90,26 @@ export default async function FinancePage({
       title={workspaceLabel('finance')}
       actions={
         <div className="flex gap-2">
+          {canManagePlans ? <ButtonLink href={`/organizations/${organizationId}/finance/economics`} tone="secondary">Economics</ButtonLink> : null}
           {canManagePlans ? <ButtonLink href={`/organizations/${organizationId}/finance/plans`} tone="secondary">Plans &amp; Add-ons</ButtonLink> : null}
           <ButtonLink href={planPath}>Manage plan &amp; billing</ButtonLink>
         </div>
       }
     >
+      {economics && economicsTotals ? (
+        <Section className="mb-6">
+          <SectionHeading>GildOps commercial economics — this month</SectionHeading>
+          <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
+            <div><dt className="text-muted">Obligations</dt><dd className="font-medium tabular-nums">{formatMoney(economicsTotals.obligation, economics.reportingCurrency)}</dd></div>
+            <div><dt className="text-muted">Known COGS</dt><dd className="font-medium tabular-nums">{formatMoney(economicsTotals.knownCost, economics.reportingCurrency)}</dd></div>
+            <div><dt className="text-muted">Known contribution</dt><dd className="font-medium tabular-nums">{formatMoney(economicsTotals.contribution, economics.reportingCurrency)}</dd></div>
+            <div>
+              <dt className="text-muted">Organizations needing attention</dt>
+              <dd className="font-medium tabular-nums">{economics.portfolio.filter((row) => row.costCoverage < 1).length}</dd>
+            </div>
+          </dl>
+        </Section>
+      ) : null}
       {empty ? (
         <EmptyState title="Nothing financial recorded yet" description="A plan, a connection or any usage for this business will show here." />
       ) : (

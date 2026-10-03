@@ -3,6 +3,7 @@ import { requirePlatformArea } from '@/lib/route/platform';
 import { platformHref } from '@/lib/platform-navigation';
 import { getDb } from '@/lib/db/server';
 import { loadOrganizationCommercial } from '@/lib/application/platform/organization-commercial';
+import { loadOrganizationEconomics } from '@/lib/application/finance/economics-overview';
 import { OrganizationCommercialScreen } from '@/features/platform/organizations/organization-commercial-screen';
 
 export const dynamic = 'force-dynamic';
@@ -20,14 +21,22 @@ export default async function Commercial({ params }: PageProps<'/organizations/[
   // `record_commercial_term` — `app.require_platform_capability('platform.commercial')`) both
   // refuse a staff row that names only `platform.organizations` (Work Order A0).
   const permissions = await requirePlatformArea(goldId, 'platform.organizations');
-  const model = await loadOrganizationCommercial(await getDb(), organizationId);
+  const db = await getDb();
+  const canManageCommercial = permissions.has('platform.commercial');
+  const [model, economics] = await Promise.all([
+    loadOrganizationCommercial(db, organizationId),
+    // Loaded only for a caller who could reach the Economics tab at all — the same gate the
+    // screen itself re-checks by only rendering the tab when this is non-null.
+    canManageCommercial ? loadOrganizationEconomics(db, { organizationId }) : Promise.resolve(null),
+  ]);
   if (!model) redirect(platformHref(goldId, 'organizations'));
   return (
     <OrganizationCommercialScreen
       goldId={goldId}
       organizationId={organizationId}
       model={model}
-      canManageCommercial={permissions.has('platform.commercial')}
+      canManageCommercial={canManageCommercial}
+      economics={economics}
     />
   );
 }

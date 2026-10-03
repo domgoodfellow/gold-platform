@@ -3741,6 +3741,123 @@ export type Database = {
           },
         ]
       }
+      organization_charge_components: {
+        Row: {
+          amount_minor: number
+          billing_period_end: string
+          billing_period_start: string
+          component_type: string
+          computed_at: string
+          computed_by: string | null
+          currency: string
+          description: string
+          finalized_at: string | null
+          id: string
+          organization_id: string
+          provenance: Json
+          source_domain: string
+          source_record_id: string
+        }
+        Insert: {
+          amount_minor: number
+          billing_period_end: string
+          billing_period_start: string
+          component_type: string
+          computed_at?: string
+          computed_by?: string | null
+          currency: string
+          description: string
+          finalized_at?: string | null
+          id?: string
+          organization_id: string
+          provenance?: Json
+          source_domain: string
+          source_record_id: string
+        }
+        Update: {
+          amount_minor?: number
+          billing_period_end?: string
+          billing_period_start?: string
+          component_type?: string
+          computed_at?: string
+          computed_by?: string | null
+          currency?: string
+          description?: string
+          finalized_at?: string | null
+          id?: string
+          organization_id?: string
+          provenance?: Json
+          source_domain?: string
+          source_record_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_charge_components_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_charge_components_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_commercial_adjustments: {
+        Row: {
+          amount_minor: number
+          currency: string
+          direction: string
+          effective_at: string
+          id: string
+          organization_id: string
+          reason: string
+          recorded_at: string
+          recorded_by: string | null
+        }
+        Insert: {
+          amount_minor: number
+          currency: string
+          direction: string
+          effective_at: string
+          id?: string
+          organization_id: string
+          reason: string
+          recorded_at?: string
+          recorded_by?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          currency?: string
+          direction?: string
+          effective_at?: string
+          id?: string
+          organization_id?: string
+          reason?: string
+          recorded_at?: string
+          recorded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_commercial_adjustments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_commercial_adjustments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_commercial_terms: {
         Row: {
           currency: string | null
@@ -5481,6 +5598,135 @@ export type Database = {
           source?: string
         }
         Relationships: []
+      }
+      platform_infrastructure_cost_components: {
+        Row: {
+          allocation_quality: string
+          billing_period: string
+          cost_category: string
+          driver_basis: string | null
+          driver_quantity: number | null
+          fx_rate: number | null
+          fx_rate_id: string | null
+          id: string
+          native_cost_micros: number
+          native_currency: string
+          note: string
+          organization_id: string | null
+          provider_account_id: string | null
+          provider_binding_id: string | null
+          provider_key: string | null
+          provider_reference: string | null
+          provider_resource_id: string | null
+          recorded_at: string
+          recorded_by: string | null
+          reporting_cost_micros: number | null
+          reporting_currency: string | null
+          source: string
+        }
+        Insert: {
+          allocation_quality: string
+          billing_period: string
+          cost_category: string
+          driver_basis?: string | null
+          driver_quantity?: number | null
+          fx_rate?: number | null
+          fx_rate_id?: string | null
+          id?: string
+          native_cost_micros: number
+          native_currency: string
+          note?: string
+          organization_id?: string | null
+          provider_account_id?: string | null
+          provider_binding_id?: string | null
+          provider_key?: string | null
+          provider_reference?: string | null
+          provider_resource_id?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          reporting_cost_micros?: number | null
+          reporting_currency?: string | null
+          source: string
+        }
+        Update: {
+          allocation_quality?: string
+          billing_period?: string
+          cost_category?: string
+          driver_basis?: string | null
+          driver_quantity?: number | null
+          fx_rate?: number | null
+          fx_rate_id?: string | null
+          id?: string
+          native_cost_micros?: number
+          native_currency?: string
+          note?: string
+          organization_id?: string | null
+          provider_account_id?: string | null
+          provider_binding_id?: string | null
+          provider_key?: string | null
+          provider_reference?: string | null
+          provider_resource_id?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          reporting_cost_micros?: number | null
+          reporting_currency?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_infrastructure_cost__organization_id_provider_bin_fkey"
+            columns: ["organization_id", "provider_binding_id", "provider_key"]
+            isOneToOne: false
+            referencedRelation: "organization_provider_bindings"
+            referencedColumns: ["organization_id", "id", "provider_key"]
+          },
+          {
+            foreignKeyName: "platform_infrastructure_cost_component_provider_account_id_fkey"
+            columns: ["provider_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_infrastructure_cost_components_fx_rate_id_fkey"
+            columns: ["fx_rate_id"]
+            isOneToOne: false
+            referencedRelation: "platform_fx_rates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_infrastructure_cost_components_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_infrastructure_cost_components_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_infrastructure_cost_components_provider_key_fkey"
+            columns: ["provider_key"]
+            isOneToOne: false
+            referencedRelation: "platform_providers"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "platform_infrastructure_cost_organization_id_provider_bin_fkey1"
+            columns: [
+              "organization_id",
+              "provider_binding_id",
+              "provider_resource_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "organization_provider_resources"
+            referencedColumns: ["organization_id", "binding_id", "id"]
+          },
+        ]
       }
       platform_meter_cost_model_components: {
         Row: {
@@ -8681,6 +8927,18 @@ export type Database = {
         Args: { p_feature_id: string; p_plan_id: string }
         Returns: undefined
       }
+      compose_organization_charges: {
+        Args: {
+          p_billing_period_end: string
+          p_billing_period_start: string
+          p_organization_id: string
+        }
+        Returns: {
+          kind: string
+          proration_required: boolean
+          written: boolean
+        }[]
+      }
       confirm_external_card_payment: {
         Args: { p_provider_reference: string; p_request_id: string }
         Returns: undefined
@@ -8908,6 +9166,14 @@ export type Database = {
           outstanding_minor: number
         }[]
       }
+      finalize_organization_charges: {
+        Args: {
+          p_billing_period_end: string
+          p_billing_period_start: string
+          p_organization_id: string
+        }
+        Returns: number
+      }
       grant_plan_module: {
         Args: { p_module_id: string; p_plan_id: string }
         Returns: undefined
@@ -9028,6 +9294,29 @@ export type Database = {
           unpriced_quantity: number
         }[]
       }
+      organization_cost_to_serve: {
+        Args: {
+          p_organization_id: string
+          p_period_end: string
+          p_period_start: string
+          p_reporting_currency?: string
+        }
+        Returns: {
+          attributable_has_unallocated_peer: boolean
+          attributable_known_cogs_micros: number
+          component_count: number
+          cost_coverage: number
+          direct_usage_cogs_micros: number
+          direct_usage_has_unknown: boolean
+          infrastructure_attributable_cogs_micros: number
+          known_component_count: number
+          manual_direct_cogs_micros: number
+          reporting_currency: string
+          resource_cogs_micros: number
+          shared_platform_cost_micros: number
+          unallocated_cost_micros: number
+        }[]
+      }
       organization_effective_entitlements: {
         Args: { p_at?: string; p_organization_id: string }
         Returns: {
@@ -9101,6 +9390,30 @@ export type Database = {
               source: string
             }[]
           }
+      organization_revenue_summary: {
+        Args: {
+          p_billing_period_end: string
+          p_billing_period_start: string
+          p_organization_id: string
+          p_reporting_currency?: string
+        }
+        Returns: {
+          addon_minor: number
+          base_plan_minor: number
+          cost_coverage: number
+          credit_adjustment_minor: number
+          customer_obligation_minor: number
+          debit_adjustment_minor: number
+          has_mixed_currency: boolean
+          known_contribution_minor: number
+          known_cost_to_serve_minor: number
+          known_margin: number
+          one_time_service_minor: number
+          recurring_resource_minor: number
+          reporting_currency: string
+          usage_overage_minor: number
+        }[]
+      }
       organization_usage_detail: {
         Args: { p_organization_id: string }
         Returns: {
@@ -9211,6 +9524,22 @@ export type Database = {
         }[]
       }
       platform_public_domain: { Args: never; Returns: string }
+      platform_revenue_portfolio: {
+        Args: {
+          p_billing_period_end: string
+          p_billing_period_start: string
+          p_reporting_currency?: string
+        }
+        Returns: {
+          cost_coverage: number
+          customer_obligation_minor: number
+          known_contribution_minor: number
+          known_cost_to_serve_minor: number
+          known_margin: number
+          organization_id: string
+          organization_name: string
+        }[]
+      }
       platform_usage_cost_components: {
         Args: { p_usage_event_id: string }
         Returns: {
@@ -9410,6 +9739,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_commercial_adjustment: {
+        Args: {
+          p_amount_minor: number
+          p_currency: string
+          p_direction: string
+          p_effective_at?: string
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: string
+      }
       record_commercial_retail_rate: {
         Args: {
           p_approval_state?: string
@@ -9473,6 +9813,30 @@ export type Database = {
           p_external_id: string
           p_from_number: string
           p_to_number: string
+        }
+        Returns: string
+      }
+      record_infrastructure_cost: {
+        Args: {
+          p_allocation_quality: string
+          p_billing_period: string
+          p_cost_category: string
+          p_driver_basis?: string
+          p_driver_quantity?: number
+          p_fx_rate?: number
+          p_fx_rate_id?: string
+          p_native_cost_micros: number
+          p_native_currency: string
+          p_note?: string
+          p_organization_id?: string
+          p_provider_account_id?: string
+          p_provider_binding_id?: string
+          p_provider_key?: string
+          p_provider_reference?: string
+          p_provider_resource_id?: string
+          p_reporting_cost_micros?: number
+          p_reporting_currency?: string
+          p_source: string
         }
         Returns: string
       }
