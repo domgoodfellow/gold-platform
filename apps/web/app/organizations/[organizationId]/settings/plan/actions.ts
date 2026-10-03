@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PlatformBillingCheckoutSchema } from '@gold/schemas';
 import { DomainError } from '@/lib/domain/errors';
@@ -23,9 +24,10 @@ export async function beginPlatformBillingCheckoutAction(
 ): Promise<PlatformBillingActionState> {
   const organizationId = String(formData.get('organizationId') ?? '');
   const planKey = String(formData.get('planKey') ?? '');
+  const quoteVersion = String(formData.get('quoteVersion') ?? '');
 
-  const parsed = PlatformBillingCheckoutSchema.safeParse({ organizationId, planKey });
-  if (!parsed.success) return { error: 'Choose a Plan to subscribe to.' };
+  const parsed = PlatformBillingCheckoutSchema.safeParse({ organizationId, planKey, quoteVersion });
+  if (!parsed.success) return { error: 'Review the current price before subscribing.' };
 
   const { db, organization } = await requireOrganizationForBillingRecovery(organizationId);
   if (!organization.currency) {
@@ -39,6 +41,7 @@ export async function beginPlatformBillingCheckoutAction(
     ({ url } = await beginPlatformBillingCheckout(db, {
       organizationId,
       planKey: parsed.data.planKey,
+      reviewedQuoteVersion: parsed.data.quoteVersion,
       organizationName: organization.name,
       // Nothing a business has not said is filled in on its behalf — a billing contact email is
       // a later, explicit question, not one this checkout invents an answer to.
@@ -48,7 +51,14 @@ export async function beginPlatformBillingCheckoutAction(
       cancelUrl: `${origin}/organizations/${organizationId}/settings/plan?checkout=canceled`,
     }));
   } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
+    if (error instanceof DomainError) {
+      // The screen is still showing the price that went stale; re-render it so the next Subscribe
+      // carries the current version.
+      if (error.code === 'platform_billing.quote_stale') {
+        revalidatePath(`/organizations/${organizationId}/settings/plan`);
+      }
+      return { error: error.message };
+    }
     throw error;
   }
 

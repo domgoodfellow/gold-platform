@@ -4204,33 +4204,33 @@ export type Database = {
       }
       organization_plan_agreement_provider_prices: {
         Row: {
+          agreement_id: string
           billing_interval: string
           environment: string
           id: string
           organization_id: string
-          plan_id: string
           price_reference: string
           product_reference: string
           provisioned_at: string
           provisioned_by: string | null
         }
         Insert: {
+          agreement_id: string
           billing_interval: string
           environment: string
           id?: string
           organization_id: string
-          plan_id: string
           price_reference: string
           product_reference: string
           provisioned_at?: string
           provisioned_by?: string | null
         }
         Update: {
+          agreement_id?: string
           billing_interval?: string
           environment?: string
           id?: string
           organization_id?: string
-          plan_id?: string
           price_reference?: string
           product_reference?: string
           provisioned_at?: string
@@ -4252,11 +4252,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "organization_plan_agreement_provider_prices_plan_id_fkey"
-            columns: ["plan_id"]
+            foreignKeyName: "organization_plan_agreement_provider_prices_agreement_fk"
+            columns: ["organization_id", "agreement_id"]
             isOneToOne: false
-            referencedRelation: "platform_plans"
-            referencedColumns: ["id"]
+            referencedRelation: "organization_plan_agreements"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -9433,10 +9433,10 @@ export type Database = {
       }
       organization_plan_agreement_provider_price_reference: {
         Args: {
+          p_agreement_id: string
           p_billing_interval: string
           p_environment: string
           p_organization_id: string
-          p_plan_id: string
         }
         Returns: string
       }
@@ -9451,6 +9451,7 @@ export type Database = {
               amount_minor: number
               currency: string
               source: string
+              source_id: string
             }[]
           }
         | {
@@ -9464,6 +9465,7 @@ export type Database = {
               amount_minor: number
               currency: string
               source: string
+              source_id: string
             }[]
           }
       organization_revenue_summary: {
@@ -9760,10 +9762,9 @@ export type Database = {
       }
       record_agreement_provider_price: {
         Args: {
+          p_agreement_id: string
           p_billing_interval: string
           p_environment: string
-          p_organization_id: string
-          p_plan_id: string
           p_price_reference: string
           p_product_reference: string
         }

@@ -108,7 +108,8 @@ export async function provisionPlanPrice(
  * Staff provisioning the processor's representation of one organization's negotiated price
  * (`organization_plan_agreements`) -- the agreement-priced counterpart to `provisionPlanPrice`.
  * Never mutates the Plan's own standard provider price (I8); the mapping is its own table, keyed
- * by organization rather than by a `platform_plan_prices` row that does not exist for this price.
+ * by the `organization_plan_agreements` row that produced the amount -- so a later agreement is
+ * provisioned as its own provider price and the earlier one's mapping stays as it was.
  */
 export async function provisionAgreementPlanPrice(
   db: Db,
@@ -134,6 +135,10 @@ export async function provisionAgreementPlanPrice(
     );
   }
 
+  // The mapping belongs to this exact agreement record, so a later agreement for the same Plan
+  // gets a provider price of its own and this one's is never touched.
+  const agreementId = price.sourceId;
+
   // Staff holds select on this table directly (its RLS, not the tenant-gated reference RPC
   // checkout itself calls) -- the idempotency check below is a staff-side read of what staff
   // already provisioned, never a `billing.manage` question.
@@ -141,7 +146,7 @@ export async function provisionAgreementPlanPrice(
     .from('organization_plan_agreement_provider_prices')
     .select('product_reference, price_reference')
     .eq('organization_id', input.organizationId)
-    .eq('plan_id', input.planId)
+    .eq('agreement_id', agreementId)
     .eq('environment', provider.environment)
     .eq('billing_interval', input.billingInterval)
     .maybeSingle();
@@ -151,8 +156,8 @@ export async function provisionAgreementPlanPrice(
   }
 
   const { productId, priceId } = await provider.createPrice({
-    productIdempotencyKey: `platform-agreement-product:${input.organizationId}:${plan.key}`,
-    priceIdempotencyKey: `platform-agreement-price:${input.organizationId}:${plan.key}:${input.billingInterval}`,
+    productIdempotencyKey: `platform-agreement-product:${agreementId}`,
+    priceIdempotencyKey: `platform-agreement-price:${agreementId}:${input.billingInterval}`,
     planKey: plan.key,
     planLabel: plan.label,
     currency: price.currency,
@@ -161,8 +166,7 @@ export async function provisionAgreementPlanPrice(
   });
 
   const { error } = await db.rpc('record_agreement_provider_price', {
-    p_organization_id: input.organizationId,
-    p_plan_id: input.planId,
+    p_agreement_id: agreementId,
     p_environment: provider.environment,
     p_billing_interval: input.billingInterval,
     p_product_reference: productId,

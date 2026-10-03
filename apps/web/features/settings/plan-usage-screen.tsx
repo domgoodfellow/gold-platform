@@ -162,7 +162,14 @@ export function PlanUsageScreen({
               {quote ? <PurchaseReview quote={quote} /> : null}
               {canManageBilling ? (
                 <div className="mt-3">
-                  <SubscribeButton organizationId={organizationId} planKey={basePlan.key} planLabel={basePlan.label} />
+                  {quote ? (
+                    <SubscribeButton
+                      organizationId={organizationId}
+                      planKey={basePlan.key}
+                      planLabel={basePlan.label}
+                      quoteVersion={quote.reviewVersion}
+                    />
+                  ) : null}
                 </div>
               ) : (
                 <Hint className="mt-2">Only this business’s billing manager can start a subscription.</Hint>

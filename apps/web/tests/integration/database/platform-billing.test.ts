@@ -8,6 +8,7 @@ import { createRole } from '@/lib/domain/tenancy/roles';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { ensurePlatformBillingCustomer } from '@/lib/domain/platform-billing/customers';
 import { beginPlatformBillingCheckout } from '@/lib/domain/platform-billing/checkout';
+import { buildOrganizationPurchaseQuote } from '@/lib/domain/platform-billing/quote';
 import { beginPlatformBillingPortalSession } from '@/lib/domain/platform-billing/portal';
 import { getOrganizationSubscription } from '@/lib/domain/platform-billing/subscriptions';
 import { provisionAgreementPlanPrice, provisionPlanPrice } from '@/lib/domain/platform-billing/provisioning';
@@ -144,6 +145,20 @@ function spyOnStripeCalls(): { spy: ReturnType<typeof vi.spyOn>; calls: string[]
   return { spy, calls };
 }
 
+/**
+ * Subscribing exactly as the screen does: the quote is built and shown first, and only its opaque
+ * version travels back with the request. `reviewed` lets a test submit the version of a quote it
+ * built earlier.
+ */
+async function beginReviewedCheckout(
+  db: SupabaseClient,
+  input: Omit<Parameters<typeof beginPlatformBillingCheckout>[1], 'reviewedQuoteVersion'>,
+  reviewed?: string,
+) {
+  const quote = await buildOrganizationPurchaseQuote(db, { organizationId: input.organizationId });
+  return beginPlatformBillingCheckout(db, { ...input, reviewedQuoteVersion: reviewed ?? quote.reviewVersion });
+}
+
 /** Checkout now purchases only the Plan currently assigned to the business (work order C §3). */
 async function assignPlan(organizationId: string, planId: string): Promise<void> {
   await recordPlanAssignment(staff, {
@@ -156,7 +171,10 @@ async function assignPlan(organizationId: string, planId: string): Promise<void>
 }
 
 /** Provisions a billable Plan/Price/provider-price mapping, returning the plan key. */
-async function seedProvisionedPlan(currency = 'CAD'): Promise<{ planKey: string; planId: string; priceId: string }> {
+async function seedProvisionedPlan(
+  currency = 'CAD',
+  saleStatus: 'active' | 'unlisted' | 'archived' = 'active',
+): Promise<{ planKey: string; planId: string; priceId: string }> {
   const key = `plan_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const planId = await createPlan(staff, {
     key,
@@ -164,6 +182,7 @@ async function seedProvisionedPlan(currency = 'CAD'): Promise<{ planKey: string;
     label: `Plan ${key}`,
     description: '',
     billable: true,
+    saleStatus,
   });
   const priceId = await recordPlanPrice(staff, {
     planId,
@@ -180,6 +199,25 @@ async function seedProvisionedPlan(currency = 'CAD'): Promise<{ planKey: string;
   fetchSpy.mockRestore();
 
   return { planKey: key, planId, priceId };
+}
+
+/** Provisions a billable Add-on/Price/provider-price mapping, returning the plan key. */
+async function seedProvisionedAddon(
+  billingInterval: 'month' | 'one_time' = 'month',
+  currency = 'CAD',
+): Promise<{ planId: string; priceId: string }> {
+  const key = `addon_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+  const planId = await createPlan(staff, { key, kind: 'addon', label: `Addon ${key}`, description: '', billable: true });
+  const priceId = await recordPlanPrice(staff, { planId, currency, amountMinor: 1_500, billingInterval });
+
+  const fetchSpy = mockStripeFetch({
+    '/v1/products': { id: `prod_${randomUUID().slice(0, 8)}` },
+    '/v1/prices': { id: `price_${randomUUID().slice(0, 8)}` },
+  });
+  await provisionPlanPrice(staff, { planId, planPriceId: priceId });
+  fetchSpy.mockRestore();
+
+  return { planId, priceId };
 }
 
 describe('provisioning a Plan price with the billing provider', () => {
@@ -355,7 +393,7 @@ describe('starting a subscription (Checkout)', () => {
       throw new Error(`unexpected stripe fetch: ${url}`);
     });
 
-    const result = await beginPlatformBillingCheckout(org.db, {
+    const result = await beginReviewedCheckout(org.db, {
       organizationId: org.organizationId,
       planKey,
       organizationName: 'Tenant Co',
@@ -381,7 +419,7 @@ describe('starting a subscription (Checkout)', () => {
     const { spy, calls } = spyOnStripeCalls();
 
     await expect(
-      beginPlatformBillingCheckout(org.db, {
+      beginReviewedCheckout(org.db, {
         organizationId: org.organizationId,
         planKey,
         organizationName: 'Tenant Co',
@@ -407,7 +445,7 @@ describe('starting a subscription (Checkout)', () => {
     const { spy, calls } = spyOnStripeCalls();
 
     await expect(
-      beginPlatformBillingCheckout(org.db, {
+      beginReviewedCheckout(org.db, {
         organizationId: org.organizationId,
         planKey: key,
         organizationName: 'Tenant Co',
@@ -430,7 +468,7 @@ describe('starting a subscription (Checkout)', () => {
     const { spy, calls } = spyOnStripeCalls();
 
     await expect(
-      beginPlatformBillingCheckout(member.db, {
+      beginReviewedCheckout(member.db, {
         organizationId: org.organizationId,
         planKey,
         organizationName: 'Tenant Co',
@@ -459,7 +497,7 @@ describe('starting a subscription (Checkout)', () => {
       throw new Error(`unexpected stripe fetch: ${url}`);
     });
 
-    await beginPlatformBillingCheckout(org.db, {
+    await beginReviewedCheckout(org.db, {
       organizationId: org.organizationId,
       planKey,
       organizationName: 'Tenant Co',
@@ -485,25 +523,6 @@ describe('starting a subscription (Checkout)', () => {
 });
 
 describe('multi-line checkout and negotiated prices', () => {
-  /** Provisions a billable Add-on/Price/provider-price mapping, returning the plan key. */
-  async function seedProvisionedAddon(
-    billingInterval: 'month' | 'one_time' = 'month',
-    currency = 'CAD',
-  ): Promise<{ planId: string; priceId: string }> {
-    const key = `addon_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
-    const planId = await createPlan(staff, { key, kind: 'addon', label: `Addon ${key}`, description: '', billable: true });
-    const priceId = await recordPlanPrice(staff, { planId, currency, amountMinor: 1_500, billingInterval });
-
-    const fetchSpy = mockStripeFetch({
-      '/v1/products': { id: `prod_${randomUUID().slice(0, 8)}` },
-      '/v1/prices': { id: `price_${randomUUID().slice(0, 8)}` },
-    });
-    await provisionPlanPrice(staff, { planId, planPriceId: priceId });
-    fetchSpy.mockRestore();
-
-    return { planId, priceId };
-  }
-
   it('sends one Stripe line item per Plan and Add-on currently assigned to the business', async () => {
     const org = await newTenant('checkout-multiline');
     const { planKey, planId } = await seedProvisionedPlan();
@@ -525,7 +544,7 @@ describe('multi-line checkout and negotiated prices', () => {
       throw new Error(`unexpected stripe fetch: ${url}`);
     });
 
-    await beginPlatformBillingCheckout(org.db, {
+    await beginReviewedCheckout(org.db, {
       organizationId: org.organizationId,
       planKey,
       organizationName: 'Multiline Co',
@@ -587,7 +606,7 @@ describe('multi-line checkout and negotiated prices', () => {
       throw new Error(`unexpected stripe fetch: ${url}`);
     });
 
-    await beginPlatformBillingCheckout(org.db, {
+    await beginReviewedCheckout(org.db, {
       organizationId: org.organizationId,
       planKey: agreementPlanKey,
       organizationName: 'Agreement Co',
@@ -604,23 +623,374 @@ describe('multi-line checkout and negotiated prices', () => {
   });
 
   it('is staff-only — a tenant cannot provision an agreement price directly through the door', async () => {
-    const planId = await createPlan(staff, {
-      key: `agreement_forge_${randomUUID().replace(/-/g, '').slice(0, 8)}`,
-      kind: 'plan',
-      label: 'Forged Agreement Plan',
-      description: '',
-      billable: true,
-    });
-
     const { error } = await tenant.db.rpc('record_agreement_provider_price', {
-      p_organization_id: tenant.organizationId,
-      p_plan_id: planId,
+      p_agreement_id: randomUUID(),
       p_environment: 'sandbox',
       p_billing_interval: 'month',
       p_product_reference: 'prod_forged',
       p_price_reference: 'price_forged',
     });
     expect(error).toBeTruthy();
+  });
+});
+
+/** A Stripe stub that records what checkout asked for and answers customers, prices and sessions. */
+function checkoutStripe(label: string) {
+  const captured = { checkoutBody: '', providerCalls: 0 };
+  const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
+    captured.providerCalls += 1;
+    if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: `cus_${label}` }), { status: 200 });
+    if (url.includes('/v1/checkout/sessions')) {
+      captured.checkoutBody = String(init?.body ?? '');
+      return new Response(JSON.stringify({ id: `cs_${label}_${randomUUID().slice(0, 6)}`, url: `https://checkout.stripe.test/${label}` }), { status: 200 });
+    }
+    throw new Error(`unexpected stripe fetch: ${url}`);
+  });
+  return { captured, spy };
+}
+
+function checkoutInput(organizationId: string, planKey: string) {
+  return {
+    organizationId,
+    planKey,
+    organizationName: 'Closeout Co',
+    organizationEmail: null,
+    currency: 'CAD',
+    successUrl: 'https://app.test/success',
+    cancelUrl: 'https://app.test/cancel',
+  };
+}
+
+/** UTC midnight today plus a few seconds: always in the past, always on the assignment's own date. */
+function earlyToday(seconds: number): string {
+  const startOfDay = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z').getTime();
+  return new Date(startOfDay + seconds * 1000).toISOString();
+}
+
+describe('the reviewed quote is stale-safe', () => {
+  it('has a stable version when nothing changed', async () => {
+    const org = await newTenant('stale-stable');
+    const { planId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
+    const first = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+    const second = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+    expect(second.reviewVersion).toBe(first.reviewVersion);
+    expect(first.reviewVersion).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it('refuses, before any provider call, when the standard price changed after review', async () => {
+    const org = await newTenant('stale-price');
+    const { planKey, planId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
+    const reviewed = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+
+    await recordPlanPrice(staff, { planId, currency: 'CAD', amountMinor: 12_900, billingInterval: 'month' });
+
+    const { spy, calls } = spyOnStripeCalls();
+    await expect(
+      beginReviewedCheckout(org.db, checkoutInput(org.organizationId, planKey), reviewed.reviewVersion),
+    ).rejects.toMatchObject({ code: 'platform_billing.quote_stale' });
+    expect(calls).toEqual([]);
+    spy.mockRestore();
+  });
+
+  it('refuses when an organization agreement appeared after review', async () => {
+    const org = await newTenant('stale-agreement');
+    const { planKey, planId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
+    const reviewed = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+
+    await recordPlanAgreement(staff, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 7_000, effectiveFrom: earlyToday(1) });
+    const now = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+    expect(now.reviewVersion).not.toBe(reviewed.reviewVersion);
+
+    const { spy, calls } = spyOnStripeCalls();
+    await expect(
+      beginReviewedCheckout(org.db, checkoutInput(org.organizationId, planKey), reviewed.reviewVersion),
+    ).rejects.toMatchObject({ code: 'platform_billing.quote_stale' });
+    expect(calls).toEqual([]);
+    spy.mockRestore();
+  });
+
+  it('refuses when an Add-on was assigned after review', async () => {
+    const org = await newTenant('stale-addon');
+    const { planKey, planId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
+    const reviewed = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+
+    const { planId: addonId } = await seedProvisionedAddon();
+    await assignPlan(org.organizationId, addonId);
+
+    const { spy, calls } = spyOnStripeCalls();
+    await expect(
+      beginReviewedCheckout(org.db, checkoutInput(org.organizationId, planKey), reviewed.reviewVersion),
+    ).rejects.toMatchObject({ code: 'platform_billing.quote_stale' });
+    expect(calls).toEqual([]);
+    spy.mockRestore();
+  });
+
+  it('refuses an absent or invented version, and accepts the current one', async () => {
+    const org = await newTenant('stale-missing');
+    const { planKey, planId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
+
+    for (const forged of ['', 'f'.repeat(64)]) {
+      const { spy, calls } = spyOnStripeCalls();
+      await expect(
+        beginPlatformBillingCheckout(org.db, { ...checkoutInput(org.organizationId, planKey), reviewedQuoteVersion: forged }),
+      ).rejects.toMatchObject({ code: 'platform_billing.quote_stale' });
+      expect(calls).toEqual([]);
+      spy.mockRestore();
+    }
+
+    const { captured, spy } = checkoutStripe('current');
+    await expect(beginReviewedCheckout(org.db, checkoutInput(org.organizationId, planKey))).resolves.toMatchObject({
+      url: 'https://checkout.stripe.test/current',
+    });
+    expect(captured.checkoutBody).toContain('line_items');
+    spy.mockRestore();
+  });
+
+  it('keeps the persisted snapshot as the purchase intent, naming the exact price record and provider price', async () => {
+    const org = await newTenant('snapshot-intent');
+    const { planKey, planId, priceId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
+    const { spy } = checkoutStripe('snapshot');
+
+    await beginReviewedCheckout(org.db, checkoutInput(org.organizationId, planKey));
+    spy.mockRestore();
+
+    const { rows } = await pg.query(
+      `select quote_snapshot, quote_version from public.platform_billing_checkout_sessions where organization_id = $1`,
+      [org.organizationId],
+    );
+    const snapshot = rows[0].quote_snapshot;
+    expect(snapshot.recurring[0].priceSourceDomain).toBe('catalogue.plan_price');
+    expect(snapshot.recurring[0].priceSourceId).toBe(priceId);
+    expect(snapshot.providerLines[0].providerPriceReference).toMatch(/^price_/);
+    expect(rows[0].quote_version).toBe(snapshot.reviewVersion);
+  });
+
+  it('is only reachable by a billing manager, and never from another business', async () => {
+    const org = await newTenant('stale-authz');
+    const { planKey, planId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
+    const reviewed = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+    const { spy, calls } = spyOnStripeCalls();
+
+    const member = await restrictedMember(org, 'stale-authz-member');
+    await expect(
+      beginPlatformBillingCheckout(member.db, { ...checkoutInput(org.organizationId, planKey), reviewedQuoteVersion: reviewed.reviewVersion }),
+    ).rejects.toThrow();
+    await expect(
+      beginPlatformBillingCheckout(other.db, { ...checkoutInput(org.organizationId, planKey), reviewedQuoteVersion: reviewed.reviewVersion }),
+    ).rejects.toThrow();
+    expect(calls).toEqual([]);
+    spy.mockRestore();
+  });
+});
+
+describe('every quote price names its exact source record', () => {
+  it('identifies a standard price by platform_plan_prices.id and an agreement price by organization_plan_agreements.id', async () => {
+    const standardOrg = await newTenant('provenance-standard');
+    const { planId, priceId } = await seedProvisionedPlan();
+    await assignPlan(standardOrg.organizationId, planId);
+    const standardQuote = await buildOrganizationPurchaseQuote(standardOrg.db, { organizationId: standardOrg.organizationId });
+    expect(standardQuote.recurring[0]).toMatchObject({ priceSourceDomain: 'catalogue.plan_price', priceSourceId: priceId });
+
+    const agreementOrg = await newTenant('provenance-agreement');
+    await assignPlan(agreementOrg.organizationId, planId);
+    const agreementId = await recordPlanAgreement(staff, {
+      organizationId: agreementOrg.organizationId, planId, currency: 'CAD', amountMinor: 5_500, effectiveFrom: earlyToday(1),
+    });
+    const agreementQuote = await buildOrganizationPurchaseQuote(agreementOrg.db, { organizationId: agreementOrg.organizationId });
+    expect(agreementQuote.recurring[0]).toMatchObject({
+      amountMinor: 5_500,
+      priceSourceDomain: 'catalogue.plan_agreement',
+      priceSourceId: agreementId,
+    });
+  });
+});
+
+describe('a negotiated provider price belongs to its own agreement', () => {
+  it('gives a later agreement its own provider price and never rewrites the earlier one', async () => {
+    const org = await newTenant('agreement-history');
+    const key = `history_${randomUUID().replace(/-/g, '').slice(0, 10)}`;
+    const planId = await createPlan(staff, { key, kind: 'plan', label: 'History Plan', description: '', billable: true });
+    await assignPlan(org.organizationId, planId);
+
+    const agreementA = await recordPlanAgreement(staff, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 40_000, effectiveFrom: earlyToday(1) });
+    let stripe = mockStripeFetch({
+      '/v1/products': { id: `prod_a_${randomUUID().slice(0, 8)}` },
+      '/v1/prices': { id: `price_a_${randomUUID().slice(0, 8)}` },
+    });
+    const providerA = await provisionAgreementPlanPrice(staff, { organizationId: org.organizationId, planId, billingInterval: 'month' });
+    stripe.mockRestore();
+
+    // Checkout under agreement A, kept as the historical purchase intent.
+    const checkoutA = checkoutStripe('agreement_a');
+    await beginReviewedCheckout(org.db, checkoutInput(org.organizationId, key));
+    expect(new URLSearchParams(checkoutA.captured.checkoutBody).get('line_items[0][price]')).toBe(providerA.priceReference);
+    checkoutA.spy.mockRestore();
+
+    // A later agreement for the same Plan.
+    const agreementB = await recordPlanAgreement(staff, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 38_000, effectiveFrom: earlyToday(2) });
+    expect(agreementB).not.toBe(agreementA);
+    stripe = mockStripeFetch({
+      '/v1/products': { id: `prod_b_${randomUUID().slice(0, 8)}` },
+      '/v1/prices': { id: `price_b_${randomUUID().slice(0, 8)}` },
+    });
+    const providerB = await provisionAgreementPlanPrice(staff, { organizationId: org.organizationId, planId, billingInterval: 'month' });
+    stripe.mockRestore();
+
+    expect(providerB.priceReference).not.toBe(providerA.priceReference);
+
+    // B did not overwrite A.
+    const { rows: mappings } = await pg.query(
+      `select agreement_id, price_reference from public.organization_plan_agreement_provider_prices
+        where organization_id = $1 order by provisioned_at`,
+      [org.organizationId],
+    );
+    expect(mappings).toEqual([
+      { agreement_id: agreementA, price_reference: providerA.priceReference },
+      { agreement_id: agreementB, price_reference: providerB.priceReference },
+    ]);
+
+    // Recording A again is a no-op returning A's mapping, never a rewrite.
+    const rerecorded = await staff.rpc('record_agreement_provider_price', {
+      p_agreement_id: agreementA, p_environment: 'sandbox', p_billing_interval: 'month',
+      p_product_reference: 'prod_other', p_price_reference: 'price_other',
+    });
+    expect(rerecorded.error).toBeNull();
+    const after = await pg.query(`select price_reference from public.organization_plan_agreement_provider_prices where agreement_id = $1`, [agreementA]);
+    expect(after.rows[0].price_reference).toBe(providerA.priceReference);
+
+    // The old checkout snapshot still identifies A and A's provider price.
+    const { rows: sessions } = await pg.query(
+      `select quote_snapshot from public.platform_billing_checkout_sessions where organization_id = $1`,
+      [org.organizationId],
+    );
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].quote_snapshot.recurring[0].priceSourceId).toBe(agreementA);
+    expect(sessions[0].quote_snapshot.providerLines[0].providerPriceReference).toBe(providerA.priceReference);
+
+    // A new checkout resolves B.
+    const checkoutB = checkoutStripe('agreement_b');
+    await beginReviewedCheckout(org.db, checkoutInput(org.organizationId, key));
+    checkoutB.spy.mockRestore();
+    expect(new URLSearchParams(checkoutB.captured.checkoutBody).get('line_items[0][price]')).toBe(providerB.priceReference);
+
+    // The tenant door resolves only the in-force agreement's mapping, only for its own business.
+    const reference = (client: SupabaseClient, agreementId: string) =>
+      client.rpc('organization_plan_agreement_provider_price_reference', {
+        p_organization_id: org.organizationId, p_agreement_id: agreementId, p_environment: 'sandbox', p_billing_interval: 'month',
+      });
+    expect((await reference(org.db, agreementB)).data).toBe(providerB.priceReference);
+    expect((await reference(org.db, agreementA)).data).toBeNull(); // superseded: not an offerable price
+    expect((await reference(other.db, agreementB)).error?.code).toBe('42501');
+    const member = await restrictedMember(org, 'agreement-history-member');
+    expect((await reference(member.db, agreementB)).error?.code).toBe('42501');
+  });
+});
+
+describe('a one-time fee is charged once', () => {
+  it('charges it on the first purchase, keeps a retry on the same intent, and does not charge it again once purchased', async () => {
+    const org = await newTenant('one-time');
+    const { planKey, planId } = await seedProvisionedPlan();
+    await assignPlan(org.organizationId, planId);
+    const { planId: setupId } = await seedProvisionedAddon('one_time');
+    await assignPlan(org.organizationId, setupId);
+
+    // First purchase: the fee is due now.
+    const first = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+    expect(first.blockers).toEqual([]);
+    expect(first.dueNow.map((line) => line.sourceId)).toEqual([setupId]);
+
+    // A retry before completion is the same purchase intent -- the assignment alone changed nothing.
+    const retry = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+    expect(retry.reviewVersion).toBe(first.reviewVersion);
+    expect(retry.dueNow.map((line) => line.sourceId)).toEqual([setupId]);
+
+    // The purchase completes: the fee is composed as a charge and frozen (the canonical history).
+    const start = new Date();
+    const end = new Date(start.getTime() + 24 * 3600 * 1000);
+    const composed = await staff.rpc('compose_organization_charges', {
+      p_organization_id: org.organizationId, p_billing_period_start: start.toISOString(), p_billing_period_end: end.toISOString(),
+    });
+    expect(composed.error).toBeNull();
+    // Composed but not yet finalized is still owed, not purchased.
+    const unfrozen = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+    expect(unfrozen.dueNow.map((line) => line.sourceId)).toEqual([setupId]);
+    const finalized = await staff.rpc('finalize_organization_charges', {
+      p_organization_id: org.organizationId, p_billing_period_start: start.toISOString(), p_billing_period_end: end.toISOString(),
+    });
+    expect(finalized.error).toBeNull();
+
+    // A later re-subscription: the base Plan is bought again, the old one-time fee is not.
+    const later = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+    expect(later.dueNow).toEqual([]);
+    expect(later.recurring.map((line) => line.sourceId)).toEqual([planId]);
+    expect(later.dueNowTotalMinor).toBe(later.recurringTotalMinor);
+    expect(later.reviewVersion).not.toBe(first.reviewVersion);
+
+    const { captured, spy } = checkoutStripe('one_time_resub');
+    await beginReviewedCheckout(org.db, checkoutInput(org.organizationId, planKey));
+    spy.mockRestore();
+    const params = new URLSearchParams(captured.checkoutBody);
+    expect(params.get('line_items[0][price]')).toBeTruthy();
+    expect(params.get('line_items[1][price]')).toBeNull();
+
+    // A new assignment is a new source record: its fee is owed.
+    const { planId: anotherSetupId } = await seedProvisionedAddon('one_time');
+    await assignPlan(org.organizationId, anotherSetupId);
+    const withNew = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
+    expect(withNew.dueNow.map((line) => line.sourceId)).toEqual([anotherSetupId]);
+  });
+
+  it('does not let one business\'s frozen fee excuse another\'s', async () => {
+    const paid = await newTenant('one-time-paid');
+    const unpaid = await newTenant('one-time-unpaid');
+    const { planId } = await seedProvisionedPlan();
+    const { planId: setupId } = await seedProvisionedAddon('one_time');
+    for (const org of [paid, unpaid]) {
+      await assignPlan(org.organizationId, planId);
+      await assignPlan(org.organizationId, setupId);
+    }
+    const start = new Date();
+    const end = new Date(start.getTime() + 24 * 3600 * 1000);
+    const args = { p_billing_period_start: start.toISOString(), p_billing_period_end: end.toISOString() };
+    await staff.rpc('compose_organization_charges', { p_organization_id: paid.organizationId, ...args });
+    await staff.rpc('finalize_organization_charges', { p_organization_id: paid.organizationId, ...args });
+
+    expect((await buildOrganizationPurchaseQuote(paid.db, { organizationId: paid.organizationId })).dueNow).toEqual([]);
+    expect((await buildOrganizationPurchaseQuote(unpaid.db, { organizationId: unpaid.organizationId })).dueNow).toHaveLength(1);
+  });
+});
+
+describe('a privately sold (unlisted) Plan', () => {
+  it('can be subscribed to once assigned, and an archived one cannot', async () => {
+    const org = await newTenant('unlisted');
+    const { planKey, planId } = await seedProvisionedPlan('CAD', 'unlisted');
+    await assignPlan(org.organizationId, planId);
+
+    const { captured, spy } = checkoutStripe('unlisted');
+    await expect(beginReviewedCheckout(org.db, checkoutInput(org.organizationId, planKey))).resolves.toMatchObject({
+      url: 'https://checkout.stripe.test/unlisted',
+    });
+    spy.mockRestore();
+    expect(new URLSearchParams(captured.checkoutBody).get('line_items[0][price]')).toBeTruthy();
+
+    const archivedOrg = await newTenant('archived');
+    const archived = await seedProvisionedPlan('CAD', 'archived');
+    await assignPlan(archivedOrg.organizationId, archived.planId);
+    const { spy: noCalls, calls } = spyOnStripeCalls();
+    await expect(
+      beginReviewedCheckout(archivedOrg.db, checkoutInput(archivedOrg.organizationId, archived.planKey)),
+    ).rejects.toMatchObject({ code: 'platform_billing.plan_unavailable' });
+    expect(calls).toEqual([]);
+    noCalls.mockRestore();
   });
 });
 

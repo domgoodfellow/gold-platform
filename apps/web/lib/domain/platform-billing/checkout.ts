@@ -5,7 +5,7 @@ import { getPlan } from '@/lib/domain/catalogue/plans';
 import { DomainError } from '@/lib/domain/errors';
 import { ensurePlatformBillingCustomer } from '@/lib/domain/platform-billing/customers';
 import { resolveCheckoutLineItems } from '@/lib/domain/platform-billing/line-items';
-import { buildOrganizationPurchaseQuote } from '@/lib/domain/platform-billing/quote';
+import { assertQuoteMatchesReview, buildOrganizationPurchaseQuote } from '@/lib/domain/platform-billing/quote';
 import { getOrganizationSubscription } from '@/lib/domain/platform-billing/subscriptions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -19,6 +19,9 @@ export async function beginPlatformBillingCheckout(
   input: {
     organizationId: string;
     planKey: string;
+    /** The `reviewVersion` of the quote the billing manager was shown -- the only thing about the
+     * purchase the browser sends back. Every amount is rebuilt here. */
+    reviewedQuoteVersion: string;
     organizationName: string;
     organizationEmail: string | null;
     currency: string;
@@ -29,7 +32,9 @@ export async function beginPlatformBillingCheckout(
   const actor = await requireActor(db);
 
   const plan = await getPlan(db, input.planKey);
-  if (!plan || plan.kind !== 'plan' || plan.saleStatus !== 'active' || !plan.billable) {
+  // `unlisted` is sellable privately -- hidden from the ordinary catalogue and assigned by staff --
+  // so an assigned one may be bought. Only `archived` is closed to new purchases.
+  if (!plan || plan.kind !== 'plan' || plan.saleStatus === 'archived' || !plan.billable) {
     throw new DomainError('That Plan is not available to subscribe to.', 'platform_billing.plan_unavailable');
   }
 
@@ -57,9 +62,11 @@ export async function beginPlatformBillingCheckout(
     );
   }
 
-  // The quote is what the review step showed; it is captured onto the session row below so a
-  // package change the browser raced past is detectable rather than silently re-priced.
+  // Rebuilt here, never trusted from the browser, and compared with what the billing manager
+  // actually reviewed before anything external happens -- no customer, no session row, no
+  // provider call for a package that changed underneath them.
   const quote = await buildOrganizationPurchaseQuote(db, { organizationId: input.organizationId });
+  assertQuoteMatchesReview(input.reviewedQuoteVersion, quote);
   if (quote.blockers.length > 0) {
     throw new DomainError(quote.blockers[0]!.message, `platform_billing.${quote.blockers[0]!.code}`);
   }
@@ -80,6 +87,19 @@ export async function beginPlatformBillingCheckout(
 
   const baseLine = quote.recurring.find((line) => line.sourceType === 'plan' && line.sourceId === plan.id);
 
+  // From here the snapshot is historical purchase intent. What the provider is asked to charge,
+  // and the provider price each line resolved to, are written down now; a later webhook reconciles
+  // to this row and never to a package recalculated after the fact.
+  const quoteSnapshot = {
+    ...quote,
+    providerLines: resolvedLines.map((line, index) => ({
+      priceSourceDomain: quoteLines[index]!.priceSourceDomain,
+      priceSourceId: quoteLines[index]!.priceSourceId,
+      providerPriceReference: line.priceReference,
+      quantity: line.quantity,
+    })),
+  };
+
   const customer = await ensurePlatformBillingCustomer(db, {
     organizationId: input.organizationId,
     email: input.organizationEmail,
@@ -94,10 +114,10 @@ export async function beginPlatformBillingCheckout(
     .insert({
       organization_id: input.organizationId,
       environment: provider.environment,
-      plan_price_id: baseLine?.planPriceId ?? null,
+      plan_price_id: baseLine?.priceSourceDomain === 'catalogue.plan_price' ? baseLine.priceSourceId : null,
       requested_by: actor.id,
-      quote_snapshot: quote,
-      quote_version: quote.commercialConfigurationVersion,
+      quote_snapshot: quoteSnapshot,
+      quote_version: quote.reviewVersion,
       expires_at: quote.expiresAt,
     })
     .select('id')

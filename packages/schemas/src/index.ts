@@ -19,10 +19,14 @@ export const StartSupportSessionSchema = z.object({
 });
 export type StartSupportSessionInput = z.infer<typeof StartSupportSessionSchema>;
 
-/** A Plan key, never a price or customer id — the domain layer resolves the rest server-side (Phase 7). */
+/**
+ * A Plan key and the opaque version of the quote the person reviewed — never a price, an amount or
+ * a customer id. The domain layer rebuilds the quote and refuses if it is no longer that version.
+ */
 export const PlatformBillingCheckoutSchema = z.object({
   organizationId: z.string().uuid(),
   planKey: z.string().trim().regex(/^[a-z][a-z0-9_]{1,60}$/),
+  quoteVersion: z.string().trim().regex(/^[a-f0-9]{64}$/),
 });
 export type PlatformBillingCheckoutInput = z.infer<typeof PlatformBillingCheckoutSchema>;
 

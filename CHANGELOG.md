@@ -5,6 +5,17 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Checkout buys exactly what was reviewed
+
+Subscribe now sends back only an opaque version of the quote the billing manager saw; the server
+rebuilds the quote and refuses with `platform_billing.quote_stale`, before any provider call, if
+a Plan, Add-on, price, agreement, currency, interval, quantity or one-time classification has
+changed. Each quote line names the exact `platform_plan_prices` or `organization_plan_agreements`
+row its price came from, and a negotiated price's provider price now belongs to that agreement, so
+a later agreement no longer rewrites the earlier one's. A one-time fee is charged until a
+finalized charge records it, not while the Add-on is merely assigned, and a privately sold
+`unlisted` Plan can be bought once assigned.
+
 ### Operator navigation adopts the canonical D68 workspace identities
 
 The workspace registry now uses the stable canonical keys CRM, Communications, Marketing,

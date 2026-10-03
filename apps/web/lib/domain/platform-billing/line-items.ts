@@ -20,25 +20,19 @@ export async function resolveCheckoutLineItems(
   for (const line of input.lines) {
     let reference: string | null;
 
-    if (line.priceSource === 'agreement') {
+    if (line.priceSourceDomain === 'catalogue.plan_agreement') {
       const { data, error } = await db.rpc('organization_plan_agreement_provider_price_reference', {
         p_organization_id: input.organizationId,
-        p_plan_id: line.sourceId,
+        p_agreement_id: line.priceSourceId,
         p_environment: input.environment,
         p_billing_interval: line.billingInterval,
       });
       if (error) throw new DomainError(error.message, 'platform_billing.agreement_price_lookup_failed');
       reference = data;
     } else {
-      if (!line.planPriceId) {
-        throw new DomainError(
-          `${line.label} has no standard price to resolve.`,
-          'platform_billing.line_item_unresolvable',
-        );
-      }
       const { data, error } = await db.rpc('plan_price_provider_reference', {
         p_organization_id: input.organizationId,
-        p_plan_price_id: line.planPriceId,
+        p_plan_price_id: line.priceSourceId,
         p_environment: input.environment,
       });
       if (error) throw new DomainError(error.message, 'platform_billing.price_lookup_failed');

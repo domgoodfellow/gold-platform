@@ -50,7 +50,8 @@ export type PlanQuotaOverride = {
 
 export type EffectiveEntitlement = { featureId: string; planId: string; planKey: string };
 
-export type EffectivePrice = { amountMinor: number; currency: string; source: 'agreement' | 'standard' };
+/** `sourceId` is the deciding row's own id: `organization_plan_agreements.id` for `'agreement'`, `platform_plan_prices.id` for `'standard'`. */
+export type EffectivePrice = { amountMinor: number; currency: string; source: 'agreement' | 'standard'; sourceId: string };
 
 export type EffectiveQuota = {
   allowanceKey: string;
@@ -312,9 +313,16 @@ export async function organizationPlanPrice(
     p_billing_interval: input.billingInterval ?? 'month',
   });
   if (error) throw new DomainError(error.message, 'organization_plans.plan_price_failed');
-  const row = (data ?? [])[0] as { amount_minor: string | number; currency: string; source: string } | undefined;
+  const row = (data ?? [])[0] as
+    | { amount_minor: string | number; currency: string; source: string; source_id: string }
+    | undefined;
   if (!row) return null;
-  return { amountMinor: Number(row.amount_minor), currency: row.currency, source: row.source as EffectivePrice['source'] };
+  return {
+    amountMinor: Number(row.amount_minor),
+    currency: row.currency,
+    source: row.source as EffectivePrice['source'],
+    sourceId: row.source_id,
+  };
 }
 
 export async function organizationEffectiveQuotas(

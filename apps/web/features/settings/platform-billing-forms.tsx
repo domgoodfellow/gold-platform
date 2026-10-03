@@ -22,10 +22,13 @@ export function SubscribeButton({
   organizationId,
   planKey,
   planLabel,
+  quoteVersion,
 }: {
   organizationId: string;
   planKey: string;
   planLabel: string;
+  /** The opaque version of the quote shown beside this button -- what the person reviewed. */
+  quoteVersion: string;
 }) {
   const [state, action, pending] = useActionState(beginPlatformBillingCheckoutAction, INITIAL);
 
@@ -33,6 +36,7 @@ export function SubscribeButton({
     <form action={action} className="flex flex-col items-start gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="planKey" value={planKey} />
+      <input type="hidden" name="quoteVersion" value={quoteVersion} />
       <Button type="submit" disabled={pending}>
         {pending ? 'Starting…' : `Subscribe to ${planLabel}`}
       </Button>

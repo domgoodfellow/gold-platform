@@ -150,7 +150,7 @@ describe('buildOrganizationPurchaseQuote', () => {
     await assign(org.organizationId, recurringAddonPlanId);
     const after = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
 
-    expect(after.commercialConfigurationVersion).not.toBe(before.commercialConfigurationVersion);
+    expect(after.reviewVersion).not.toBe(before.reviewVersion);
   });
 
   it('never resolves another organization’s package, even by id', async () => {
