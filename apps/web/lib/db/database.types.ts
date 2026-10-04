@@ -11011,6 +11011,16 @@ export type Database = {
         Args: { p_module_id: string; p_plan_id: string }
         Returns: undefined
       }
+      record_sms_send_result: {
+        Args: {
+          p_external_id?: string
+          p_failure_reason?: string
+          p_message_id: string
+          p_organization_id: string
+          p_status: string
+        }
+        Returns: undefined
+      }
       revoke_plan_product: {
         Args: { p_plan_id: string; p_product_key: string }
         Returns: undefined

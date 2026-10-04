@@ -344,20 +344,32 @@ export async function sendSms(
   try {
     sent = await provider.sendMessage({ from: sender.e164, to, body: input.body.trim(), reportTo });
   } catch (cause) {
-    const reason = cause instanceof Error ? cause.message : String(cause);
-    await db
-      .from('messages')
-      .update({ status: 'failed', failure_reason: reason })
-      .eq('organization_id', input.organizationId)
-      .eq('id', message.id);
-    throw new DomainError(`The message could not be sent: ${reason}`, 'messaging.send_failed');
+    // What the carrier said stays in the server's log; what the person reads is a sentence of ours,
+    // never the carrier's raw answer.
+    console.error('the carrier did not accept a text', cause);
+    const reason = 'The carrier could not accept this message.';
+    await db.rpc('record_sms_send_result', {
+      p_organization_id: input.organizationId,
+      p_message_id: message.id,
+      p_status: 'failed',
+      p_external_id: null as unknown as string,
+      p_failure_reason: reason,
+    });
+    throw new DomainError(`The message could not be sent. ${reason}`, 'messaging.send_failed');
   }
 
-  const { error } = await db
-    .from('messages')
-    .update({ status: sent.status, transport: 'sms', external_id: sent.externalId, sent_at: new Date().toISOString() })
-    .eq('organization_id', input.organizationId)
-    .eq('id', message.id);
+  // What the carrier answered to the send itself, reported through the one door a sender may use: the
+  // carrier took it (queued, sending or sent) and gave it an id. Delivered, read and undelivered are the
+  // carrier's own callbacks to make — a send can never report them, so an adapter answer outside the three
+  // is treated as "taken, not yet sent on".
+  const taken = sent.status === 'sending' || sent.status === 'sent' ? sent.status : 'queued';
+  const { error } = await db.rpc('record_sms_send_result', {
+    p_organization_id: input.organizationId,
+    p_message_id: message.id,
+    p_status: taken,
+    p_external_id: sent.externalId,
+    p_failure_reason: null as unknown as string,
+  });
   if (error) {
     throw new DomainError('The text was sent, but its status could not be saved.', 'messaging.status_not_recorded');
   }
@@ -368,5 +380,5 @@ export async function sendSms(
     .eq('organization_id', input.organizationId)
     .eq('id', conversationId);
 
-  return { ...message, status: sent.status, transport: 'sms' };
+  return { ...message, status: taken, transport: 'sms', externalId: sent.externalId } as Message;
 }

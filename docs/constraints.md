@@ -2725,3 +2725,36 @@ list refreshes every half minute and on any change a person makes).
 **Permissions.** `organization.manage` governs creating, editing, publishing and reading responses, as it already does every public surface of a business; no `forms.*` capability was added because nothing yet needs forms to be granted apart from the rest of Studio.
 
 **Not decided here.** Whether a submission becomes a Customer or starts an automation (consumers of `form.submitted`), rate limiting beyond a honeypot and input size limits, and moving booking onto the shared renderer.
+
+### D75 — SMS is a channel of Communications; the carrier, not the sender, decides a text's state
+
+**Decision.** SMS needed no new subsystem: it already runs on the canonical `conversations` and `messages`
+(`channel = 'sms'`), appears in the Inbox and the one conversation screen, resolves customers, assignment
+and status exactly as email does, and sends through `MessagingProvider` after the server resolves the number
+from a `phoneNumberId`. What the closeout changed is who may say what happened to a text. Before, the
+sender's own session could write `status`, `external_id` and `delivered_at` on its text, a late carrier
+callback could move a delivered text back to sent, and an unfamiliar carrier word raised inside the callback.
+Now a text is created `queued`, a send reports only what the send itself answered (`record_sms_send_result`:
+taken, or refused), and the carrier's callbacks apply forward-only through the same rank email uses.
+
+**Same ownership, not the same mechanics.** Email queues in the database and is sent by `apps/api`; SMS is
+sent by the web runtime through the adapter and its result is reported through a narrow door. Both are
+correct, and neither was forced into the other's shape. SMS keeps its state on the message row; it does
+not write `message_events`, because its callbacks carry no id of their own and a forward-only status is
+already idempotent for them — a decision to revisit only if SMS needs a delivery history to show.
+
+**Truthful failure.** A carrier refusal is recorded `failed` with a sentence of ours (the carrier's answer
+stays in the server log), never bills, and never moves a conversation to `waiting`: only a text the carrier
+reports as sent does that. If the carrier took the text and our bookkeeping then failed, the text is not
+marked failed.
+
+**Metering.** `sms_segment` is recorded once per text, at first `sent` for outbound and on arrival for
+inbound (the `inbound_sms` feature, the meter and an inbound cost component all existed; nothing called
+them). The count is `ceil(characters / 160)`: an estimate, not the carrier's count — Unicode bodies are
+70 to a segment and concatenated segments hold 153. Reconciliation against the carrier is where exactness
+belongs, not this meter.
+
+**Not changed.** Consent policy (STOP, START, and the carrier's keyword set, which includes words an
+ordinary reply can contain), retry (a failed text is answered by sending a new one), MMS and RCS.
+
+**Holds.** I76; `sms-lifecycle.test.ts`, `sms-boundary.test.ts`, `test_sms_status.py`.

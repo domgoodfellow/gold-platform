@@ -167,6 +167,14 @@
       ],
       "note": "A business's own email: the send sequencing (claim, record, retry), the Resend protocol reading, tenant event parsing and inbound persistence, with the provider and database doors replaced."
     },
+    "apps/api/tests/component/test_sms_status.py": {
+      "category": "python-component",
+      "concerns": [
+        "providers",
+        "security"
+      ],
+      "note": "The carrier's delivery vocabulary is translated at the provider boundary; an unknown word is acknowledged, an unsigned callback writes nothing."
+    },
     "apps/api/tests/component/test_domains_routing.py": {
       "category": "python-component",
       "concerns": [
@@ -788,6 +796,14 @@
         "boundaries"
       ],
       "note": "One canonical Inbox query and screen, one membership-keyed assignment mechanism, and Communications linking to CRM without becoming it."
+    },
+    "apps/web/tests/architecture/static/sms-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "providers",
+        "boundaries"
+      ],
+      "note": "SMS is a channel of canonical Communications, the carrier stays behind the adapter, and the carrier alone decides a text's state."
     },
     "apps/web/tests/architecture/static/navigation.test.ts": {
       "category": "architecture-static",
@@ -1513,6 +1529,14 @@
       ]
     },
     "apps/web/tests/integration/database/milestone-m1.test.ts": {
+    "apps/web/tests/integration/database/sms-lifecycle.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
+      ],
+      "note": "A text's whole life against real RLS with the carrier replaced: who may write its state, forward-only callbacks, usage once, suppression, inbound idempotency and tenant isolation."
+    },
       "category": "database-integration",
       "concerns": [
         "tenancy",

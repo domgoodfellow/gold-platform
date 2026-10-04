@@ -5,6 +5,30 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A resource says what it is and what it can do
+
+Every resource now says what kind of thing it is — a person, a vehicle, equipment, a facility or
+something else — and can list what it can do, in your own words: "Tire service", "Mobile service". Adding
+a resource asks for its type and leaves it unchosen; only a person can stand for a member of your team, so
+that choice appears for people alone, and a member's resource cannot be turned into a vehicle until the
+link is cleared on purpose. Resources that existed before are marked as a person when they stood for a
+member and as "Other" otherwise, since a name is not a reliable sign of what something is. The list shows
+each resource's type and capabilities; a resource's own page changes its type and capabilities; and
+Resources configuration is where the words themselves are renamed or archived — archived words stay on the
+resources that have them and can't be given again. Nothing about scheduling, availability or online
+booking changes.
+
+### A text's state is the carrier's word
+
+Text messages already lived in the Inbox beside email; this makes their delivery state trustworthy. A
+person can no longer mark their own text delivered, read or failed, a late or repeated carrier callback can
+no longer move a delivered text backwards or bill it twice, and the carrier's status words and error codes are
+translated at the edge, so an unfamiliar one no longer breaks the callback and an error code never reaches a
+business (it reads as a sentence). A retried inbound text no longer marks a conversation you have read as
+unread again or moves it up the list, a number held by two businesses or no longer active no longer
+delivers texts to an arbitrary one, and a text that arrives is now metered like one sent. A text the carrier
+refuses shows a plain reason and does not make the conversation wait.
+
 ### A kind of work says whether it is scheduled
 
 Each kind of work now says whether it happens at a time. Creating one asks, and nothing is chosen for

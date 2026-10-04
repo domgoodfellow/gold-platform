@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler
 from api.voice_status import form_params, public_url
 from app.core.config import load_voice_settings
 from app.core.db import record_message_status
+from app.providers.twilio.sms import failure_reason, normalize_status
 from app.providers.twilio.voice import verify_signature
 
 _FAILURE_STATUSES = {"failed", "undelivered"}
@@ -38,17 +39,16 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             return
 
         external_id = (params.get("MessageSid") or params.get("SmsSid") or "").strip()
-        status = (params.get("MessageStatus") or "").strip().lower()
-        if not external_id or not status:
+        # The carrier's word, translated here into this platform's own; one this platform has no meaning
+        # for is acknowledged and not acted on, so the carrier stops retrying it.
+        status = normalize_status(params.get("MessageStatus"))
+        if not external_id or status is None:
             self._reply(200, "ignored")
             return
 
-        failure_reason = None
-        if status in _FAILURE_STATUSES:
-            error_code = params.get("ErrorCode")
-            failure_reason = f"provider error {error_code}" if error_code else "delivery failed"
+        reason = failure_reason(params.get("ErrorCode")) if status in _FAILURE_STATUSES else None
 
-        recorded = record_message_status(settings, external_id=external_id, status=status, failure_reason=failure_reason)
+        recorded = record_message_status(settings, external_id=external_id, status=status, failure_reason=reason)
         self._reply(200, "recorded" if recorded else "ignored")
 
     def _reply(self, status: int, message: str) -> None:
