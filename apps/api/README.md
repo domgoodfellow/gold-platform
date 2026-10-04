@@ -35,9 +35,11 @@ platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and acces
 | `POST /sms/status` | `api/sms_status.py` | Twilio signature. Records a message's delivery status through the Messaging machine role. |
 | `POST /public_chat` | `api/public_chat.py` | Shared server-to-server key (`x-gold-public-chat-key`) from `apps/web` only; the same answer as "not configured" on any mismatch. Public-site assistant. |
 | `POST /invitations/email` | `api/invitation_email.py` | Bearer token; the caller must be able to see the pending invitation named, proved by RLS. Sends or resends its email through GOLD's own Resend account (or the environment bootstrap fallback) — never a caller-supplied recipient, subject or body. |
+| `POST /communications/email/send` | `api/tenant_email_send.py` | Bearer token; names one queued email message and nothing else. RLS proves the caller may see it; the recipient, address, subject, body and attachments are all read from the message row, never from the request. Sends it through the provider that answers for the address beneath it, and records the provider's answer. |
+| `POST /webhooks/tenant-email` | `api/tenant_email_webhook.py` | The provider's Svix-shaped signature over the raw body, with its own secret. Records a business's email delivery events and arriving messages through the narrow `tenant_email_webhook` role; derives the business from the provider's own message id (delivery) or the receiving address (inbound). |
 | `POST /webhooks/invitation-email` | `api/invitation_email_webhook.py` | Resend's Svix-shaped signature over the raw body. Records a delivery event through the narrow invitation-email machine role; derives the organization and invitation from the provider's own message id. |
 
-21 deployable handlers, one file each. Vercel also serves every file under `api/` at its
+23 deployable handlers, one file each. Vercel also serves every file under `api/` at its
 physical `/api/<name>` path, so a rewrite is the documented route, not the only reachable one.
 `tests/architecture/static/python-handler-inventory.test.ts` holds this table, `vercel.json`, the
 files in `api/` and the handler tests to one another.
@@ -66,6 +68,7 @@ names in the API Vercel project for hosted environments; do not upload the file.
 | `CRON_SECRET` | automation tick | Random shared secret; Vercel Cron normally invokes Production. |
 | `RESEND_API_KEY`, `MESSAGE_FROM_ADDRESS` | tenant-channel email | Separate operational concern from platform invitation email below — a different purse, a different sender identity (D40). |
 | `RESEND_API_KEY`, `PLATFORM_EMAIL_FROM_ADDRESS` | platform invitation email, bootstrap fallback | Tried only when no `resend` row in `platform_provider_accounts` is both active, default and holds a credential; `app.services.platform_email` prefers the account (D62). `RESEND_API_KEY` is shared by name with the tenant-channel row above, but the two paths never combine a tenant's message with GOLD's own. |
+| `TENANT_EMAIL_WEBHOOK_SECRET` | the tenant-email webhook | The provider's Svix signing secret for the *separate* destination that carries a business's own email events (`whsec_...`) — never the invitation destination's. Register it for the sent, delivered, delayed, bounced, failed, complained, suppressed, opened, clicked and received events. |
 | `RESEND_WEBHOOK_SECRET` | the invitation-email webhook | Resend's own Svix signing secret for this one destination (`whsec_...`). Without it the endpoint is unconfigured, same as every other webhook here with no secret. |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `MESSAGE_FROM_NUMBER` | messaging and Voice callbacks | Deployment/provider configuration; tenant resources increasingly live in provider bindings. |
 | `ANTHROPIC_API_KEY` | hosted model fallback | Optional. |

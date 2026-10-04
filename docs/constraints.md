@@ -2605,3 +2605,115 @@ actually lands on say "Access" today.
 **Holds.** `personal-settings.test.ts` proves the account menu offers one Settings entry, no
 Business/Account split, and that `PersonalSettingsShell` and every organization-scoped Settings
 page render the same `SettingsScopeNav`.
+
+### D72 — Communications is multi-channel at its foundation: one Conversation, per-channel identities, a server-decided sender
+
+**Decision.** `conversations` gains `channel` (`sms`, `email`) and an `email_identity_id`, and
+`phone_number_id`/`external_number` stop being required — a conversation is no longer defined by
+a phone number. Which addressing columns a row holds is its own check, so a row cannot be both
+channels or neither. Email gets its own organization-facing identity, `email_identities`, beside
+`phone_numbers` rather than a generic identities table the two would share no columns of. An
+identity references the thing that backs it (a sending-domain resource, a connection) and
+readiness is read from that thing, so there is one authority for whether a domain can send.
+Tenant mail to customers is `lib/adapters/tenant-email` (`EmailProvider`), a third capability
+beside `PlatformEmailSender` (GildOps' own invitation mail) and `SendingDomainProvider`
+(proving a name); none widens into another.
+
+**Why.** Email was about to be added to a conversation model that could only hold a phone number,
+and a sender address was a value the browser supplied and the server forwarded. Fixing either
+under a half-built email channel would have meant replacing SMS underneath itself.
+
+**The sender.** A client names its own resource by id (`phoneNumberId`, later `emailIdentityId`);
+the server resolves the address (`resolveSmsSender`, `resolveEmailSender`) and checks ownership,
+lifecycle, direction and provider-resource state. There is one input, not an id and an address that
+might disagree.
+
+**Navigation.** `call.place` and `message.send` are independent. Text messages needs `message.send`;
+Calls needs `call.place`; Communications Home and Numbers take either. `message.send` already reads
+"send a text message and see the conversation", so no read-only capability was added: the table
+policy still lets any member read, and a read-only role is a decision for the day one is asked for.
+
+**Still reserved.** `gildops_managed` and `connected_mailbox` email identities have a schema and no
+writer: no managed domain and no mailbox sync exist, so a tenant cannot create one and a managed
+address is never reported ready. An email conversation has no tenant-writable path yet; `channel`
+and `email_identity_id` are outside the insert grant until the email channel's own writer exists.
+
+**Holds.** `communications-foundation.test.ts` (static and database), `messaging-sender.test.ts`,
+`adapters.test.ts`. I69, I70.
+
+### D73 — Email is a channel of the one Message; the database queues it, a provider runtime sends it, a provider's word is the only thing that moves it
+
+**Decision.** `messages` and `conversations` carry email (`requested_transport = 'email'`,
+`channel = 'email'`); `email_message_details` holds only what an email alone has (subject, RFC
+Message-ID, threading headers, HTML), `message_events` is the append-only history of what happened to
+a message, and `message_attachments` holds files that belong to one message. There is no
+`email_messages` and no `email_conversations`. Sending is two acts: `queue_outbound_email` writes the
+message under the sender's own session, deciding every authoritative fact itself; `apps/api` is then
+handed only the message id, reads everything else under the caller's token, and records what the
+provider answered through `provider_operator`. The provider's own callbacks arrive through a separate
+destination, secret and role (`tenant_email_webhook`), which hold no table grant.
+
+**Why.** The first design that comes to mind has the web runtime call a provider with a `from` it
+was given. That makes the browser the authority on who a business is speaking as, and it makes status
+a column anybody who can send can also set. Here the message row is the command, so there is nothing
+to redirect, and a status is a statement by whoever actually knows.
+
+**What a message's status means.** `queued` is a message that exists and has not left (*not sent
+yet*, never *sending*); `sending` is claimed by one attempt; `sent` is the provider having accepted
+it, and is when `email_send` is billed once; `delivered`, `bounced`, `failed` and `rejected` are the
+provider's later word. Order is forward-only with every failure outranking every success, so a late
+callback cannot undo a bounce and a bounce after delivery is real. Opens, clicks, delays and
+complaints are history and never status. The same vocabulary serves SMS; its writers are unchanged.
+
+**Threading is what the mail says.** `In-Reply-To`, then `References`, matched against Message-IDs
+the provider confirmed for mail we sent or the mail itself carried, inside one business and one
+address. A subject, a sender, or a provider thread id is never a conversation; no match is a new
+one. The outbound Message-ID is read back from the provider after the send rather than assumed.
+
+**Authority.** Sending reuses `message.send`: writing to a customer is one trust whichever channel
+carries it, and configuring an address (`organization.manage`) is a different authority from using
+it. A separate email capability waits for a role that needs one without the other.
+
+**Receiving is a business's statement, not a provisioning step.** A customer-domain address may be
+marked as receiving once the domain's mail records point here; mail is accepted only for an active,
+receiving address beneath a verified domain. Pointing a domain's mail records at the provider is not
+provisioned by this decision, so inbound has not been exercised against the live provider.
+
+**Deferred.** Forwarding, drafts, `cc`/`bcc`, an HTML composer, malware scanning, managed and
+connected-mailbox addresses (schema only), a unified Inbox, assignment, and automatic customer
+resolution for an unknown sender.
+
+**Holds.** I71, I72, I73.
+
+### D74 — The Inbox unifies the operator's task, not the channels; status, handler and customer are facts of the conversation
+
+**Decision.** `/comms/inbox` is the one list of every asynchronous conversation and `/comms/inbox/{id}` the
+one conversation screen, SMS and email alike; `comms/messages` and `comms/email` redirect to it already
+narrowed to their channel (`next.config.ts`), and no second operating screen exists. A row is read from the
+canonical `conversations` table through `listInbox` — filtered in the database, newest activity first, paged
+by keyset on `(last_message_at, id)` — and carries no provider field. A text stays a text and an email stays
+an email inside the screen: bubbles and delivery words for one, cards with subject, attachments and
+sanitized body for the other.
+
+**Three facts, each with one home.** *Status* (`open`, `waiting`, `closed`) is on the conversation and is
+deliberately not a ticket: no severity, no SLA, no category. It follows the messages conservatively — a
+message from them reopens it, an answer that actually *left* (sent, never merely queued) moves `open` to
+`waiting`, a closed conversation stays closed when we reply, and a delivery callback never changes status or
+unread. *Assignment* is one column keyed by membership, with the `events` trail as its history; handler
+(human, AI, automation) is a different thing and is not modelled here. *Customer* is the CRM relation, set
+by the one contact-point rule or by a person.
+
+**Assignment is not CRM ownership, and CRM has no owner field to conflict with.** Nothing in
+`customers` records an owner today; when one exists it will be a separate fact. A conversation may be
+handled by someone other than the person who owns the relationship, and neither overwrites the other.
+
+**Authority.** Handling a conversation (status, claim, assign, link) reuses `message.send`; creating a
+customer from a conversation additionally needs `customer.create`. A role that can read conversations but
+not send is shown them and cannot change them. A separate "assign others" authority waits for a role that
+needs one.
+
+**Deferred.** Teams, AI or automation as assignee/handler, a priority, merging conversations, search,
+bulk actions, call activity inside a conversation (no canonical relation exists), and real-time push (the
+list refreshes every half minute and on any change a person makes).
+
+**Holds.** I74, I75; `inbox.test.ts`, `inbox-boundary.test.ts`.

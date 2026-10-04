@@ -6,10 +6,12 @@ import { DomainError } from '@/lib/domain/errors';
 import {
   applySendingDomainDns,
   checkSendingDomain,
+  listSendingDomains,
   releaseSendingDomain,
   requestSendingDomain,
   type SendingDomainOutcome,
 } from '@/lib/domain/email/sending-domains';
+import { createEmailIdentity, setEmailIdentityReceiving } from '@/lib/domain/email/identities';
 import { requireOrganization } from '@/lib/route/organization';
 
 /**
@@ -132,6 +134,50 @@ export async function releaseSendingDomainAction(
     await releaseSendingDomain(await getDb(), {
       organizationId,
       resourceId: String(form.get('resourceId') ?? ''),
+    });
+    refresh(organizationId);
+    return { error: null, notice: null, done: true };
+  } catch (error) {
+    return { error: words(error), notice: null, done: false };
+  }
+}
+
+/**
+ * Name an address beneath a sending domain this business already holds. The form has a local part and
+ * a domain *the business chose from its own list*; the database refuses an address that is not beneath
+ * the domain it names, so the form is a convenience and not the guard.
+ */
+export async function addEmailAddressAction(_previous: EmailDomainState, form: FormData): Promise<EmailDomainState> {
+  const organizationId = String(form.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  try {
+    const db = await getDb();
+    const resourceId = String(form.get('resourceId') ?? '');
+    // The domain is read back from the business's own list by the id it chose, never taken from the form.
+    const domain = (await listSendingDomains(db, organizationId)).find((candidate) => candidate.resourceId === resourceId)?.domain;
+    if (!domain) return { error: 'Choose one of this business’s sending domains.', notice: null, done: false };
+    const local = String(form.get('local') ?? '').trim().toLowerCase();
+    await createEmailIdentity(db, {
+      organizationId,
+      address: `${local}@${domain}`,
+      displayName: String(form.get('displayName') ?? ''),
+      sendingDomainResourceId: resourceId,
+    });
+    refresh(organizationId);
+    return { error: null, notice: null, done: true };
+  } catch (error) {
+    return { error: words(error), notice: null, done: false };
+  }
+}
+
+export async function setEmailReceivingAction(_previous: EmailDomainState, form: FormData): Promise<EmailDomainState> {
+  const organizationId = String(form.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  try {
+    await setEmailIdentityReceiving(await getDb(), {
+      organizationId,
+      emailIdentityId: String(form.get('emailIdentityId') ?? ''),
+      canReceive: String(form.get('canReceive') ?? '') === 'true',
     });
     refresh(organizationId);
     return { error: null, notice: null, done: true };

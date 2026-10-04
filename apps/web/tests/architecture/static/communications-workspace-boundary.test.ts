@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { AREAS } from '@/lib/navigation';
 
 /**
- * Communications owns channels and conversation history (Calls, Messages, Numbers); Platform
+ * Communications owns channels and conversation history (Calls, the Inbox, Numbers); Platform
  * Infrastructure owns the carrier account, credentials and subaccounts behind them (D39, I15).
  * What proves the boundary is the one thing a business's own screens must never say.
  */
@@ -14,7 +14,9 @@ const ROUTES = `${WEB_ROOT}/app/organizations/[organizationId]`;
 
 const TENANT_COMMS_SOURCE = [
   'comms/page.tsx',
-  'comms/messages/page.tsx',
+  'comms/inbox/page.tsx',
+  'comms/inbox/[conversationId]/page.tsx',
+  'comms/inbox/new/page.tsx',
   'comms/numbers/page.tsx',
   'comms/numbers/[phoneNumberId]/page.tsx',
   'calls/page.tsx',
@@ -23,9 +25,9 @@ const TENANT_COMMS_SOURCE = [
 const PROVIDER_VOCABULARY = /twilio|account[_ ]?sid|auth[_ ]?token|twiml/i;
 
 describe('Communications workspace boundaries', () => {
-  it('registers Calls, Messages and Numbers as sibling pages of the Communications workspace', () => {
+  it('registers Calls, the Inbox and Numbers as sibling pages of the Communications workspace', () => {
     const pages = AREAS.filter((area) => area.workspace === 'communications').map((area) => area.segment);
-    expect(pages).toEqual(['comms', 'calls', 'comms-messages', 'comms-numbers']);
+    expect(pages).toEqual(['comms', 'calls', 'comms-inbox', 'comms-numbers']);
   });
 
   it('names no provider in a tenant-facing Communications route', () => {

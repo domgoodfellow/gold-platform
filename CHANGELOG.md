@@ -5,6 +5,49 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### One Inbox for every conversation
+
+Communications has one Inbox. Texts and email appear in a single list, newest activity first, with
+channel, who it is with (the customer's name, or the address or number when nobody is linked), the
+subject of an email, a preview, unread, status and who is handling it. It filters by channel, unread,
+assigned to me, unassigned and status, pages without skipping or repeating rows, and keeps its filters in
+the address. A conversation opens in one screen that fits its channel: a text with its delivery words, an
+email with its subject, attachments and sanitized body, and a reply box for each. A conversation is open,
+waiting or closed — reopened when they write, waiting once your answer has gone out — and one person can
+be responsible for it: claim, assign, reassign or release, with the history kept. A conversation can be
+linked to an existing customer or, when a person chooses, a new one is created from it; a sender is
+matched to a customer only when exactly one customer in the business holds that number or address, and
+never guessed or created. The old Text messages and Email pages now redirect to the Inbox, and
+Communications Home counts unread, open, unassigned and assigned-to-me conversations and links into them.
+Deleting a customer no longer fails when they have conversations; the conversations stay.
+
+### Email is a Communications channel
+
+A business can send and receive email from Communications. An address is named under Settings → Email,
+beneath a verified domain, and a person sends from the new Email page: compose, reply in the thread,
+attach files, and see an honest state for each message (not sent yet, sent, delivered, bounced,
+rejected). The address a message goes out as, the person it goes to and the thread it belongs to are
+all decided by the database; the browser names only an address by id. Received mail finds its
+conversation by what the mail says, not by its subject, and an unknown sender is kept as they are
+rather than becoming a customer. Delivery events are kept as history and can only move a message
+forward. Received HTML is stripped of anything that can run, call out or restyle the page, and
+attachments are stored privately and served only as downloads. One `email_send` is billed per accepted
+message. Text sending now records the truth when only its bookkeeping fails, instead of marking a
+text that went out as failed.
+
+### Communications is multi-channel at its foundation
+
+A conversation now belongs to a channel and no longer requires a phone number, so an email
+thread can exist without a fake one; existing text conversations keep their ids, messages and
+unread state. A business's email address is its own identity, distinct from the sending domain
+beneath it and from a mailbox, with readiness read from the domain rather than copied. Tenant
+email to customers has its own provider contract, separate from GildOps' invitation sender.
+A text is sent from the number the server resolves from a number id — the browser no longer
+supplies the `From` — and a business can now read its own opt-outs, which sending a text needed
+and never had, so every send failed at that check. Text messages is shown to anyone who can send
+texts, not only to anyone who can place calls, and Communications Home no longer warns a
+texting-only person about the dialer.
+
 ### Checkout buys exactly what was reviewed
 
 Subscribe now sends back only an opaque version of the quote the billing manager saw; the server

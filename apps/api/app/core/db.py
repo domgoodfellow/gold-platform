@@ -825,3 +825,171 @@ def record_invitation_delivery_event(
     if response.status_code >= 400:
         raise RuntimeError(f"record_invitation_delivery_event failed: {response.status_code}")
     return response.json()
+
+
+# --- a business's own email: the provider's callbacks, and the runtime's answers ---------------------
+#
+# Two machine roles, two jobs, and no table grant on either. `tenant_email_webhook` is the provider
+# calling in (a delivery event, an arriving message, a stored attachment); `provider_operator` is this
+# runtime telling the database what the provider answered about a send it has already proved the
+# caller may make. Neither can name an organization: the database derives it from what the provider
+# itself names.
+
+TENANT_EMAIL_WEBHOOK_ROLE = "tenant_email_webhook"
+TENANT_EMAIL_WEBHOOK_ACTOR = "00000000-0000-4000-8000-0000000000a7"
+
+
+def _webhook_headers(settings) -> dict[str, str]:
+    token = machine_token(settings.supabase_jwt_secret, role=TENANT_EMAIL_WEBHOOK_ROLE, sub=TENANT_EMAIL_WEBHOOK_ACTOR)
+    return {"apikey": settings.supabase_publishable_key, "Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+
+def _rpc(settings, headers: dict[str, str], *, function: str, payload: dict) -> object:
+    response = httpx.post(f"{settings.supabase_url}/rest/v1/rpc/{function}", headers=headers, json=payload, timeout=15.0)
+    if response.status_code >= 400:
+        # No body: an error here could echo an argument, and an argument may be a message.
+        raise RuntimeError(f"{function} failed: {response.status_code}")
+    # A function that returns nothing answers with an empty body, which is a success, not a parse error.
+    return response.json() if response.content else None
+
+
+def record_email_event(
+    settings,
+    *,
+    provider_message_id: str,
+    event_type: str,
+    provider_event_id: str,
+    detail: str | None,
+    payload: dict,
+    event_at: datetime | None,
+) -> str | None:
+    """One delivery callback about an email GildOps sent. `None` for a duplicate or an unknown message."""
+    return _rpc(  # type: ignore[return-value]
+        settings,
+        _webhook_headers(settings),
+        function="record_email_event",
+        payload={
+            "p_provider_message_id": provider_message_id,
+            "p_event_type": event_type,
+            "p_provider_event_id": provider_event_id,
+            "p_detail": detail,
+            "p_payload": payload,
+            "p_event_at": event_at.isoformat() if event_at is not None else None,
+        },
+    )
+
+
+def record_inbound_email(
+    settings,
+    *,
+    to_addresses: list[str],
+    from_address: str,
+    provider_email_id: str,
+    provider_event_id: str,
+    rfc_message_id: str | None,
+    in_reply_to: str | None,
+    references: list[str],
+    subject: str,
+    text: str,
+    html: str | None,
+    received_at: datetime | None,
+    authentication: dict | None,
+    attachments: list[dict],
+) -> dict | None:
+    """A verified inbound email, persisted. The business, the address and the thread are all derived
+    inside the function from the address the mail was sent to; `None` when it is not for anyone here."""
+    return _rpc(  # type: ignore[return-value]
+        settings,
+        _webhook_headers(settings),
+        function="record_inbound_email",
+        payload={
+            "p_to_addresses": to_addresses,
+            "p_from_address": from_address,
+            "p_provider_email_id": provider_email_id,
+            "p_provider_event_id": provider_event_id,
+            "p_rfc_message_id": rfc_message_id,
+            "p_in_reply_to": in_reply_to,
+            "p_references": references,
+            "p_subject": subject,
+            "p_text": text,
+            "p_html": html,
+            "p_received_at": received_at.isoformat() if received_at is not None else None,
+            "p_authentication": authentication,
+            "p_attachments": attachments,
+        },
+    )
+
+
+def record_inbound_attachment_stored(
+    settings,
+    *,
+    attachment_id: str,
+    storage_path: str | None,
+    size_bytes: int | None,
+    rejection: str | None = None,
+) -> None:
+    _rpc(
+        settings,
+        _webhook_headers(settings),
+        function="record_inbound_attachment_stored",
+        payload={
+            "p_attachment_id": attachment_id,
+            "p_storage_path": storage_path,
+            "p_size_bytes": size_bytes,
+            "p_rejection": rejection,
+        },
+    )
+
+
+def store_inbound_attachment(settings, *, path: str, content: bytes, content_type: str) -> bool:
+    """Put one received attachment in the private bucket under its business's `inbound` folder.
+
+    The webhook role may insert there and nowhere else, and cannot read anything back: a
+    compromised handler could add a file to the folder it was given, never open another's.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=TENANT_EMAIL_WEBHOOK_ROLE, sub=TENANT_EMAIL_WEBHOOK_ACTOR)
+    response = httpx.post(
+        f"{settings.supabase_url}/storage/v1/object/communications/{path}",
+        headers={"apikey": settings.supabase_publishable_key, "Authorization": f"Bearer {token}", "Content-Type": content_type or "application/octet-stream"},
+        content=content,
+        timeout=60.0,
+    )
+    return response.status_code < 400
+
+
+def claim_email_for_send(settings: ProviderOperationsSettings, *, organization_id: str, message_id: str) -> bool:
+    """Take a queued email for sending, exactly once. False when something else already has it."""
+    return bool(
+        _rpc(
+            settings,
+            _provider_headers(settings),
+            function="claim_email_for_send",
+            payload={"p_organization_id": organization_id, "p_message_id": message_id},
+        )
+    )
+
+
+def record_email_send_result(
+    settings: ProviderOperationsSettings,
+    *,
+    organization_id: str,
+    message_id: str,
+    outcome: str,
+    external_id: str | None = None,
+    detail: str | None = None,
+    rfc_message_id: str | None = None,
+) -> None:
+    """What the provider answered about one send. The only way an email message ever becomes `sent`."""
+    _rpc(
+        settings,
+        _provider_headers(settings),
+        function="record_email_send_result",
+        payload={
+            "p_organization_id": organization_id,
+            "p_message_id": message_id,
+            "p_outcome": outcome,
+            "p_external_id": external_id,
+            "p_detail": detail,
+            "p_rfc_message_id": rfc_message_id,
+        },
+    )

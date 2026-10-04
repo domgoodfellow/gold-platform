@@ -70,6 +70,16 @@
         "p_stage_id"
       ]
     },
+    "claim_email_for_send": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_message_id",
+        "p_organization_id"
+      ]
+    },
     "clear_integration_credential": {
       "role": "integration_operator",
       "callers": [
@@ -256,6 +266,39 @@
         "p_provider_status"
       ]
     },
+    "record_email_event": {
+      "role": "tenant_email_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_detail",
+        "p_event_at",
+        "p_event_type",
+        "p_payload",
+        "p_provider_event_id",
+        "p_provider_message_id"
+      ]
+    },
+    "record_email_send_result": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_detail",
+        "p_external_id",
+        "p_message_id",
+        "p_organization_id",
+        "p_outcome",
+        "p_rfc_message_id"
+      ],
+      "optional": [
+        "p_detail",
+        "p_external_id",
+        "p_rfc_message_id"
+      ]
+    },
     "record_external_readings": {
       "role": "automation_runner",
       "callers": [
@@ -264,6 +307,42 @@
       "sends": [
         "p_location_id",
         "p_readings"
+      ]
+    },
+    "record_inbound_attachment_stored": {
+      "role": "tenant_email_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_attachment_id",
+        "p_rejection",
+        "p_size_bytes",
+        "p_storage_path"
+      ],
+      "optional": [
+        "p_rejection"
+      ]
+    },
+    "record_inbound_email": {
+      "role": "tenant_email_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_attachments",
+        "p_authentication",
+        "p_from_address",
+        "p_html",
+        "p_in_reply_to",
+        "p_provider_email_id",
+        "p_provider_event_id",
+        "p_received_at",
+        "p_references",
+        "p_rfc_message_id",
+        "p_subject",
+        "p_text",
+        "p_to_addresses"
       ]
     },
     "record_inbound_message": {

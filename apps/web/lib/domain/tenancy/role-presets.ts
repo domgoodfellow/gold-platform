@@ -22,7 +22,7 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
       'resource.update', 'work_item.create', 'asset.create', 'document.create', 'work_item.transition', 'work_item.schedule',
       'work_item.record', 'organization.manage', 'price.manage', 'work_item.price', 'work_item.update',
       'invoice.issue', 'payment.record', 'automation.manage', 'configuration.propose', 'assistant.ask',
-      'report.read', 'report.manage', 'call.place', 'integration.manage', 'feature.manage', 'billing.manage',
+      'report.read', 'report.manage', 'call.place', 'message.send', 'integration.manage', 'feature.manage', 'billing.manage',
     ],
   },
   {
@@ -31,18 +31,18 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
     capabilities: [
       'customer.create', 'customer.update', 'location.create', 'resource.create', 'resource.update', 'work_item.create',
       'asset.create', 'document.create', 'work_item.transition', 'work_item.schedule', 'work_item.record',
-      'work_item.price', 'work_item.update', 'invoice.issue', 'payment.record', 'assistant.ask', 'report.read', 'call.place',
+      'work_item.price', 'work_item.update', 'invoice.issue', 'payment.record', 'assistant.ask', 'report.read', 'call.place', 'message.send',
     ],
   },
   {
     key: 'sales',
     label: 'Sales',
-    capabilities: ['customer.create', 'customer.update', 'call.place', 'document.create', 'assistant.ask', 'report.read'],
+    capabilities: ['customer.create', 'customer.update', 'call.place', 'message.send', 'document.create', 'assistant.ask', 'report.read'],
   },
   {
     key: 'support',
     label: 'Support',
-    capabilities: ['customer.create', 'customer.update', 'call.place', 'document.create', 'work_item.create', 'assistant.ask'],
+    capabilities: ['customer.create', 'customer.update', 'call.place', 'message.send', 'document.create', 'work_item.create', 'assistant.ask'],
   },
   {
     key: 'dispatcher',

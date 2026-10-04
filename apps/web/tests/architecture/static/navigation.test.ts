@@ -185,7 +185,7 @@ describe('the operator shell navigation', () => {
   it('gives every workspace an owner-side map: pages and configuration name the workspace that owns them', () => {
     const owner = (segment: string) => AREAS.find((area) => area.segment === segment)?.workspace;
     expect(['sales', 'customers', 'pipeline'].map(owner)).toEqual(['crm', 'crm', 'crm']);
-    expect(['comms', 'calls', 'comms-messages', 'comms-numbers'].map(owner)).toEqual(['communications', 'communications', 'communications', 'communications']);
+    expect(['comms', 'calls', 'comms-inbox', 'comms-numbers'].map(owner)).toEqual(['communications', 'communications', 'communications', 'communications']);
     expect(['automations', 'automation-rules'].map(owner)).toEqual(['automations', 'automations']);
     expect(owner('pricing')).toBe('finance');
     // Insights is cross-cutting, not a workspace (D66) — it belongs to no one workspace either.
@@ -260,7 +260,7 @@ describe('the operator shell navigation', () => {
       'home',
       'library',
       'sales', 'customers', 'pipeline',
-      'comms', 'calls', 'comms-messages', 'comms-numbers',
+      'comms', 'calls', 'comms-inbox', 'comms-numbers',
       'finance',
       'automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'field', 'work', 'schedule', 'resources', 'locations', 'assets',
@@ -886,7 +886,7 @@ describe('the organization shell taxonomy', () => {
   it('names the workspaces in the operator’s words', () => {
     const labels = new Map(AREAS.map((area) => [area.segment, area.label]));
     expect(labels.get('calls')).toBe('Calls');
-    expect(labels.get('comms-messages')).toBe('Text messages');
+    expect(labels.get('comms-inbox')).toBe('Inbox');
     expect(labels.get('comms-numbers')).toBe('Numbers');
     expect(labels.get('automations')).toBe('Automations');
     expect(labels.get('automation-rules')).toBe('Rules');

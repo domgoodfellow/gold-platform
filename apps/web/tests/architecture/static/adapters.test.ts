@@ -42,6 +42,10 @@ const VENDORS = [
   'openstreetmap',
   // GOLD's own transactional email (invitations) — a fourth capability, held to the same line.
   'resend',
+  // Other mail carriers the tenant email capability must never be written in terms of.
+  'postmark',
+  'sendgrid',
+  'mailgun',
 ];
 
 /**
@@ -52,7 +56,7 @@ const VENDORS = [
  * this repository refuses to say in the wrong place, and it is allowed to run ahead of what has
  * been built.
  */
-const CONTRACTS = ['payments', 'platform-billing', 'geocoding', 'drafting', 'answering', 'telephony', 'messaging', 'email', 'email-domains'];
+const CONTRACTS = ['payments', 'platform-billing', 'geocoding', 'drafting', 'answering', 'telephony', 'messaging', 'email', 'email-domains', 'tenant-email'];
 
 describe('the adapter boundary (I15)', () => {
   it('has no domain file importing a provider implementation', () => {
@@ -100,5 +104,30 @@ describe('the adapter boundary (I15)', () => {
       expect(contract).not.toContain('sessionid');
       expect(contract).not.toContain('placeid');
     }
+  });
+
+  it('keeps a tenant’s email to its customers a different capability from GildOps’ own platform email', () => {
+    // Three email contracts, three questions: GildOps sending an invitation (`email`), proving a
+    // business may send from a name (`email-domains`), and an organization writing to a person
+    // (`tenant-email`). A tenant's mail must never be reachable through the platform's sender.
+    const read = (capability: string) =>
+      readFileSync(join(SRC, 'lib', 'adapters', capability, 'index.ts'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    const platform = read('email');
+    const tenant = read('tenant-email');
+
+    expect(platform).toContain('PlatformEmailSender');
+    expect(platform).not.toContain('EmailProvider');
+    expect(tenant).toContain('EmailProvider');
+    expect(tenant).not.toContain('PlatformEmailSender');
+    expect(tenant).not.toContain('sendInvitationEmail');
+    // The tenant contract names a message and nothing a caller could redirect.
+    expect(tenant).not.toMatch(/\b(from|to|subject)\s*:/);
+  });
+
+  it('lets nothing outside the tenant email capability reach an implementation behind its registry', () => {
+    const importers = [...sources(join(SRC, 'lib')), ...sources(join(SRC, 'app')), ...sources(join(SRC, 'features'))]
+      .filter((path) => !path.includes(join('lib', 'adapters', 'tenant-email')))
+      .filter((path) => /from\s+'@\/lib\/adapters\/tenant-email\/[^']+'/.test(readFileSync(path, 'utf8')));
+    expect(importers).toEqual([]);
   });
 });

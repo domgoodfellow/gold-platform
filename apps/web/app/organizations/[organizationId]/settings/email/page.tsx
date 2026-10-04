@@ -2,9 +2,11 @@ import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/headers/page-header';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { AddSendingDomainForm } from '@/features/communications/email/add-sending-domain-form';
+import { EmailAddresses } from '@/features/communications/email/email-addresses';
 import { SendingDomains } from '@/features/communications/email/sending-domains';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { isDnsAutomated, listConnectedDnsZones } from '@/lib/domain/domains/dns-zones';
+import { listEmailIdentities } from '@/lib/domain/email/identities';
 import { listSendingDomains, MANAGED_SENDING } from '@/lib/domain/email/sending-domains';
 import { requireOrganization } from '@/lib/route/organization';
 import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
@@ -29,9 +31,10 @@ export default async function EmailSettingsPage({ params }: PageProps<'/organiza
   const { db, organization } = await requireOrganization(organizationId);
   const mayManage = organization.capabilities.includes('organization.manage');
 
-  const [domains, zones] = await Promise.all([
+  const [domains, zones, identities] = await Promise.all([
     mayManage ? listSendingDomains(db, organizationId) : Promise.resolve([]),
     mayManage ? listConnectedDnsZones(db, organizationId) : Promise.resolve([]),
+    mayManage ? listEmailIdentities(db, { organizationId }) : Promise.resolve([]),
   ]);
 
   const header = (
@@ -59,8 +62,8 @@ export default async function EmailSettingsPage({ params }: PageProps<'/organiza
     <SettingsPageFrame>
       {header}
       <Hint className="mt-1">
-        Proving a domain lets this business send email from addresses at it. It does not create a
-        mailbox, and nothing sent to an address at this domain reaches GildOps.
+        Proving a domain lets this business send email from addresses at it. It does not create an
+        address or a mailbox: an address is named below, beneath a domain that is verified.
       </Hint>
 
       <Section className="mt-8">
@@ -83,6 +86,12 @@ export default async function EmailSettingsPage({ params }: PageProps<'/organiza
         organizationId={organizationId}
         domains={domains}
         automatedZone={(domain) => zones.find((zone) => isDnsAutomated(domain, [zone])) ?? null}
+      />
+
+      <EmailAddresses
+        organizationId={organizationId}
+        identities={identities}
+        domains={domains.map((domain) => ({ resourceId: domain.resourceId, domain: domain.domain, ready: domain.state === 'ready' }))}
       />
     </SettingsPageFrame>
   );

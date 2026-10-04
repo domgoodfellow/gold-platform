@@ -61,6 +61,20 @@ def email_domains_for(provider_key: str):
     return None
 
 
+def tenant_email_for(provider_key: str):
+    """The module that sends, confirms and reads back a *business's* email at `provider_key`, or `None`.
+
+    `app.services.tenant_email` asks for it by the key the sending domain's binding carries and never
+    imports a vendor (I15). Distinct from `email_domains_for` (proving a name) and from GildOps' own
+    platform sender: this is an organization's message to a person.
+    """
+    if provider_key == "resend":
+        from app.providers.resend import email
+
+        return email
+    return None
+
+
 def operations_for(provider_key: str) -> dict[str, Operation] | None:
     if provider_key == "twilio":
         from app.providers.twilio.accounts import OPERATIONS

@@ -73,7 +73,7 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(topLevel(sections, 'workspaces')).toEqual(['workspace-crm', 'workspace-communications', 'workspace-finance', 'workspace-automations', 'workspace-field', 'workspace-studio']);
     expect(keys(sections, 'workspaces')).toEqual([
       'workspace-crm', 'customers', 'pipeline',
-      'workspace-communications', 'calls', 'comms-messages', 'comms-numbers',
+      'workspace-communications', 'calls', 'comms-inbox', 'comms-numbers',
       'workspace-finance', 'finance-plans',
       'workspace-automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets',
@@ -84,7 +84,7 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(row('workspace-field').children?.map((page) => page.key)).toEqual(['work', 'schedule', 'resources', 'locations', 'assets']);
     expect(row('workspace-crm').children?.map((page) => page.key)).toEqual(['customers', 'pipeline']);
     expect(row('workspace-automations').children?.map((page) => page.label)).toEqual(['Rules', 'Messages', 'Activity']);
-    expect(row('workspace-communications').children?.map((page) => page.key)).toEqual(['calls', 'comms-messages', 'comms-numbers']);
+    expect(row('workspace-communications').children?.map((page) => page.key)).toEqual(['calls', 'comms-inbox', 'comms-numbers']);
     expect(row('workspace-field').label).toBe('Field');
     expect(row('workspace-field').href).toBe(`/organizations/${ORG}/field`);
     expect(row('workspace-crm').href).toBe(`/organizations/${ORG}/sales`);
@@ -174,7 +174,7 @@ describe('GOLD sales member in the same organization', () => {
 
   it('uses GOLD as an ordinary business: sales, customers and calls', () => {
     expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-crm', 'customers', 'pipeline', 'workspace-communications', 'calls', 'comms-messages', 'comms-numbers', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio',
+      'workspace-crm', 'customers', 'pipeline', 'workspace-communications', 'calls', 'comms-inbox', 'comms-numbers', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio',
     ]);
   });
 
@@ -312,7 +312,7 @@ describe('the phone renders the same projection', () => {
     expect(more[0].items.map((item) => item.key)).toEqual(['library']);
     expect(more[1].items.map((item) => item.key)).toEqual(['workspace-studio']);
     expect(more[2].items.map((item) => item.key)).toEqual(['pipeline']);
-    expect(more[3].items.map((item) => item.key)).toEqual(['calls', 'comms-messages', 'comms-numbers']);
+    expect(more[3].items.map((item) => item.key)).toEqual(['calls', 'comms-inbox', 'comms-numbers']);
     expect(more[4].items.map((item) => item.key)).toEqual(['finance-plans']);
     expect(more[5].items.map((item) => item.label)).toEqual(['Rules', 'Messages', 'Activity']);
     expect(more[6].items.map((item) => item.key)).toEqual(['resources', 'locations', 'assets']);

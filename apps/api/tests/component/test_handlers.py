@@ -42,6 +42,8 @@ import api.sms_inbound as sms_inbound
 import api.sms_status as sms_status
 import api.stripe_platform_billing_webhook as platform_billing_webhook
 import api.stripe_webhook as stripe_webhook
+import api.tenant_email_send as tenant_email_send
+import api.tenant_email_webhook as tenant_email_webhook
 import api.voice_inbound as voice_inbound
 import api.voice_outbound as voice_outbound
 import api.voice_recording as voice_recording
@@ -323,6 +325,95 @@ class TestInvitationEmailWebhook:
         monkeypatch.setattr(invitation_email_webhook, "load_invitation_email_webhook_settings", lambda: None)
 
         assert call(invitation_email_webhook, "POST", body=b"{}")[0] == 404
+
+
+class TestTenantEmailWebhook:
+    """The signature's own correctness is `test_resend_webhook.py`'s subject; this proves the handler
+    verifies before it writes, derives nothing from the payload, and asks the provider to retry when a
+    verified message could not be read."""
+
+    SECRET = "whsec_" + base64.b64encode(b"b" * 24).decode()
+
+    def _signed(self, body: bytes, svix_id: str = "msg_1") -> dict[str, str]:
+        import time
+
+        issued = int(time.time())
+        key = base64.b64decode(self.SECRET.removeprefix("whsec_"))
+        signature = base64.b64encode(hmac.new(key, f"{svix_id}.{issued}.{body.decode()}".encode(), hashlib.sha256).digest()).decode()
+        return {"svix-id": svix_id, "svix-timestamp": str(issued), "svix-signature": f"v1,{signature}"}
+
+    def _armed(self, monkeypatch):
+        monkeypatch.setattr(tenant_email_webhook, "load_tenant_email_webhook_settings", lambda: SimpleNamespace(**{**SETTINGS.__dict__, "signing_secret": self.SECRET}))
+
+    def test_refuses_without_a_valid_signature_and_writes_nothing(self, monkeypatch) -> None:
+        self._armed(monkeypatch)
+        recorded, received = Sink(), Sink()
+        monkeypatch.setattr(tenant_email_webhook, "record_email_event", recorded)
+        monkeypatch.setattr(tenant_email_webhook, "handle_received", received)
+        body = json.dumps({"type": "email.delivered", "data": {"email_id": "m1"}}).encode()
+
+        for headers in ({}, {"svix-id": "x", "svix-timestamp": "1", "svix-signature": "v1,deadbeef"}):
+            assert call(tenant_email_webhook, "POST", headers=headers, body=body) == (400, "rejected")
+
+        assert recorded.calls == [] and received.calls == []
+
+    def test_a_deployment_with_no_webhook_configured_answers_404(self, monkeypatch) -> None:
+        monkeypatch.setattr(tenant_email_webhook, "load_tenant_email_webhook_settings", lambda: None)
+        assert call(tenant_email_webhook, "POST", body=b"{}")[0] == 404
+
+    def test_a_signed_delivery_event_is_recorded_with_the_providers_own_delivery_id(self, monkeypatch) -> None:
+        self._armed(monkeypatch)
+        recorded = Sink(result="event-1")
+        monkeypatch.setattr(tenant_email_webhook, "record_email_event", recorded)
+        body = json.dumps({"type": "email.delivered", "data": {"email_id": "re_1"}}).encode()
+
+        assert call(tenant_email_webhook, "POST", headers=self._signed(body, "msg_77"), body=body) == (200, "recorded")
+        kwargs = recorded.calls[0][1]
+        assert kwargs["provider_message_id"] == "re_1" and kwargs["event_type"] == "delivered" and kwargs["provider_event_id"] == "msg_77"
+
+    def test_a_duplicate_or_unknown_event_is_acknowledged_not_failed(self, monkeypatch) -> None:
+        self._armed(monkeypatch)
+        monkeypatch.setattr(tenant_email_webhook, "record_email_event", Sink(result=None))
+        body = json.dumps({"type": "email.delivered", "data": {"email_id": "re_1"}}).encode()
+        assert call(tenant_email_webhook, "POST", headers=self._signed(body), body=body) == (200, "ignored")
+
+    def test_an_event_this_platform_does_not_track_is_acknowledged(self, monkeypatch) -> None:
+        self._armed(monkeypatch)
+        recorded = Sink()
+        monkeypatch.setattr(tenant_email_webhook, "record_email_event", recorded)
+        body = json.dumps({"type": "domain.updated", "data": {}}).encode()
+        assert call(tenant_email_webhook, "POST", headers=self._signed(body), body=body) == (200, "ignored")
+        assert recorded.calls == []
+
+    def test_a_received_message_is_handed_on_and_a_failure_to_read_it_asks_the_provider_to_retry(self, monkeypatch) -> None:
+        self._armed(monkeypatch)
+        body = json.dumps({"type": "email.received", "data": {"email_id": "in_1", "from": "kim@example.test", "to": ["hello@acme.test"], "subject": "Hi"}}).encode()
+
+        handled = Sink(result="recorded")
+        monkeypatch.setattr(tenant_email_webhook, "handle_received", handled)
+        assert call(tenant_email_webhook, "POST", headers=self._signed(body, "msg_9"), body=body) == (200, "recorded")
+        assert handled.calls[0][1]["event_id"] == "msg_9" and handled.calls[0][1]["event"]["to"] == ["hello@acme.test"]
+
+        def unreadable(*args, **kwargs):
+            raise RuntimeError("provider unreachable")
+
+        monkeypatch.setattr(tenant_email_webhook, "handle_received", unreadable)
+        assert call(tenant_email_webhook, "POST", headers=self._signed(body, "msg_10"), body=body) == (500, "retry")
+
+
+class TestTenantEmailSend:
+    def test_refuses_an_anonymous_caller_before_reading_anything(self, monkeypatch) -> None:
+        monkeypatch.setattr(tenant_email_send, "load_provider_operations_settings", lambda: SETTINGS)
+        sent = Sink()
+        monkeypatch.setattr(tenant_email_send, "send_queued_email", sent)
+
+        status, _ = call(tenant_email_send, "POST", body=b'{"organization_id": "o", "message_id": "m"}')
+
+        assert status == 401 and sent.calls == []
+
+    def test_a_deployment_with_no_provider_operations_answers_404(self, monkeypatch) -> None:
+        monkeypatch.setattr(tenant_email_send, "load_provider_operations_settings", lambda: None)
+        assert call(tenant_email_send, "POST", body=b"{}")[0] == 404
 
 
 # --- the scheduler's tick: a shared secret, or nothing runs --------------------------------------

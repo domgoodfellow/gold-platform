@@ -1672,39 +1672,74 @@ export type Database = {
       }
       conversations: {
         Row: {
+          assignee_membership_id: string | null
+          channel: string
           created_at: string
           customer_id: string | null
-          external_number: string
+          email_identity_id: string | null
+          external_email: string | null
+          external_number: string | null
           id: string
           last_message_at: string
           last_message_preview: string
           organization_id: string
-          phone_number_id: string
+          phone_number_id: string | null
+          status: string
+          status_changed_at: string
+          subject: string | null
           unread: boolean
         }
         Insert: {
+          assignee_membership_id?: string | null
+          channel?: string
           created_at?: string
           customer_id?: string | null
-          external_number: string
+          email_identity_id?: string | null
+          external_email?: string | null
+          external_number?: string | null
           id?: string
           last_message_at?: string
           last_message_preview?: string
           organization_id: string
-          phone_number_id: string
+          phone_number_id?: string | null
+          status?: string
+          status_changed_at?: string
+          subject?: string | null
           unread?: boolean
         }
         Update: {
+          assignee_membership_id?: string | null
+          channel?: string
           created_at?: string
           customer_id?: string | null
-          external_number?: string
+          email_identity_id?: string | null
+          external_email?: string | null
+          external_number?: string | null
           id?: string
           last_message_at?: string
           last_message_preview?: string
           organization_id?: string
-          phone_number_id?: string
+          phone_number_id?: string | null
+          status?: string
+          status_changed_at?: string
+          subject?: string | null
           unread?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "conversations_assignee_fk"
+            columns: ["organization_id", "assignee_membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "conversations_email_identity_fk"
+            columns: ["organization_id", "email_identity_id"]
+            isOneToOne: false
+            referencedRelation: "email_identities"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "conversations_organization_id_customer_id_fkey"
             columns: ["organization_id", "customer_id"]
@@ -2475,6 +2510,150 @@ export type Database = {
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
             referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      email_identities: {
+        Row: {
+          address: string
+          can_receive: boolean
+          can_send: boolean
+          created_at: string
+          created_by: string | null
+          display_name: string | null
+          id: string
+          integration_connection_id: string | null
+          organization_id: string
+          ownership: string
+          sending_domain_resource_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          can_receive?: boolean
+          can_send?: boolean
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          id?: string
+          integration_connection_id?: string | null
+          organization_id: string
+          ownership: string
+          sending_domain_resource_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          can_receive?: boolean
+          can_send?: boolean
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          id?: string
+          integration_connection_id?: string | null
+          organization_id?: string
+          ownership?: string
+          sending_domain_resource_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_identities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_identities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_identities_organization_id_integration_connection_id_fkey"
+            columns: ["organization_id", "integration_connection_id"]
+            isOneToOne: false
+            referencedRelation: "integration_connections"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "email_identities_organization_id_sending_domain_resource_i_fkey"
+            columns: ["organization_id", "sending_domain_resource_id"]
+            isOneToOne: false
+            referencedRelation: "organization_provider_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      email_message_details: {
+        Row: {
+          authentication: Json | null
+          cc_addresses: string[]
+          from_address: string
+          from_name: string | null
+          html_body: string | null
+          in_reply_to: string | null
+          message_id: string
+          organization_id: string
+          reference_ids: string[]
+          rfc_message_id: string | null
+          subject: string
+          to_addresses: string[]
+        }
+        Insert: {
+          authentication?: Json | null
+          cc_addresses?: string[]
+          from_address: string
+          from_name?: string | null
+          html_body?: string | null
+          in_reply_to?: string | null
+          message_id: string
+          organization_id: string
+          reference_ids?: string[]
+          rfc_message_id?: string | null
+          subject?: string
+          to_addresses?: string[]
+        }
+        Update: {
+          authentication?: Json | null
+          cc_addresses?: string[]
+          from_address?: string
+          from_name?: string | null
+          html_body?: string | null
+          in_reply_to?: string | null
+          message_id?: string
+          organization_id?: string
+          reference_ids?: string[]
+          rfc_message_id?: string | null
+          subject?: string
+          to_addresses?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_message_details_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_message_details_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_message_details_organization_id_message_id_fkey"
+            columns: ["organization_id", "message_id"]
+            isOneToOne: true
+            referencedRelation: "messages"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -3464,6 +3643,76 @@ export type Database = {
           },
         ]
       }
+      message_attachments: {
+        Row: {
+          content_disposition: string | null
+          content_id: string | null
+          content_type: string
+          created_at: string
+          filename: string
+          id: string
+          message_id: string
+          organization_id: string
+          provider_attachment_id: string | null
+          rejection_reason: string | null
+          size_bytes: number | null
+          storage_path: string | null
+          storage_state: string
+        }
+        Insert: {
+          content_disposition?: string | null
+          content_id?: string | null
+          content_type: string
+          created_at?: string
+          filename: string
+          id?: string
+          message_id: string
+          organization_id: string
+          provider_attachment_id?: string | null
+          rejection_reason?: string | null
+          size_bytes?: number | null
+          storage_path?: string | null
+          storage_state?: string
+        }
+        Update: {
+          content_disposition?: string | null
+          content_id?: string | null
+          content_type?: string
+          created_at?: string
+          filename?: string
+          id?: string
+          message_id?: string
+          organization_id?: string
+          provider_attachment_id?: string | null
+          rejection_reason?: string | null
+          size_bytes?: number | null
+          storage_path?: string | null
+          storage_state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_attachments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_attachments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_attachments_organization_id_message_id_fkey"
+            columns: ["organization_id", "message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       message_deliveries: {
         Row: {
           body: string
@@ -3527,6 +3776,67 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_events: {
+        Row: {
+          detail: string | null
+          event_type: string
+          id: string
+          message_id: string
+          occurred_at: string
+          organization_id: string
+          payload: Json
+          provider_event_at: string | null
+          provider_event_id: string | null
+          status_after: string | null
+        }
+        Insert: {
+          detail?: string | null
+          event_type: string
+          id?: string
+          message_id: string
+          occurred_at?: string
+          organization_id: string
+          payload?: Json
+          provider_event_at?: string | null
+          provider_event_id?: string | null
+          status_after?: string | null
+        }
+        Update: {
+          detail?: string | null
+          event_type?: string
+          id?: string
+          message_id?: string
+          occurred_at?: string
+          organization_id?: string
+          payload?: Json
+          provider_event_at?: string | null
+          provider_event_id?: string | null
+          status_after?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_events_organization_id_message_id_fkey"
+            columns: ["organization_id", "message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -8876,6 +9186,14 @@ export type Database = {
         }
         Returns: string
       }
+      assign_conversation: {
+        Args: {
+          p_conversation_id: string
+          p_membership_id: string
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
       assign_phone_number: {
         Args: {
           p_default?: boolean
@@ -8984,6 +9302,14 @@ export type Database = {
         Args: { p_status_id: string; p_work_item_id: string }
         Returns: undefined
       }
+      claim_conversation: {
+        Args: { p_conversation_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      claim_email_for_send: {
+        Args: { p_message_id: string; p_organization_id: string }
+        Returns: boolean
+      }
       claim_portal_invite: { Args: { p_token: string }; Returns: string }
       claim_proposal_invite: { Args: { p_token: string }; Returns: string }
       clear_integration_credential: {
@@ -9015,6 +9341,15 @@ export type Database = {
         Returns: {
           allowed: boolean
           retry_after: number
+        }[]
+      }
+      conversation_customer_candidates: {
+        Args: { p_conversation_id: string; p_organization_id: string }
+        Returns: {
+          customer_id: string
+          email: string
+          name: string
+          phone: string
         }[]
       }
       create_asset: {
@@ -9288,6 +9623,14 @@ export type Database = {
         Returns: string
       }
       launch_organization: { Args: { p_id: string }; Returns: undefined }
+      link_conversation_customer: {
+        Args: {
+          p_conversation_id: string
+          p_customer_id: string
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
       link_customer_location: {
         Args: {
           p_customer_id: string
@@ -9731,6 +10074,21 @@ export type Database = {
       }
       published_gold_homepage: { Args: never; Returns: Json }
       published_hostname_site: { Args: { p_hostname: string }; Returns: Json }
+      queue_outbound_email: {
+        Args: {
+          p_attachments: Json
+          p_conversation_id: string
+          p_customer_id: string
+          p_email_identity_id: string
+          p_html: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_subject: string
+          p_text: string
+          p_to: string
+        }
+        Returns: string
+      }
       queued_messages: {
         Args: { p_limit?: number }
         Returns: {
@@ -9891,9 +10249,58 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_email_event: {
+        Args: {
+          p_detail: string
+          p_event_at?: string
+          p_event_type: string
+          p_payload: Json
+          p_provider_event_id: string
+          p_provider_message_id: string
+        }
+        Returns: string
+      }
+      record_email_send_result: {
+        Args: {
+          p_detail?: string
+          p_external_id?: string
+          p_message_id: string
+          p_organization_id: string
+          p_outcome: string
+          p_rfc_message_id?: string
+        }
+        Returns: undefined
+      }
       record_external_readings: {
         Args: { p_location_id: string; p_readings: Json }
         Returns: number
+      }
+      record_inbound_attachment_stored: {
+        Args: {
+          p_attachment_id: string
+          p_rejection?: string
+          p_size_bytes: number
+          p_storage_path: string
+        }
+        Returns: undefined
+      }
+      record_inbound_email: {
+        Args: {
+          p_attachments: Json
+          p_authentication: Json
+          p_from_address: string
+          p_html: string
+          p_in_reply_to: string
+          p_provider_email_id: string
+          p_provider_event_id: string
+          p_received_at: string
+          p_references: string[]
+          p_rfc_message_id: string
+          p_subject: string
+          p_text: string
+          p_to_addresses: string[]
+        }
+        Returns: Json
       }
       record_inbound_message: {
         Args: {
@@ -10292,6 +10699,10 @@ export type Database = {
         Returns: string
       }
       reissue_invitation: { Args: { p_id: string }; Returns: string }
+      release_conversation: {
+        Args: { p_conversation_id: string; p_organization_id: string }
+        Returns: undefined
+      }
       release_custom_domain: {
         Args: { p_domain_id: string; p_organization_id: string }
         Returns: undefined
@@ -10439,6 +10850,14 @@ export type Database = {
           p_feature_id: string
           p_note?: string
           p_relationship?: string
+        }
+        Returns: undefined
+      }
+      set_conversation_status: {
+        Args: {
+          p_conversation_id: string
+          p_organization_id: string
+          p_status: string
         }
         Returns: undefined
       }

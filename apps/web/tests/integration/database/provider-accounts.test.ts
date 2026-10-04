@@ -246,7 +246,7 @@ describe('a credential goes in and never comes out', () => {
     expect(rows[0]).toEqual({ decrypted: false, secrets: false });
   });
 
-  it('gives the machine role no table grant and exactly ten executes', async () => {
+  it('gives the machine role no table grant and exactly twelve executes', async () => {
     const tables = await pg.query(`select table_name from information_schema.role_table_grants where grantee = 'provider_operator'`);
     expect(tables.rows).toEqual([]);
 
@@ -263,14 +263,18 @@ describe('a credential goes in and never comes out', () => {
     // default account and record what happened without the caller having to be staff; the two
     // `email_domain_*`/`record_email_domain_provisioning` doors joined once a business's own
     // sending domain needed the same thing recorded — the same machine role, narrow doors added
-    // one capability at a time, never a table grant.
+    // one capability at a time, never a table grant. `claim_email_for_send` and
+    // `record_email_send_result` joined once a business's own email needed the same: apps/api,
+    // after proving the caller may send one message, says what the provider answered.
     expect(functions.rows.map((row) => row.proname)).toEqual([
+      'claim_email_for_send',
       'custom_domain_provider_account',
       'default_platform_provider_account',
       'email_domain_provider_account',
       'read_provider_account_credential',
       'record_custom_domain_registration',
       'record_email_domain_provisioning',
+      'record_email_send_result',
       'record_invitation_delivery',
       'record_provider_account_verification',
       'resolve_ai_runtime_assignment',

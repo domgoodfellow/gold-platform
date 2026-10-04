@@ -90,6 +90,14 @@
     {
       "source": "/webhooks/invitation-email",
       "destination": "/api/invitation_email_webhook"
+    },
+    {
+      "source": "/communications/email/send",
+      "destination": "/api/tenant_email_send"
+    },
+    {
+      "source": "/webhooks/tenant-email",
+      "destination": "/api/tenant_email_webhook"
     }
   ],
   "crons": [

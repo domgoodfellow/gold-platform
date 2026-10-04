@@ -159,6 +159,14 @@
       ],
       "note": "Domain command over a patched PostgREST call."
     },
+    "apps/api/tests/component/test_tenant_email.py": {
+      "category": "python-component",
+      "concerns": [
+        "providers",
+        "security"
+      ],
+      "note": "A business's own email: the send sequencing (claim, record, retry), the Resend protocol reading, tenant event parsing and inbound persistence, with the provider and database doors replaced."
+    },
     "apps/api/tests/component/test_domains_routing.py": {
       "category": "python-component",
       "concerns": [
@@ -765,6 +773,21 @@
         "accessibility"
       ],
       "note": "Named for a roadmap period; it is a source scan."
+    },
+    "apps/web/tests/architecture/static/communications-foundation.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "voice",
+        "boundaries"
+      ],
+      "note": "Conversation is channel-capable, a sender address is never a client value, and calling and messaging stay two navigation authorities."
+    },
+    "apps/web/tests/architecture/static/inbox-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "boundaries"
+      ],
+      "note": "One canonical Inbox query and screen, one membership-keyed assignment mechanism, and Communications linking to CRM without becoming it."
     },
     "apps/web/tests/architecture/static/navigation.test.ts": {
       "category": "architecture-static",
@@ -1396,6 +1419,46 @@
         "rbac"
       ]
     },
+    "apps/web/tests/integration/database/communications-foundation.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
+      ],
+      "note": "Channel-typed conversations and tenant-scoped email identities against real RLS."
+    },
+    "apps/web/tests/integration/database/messaging-sender.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
+      ],
+      "note": "The server resolves the SMS sender from a number id; the carrier is replaced by a recorder, everything else is real."
+    },
+    "apps/web/tests/integration/database/email-channel.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
+      ],
+      "note": "Email as a channel of messages: queueing, the provider doors, delivery events, inbound threading and attachments, against real RLS and Storage."
+    },
+    "apps/web/tests/integration/database/email-send.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
+      ],
+      "note": "The SendEmail and ReplyToConversation commands with the tenant email capability replaced by a recorder."
+    },
+    "apps/web/tests/integration/database/inbox.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
+      ],
+      "note": "The Inbox over SMS and email, conversation status, assignment, and customer resolution against real RLS."
+    },
     "apps/web/tests/integration/database/messaging.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1811,6 +1874,20 @@
       "concerns": [
         "work"
       ]
+    },
+    "apps/web/tests/unit/email-identity-readiness.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "providers"
+      ],
+      "note": "Email identity readiness is derived from what backs the address; the tenant email provider seam has no implementation yet."
+    },
+    "apps/web/tests/unit/email-content.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "security"
+      ],
+      "note": "Received HTML is sanitized against the classic vectors; what an email may carry."
     },
     "apps/web/tests/unit/agent-attachments.test.ts": {
       "category": "unit",

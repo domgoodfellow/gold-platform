@@ -327,6 +327,41 @@ def load_invitation_email_webhook_settings() -> InvitationEmailWebhookSettings |
     return InvitationEmailWebhookSettings(**values)  # type: ignore[arg-type]
 
 
+@dataclass(frozen=True)
+class TenantEmailWebhookSettings:
+    """What hearing from the email provider about a *business's* email needs.
+
+    **Its own settings group, its own signing secret, its own destination at the provider.** The
+    invitation callbacks (`InvitationEmailWebhookSettings`) are GildOps' own mail; this is a tenant's
+    mail to its customers, and a secret that leaked from one must never be able to write the other's
+    state -- the separation `PlatformBillingSettings` already draws between two money directions.
+    It signs a short-lived token for `tenant_email_webhook`, a role holding no table grant, and the
+    same provider-account door `ProviderOperationsSettings` uses is how the runtime learns the
+    credential it needs to read a received message's body.
+    """
+
+    supabase_url: str
+    supabase_publishable_key: str
+    supabase_jwt_secret: str
+    # The provider's own signing secret for this one webhook destination (a Svix `whsec_...`).
+    signing_secret: str
+
+
+def load_tenant_email_webhook_settings() -> TenantEmailWebhookSettings | None:
+    values = {
+        "supabase_url": os.environ.get("SUPABASE_URL"),
+        "supabase_publishable_key": _publishable_key(),
+        "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
+        "signing_secret": os.environ.get("TENANT_EMAIL_WEBHOOK_SECRET"),
+    }
+
+    if not all(values.values()):
+        return None
+
+    return TenantEmailWebhookSettings(**values)  # type: ignore[arg-type]
+
+
+
 def environment_warnings() -> list[str]:
     """Partial configuration this deployment's own graceful-degradation rules cannot see.
 

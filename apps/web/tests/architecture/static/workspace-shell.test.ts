@@ -448,7 +448,24 @@ describe('the page-header contract — the page, not the workspace header, owns 
     // the Screen the page delegates to, rather than inline in the page itself — the same shape
     // `CustomerDetail`/`HomeDashboard` already had: a feature component that renders the real one.
     const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage|<PlanDetailScreen|<OrganizationCommercialScreen|<CatalogFamilyScreen|<TwilioProviderScreen|<PlanUsageScreen|<WorkItemDetailScreen/;
+    // A master-detail screen (the Inbox: a persistent list beside whichever pane is selected) renders its one
+    // identity in the layout that frames every pane, because a page-owned header would be torn down and drawn
+    // again on every selection. Only a layout *below* the organization root counts — the root layout frames
+    // everything and would excuse every page.
+    const framedByIdentity = (page: string): boolean => {
+      let dir = page.slice(0, page.lastIndexOf('/'));
+      while (dir.length > root.length) {
+        try {
+          if (identity.test(readFileSync(`${dir}/layout.tsx`, 'utf8'))) return true;
+        } catch {
+          // no layout at this level
+        }
+        dir = dir.slice(0, dir.lastIndexOf('/'));
+      }
+      return false;
+    };
     for (const page of pages) {
+      if (framedByIdentity(page)) continue;
       const source = readFileSync(page, 'utf8');
       const label = page.slice(root.length);
       // A pure redirect renders nothing, and so does an unmatched-address catch-all that only

@@ -125,3 +125,84 @@ def parse_event(body: dict) -> dict | None:
         "detail": _detail(event_type, data),
         "event_at": _event_at(body),
     }
+
+
+# --- a business's own mail ---------------------------------------------------------------------
+#
+# The same account sends and receives for every business, and delivers its callbacks to one
+# destination per purpose. These are the events a *tenant's* email raises; the invitation events
+# above are a different destination with a different secret.
+
+# GildOps' own delivery vocabulary for the provider's own event names. `delivery_delayed` and the
+# engagement events change no status; they are history (`message_events`).
+_TENANT_EVENT_TYPES = {
+    "email.sent": "sent",
+    "email.delivered": "delivered",
+    "email.delivery_delayed": "delayed",
+    "email.bounced": "bounced",
+    "email.failed": "failed",
+    "email.complained": "complained",
+    "email.suppressed": "rejected",
+    "email.opened": "opened",
+    "email.clicked": "clicked",
+}
+
+
+def _address(raw: object) -> str | None:
+    """The bare address in `Name <a@b.c>` or `a@b.c`, lowercased; `None` when there is none."""
+    from email.utils import parseaddr
+
+    if not isinstance(raw, str):
+        return None
+    address = parseaddr(raw)[1].strip().lower()
+    return address if "@" in address else None
+
+
+def parse_tenant_event(body: dict) -> dict | None:
+    """A verified callback turned into plain data, or `None` for an event this platform does not
+    act on (a 200, never a refusal).
+
+    `{"kind": "delivery", "message_id", "type", "detail", "event_at"}` for something that happened to
+    a message GildOps sent, `{"kind": "received", ...}` for mail that arrived. A received event
+    carries metadata only: the body is fetched separately by the runtime that holds the credential.
+    """
+    if not isinstance(body, dict):
+        return None
+    event_type = str(body.get("type") or "")
+    data = body.get("data")
+    if not isinstance(data, dict):
+        return None
+
+    if event_type == "email.received":
+        email_id = data.get("email_id")
+        sender = _address(data.get("from"))
+        recipients = [
+            address
+            for raw in [*(data.get("to") or []), *(data.get("cc") or []), *(data.get("bcc") or []), *(data.get("received_for") or [])]
+            if (address := _address(raw))
+        ]
+        if not email_id or not sender or not recipients:
+            return None
+        return {
+            "kind": "received",
+            "email_id": str(email_id),
+            "from": sender,
+            "to": sorted(set(recipients)),
+            "subject": str(data.get("subject") or "")[:998],
+            "message_id": data.get("message_id"),
+            "event_at": _event_at(body),
+        }
+
+    kind = _TENANT_EVENT_TYPES.get(event_type)
+    if kind is None:
+        return None
+    message_id = data.get("email_id")
+    if not message_id:
+        return None
+    return {
+        "kind": "delivery",
+        "message_id": str(message_id),
+        "type": kind,
+        "detail": _detail(event_type, data),
+        "event_at": _event_at(body),
+    }

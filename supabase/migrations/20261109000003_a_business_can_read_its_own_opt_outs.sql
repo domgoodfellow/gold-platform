@@ -1,0 +1,13 @@
+-- A business could not send a text, because it could not read who had said STOP.
+--
+-- `messaging_opt_outs` (20261016000001) was created with a tenant-scoped select policy and a
+-- comment saying a business reads its own suppression state, but no `grant select` was ever issued
+-- to `authenticated`. A policy decides which rows a role may see *among the rows it may query at
+-- all*; with no table privilege the query itself is refused, so `sendMessage`'s suppression check
+-- (`isSuppressed`) failed with "permission denied" before any message was written. Nothing caught
+-- it because the send path needs a carrier credential and the suite exercised only the table's
+-- policies, never the call that reads it.
+--
+-- Select only. A signed-in role still holds no insert, update or delete on this table: a business
+-- cannot suppress or un-suppress a number by any path but the keyword webhook's own door.
+grant select on public.messaging_opt_outs to authenticated;

@@ -345,18 +345,24 @@ export const AREAS: readonly Area[] = [
   { segment: 'sales', label: 'CRM', group: 'workspaces', workspace: 'crm' },
   { segment: 'customers', label: 'Customers', group: 'workspaces', workspace: 'crm', phone: true },
   { segment: 'pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'crm', route: 'customers/pipeline', module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
-  // Communications. Home carries the same entitlement as Calls, the one channel implemented, so
-  // the workspace draws no row for a business without it. The specific Voice features Calls is —
-  // not the pipeline features that share the `reception` module key (D46's many-to-many seam, and
-  // the reason `featureKeys` exists rather than gating on `module` alone). Messages and Numbers
+  // Communications. Home is the workspace's own destination, so it is offered to anyone who can
+  // operate **any** of its channels — placing calls (`call.place`) or sending texts
+  // (`message.send`), two independent authorities — and entitled through either channel's
+  // Features. Calls requires calling alone and Messages requires messaging alone, so a person who
+  // only texts is never shown a calling surface, and the reverse. Numbers serve both channels and
+  // is offered to either. Not the pipeline features that share the `reception` module key (D46's
+  // many-to-many seam, and the reason `featureKeys` exists rather than gating on `module` alone). Messages and Numbers
   // are the domain-facing shells for SMS and the number inventory: each names the canonical
   // catalogue Features it is actually the surface for, so a deployment where those Features are
   // still `planned` in the catalogue (SMS today) shows the page and says so truthfully rather
   // than riding along on the `reception` module the way an unqualified module gate would.
-  { segment: 'comms', label: 'Communications', group: 'workspaces', workspace: 'communications', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
+  { segment: 'comms', label: 'Communications', group: 'workspaces', workspace: 'communications', module: 'reception', relevantCapabilities: ['call.place', 'message.send'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions', 'inbound_sms', 'outbound_sms', 'sending'] },
   { segment: 'calls', label: 'Calls', group: 'workspaces', workspace: 'communications', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
-  { segment: 'comms-messages', label: 'Text messages', group: 'workspaces', workspace: 'communications', route: 'comms/messages', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_sms', 'outbound_sms'] },
-  { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'communications', route: 'comms/numbers', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['number_inventory', 'caller_id'] },
+  // Inbox: one list of every asynchronous conversation, SMS and email together, and the one screen a conversation opens in. It replaced
+  // the separate Text messages and Email pages (their old addresses redirect here, filtered). Gated by the sending authority (`message.send`)
+  // and by either channel's Features: a business with only one of the two channels still has its Inbox.
+  { segment: 'comms-inbox', label: 'Inbox', group: 'workspaces', workspace: 'communications', route: 'comms/inbox', module: 'reception', relevantCapabilities: ['message.send'], featureKeys: ['inbound_sms', 'outbound_sms', 'sending'] },
+  { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'communications', route: 'comms/numbers', module: 'reception', relevantCapabilities: ['call.place', 'message.send'], featureKeys: ['number_inventory', 'caller_id'] },
   // Finance: what money is moving through this business, and what it is paying GildOps for —
   // kernel, like Sales and Field's own Home, so a member sees it regardless of role. Its only
   // page for now (D68's discipline against a row with nothing behind it); Billing, Usage or

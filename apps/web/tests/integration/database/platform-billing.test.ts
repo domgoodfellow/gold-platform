@@ -575,7 +575,8 @@ describe('multi-line checkout and negotiated prices', () => {
     });
     await assignPlan(org.organizationId, planId);
     // No standard price at all -- only a negotiated one for this organization.
-    await recordPlanAgreement(staff, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 42_000 });
+    // Effective a minute ago, not "now": the database's clock and this process's are not the same clock, and an agreement dated a few hundred milliseconds ahead of the database is not yet in force when the checkout reads it.
+    await recordPlanAgreement(staff, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 42_000, effectiveFrom: new Date(Date.now() - 60_000).toISOString() });
 
     const fetchSpy = mockStripeFetch({
       '/v1/products': { id: `prod_agreement_${randomUUID().slice(0, 8)}` },
