@@ -8751,6 +8751,7 @@ export type Database = {
           id: string
           name: string
           organization_id: string
+          schedulable: boolean
         }
         Insert: {
           booking_duration_minutes?: number | null
@@ -8761,6 +8762,7 @@ export type Database = {
           id?: string
           name: string
           organization_id: string
+          schedulable: boolean
         }
         Update: {
           booking_duration_minutes?: number | null
@@ -8771,6 +8773,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string
+          schedulable?: boolean
         }
         Relationships: [
           {
@@ -9510,7 +9513,11 @@ export type Database = {
         Returns: string
       }
       create_work_item_type: {
-        Args: { p_name: string; p_organization_id: string }
+        Args: {
+          p_name: string
+          p_organization_id: string
+          p_schedulable: boolean
+        }
         Returns: string
       }
       credit_balance: { Args: { p_organization_id: string }; Returns: number }
@@ -11019,6 +11026,10 @@ export type Database = {
           p_price_item_id: string
           p_status_id: string
         }
+        Returns: undefined
+      }
+      set_work_item_type_schedulable: {
+        Args: { p_id: string; p_schedulable: boolean }
         Returns: undefined
       }
       stage_import_rows: {

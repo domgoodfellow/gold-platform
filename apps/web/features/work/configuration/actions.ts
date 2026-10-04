@@ -16,6 +16,7 @@ import {
   createWorkItemType,
   renameWorkItemType,
   setTypeBookable,
+  setWorkItemTypeSchedulable,
 } from '@/lib/domain/work-items/types';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -67,9 +68,16 @@ export async function createTypeAction(
   await requireOrganization(organizationId);
 
   try {
+    // Anything but "yes" or "no" is refused rather than read as false: the form leaves neither
+    // selected, so a missing answer is a question not yet answered.
+    const answer = formData.get('schedulable');
+    if (answer !== 'yes' && answer !== 'no') {
+      return { error: 'Say whether this work is scheduled.' };
+    }
     await createWorkItemType(db, {
       organizationId,
       name: String(formData.get('name') ?? ''),
+      schedulable: answer === 'yes',
     });
   } catch (error) {
     if (error instanceof DomainError) {
@@ -129,6 +137,31 @@ export async function renameTypeAction(
   }
 
   revalidateWork(organizationId);
+  return { error: null };
+}
+
+export async function setTypeSchedulableAction(
+  _previous: WorkConfigActionState,
+  formData: FormData,
+): Promise<WorkConfigActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+
+  try {
+    await setWorkItemTypeSchedulable(db, {
+      id: String(formData.get('typeId') ?? ''),
+      // An unchecked checkbox submits nothing at all, which is the false this needs.
+      schedulable: formData.get('schedulable') === '1',
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  // Schedule, Resources, Locations and Field Home all follow this declaration, so a change
+  // reaches the whole organization layout and not only this screen.
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
   return { error: null };
 }
 

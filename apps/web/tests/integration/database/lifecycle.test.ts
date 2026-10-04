@@ -250,13 +250,14 @@ describe('the setup overview — areas, importance and progress', () => {
     // Billing is on by default and nothing is priced: a real gap, but the database does not block on it.
     expect(byKey.get('billing')).toMatchObject({ state: 'incomplete', importance: 'recommended' });
     // Kernel configuration is never required — a solo tenant with none of it is a valid business.
-    for (const key of ['work', 'resources', 'locations']) {
-      expect(byKey.get(key)).toMatchObject({ state: 'incomplete', importance: 'optional' });
-    }
+    expect(byKey.get('work')).toMatchObject({ state: 'incomplete', importance: 'optional' });
+    // Resources, hours and locations describe scheduled work, and this business has declared none,
+    // so setup does not ask for them — whatever it has or has not recorded.
+    for (const key of ['resources', 'hours', 'locations']) expect(byKey.has(key)).toBe(false);
     expect(overview.ready).toBe(0);
     expect(overview.total).toBe(overview.areas.length);
     expect(overview.recommendedOpen).toBe(1);
-    expect(overview.optionalOpen).toBe(3);
+    expect(overview.optionalOpen).toBe(1);
     // Each area points at the surface that owns it, not at a copy of it.
     expect(byKey.get('work')?.area.href).toBe(`/organizations/${organizationId}/work/configuration`);
     expect(byKey.get('billing')?.area.href).toBe(`/organizations/${organizationId}/settings/pricing`);
@@ -265,7 +266,7 @@ describe('the setup overview — areas, importance and progress', () => {
   it('counts an area as ready the moment its real fact is true, and orders required gaps first', async () => {
     const { db, organizationId } = await freshOrganization();
 
-    await createWorkItemType(db, { organizationId, name: 'Repair' });
+    await createWorkItemType(db, { schedulable: true, organizationId, name: 'Repair' });
     await setModuleEnabled(db, { organizationId, key: 'booking', enabled: true });
 
     const overview = await computeSetupOverview(db, { organizationId });

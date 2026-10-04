@@ -156,6 +156,14 @@ export function ProposalReview({
           onChange={(event) => set('typeName', event.target.value)}
           size="small"
         />
+        <label className="mt-2 flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={shape.schedulable}
+            onChange={(event) => set('schedulable', event.target.checked)}
+          />
+          This work is scheduled — it happens at a time and appears in Schedule
+        </label>
       </Section>
 
       <Section title="How a job moves">

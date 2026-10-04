@@ -75,7 +75,7 @@ async function newTenant(label: string): Promise<Tenant> {
   });
 
   const orgId = organizationId as string;
-  const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId: orgId, name: 'Callout' });
 
   const status = (name: string) =>
     createWorkItemStatus(db, { organizationId: orgId, typeId, name });
@@ -239,7 +239,7 @@ describe('work item transitions', () => {
     // Not a tenancy question: both statuses are Bob's, so RLS is satisfied and every
     // composite reference carrying only organization_id would pass. The third column is what
     // refuses it.
-    const otherType = await createWorkItemType(bob.db, {
+    const otherType = await createWorkItemType(bob.db, { schedulable: true,
       organizationId: bob.organizationId,
       name: 'Installation',
     });

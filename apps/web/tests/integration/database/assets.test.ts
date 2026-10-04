@@ -79,7 +79,7 @@ async function newTenant(label: string): Promise<Tenant> {
   });
 
   // A status belongs to a type, so the type comes first.
-  const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Service' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId: orgId, name: 'Service' });
 
   return {
     db,

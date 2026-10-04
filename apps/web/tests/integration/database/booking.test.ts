@@ -97,7 +97,7 @@ async function newBusiness(label: string, opts: { publish: boolean }): Promise<B
   });
 
   const orgId = organizationId as string;
-  const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Tyre change' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId: orgId, name: 'Tyre change' });
   const statusId = await createWorkItemStatus(db, {
     organizationId: orgId,
     typeId,
@@ -250,7 +250,7 @@ describe('booking, by somebody who is a member of nothing', () => {
   it('cannot see a type the business has not published', async () => {
     // A second type exists and has no booking status, so it is not published. There is no
     // `bookable` flag to forget to set — the absence of a status is what unpublished means.
-    await createWorkItemType(pneu.db, { organizationId: pneu.organizationId, name: 'Internal' });
+    await createWorkItemType(pneu.db, { schedulable: true, organizationId: pneu.organizationId, name: 'Internal' });
 
     const db = await visitor(pneu.organizationId);
     const types = await listBookableTypes(db, { organizationId: pneu.organizationId });

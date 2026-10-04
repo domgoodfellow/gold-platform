@@ -84,7 +84,7 @@ async function newTenant(label: string, currency = 'CAD'): Promise<Tenant> {
   });
 
   const organization = organizationId as string;
-  const typeId = await createWorkItemType(db, { organizationId: organization, name: 'Job' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId: organization, name: 'Job' });
   const statusId = await createWorkItemStatus(db, {
     organizationId: organization,
     typeId,

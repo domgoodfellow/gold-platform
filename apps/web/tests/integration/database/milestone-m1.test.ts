@@ -187,7 +187,7 @@ async function buildTenant(label: string): Promise<Tenant> {
     custom: { [SHARED.fieldKey]: `VAT-${label}` },
   });
 
-  const typeId = await createWorkItemType(founder.db, {
+  const typeId = await createWorkItemType(founder.db, { schedulable: true,
     organizationId,
     name: SHARED.typeName,
   });

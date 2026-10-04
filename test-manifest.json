@@ -906,6 +906,13 @@
         "navigation"
       ]
     },
+    "apps/web/tests/architecture/static/schedulable-work-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "scheduling",
+        "navigation"
+      ]
+    },
     "apps/web/tests/architecture/static/service-access-boundary.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -1011,6 +1018,14 @@
       "concerns": [
         "ui",
         "accessibility"
+      ]
+    },
+    "apps/web/tests/component/work-type-scheduling-forms.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "work",
+        "scheduling"
       ]
     },
     "apps/web/tests/component/required-records-table.test.tsx": {
@@ -1134,6 +1149,13 @@
     "apps/web/tests/integration/database/availability.test.ts": {
       "category": "database-integration",
       "concerns": [
+        "scheduling"
+      ]
+    },
+    "apps/web/tests/integration/database/booking-availability-agreement.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "booking",
         "scheduling"
       ]
     },
@@ -1868,6 +1890,14 @@
     "apps/web/tests/integration/database/work-item-transitions.test.ts": {
       "category": "database-integration",
       "concerns": [
+        "work"
+      ]
+    },
+    "apps/web/tests/integration/database/work-type-scheduling.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling",
+        "booking",
         "work"
       ]
     },

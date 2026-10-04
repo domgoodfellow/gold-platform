@@ -19,6 +19,7 @@ import {
   EditStatusForm,
   PublishTypeForm,
   RenameTypeForm,
+  SchedulingTypeForm,
   TypeChecklistItemRow,
 } from './work-config-forms';
 
@@ -107,6 +108,7 @@ export function WorkConfiguration({
                   <Item key={type.id} variant="outline" size="sm">
                     <ItemContent>
                       <ItemTitle>{type.name}</ItemTitle>
+                      <p className="text-sm text-muted">{type.schedulable ? 'Scheduled' : 'Not scheduled'}</p>
                     </ItemContent>
                   </Item>
                 ))}
@@ -130,6 +132,21 @@ export function WorkConfiguration({
             </FieldSet>
           ) : null}
 
+          {selectedType ? (
+            <FieldSet>
+              <FieldLegend variant="label">Scheduling for {selectedType.name}</FieldLegend>
+              <SchedulingTypeForm
+                organizationId={organizationId}
+                typeId={selectedType.id}
+                typeName={selectedType.name}
+                schedulable={selectedType.schedulable}
+                published={booking !== null}
+                disabled={!mayConfigure}
+              />
+              {!mayConfigure ? <Hint>Your role, {role}, cannot change whether work is scheduled.</Hint> : null}
+            </FieldSet>
+          ) : null}
+
           {selectedType && bookingEnabled ? (
             <FieldSet>
               <FieldLegend variant="label">Publish {selectedType.name} to the public booking page</FieldLegend>
@@ -140,6 +157,7 @@ export function WorkConfiguration({
                 statuses={statuses}
                 prices={prices}
                 booking={booking}
+                schedulable={selectedType.schedulable}
                 disabled={!mayConfigure}
               />
               {!mayConfigure ? <Hint>Your role, {role}, cannot change what this business publishes.</Hint> : null}

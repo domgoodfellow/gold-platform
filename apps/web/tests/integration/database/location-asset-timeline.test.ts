@@ -69,7 +69,7 @@ async function newTenant(label: string): Promise<Tenant> {
 
   const orgId = organizationId as string;
   const customerId = await createCustomer(db, { organizationId: orgId, name: `${label} Customer` });
-  const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Service' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId: orgId, name: 'Service' });
   const statusId = await createWorkItemStatus(db, { organizationId: orgId, typeId, name: 'Open' });
 
   return { db, organizationId: orgId, customerId, typeId, statusId };

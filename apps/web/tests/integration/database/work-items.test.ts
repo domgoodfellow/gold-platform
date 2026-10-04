@@ -79,7 +79,7 @@ async function newTenant(label: string, statusName: string): Promise<Tenant> {
 
   // A status belongs to a type, so the type comes first. Both tenants call theirs the same
   // thing for the same reason the statuses differ: the collision is the point.
-  const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId: orgId, name: 'Callout' });
 
   return {
     db,

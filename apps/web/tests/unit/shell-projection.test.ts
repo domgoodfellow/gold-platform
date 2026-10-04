@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AREAS } from '@/lib/navigation';
+import { AREAS, configTarget, configTargetOffered } from '@/lib/navigation';
 import {
   ADMINISTRATION_SECTIONS,
   SHELL_SECTION_ORDER,
@@ -463,5 +463,44 @@ describe('the permission gradient: operating work, then business administration,
   it('a workspace with one reachable area is a plain row; with several, an expandable one — never a dropdown of one Home', () => {
     const rows = personas[1].sections.find((section) => section.key === 'workspaces')!.items;
     for (const row of rows) expect(row.children === undefined || row.children.length >= 1).toBe(true);
+  });
+});
+
+describe('Field follows the business’s declared shape of work', () => {
+  const field = (schedulableWork: boolean | undefined, modules = EVERYTHING_MODULES, features = everyFeature()) =>
+    projectShell({
+      organizationId: ORG,
+      enabledModules: new Set(modules),
+      featureAvailability: features,
+      capabilities: new Set<Capability>(['field.manage']),
+      platform: null,
+      schedulableWork,
+    })
+      .flatMap((section) => section.items)
+      .find((item) => item.key === 'workspace-field')!;
+
+  it('a business with scheduled work gets Schedule, Resources and Locations beside Work', () => {
+    expect(field(true).children?.map((page) => page.key)).toEqual(['work', 'schedule', 'resources', 'locations', 'assets']);
+  });
+
+  it('a business with none keeps Work, and Assets by its own entitlement, and loses the three that need a schedule', () => {
+    expect(field(false).children?.map((page) => page.key)).toEqual(['work', 'assets']);
+    // Assets follows its module and nothing else: without it the workspace is Home and Work.
+    expect(field(false, ['billing'], new Set(['price_book'])).children?.map((page) => page.key)).toEqual(['work']);
+    // Field Home is never withheld.
+    expect(field(false).href).toBe(`/organizations/${ORG}/field`);
+  });
+
+  it('an unasked question hides nothing, so a caller that does not know the shape keeps every page', () => {
+    expect(field(undefined).children?.map((page) => page.key)).toEqual(['work', 'schedule', 'resources', 'locations', 'assets']);
+  });
+
+  it('Schedule configuration follows Schedule — configuring a page the business does not have is not offered', () => {
+    const gate = { enabledModules: new Set(EVERYTHING_MODULES), featureAvailability: everyFeature(), capabilities: new Set<Capability>(['field.manage']) };
+    const target = configTarget('schedule-configuration');
+    expect(configTargetOffered(target, { ...gate, schedulableWork: true })).toBe(true);
+    expect(configTargetOffered(target, { ...gate, schedulableWork: false })).toBe(false);
+    // Work configuration is where the declaration lives, so it is always offered.
+    expect(configTargetOffered(configTarget('work-configuration'), { ...gate, schedulableWork: false })).toBe(true);
   });
 });

@@ -89,7 +89,7 @@ async function newBusiness(label: string): Promise<Business> {
   });
 
   const organization = organizationId as string;
-  const typeId = await createWorkItemType(db, { organizationId: organization, name: 'Job' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId: organization, name: 'Job' });
   const statusId = await createWorkItemStatus(db, {
     organizationId: organization,
     typeId,
@@ -586,7 +586,7 @@ describe('what a switched-on module still needs', () => {
       'No kind of work is published to this page yet. Publish one on the Work screen, under the kind of work you want to take bookings for.',
     );
 
-    const typeId = await createWorkItemType(bare.db, {
+    const typeId = await createWorkItemType(bare.db, { schedulable: true,
       organizationId: bare.organizationId,
       name: 'Fitting',
     });
@@ -647,6 +647,7 @@ describe('the modules a configuration asks for', () => {
    */
   const minimal = (modules: string[]): BusinessShape => ({
     typeName: `Job ${randomUUID().slice(0, 6)}`,
+    schedulable: true,
     statuses: ['Open', 'Done'],
     transitions: [[0, 1]],
     fields: {},

@@ -131,7 +131,7 @@ async function newBusiness(label: string): Promise<Business> {
 
   await setModuleEnabled(db, { organizationId, key: 'automations', enabled: true });
 
-  const typeId = await createWorkItemType(db, { organizationId, name: 'Callout' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId, name: 'Callout' });
   const requestedId = await createWorkItemStatus(db, {
     organizationId,
     typeId,

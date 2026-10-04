@@ -44,7 +44,7 @@ async function newBusiness(label: string): Promise<Business> {
   expect((await db.auth.signInWithPassword({ email, password })).error).toBeNull();
   const organizationId = await foundBusiness({ ownerEmail: email, name: `${label} ${randomUUID().slice(0, 6)}`, currency: 'EUR' });
 
-  const typeId = await createWorkItemType(db, { organizationId, name: 'Job' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId, name: 'Job' });
   const statusId = await createWorkItemStatus(db, { organizationId, typeId, name: 'Booked' });
   const resourceId = await createResource(db, { organizationId, name: `Van ${label}` });
 

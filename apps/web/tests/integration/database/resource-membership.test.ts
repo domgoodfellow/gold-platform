@@ -306,7 +306,7 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
   it('10. existing Work Items against a Resource remain intact when its link changes', async () => {
     const crewVanId = await createResource(owner.db, { organizationId, name: 'Crew Van' });
 
-    const typeId = await createWorkItemType(owner.db, { organizationId, name: 'Callout' });
+    const typeId = await createWorkItemType(owner.db, { schedulable: true, organizationId, name: 'Callout' });
     const statusId = await createWorkItemStatus(owner.db, { organizationId, typeId, name: 'Open' });
     const workItemId = await createWorkItem(owner.db, {
       organizationId,

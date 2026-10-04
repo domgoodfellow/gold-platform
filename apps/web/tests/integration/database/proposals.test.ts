@@ -47,6 +47,7 @@ let bob: Tenant;
 /** A shape with nothing in it. Enough to be a row; the policy tests never read what it says. */
 const EMPTY_SHAPE = {
   typeName: 'Job',
+  schedulable: true,
   statuses: [],
   transitions: [],
   fields: {},
@@ -64,6 +65,7 @@ const EMPTY_SHAPE = {
  */
 const WORKSHOP_SHAPE: BusinessShape = {
   typeName: 'Repair',
+  schedulable: true,
   statuses: ['Booked in', 'On the bench', 'Ready'],
   transitions: [
     [0, 1],

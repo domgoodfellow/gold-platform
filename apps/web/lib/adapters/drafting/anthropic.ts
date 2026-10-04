@@ -99,6 +99,7 @@ function responseSchema(): Record<string, unknown> {
         additionalProperties: false,
         required: [
           'typeName',
+          'schedulable',
           'statuses',
           'transitions',
           'fields',
@@ -113,6 +114,11 @@ function responseSchema(): Record<string, unknown> {
             type: 'string',
             description:
               "What this business calls the work it does, in its own words -- 'Repair', 'Consultation', 'Hire'. Never a platform word like 'job' or 'ticket' unless the business used it.",
+          },
+          schedulable: {
+            type: 'boolean',
+            description:
+              'True when this work happens at a time the business plans (visits, appointments, installations); false when it has no set time (an enquiry, a sales opportunity). Ask if the description does not say.',
           },
           statuses: {
             type: 'array',
@@ -264,7 +270,7 @@ function responseSchema(): Record<string, unknown> {
             field: {
               type: 'string',
               description:
-                'Which part of the shape the question concerns: typeName, statuses, transitions, fields, prices, hours, roles, automations, modules, voice or brand.',
+                'Which part of the shape the question concerns: typeName, schedulable, statuses, transitions, fields, prices, hours, roles, automations, modules, voice or brand.',
             },
             question: {
               type: 'string',
@@ -370,7 +376,7 @@ function narrow(value: unknown): DraftedConfiguration | null {
   const shape = rawShape as Record<string, unknown>;
 
   const statuses = strings(shape.statuses);
-  if (typeof shape.typeName !== 'string' || statuses === null) return null;
+  if (typeof shape.typeName !== 'string' || typeof shape.schedulable !== 'boolean' || statuses === null) return null;
 
   if (!Array.isArray(shape.transitions) || !Array.isArray(shape.prices)) return null;
   if (!Array.isArray(shape.hours) || !Array.isArray(shape.roles)) return null;

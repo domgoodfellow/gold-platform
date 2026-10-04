@@ -119,7 +119,7 @@ async function newTenant(label: string): Promise<Tenant> {
     currency: 'PHP',
   });
 
-  const typeId = await createWorkItemType(db, { organizationId, name: 'Job' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId, name: 'Job' });
   const statusId = await createWorkItemStatus(db, {
     organizationId,
     typeId,

@@ -80,11 +80,11 @@ describe('work item types', () => {
   it('lets two tenants define the same type (I2)', async () => {
     // If work_item_types_org_name_unique had lost its leading organization_id, the second of
     // these would fail — and no two businesses could ever both do installations.
-    const mine = await createWorkItemType(alice.db, {
+    const mine = await createWorkItemType(alice.db, { schedulable: true,
       organizationId: alice.organizationId,
       name: 'Installation',
     });
-    const theirs = await createWorkItemType(bob.db, {
+    const theirs = await createWorkItemType(bob.db, { schedulable: true,
       organizationId: bob.organizationId,
       name: 'Installation',
     });
@@ -94,7 +94,7 @@ describe('work item types', () => {
 
   it('refuses two types with the same name in one tenant', async () => {
     await expect(
-      createWorkItemType(alice.db, {
+      createWorkItemType(alice.db, { schedulable: true,
         organizationId: alice.organizationId,
         name: 'installation',
       }),
@@ -105,7 +105,7 @@ describe('work item types', () => {
     const [installation] = await listWorkItemTypes(alice.db, {
       organizationId: alice.organizationId,
     });
-    const repair = await createWorkItemType(alice.db, {
+    const repair = await createWorkItemType(alice.db, { schedulable: true,
       organizationId: alice.organizationId,
       name: 'Repair',
     });
@@ -247,7 +247,7 @@ describe('work item types', () => {
     await assignRole(bob.db, { membershipId: membership!.id, roleId: limited });
 
     await expect(
-      createWorkItemType(bob.db, {
+      createWorkItemType(bob.db, { schedulable: true,
         organizationId: bob.organizationId,
         name: 'Should not exist',
       }),

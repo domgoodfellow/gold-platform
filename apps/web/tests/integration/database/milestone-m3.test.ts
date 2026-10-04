@@ -115,6 +115,7 @@ const HIRE: Evidence = {
   },
   shape: {
     typeName: 'Hire',
+    schedulable: true,
     statuses: ['Reserved', 'Out', 'Returned', 'Inspected'],
     transitions: [
       [0, 1],
@@ -170,6 +171,7 @@ const CLINIC: Evidence = {
   },
   shape: {
     typeName: 'Consultation',
+    schedulable: true,
     statuses: ['Booked', 'Seen', 'Billed'],
     transitions: [
       [0, 1],

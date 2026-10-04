@@ -37,7 +37,8 @@ export type HomeData = {
     /** Null when the list was truncated, because a count taken from a partial list is a wrong count. */
     waiting: WorkItem[] | null;
   };
-  schedule: { committed: Commitment[]; byId: Map<string, WorkItem> };
+  /** Null when no kind of work is declared scheduled — there is no Schedule to summarise, which is different from an empty one. */
+  schedule: { committed: Commitment[]; byId: Map<string, WorkItem> } | null;
   communications: { today: number; unwritten: number } | null;
   automation: { failedRuns: AutomationRun[]; failedMessages: MessageDelivery[] } | null;
   /** This month's invoiced and incurred, per currency — the reporting aggregate's own totals. Null when reporting is not available to this reader. */
@@ -79,13 +80,15 @@ export function HomeDashboard({ data, readiness }: { data: HomeData; readiness?:
   const operationalEmpty =
     data.customers.total === 0 &&
     data.work.total === 0 &&
-    data.schedule.committed.length === 0;
+    (data.schedule?.committed.length ?? 0) === 0;
 
   const kpis: Kpi[] = [];
   if (!operationalEmpty) {
     kpis.push({ key: 'customers', label: areaLabel('customers'), value: data.customers.total, href: href('customers') });
     kpis.push({ key: 'work', label: areaLabel('work'), value: data.work.total, note: 'jobs recorded', href: href('work') });
-    kpis.push({ key: 'schedule', label: 'Scheduled today', value: data.schedule.committed.length, href: href('schedule') });
+    if (data.schedule) {
+      kpis.push({ key: 'schedule', label: 'Scheduled today', value: data.schedule.committed.length, href: href('schedule') });
+    }
   }
   if (data.communications && (data.communications.today > 0 || !operationalEmpty)) {
     kpis.push({
@@ -114,6 +117,7 @@ export function HomeDashboard({ data, readiness }: { data: HomeData; readiness?:
   }
 
   const waiting = data.work.waiting ?? [];
+  const schedule = data.schedule;
   const attention = [
     ...(data.automation?.failedRuns ?? []).map((run) => ({ key: `run-${run.id}`, title: run.ruleName, detail: run.detail })),
     ...(data.automation?.failedMessages ?? []).map((message) => ({ key: `message-${message.id}`, title: `${message.channel} to ${message.recipient}`, detail: message.detail })),
@@ -135,13 +139,14 @@ export function HomeDashboard({ data, readiness }: { data: HomeData; readiness?:
           ) : null}
 
           <div className="grid gap-4 lg:grid-cols-3">
+            {schedule ? (
             <Panel title="Scheduled today" href={href('schedule')} hrefLabel="Open schedule" className="lg:col-span-2">
-              {data.schedule.committed.length === 0 ? (
+              {schedule.committed.length === 0 ? (
                 <EmptyState weight="subtle">Nothing is scheduled today.</EmptyState>
               ) : (
                 <DividedList className="text-sm">
-                  {data.schedule.committed.slice(0, PREVIEW).map((row) => {
-                    const item = data.schedule.byId.get(row.workItemId);
+                  {schedule.committed.slice(0, PREVIEW).map((row) => {
+                    const item = schedule.byId.get(row.workItemId);
                     return (
                       <li key={row.workItemId} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2">
                         <span className="w-28 shrink-0 tabular-nums text-muted">{formatWindow(row.window, timezone)}</span>
@@ -154,8 +159,9 @@ export function HomeDashboard({ data, readiness }: { data: HomeData; readiness?:
                 </DividedList>
               )}
             </Panel>
+            ) : null}
 
-            <Panel title="Needs attention" href={waiting.length > 0 ? href('work') : undefined} hrefLabel="Open work">
+            <Panel title="Needs attention" href={waiting.length > 0 ? href('work') : undefined} hrefLabel="Open work" className={data.schedule ? undefined : 'lg:col-span-3'}>
               {waiting.length === 0 && attention.length === 0 ? (
                 <EmptyState weight="subtle">Nothing needs attention.</EmptyState>
               ) : (

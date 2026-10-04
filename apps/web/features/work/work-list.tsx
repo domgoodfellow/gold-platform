@@ -169,7 +169,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
                                     : []
                                 }
                               />
-                              {maySchedule ? (
+                              {maySchedule && item.type.schedulable ? (
                                 <Disclosure
                                   summary={item.window ? 'Reschedule' : 'Schedule'}
                                   className="border-0"

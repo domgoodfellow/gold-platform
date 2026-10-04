@@ -99,7 +99,7 @@ async function newTenant(label: string): Promise<Tenant> {
   });
 
   const orgId = organizationId as string;
-  const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId: orgId, name: 'Callout' });
   const bookedId = await createWorkItemStatus(db, {
     organizationId: orgId,
     typeId,
@@ -228,7 +228,7 @@ describe('correcting a job, and cancelling one', () => {
     // `type_id` is outside the column grant entirely. Changing it would strand the status
     // the job sits in, and I20's three-column reference is what would refuse it — better to
     // have no path at all than one that fails halfway with a foreign key error.
-    const otherType = await createWorkItemType(acme.db, {
+    const otherType = await createWorkItemType(acme.db, { schedulable: true,
       organizationId: acme.organizationId,
       name: 'Installation',
     });

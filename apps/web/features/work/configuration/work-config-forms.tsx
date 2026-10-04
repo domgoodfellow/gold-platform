@@ -16,6 +16,7 @@ import {
   removeTypeChecklistItemAction,
   renameTypeAction,
   setTypeBookableAction,
+  setTypeSchedulableAction,
   updateStatusAction,
   type WorkConfigActionState,
 } from './actions';
@@ -60,23 +61,96 @@ export function CreateTypeForm({ organizationId }: { organizationId: string }) {
   const [state, formAction, pending] = useActionState(createTypeAction, INITIAL);
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-2">
+    <form action={formAction} className="mt-4 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <TextInput
-          name="name"
-          type="text"
-          required
-          maxLength={64}
-          placeholder="Type name, e.g. Installation"
-          aria-label="Type name"
-          className="flex-1"
+      <TextInput
+        name="name"
+        type="text"
+        required
+        maxLength={64}
+        placeholder="Type name, e.g. Installation"
+        aria-label="Type name"
+        className="w-full"
+      />
+
+      {/* Neither answer is preselected: whether a business schedules this work is its to say, and a
+          default would be the platform answering for it. */}
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium">Scheduling</legend>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="radio" name="schedulable" value="yes" required className="mt-1" />
+          <span>
+            Scheduled
+            <span className="block text-muted">This work happens at a time and can appear in Schedule.</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="radio" name="schedulable" value="no" required className="mt-1" />
+          <span>
+            Not scheduled
+            <span className="block text-muted">This work has no set time, like a sales opportunity.</span>
+          </span>
+        </label>
+      </fieldset>
+
+      <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
+        {pending ? 'Adding…' : 'Add type'}
+      </Button>
+
+      <ErrorText role="alert">{state.error}</ErrorText>
+    </form>
+  );
+}
+
+/**
+ * Whether this kind of work is scheduled. Lives with the rest of what a type *is* — Schedule
+ * configuration owns how scheduling operates, never whether this work does it.
+ */
+export function SchedulingTypeForm({
+  organizationId,
+  typeId,
+  typeName,
+  schedulable,
+  published,
+  disabled,
+}: {
+  organizationId: string;
+  typeId: string;
+  typeName: string;
+  schedulable: boolean;
+  /** Whether the type is on the public booking page, which needs it to stay scheduled. */
+  published: boolean;
+  disabled: boolean;
+}) {
+  const [state, formAction, pending] = useActionState(setTypeSchedulableAction, INITIAL);
+
+  return (
+    <form action={formAction} className="mt-4 flex flex-col gap-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="typeId" value={typeId} />
+
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="schedulable"
+          value="1"
+          defaultChecked={schedulable}
+          disabled={disabled}
+          aria-label={`${typeName} is scheduled`}
+          className="mt-1"
         />
-        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
-          {pending ? 'Adding…' : 'Add type'}
-        </Button>
-      </div>
+        <span>
+          This work is scheduled
+          <span className="block text-muted">
+            {typeName} happens at a time and can appear in Schedule.
+            {published ? ' It is on the public booking page, which needs it to stay scheduled.' : ''}
+          </span>
+        </span>
+      </label>
+      <Button type="submit" disabled={pending || disabled} tone="secondary" className="w-fit">
+        {pending ? 'Saving…' : 'Save'}
+      </Button>
 
       <ErrorText role="alert">{state.error}</ErrorText>
     </form>
@@ -331,17 +405,27 @@ export function PublishTypeForm({
   statuses,
   prices,
   booking,
+  schedulable,
   disabled,
 }: {
   organizationId: string;
   typeId: string;
   typeName: string;
+  schedulable: boolean;
   statuses: WorkItemStatus[];
   prices: PriceBookItem[];
   booking: TypeBooking | null;
   disabled: boolean;
 }) {
   const [state, formAction, pending] = useActionState(setTypeBookableAction, INITIAL);
+
+  if (!schedulable) {
+    return (
+      <Hint className="mt-4">
+        {typeName} is not scheduled, so it cannot be booked. Turn scheduling on for it above first.
+      </Hint>
+    );
+  }
 
   if (statuses.length === 0) {
     return (

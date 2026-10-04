@@ -5,6 +5,18 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A kind of work says whether it is scheduled
+
+Each kind of work now says whether it happens at a time. Creating one asks, and nothing is chosen for
+you; it can be changed later on Work configuration, next to the kind's name. Every kind that existed
+stays scheduled, so nothing changes for a business already using Schedule. Work that is not scheduled —
+a sales opportunity, say — can no longer be given a time, and a kind cannot be switched off while
+scheduled work of that kind is still in the diary: the screen says to unschedule it first. A kind can
+only be offered for online booking if it is scheduled. A business with no scheduled work no longer sees
+Schedule, Resources or Locations in the sidebar, on Field or on Home, is not asked in setup for people,
+opening hours or locations, and finds an explanation if it opens the Schedule address. Drafted setups
+now state whether the work is scheduled, and an old draft that does not is asked to.
+
 ### One Inbox for every conversation
 
 Communications has one Inbox. Texts and email appear in a single list, newest activity first, with

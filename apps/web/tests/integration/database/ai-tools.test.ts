@@ -122,7 +122,7 @@ async function newBusiness(label: string): Promise<Business> {
 
   // Each business's own words, and they share none. What the tool reports back is the tenant's
   // status name rather than a platform one, which is the same claim M3 makes about configuring.
-  const typeId = await createWorkItemType(db, {
+  const typeId = await createWorkItemType(db, { schedulable: true,
     organizationId,
     name: label === 'tool-yard' ? 'Verhuur' : 'Shinsatsu',
   });

@@ -66,6 +66,11 @@ export type ShapeAutomation = {
 export type BusinessShape = {
   /** What this business calls the work it does. */
   typeName: string;
+  /**
+   * Whether that work happens at a time and belongs in Schedule. Stated, never derived from the
+   * hours or the name: a shape written before this existed is refused rather than answered for.
+   */
+  schedulable: boolean;
   /** Its lifecycle, in its own words and its own length. */
   statuses: string[];
   /** Which moves are legal, as index pairs — an empty list means this business hasn't said how its work moves, and a type with none is frozen rather than unconstrained (I13). */
@@ -176,6 +181,22 @@ function validateModules(shape: BusinessShape): void {
   }
 }
 
+/** Whether the work is scheduled is the business's to say; opening hours describe Schedule, so they need work that uses it. */
+function validateScheduling(shape: BusinessShape): void {
+  if (typeof shape.schedulable !== 'boolean') {
+    throw new DomainError(
+      'This setup does not say whether the work is scheduled.',
+      'configuration.schedulable_missing',
+    );
+  }
+  if (!shape.schedulable && shape.hours.length > 0) {
+    throw new DomainError(
+      'Opening hours belong to work that is scheduled, and this setup says its work is not.',
+      'configuration.hours_without_schedule',
+    );
+  }
+}
+
 /**
  * Configure a business that already exists — it no longer creates one, since `createRole` and
  * everything after it run against policies keyed to `app.current_tenant_ids()`, and platform
@@ -191,6 +212,7 @@ export async function configureBusiness(
 ): Promise<ConfiguredBusiness> {
   validateTransitions(shape);
   validateModules(shape);
+  validateScheduling(shape);
 
   const roleIds: string[] = [];
   for (const role of shape.roles) {
@@ -203,7 +225,11 @@ export async function configureBusiness(
     );
   }
 
-  const typeId = await createWorkItemType(db, { organizationId, name: shape.typeName });
+  const typeId = await createWorkItemType(db, {
+    organizationId,
+    name: shape.typeName,
+    schedulable: shape.schedulable,
+  });
 
   const statusIds: string[] = [];
   for (const [position, name] of shape.statuses.entries()) {

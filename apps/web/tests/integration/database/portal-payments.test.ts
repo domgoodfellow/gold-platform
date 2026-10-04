@@ -84,7 +84,7 @@ async function newBusiness(label: string, options: { cardPayments: boolean }): P
   });
   const orgId = organizationId as string;
 
-  const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId: orgId, name: 'Callout' });
   const statusId = await createWorkItemStatus(db, { organizationId: orgId, typeId, name: 'Open' });
   const priceItemId = await createPriceBookItem(db, {
     organizationId: orgId,
@@ -285,7 +285,7 @@ describe('a customer pays their own invoice', () => {
         unit: 'visit',
         unitAmountMinor: 3_000,
       });
-      const typeId = await createWorkItemType(shop.db, { organizationId: shop.organizationId, name: 'Settled type' });
+      const typeId = await createWorkItemType(shop.db, { schedulable: true, organizationId: shop.organizationId, name: 'Settled type' });
       const statusId = await createWorkItemStatus(shop.db, { organizationId: shop.organizationId, typeId, name: 'Open settled' });
       const id = await createWorkItem(shop.db, {
         organizationId: shop.organizationId,

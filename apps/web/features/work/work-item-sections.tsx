@@ -148,7 +148,7 @@ export function WorkOperationalActions({
           No stage moves are available from {workItem.status.label}.
         </Hint>
       ) : null}
-      {maySchedule ? (
+      {maySchedule && workItem.type.schedulable ? (
         <Disclosure
           summary={workItem.window ? 'Change schedule' : 'Schedule this work'}
           className="mt-3 max-w-2xl"

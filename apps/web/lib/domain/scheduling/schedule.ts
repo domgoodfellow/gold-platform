@@ -72,6 +72,13 @@ export async function scheduleWorkItem(
         'scheduling.window_backwards',
       );
     }
+    // `app.check_work_item_type_is_schedulable`: the type was declared as work that does not use the schedule.
+    if (error.code === 'GD005') {
+      throw new DomainError(
+        'This kind of work does not use the schedule.',
+        'scheduling.type_not_schedulable',
+      );
+    }
     // The composite reference refusing a resource that is not in this tenant.
     if (error.code === '23503') {
       throw new DomainError('No such resource here.', 'scheduling.resource_not_found');

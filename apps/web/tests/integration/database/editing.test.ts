@@ -92,7 +92,7 @@ async function newTenant(label: string): Promise<Tenant> {
   });
 
   const orgId = organizationId as string;
-  const typeId = await createWorkItemType(db, { organizationId: orgId, name: 'Callout' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId: orgId, name: 'Callout' });
   const statusId = await createWorkItemStatus(db, {
     organizationId: orgId,
     typeId,
@@ -213,7 +213,7 @@ describe('editing configuration that shipped write-once', () => {
   it('cannot move a status to another type, even directly', async () => {
     // Not offered, and not possible: `type_id` is outside the column grant, so there is no
     // path that fails halfway through with a foreign key error nobody can read.
-    const otherType = await createWorkItemType(alice.db, {
+    const otherType = await createWorkItemType(alice.db, { schedulable: true,
       organizationId: alice.organizationId,
       name: 'Installation',
     });

@@ -115,6 +115,7 @@ describe('M5 — the platform side', () => {
     // reaching into a business that exists (I21).
     await configureBusiness(founderDb, yardId, {
       typeName: 'Hire',
+      schedulable: true,
       statuses: ['Reserved', 'Out', 'Returned'],
       transitions: [
         [0, 1],

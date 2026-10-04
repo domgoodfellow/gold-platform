@@ -101,6 +101,7 @@ const GRACHTWERK: DemoBusiness = {
     // (D37). Different lengths from the clinic's, so the two sidebars differ.
     modules: ['billing', 'assets', 'reporting'],
     typeName: 'Verhuring', // a hire
+    schedulable: true,
     statuses: [
       'Aangevraagd', // requested
       'Ingepland', // scheduled
@@ -326,6 +327,7 @@ const KOISHIKAWA: DemoBusiness = {
   shape: {
     modules: ['billing', 'reporting'],
     typeName: '診察', // a consultation
+    schedulable: true,
     statuses: [
       '受付', // received
       '予約済', // booked

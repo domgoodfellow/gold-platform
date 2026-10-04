@@ -64,10 +64,10 @@ describe('a capability-limited member gains no configuration authority through t
     // write underneath it is still `field.manage`, checked by the same RLS as before this
     // slice touched a single line of navigation.
     await expect(
-      createWorkItemType(limited, { organizationId, name: 'Should not exist' }),
+      createWorkItemType(limited, { schedulable: true, organizationId, name: 'Should not exist' }),
     ).rejects.toMatchObject({ code: expect.stringContaining('forbidden') });
 
-    const type = await createWorkItemType(owner, { organizationId, name: 'Installation' });
+    const type = await createWorkItemType(owner, { schedulable: true, organizationId, name: 'Installation' });
     await expect(
       createWorkItemStatus(limited, { organizationId, typeId: type, name: 'Should not exist' }),
     ).rejects.toMatchObject({ code: expect.stringContaining('forbidden') });

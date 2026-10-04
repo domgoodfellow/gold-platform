@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/layout/app-page';
+import { EmptyState } from '@/components/surfaces/section';
 import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
 import { PageHeader } from '@/components/headers/page-header';
 import { ScheduleConfiguration } from '@/features/scheduling/configuration/schedule-configuration';
@@ -11,6 +12,7 @@ import {
 } from '@/features/scheduling/calendar/schedule-url';
 import { listScheduleDays } from '@/lib/domain/scheduling/availability';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
+import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import { isoDayOfWeek, shiftDate, startOfMonth, todayInZone } from '@/lib/domain/scheduling/window';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
@@ -37,6 +39,29 @@ export default async function SchedulePage({
   const { organizationId } = await params;
   const query = await searchParams;
   const { db, organization } = await requireOrganization(organizationId);
+
+  // The sidebar withholds Schedule from a business that has declared no work as scheduled, but a
+  // hidden row is not a closed door — this address still answers, and says why there is nothing
+  // here rather than drawing an empty calendar or pretending the page is forbidden.
+  if (!(await hasSchedulableWork(db, { organizationId }))) {
+    const mayConfigureWork = organization.capabilities.includes('field.manage');
+    return (
+      <AppPage>
+        <PageHeader title={areaLabel('schedule')} crumbs={workspaceAncestry(organizationId, 'schedule')} />
+        <EmptyState
+          title="No work here is scheduled"
+          description="Schedule shows work that happens at a time. None of this business's kinds of work is set up that way yet."
+          action={
+            mayConfigureWork ? (
+              <Link href={`/organizations/${organizationId}/work/configuration`} className="underline underline-offset-4">
+                Choose which work is scheduled
+              </Link>
+            ) : undefined
+          }
+        />
+      </AppPage>
+    );
+  }
 
   const today = todayInZone(organization.timezone);
   const view = parseScheduleView(query.view);

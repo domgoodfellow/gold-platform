@@ -62,7 +62,7 @@ async function newTenant(label: string): Promise<Tenant> {
   if (signInError) throw signInError;
 
   const organizationId = await foundBusiness({ ownerEmail: email, name: `${label} Ltd`, currency: 'EUR', timezone: ZONE });
-  const typeId = await createWorkItemType(db, { organizationId, name: 'Callout' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId, name: 'Callout' });
 
   return {
     db,

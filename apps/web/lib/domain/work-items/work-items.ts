@@ -19,7 +19,10 @@ export type WorkItem = {
   id: string;
   title: string;
   /** What kind of work this is. Scopes the statuses; nothing branches on it. */
-  type: WorkItemRef;
+  type: WorkItemRef & {
+    /** Whether this kind of work occupies a scheduled time; Schedule controls follow it, never the window alone. */
+    schedulable: boolean;
+  };
   status: WorkItemRef;
   customer: WorkItemRef | null;
   location: WorkItemRef | null;
@@ -42,7 +45,7 @@ const TITLE_MAX = 300;
 // status hint names the three-column constraint, which carries type_id as well — a work item
 // cannot sit in another type's status, and that is a database fact rather than a convention.
 const WORK_ITEM_SELECT =
-  'id, title, custom, created_at, scheduled_during, type:work_item_types!work_items_type_same_org (id, name), status:work_item_statuses!work_items_status_same_org_and_type (id, name), customer:customers!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), resource:resources!work_items_resource_same_org (id, name), asset:assets!work_items_asset_same_org (id, name)';
+  'id, title, custom, created_at, scheduled_during, type:work_item_types!work_items_type_same_org (id, name, schedulable), status:work_item_statuses!work_items_status_same_org_and_type (id, name), customer:customers!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), resource:resources!work_items_resource_same_org (id, name), asset:assets!work_items_asset_same_org (id, name)';
 
 function one<T>(value: T | T[] | null): T | undefined {
   if (value === null) return undefined;
@@ -120,7 +123,7 @@ export async function listWorkItems(
         {
           id: row.id,
           title: row.title,
-          type: { id: type.id, label: type.name },
+          type: { id: type.id, label: type.name, schedulable: type.schedulable },
           status: { id: status.id, label: status.name },
           customer: customer ? { id: customer.id, label: customer.name } : null,
           location: location ? { id: location.id, label: location.label } : null,
@@ -164,7 +167,7 @@ export async function getWorkItem(
   return {
     id: row.id,
     title: row.title,
-    type: { id: type.id, label: type.name },
+    type: { id: type.id, label: type.name, schedulable: type.schedulable },
     status: { id: status.id, label: status.name },
     customer: customer ? { id: customer.id, label: customer.name } : null,
     location: location ? { id: location.id, label: location.label } : null,

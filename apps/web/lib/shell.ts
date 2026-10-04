@@ -3,6 +3,7 @@ import {
   WORKSPACES,
   areaEntitled,
   areaHref,
+  areaRelevantToShape,
   areaVisibleTo,
   CONFIG_TARGETS,
   configTarget,
@@ -83,6 +84,8 @@ export type ShellInput = {
   featureAvailability: ReadonlySet<string>;
   /** What this member's roles grant here. */
   capabilities: ReadonlySet<Capability>;
+  /** `hasSchedulableWork` for this organization — its declared shape of work. Omitted means unknown, which hides nothing. */
+  schedulableWork?: boolean;
   /**
    * The member's platform permissions **when, and only when, this is GOLD's own organization**.
    * `null` everywhere else — including a customer's business the same person is looking at — so
@@ -195,19 +198,20 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
  * Settings entry (D71) asks this to decide whether it lands on Organization or falls back to
  * Account; any contextual Configure link asks it the same way before offering a destination at all.
  */
-export function businessSettingsOffered(input: Pick<ShellInput, 'enabledModules' | 'featureAvailability' | 'capabilities'>): boolean {
-  const gate = { enabledModules: input.enabledModules, featureAvailability: input.featureAvailability, capabilities: input.capabilities };
+export function businessSettingsOffered(input: Pick<ShellInput, 'enabledModules' | 'featureAvailability' | 'capabilities' | 'schedulableWork'>): boolean {
+  const gate = { enabledModules: input.enabledModules, featureAvailability: input.featureAvailability, capabilities: input.capabilities, schedulableWork: input.schedulableWork };
   return CONFIG_TARGETS.some((target) => configTargetOffered(target, gate));
 }
 
 export function projectShell(input: ShellInput): ShellSection[] {
-  const { organizationId, enabledModules, featureAvailability, capabilities, platform } = input;
-  const gate = { enabledModules, featureAvailability, capabilities };
+  const { organizationId, enabledModules, featureAvailability, capabilities, platform, schedulableWork } = input;
+  const gate = { enabledModules, featureAvailability, capabilities, schedulableWork };
 
   const operable = (area: Area) =>
     area.sidebar !== false &&
     areaEntitled(area, enabledModules, featureAvailability) &&
-    areaVisibleTo(area, capabilities);
+    areaVisibleTo(area, capabilities) &&
+    areaRelevantToShape(area, schedulableWork);
 
   const inGroup = (group: Area['group']) => AREAS.filter((area) => area.group === group && operable(area));
 

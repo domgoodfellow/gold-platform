@@ -14,6 +14,12 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 export type WorkItemType = {
   id: string;
   name: string;
+  /**
+   * Whether work of this kind occupies a scheduled time — the business's own declaration of the
+   * shape of its work. Not whether it is publicly bookable (bookable implies it; never the
+   * reverse), not whether any is scheduled now, and never inferred from resources or bookings.
+   */
+  schedulable: boolean;
 };
 
 const NAME_MAX = 64;
@@ -31,7 +37,7 @@ export async function listWorkItemTypes(
 ): Promise<WorkItemType[]> {
   const { data, error } = await db
     .from('work_item_types')
-    .select('id, name')
+    .select('id, name, schedulable')
     .eq('organization_id', input.organizationId)
     .order('name', { ascending: true });
 
@@ -39,12 +45,17 @@ export async function listWorkItemTypes(
     throw new DomainError(error.message, 'work_item_types.list_failed');
   }
 
-  return (data ?? []).map((row) => ({ id: row.id, name: row.name }));
+  return (data ?? []).map((row) => ({ id: row.id, name: row.name, schedulable: row.schedulable }));
 }
 
+/**
+ * **The business states whether this work is scheduled, every time — there is no default.** The
+ * platform does not answer *does this business schedule* from its name, its resources or what it
+ * has booked, so the argument is required here and the column has no default in the database.
+ */
 export async function createWorkItemType(
   db: Db,
-  input: { organizationId: string; name: string },
+  input: { organizationId: string; name: string; schedulable: boolean },
 ): Promise<string> {
   await requireActor(db);
 
@@ -62,6 +73,7 @@ export async function createWorkItemType(
   const { data, error } = await db.rpc('create_work_item_type', {
     p_organization_id: input.organizationId,
     p_name: name,
+    p_schedulable: input.schedulable,
   });
 
   if (error) {
@@ -123,6 +135,72 @@ export async function renameWorkItemType(
       );
     }
     throw new DomainError(error.message, 'work_item_types.update_failed');
+  }
+}
+
+/**
+ * Whether this organization has declared any kind of work that is scheduled — **the one answer**
+ * Schedule, Resources, Locations, Field Home and setup all ask. It is read from the declaration
+ * itself, never from how many jobs, resources, locations or bookings exist: a business that
+ * schedules and has not yet booked anything still schedules.
+ */
+export async function hasSchedulableWork(
+  db: Db,
+  input: { organizationId: string },
+): Promise<boolean> {
+  const { data, error } = await db
+    .from('work_item_types')
+    .select('id')
+    .eq('organization_id', input.organizationId)
+    .eq('schedulable', true)
+    .limit(1);
+
+  if (error) {
+    throw new DomainError(error.message, 'work_item_types.schedulable_read_failed');
+  }
+
+  return (data ?? []).length > 0;
+}
+
+/**
+ * Declare whether work of this type is scheduled.
+ *
+ * Turning it off is refused by the database while any item of the type holds a scheduled window
+ * (`app.check_type_has_no_scheduled_work`), and while the type is publicly bookable
+ * (`work_item_types_bookable_is_schedulable`) — this only turns each into a sentence. Nothing is
+ * unscheduled or unpublished on the caller's behalf.
+ */
+export async function setWorkItemTypeSchedulable(
+  db: Db,
+  input: { id: string; schedulable: boolean },
+): Promise<void> {
+  await requireActor(db);
+
+  const { error } = await db.rpc('set_work_item_type_schedulable', {
+    p_id: input.id,
+    p_schedulable: input.schedulable,
+  });
+
+  if (error) {
+    if (error.code === 'GD006') {
+      throw new DomainError(
+        'This work type still has scheduled work. Unschedule those items before turning scheduling off.',
+        'work_item_types.has_scheduled_work',
+      );
+    }
+    if (error.code === '23514') {
+      throw new DomainError(
+        'This work type is open for public booking, which needs it to be scheduled. Withdraw its booking first.',
+        'work_item_types.is_bookable',
+      );
+    }
+    if (error.code === '42501') {
+      throw new DomainError(
+        'You cannot configure work item types here.',
+        'work_item_types.forbidden',
+      );
+    }
+    throw new DomainError(error.message, 'work_item_types.scheduling_failed');
   }
 }
 
@@ -231,6 +309,13 @@ export async function setTypeBookable(
       );
     }
     if (error.code === '23514') {
+      // Two checks share this code; the constraint's name, which Postgres puts in the message, says which.
+      if (error.message.includes('work_item_types_bookable_is_schedulable')) {
+        throw new DomainError(
+          'This work is not scheduled, so it cannot be booked. Turn scheduling on for it first.',
+          'types.booking_requires_schedulable',
+        );
+      }
       throw new DomainError(
         'A bookable type needs both a status and a duration.',
         'types.booking_incomplete',

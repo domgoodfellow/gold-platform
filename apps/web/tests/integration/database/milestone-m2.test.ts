@@ -170,7 +170,7 @@ async function buildBusiness(label: string): Promise<Business> {
   // From here on it is the operator, not the founder. Everything below is an admin screen.
   const db = operator.db;
 
-  const typeId = await createWorkItemType(db, { organizationId, name: SHARED.typeName });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId, name: SHARED.typeName });
 
   const booked = await createWorkItemStatus(db, {
     organizationId,

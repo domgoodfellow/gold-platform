@@ -137,6 +137,7 @@ describe('the platform staff axis (D28)', () => {
     });
     const alpha = await configureBusiness(member.db, alphaOrg, {
       typeName: 'Hire',
+      schedulable: true,
       statuses: ['Reserved', 'Out'],
       transitions: [[0, 1]],
       fields: {},
@@ -155,6 +156,7 @@ describe('the platform staff axis (D28)', () => {
     });
     const beta = await configureBusiness(other.db, betaOrg, {
       typeName: 'Consultation',
+      schedulable: true,
       statuses: ['Booked', 'Seen'],
       transitions: [[0, 1]],
       fields: {},

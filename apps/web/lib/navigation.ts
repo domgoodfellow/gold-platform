@@ -307,6 +307,14 @@ export type Area = {
    */
   relevantCapabilities?: readonly Capability[];
   /**
+   * The area only makes sense for a business that has declared some kind of work as scheduled
+   * (`hasSchedulableWork`). Business shape, not entitlement and not permission: it is a third,
+   * independent reason an area may be absent, and never read from row counts or from whether
+   * public booking is on. Absent means the area does not depend on it. Like every navigation gate
+   * it hides a row and nothing else — the route underneath still answers, and RLS decides access.
+   */
+  needsSchedulableWork?: boolean;
+  /**
    * The canonical `platform_catalog_features.key` value(s) that actually back this area's
    * surface — route metadata (an identifying key, nothing copied from the catalogue itself),
    * used to resolve visibility against `organizationResolvedFeatureStates` rather than against
@@ -381,9 +389,9 @@ export const AREAS: readonly Area[] = [
   // page behind a module.
   { segment: 'field', label: 'Field', group: 'workspaces', workspace: 'field' },
   { segment: 'work', label: 'Work', group: 'workspaces', workspace: 'field' },
-  { segment: 'schedule', label: 'Schedule', group: 'workspaces', workspace: 'field' },
-  { segment: 'resources', label: 'Resources', group: 'workspaces', workspace: 'field' },
-  { segment: 'locations', label: 'Locations', group: 'workspaces', workspace: 'field' },
+  { segment: 'schedule', label: 'Schedule', group: 'workspaces', workspace: 'field', needsSchedulableWork: true },
+  { segment: 'resources', label: 'Resources', group: 'workspaces', workspace: 'field', needsSchedulableWork: true },
+  { segment: 'locations', label: 'Locations', group: 'workspaces', workspace: 'field', needsSchedulableWork: true },
   { segment: 'assets', label: 'Equipment & Assets', group: 'workspaces', workspace: 'field', module: 'assets', featureKeys: ['assets'] },
   // Studio: what is public for this business, and what needs attention. Home is a real page —
   // kernel, like Sales and Field's own Home, so a member sees it regardless of role. Website has
@@ -445,7 +453,7 @@ export type ConfigTarget = {
 export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'general', path: 'settings/general', permission: ['organization.manage'] },
   { key: 'work-configuration', workspace: 'field', path: 'work/configuration', permission: ['field.manage'] },
-  { key: 'schedule-configuration', workspace: 'field', path: 'schedule/configuration', permission: ['field.manage'] },
+  { key: 'schedule-configuration', workspace: 'field', path: 'schedule/configuration', entitledBy: 'schedule', permission: ['field.manage'] },
   { key: 'pricing', workspace: 'finance', path: 'settings/pricing', entitledBy: 'pricing', permission: ['price.manage'] },
   { key: 'custom-fields', path: 'settings/custom-fields', permission: ['field.manage'] },
   // Entitled through Pipeline, permitted through field.manage: naming stages is not moving a customer between them.
@@ -475,6 +483,8 @@ export type ConfigGate = {
   enabledModules?: ReadonlySet<string>;
   featureAvailability?: ReadonlySet<string>;
   capabilities?: ReadonlySet<Capability>;
+  /** `hasSchedulableWork`. Absent means unknown, which shows everything, like the other gates. */
+  schedulableWork?: boolean;
 };
 
 export function configTarget(key: string): ConfigTarget {
@@ -492,6 +502,7 @@ export function configTargetOffered(target: ConfigTarget, gate: ConfigGate): boo
   if (target.entitledBy) {
     const area = AREAS.find((candidate) => candidate.segment === target.entitledBy);
     if (!area || !areaEntitled(area, gate.enabledModules, gate.featureAvailability)) return false;
+    if (!areaRelevantToShape(area, gate.schedulableWork)) return false;
   }
   return !gate.capabilities || target.permission.some((capability) => gate.capabilities!.has(capability));
 }
@@ -503,6 +514,15 @@ export function areaVisibleTo(area: Area, capabilities?: ReadonlySet<Capability>
     !capabilities ||
     area.relevantCapabilities.some((capability) => capabilities.has(capability))
   );
+}
+
+/**
+ * Whether the business's declared shape of work makes `area` meaningful. `schedulableWork` is the
+ * one canonical answer (`hasSchedulableWork`); `undefined` means the caller did not ask, and an
+ * unasked question hides nothing.
+ */
+export function areaRelevantToShape(area: Area, schedulableWork?: boolean): boolean {
+  return !area.needsSchedulableWork || schedulableWork !== false;
 }
 
 /**
@@ -540,11 +560,16 @@ export function areaAvailable(
     enabled?: ReadonlySet<string>;
     capabilities?: ReadonlySet<Capability>;
     featureAvailability?: ReadonlySet<string>;
+    schedulableWork?: boolean;
   },
 ): boolean {
   const area = AREAS.find((candidate) => candidate.segment === segment);
   if (!area) throw new Error(`No area has the segment "${segment}".`);
-  return areaEntitled(area, state.enabled, state.featureAvailability) && areaVisibleTo(area, state.capabilities);
+  return (
+    areaEntitled(area, state.enabled, state.featureAvailability) &&
+    areaVisibleTo(area, state.capabilities) &&
+    areaRelevantToShape(area, state.schedulableWork)
+  );
 }
 
 /**
@@ -560,12 +585,14 @@ export function visibleAreas(
   enabled?: ReadonlySet<string>,
   capabilities?: ReadonlySet<Capability>,
   featureAvailability?: ReadonlySet<string>,
+  schedulableWork?: boolean,
 ): Area[] {
   return AREAS.filter(
     (area) =>
       area.sidebar !== false &&
       areaEntitled(area, enabled, featureAvailability) &&
-      areaVisibleTo(area, capabilities),
+      areaVisibleTo(area, capabilities) &&
+      areaRelevantToShape(area, schedulableWork),
   );
 }
 
@@ -574,8 +601,9 @@ export function areasIn(
   enabled?: ReadonlySet<string>,
   capabilities?: ReadonlySet<Capability>,
   featureAvailability?: ReadonlySet<string>,
+  schedulableWork?: boolean,
 ): Area[] {
-  return visibleAreas(enabled, capabilities, featureAvailability).filter((area) => area.group === group);
+  return visibleAreas(enabled, capabilities, featureAvailability, schedulableWork).filter((area) => area.group === group);
 }
 
 export function areaHref(organizationId: string, segment: string): string {

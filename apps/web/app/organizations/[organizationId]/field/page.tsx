@@ -11,6 +11,7 @@ import { listLocations } from '@/lib/domain/locations/locations';
 import { listResources } from '@/lib/domain/resources/resources';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
+import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { areaAvailable, areaHref, areaLabel, workspaceLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
@@ -21,8 +22,10 @@ export const dynamic = 'force-dynamic';
  * Field Home: Work, Schedule, Resources, Locations and Equipment & Assets. Every figure is a count
  * some domain read already owns, one per page, and each links to it — nothing is totalled here and
  * nothing is a target, a rate or a trend. A page the organization does not have (Equipment & Assets
- * without its module) is not drawn and not queried, decided by the same predicate that decides the
- * sidebar's own list of pages.
+ * without its module, or Schedule, Resources and Locations for a business that has declared no
+ * work as scheduled) is not drawn and not queried, decided by the same predicate that decides the
+ * sidebar's own list of pages. Whether a page *exists* for this business comes from that
+ * declaration and never from how many rows it has: zero scheduled jobs is still a schedule.
  */
 export default async function FieldPage({ params }: PageProps<'/organizations/[organizationId]/field'>) {
   const { organizationId } = await params;
@@ -35,29 +38,37 @@ export default async function FieldPage({ params }: PageProps<'/organizations/[o
     enabled: activeModuleKeys(featureStates),
     featureAvailability: availableFeatureKeys(featureStates),
     capabilities: new Set(organization.capabilities),
+    schedulableWork: await hasSchedulableWork(db, { organizationId }),
   };
   const hasAssets = areaAvailable('assets', state);
+  const hasSchedule = areaAvailable('schedule', state);
+  const hasResources = areaAvailable('resources', state);
+  const hasLocations = areaAvailable('locations', state);
 
   const [work, schedule, resources, locations, assets] = await Promise.all([
     listWorkItems(db, { organizationId }),
-    listSchedule(db, { organizationId, within, on: { date, timeZone: organization.timezone } }),
-    listResources(db, { organizationId }),
-    listLocations(db, { organizationId }),
+    hasSchedule
+      ? listSchedule(db, { organizationId, within, on: { date, timeZone: organization.timezone } })
+      : Promise.resolve(null),
+    hasResources ? listResources(db, { organizationId }) : Promise.resolve(null),
+    hasLocations ? listLocations(db, { organizationId }) : Promise.resolve(null),
     hasAssets ? listAssets(db, { organizationId }) : Promise.resolve(null),
   ]);
 
   const href = (segment: string) => areaHref(organizationId, segment);
   const kpis: Kpi[] = [
     { key: 'work', label: areaLabel('work'), value: work.total, note: 'jobs recorded', href: href('work') },
-    {
+  ];
+  if (schedule) {
+    kpis.push({
       key: 'schedule',
       label: 'Scheduled today',
       value: schedule.flatMap((entry) => entry.booked).length,
       href: href('schedule'),
-    },
-    { key: 'resources', label: areaLabel('resources'), value: resources.total, href: href('resources') },
-    { key: 'locations', label: areaLabel('locations'), value: locations.total, href: href('locations') },
-  ];
+    });
+  }
+  if (resources) kpis.push({ key: 'resources', label: areaLabel('resources'), value: resources.total, href: href('resources') });
+  if (locations) kpis.push({ key: 'locations', label: areaLabel('locations'), value: locations.total, href: href('locations') });
   if (assets) kpis.push({ key: 'assets', label: areaLabel('assets'), value: assets.total, href: href('assets') });
 
   const empty = kpis.every((kpi) => kpi.value === 0);
@@ -67,7 +78,11 @@ export default async function FieldPage({ params }: PageProps<'/organizations/[o
       {empty ? (
         <EmptyState
           title="Nothing recorded in Field yet"
-          description="Work, Schedule, Resources, Locations and Equipment & Assets will show here once this business has them."
+          description={
+            hasSchedule
+              ? 'Work, Schedule, Resources, Locations and Equipment & Assets will show here once this business has them.'
+              : 'Work will show here once this business has recorded some.'
+          }
         />
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">

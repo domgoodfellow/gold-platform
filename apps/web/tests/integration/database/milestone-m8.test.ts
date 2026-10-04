@@ -72,6 +72,7 @@ const SWEEP = {
     'I sweep chimneys around Tallinn on my own. Someone rings, I put them in the book, I go out and do the sweep, then I write up a certificate and send it. I charge per visit, and more for a stove than an open fire. I work Monday to Friday mornings only.',
   shape: {
     typeName: 'Pühkimine',
+    schedulable: true,
     statuses: ['Raamatus', 'Tehtud', 'Tunnistus saadetud'],
     transitions: [
       [0, 1],
@@ -93,6 +94,7 @@ const DIVE = {
     'We run diving courses out of Moalboal. People enquire, we confirm a boat, they turn up for the classroom part, then the open water dives, then we certify them. Price is per diver per course. Boats go out every day of the week.',
   shape: {
     typeName: 'Course',
+    schedulable: true,
     statuses: ['Enquiry', 'Boat confirmed', 'Classroom', 'Open water', 'Certified'],
     transitions: [
       [0, 1],

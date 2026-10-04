@@ -6,12 +6,15 @@ import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { isGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
+import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import { businessSettingsOffered, projectShell } from '@/lib/shell';
 
 export async function loadOrganizationShellModel(db: Db, input: { organizationId: string; capabilities: readonly Capability[]; locked: boolean }) {
   const { organizationId, locked } = input;
-  const [featureStates, myOrganizations, staff, { data: userData }, gold, brand] = await Promise.all([
+  const [featureStates, schedulableWork, myOrganizations, staff, { data: userData }, gold, brand] = await Promise.all([
     locked ? Promise.resolve([]) : organizationResolvedFeatureStates(db, { organizationId }),
+    // The one answer about the business's shape of work; a locked organization draws no workspaces at all, so it is not asked.
+    locked ? Promise.resolve(undefined) : hasSchedulableWork(db, { organizationId }),
     listMyOrganizations(db), isPlatformStaff(db), db.auth.getUser(), isGoldInternalOrganization(db, { organizationId }), getBrand(db, { organizationId }),
   ]);
   const platform = staff && gold ? await platformPermissions(db) : null;
@@ -25,7 +28,7 @@ export async function loadOrganizationShellModel(db: Db, input: { organizationId
     switchable: myOrganizations.map((organization) => ({
       id: organization.id, name: organization.name, role: organization.role, operationalState: organization.operationalState,
     })),
-    sections: projectShell({ organizationId, enabledModules, featureAvailability, capabilities, platform }),
-    settingsOffered: businessSettingsOffered({ enabledModules, featureAvailability, capabilities }),
+    sections: projectShell({ organizationId, enabledModules, featureAvailability, capabilities, platform, schedulableWork }),
+    settingsOffered: businessSettingsOffered({ enabledModules, featureAvailability, capabilities, schedulableWork }),
   };
 }

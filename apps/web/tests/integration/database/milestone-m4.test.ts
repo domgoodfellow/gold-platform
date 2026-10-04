@@ -151,7 +151,7 @@ async function standUpPneu3L(): Promise<Business> {
     currency: 'CAD',
   });
 
-  const typeId = await createWorkItemType(db, { organizationId, name: 'Mobile tyre change' });
+  const typeId = await createWorkItemType(db, { schedulable: true, organizationId, name: 'Mobile tyre change' });
   const requestedId = await createWorkItemStatus(db, {
     organizationId,
     typeId,

@@ -15,6 +15,7 @@ import { PERIOD_LABELS, periodFor } from '@/lib/domain/reporting/shape';
 import { listSchedule } from '@/lib/domain/scheduling/availability';
 import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 import { listRecentActivity } from '@/lib/domain/timeline/timeline';
+import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { areaAvailable } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
@@ -45,9 +46,11 @@ export default async function HomePage({ params }: PageProps<'/organizations/[or
   const hasAutomation = has('automations');
   const hasFinancials = has('insights') && capabilities.has('report.read');
   const period = periodFor('month', date);
+  // The business's declared shape of work — the same answer the sidebar used, so Home does not draw a Schedule the navigation withholds.
+  const schedulableWork = await hasSchedulableWork(db, { organizationId });
 
   const [schedule, workItems, customers, activity, calls, failedRuns, failedMessages, invoiced, setupOverview, usableModules] = await Promise.all([
-    listSchedule(db, { organizationId, within, on: { date, timeZone: organization.timezone } }),
+    schedulableWork ? listSchedule(db, { organizationId, within, on: { date, timeZone: organization.timezone } }) : Promise.resolve(null),
     listWorkItems(db, { organizationId }),
     listCustomers(db, { organizationId, limit: 1 }),
     listRecentActivity(db, { organizationId, limit: 12 }),
@@ -61,7 +64,7 @@ export default async function HomePage({ params }: PageProps<'/organizations/[or
     organization.operationalState === 'setup' ? listUsableModules(db, { organizationId }) : Promise.resolve(new Set<string>()),
   ]);
 
-  const committed = schedule
+  const committed = (schedule ?? [])
     .flatMap((entry) => entry.booked.map((booking) => ({ ...booking, resource: entry.resource.name })))
     .sort((a, b) => a.window.startsAt.localeCompare(b.window.startsAt));
   const todaysCalls = calls?.filter((call) => call.startedAt >= within.startsAt && call.startedAt < within.endsAt) ?? [];
@@ -75,9 +78,9 @@ export default async function HomePage({ params }: PageProps<'/organizations/[or
     work: {
       total: workItems.total,
       // A count of what is waiting is only true of the whole list when the whole list was read.
-      waiting: workItems.total > workItems.length ? null : workItems.filter((item) => item.window === null),
+      waiting: workItems.total > workItems.length ? null : workItems.filter((item) => item.type.schedulable && item.window === null),
     },
-    schedule: { committed, byId: new Map(workItems.map((item) => [item.id, item])) },
+    schedule: schedule ? { committed, byId: new Map(workItems.map((item) => [item.id, item])) } : null,
     communications: calls
       ? { today: todaysCalls.length, unwritten: todaysCalls.filter((call) => call.outcome === null).length }
       : null,

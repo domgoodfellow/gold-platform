@@ -124,7 +124,7 @@ async function standUp(shape: Shape, label: string): Promise<Business> {
     currency: shape.currency,
   });
 
-  const typeId = await createWorkItemType(founder.db, { organizationId, name: shape.work });
+  const typeId = await createWorkItemType(founder.db, { schedulable: true, organizationId, name: shape.work });
   const statusId = await createWorkItemStatus(founder.db, {
     organizationId,
     typeId,

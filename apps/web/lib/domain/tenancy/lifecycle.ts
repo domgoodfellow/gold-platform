@@ -3,6 +3,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from './actor';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { listResources } from '@/lib/domain/resources/resources';
+import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { listEnabledModules, MODULES_WITH_READINESS_CHECK, outstandingModuleSetup } from './modules';
 import { areaHref, areaLabel, MODULES, moduleConfiguration } from '@/lib/navigation';
@@ -133,13 +134,21 @@ export async function computeSetupOverview(
   input: { organizationId: string },
 ): Promise<SetupOverview> {
   const { organizationId } = input;
-  const [readiness, enabled, types, resources, locations] = await Promise.all([
+  const [readiness, enabled, types] = await Promise.all([
     computeReadiness(db, { organizationId }),
     listEnabledModules(db, { organizationId }),
     listWorkItemTypes(db, { organizationId }),
-    listResources(db, { organizationId, limit: 1 }),
-    listLocations(db, { organizationId, limit: 1 }),
   ]);
+  // The declaration, read from the types already loaded — the same fact `hasSchedulableWork`
+  // answers for navigation, so setup cannot ask for resources the sidebar has withheld.
+  const schedulesWork = types.some((type) => type.schedulable);
+  const [resources, locations, hours] = schedulesWork
+    ? await Promise.all([
+        listResources(db, { organizationId, limit: 1 }),
+        listLocations(db, { organizationId, limit: 1 }),
+        listOperatingHours(db, { organizationId }),
+      ])
+    : [null, null, null];
 
   const moduleArea = (item: ReadinessRequirement, importance: SetupImportance): SetupArea => ({
     key: item.key,
@@ -194,23 +203,42 @@ export async function computeSetupOverview(
       types.length === 1 ? '1 kind of work is defined.' : `${types.length} kinds of work are defined.`,
       'No kinds of work are defined.',
     ),
-    kernel(
-      'resources',
-      'resources',
-      areaHref(organizationId, 'resources'),
-      resources.total,
-      'Resources exist to assign to a job.',
-      'No resources exist, so nothing can be assigned to a job.',
-    ),
-    kernel(
-      'locations',
-      'locations',
-      areaHref(organizationId, 'locations'),
-      locations.total,
-      'Locations exist to attach to a job.',
-      'No locations exist.',
-    ),
   );
+
+  // Resources, hours and locations only describe scheduled work. A business whose work is not
+  // scheduled is not asked for them — and a scheduling business with none of them yet is asked,
+  // gently, because zero is a valid count and not a reason to hide the question.
+  if (resources && locations && hours) {
+    areas.push(
+      kernel(
+        'resources',
+        'resources',
+        areaHref(organizationId, 'resources'),
+        resources.total,
+        'Resources exist to assign to a job.',
+        'No resources exist, so nothing can be assigned to a job.',
+      ),
+      {
+        ...kernel(
+          'hours',
+          'schedule',
+          `${areaHref(organizationId, 'schedule')}/configuration`,
+          hours.length,
+          'Opening hours are set.',
+          'No opening hours are set, so this business is treated as always open.',
+        ),
+        label: 'Opening hours',
+      },
+      kernel(
+        'locations',
+        'locations',
+        areaHref(organizationId, 'locations'),
+        locations.total,
+        'Locations exist to attach to a job.',
+        'No locations exist.',
+      ),
+    );
+  }
 
   areas.sort((a, b) => {
     const rank = (entry: SetupArea) =>

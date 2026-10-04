@@ -121,6 +121,7 @@ describe('M6 — a business that runs itself', () => {
 
     const configured = await configureBusiness(owner.db, organizationId, {
       typeName: 'Fitting',
+      schedulable: true,
       statuses: ['Booked', 'On the way', 'Done', 'Postponed'],
       transitions: [
         [0, 1],
@@ -392,6 +393,7 @@ describe('M6 — a business that runs itself', () => {
     });
     const configured = await configureBusiness(second.db, secondOrg, {
       typeName: 'Round',
+      schedulable: true,
       statuses: ['Due', 'Cleaned'],
       transitions: [[0, 1]],
       fields: {},
