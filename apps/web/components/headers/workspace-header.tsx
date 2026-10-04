@@ -15,7 +15,7 @@ import { AgentTrigger } from '../panels/workspace-right-rail';
  * platform routing, no authorization, no Agent data.
  *
  * Left to right: the sidebar trigger, a mobile-only context control, the breadcrumb slot, a
- * spacer, a mobile-only account control, and Agent — always the furthest-right control.
+ * spacer, an optional `beforeActions` control, and Agent — always the furthest-right control.
  */
 export function WorkspaceHeader({
   navigationTrigger,
@@ -38,8 +38,8 @@ export function WorkspaceHeader({
    * sidebar (and therefore its own switcher) is not reachable at this width. Absent where it is.
    */
   context?: ReactNode;
-  /** Rendered immediately before Agent — a compact person control for a shell whose
-   * sidebar-footer `AccountMenu` is not reachable at this width. */
+  /** Rendered immediately before Agent. A generic slot: the organization shell leaves it empty, since its
+   * phone Account lives in the Menu sheet's footer. */
   beforeActions?: ReactNode;
   /**
    * 'md' — the Agent trigger shows only from `md` up, for a shell whose phone bottom bar carries its own

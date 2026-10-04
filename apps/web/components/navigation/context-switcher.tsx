@@ -173,6 +173,23 @@ export function ContextSwitcher({ mark, current, organizations }: SwitcherProps)
   );
 }
 
+/**
+ * Who this is, and nothing more: the mark, the name and the role, as plain text. The phone Menu's
+ * header, where switching businesses is deliberately not offered a second time — the header's compact
+ * switcher is the one phone control for that. No routing, no menu, no button.
+ */
+export function ContextIdentity({ mark, name, role }: { mark: ReactNode; name: string; role: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3 px-2">
+      <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded">{mark}</span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold">{name}</span>
+        <span className="block truncate text-xs text-muted">{role}</span>
+      </span>
+    </div>
+  );
+}
+
 export function CompactContextSwitcher({ mark, current, organizations }: SwitcherProps) {
   const view = deriveSwitcherView(current, organizations);
 

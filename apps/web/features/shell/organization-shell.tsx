@@ -8,7 +8,6 @@ import { signOut } from '@/lib/domain/identity/credentials';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 import { loadOrganizationShellModel } from '@/lib/application/shell/organization-shell';
 import { CompactContextSwitcher } from '@/components/navigation/context-switcher';
-import { CompactAccountMenu } from '@/components/navigation/account-menu';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
@@ -127,15 +126,17 @@ export async function OrganizationShell({
   );
 
   /*
-    The global header, composed from the shared `WorkspaceHeader`. Left to right: the sidebar's
-    own trigger (from `md` up) and — on a phone, where the bottom bar carries Home, AI and Menu —
-    the two identity controls: a compact context switcher in the context slot, and the account menu
-    in `beforeActions`. Agent stays the furthest-right control from `md` up; below it the bar's own
-    AI control opens the same Agent. Page identity is each page's own `PageHeader`.
+    The global header, composed from the shared `WorkspaceHeader`.
+    - Phone, unlocked: the compact context switcher and the breadcrumb. Home, AI and Menu are the bottom
+      bar; Account lives in the Menu sheet's footer and Agent is the bar's AI, so the header has neither.
+    - Phone, locked: there is no bottom bar, so the sidebar trigger shows (`navigationTrigger="always"`)
+      and opens `LockedOrgSidebar` — Plan & usage and the account menu — beside the same switcher.
+    - Tablet and desktop: the sidebar trigger, the breadcrumb and Agent, the furthest-right control.
+    Page identity is each page's own `PageHeader`.
   */
   const header = (
     <WorkspaceHeader
-      navigationTrigger="md"
+      navigationTrigger={locked ? 'always' : 'md'}
       agentTrigger="md"
       context={
         <div className="flex min-w-0 items-center gap-3 md:hidden">
@@ -144,11 +145,6 @@ export async function OrganizationShell({
             current={{ kind: 'business', organizationId, name: organization.name, role: organization.role }}
             organizations={switchable}
           />
-        </div>
-      }
-      beforeActions={
-        <div className="md:hidden">
-          <CompactAccountMenu email={email} signOutAction={signOutAction} businessSettingsOffered={settingsOffered} />
         </div>
       }
     />

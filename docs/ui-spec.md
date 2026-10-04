@@ -49,7 +49,7 @@ settings* (`/settings/account`: Profile, Security & sign-in) is the signed-in pe
 their email and password belong to them, so no business's Settings ever holds them (D45).
 *Business settings* (`/organizations/{id}/settings`) is the selected business's. Both render
 through `WorkspaceShell` and `SettingsPageFrame`, and each says whose it is in its own description.
-The account menu — the footer of the sidebar, or its compact phone equivalent — offers *Business
+The account menu — the footer of the sidebar, which on a phone is the footer of the Menu sheet — offers *Business
 settings* (only where the member may configure something there), *Account settings* and *Sign
 out*; switching business is the context switcher's alone, and Settings holds no permanent row of
 its own in the sidebar (`lib/shell.ts`'s `businessSettingsOffered`). The link to Account settings
@@ -397,11 +397,10 @@ Platform, or Account.
 
 | | What | Which widths |
 |---|---|---|
-| Left | the sidebar trigger | `md` and up in the organization shell (which Platform renders inside), where a phone gets the bottom bar's Menu button instead; every width in Personal settings and the fallback frame, whose only phone navigation is the sidebar sheet |
+| Left | the sidebar trigger | `md` and up in an unlocked organization shell (which Platform renders inside), where a phone gets the bottom bar's Menu button instead; every width in a **locked** organization (no bottom bar, so this trigger opens `LockedOrgSidebar`, right-side, for Plan & usage and the account menu), in Personal settings and in the fallback frame |
 | Left | the compact context switcher — the business's mark and name, opening the same menu the sidebar's own switcher does — nothing about Setup lives in this header at any width | below `md` only, in the organization shell — the sidebar says it above that |
 | Left, after the above | the breadcrumb trail — ancestors, then the current page, always published | all |
-| Right, before Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
-| Right, furthest | Agent | all — always the last control in the row |
+| Right, furthest | Agent | `md` and up; a phone's AI is the bottom bar's, and a phone header carries no Account control — Account is the Menu sheet's footer. `beforeActions` remains a generic slot, empty in the organization shell |
 
 **`PageHeader` — one available page identity, inside its `AppPage`, not the required one.** The
 page's single `<h1>`, an optional metadata line, and the page's actions at the right (wrapping
@@ -440,7 +439,7 @@ entry. Platform is not an organization and is not listed; inside Platform the cu
 is GildOps. With nowhere else to go it is a label, not an empty menu. There is no directory page: `/organizations` only lands a sign-in (the business last
 worked in, else the first) and founds a first business, and the old `?all=1` request is ignored.
 It does not manufacture a list or creation action without a server read behind it. **Sign out belongs to the account menu**, in the sidebar footer on desktop and in
-the compact header menu on a phone. Neither is an operating action or permanent page-header
+the Menu sheet's footer on a phone, where the sheet's header names the current business and offers no second switcher — the header's compact context switcher is the one phone control for that. Neither is an operating action or permanent page-header
 command.
 
 **GildOps staff operate GildOps through its ordinary organization workspace when they are real members

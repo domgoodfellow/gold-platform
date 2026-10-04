@@ -58,10 +58,23 @@ test.describe('a tenant owner', () => {
     const scrolls = await bar.locator('ul').evaluate((list) => list.scrollWidth > list.clientWidth);
     expect(scrolls).toBe(false);
 
+    // The header is the organization context and the page location, and nothing else: no Account, no Agent.
+    const header = page.locator('header');
+    await expect(header.locator('[aria-label^="Switch context"], span[aria-label]').first()).toBeVisible();
+    await expect(header.getByRole('button', { name: /^Account/ })).toHaveCount(0);
+    await expect(header.getByRole('button', { name: 'Agent' })).toHaveCount(0);
+
     await bar.getByRole('button', { name: 'Menu', exact: true }).click();
     const sheet = page.getByRole('dialog');
+    // The sheet names the business and offers no second switcher; Account is its footer.
+    await expect(sheet.getByText('Grachtwerk Verhuur', { exact: true }).filter({ visible: true })).toHaveCount(1);
+    await expect(sheet.getByRole('button', { name: /Switch context/ })).toHaveCount(0);
     await expect(sheet.getByText('Business', { exact: true })).toBeVisible();
     await expect(sheet.getByText('Platform', { exact: true })).toHaveCount(0);
+    await sheet.getByRole('button', { name: /sanne@grachtwerk.test/ }).click();
+    await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /Plan & usage/ })).toBeVisible();
+    await page.keyboard.press('Escape');
     await sheet.getByRole('link', { name: 'Team', exact: true }).click();
     await expect(page).toHaveURL(/\/settings\/access/);
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -140,8 +153,14 @@ test.describe('GOLD platform staff', () => {
     await expect(bar.getByRole('button', { name: 'AI', exact: true })).toBeVisible();
     await expect(bar.getByRole('button', { name: 'Menu', exact: true })).toBeVisible();
     await expect(bar.getByRole('link', { name: 'Organizations', exact: true })).toHaveCount(0);
+    await expect(page.locator('header').getByRole('button', { name: /^Account/ })).toHaveCount(0);
     await bar.getByRole('button', { name: 'Menu', exact: true }).click();
     const sheet = page.getByRole('dialog');
+    // The sheet's header is the GOLD organization, not "Platform Administration"; Account stays reachable.
+    const identity = sheet.locator('[data-sidebar="header"]');
+    await expect(identity.getByText('GOLD', { exact: true }).filter({ visible: true })).toHaveCount(1);
+    await expect(identity).not.toContainText('Platform');
+    await expect(sheet.getByRole('button', { name: /staff@gold.test/ })).toBeVisible();
     await expect(sheet.getByRole('link', { name: 'Organizations', exact: true })).toBeVisible();
     await expect(sheet.getByRole('link', { name: 'Providers', exact: true })).toBeVisible();
   });

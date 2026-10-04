@@ -181,9 +181,9 @@ describe('the phone bar is Home, AI and Menu over the one projection', () => {
 });
 
 describe('the mobile sidebar trigger says what the layouts do', () => {
-  it('Platform Context uses navigationTrigger="md", and the header comment agrees', () => {
+  it('Platform Context uses the unlocked trigger rule (md), and the header comment agrees', () => {
     // Platform renders inside the one organization shell, which asks for the trigger from md up.
-    expect(read('features/shell/organization-shell.tsx')).toContain('navigationTrigger="md"');
+    expect(read('features/shell/organization-shell.tsx')).toContain("navigationTrigger={locked ? 'always' : 'md'}");
     const header = read('components/headers/workspace-header.tsx');
     expect(header).toContain('Business *and*');
     expect(header).not.toMatch(/Platform, whose\s*\n\s*\*\s*`Sidebar` renders an off-canvas Sheet/);
@@ -191,7 +191,7 @@ describe('the mobile sidebar trigger says what the layouts do', () => {
 
   it('only shells with no bottom bar ask for the trigger at every width', () => {
     expect(read('features/account/global-fallback-shell.tsx')).toContain('navigationTrigger="always"');
-    expect(read('features/shell/organization-shell.tsx')).toContain('navigationTrigger="md"');
+    expect(read('features/shell/organization-shell.tsx')).toContain("navigationTrigger={locked ? 'always' : 'md'}");
   });
 });
 

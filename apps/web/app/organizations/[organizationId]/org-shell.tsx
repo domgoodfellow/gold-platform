@@ -1,7 +1,7 @@
 'use client';
 
 import { AccountMenu } from '@/components/navigation/account-menu';
-import { ContextSwitcher, type SwitchableOrganization } from '@/components/navigation/context-switcher';
+import { ContextIdentity, ContextSwitcher, type SwitchableOrganization } from '@/components/navigation/context-switcher';
 import {
   Sidebar,
   SidebarContent,
@@ -411,11 +411,18 @@ export function OrgSidebar({
   return (
     <Sidebar collapsible="icon" mobileSide="right" {...props}>
       <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
-        <ContextSwitcher
-          mark={mark}
-          current={{ kind: 'business', organizationId, name, role }}
-          organizations={organizations}
-        />
+        {/* On a phone this sidebar is the Menu sheet: it names the business and does not offer a second
+            switcher, because the header's compact switcher is the one phone control for that. */}
+        <div className="md:hidden">
+          <ContextIdentity mark={mark} name={name} role={role} />
+        </div>
+        <div className="hidden md:block">
+          <ContextSwitcher
+            mark={mark}
+            current={{ kind: 'business', organizationId, name, role }}
+            organizations={organizations}
+          />
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <OrgNav sections={sections} />
@@ -455,13 +462,20 @@ export function LockedOrgSidebar({
   const current = usePathname().includes('/settings/plan');
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" mobileSide="right" {...props}>
       <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
-        <ContextSwitcher
-          mark={mark}
-          current={{ kind: 'business', organizationId, name, role }}
-          organizations={organizations}
-        />
+        {/* On a phone this sidebar is the Menu sheet: it names the business and does not offer a second
+            switcher, because the header's compact switcher is the one phone control for that. */}
+        <div className="md:hidden">
+          <ContextIdentity mark={mark} name={name} role={role} />
+        </div>
+        <div className="hidden md:block">
+          <ContextSwitcher
+            mark={mark}
+            current={{ kind: 'business', organizationId, name, role }}
+            organizations={organizations}
+          />
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

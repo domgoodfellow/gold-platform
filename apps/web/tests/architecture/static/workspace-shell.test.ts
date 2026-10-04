@@ -165,20 +165,14 @@ describe('the Business phone header — compact controls wired to the right slot
     expect(contextBlock).toContain('md:hidden');
   });
 
-  it('gives beforeActions the compact account menu — Account sits before Agent, never after', () => {
-    // `beforeActions` is a prop the header itself places ahead of its own actions (Agent), so
-    // wiring the account control there — rather than as a sibling rendered after `WorkspaceHeader`,
-    // which would put Account to the right of Agent — is what the contract actually depends on.
-    expect(organizationLayout).toContain('beforeActions=');
-    const beforeActionsBlock = organizationLayout.slice(
-      organizationLayout.indexOf('beforeActions={'),
-      organizationLayout.indexOf('/>', organizationLayout.indexOf('beforeActions={')),
-    );
-    expect(beforeActionsBlock).toContain('CompactAccountMenu');
+  it("has no Account control in the header: the phone Account is the Menu sheet's footer", () => {
+    expect(organizationLayout).not.toContain('beforeActions=');
+    expect(organizationLayout).not.toContain('CompactAccountMenu');
   });
 
-  it('passes navigationTrigger="md" — Business only shows its trigger from md up', () => {
-    expect(organizationLayout).toContain('navigationTrigger="md"');
+  it('shows the sidebar trigger from md up while a bottom bar exists, and at every width while locked', () => {
+    expect(organizationLayout).toContain("navigationTrigger={locked ? 'always' : 'md'}");
+    expect(organizationLayout).toMatch(/bottomBar=\{\s*locked \? undefined/);
   });
 
   it('hands the mark, current business and this identity’s other businesses to the compact switcher, same shape the sidebar’s own switcher gets', () => {
@@ -191,15 +185,6 @@ describe('the Business phone header — compact controls wired to the right slot
     expect(contextBlock).toContain('organizations={switchable}');
     expect(organizationShellModel).toMatch(/myOrganizations\.map/);
     expect(contextBlock).not.toContain('platformStaff=');
-  });
-
-  it('the compact account menu knows whether Business settings has anything to offer', () => {
-    expect(organizationShellModel).toContain('businessSettingsOffered(');
-    const beforeActionsBlock = organizationLayout.slice(
-      organizationLayout.indexOf('beforeActions={'),
-      organizationLayout.indexOf('/>', organizationLayout.indexOf('beforeActions={')),
-    );
-    expect(beforeActionsBlock).toContain('businessSettingsOffered=');
   });
 });
 
@@ -234,7 +219,7 @@ describe('the Platform route renders inside the one organization shell', () => {
   });
 
   it('gets its trigger, switcher and bottom bar from the one shell, at every width', () => {
-    expect(organizationLayout).toContain('navigationTrigger="md"');
+    expect(organizationLayout).toContain("navigationTrigger={locked ? 'always' : 'md'}");
     expect(organizationLayout).toContain('CompactContextSwitcher');
     expect(organizationLayout).toMatch(/bottomBar=\{/);
   });
@@ -274,22 +259,11 @@ describe('ContextSwitcher — content is about context only', () => {
   });
 });
 
-describe('AccountMenu — the compact trigger is not built from Sidebar-only geometry', () => {
-  it('shares one menu-items implementation — only each trigger’s own DropdownMenuContent positioning differs', () => {
+describe('AccountMenu — one trigger, in the sidebar footer', () => {
+  it("is the sidebar footer's menu only: a phone reaches it through the Menu sheet", () => {
     expect(accountMenu).toContain('function AccountMenuContent');
-    // Two wrappers, not two menus: the sidebar trigger positions its content `right` (or `bottom`
-    // on mobile) and the compact header trigger always `bottom` — a real difference in where each
-    // trigger sits, not a duplicated menu. Both render the one `<AccountMenuContent>`.
-    expect(accountMenu.match(/<DropdownMenuContent/g)?.length).toBe(2);
-    expect(accountMenu.match(/<AccountMenuContent/g)?.length).toBe(2);
-  });
-
-  it('does not build the compact trigger from SidebarMenuButton, which is w-full by design', () => {
-    const compactBody = accountMenu.slice(
-      accountMenu.indexOf('export function CompactAccountMenu'),
-    );
-    expect(compactBody).not.toContain('SidebarMenuButton');
-    expect(compactBody).not.toContain('SidebarMenu>');
+    expect(accountMenu.match(/<DropdownMenuContent/g)?.length).toBe(1);
+    expect(accountMenu).not.toContain('CompactAccountMenu');
   });
 });
 
