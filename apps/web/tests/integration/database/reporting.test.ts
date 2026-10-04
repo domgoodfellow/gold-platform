@@ -1225,7 +1225,7 @@ describe('time a business has committed', () => {
 
   beforeAll(async () => {
     yard = await newTenant('time-yard');
-    vanId = await createResource(yard.db, {
+    vanId = await createResource(yard.db, { resourceClass: 'other',
       organizationId: yard.organizationId,
       name: 'Van one',
     });
@@ -1345,7 +1345,7 @@ describe('time a business has committed', () => {
   it('splits a job across the months it actually occupied', async () => {
     // Counting the whole window into both months would report more committed time than exists.
     const spanning = await newTenant('time-span');
-    const van = await createResource(spanning.db, {
+    const van = await createResource(spanning.db, { resourceClass: 'other',
       organizationId: spanning.organizationId,
       name: 'Night shift',
     });

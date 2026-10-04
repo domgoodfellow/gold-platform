@@ -1060,6 +1060,14 @@
         "scheduling"
       ]
     },
+    "apps/web/tests/component/resource-forms.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "scheduling",
+        "accessibility"
+      ]
+    },
     "apps/web/tests/component/required-records-table.test.tsx": {
       "category": "component",
       "concerns": [
@@ -1521,14 +1529,6 @@
       ],
       "note": "The Inbox over SMS and email, conversation status, assignment, and customer resolution against real RLS."
     },
-    "apps/web/tests/integration/database/messaging.test.ts": {
-      "category": "database-integration",
-      "concerns": [
-        "voice",
-        "security"
-      ]
-    },
-    "apps/web/tests/integration/database/milestone-m1.test.ts": {
     "apps/web/tests/integration/database/sms-lifecycle.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -1537,6 +1537,14 @@
       ],
       "note": "A text's whole life against real RLS with the carrier replaced: who may write its state, forward-only callbacks, usage once, suppression, inbound idempotency and tenant isolation."
     },
+    "apps/web/tests/integration/database/messaging.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "security"
+      ]
+    },
+    "apps/web/tests/integration/database/milestone-m1.test.ts": {
       "category": "database-integration",
       "concerns": [
         "tenancy",
@@ -1802,6 +1810,14 @@
       "category": "database-integration",
       "concerns": [
         "reporting"
+      ]
+    },
+    "apps/web/tests/integration/database/resource-class-capabilities.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling",
+        "tenancy",
+        "security"
       ]
     },
     "apps/web/tests/integration/database/resource-membership.test.ts": {
@@ -2072,6 +2088,14 @@
         "tenancy"
       ],
       "note": "Form lifecycle, exact-revision submissions, anonymous door, tenant isolation and template independence against real Postgres."
+    },
+    "apps/web/tests/component/form-builder.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "accessibility"
+      ],
+      "note": "The Studio form builder's add, select, edit, remove, reorder, dirty and publish behaviour, and the shared renderer's label/error association."
     },
     "apps/web/tests/architecture/static/forms-boundary.test.ts": {
       "category": "architecture-static",

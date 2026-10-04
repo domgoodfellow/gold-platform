@@ -1,3 +1,4 @@
+import type { ResourceClass } from '@/lib/domain/resources/resource-class';
 import type { BusinessShape } from '@/lib/domain/configuration/configure';
 import type { Grouping, Measure, PeriodPreset } from '@/lib/domain/reporting/shape';
 
@@ -68,7 +69,8 @@ export type DemoBusiness = {
    */
   releasesResource: number[];
   marksComplete: number[];
-  resources: string[];
+  /** A resource states its class; capabilities are the business's own words for what it can do, optional. */
+  resources: { name: string; resourceClass: ResourceClass; capabilities?: string[] }[];
   locations: { label: string; address: string }[];
   customers: { name: string; email: string; phone: string; location: number }[];
   jobs: DemoJob[];
@@ -162,7 +164,11 @@ const GRACHTWERK: DemoBusiness = {
   },
   releasesResource: [5],
   marksComplete: [4],
-  resources: ['Hoogwerker 12m', 'Hoogwerker 18m', 'Bestelbus'],
+  resources: [
+    { name: 'Hoogwerker 12m', resourceClass: 'equipment', capabilities: ['Hoogwerken'] },
+    { name: 'Hoogwerker 18m', resourceClass: 'equipment', capabilities: ['Hoogwerken'] },
+    { name: 'Bestelbus', resourceClass: 'vehicle', capabilities: ['Transport'] },
+  ],
   locations: [
     { label: 'De werf', address: 'Havenstraat 44, Amsterdam' },
     { label: 'Nieuwbouw Zuidas', address: 'Gustav Mahlerlaan 10, Amsterdam' },
@@ -387,7 +393,10 @@ const KOISHIKAWA: DemoBusiness = {
   },
   releasesResource: [3],
   marksComplete: [2],
-  resources: ['第一診察室', '第二診察室'],
+  resources: [
+    { name: '第一診察室', resourceClass: 'facility' },
+    { name: '第二診察室', resourceClass: 'facility' },
+  ],
   locations: [{ label: '本院', address: '東京都文京区小石川 3-12-4' }],
   customers: [
     { name: '田中 一郎', email: 'tanaka@example.test', phone: '+81 3 5555 0101', location: 0 },

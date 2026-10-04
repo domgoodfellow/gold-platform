@@ -167,7 +167,7 @@ describe('a work type says whether it is scheduled', () => {
 
   it('lets internal staff schedule work that is scheduled but not bookable', async () => {
     const { typeId, workItemId } = await typeWithJob(shop, 'Private service visit', true);
-    const resourceId = await createResource(shop.db, { organizationId: shop.organizationId, name: 'Van A' });
+    const resourceId = await createResource(shop.db, { resourceClass: 'other', organizationId: shop.organizationId, name: 'Van A' });
 
     await expect(
       scheduleWorkItem(shop.db, { workItemId, resourceId, startsAt: NINE, endsAt: TEN }),
@@ -227,7 +227,7 @@ describe('a work type says whether it is scheduled', () => {
 
     // Plenty of work, a resource, and nothing declared scheduled: still no schedule.
     await typeWithJob(office, 'Sales opportunity', false);
-    await createResource(office.db, { organizationId: office.organizationId, name: 'Somebody' });
+    await createResource(office.db, { resourceClass: 'other', organizationId: office.organizationId, name: 'Somebody' });
     expect(await hasSchedulableWork(office.db, { organizationId: office.organizationId })).toBe(false);
 
     // Declared, with no job booked yet: a schedule.

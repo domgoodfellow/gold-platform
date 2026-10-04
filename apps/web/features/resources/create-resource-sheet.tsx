@@ -12,6 +12,7 @@ import {
   PageDrawerTitle,
 } from '@/components/panels/page-drawer';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
+import type { ResourceCapability } from '@/lib/domain/resources/resource-capabilities';
 import type { AvailableMember } from './member-options';
 import { CreateResourceForm } from './create-resource-form';
 
@@ -26,10 +27,14 @@ export function CreateResourceSheetProvider({
   organizationId,
   definitions,
   availableMembers,
+  capabilities,
+  mayAddCapability,
   children,
 }: {
   organizationId: string;
   definitions: FieldDefinition[];
+  capabilities: ResourceCapability[];
+  mayAddCapability: boolean;
   /** Members not already representing another Resource — see `member-options.ts`. */
   availableMembers: AvailableMember[];
   children: ReactNode;
@@ -46,7 +51,7 @@ export function CreateResourceSheetProvider({
           <PageDrawerHeader className="border-b border-border">
             <PageDrawerTitle>New resource</PageDrawerTitle>
             <PageDrawerDescription>
-              People, vehicles and equipment that work is scheduled against.
+              People, vehicles, equipment and facilities that work is scheduled against.
             </PageDrawerDescription>
           </PageDrawerHeader>
           <div className="flex-1 overflow-y-auto p-4">
@@ -54,6 +59,8 @@ export function CreateResourceSheetProvider({
               organizationId={organizationId}
               definitions={definitions}
               availableMembers={availableMembers}
+              capabilities={capabilities}
+              mayAddCapability={mayAddCapability}
               onCreated={() => setOpen(false)}
               formId={formId}
               onPendingChange={setPending}

@@ -203,7 +203,7 @@ async function buildBusiness(label: string): Promise<Business> {
     toStatusId: complete,
   });
 
-  const resourceId = await createResource(db, { organizationId, name: SHARED.resourceName });
+  const resourceId = await createResource(db, { resourceClass: 'other', organizationId, name: SHARED.resourceName });
 
   const workItemId = await createWorkItem(db, {
     organizationId,

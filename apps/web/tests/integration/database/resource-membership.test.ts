@@ -175,7 +175,7 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
   });
 
   it('1. may exist with no linked member', async () => {
-    const id = await createResource(owner.db, { organizationId, name: 'Van 1' });
+    const id = await createResource(owner.db, { resourceClass: 'person', organizationId, name: 'Van 1' });
     const resource = await getResource(owner.db, { organizationId, resourceId: id });
     expect(resource?.member).toBeNull();
   });
@@ -183,7 +183,7 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
   let colleagueResourceId: string;
 
   it('2. links to a Membership from the same organization', async () => {
-    colleagueResourceId = await createResource(owner.db, {
+    colleagueResourceId = await createResource(owner.db, { resourceClass: 'person',
       organizationId,
       name: 'Van 9', // deliberately unrelated to "Colleague" — see test 13.
       membershipId: colleagueMembershipId,
@@ -197,14 +197,14 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
 
   it('3. cannot link to another organization\'s Membership, at creation or by correction', async () => {
     await expect(
-      createResource(owner.db, {
+      createResource(owner.db, { resourceClass: 'person',
         organizationId,
         name: 'Cross-tenant at creation',
         membershipId: strangerMembershipId,
       }),
     ).rejects.toMatchObject({ code: 'resources.member_not_found' });
 
-    const unlinked = await createResource(owner.db, { organizationId, name: 'Van 2' });
+    const unlinked = await createResource(owner.db, { resourceClass: 'person', organizationId, name: 'Van 2' });
     await expect(
       setResourceMembership(owner.db, { resourceId: unlinked, membershipId: strangerMembershipId }),
     ).rejects.toMatchObject({ code: 'resources.member_not_found' });
@@ -220,21 +220,21 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
 
   it('4. one Membership cannot represent two Resources', async () => {
     await expect(
-      createResource(owner.db, {
+      createResource(owner.db, { resourceClass: 'person',
         organizationId,
         name: 'Second Van For Colleague',
         membershipId: colleagueMembershipId,
       }),
     ).rejects.toMatchObject({ code: 'resources.member_already_linked' });
 
-    const another = await createResource(owner.db, { organizationId, name: 'Van 3' });
+    const another = await createResource(owner.db, { resourceClass: 'person', organizationId, name: 'Van 3' });
     await expect(
       setResourceMembership(owner.db, { resourceId: another, membershipId: colleagueMembershipId }),
     ).rejects.toMatchObject({ code: 'resources.member_already_linked' });
   });
 
   it('5. two different Memberships may link to two different Resources', async () => {
-    const ownerVan = await createResource(owner.db, {
+    const ownerVan = await createResource(owner.db, { resourceClass: 'person',
       organizationId,
       name: 'Van 4',
       membershipId: ownerMembershipId,
@@ -253,7 +253,7 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
   let sharedResourceId: string;
 
   it('6. an actor without resource.update cannot link or unlink, whoever created the Resource', async () => {
-    sharedResourceId = await createResource(owner.db, { organizationId, name: 'Van 5' });
+    sharedResourceId = await createResource(owner.db, { resourceClass: 'person', organizationId, name: 'Van 5' });
 
     await expect(
       setResourceMembership(restricted.db, {
@@ -304,7 +304,7 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
   });
 
   it('10. existing Work Items against a Resource remain intact when its link changes', async () => {
-    const crewVanId = await createResource(owner.db, { organizationId, name: 'Crew Van' });
+    const crewVanId = await createResource(owner.db, { resourceClass: 'person', organizationId, name: 'Crew Van' });
 
     const typeId = await createWorkItemType(owner.db, { schedulable: true, organizationId, name: 'Callout' });
     const statusId = await createWorkItemStatus(owner.db, { organizationId, typeId, name: 'Open' });
@@ -330,7 +330,7 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
   });
 
   it('11. removing a Membership clears only the Resource\'s identity link, never organization_id, and never deletes the Resource', async () => {
-    const deletionResourceId = await createResource(owner.db, {
+    const deletionResourceId = await createResource(owner.db, { resourceClass: 'person',
       organizationId,
       name: 'Deletion Test Resource',
       membershipId: restrictedMembershipId,

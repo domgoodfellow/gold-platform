@@ -68,7 +68,7 @@ async function newTenant(label: string): Promise<Tenant> {
     db,
     organizationId,
     statusId: await createWorkItemStatus(db, { organizationId, typeId, name: 'Open' }),
-    resourceId: await createResource(db, { organizationId, name: 'Sam Okafor' }),
+    resourceId: await createResource(db, { resourceClass: 'other', organizationId, name: 'Sam Okafor' }),
   };
 }
 

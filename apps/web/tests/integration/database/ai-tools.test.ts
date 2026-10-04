@@ -132,7 +132,7 @@ async function newBusiness(label: string): Promise<Business> {
     name: label === 'tool-yard' ? 'Op de planning' : 'Shinsatsu-chū',
   });
 
-  const resourceId = await createResource(db, {
+  const resourceId = await createResource(db, { resourceClass: 'other',
     organizationId,
     name: label === 'tool-yard' ? 'Kraan' : 'Shinsatsushitsu 1',
   });

@@ -6,6 +6,7 @@ import { ResourceTable } from '@/features/resources/resource-table';
 import { CreateResourceSheetProvider, CreateResourceTrigger } from '@/features/resources/create-resource-sheet';
 import { availableMembers } from '@/features/resources/member-options';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { listResourceCapabilities } from '@/lib/domain/resources/resource-capabilities';
 import { listResources } from '@/lib/domain/resources/resources';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
@@ -19,10 +20,11 @@ export default async function ResourcesPage({
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const [resources, definitions, members] = await Promise.all([
+  const [resources, definitions, members, vocabulary] = await Promise.all([
     listResources(db, { organizationId }),
     listFieldDefinitions(db, { organizationId, entityType: 'resource' }),
     listMembers(db, { organizationId }),
+    listResourceCapabilities(db, { organizationId, includeArchived: true }),
   ]);
 
   const mayAdd = organization.capabilities.includes('resource.create');
@@ -35,6 +37,8 @@ export default async function ResourcesPage({
         organizationId={organizationId}
         definitions={definitions}
         availableMembers={memberOptions}
+        capabilities={vocabulary.filter((capability) => !capability.archived)}
+        mayAddCapability={mayConfigure}
       >
         {/*
           Hiding the trigger is a courtesy, not the guard. `resources_insert` requires
@@ -57,6 +61,7 @@ export default async function ResourcesPage({
               role={organization.role}
               mayConfigure={mayConfigure}
               definitions={definitions}
+              capabilities={vocabulary}
             />
           </ConfigureRegistrar>
         ) : null}

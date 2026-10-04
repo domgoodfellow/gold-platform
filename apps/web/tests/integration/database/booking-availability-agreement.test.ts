@@ -107,7 +107,7 @@ describe('public booking offers what the exclusion constraint would accept (I5)'
 
     const typeId = await createWorkItemType(owner, { schedulable: true, organizationId, name: 'Tyre change' });
     statusId = await createWorkItemStatus(owner, { organizationId, typeId, name: 'Requested' });
-    await createResource(owner, { organizationId, name: 'Van 1' });
+    await createResource(owner, { resourceClass: 'other', organizationId, name: 'Van 1' });
 
     // 09:00–12:00 on the Monday the suite books, so the offered slots are countable.
     await addOperatingHours(owner, { organizationId, dayOfWeek: 1, opensAt: '09:00', closesAt: '12:00' });

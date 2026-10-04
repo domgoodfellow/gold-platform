@@ -98,7 +98,7 @@ async function newTenant(label: string): Promise<Tenant> {
     typeId,
     name: 'Booked',
   });
-  const resourceId = await createResource(db, { organizationId: orgId, name: 'Sam Okafor' });
+  const resourceId = await createResource(db, { resourceClass: 'other', organizationId: orgId, name: 'Sam Okafor' });
   const workItemId = await createWorkItem(db, {
     organizationId: orgId,
     title: 'Replace the pump',

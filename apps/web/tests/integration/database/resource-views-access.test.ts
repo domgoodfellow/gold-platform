@@ -46,7 +46,7 @@ async function newBusiness(label: string): Promise<Business> {
 
   const typeId = await createWorkItemType(db, { schedulable: true, organizationId, name: 'Job' });
   const statusId = await createWorkItemStatus(db, { organizationId, typeId, name: 'Booked' });
-  const resourceId = await createResource(db, { organizationId, name: `Van ${label}` });
+  const resourceId = await createResource(db, { resourceClass: 'other', organizationId, name: `Van ${label}` });
 
   // A job holding the resource for an hour, so there is a commitment to see or be refused.
   const created2 = await db.rpc('create_work_item', {

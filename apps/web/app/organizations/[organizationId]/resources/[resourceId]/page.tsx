@@ -5,8 +5,12 @@ import { DividedList, EmptyState } from '@/components/surfaces/section';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { availableMembers } from '@/features/resources/member-options';
+import { ResourceCapabilitiesControl } from '@/features/resources/resource-capabilities-control';
+import { ResourceClassControl } from '@/features/resources/resource-class-control';
 import { ResourceMembershipControl } from '@/features/resources/resource-membership-control';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { listResourceCapabilities } from '@/lib/domain/resources/resource-capabilities';
+import { RESOURCE_CLASS_LABELS } from '@/lib/domain/resources/resource-class';
 import { getResource, listResources } from '@/lib/domain/resources/resources';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
@@ -37,14 +41,17 @@ export default async function ResourcePage({
     notFound();
   }
 
-  const [definitions, workItems, members, resources] = await Promise.all([
+  const [definitions, workItems, members, resources, vocabulary] = await Promise.all([
     listFieldDefinitions(db, { organizationId, entityType: 'resource' }),
     listWorkItems(db, { organizationId, resourceId }),
     listMembers(db, { organizationId }),
     listResources(db, { organizationId }),
+    listResourceCapabilities(db, { organizationId }),
   ]);
 
   const mayUpdate = organization.capabilities.includes('resource.update');
+  const mayConfigure = organization.capabilities.includes('field.manage');
+  const heldIds = new Set(resource.capabilities.map((capability) => capability.id));
   const memberOptions = availableMembers(members, resources, { excludeResourceId: resourceId });
 
   return (
@@ -65,18 +72,41 @@ export default async function ResourcePage({
 
         <TabsContent value="overview" className="mt-6 flex flex-col gap-6">
           <div>
-            <div className="text-sm font-medium text-muted">Represents member</div>
+            <div className="text-sm font-medium text-muted">Type</div>
             {mayUpdate ? (
-              <ResourceMembershipControl
-                organizationId={organizationId}
-                resourceId={resourceId}
-                currentMembershipId={resource.member?.membershipId ?? null}
-                availableMembers={memberOptions}
-              />
+              <ResourceClassControl organizationId={organizationId} resourceId={resourceId} current={resource.resourceClass} />
             ) : (
-              <div>{resource.member ? resource.member.displayName : 'None — not a member'}</div>
+              <div>{RESOURCE_CLASS_LABELS[resource.resourceClass]}</div>
             )}
           </div>
+          <div>
+            <div className="text-sm font-medium text-muted">Capabilities</div>
+            <ResourceCapabilitiesControl
+              organizationId={organizationId}
+              resourceId={resourceId}
+              resourceName={resource.name}
+              held={resource.capabilities}
+              available={vocabulary.filter((capability) => !heldIds.has(capability.id))}
+              mayChange={mayUpdate}
+              mayAddWord={mayConfigure}
+            />
+          </div>
+          {/* Only a person can represent a member, so the control exists for that class alone. */}
+          {resource.resourceClass === 'person' ? (
+            <div>
+              <div className="text-sm font-medium text-muted">Represents member</div>
+              {mayUpdate ? (
+                <ResourceMembershipControl
+                  organizationId={organizationId}
+                  resourceId={resourceId}
+                  currentMembershipId={resource.member?.membershipId ?? null}
+                  availableMembers={memberOptions}
+                />
+              ) : (
+                <div>{resource.member ? resource.member.displayName : 'None — not a member'}</div>
+              )}
+            </div>
+          ) : null}
           <CustomFieldValues definitions={definitions} custom={resource.custom} />
         </TabsContent>
 

@@ -94,7 +94,7 @@ async function newTenant(label: string, timezone: string): Promise<Tenant> {
     statusId: await createWorkItemStatus(db, { organizationId: orgId, typeId, name: 'Open' }),
     // The same name in both tenants, so the cross-tenant test below is not passing because
     // the resources happen to be distinguishable.
-    resourceId: await createResource(db, { organizationId: orgId, name: 'Sam Okafor' }),
+    resourceId: await createResource(db, { resourceClass: 'other', organizationId: orgId, name: 'Sam Okafor' }),
   };
 }
 

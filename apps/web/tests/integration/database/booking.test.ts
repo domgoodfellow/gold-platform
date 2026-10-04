@@ -103,7 +103,7 @@ async function newBusiness(label: string, opts: { publish: boolean }): Promise<B
     typeId,
     name: 'Requested',
   });
-  const resourceId = await createResource(db, { organizationId: orgId, name: 'Van 1' });
+  const resourceId = await createResource(db, { resourceClass: 'other', organizationId: orgId, name: 'Van 1' });
   const priceItemId = await createPriceBookItem(db, {
     organizationId: orgId,
     name: 'Seasonal tyre change',

@@ -225,7 +225,7 @@ describe('M6 — a business that runs itself', () => {
         name: 'Marieke',
         email: `marieke-${randomUUID().slice(0, 8)}@example.test`,
       });
-      const van = await createResource(owner.db, { organizationId, name: 'Fitting van' });
+      const van = await createResource(owner.db, { resourceClass: 'other', organizationId, name: 'Fitting van' });
 
       // The second technician books the work. From here nobody touches anything.
       const workItemId = await createWorkItem(technician.db, {

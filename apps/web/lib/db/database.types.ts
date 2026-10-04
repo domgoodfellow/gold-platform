@@ -7884,6 +7884,108 @@ export type Database = {
           },
         ]
       }
+      resource_capabilities: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_capabilities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_capabilities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resource_capability_assignments: {
+        Row: {
+          capability_id: string
+          created_at: string
+          created_by: string
+          organization_id: string
+          resource_id: string
+        }
+        Insert: {
+          capability_id: string
+          created_at?: string
+          created_by: string
+          organization_id: string
+          resource_id: string
+        }
+        Update: {
+          capability_id?: string
+          created_at?: string
+          created_by?: string
+          organization_id?: string
+          resource_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_capability_assignments_capability_same_org"
+            columns: ["organization_id", "capability_id"]
+            isOneToOne: false
+            referencedRelation: "resource_capabilities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "resource_capability_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_capability_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_capability_assignments_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "bookable_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "resource_capability_assignments_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       resources: {
         Row: {
           created_at: string
@@ -7893,6 +7995,7 @@ export type Database = {
           membership_id: string | null
           name: string
           organization_id: string
+          resource_class: string
         }
         Insert: {
           created_at?: string
@@ -7902,6 +8005,7 @@ export type Database = {
           membership_id?: string | null
           name: string
           organization_id: string
+          resource_class: string
         }
         Update: {
           created_at?: string
@@ -7911,6 +8015,7 @@ export type Database = {
           membership_id?: string | null
           name?: string
           organization_id?: string
+          resource_class?: string
         }
         Relationships: [
           {
@@ -9398,6 +9503,10 @@ export type Database = {
         }
         Returns: string
       }
+      assign_resource_capability: {
+        Args: { p_capability_id: string; p_resource_id: string }
+        Returns: undefined
+      }
       assign_role: {
         Args: { p_membership_id: string; p_role_id: string }
         Returns: undefined
@@ -9669,11 +9778,17 @@ export type Database = {
       }
       create_resource: {
         Args: {
+          p_capability_ids?: string[]
           p_custom: Json
           p_membership_id?: string
           p_name: string
           p_organization_id: string
+          p_resource_class: string
         }
+        Returns: string
+      }
+      create_resource_capability: {
+        Args: { p_name: string; p_organization_id: string }
         Returns: string
       }
       create_role: {
@@ -10896,6 +11011,16 @@ export type Database = {
         }
         Returns: string
       }
+      record_sms_send_result: {
+        Args: {
+          p_external_id?: string
+          p_failure_reason?: string
+          p_message_id: string
+          p_organization_id: string
+          p_status: string
+        }
+        Returns: undefined
+      }
       record_usage_reconciliation: {
         Args: {
           p_note?: string
@@ -10960,6 +11085,10 @@ export type Database = {
         Args: { p_feature_id: string; p_provider_service_id: string }
         Returns: undefined
       }
+      remove_resource_capability: {
+        Args: { p_capability_id: string; p_resource_id: string }
+        Returns: undefined
+      }
       remove_type_checklist_item: { Args: { p_id: string }; Returns: undefined }
       remove_work_item_priced_line: {
         Args: { p_id: string }
@@ -10967,6 +11096,10 @@ export type Database = {
       }
       rename_form: {
         Args: { p_form_id: string; p_name: string; p_organization_id: string }
+        Returns: undefined
+      }
+      rename_resource_capability: {
+        Args: { p_id: string; p_name: string }
         Returns: undefined
       }
       rename_work_item_type: {
@@ -11009,16 +11142,6 @@ export type Database = {
       revoke_invitation: { Args: { p_id: string }; Returns: undefined }
       revoke_plan_module: {
         Args: { p_module_id: string; p_plan_id: string }
-        Returns: undefined
-      }
-      record_sms_send_result: {
-        Args: {
-          p_external_id?: string
-          p_failure_reason?: string
-          p_message_id: string
-          p_organization_id: string
-          p_status: string
-        }
         Returns: undefined
       }
       revoke_plan_product: {
@@ -11264,6 +11387,14 @@ export type Database = {
           p_provider_service_id: string
           p_relationship?: string
         }
+        Returns: undefined
+      }
+      set_resource_capability_archived: {
+        Args: { p_archived: boolean; p_id: string }
+        Returns: undefined
+      }
+      set_resource_class: {
+        Args: { p_resource_class: string; p_resource_id: string }
         Returns: undefined
       }
       set_resource_membership: {

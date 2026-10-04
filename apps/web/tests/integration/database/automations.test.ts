@@ -568,7 +568,7 @@ describe('the clock', () => {
     await client.connect();
 
     try {
-      const resource = await createResource(one.db, {
+      const resource = await createResource(one.db, { resourceClass: 'other',
         organizationId: one.organizationId,
         name: 'Van',
       });
@@ -911,7 +911,7 @@ describe('conditions at a job', () => {
       latitude: 52.370216,
       longitude: 4.895168,
     });
-    resourceId = await createResource(one.db, {
+    resourceId = await createResource(one.db, { resourceClass: 'other',
       organizationId: one.organizationId,
       name: 'Crane',
     });

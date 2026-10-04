@@ -6,12 +6,18 @@ import {
   type CustomInput,
   type CustomValues,
 } from '@/lib/domain/fields/field-definitions';
+import { isResourceClass, type ResourceClass } from '@/lib/domain/resources/resource-class';
+import type { ResourceCapability } from '@/lib/domain/resources/resource-capabilities';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 export type Resource = {
   id: string;
   name: string;
-  /** Tenant-defined fields, governed by this organization's registry (D7). */
+  /** What kind of schedulable thing this is — platform vocabulary, stated, never inferred from the name. */
+  resourceClass: ResourceClass;
+  /** What the business says this resource can do, by name. Archived ones stay on the resource that holds them. */
+  capabilities: ResourceCapability[];
+  /** Tenant-defined fields, governed by this organization's registry (D7). Nothing the scheduling engine reads lives here. */
   custom: CustomValues;
   createdAt: string;
   /**
@@ -30,11 +36,15 @@ const NAME_MAX = 200;
 // parses a select at the type level, so this only resolves through `resources_membership_same_org`
 // when written as one literal rather than assembled.
 const RESOURCE_SELECT =
-  'id, name, custom, created_at, membership_id, member:memberships!resources_membership_same_org(id, display_name)';
+  'id, name, resource_class, custom, created_at, membership_id, member:memberships!resources_membership_same_org(id, display_name), assignments:resource_capability_assignments!resource_capability_assignments_resource_same_org(capability:resource_capabilities!resource_capability_assignments_capability_same_org(id, name, archived_at))';
+
+type CapabilityRow = { id: string; name: string; archived_at: string | null };
 
 type ResourceRow = {
   id: string;
   name: string;
+  resource_class: string;
+  assignments: { capability: CapabilityRow | CapabilityRow[] | null }[] | null;
   custom: unknown;
   created_at: string;
   membership_id: string | null;
@@ -48,9 +58,17 @@ function one<T>(value: T | T[] | null): T | undefined {
 
 function toResource(row: ResourceRow): Resource {
   const member = one(row.member);
+  const capabilities = (row.assignments ?? []).flatMap((assignment) => {
+    const capability = one(assignment.capability);
+    return capability ? [{ id: capability.id, name: capability.name, archived: capability.archived_at !== null }] : [];
+  });
+  capabilities.sort((a, b) => a.name.localeCompare(b.name));
   return {
     id: row.id,
     name: row.name,
+    // The column is a checked closed set, so this narrows rather than guards.
+    resourceClass: (isResourceClass(row.resource_class) ? row.resource_class : 'other') as ResourceClass,
+    capabilities,
     custom: (row.custom ?? {}) as CustomValues,
     createdAt: row.created_at,
     member: member ? { membershipId: member.id, displayName: member.display_name } : null,
@@ -65,14 +83,39 @@ function toResource(row: ResourceRow): Resource {
  */
 export async function listResources(
   db: Db,
-  input: { organizationId: string; limit?: number },
+  input: {
+    organizationId: string;
+    limit?: number;
+    /** Only resources of this class. */
+    resourceClass?: ResourceClass;
+    /** Only resources that hold this capability. Eligibility, not availability — nothing here looks at time. */
+    capabilityId?: string;
+  },
 ): Promise<Counted<Resource>> {
-  const { data, error, count } = await db
+  let query = db
     .from('resources')
     .select(RESOURCE_SELECT, { count: 'exact' })
     .eq('organization_id', input.organizationId)
     .order('created_at', { ascending: false })
     .limit(input.limit ?? LIST_LIMIT);
+
+  if (input.resourceClass) query = query.eq('resource_class', input.resourceClass);
+
+  if (input.capabilityId) {
+    // Two steps rather than an inner join: filtering the embedded assignments would also trim the
+    // capabilities each resource is shown with, and a resource must list everything it can do.
+    const { data: holders, error: holdersError } = await db
+      .from('resource_capability_assignments')
+      .select('resource_id')
+      .eq('organization_id', input.organizationId)
+      .eq('capability_id', input.capabilityId);
+    if (holdersError) {
+      throw new DomainError(holdersError.message, 'resources.list_failed');
+    }
+    query = query.in('id', (holders ?? []).map((holder) => holder.resource_id));
+  }
+
+  const { data, error, count } = await query;
 
   if (error) {
     throw new DomainError(error.message, 'resources.list_failed');
@@ -117,6 +160,10 @@ export async function createResource(
   input: {
     organizationId: string;
     name: string;
+    /** Stated every time. There is no default: the platform does not decide what a business's resource is. */
+    resourceClass: ResourceClass;
+    /** Capabilities given at creation, in the same transaction. Archived ones are refused. */
+    capabilityIds?: string[];
     /** Raw form values keyed by field key. Coerced and checked against the registry here. */
     custom?: CustomInput;
     /**
@@ -141,6 +188,16 @@ export async function createResource(
     );
   }
 
+  if (!isResourceClass(input.resourceClass)) {
+    throw new DomainError('Say what kind of resource this is.', 'resources.class_required');
+  }
+  if (input.membershipId && input.resourceClass !== 'person') {
+    throw new DomainError(
+      'Only a person can represent a member.',
+      'resources.member_requires_person',
+    );
+  }
+
   const custom = await resolveCustom(db, {
     organizationId: input.organizationId,
     entityType: 'resource',
@@ -150,8 +207,10 @@ export async function createResource(
   const { data, error } = await db.rpc('create_resource', {
     p_organization_id: input.organizationId,
     p_name: name,
+    p_resource_class: input.resourceClass,
     p_custom: custom,
     ...(input.membershipId ? { p_membership_id: input.membershipId } : {}),
+    ...(input.capabilityIds && input.capabilityIds.length > 0 ? { p_capability_ids: input.capabilityIds } : {}),
   });
 
   if (error) {
@@ -159,7 +218,14 @@ export async function createResource(
       throw new DomainError('You cannot add resources here.', 'resources.forbidden');
     }
     if (error.code === '23514') {
+      if (error.message.includes('resources_member_is_person')) {
+        throw new DomainError('Only a person can represent a member.', 'resources.member_requires_person');
+      }
       throw new DomainError(error.message, 'resources.custom_invalid');
+    }
+    // An archived capability given at creation.
+    if (error.code === 'GD007') {
+      throw new DomainError('That capability is archived and cannot be given to anything new.', 'resource_capabilities.archived');
     }
     // The composite reference refusing a Membership that is not in this tenant.
     if (error.code === '23503') {
@@ -206,6 +272,10 @@ export async function setResourceMembership(
         'resources.update_forbidden',
       );
     }
+    // `resources_member_is_person`: a vehicle, a room or a machine cannot stand for a member.
+    if (error.code === '23514') {
+      throw new DomainError('Only a person can represent a member.', 'resources.member_requires_person');
+    }
     // The composite reference refusing a Membership that is not in this tenant.
     if (error.code === '23503') {
       throw new DomainError('No such member here.', 'resources.member_not_found');
@@ -215,6 +285,42 @@ export async function setResourceMembership(
       throw new DomainError(
         'That member already represents another resource.',
         'resources.member_already_linked',
+      );
+    }
+    throw new DomainError(error.message, 'resources.update_failed');
+  }
+}
+
+/**
+ * Change what kind of resource this is.
+ *
+ * Refused by the database while the resource represents a member and the new class is not person
+ * (`resources_member_is_person`) — nothing is unlinked on the caller's behalf, so a person who is
+ * a member becomes a vehicle only after somebody has deliberately cleared the link.
+ */
+export async function setResourceClass(
+  db: Db,
+  input: { resourceId: string; resourceClass: ResourceClass },
+): Promise<void> {
+  await requireActor(db);
+
+  if (!isResourceClass(input.resourceClass)) {
+    throw new DomainError('Say what kind of resource this is.', 'resources.class_required');
+  }
+
+  const { error } = await db.rpc('set_resource_class', {
+    p_resource_id: input.resourceId,
+    p_resource_class: input.resourceClass,
+  });
+
+  if (error) {
+    if (error.code === '42501') {
+      throw new DomainError('No such resource, or you cannot change it.', 'resources.update_forbidden');
+    }
+    if (error.code === '23514') {
+      throw new DomainError(
+        'This resource represents a member, so it can only be a person. Clear the member first.',
+        'resources.member_requires_person',
       );
     }
     throw new DomainError(error.message, 'resources.update_failed');

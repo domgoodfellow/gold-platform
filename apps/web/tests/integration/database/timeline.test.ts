@@ -106,7 +106,7 @@ async function newTenant(label: string): Promise<Tenant> {
     customerId,
   });
 
-  const resourceId = await createResource(db, { organizationId: orgId, name: 'Van 1' });
+  const resourceId = await createResource(db, { resourceClass: 'other', organizationId: orgId, name: 'Van 1' });
   await scheduleWorkItem(db, {
     workItemId,
     resourceId,

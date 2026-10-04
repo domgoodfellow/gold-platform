@@ -10,6 +10,7 @@ import { provisionOrganization } from '@/lib/domain/platform/provision';
 import { addPricedLine } from '@/lib/domain/pricing/prices';
 import { createDashboard, pinReport } from '@/lib/domain/reporting/dashboards';
 import { saveReportDefinition, setReportRoles } from '@/lib/domain/reporting/definitions';
+import { createResourceCapability } from '@/lib/domain/resources/resource-capabilities';
 import { createResource } from '@/lib/domain/resources/resources';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
 import { addMember } from '@/lib/domain/tenancy/members';
@@ -271,9 +272,21 @@ async function standUp(
     roleId: configured.roleIds[0],
   });
 
+  // The vocabulary first, one row per distinct word, then each resource states its class and what it can do.
+  const capabilityIds = new Map<string, string>();
+  for (const word of new Set(business.resources.flatMap((resource) => resource.capabilities ?? []))) {
+    capabilityIds.set(word, await createResourceCapability(ownerDb, { organizationId, name: word }));
+  }
   const resourceIds: string[] = [];
-  for (const name of business.resources) {
-    resourceIds.push(await createResource(ownerDb, { organizationId, name }));
+  for (const resource of business.resources) {
+    resourceIds.push(
+      await createResource(ownerDb, {
+        organizationId,
+        name: resource.name,
+        resourceClass: resource.resourceClass,
+        capabilityIds: (resource.capabilities ?? []).map((word) => capabilityIds.get(word)!),
+      }),
+    );
   }
 
   const locationIds: string[] = [];

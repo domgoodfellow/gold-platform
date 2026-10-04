@@ -120,7 +120,7 @@ async function newTenant(label: string): Promise<Tenant> {
     toStatusId: cancelledId,
   });
 
-  const resourceId = await createResource(db, { organizationId: orgId, name: 'Van 1' });
+  const resourceId = await createResource(db, { resourceClass: 'other', organizationId: orgId, name: 'Van 1' });
   const customerId = await createCustomer(db, { organizationId: orgId, name: 'Rue Sainte-Anne' });
 
   const workItemId = await createWorkItem(db, {

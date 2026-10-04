@@ -173,7 +173,7 @@ async function buildTenant(label: string): Promise<Tenant> {
 
   await linkCustomerLocation(founder.db, { organizationId, customerId, locationId });
 
-  const resourceId = await createResource(founder.db, {
+  const resourceId = await createResource(founder.db, { resourceClass: 'other',
     organizationId,
     name: SHARED.resourceName,
     custom: { [SHARED.fieldKey]: `VAT-${label}` },

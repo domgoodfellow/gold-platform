@@ -176,7 +176,7 @@ async function standUpPneu3L(): Promise<Business> {
   await createWorkItemTransition(db, { organizationId, typeId, fromStatusId: requestedId, toStatusId: scheduledId });
   await createWorkItemTransition(db, { organizationId, typeId, fromStatusId: scheduledId, toStatusId: doneId });
 
-  const resourceId = await createResource(db, { organizationId, name: 'The van' });
+  const resourceId = await createResource(db, { resourceClass: 'other', organizationId, name: 'The van' });
   const priceItemId = await createPriceBookItem(db, {
     organizationId,
     name: 'Seasonal tyre change',

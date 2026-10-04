@@ -70,15 +70,15 @@ describe('resources', () => {
   it('lets two tenants employ people with the same name', async () => {
     // Deliberately no unique index on name: two employees called Sam Okafor is ordinary
     // within one tenant, let alone across two. This asserts the absence is intended.
-    const mine = await createResource(alice.db, {
+    const mine = await createResource(alice.db, { resourceClass: 'other',
       organizationId: alice.organizationId,
       name: SHARED_NAME,
     });
-    const theirs = await createResource(bob.db, {
+    const theirs = await createResource(bob.db, { resourceClass: 'other',
       organizationId: bob.organizationId,
       name: SHARED_NAME,
     });
-    const alsoMine = await createResource(alice.db, {
+    const alsoMine = await createResource(alice.db, { resourceClass: 'other',
       organizationId: alice.organizationId,
       name: SHARED_NAME,
     });
@@ -109,7 +109,7 @@ describe('resources', () => {
       required: false,
     });
 
-    await createResource(alice.db, {
+    await createResource(alice.db, { resourceClass: 'other',
       organizationId: alice.organizationId,
       name: 'Van 3',
       custom: { payload_kg: '1200' },
@@ -134,7 +134,7 @@ describe('resources', () => {
     });
 
     await expect(
-      createResource(alice.db, {
+      createResource(alice.db, { resourceClass: 'other',
         organizationId: alice.organizationId,
         name: 'Wrong Entity',
         custom: { gate_code: '4821' },
@@ -167,7 +167,7 @@ describe('resources', () => {
     await assignRole(bob.db, { membershipId: membership!.id, roleId: limited });
 
     await expect(
-      createResource(bob.db, {
+      createResource(bob.db, { resourceClass: 'other',
         organizationId: bob.organizationId,
         name: 'Should Not Exist',
       }),
