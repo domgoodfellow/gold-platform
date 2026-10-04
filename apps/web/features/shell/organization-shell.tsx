@@ -98,10 +98,10 @@ export async function OrganizationShell({
     </span>
   );
 
-  // The one place the shell asks whether this business is still being set up. The sidebar row and
-  // the phone bar's first item both read this and nothing else, so neither can outlive Launch. It
-  // is the lifecycle fact already on the organization — the shell prints no progress, so it runs
-  // no readiness query; the Setup page owns the count and `launchOrganization` the guard.
+  // The one place the shell asks whether this business is still being set up. The sidebar row reads
+  // this and nothing else, so it cannot outlive Launch. It is the lifecycle fact already on the
+  // organization — the shell prints no progress, so it runs no readiness query; the Setup page owns
+  // the count and `launchOrganization` the guard.
   const sidebar = locked ? (
     <LockedOrgSidebar
       organizationId={organizationId}
@@ -128,17 +128,15 @@ export async function OrganizationShell({
 
   /*
     The global header, composed from the shared `WorkspaceHeader`. Left to right: the sidebar's
-    own trigger (from `md` up, where the sidebar exists at all) and — on a phone, where the
-    sidebar itself renders nothing and `OrgNavBar` carries navigation instead — the two identity
-    controls the sidebar would otherwise have held, kept as the two separate responsibilities they
-    are everywhere else: a compact context switcher in the context slot, and the account menu in
-    `beforeActions`, immediately before Agent, so Agent stays the furthest-right control at every
-    width. A phone reaches Setup through `OrgNavBar`'s own first item while SETUP lasts, never
-    through this header. Page identity is each page's own `PageHeader`.
+    own trigger (from `md` up) and — on a phone, where the bottom bar carries Home, AI and Menu —
+    the two identity controls: a compact context switcher in the context slot, and the account menu
+    in `beforeActions`. Agent stays the furthest-right control from `md` up; below it the bar's own
+    AI control opens the same Agent. Page identity is each page's own `PageHeader`.
   */
   const header = (
     <WorkspaceHeader
       navigationTrigger="md"
+      agentTrigger="md"
       context={
         <div className="flex min-w-0 items-center gap-3 md:hidden">
           <CompactContextSwitcher

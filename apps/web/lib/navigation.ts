@@ -286,8 +286,6 @@ export type Area = {
    * `areaLabel` reads; the first path part is the directory `navigation.test.ts` finds the page in.
    */
   route?: string;
-  /** Carried in the phone bar's primary slots when the bar has room (Customers, Work, Schedule): the frequent work stays one tap away however the sidebar nests it. */
-  phone?: boolean;
   /** The module this area belongs to, or absent for the kernel. A business without a named module doesn't see its entry — not capability gating (I12), just a fact that it isn't part of that business. */
   module?: ModuleKey;
   /**
@@ -343,7 +341,7 @@ export const AREAS: readonly Area[] = [
   // always there — and is never repeated as a child beneath it. Pipeline is the CRM stages view,
   // offered where the business has it (the reception module).
   { segment: 'sales', label: 'CRM', group: 'workspaces', workspace: 'crm' },
-  { segment: 'customers', label: 'Customers', group: 'workspaces', workspace: 'crm', phone: true },
+  { segment: 'customers', label: 'Customers', group: 'workspaces', workspace: 'crm' },
   { segment: 'pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'crm', route: 'customers/pipeline', module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
   // Communications. Home is the workspace's own destination, so it is offered to anyone who can
   // operate **any** of its channels — placing calls (`call.place`) or sending texts
@@ -382,8 +380,8 @@ export const AREAS: readonly Area[] = [
   // Work and Schedule — and is never repeated as a child beneath it. Equipment & Assets is the one
   // page behind a module.
   { segment: 'field', label: 'Field', group: 'workspaces', workspace: 'field' },
-  { segment: 'work', label: 'Work', group: 'workspaces', workspace: 'field', phone: true },
-  { segment: 'schedule', label: 'Schedule', group: 'workspaces', workspace: 'field', phone: true },
+  { segment: 'work', label: 'Work', group: 'workspaces', workspace: 'field' },
+  { segment: 'schedule', label: 'Schedule', group: 'workspaces', workspace: 'field' },
   { segment: 'resources', label: 'Resources', group: 'workspaces', workspace: 'field' },
   { segment: 'locations', label: 'Locations', group: 'workspaces', workspace: 'field' },
   { segment: 'assets', label: 'Equipment & Assets', group: 'workspaces', workspace: 'field', module: 'assets', featureKeys: ['assets'] },
@@ -551,7 +549,7 @@ export function areaAvailable(
 
 /**
  * Every area visible in navigation for the given state — one predicate, so `OrgNav` (grouped)
- * and `OrgNavBar` (flat, phone) can never diverge on eligibility even though they render
+ * and the phone Menu (the same sidebar) can never diverge on eligibility even though they render
  * differently (D4 of this slice). `enabled` is legacy module keys, `featureAvailability` is the
  * canonical resolver's available-and-entitled-and-active Feature keys
  * (`availableFeatureKeys(organizationResolvedFeatureStates(...))`), and `capabilities` is the

@@ -975,6 +975,14 @@
         "ui"
       ]
     },
+    "apps/web/tests/component/organization-phone-bar.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "navigation",
+        "accessibility"
+      ]
+    },
     "apps/web/tests/component/agent-trigger.test.tsx": {
       "category": "component",
       "concerns": [

@@ -16,7 +16,7 @@ import {
 import { BarChart3, Bot, History, Settings, X, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { cx, FOCUS_RING } from '@/components/class-names';
-import { HEADER_HEIGHT_STYLE } from '../layout/workspace-geometry';
+import { HEADER_HEIGHT_STYLE, MOBILE_NAV_HEIGHT_STYLE } from '../layout/workspace-geometry';
 
 /**
  * Two independent panels beside the workspace, each with its own open state:
@@ -302,8 +302,11 @@ function panelClass(panel: Panel, layout: RailLayout, shown: boolean): string {
   }
   return cx(
     base,
-    'fixed inset-x-0 bottom-0 z-40 rounded-t-xl border-t border-border shadow-lg',
-    global ? 'h-[85dvh]' : 'h-[min(85dvh,calc(100dvh-var(--header-height)))]',
+    // Stops above the persistent bottom bar (`--mobile-nav-height`, unset when the shell has none) so it stays reachable.
+    'fixed inset-x-0 bottom-[var(--mobile-nav-height,0px)] z-40 rounded-t-xl border-t border-border shadow-lg',
+    global
+      ? 'h-[85dvh] max-h-[calc(100dvh-var(--mobile-nav-height,0px))]'
+      : 'h-[min(85dvh,calc(100dvh-var(--header-height)))] max-h-[calc(100dvh-var(--header-height)-var(--mobile-nav-height,0px))]',
   );
 }
 
@@ -398,11 +401,14 @@ export function PagePanel() {
  * the page, and the same two elements serve every layout — only their classes change. It owns
  * `--header-height`, so Agent's header and the workspace header are one band.
  */
-export function WorkspaceRightRail({ main }: { main: ReactNode }) {
+export function WorkspaceRightRail({ main, bottomInset = false }: { main: ReactNode; /** True when the shell draws a persistent phone bottom bar; panels then stop above it. */ bottomInset?: boolean }) {
   return (
     <div className="flex min-h-svh w-full" style={HEADER_HEIGHT_STYLE}>
-      <div className="min-w-0 flex-1">{main}</div>
-      <AgentPanel />
+      {/* `contents` draws no box; it only carries `--mobile-nav-height` to both the page and Agent. */}
+      <div className="contents" style={bottomInset ? MOBILE_NAV_HEIGHT_STYLE : undefined}>
+        <div className="min-w-0 flex-1">{main}</div>
+        <AgentPanel />
+      </div>
     </div>
   );
 }

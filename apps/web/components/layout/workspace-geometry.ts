@@ -21,3 +21,12 @@ export const PAGE_PADDING = 'p-4 sm:p-6 lg:p-8';
  */
 export const DRAWER_HEADER = 'min-h-12 py-2 pl-4 pr-14';
 export const DRAWER_CLOSE_OFFSET = 'top-2'; 
+
+/**
+ * The persistent phone navigation bar's full height, safe-area inset included. Exposed as
+ * `--mobile-nav-height` by a shell that has such a bar (`WorkspaceShell`); every consumer — the page's
+ * bottom inset, the bar itself, the phone Agent panel — reads the variable, never a copy of the number.
+ * A shell with no bar leaves it unset, and consumers fall back to `0px`.
+ */
+export const MOBILE_NAV_HEIGHT = 'calc(3.5rem + env(safe-area-inset-bottom))';
+export const MOBILE_NAV_HEIGHT_STYLE = { '--mobile-nav-height': MOBILE_NAV_HEIGHT } as CSSProperties;

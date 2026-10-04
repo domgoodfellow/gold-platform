@@ -27,6 +27,7 @@ export function WorkspaceShell({
     <WorkspaceRailProvider>
       <WorkspaceCrumbsProvider>
         <WorkspaceRightRail
+          bottomInset={bottomBar != null}
           main={
             <AppShell sidebar={sidebar} header={header} bottomBar={bottomBar}>
               {children}

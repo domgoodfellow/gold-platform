@@ -87,7 +87,7 @@ describe('the operator shell navigation', () => {
     }
   });
 
-  it('gives every registered workspace row an icon — a canonical key with no NAV_ICONS entry renders blank in the collapsed rail, the phone bar and More', () => {
+  it('gives every registered workspace row an icon — a canonical key with no NAV_ICONS entry renders blank in the collapsed rail and the phone Menu', () => {
     // Only a workspace with a Home page draws a row at all (`projectShell`); Marketing, Support
     // and AI register no `home` yet and so project no `workspace-*` key to carry an icon.
     for (const workspace of WORKSPACES.filter((entry) => entry.home)) {
@@ -223,8 +223,8 @@ describe('the operator shell navigation', () => {
   });
 
   it('leads with the area an operator opens the application for', () => {
-    // Not alphabetisation and not an accident: D23 designs the phone rendering around one
-    // action, and this is the area that answers it.
+    // Not alphabetisation and not an accident: Home comes first for every renderer, and this is the
+    // area that answers "what do I do next".
     expect(AREAS[0].segment).toBe('home');
   });
 
@@ -781,13 +781,10 @@ describe('the roles Area reads as Team', () => {
  * `sidebar: false` now.
  */
 describe('an area hidden from the sidebar', () => {
-  it('is absent from the sidebar, the tablet rail and the phone bar alike — one shared predicate, not two', () => {
-    // `OrgNav` (desktop and tablet, via `areasIn`) and `OrgNavBar` (phone) are two renderings of
-    // the one `visibleAreas` predicate in `lib/navigation.ts`, per `ui-spec.md` §2 — never a
-    // second, independently-filtered copy of `AREAS` kept in step by hand. Both used to filter
-    // `sidebar !== false` themselves; `OrgNavBar` now calls the same `visibleAreas` function
-    // `areasIn` is built from, so a change to eligibility (the module gate, the canonical
-    // Feature gate, or the capability layer) cannot update one renderer and miss the other.
+  it('is absent from the sidebar, the tablet rail and the phone Menu alike — one shared predicate, not two', () => {
+    // `projectShell` is the one eligibility rule; `OrgNav` draws its result for desktop, tablet and the
+    // phone Menu (the sidebar's own Sheet), and `OrgNavBar` carries no destination list, so a change to
+    // the module gate, the Feature gate or the capability layer cannot reach one renderer and miss another.
     const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
     const projection = readFileSync(fileURLToPath(new URL('../../../lib/shell.ts', import.meta.url)), 'utf8');
 
@@ -795,7 +792,7 @@ describe('an area hidden from the sidebar', () => {
     // capability layer, the configuration targets, platform authority) is decided in `projectShell`.
     expect(projection, 'projectShell should filter on the sidebar flag').toContain('area.sidebar !== false');
     expect(shell, 'the desktop rendering should take the projection, not filter AREAS itself').toContain('sections: ShellSection[]');
-    expect(shell, 'the phone bar should take the same projection').toContain('projectPhone(sections, { platformActive })');
+    expect(shell, 'the phone bar should take the same projection').toContain('export function OrgNavBar({ sections }');
     expect(shell, 'no renderer keeps its own eligibility filter').not.toMatch(/AREAS[.]filter|visibleAreas[(]|areasIn[(]/);
     expect(shell).toContain("from '@/lib/shell'");
   });

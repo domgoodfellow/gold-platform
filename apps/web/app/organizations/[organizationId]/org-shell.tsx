@@ -18,15 +18,18 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  useSidebar,
 } from '@gold/ui/components/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@gold/ui/components/collapsible';
-import { MoreMenu } from '@/components/navigation/more-menu';
+import { Button } from '@/components/controls/button';
+import { useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   BarChart3,
+  Bot,
   Blocks,
   Building2,
   CalendarDays,
@@ -46,6 +49,7 @@ import {
   LayoutDashboard,
   Library,
   MapPin,
+  Menu,
   Inbox,
   MessageSquare,
   Package,
@@ -66,7 +70,6 @@ import {
   activeItemKey,
   inPlatformScope,
   itemContains,
-  projectPhone,
   type NavItem,
   type ShellSection,
 } from '@/lib/shell';
@@ -294,100 +297,92 @@ export function OrgNav({ sections }: { sections: ShellSection[] }) {
 
 export type { SwitchableOrganization };
 
-const PHONE_ROW = 'flex items-center justify-center gap-2 rounded px-3 py-1.5 text-sm';
+const BAR_CELL =
+  'h-full w-full flex-col gap-0.5 rounded border-0 px-0 text-xs font-medium shadow-none';
 
-/** A single row in the phone bar — plain Tailwind, not `Sidebar`'s vocabulary, since this list never collapses and never sits inside a `Sidebar` at all (see `OrgNavBar`). */
-function PhoneNavLink({ item, current }: { item: NavItem; current: boolean }) {
-  const Icon = NAV_ICONS[item.key];
-
-  return (
-    <Link
-      href={item.href}
-      aria-current={current ? 'page' : undefined}
-      aria-label={item.label}
-      title={item.label}
-      className={cx(FOCUS_RING, PHONE_ROW, current ? 'bg-foreground font-medium text-background' : 'hover:bg-hover')}
-    >
-      {Icon ? <Icon aria-hidden size={18} className="shrink-0" /> : null}
-      <span className="min-w-0">{item.label}</span>
-    </Link>
-  );
-}
+/** AI and Menu are buttons whose state is `aria-pressed` / `aria-expanded`; the shared Button styles those, so the bar restates them to match Home's current state. */
+const BAR_TOGGLE =
+  'bg-transparent hover:bg-hover aria-pressed:bg-foreground aria-pressed:text-background aria-pressed:hover:bg-foreground aria-expanded:bg-foreground aria-expanded:text-background aria-expanded:hover:bg-foreground';
 
 /**
- * The phone rendering of the same projection: a fixed bar with Home, the first workspaces and one
- * **More** button, which opens everything else — the remaining workspaces, Operations,
- * Business and Platform — in a sheet, grouped exactly as the desktop sidebar groups them.
- * Frequent work is one thumb away; the less frequent is understandable and never crowds it, however
- * many sections a member's authority produces. It is a rendering choice over `projectPhone`, not a
- * second eligibility rule.
+ * The phone's persistent bar: exactly three equal cells and nothing that scrolls.
  *
- * It lists this business's places and nothing else. Platform items appear here only where the
- * projection produced them — GOLD's own organization, for an operator holding the permission —
- * behind More, never in the bar.
+ * - **Home** is the projected Home item, whatever address `projectShell` gave it.
+ * - **AI** toggles the one workspace-global Agent (`useWorkspaceRail`), the same call the header's
+ *   `AgentTrigger` makes; its pressed state is `agentOpen`.
+ * - **Menu** opens the sidebar's own phone Sheet (`useSidebar`), which renders `OrgSidebar` — the
+ *   same `sections` the desktop sidebar draws, workspace rows and Platform included. The bar holds no
+ *   destination of its own, so it decides no eligibility.
  *
- * It renders outside `Sidebar` entirely, never inside it: shadcn's own mobile rendering below `md`
- * is an off-canvas sheet no trigger reaches, so it mounts closed and this bar is what a phone
- * actually sees. When the current page belongs to something behind More, More is the current item.
+ * It renders outside `Sidebar`, as a sibling inside `SidebarProvider`, so it can read both contexts.
+ * Its height is `--mobile-nav-height` (`workspace-geometry.ts`), which the page inset and the phone
+ * Agent panel read too.
  */
-export function OrgNavBar({
-  sections,
-}: {
-  sections: ShellSection[];
-  /** True only while the business is in SETUP — the layout decides, and it leaves the bar the moment the business is LIVE. */
-}) {
+export function OrgNavBar({ sections }: { sections: ShellSection[] }) {
   const pathname = usePathname();
   const active = activeItemKey(sections, pathname);
-  const platformActive = inPlatformScope(pathname);
-  const { primary, more } = projectPhone(sections, { platformActive });
+  const home = sections.find((section) => section.key === 'home')?.items[0];
+  const { agentOpen, toggleAgent } = useWorkspaceRail();
+  const { openMobile, setOpenMobile } = useSidebar();
+
+  // The Sheet does not close itself when a link inside it is followed.
+  useEffect(() => setOpenMobile(false), [pathname, setOpenMobile]);
 
   return (
     <nav
-      aria-label={platformActive ? 'Platform' : 'This business'}
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background md:hidden"
+      aria-label="This business"
+      className="fixed inset-x-0 bottom-0 z-20 h-(--mobile-nav-height) border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
     >
-      <ul className="flex gap-1 overflow-x-auto p-2">
-        {primary.map((item) => (
-          <li key={item.key} className="shrink-0">
-            <PhoneNavLink item={item} current={item.key === active} />
-          </li>
-        ))}
-        {more.length > 0 ? (
-          <li className="shrink-0">
-            <MoreMenu
-              sections={more}
-              activeKey={active}
-              triggerClassName={PHONE_ROW}
-              renderIcon={(key) => {
-                const Icon = NAV_ICONS[key];
-                return Icon ? <Icon aria-hidden size={18} className="shrink-0" /> : null;
-              }}
-            />
-          </li>
-        ) : null}
+      <ul className="grid h-full grid-cols-3 gap-1 p-1">
+        <li className="min-w-0">
+          {home ? (
+            <Link
+              href={home.href}
+              aria-current={home.key === active ? 'page' : undefined}
+              className={cx(FOCUS_RING, 'flex items-center justify-center', BAR_CELL, home.key === active ? 'bg-foreground text-background' : 'hover:bg-hover')}
+            >
+              <Home aria-hidden size={20} />
+              Home
+            </Link>
+          ) : null}
+        </li>
+        <li className="min-w-0">
+          <Button
+            type="button"
+            tone="secondary"
+            aria-label="AI"
+            aria-pressed={agentOpen}
+            onClick={toggleAgent}
+            className={cx(BAR_CELL, BAR_TOGGLE)}
+          >
+            <Bot aria-hidden size={20} />
+            AI
+          </Button>
+        </li>
+        <li className="min-w-0">
+          <Button
+            type="button"
+            tone="secondary"
+            aria-label="Menu"
+            aria-expanded={openMobile}
+            onClick={() => setOpenMobile(!openMobile)}
+            className={cx(BAR_CELL, BAR_TOGGLE)}
+          >
+            <Menu aria-hidden size={20} />
+            Menu
+          </Button>
+        </li>
       </ul>
     </nav>
   );
 }
 
 /**
- * The one Setup treatment while a business is in SETUP — an ordinary navigation row above the
- * areas, and the only setup affordance the shell draws: not a second call to action, not a badge,
- * not a count. Setup owns progress (`SetupProgressCard`); navigation only goes there, so the
- * shell runs no readiness query on every request. The layout renders it only while
- * `operationalState === 'setup'`, so it is gone the moment the business is LIVE with nothing left
- * to remember to turn off. Same collapse-to-icon and tooltip behaviour as every other row.
- */
-/**
- * The phone's rendering of the same lifecycle treatment: the first item in the bottom bar, only
- * while the business is in SETUP. It is the bar's own row, not a header badge, and `ui-spec.md` §2's
- * rule against a permanent extra bottom-bar destination holds because it disappears at Launch.
- */
-/**
  * The whole operator sidebar: identity and context switching in the header, Setup (while it
  * applies) and the projected sections in the content, the account menu in the footer.
  * `collapsible="icon"` and everything collapse-related is `Sidebar`'s own state, shared with every
- * other workspace shell rather than a second, `localStorage`-backed implementation beside it.
+ * other workspace shell rather than a second, `localStorage`-backed implementation beside it. On a phone
+ * the same sidebar is the Menu: its own Sheet, opened from the right (`mobileSide`), drawing these same sections.
  */
 export function OrgSidebar({
   organizationId,
@@ -414,7 +409,7 @@ export function OrgSidebar({
   businessSettingsOffered: boolean;
 } & React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" mobileSide="right" {...props}>
       <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
         <ContextSwitcher
           mark={mark}

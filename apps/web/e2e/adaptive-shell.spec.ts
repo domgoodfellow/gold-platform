@@ -43,17 +43,45 @@ test.describe('a tenant owner', () => {
     await expect(sidebar(page).getByText('Platform', { exact: true })).toHaveCount(0);
   });
 
-  test('on a phone reaches Business behind More, not in the bar', async ({ page }) => {
+  test('on a phone has Home, AI and Menu in the bar, and reaches Business through Menu', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/organizations/${organizationId}/home`);
     const bar = page.locator('nav[aria-label="This business"].fixed');
-    await expect(bar.getByRole('link', { name: 'Team', exact: true })).toHaveCount(0);
-    await bar.getByRole('button', { name: 'More' }).click();
+    await expect(bar.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'AI', exact: true })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Menu', exact: true })).toBeVisible();
+    // Workspace pages are not bar destinations, and nothing in the bar scrolls sideways.
+    for (const name of ['Customers', 'Work', 'Schedule', 'Team']) {
+      await expect(bar.getByRole('link', { name, exact: true })).toHaveCount(0);
+    }
+    const scrolls = await bar.locator('ul').evaluate((list) => list.scrollWidth > list.clientWidth);
+    expect(scrolls).toBe(false);
+
+    await bar.getByRole('button', { name: 'Menu', exact: true }).click();
     const sheet = page.getByRole('dialog');
     await expect(sheet.getByText('Business', { exact: true })).toBeVisible();
-    await expect(sheet.getByRole('link', { name: 'Team', exact: true })).toBeVisible();
     await expect(sheet.getByText('Platform', { exact: true })).toHaveCount(0);
+    await sheet.getByRole('link', { name: 'Team', exact: true }).click();
+    await expect(page).toHaveURL(/\/settings\/access/);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('on a phone, AI opens the Agent above the bar and the same control closes it', async ({ page }) => {
+    const { organizationId } = loadDemoContext();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/organizations/${organizationId}/home`);
+    const bar = page.locator('nav[aria-label="This business"].fixed');
+    const ai = bar.getByRole('button', { name: 'AI', exact: true });
+    await ai.click();
+    const agent = page.getByRole('complementary', { name: 'Agent' });
+    await expect(agent).toBeVisible();
+    await expect(ai).toHaveAttribute('aria-pressed', 'true');
+    const barBox = (await bar.boundingBox())!;
+    const agentBox = (await agent.boundingBox())!;
+    expect(agentBox.y + agentBox.height).toBeLessThanOrEqual(barBox.y + 1);
+    await ai.click();
+    await expect(agent).toBeHidden();
   });
 });
 
@@ -104,15 +132,17 @@ test.describe('GOLD platform staff', () => {
     await expect(page.locator('[data-slot="sidebar-container"]').getByText('GOLD', { exact: true }).first()).toBeVisible();
   });
 
-  test('on a phone, are shown Platform as the active scope, with Home to get back', async ({ page }) => {
+  test('on a phone, keep Home, AI and Menu in the bar inside Platform, and find Platform in Menu', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(platformUrl());
-    const bar = page.locator('nav[aria-label="Platform"].fixed');
+    const bar = page.locator('nav[aria-label="This business"].fixed');
     await expect(bar.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
-    await expect(bar.getByRole('link', { name: 'Organizations', exact: true })).toBeVisible();
-    await bar.getByRole('button', { name: 'More' }).click();
+    await expect(bar.getByRole('button', { name: 'AI', exact: true })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Menu', exact: true })).toBeVisible();
+    await expect(bar.getByRole('link', { name: 'Organizations', exact: true })).toHaveCount(0);
+    await bar.getByRole('button', { name: 'Menu', exact: true }).click();
     const sheet = page.getByRole('dialog');
-    await expect(sheet.getByText('Infrastructure', { exact: true })).toBeVisible();
+    await expect(sheet.getByRole('link', { name: 'Organizations', exact: true })).toBeVisible();
     await expect(sheet.getByRole('link', { name: 'Providers', exact: true })).toBeVisible();
   });
 });

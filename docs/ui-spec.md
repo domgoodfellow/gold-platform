@@ -106,7 +106,7 @@ was — segments, labels, groups, modules.
 
 | | Navigation | Layout | Overlays | State |
 |---|---|---|---|---|
-| Phone | bottom bar, fixed, scrolls sideways; leads with the current context | single column | sheets, sticky action bars | built |
+| Phone | bottom bar, fixed: **Home | AI | Menu**, three equal cells, never scrolling; Menu is the sidebar's own sheet, from the right | single column | sheets, sticky action bars | built |
 | Tablet | rail, icon-only | two column | sheets or dialogs | built |
 | Desktop | persistent sidebar | denser tables | dialogs | built |
 
@@ -114,7 +114,7 @@ was — segments, labels, groups, modules.
 same `AREAS`; two lists that had to agree eventually would not.
 
 **One shell, projected.** Organization context is the normal operating context. Every renderer —
-the desktop sidebar, its collapsed rail, the tablet rail, the phone bar and its More menu, and the
+the desktop sidebar, its collapsed rail, the tablet rail, the phone Menu, and the
 Settings map — draws the projection `projectShell` (`lib/shell.ts`) resolves from four independent
 facts: the organization's entitlements, the member's capabilities, whether the organization is
 GildOps' own, and the member's platform permissions. Hiding an item is courtesy, never
@@ -228,11 +228,17 @@ where an operator works; a page is one task inside it. A Product can contribute 
 workspaces and a workspace can compose several Products. Only workspaces and pages are navigation,
 and nothing in the sidebar is named for a Plan.
 
-**The phone bar is Home, the first workspaces and More.** Frequent work is in the bar
-(`projectPhone`); everything else — the remaining workspace pages, Library, Business and
-Platform — is behind **More**, a sheet grouped as the sidebar is. It is a rendering choice over the
-same projection, so the bar and More together are exactly what the desktop shows. The sidebar
-trigger is hidden below `md` because the bottom bar is the phone's navigation.
+**The phone bar is Home, AI and Menu.** Three equal cells, and nothing in the bar scrolls.
+*Home* goes to the organization's projected Home. *AI* toggles the existing workspace-global Agent
+(`useWorkspaceRail`'s `toggleAgent`), the same Agent the header's trigger opens from `md` up; on a
+phone the open Agent panel stops above the bar, so the same control closes it. *Menu* opens the
+sidebar's own phone sheet, from the right (`Sidebar`'s `mobileSide`; the desktop sidebar stays on
+the left), and that sheet draws the same `sections` as the desktop sidebar: workspace rows go to
+their Home, the chevron expands their pages, and Business and Platform appear there when projected.
+Platform is never a bar destination. There is no separate phone projection, so the Menu and the
+desktop sidebar are exactly one list; desktop and tablet navigation are unchanged. The bar's height is
+`--mobile-nav-height` (`workspace-geometry.ts`), which the page's bottom inset and the phone Agent
+panel read. The sidebar trigger is hidden below `md` because the Menu button opens that sheet.
 
 **Sections, ruled apart, in `AREA_GROUPS` order** — Home, Library, Workspaces, Business and
 Platform. `navigation.test.ts` fails on an interleaved list: each
@@ -347,13 +353,12 @@ just narrows. `AppShell` uses `@gold/ui`'s `SidebarProvider`; the shared shadcn 
 persists collapse state in its `sidebar_state` cookie. Each context maps its own navigation
 model. The identity block compacts with the labels.
 
-**The sidebar is not there at all on a phone.** It used to be, which put the business's identity
-and the shell's own actions in a band above every screen while the same areas sat in the bar at
-the bottom — two pieces of chrome and one duplicated list before any content. Below `md` the
-areas are the bottom bar and everything else is the header, so `AppShell` hides the column
-outright. The phone bar is `fixed`, and `display: none` on an ancestor takes a fixed descendant
-with it, so that bar is a sibling of the sidebar rather than a second `<nav>` inside it —
-`OrgNavBar` beside `OrgNav`, both mapping the one `AREAS` list.
+**The sidebar is not a column on a phone; it is the Menu sheet.** Below `md` the column does not
+draw, and the persistent chrome is the header and the three-cell bottom bar. The sidebar's own
+mobile sheet holds the same content as the desktop column and opens from the Menu button. The
+phone bar is `fixed`, and `display: none` on an ancestor takes a fixed descendant with it, so that
+bar is a sibling of the sidebar rather than a `<nav>` inside it — `OrgNavBar` beside `OrgSidebar`,
+both inside `SidebarProvider`, which is how the bar opens the sheet.
 
 ---
 
@@ -392,7 +397,7 @@ Platform, or Account.
 
 | | What | Which widths |
 |---|---|---|
-| Left | the sidebar trigger | `md` and up in the organization shell (which Platform renders inside), where a phone gets the bottom bar instead; every width in Personal settings and the fallback frame, whose only phone navigation is the sidebar sheet |
+| Left | the sidebar trigger | `md` and up in the organization shell (which Platform renders inside), where a phone gets the bottom bar's Menu button instead; every width in Personal settings and the fallback frame, whose only phone navigation is the sidebar sheet |
 | Left | the compact context switcher — the business's mark and name, opening the same menu the sidebar's own switcher does — nothing about Setup lives in this header at any width | below `md` only, in the organization shell — the sidebar says it above that |
 | Left, after the above | the breadcrumb trail — ancestors, then the current page, always published | all |
 | Right, before Agent | account menu | below `md`; desktop account controls live in the sidebar footer |
@@ -442,9 +447,8 @@ command.
 of it.** The current `gold_internal` base Plan identifies that workspace, never its name. Platform
 Administration is a sub-scope of that same organization (D60), reached from the Platform section of
 its sidebar, not from the switcher. Neither authority substitutes for the other. On a phone the bar
-presents Platform while the address is inside it — a way back to Home and the Platform
-destinations, with the pages under Catalog, Commercial and Infrastructure and GildOps' own workspaces
-behind More — and the business's own places otherwise.
+is Home, AI and Menu everywhere, Platform included; the Platform section, with the pages under
+Catalog, Commercial and Infrastructure, is in the Menu beside GildOps' own workspaces.
 
 **The application canvas has three modes.** `AppPage` owns `fluid` (the default), `form` and
 `reading`. Operational and collection pages are `fluid`: header, local navigation, toolbar and
@@ -454,7 +458,7 @@ deliberate, bounded, centred layouts for one focused task. No page writes a `max
 **The support modes are always the last page actions, in one order.** `PageHeader` renders
 Activity, Insights, then Configure, after `actions`; `SupportTrigger` is placed nowhere else.
 Resources reads *Add resource, Configure*; Customers reads *Import, New customer, Activity,
-Insights, Configure*. Agent stays in the workspace header.
+Insights, Configure*. Agent stays in the workspace header from `md` up; below it the bottom bar's AI control opens the same Agent.
 
 **A drawer's chrome is one compact band** (`DRAWER_HEADER` in `workspace-geometry.ts`), the same
 for Configure and every create or edit form.

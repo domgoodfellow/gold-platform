@@ -140,18 +140,18 @@ describe('who owns which failure', () => {
   });
 });
 
-describe('the phone bar is one projection with a More menu', () => {
+describe('the phone bar is Home, AI and Menu over the one projection', () => {
   const shell = read('app/organizations/[organizationId]/org-shell.tsx');
-  const bar = shell.slice(shell.indexOf('export function OrgNavBar('), shell.indexOf('export function SetupEntry'));
+  const bar = shell.slice(shell.indexOf('export function OrgNavBar('), shell.indexOf('export function OrgSidebar('));
 
   it('a business’s bar renders the projection it is given — it decides no eligibility of its own', () => {
-    expect(bar).toContain('projectPhone(sections, { platformActive })');
+    expect(bar).toContain("sections.find((section) => section.key === 'home')");
     expect(bar).not.toMatch(/visibleAreas\(|areasIn\(|PlatformPhoneNavMenu|PLATFORM_NAV|inPlatformContext|capabilit/);
   });
 
-  it('reaches Business and Platform behind More rather than crowding the bar', () => {
-    expect(bar).toContain('More');
-    expect(bar).toContain('<MoreMenu');
+  it('reaches Business and Platform through Menu rather than crowding the bar', () => {
+    expect(bar).toContain('aria-label="Menu"');
+    expect(bar).toContain('useSidebar()');
   });
 
   it('Platform is offered only from server-resolved facts, inside the one shell', () => {

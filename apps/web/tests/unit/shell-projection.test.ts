@@ -8,7 +8,6 @@ import {
   inPlatformScope,
   itemContains,
   projectedItems,
-  projectPhone,
   projectShell,
   type ShellInput,
   type ShellSection,
@@ -292,95 +291,6 @@ describe('entitlement absent', () => {
   });
 });
 
-describe('the phone renders the same projection', () => {
-  const sections = project(ALL_CAPABILITIES, { platform: allPlatform });
-  const { primary, more } = projectPhone(sections);
-  /** A heading is a disclosure with no page of its own; the phone lists the pages beneath it. */
-  const pagesOf = (items: { key: string; heading?: boolean }[]) => items.filter((item) => !item.heading).map((item) => item.key).sort();
-
-  it('in a business carries Home and the first workspace pages in the bar, and everything else behind More', () => {
-    // A workspace with pages contributes its pages, so Work and Schedule stay one tap away.
-    expect(primary.map((item) => item.key)).toEqual(['home', 'customers', 'work', 'schedule']);
-    // Every other workspace here has a Home plus at least one other page, so each is a heading over
-    // its pages — never a loose "Workspaces" group, and never Home listed again as one of them.
-    // For this platform operator Finance now has one too (Plans & Add-ons), so it joins them; Studio
-    // still has only its one page, so it stays a loose item under the section's own "Workspaces"
-    // heading — the same rule a parent with pages follows, applied to a workspace with none.
-    expect(more.map((section) => section.label)).toEqual([
-      null, 'Workspaces', 'CRM', 'Communications', 'Finance', 'Automations', 'Field', 'Business', 'Platform', 'Catalog', 'Commercial', 'Infrastructure',
-    ]);
-    expect(more[0].items.map((item) => item.key)).toEqual(['library']);
-    expect(more[1].items.map((item) => item.key)).toEqual(['workspace-studio']);
-    expect(more[2].items.map((item) => item.key)).toEqual(['pipeline']);
-    expect(more[3].items.map((item) => item.key)).toEqual(['calls', 'comms-inbox', 'comms-numbers']);
-    expect(more[4].items.map((item) => item.key)).toEqual(['finance-plans']);
-    expect(more[5].items.map((item) => item.label)).toEqual(['Rules', 'Messages', 'Activity']);
-    expect(more[6].items.map((item) => item.key)).toEqual(['resources', 'locations', 'assets']);
-    expect(more[7].items.map((item) => item.key)).toEqual(['team', 'connections', 'plan']);
-    // Platform, unwrapped one level: Organizations loose beneath the Platform heading itself
-    // (never a repeated "Overview"), Catalog/Commercial/Infrastructure each their own entry.
-    expect(more[8].items.map((item) => item.key)).toEqual(['platform-organizations']);
-    expect(more[9].items.map((item) => item.key)).toEqual(['platform-products', 'platform-meters', 'platform-connectors']);
-  });
-
-  it('loses and adds nothing: the bar and More together are exactly the desktop projection', () => {
-    const phone = pagesOf([...primary, ...more.flatMap((section) => section.items)]);
-    expect(phone).toEqual(pagesOf(projectedItems(sections)));
-  });
-
-  it('inside Platform presents Platform: a way back to Home, the Platform destinations, and the rest behind More', () => {
-    const platform = projectPhone(sections, { platformActive: true });
-    // Platform's own row is never a primary button beside its own children — the same "never
-    // repeated as a child" rule, the other way round: its destinations are what leads the bar.
-    expect(platform.primary.map((item) => item.key)).toEqual([
-      'home',
-      'platform-organizations',
-      'platform-group-catalog',
-      'platform-group-commercial',
-      'platform-group-infrastructure',
-    ]);
-    // Platform's own pages lead More; GOLD's workspaces follow. Ten Platform destinations and every workspace never share the bar.
-    expect(platform.more.map((section) => section.label)).toEqual([
-      'Catalog', 'Commercial', 'Infrastructure', null, 'Workspaces', 'CRM', 'Communications', 'Finance', 'Automations', 'Field', 'Business',
-    ]);
-    const phone = pagesOf([...platform.primary, ...platform.more.flatMap((section) => section.items)]);
-    expect(phone).toEqual(pagesOf(projectedItems(sections)));
-  });
-
-  it('is the ordinary business bar when the person is not in Platform, even with Platform authority', () => {
-    expect(projectPhone(sections, { platformActive: false }).primary.map((item) => item.key)).toEqual(primary.map((item) => item.key));
-  });
-
-  it('falls back to the business bar when there is no Platform to present', () => {
-    const noPlatform = project(ALL_CAPABILITIES, { platform: null });
-    expect(projectPhone(noPlatform, { platformActive: true }).primary.map((item) => item.key)).toEqual(['home', 'customers', 'work', 'schedule']);
-  });
-
-  it('never puts Business or Platform in the bar, however few workspaces there are', () => {
-    const tiny = projectPhone(project([], { enabledModules: new Set(), featureAvailability: new Set(), platform: allPlatform }));
-    expect(tiny.primary.every((item) => item.section === 'home' || item.section === 'workspaces')).toBe(true);
-  });
-
-  it('leaves only the rest of Field behind More for somebody with the kernel and nothing else', () => {
-    const minimal = projectShell({
-      organizationId: ORG,
-      enabledModules: new Set(),
-      featureAvailability: new Set(),
-      capabilities: new Set(),
-      platform: null,
-    }).filter((section) => section.key === 'home' || section.key === 'workspaces');
-    const { more: rest } = projectPhone(minimal);
-    // Sales is fully absorbed into the bar (Home's only other kernel page, Customers, is already
-    // there, and Pipeline needs a module this business lacks), so it draws no More entry at all.
-    // Finance and Studio are kernel too and have no phone-primary page of their own, so their one
-    // page each surfaces as a loose item under "Workspaces".
-    expect(rest.map((section) => [section.label, section.items.map((item) => item.key)])).toEqual([
-      ['Workspaces', ['workspace-finance', 'workspace-studio']],
-      ['Field', ['resources', 'locations']],
-    ]);
-  });
-});
-
 describe('the current item', () => {
   const sections = project(ALL_CAPABILITIES, { platform: allPlatform });
 
@@ -553,12 +463,5 @@ describe('the permission gradient: operating work, then business administration,
   it('a workspace with one reachable area is a plain row; with several, an expandable one — never a dropdown of one Home', () => {
     const rows = personas[1].sections.find((section) => section.key === 'workspaces')!.items;
     for (const row of rows) expect(row.children === undefined || row.children.length >= 1).toBe(true);
-  });
-
-  it('the phone carries the same items, with the administration tiers behind More in the same order', () => {
-    const { primary, more } = projectPhone(personas[4].sections);
-    expect(primary.every((item) => !ADMINISTRATION_SECTIONS.has(item.section))).toBe(true);
-    const order = more.map((section) => SHELL_SECTION_ORDER.indexOf(section.key));
-    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 });

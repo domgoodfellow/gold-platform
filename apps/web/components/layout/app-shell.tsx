@@ -13,12 +13,9 @@ import { PagePanel } from '../panels/workspace-right-rail';
  * this is that primitive promoted to both shells rather than the operator half of it staying a
  * bespoke `localStorage` implementation beside it.
  *
- * `bottomBar` is a phone-only sibling of `SidebarInset`, never a child of the `Sidebar` itself.
- * shadcn's own mobile rendering is an off-canvas sheet, and `ui-spec.md` §2 refuses a phone
- * drawer outright — "needs a toggle, a focus trap and an escape key to be correct" — so a
- * caller that passes `bottomBar` must never also give the sidebar a trigger reachable below
- * `md`: with no trigger, `Sidebar`'s own mobile branch mounts a closed sheet and renders
- * nothing, and the bottom bar is what a phone actually sees.
+ * `bottomBar` is a phone-only sibling of `SidebarInset`, inside `SidebarProvider` so its Menu control can open the
+ * sidebar's own mobile Sheet (`useSidebar`). The sheet is the phone's navigation; the header offers no
+ * sidebar trigger below `md`, and the page keeps `--mobile-nav-height` clear beneath it.
  */
 export function AppShell({
   sidebar,
@@ -48,7 +45,7 @@ export function AppShell({
         {/* Beneath the workspace header, beside the page: the page drawer lives here, so it starts
             under the header and the page stays visible next to it. */}
         <div className="flex min-h-0 min-w-0 flex-1">
-          <div className={cx('flex min-h-0 min-w-0 flex-1 flex-col', PAGE_PADDING, bottomBar ? 'pb-24 md:pb-6' : undefined)}>
+          <div className={cx('flex min-h-0 min-w-0 flex-1 flex-col', PAGE_PADDING, bottomBar ? 'pb-[calc(var(--mobile-nav-height,0px)+1.5rem)] md:pb-6' : undefined)}>
             {children}
           </div>
           <PagePanel />

@@ -21,12 +21,13 @@ export function WorkspaceHeader({
   navigationTrigger,
   context,
   beforeActions,
+  agentTrigger = 'always',
 }: {
   /**
    * 'md' — the sidebar trigger and its separator appear only from `md` up. Business *and*
    * Platform Context use this: Platform is GOLD's own organization shell, so a phone gets the
-   * bottom bar (`OrgNavBar`, which puts Platform first while in Platform Context) and the
-   * sidebar itself renders nothing below that width, per `AppShell`.
+   * bottom bar (`OrgNavBar`: Home, AI, Menu), whose Menu opens the sidebar's own phone Sheet, and the
+   * header carries no sidebar trigger below that width.
    * 'always' — the trigger shows at every width, for a shell with no bottom bar whose only phone
    * navigation *is* the sidebar's off-canvas Sheet (Personal settings and the fallback frame).
    * Omit where no sidebar sits behind this header.
@@ -40,6 +41,11 @@ export function WorkspaceHeader({
   /** Rendered immediately before Agent — a compact person control for a shell whose
    * sidebar-footer `AccountMenu` is not reachable at this width. */
   beforeActions?: ReactNode;
+  /**
+   * 'md' — the Agent trigger shows only from `md` up, for a shell whose phone bottom bar carries its own
+   * AI control. Default 'always', for shells with no bottom bar.
+   */
+  agentTrigger?: 'always' | 'md';
 }) {
   return (
     <header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center gap-3 border-b border-border bg-background px-4 sm:px-6">
@@ -61,7 +67,9 @@ export function WorkspaceHeader({
       <WorkspaceCrumbSlot />
       <span className="flex-1" />
       {beforeActions}
-      <AgentTrigger />
+      <div className={agentTrigger === 'md' ? 'hidden md:block' : undefined}>
+        <AgentTrigger />
+      </div>
     </header>
   );
 }

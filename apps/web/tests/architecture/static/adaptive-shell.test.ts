@@ -132,7 +132,6 @@ describe('the projection is the only eligibility rule', () => {
   // destructures; the layout still hands the one result to every renderer.
   const shellModel = code(read('lib/application/shell/organization-shell.ts'));
   const renderers = code(read('app/organizations/[organizationId]/org-shell.tsx'));
-  const more = code(read('components/navigation/more-menu.tsx'));
 
   it('is called once, by the shell, and its result is handed to every renderer', () => {
     expect(shellModel.match(/projectShell\(/g)).toHaveLength(1);
@@ -140,8 +139,8 @@ describe('the projection is the only eligibility rule', () => {
     expect(shell).toMatch(/<OrgNavBar[^>]*sections=\{sections\}/);
   });
 
-  it('no renderer or shared menu names a capability, an entitlement or a platform permission', () => {
-    for (const [name, source] of [['org-shell', renderers], ['more-menu', more]] as const) {
+  it('no renderer names a capability, an entitlement or a platform permission', () => {
+    for (const [name, source] of [['org-shell', renderers]] as const) {
       expect(source, name).not.toMatch(/capabilit|enabledModules|featureAvailability|platformPermissions|areaEntitled|areaVisibleTo/);
       expect(source, name).not.toMatch(/isOwner|isAdmin|isGold|isPlatformStaff|role\s*===/);
     }
@@ -160,8 +159,11 @@ describe('the projection is the only eligibility rule', () => {
 
   it('draws every section from the same list on desktop, tablet and phone', () => {
     expect(renderers).toContain('export function OrgNav({ sections }');
-    expect(renderers).toContain('projectPhone(sections, { platformActive })');
-    expect(renderers).toContain('<MoreMenu');
+    // The phone Menu is the sidebar's own Sheet: the one `OrgSidebar` receives `sections` and draws `OrgNav`
+    // for both breakpoints, and the phone bar carries no destination list of its own.
+    expect(renderers).toContain('export function OrgNavBar({ sections }');
+    expect(renderers).toContain('<OrgNav sections={sections} />');
+    expect(renderers).not.toMatch(/projectPhone|MoreMenu|overflow-x/);
   });
 });
 

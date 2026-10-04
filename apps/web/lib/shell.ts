@@ -28,8 +28,8 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  *   the organization's identity       (is it GOLD's own workspace?), and
  *   the member's platform authority   (which platform permissions their staff row names).
  *
- * Every renderer — the desktop sidebar, the collapsed rail, the tablet rail, the phone bar and its
- * More menu, the Settings map — consumes what this returns and decides nothing. There is no
+ * Every renderer — the desktop sidebar, the collapsed rail, the tablet rail, the phone Menu (the sidebar's own sheet),
+ * the Settings map — consumes what this returns and decides nothing. There is no
  * `isOwner`, `isAdmin`, `isGold` or `isPlatformStaff` anywhere downstream, and no role name: a role
  * is an editable bundle of capabilities, and behaviour asks about capabilities. Hiding an item is
  * courtesy; the page, the domain function and the policy behind it still refuse (I12).
@@ -61,11 +61,9 @@ export type NavItem = {
   children?: NavItem[];
   /** Matches only its own address, not everything beneath it: the Platform overview is the root of a whole tree. */
   exact?: boolean;
-  /** Kept in the phone bar's primary slots when there is room — the frequent work, however the sidebar nests it. */
-  phone?: boolean;
   /**
    * A heading that has no page of its own: its `href` is its first page's, so the collapsed rail has
-   * somewhere to go, and the phone's More menu does not list it a second time as an overview.
+   * somewhere to go, and no renderer lists it a second time as an overview.
    */
   heading?: boolean;
 };
@@ -118,7 +116,6 @@ function areaItem(organizationId: string, area: Area, section: ShellSectionKey):
     label: area.label,
     href: areaHref(organizationId, area.segment),
     section,
-    ...(area.phone ? { phone: true } : {}),
   };
 }
 
@@ -245,7 +242,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
         href: homeItem.href,
         section: 'workspaces',
       };
-      if (areas.length === 1 && financePlatformChildren.length === 0) return [{ ...row, ...(homeItem.phone ? { phone: true } : {}) }];
+      if (areas.length === 1 && financePlatformChildren.length === 0) return [row];
       return [{ ...row, heading: true, children: home ? children : children.slice(1) }];
     });
 
@@ -305,100 +302,7 @@ export function activeItemKey(sections: readonly ShellSection[], pathname: strin
   return best?.key ?? null;
 }
 
-/** Whether a pathname is inside GOLD's Platform sub-scope — the one fact the phone presentation and the Agent both follow. */
+/** Whether a pathname is inside GOLD's Platform sub-scope — the one fact the sidebar disclosure follows. */
 export function inPlatformScope(pathname: string): boolean {
   return platformSubpath(pathname) !== null;
-}
-
-/** How many workspace pages the phone bar carries beside Home before the rest go behind More. */
-export const PHONE_PRIMARY_WORKSPACES = 3;
-
-/**
- * The phone's rendering of the same projection, chosen by where the person is. It is a choice of
- * which items a thumb reaches first, never a second eligibility rule — every item still comes from
- * `projectShell`.
- *
- * **In a business:** Home, then the workspace pages marked `phone` (Customers, Work, Schedule) in
- * the order the projection lists them — a workspace with pages contributes its pages, so the
- * frequent work stays one tap away however the sidebar nests it — and everything else behind one
- * More menu, grouped as the desktop groups it.
- *
- * **In Platform:** the bar carries a way back to Home and Platform's own first-level destinations
- * — Organizations, Catalog, Commercial, Infrastructure, unwrapped from the one Platform row the
- * sidebar nests them under — and everything beneath those (a group's own pages, and all of GOLD's
- * own workspaces) sits behind More. Ten Platform destinations and every workspace never share one
- * bar.
- */
-export function projectPhone(
-  sections: readonly ShellSection[],
-  options: { platformActive?: boolean } = {},
-): { primary: NavItem[]; more: ShellSection[] } {
-  const home = sections.find((section) => section.key === 'home')?.items ?? [];
-  const platformRoot = sections.find((section) => section.key === 'platform')?.items[0];
-
-  if (options.platformActive && platformRoot) {
-    // The Platform row itself is never a primary button beside its own destinations — the same
-    // "never repeat Home as a child" rule, read the other way round: its children are what a thumb
-    // reaches first, and a `platformRoot` with none (just `platform.health`) falls back to itself.
-    const primary = [...home, ...(platformRoot.children ?? [platformRoot])];
-    return { primary, more: phoneMore(sections, new Set(primary.map((item) => item.key)), true) };
-  }
-
-  const workspaces = sections.find((section) => section.key === 'workspaces')?.items ?? [];
-  const pages = workspaces.flatMap((item) => item.children ?? [item]).filter((item) => item.phone);
-  const primary = [...home, ...pages.slice(0, PHONE_PRIMARY_WORKSPACES)];
-  return { primary, more: phoneMore(sections, new Set(primary.map((item) => item.key)), false) };
-}
-
-/**
- * Everything beneath one list of items the bar does not carry: items with no children of their own
- * stay loose, under whichever heading is calling this (a section's own label, or recursively a
- * parent's), and an item with children becomes its own named group, holding its own overview
- * (unless the bar already links to it, or it has none to repeat) and whichever of its children the
- * bar left out — themselves expanded the same way, so a group nested inside a group (Platform's
- * Catalog, Commercial and Infrastructure, one level inside Platform's own row) surfaces as its own
- * entry exactly as a top-level one would, to any depth, with no case built for Platform by name.
- */
-function expand(
-  items: readonly NavItem[],
-  inBar: ReadonlySet<string>,
-): { loose: NavItem[]; groups: { label: string; items: NavItem[] }[] } {
-  const loose: NavItem[] = [];
-  const groups: { label: string; items: NavItem[] }[] = [];
-
-  for (const item of items) {
-    if (!item.children) {
-      if (!inBar.has(item.key)) loose.push(item);
-      continue;
-    }
-    const nested = expand(item.children, inBar);
-    const overview: NavItem[] =
-      inBar.has(item.key) || item.heading ? [] : [{ ...item, label: 'Overview', children: undefined }];
-    const own = [...overview, ...nested.loose];
-    if (own.length > 0) groups.push({ label: item.label, items: own });
-    groups.push(...nested.groups);
-  }
-
-  return { loose, groups };
-}
-
-/** Everything the bar does not carry, as flat sections — one per `expand` group, grouped under each section it came from. */
-function phoneMore(
-  sections: readonly ShellSection[],
-  inBar: ReadonlySet<string>,
-  platformFirst: boolean,
-): ShellSection[] {
-  const out: ShellSection[] = [];
-
-  for (const section of sections) {
-    if (section.key === 'home') continue;
-    const { loose, groups } = expand(section.items, inBar);
-    // One list under the section's own heading, then a list per group: a section's name is never
-    // printed twice in the same menu.
-    if (loose.length > 0) out.push({ key: section.key, label: section.label, items: loose });
-    out.push(...groups.map((group) => ({ key: section.key, label: group.label, items: group.items })));
-  }
-
-  if (!platformFirst) return out;
-  return [...out.filter((entry) => entry.key === 'platform'), ...out.filter((entry) => entry.key !== 'platform')];
 }
