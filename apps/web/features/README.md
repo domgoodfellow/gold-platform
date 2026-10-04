@@ -43,6 +43,8 @@ Current boundaries:
 | `crm/sales/` | The canonical Pipeline board, its per-card stage control, and stage-vocabulary settings |
 | `communications/voice/` | Call history, call wrap-up, outbound identity and outcome-vocabulary settings |
 | `integrations/` | The tenant Integrations product: `catalogue/` (Browse, its cards and brand identity), `connections/` (Connected, the CSV connect form, one connection's own record and its Disconnect/Check/assistant-access controls), `sources/` (the Data sources table) and `imports/` (upload, the CSV column-mapping editor, the run collection and one run's own review/apply). `integrations-nav.tsx` is the one `ViewNav` every one of the four views renders |
+| `forms/` | The one renderer that turns a form definition into fields (`form-renderer.tsx`, used by the Studio builder, template preview and the hosted form) and the hosted form's own submit wrapper |
+| `studio/forms/` | Studio's form builder, list-adjacent drawers, response viewer and template browser — authoring only; the form's rules are `lib/domain/forms/` |
 | `platform/providers/` | Platform's read of infrastructure GOLD operates: `ProviderIcon`, and `ProviderDetail` for every Provider without its own account model — Twilio keeps its own telephony-specific page instead |
 
 `crm/` and `communications/voice/` are also this repository's reference example of a **command**

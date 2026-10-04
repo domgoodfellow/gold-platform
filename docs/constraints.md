@@ -2717,3 +2717,11 @@ bulk actions, call activity inside a conversation (no canonical relation exists)
 list refreshes every half minute and on any change a person makes).
 
 **Holds.** I74, I75; `inbox.test.ts`, `inbox-boundary.test.ts`.
+
+### D75 — Forms are their own domain; booking intake is a consumer, a template is a starter, and Studio authors while infrastructure serves
+
+**Decided.** Four separations. (1) *Booking intake is not Forms.* The public booking form is a use of form primitives with its own write (`create_booking`); the catalogue feature `booking_intake` stays on it, and `contact_forms` is what the Forms domain earns. Booking has not been moved onto the shared renderer: its fields are fixed by the slot flow and the move would touch a working write path for no new capability. (2) *A form, a revision and a submission are three things.* A submission records the revision it was answered against, so history stays readable; publishing is the only door a visitor's view changes through. The lifecycle is draft, published, archived — the website's `in_review` step is left out because it exists to put a second person in front of GildOps' own homepage, and a business's form has none. (3) *A template is a starter, not inheritance.* Platform templates are typed (`form_templates`), carry no tenant and are copied into the form's own draft; a business's own saved templates will be a separate tenant-owned table when built, and Library is not their home (Library holds content and files, a template holds a starting definition). (4) *Studio authors; infrastructure serves.* Authoring names no DNS, certificate or provider concern; a form is addressed `/forms/{business slug}/{form slug}` today, and a tenant-hostname route, website block and external embed are later delivery of the same artifact.
+
+**Permissions.** `organization.manage` governs creating, editing, publishing and reading responses, as it already does every public surface of a business; no `forms.*` capability was added because nothing yet needs forms to be granted apart from the rest of Studio.
+
+**Not decided here.** Whether a submission becomes a Customer or starts an automation (consumers of `form.submitted`), rate limiting beyond a honeypot and input size limits, and moving booking onto the shared renderer.

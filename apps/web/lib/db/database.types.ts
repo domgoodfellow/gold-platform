@@ -2935,6 +2935,197 @@ export type Database = {
           },
         ]
       }
+      form_revisions: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string
+          definition: Json
+          form_id: string
+          id: string
+          organization_id: string
+          published_at: string | null
+          published_by: string | null
+          revision_number: number
+          status: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by: string
+          definition: Json
+          form_id: string
+          id?: string
+          organization_id: string
+          published_at?: string | null
+          published_by?: string | null
+          revision_number: number
+          status: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string
+          definition?: Json
+          form_id?: string
+          id?: string
+          organization_id?: string
+          published_at?: string | null
+          published_by?: string | null
+          revision_number?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_revisions_organization_id_form_id_fkey"
+            columns: ["organization_id", "form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      form_submissions: {
+        Row: {
+          answers: Json
+          context: Json
+          form_id: string
+          form_revision_id: string
+          id: string
+          organization_id: string
+          source: string
+          submitted_at: string
+          submitted_by: string
+        }
+        Insert: {
+          answers: Json
+          context?: Json
+          form_id: string
+          form_revision_id: string
+          id?: string
+          organization_id: string
+          source?: string
+          submitted_at?: string
+          submitted_by: string
+        }
+        Update: {
+          answers?: Json
+          context?: Json
+          form_id?: string
+          form_revision_id?: string
+          id?: string
+          organization_id?: string
+          source?: string
+          submitted_at?: string
+          submitted_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_organization_id_form_id_form_revision_id_fkey"
+            columns: ["organization_id", "form_id", "form_revision_id"]
+            isOneToOne: false
+            referencedRelation: "form_revisions"
+            referencedColumns: ["organization_id", "form_id", "id"]
+          },
+        ]
+      }
+      form_templates: {
+        Row: {
+          category: string
+          created_at: string
+          definition: Json
+          description: string
+          display_order: number
+          id: string
+          key: string
+          name: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          definition: Json
+          description: string
+          display_order?: number
+          id?: string
+          key: string
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          definition?: Json
+          description?: string
+          display_order?: number
+          id?: string
+          key?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      forms: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          created_from_template_key: string | null
+          current_published_revision_id: string | null
+          id: string
+          name: string
+          organization_id: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by: string
+          created_from_template_key?: string | null
+          current_published_revision_id?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string
+          created_from_template_key?: string | null
+          current_published_revision_id?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forms_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forms_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forms_published_revision_belongs_to_form"
+            columns: ["organization_id", "id", "current_published_revision_id"]
+            isOneToOne: false
+            referencedRelation: "form_revisions"
+            referencedColumns: ["organization_id", "form_id", "id"]
+          },
+        ]
+      }
       import_runs: {
         Row: {
           connector_key: string
@@ -9413,6 +9604,18 @@ export type Database = {
         }
         Returns: string
       }
+      create_form: {
+        Args: {
+          p_name: string
+          p_organization_id: string
+          p_template_key?: string
+        }
+        Returns: Json
+      }
+      create_form_draft: {
+        Args: { p_form_id: string; p_organization_id: string }
+        Returns: string
+      }
       create_location: {
         Args: {
           p_access_notes: string
@@ -9583,6 +9786,10 @@ export type Database = {
         }
         Returns: number
       }
+      form_editor_state: {
+        Args: { p_form_id: string; p_organization_id: string }
+        Returns: Json
+      }
       grant_plan_module: {
         Args: { p_module_id: string; p_plan_id: string }
         Returns: undefined
@@ -9646,6 +9853,12 @@ export type Database = {
         }
         Returns: undefined
       }
+      list_form_submissions: {
+        Args: { p_form_id: string; p_limit?: number; p_organization_id: string }
+        Returns: Json
+      }
+      list_form_templates: { Args: never; Returns: Json }
+      list_forms: { Args: { p_organization_id: string }; Returns: Json }
       module_commercial_state: {
         Args: { p_organization_id: string }
         Returns: {
@@ -10060,6 +10273,10 @@ export type Database = {
           requires_contact_sales: boolean
         }[]
       }
+      publish_form_revision: {
+        Args: { p_organization_id: string; p_revision_id: string }
+        Returns: undefined
+      }
       publish_public_homepage_revision: {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: undefined
@@ -10078,6 +10295,10 @@ export type Database = {
           status: string
           suite: string
         }[]
+      }
+      published_form: {
+        Args: { p_form_slug: string; p_organization_slug: string }
+        Returns: Json
       }
       published_gold_homepage: { Args: never; Returns: Json }
       published_hostname_site: { Args: { p_hostname: string }; Returns: Json }
@@ -10744,6 +10965,10 @@ export type Database = {
         Args: { p_id: string }
         Returns: undefined
       }
+      rename_form: {
+        Args: { p_form_id: string; p_name: string; p_organization_id: string }
+        Returns: undefined
+      }
       rename_work_item_type: {
         Args: { p_id: string; p_name: string }
         Returns: undefined
@@ -10806,6 +11031,14 @@ export type Database = {
           p_scenario_id: string
         }
         Returns: string
+      }
+      save_form_draft: {
+        Args: {
+          p_definition: Json
+          p_organization_id: string
+          p_revision_id: string
+        }
+        Returns: undefined
       }
       schedule_ahead: {
         Args: { p_days?: number; p_organization_id: string }
@@ -10883,6 +11116,14 @@ export type Database = {
       }
       set_default_provider_account: {
         Args: { p_account_id: string }
+        Returns: undefined
+      }
+      set_form_archived: {
+        Args: {
+          p_archived: boolean
+          p_form_id: string
+          p_organization_id: string
+        }
         Returns: undefined
       }
       set_meter_cost_model_component: {
@@ -11053,6 +11294,15 @@ export type Database = {
           p_organization_id: string
           p_resource_id: string
           p_secret: string
+        }
+        Returns: string
+      }
+      submit_public_form: {
+        Args: {
+          p_answers: Json
+          p_form_slug: string
+          p_organization_slug: string
+          p_revision_id: string
         }
         Returns: string
       }

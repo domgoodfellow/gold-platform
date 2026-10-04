@@ -1,0 +1,81 @@
+'use client';
+
+import { useState } from 'react';
+import type { FormDefinition } from '@gold/schemas';
+import { cx, FOCUS_RING } from '@/components/class-names';
+import { EmptyState } from '@/components/surfaces/section';
+import type { FormSubmissionsRead } from '@/lib/domain/forms/forms';
+
+function display(field: FormDefinition['fields'][number] | undefined, value: unknown): string {
+  if (value === undefined || value === null || value === '') return '—';
+  if (field && 'options' in field) {
+    const label = (key: unknown) => field.options.find((option) => option.value === key)?.label ?? String(key);
+    return Array.isArray(value) ? value.map(label).join(', ') : label(value);
+  }
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return String(value);
+}
+
+/**
+ * Master and detail: who responded and when on one side, the answers on the other. Each response is
+ * read against the revision it was answered under — so a question renamed or removed since still
+ * reads as it was asked, and an answer to a field that no longer exists is still shown.
+ */
+export function SubmissionsView({ formName, read }: { formName: string; read: FormSubmissionsRead }) {
+  const [selectedId, setSelectedId] = useState<string | null>(read.submissions[0]?.id ?? null);
+  const revisions = new Map(read.revisions.map((revision) => [revision.id, revision]));
+  const selected = read.submissions.find((submission) => submission.id === selectedId) ?? null;
+  const revision = selected ? revisions.get(selected.revisionId) : undefined;
+
+  if (read.submissions.length === 0) {
+    return <EmptyState title="No responses yet" description={`Responses to ${formName} appear here once someone submits the published form.`} />;
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="rounded-lg border border-border bg-surface">
+        <p className="border-b border-border px-3 py-2 text-xs text-subtle">
+          {read.total} response{read.total === 1 ? '' : 's'}{read.total > read.submissions.length ? ` · showing the latest ${read.submissions.length}` : ''}
+        </p>
+        <ul aria-label="Responses" className="max-h-[70vh] divide-y divide-border overflow-y-auto">
+          {read.submissions.map((submission) => (
+            <li key={submission.id}>
+              <button
+                type="button"
+                onClick={() => setSelectedId(submission.id)}
+                aria-current={submission.id === selectedId ? 'true' : undefined}
+                className={cx('block w-full px-3 py-2 text-left text-sm transition', FOCUS_RING, submission.id === selectedId ? 'bg-secondary' : 'hover:bg-secondary')}
+              >
+                <span className="block font-medium">{new Date(submission.submittedAt).toLocaleString()}</span>
+                <span className="block truncate text-xs text-subtle">
+                  Revision {revisions.get(submission.revisionId)?.number ?? '?'}
+                  {' · '}
+                  {display(revisions.get(submission.revisionId)?.definition.fields[0], submission.answers[revisions.get(submission.revisionId)?.definition.fields[0]?.id ?? ''])}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {selected && revision ? (
+        <article aria-label="Response detail" className="rounded-lg border border-border bg-surface p-5">
+          <dl className="mb-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm text-muted">
+            <dt>Submitted</dt><dd>{new Date(selected.submittedAt).toLocaleString()}</dd>
+            <dt>Form</dt><dd>{formName}</dd>
+            <dt>Revision</dt><dd>{revision.number}</dd>
+            <dt>Source</dt><dd>Hosted form</dd>
+          </dl>
+          <dl className="grid gap-4 border-t border-border pt-4">
+            {revision.definition.fields.map((field) => (
+              <div key={field.id}>
+                <dt className="text-sm font-medium">{field.label}</dt>
+                <dd className="mt-0.5 whitespace-pre-line text-sm">{display(field, selected.answers[field.id])}</dd>
+              </div>
+            ))}
+          </dl>
+        </article>
+      ) : null}
+    </div>
+  );
+}

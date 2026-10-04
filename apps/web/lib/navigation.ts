@@ -395,8 +395,9 @@ export const AREAS: readonly Area[] = [
   { segment: 'assets', label: 'Equipment & Assets', group: 'workspaces', workspace: 'field', module: 'assets', featureKeys: ['assets'] },
   // Studio: what is public for this business, and what needs attention. Home is a real page —
   // kernel, like Sales and Field's own Home, so a member sees it regardless of role. Website has
-  // earned its own operating page (the workbench, `studio-website` below); Forms, Brand and Portal
-  // remain configuration reached from Settings (`CONFIG_TARGETS`) until each earns one too (D68).
+  // earned its own operating page (the workbench, `studio-website` below), and so have Forms and
+  // Templates; Brand and Portal remain configuration reached from Settings (`CONFIG_TARGETS`)
+  // until each earns one too (D68).
   { segment: 'studio', label: 'Studio', group: 'workspaces', workspace: 'studio' },
 
   // Insights: dashboards and reports over the one reporting aggregate every workspace reads. Not a
@@ -413,6 +414,10 @@ export const AREAS: readonly Area[] = [
   // row (`sidebar: false`, the same shape as Pricing above) — reached from Studio Home's own
   // Website card, never from the rail, and no longer from the Settings map either.
   { segment: 'studio-website', label: 'Website', group: 'settings', workspace: 'studio', route: 'studio/website', sidebar: false, relevantCapabilities: ['organization.manage'] },
+  // Forms and Templates are Studio's other two operating pages, on the same terms as Website:
+  // pages of the one Studio workspace, reached from its Home, never rows or workspaces of their own.
+  { segment: 'studio-forms', label: 'Forms', group: 'settings', workspace: 'studio', route: 'studio/forms', sidebar: false, relevantCapabilities: ['organization.manage'] },
+  { segment: 'studio-templates', label: 'Templates', group: 'settings', workspace: 'studio', route: 'studio/templates', sidebar: false, relevantCapabilities: ['organization.manage'] },
   { segment: 'fields', label: 'Custom fields', group: 'settings', sidebar: false, relevantCapabilities: ['field.manage'] },
   { segment: 'roles', label: 'Team', group: 'settings', sidebar: false, relevantCapabilities: ['role.manage'] },
   // Setup is a lifecycle, not a permanent area: while SETUP lasts it is the one row `SetupEntry`

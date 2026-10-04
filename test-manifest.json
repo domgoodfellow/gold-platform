@@ -2015,6 +2015,39 @@
         "ui",
         "security"
       ]
+    },
+    "apps/web/tests/unit/forms-definition.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "public-site",
+        "security"
+      ],
+      "note": "The form definition vocabulary, answer checking and the builder's edits that keep a field's identity."
+    },
+    "apps/web/tests/integration/database/forms.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "public-site",
+        "security",
+        "tenancy"
+      ],
+      "note": "Form lifecycle, exact-revision submissions, anonymous door, tenant isolation and template independence against real Postgres."
+    },
+    "apps/web/tests/architecture/static/forms-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "architecture",
+        "public-site"
+      ],
+      "note": "Forms are not booking, one renderer, slug-addressed anonymous doors, no infrastructure in authoring."
+    },
+    "apps/web/e2e/studio-forms.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "public-site",
+        "ui"
+      ],
+      "note": "Blank and template journeys from Studio to a published form to a submitted response, and draft isolation."
     }
   }
 }

@@ -34,6 +34,8 @@ export default async function StudioPage({ params }: PageProps<'/organizations/[
   });
 
   const websitePath = `/organizations/${organizationId}/studio/website`;
+  const formsPath = `/organizations/${organizationId}/studio/forms`;
+  const templatesPath = `/organizations/${organizationId}/studio/templates`;
   const brandPath = `/organizations/${organizationId}/settings/branding`;
   const bookingConfigPath = `/organizations/${organizationId}/work/configuration`;
   const customersPath = `/organizations/${organizationId}/customers`;
@@ -65,16 +67,31 @@ export default async function StudioPage({ params }: PageProps<'/organizations/[
       title={workspaceLabel('studio')}
       actions={
         <>
-          <ButtonLink tone="primary" href={websitePath}>Edit website</ButtonLink>
+          <ButtonLink tone="primary" href={formsPath}>New form</ButtonLink>
+          <ButtonLink tone="secondary" href={websitePath}>Edit website</ButtonLink>
           {overview.publicUrl ? (
             <ButtonLink tone="secondary" href={overview.publicUrl} target="_blank" rel="noreferrer">View site</ButtonLink>
           ) : null}
         </>
       }
     >
-      <SectionHeading>Public surfaces</SectionHeading>
+      <SectionHeading>Create</SectionHeading>
+      <WidgetGrid className="mt-3">
+        <Widget title="Form" value="Start a form" note="Blank, or from a template" href={formsPath} />
+        <Widget title="Templates" value="Browse starters" note="Form templates" href={templatesPath} />
+      </WidgetGrid>
+
+      <SectionHeading className="mt-10">Public surfaces</SectionHeading>
       <WidgetGrid className="mt-3">
         <Widget title="Website" value={websiteValue} note={websiteNote} href={websitePath} />
+        <Widget
+          title="Forms"
+          value={overview.forms ? (overview.forms.published > 0 ? `${overview.forms.published} published` : 'None published') : '—'}
+          note={overview.forms
+            ? overview.forms.total === 0 ? 'No forms yet' : `${overview.forms.total} form${overview.forms.total === 1 ? '' : 's'} · ${overview.forms.responses} response${overview.forms.responses === 1 ? '' : 's'}`
+            : `Your role, ${organization.role}, cannot manage forms.`}
+          href={formsPath}
+        />
         <Widget title="Booking" value={bookingValue} note={bookingNote} href={bookingConfigPath} />
         <Widget title="Portal" value={portalValue} note={portalNote} href={customersPath} />
         <Widget title="Brand" value={brandValue} note={brandNote} href={brandPath} />

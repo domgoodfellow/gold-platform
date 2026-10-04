@@ -69,15 +69,15 @@ describe('the Settings configuration map', () => {
   it('keeps every configuration-only area reachable, since none of them has a sidebar row any more', () => {
     // Setup is its own SETUP-lifecycle destination, Insights is an operating page reached
     // contextually from each workspace's Home and from PageHeader's Insights support mode
-    // (`areaAvailable('insights', ...)`), and Website is Studio's own operating page, reached from
-    // Studio Home's own card (D68) — none of the three is a Settings *configuration* door.
+    // (`areaAvailable('insights', ...)`), and Website, Forms and Templates are Studio's own operating pages, reached from
+    // Studio Home (D68) — none of them is a Settings *configuration* door.
     const settingsOwned: Record<string, string> = {
       pricing: 'pricing',
       fields: 'custom-fields',
       roles: 'team',
       integrations: 'integrations',
     };
-    for (const area of AREAS.filter((candidate) => candidate.sidebar === false && !['setup', 'insights', 'studio-website'].includes(candidate.segment))) {
+    for (const area of AREAS.filter((candidate) => candidate.sidebar === false && !['setup', 'insights', 'studio-website', 'studio-forms', 'studio-templates'].includes(candidate.segment))) {
       expect(
         entries.some((entry) => entry.key === settingsOwned[area.segment] || entry.path.split(/[/#]/)[0] === area.segment),
         `${area.segment} left the sidebar and is not on the Settings map`,

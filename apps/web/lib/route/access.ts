@@ -69,6 +69,13 @@ const BOOKING_PREFIX = '/book/';
 const PORTAL_PREFIX = '/portal/';
 
 /**
+ * A business's published form, on the same terms as booking: the organization and form are named
+ * by slug in the path, `published_form` answers only for a published one, and a visitor gets an
+ * anonymous session for exactly the length of one submission. Nothing here decides anything.
+ */
+const FORMS_PREFIX = '/forms/';
+
+/**
  * Accepting an organization invitation, on the same terms as booking and the portal.
  *
  * The token in the path is the credential, checked by `accept_invitation` against a row — not by
@@ -83,6 +90,7 @@ export function isPublic(pathname: string): boolean {
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith(BOOKING_PREFIX) ||
     pathname.startsWith(PORTAL_PREFIX) ||
+    pathname.startsWith(FORMS_PREFIX) ||
     pathname.startsWith(ACCEPT_INVITE_PREFIX)
   );
 }
