@@ -5,6 +5,14 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A business says when customers may book and until when they may change it
+
+A kind of work on the booking page now carries its own booking limits, apart from whether the people and equipment it needs are free. A business can ask for notice ("two hours"), cap how far ahead a customer may book (in days of its own time zone), turn same-day booking off, and choose how often start times are offered — separately from how long the appointment lasts, so a 90-minute job can start every 30 minutes. Start times fall on the clock of the business's own zone, not on when the visitor happened to look. A day that policy rules out says why, in plain words, and never mentions who is busy. Existing bookable kinds of work keep their behaviour: start times every duration, no notice, same-day on, a year ahead.
+
+A customer can now reschedule or cancel their own booking from the page that confirms it, until the cutoffs the business chose (or until it starts). A reschedule moves the same booking and swaps people or equipment in one step if the original ones are taken; if the new time fails nothing changes. A cancellation is the business's own move to the stage it named, so the time is freed and the booking stays on record. Staff are never held to these limits. Every rule is checked again when the booking is made, so a time that was fine a moment ago, or a request that skips the page, is refused.
+
+Existing bookings and offered times changed in one respect: with a buffer, or a job length that is not a multiple of the cadence, the first offered time after another booking is now the next cadence boundary on the clock (11:00) rather than the instant the previous booking and its buffer ended (10:30).
+
 ### A customer's portal session lasts, and a booking can ask the business's own questions
 
 Opening a portal link now makes a real session. Before, the session the page made while it drew was thrown away,

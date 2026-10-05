@@ -384,6 +384,13 @@
         "automation"
       ]
     },
+    "apps/web/e2e/booking-policy.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "booking",
+        "scheduling"
+      ]
+    },
     "apps/web/e2e/breadcrumbs.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [
@@ -930,6 +937,13 @@
         "navigation"
       ]
     },
+    "apps/web/tests/architecture/static/booking-policy-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "booking",
+        "scheduling"
+      ]
+    },
     "apps/web/tests/architecture/static/schedulable-work-boundary.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -1246,6 +1260,14 @@
       "concerns": [
         "booking",
         "scheduling"
+      ]
+    },
+    "apps/web/tests/integration/database/booking-policy.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "booking",
+        "scheduling",
+        "security"
       ]
     },
     "apps/web/tests/integration/database/booking.test.ts": {
@@ -2120,6 +2142,13 @@
       "concerns": [
         "pricing",
         "margins"
+      ]
+    },
+    "apps/web/tests/unit/booking-policy.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "booking",
+        "scheduling"
       ]
     },
     "apps/web/tests/unit/feasibility.test.ts": {

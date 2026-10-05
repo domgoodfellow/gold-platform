@@ -1,6 +1,7 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import type { BookingPolicy } from '@/lib/domain/booking/policy';
 
 /**
  * What kind of work this is, in the tenant's own vocabulary.
@@ -228,6 +229,8 @@ export type TypeBooking = {
   priceItemId: string | null;
   /** A form of this business the public booking asks, or null when it asks nothing. */
   intakeFormId: string | null;
+  /** The booking policy, as the configuration screen edits it. `getEffectiveBookingPolicy` is the reader everything else uses. */
+  policy: BookingPolicy;
 };
 
 export async function getTypeBooking(
@@ -236,7 +239,9 @@ export async function getTypeBooking(
 ): Promise<TypeBooking | null> {
   const { data, error } = await db
     .from('work_item_types')
-    .select('booking_status_id, booking_duration_minutes, booking_price_item_id, booking_intake_form_id')
+    .select(
+      'booking_status_id, booking_duration_minutes, booking_price_item_id, booking_intake_form_id, booking_cadence_minutes, booking_minimum_notice_minutes, booking_horizon_days, booking_allow_same_day, booking_reschedule_cutoff_minutes, booking_cancel_cutoff_minutes, booking_cancellation_status_id',
+    )
     .eq('organization_id', input.organizationId)
     .eq('id', input.typeId)
     .maybeSingle();
@@ -255,7 +260,69 @@ export async function getTypeBooking(
     durationMinutes: data.booking_duration_minutes,
     priceItemId: data.booking_price_item_id,
     intakeFormId: data.booking_intake_form_id,
+    policy: {
+      minimumNoticeMinutes: data.booking_minimum_notice_minutes,
+      maximumHorizonDays: data.booking_horizon_days,
+      cadenceMinutes: data.booking_cadence_minutes ?? data.booking_duration_minutes,
+      allowSameDay: data.booking_allow_same_day,
+      customerRescheduleCutoffMinutes: data.booking_reschedule_cutoff_minutes,
+      customerCancellationCutoffMinutes: data.booking_cancel_cutoff_minutes,
+      cancellationStatusId: data.booking_cancellation_status_id,
+    },
   };
+}
+
+/**
+ * Say how customers may book this kind of work: how often start times are offered, how much notice
+ * and how far ahead, whether the same day is open, and until when a customer may reschedule or cancel
+ * on their own (null = until it starts). Bounds are stated here for the message; the table's own
+ * check is the guarantee. A cancellation status, when named, must be one that releases resources.
+ */
+export async function setTypeBookingPolicy(
+  db: Db,
+  input: { typeId: string; policy: BookingPolicy },
+): Promise<void> {
+  await requireActor(db);
+  const { policy } = input;
+  const whole = (value: number | null, low: number, high: number) =>
+    value === null || (Number.isInteger(value) && value >= low && value <= high);
+
+  if (!whole(policy.cadenceMinutes, 5, 1440)) {
+    throw new DomainError('Start times are offered every five minutes to a day apart.', 'types.booking_cadence_invalid');
+  }
+  if (!whole(policy.minimumNoticeMinutes, 0, 129600)) {
+    throw new DomainError('Notice is between none and ninety days.', 'types.booking_notice_invalid');
+  }
+  if (!whole(policy.maximumHorizonDays, 1, 730)) {
+    throw new DomainError('Customers can book between one day and two years ahead.', 'types.booking_horizon_invalid');
+  }
+  if (!whole(policy.customerRescheduleCutoffMinutes, 0, 129600) || !whole(policy.customerCancellationCutoffMinutes, 0, 129600)) {
+    throw new DomainError('A cutoff is between none and ninety days before the appointment.', 'types.booking_cutoff_invalid');
+  }
+
+  const { error } = await db.rpc('set_type_booking_policy', {
+    p_type_id: input.typeId,
+    p_cadence_minutes: policy.cadenceMinutes,
+    p_minimum_notice_minutes: policy.minimumNoticeMinutes,
+    p_horizon_days: policy.maximumHorizonDays,
+    p_allow_same_day: policy.allowSameDay,
+    p_reschedule_cutoff_minutes: policy.customerRescheduleCutoffMinutes as number,
+    p_cancel_cutoff_minutes: policy.customerCancellationCutoffMinutes as number,
+    p_cancellation_status_id: policy.cancellationStatusId as string,
+  });
+
+  if (error) {
+    if (error.code === 'GD018') {
+      throw new DomainError('A cancelled booking has to move to a stage that frees up its resources.', 'types.booking_cancellation_status_invalid');
+    }
+    if (error.code === '23503') {
+      throw new DomainError('That stage belongs to a different kind of work.', 'types.booking_reference_invalid');
+    }
+    if (error.code === '42501') {
+      throw new DomainError('Publish this kind of work to the booking page first, or you may not change it.', 'types.booking_policy_forbidden');
+    }
+    throw new DomainError(error.message, 'types.booking_policy_failed');
+  }
 }
 
 /**

@@ -9629,9 +9629,16 @@ export type Database = {
       }
       work_item_types: {
         Row: {
+          booking_allow_same_day: boolean
+          booking_cadence_minutes: number | null
+          booking_cancel_cutoff_minutes: number | null
+          booking_cancellation_status_id: string | null
           booking_duration_minutes: number | null
+          booking_horizon_days: number
           booking_intake_form_id: string | null
+          booking_minimum_notice_minutes: number
           booking_price_item_id: string | null
+          booking_reschedule_cutoff_minutes: number | null
           booking_status_id: string | null
           created_at: string
           created_by: string
@@ -9641,9 +9648,16 @@ export type Database = {
           schedulable: boolean
         }
         Insert: {
+          booking_allow_same_day?: boolean
+          booking_cadence_minutes?: number | null
+          booking_cancel_cutoff_minutes?: number | null
+          booking_cancellation_status_id?: string | null
           booking_duration_minutes?: number | null
+          booking_horizon_days?: number
           booking_intake_form_id?: string | null
+          booking_minimum_notice_minutes?: number
           booking_price_item_id?: string | null
+          booking_reschedule_cutoff_minutes?: number | null
           booking_status_id?: string | null
           created_at?: string
           created_by: string
@@ -9653,9 +9667,16 @@ export type Database = {
           schedulable: boolean
         }
         Update: {
+          booking_allow_same_day?: boolean
+          booking_cadence_minutes?: number | null
+          booking_cancel_cutoff_minutes?: number | null
+          booking_cancellation_status_id?: string | null
           booking_duration_minutes?: number | null
+          booking_horizon_days?: number
           booking_intake_form_id?: string | null
+          booking_minimum_notice_minutes?: number
           booking_price_item_id?: string | null
+          booking_reschedule_cutoff_minutes?: number | null
           booking_status_id?: string | null
           created_at?: string
           created_by?: string
@@ -9665,6 +9686,13 @@ export type Database = {
           schedulable?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "work_item_types_booking_cancellation_status_same_type"
+            columns: ["organization_id", "id", "booking_cancellation_status_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_statuses"
+            referencedColumns: ["organization_id", "type_id", "id"]
+          },
           {
             foreignKeyName: "work_item_types_booking_intake_same_org"
             columns: ["organization_id", "booking_intake_form_id"]
@@ -10174,8 +10202,19 @@ export type Database = {
           resource_rank: number
         }[]
       }
+      booking_change_options: {
+        Args: { p_work_item_id: string }
+        Returns: Json
+      }
       booking_intake_available: { Args: { p_type_id: string }; Returns: Json }
       booking_organization: { Args: { p_slug: string }; Returns: string }
+      booking_own_commitments: {
+        Args: { p_work_item_id: string }
+        Returns: {
+          occupies: unknown
+          resource_id: string
+        }[]
+      }
       bootstrap_gold_internal_workspace: {
         Args: {
           p_capabilities: string[]
@@ -10498,6 +10537,18 @@ export type Database = {
       custom_domain_provider_account: {
         Args: { p_domain_id: string; p_organization_id: string }
         Returns: string
+      }
+      customer_cancel_booking: {
+        Args: { p_work_item_id: string }
+        Returns: undefined
+      }
+      customer_reschedule_booking: {
+        Args: {
+          p_allocations: Json
+          p_starts_at: string
+          p_work_item_id: string
+        }
+        Returns: undefined
       }
       customers_not_contacted: {
         Args: { p_days?: number; p_organization_id: string }
@@ -12147,6 +12198,19 @@ export type Database = {
       }
       set_type_booking_intake: {
         Args: { p_form_id: string; p_type_id: string }
+        Returns: undefined
+      }
+      set_type_booking_policy: {
+        Args: {
+          p_allow_same_day: boolean
+          p_cadence_minutes: number
+          p_cancel_cutoff_minutes: number
+          p_cancellation_status_id: string
+          p_horizon_days: number
+          p_minimum_notice_minutes: number
+          p_reschedule_cutoff_minutes: number
+          p_type_id: string
+        }
         Returns: undefined
       }
       set_user_phone_number_preference: {

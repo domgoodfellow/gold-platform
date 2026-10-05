@@ -269,7 +269,8 @@ describe('THE M4 MILESTONE: a real business runs on the platform', () => {
     const slots = await bookableSlots(stranger, {
       organizationId: pneu.organizationId,
       type: offered[0],
-      date: '2026-09-07',
+      // A Monday ahead of any real clock: a booking in the past is refused by booking policy (I86).
+      date: '2027-04-05',
       timeZone: 'America/Toronto',
     });
     expect(slots.length).toBeGreaterThan(0);

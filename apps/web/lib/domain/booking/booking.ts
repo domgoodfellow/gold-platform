@@ -5,7 +5,16 @@ import {
   judgeInterval,
   loadPublicFeasibilityData,
 } from '@/lib/domain/scheduling/feasibility';
-import { zonedDayRange } from '@/lib/domain/scheduling/window';
+import { zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
+import {
+  alignToCadence,
+  evaluateBookingPolicy,
+  getEffectiveBookingPolicy,
+  offerableStartBounds,
+  policyReasonFromDatabase,
+  describeBookingPolicyReason,
+  type BookingPolicy,
+} from '@/lib/domain/booking/policy';
 
 /**
  * Booking: what a stranger may see of a business, and what they may commit it to — the first
@@ -118,14 +127,16 @@ export async function listBookableTypes(
 }
 
 /**
- * When this business could do that work, on one of its days: the intervals for which a complete
- * set of resources exists — every required slot filled by a distinct resource that is eligible,
- * open and uncommitted. The same availability calculation the operator sees (I5), read through the
- * published commitments, and advisory only (I6): the re-assertion is `create_booking`'s own
+ * When this business could do that work, on one of its days, **for a customer**: the starts policy
+ * permits (minimum notice, same-day, the horizon, the cadence) for which the feasibility engine then
+ * finds a complete set of resources — every required slot filled by a distinct resource that is
+ * eligible, open and uncommitted. Policy bounds come first, so a day or a start that policy forbids
+ * costs no resource matching, and nothing here is asked per candidate. The same availability
+ * calculation the operator sees (I5), advisory only (I6): the re-assertion is `create_booking`'s own
  * transaction. Resource identities never leave this function — a visitor is offered times.
  *
- * Candidate starts step by the duration, as booking always has; duration and step are separate
- * inputs to the engine so a later cadence rule changes one without the other.
+ * Duration and cadence are separate: a 90-minute job offered every 30 minutes ends 90 minutes after
+ * each start, never 30.
  */
 export async function bookableSlots(
   db: Db,
@@ -134,19 +145,36 @@ export async function bookableSlots(
     type: BookableType;
     date: string;
     timeZone: string;
+    /** The instant "now" is for notice and same-day. Defaults to the real clock; tests pass their own. */
+    now?: Date;
+    /** A booking of the visitor's own to leave out of the commitments, for a reschedule. */
+    excludeWorkItemId?: string;
+    /** Already read by the caller, when it has read it for the same request. */
+    policy?: BookingPolicy;
   },
 ): Promise<Slot[]> {
-  const range = zonedDayRange(input.date, input.timeZone);
+  const policy = input.policy ?? (await getEffectiveBookingPolicy(db, { organizationId: input.organizationId, typeId: input.type.id }));
+  if (!policy) return [];
+
+  const day = zonedDayRange(input.date, input.timeZone);
+  const bounds = offerableStartBounds({ now: input.now ?? new Date(), policy, timeZone: input.timeZone, day });
+  if (!bounds) return [];
+
+  // Only the part of the day policy lets a visitor start in is read at all.
+  const range: Window = { startsAt: new Date(bounds.from).toISOString(), endsAt: day.endsAt };
   const data = await loadPublicFeasibilityData(db, {
     organizationId: input.organizationId,
     typeId: input.type.id,
     range,
+    excludeWorkItemId: input.excludeWorkItemId,
   });
 
   return feasibleSlots(data, {
     range,
     durationMinutes: input.type.durationMinutes,
-    stepMinutes: input.type.durationMinutes,
+    stepMinutes: policy.cadenceMinutes,
+    align: (instant) => alignToCadence(instant, policy.cadenceMinutes, input.timeZone),
+    startBefore: bounds.before,
   }).map(({ startsAt, endsAt }) => ({ startsAt, endsAt }));
 }
 
@@ -160,6 +188,8 @@ export async function bookSlot(
     organizationId: string;
     typeId: string;
     slot: Slot;
+    /** The instant "now" is for policy. Defaults to the real clock; tests pass their own. */
+    now?: Date;
     name: string;
     email: string;
     phone: string;
@@ -201,6 +231,26 @@ export async function bookSlot(
     startsAt: startsAt.toISOString(),
     endsAt: new Date(startsAt.getTime() + type.booking_duration_minutes * 60_000).toISOString(),
   };
+
+  // Policy first, from the same reader the page used. The database asserts it again inside
+  // `create_booking`; this only spares a resource read for a time that could never be booked, and
+  // gives the visitor the reason in words.
+  const [policy, organization] = await Promise.all([
+    getEffectiveBookingPolicy(db, { organizationId: input.organizationId, typeId: input.typeId }),
+    db.from('organizations').select('timezone').eq('id', input.organizationId).maybeSingle(),
+  ]);
+  if (!policy || !organization.data) {
+    throw new DomainError('This business is not taking that booking.', 'booking.forbidden');
+  }
+  const evaluation = evaluateBookingPolicy({
+    now: input.now ?? new Date(),
+    startsAt,
+    policy,
+    timeZone: organization.data.timezone,
+  });
+  if (!evaluation.allowed) {
+    throw new DomainError(describeBookingPolicyReason(evaluation.reasons[0], policy), 'booking.policy_refused');
+  }
 
   let data: string | null = null;
   let error: { code?: string; message: string } | null = null;
@@ -244,6 +294,15 @@ export async function bookSlot(
   }
 
   if (error) {
+    // The commit's own reassertion of policy (a slot offered earlier, or a direct call): the message
+    // is one word of the closed vocabulary.
+    if (error.code === 'GD017') {
+      const reason = policyReasonFromDatabase(error.message);
+      throw new DomainError(
+        reason ? describeBookingPolicyReason(reason, policy) : 'That time cannot be booked. Please choose another.',
+        'booking.policy_refused',
+      );
+    }
     // I6, arriving as a sentence — the slot was free when rendered and is not now, and nothing could have prevented that.
     if (error.code === '23P01' || error.code === 'GD014') {
       throw new DomainError(

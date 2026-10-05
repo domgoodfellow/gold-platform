@@ -7,6 +7,10 @@ import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { listPricedLines, priceWorkItem } from '@/lib/domain/pricing/prices';
 import { formatWindow, parseWindow } from '@/lib/domain/scheduling/window';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
+import { ButtonLink } from '@/components/controls/button';
+import { getBookingChangeOptions } from '@/lib/domain/booking/changes';
+import { describeBookingPolicyReason } from '@/lib/domain/booking/policy';
+import { CancelBookingControl } from './change-controls';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +55,7 @@ export default async function BookingConfirmationPage({
     fallbackName: organization.data.name,
   });
 
+  const options = await getBookingChangeOptions(db, { workItemId });
   const window = parseWindow(item.data.scheduled_during as string | null);
   const lines = await listPricedLines(db, { organizationId, workItemId });
   const price = priceWorkItem(lines);
@@ -60,7 +65,7 @@ export default async function BookingConfirmationPage({
     <main className="mx-auto w-full max-w-xl p-6 sm:p-8">
       <PublicHeader profile={profile} />
       {/* Application state — what just happened — rather than anything the business claims. */}
-      <p className="mt-6 text-sm font-medium">Your booking is confirmed.</p>
+      <p className="mt-6 text-sm font-medium">{options?.rescheduleRefusal === 'booking_not_active' ? 'Your booking has been cancelled.' : 'Your booking is confirmed.'}</p>
 
       <dl className="mt-8 flex flex-col gap-3 text-sm">
         <div>
@@ -90,6 +95,22 @@ export default async function BookingConfirmationPage({
           </div>
         ) : null}
       </dl>
+
+      {/* What the customer may still do themselves, as the business's own limits allow it — said
+          once, from the database's answer, never worked out here. */}
+      {options ? (
+        <section aria-label="Change this booking" className="mt-8 flex flex-col gap-3">
+          {options.canReschedule ? (
+            <ButtonLink tone="secondary" href={`/book/${slug}/${workItemId}/reschedule`} className="w-fit">Reschedule</ButtonLink>
+          ) : null}
+          {options.canCancel ? <CancelBookingControl slug={slug} workItemId={workItemId} /> : null}
+          {!options.canReschedule && !options.canCancel && options.rescheduleRefusal !== 'booking_not_active' ? (
+            <Hint>
+              {options.rescheduleRefusal ? describeBookingPolicyReason(options.rescheduleRefusal) : 'To change this booking, please contact the business.'}
+            </Hint>
+          ) : null}
+        </section>
+      ) : null}
 
       <Hint weight="subtle" className="mt-10 text-xs">Keep this page to check your booking.</Hint>
     </main>

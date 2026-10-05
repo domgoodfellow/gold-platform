@@ -259,6 +259,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | An unconstrained work item type | A type with no configured transitions is frozen, not free (I13) | `app.check_status_transition`, a trigger; the domain layer re-checks only to produce the message |
 | A per-column rule in the update policy | A policy sees the old row or the new one, never both | `app.check_work_item_update_capability`, a trigger beside the policy |
 | A checklist template joined to a job | Copying is what makes editing a template safe (I8) | The template is copied at creation |
+| Customer booking policy inside the feasibility engine, or binding staff scheduling | *May a customer book this* and *can the resources do it* are two questions, and staff are asked only the second (I86) | `feasibility.ts` imports nothing of `lib/domain/booking`; one evaluator and one reader in `policy.ts`; the commit reasserts it (`GD017`); `booking-policy-boundary.test.ts`, `booking-policy.test.ts` |
 
 ### Pricing and configuration
 

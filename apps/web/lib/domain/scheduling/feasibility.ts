@@ -541,7 +541,19 @@ export type FeasibleSlot = { startsAt: string; endsAt: string; combination: Feas
  */
 export function feasibleSlots(
   data: FeasibilityData,
-  input: { range: Window; durationMinutes: number; stepMinutes: number },
+  input: {
+    range: Window;
+    durationMinutes: number;
+    stepMinutes: number;
+    /**
+     * Where a candidate may begin, when something other than "where a free window begins" decides —
+     * a caller's cadence. Maps an instant to the first allowed start at or after it. Omitted, the
+     * engine steps from each free window's start, as staff scheduling and every older caller expect.
+     */
+    align?: (instantMs: number) => number;
+    /** Exclusive upper bound on a start, in ms; a caller's horizon. */
+    startBefore?: number;
+  },
 ): FeasibleSlot[] {
   const duration = input.durationMinutes * 60_000;
   const step = input.stepMinutes * 60_000;
@@ -558,7 +570,9 @@ export function feasibleSlots(
   for (const id of relevant) {
     for (const window of data.open.get(id) ?? []) {
       for (const free of freeWindows(window, data.committed.get(id) ?? [], { minimumMinutes: input.durationMinutes })) {
-        for (let t = ms(free.startsAt); t + duration <= ms(free.endsAt); t += step) {
+        const first = input.align ? input.align(Math.max(ms(free.startsAt), rangeStart)) : ms(free.startsAt);
+        for (let t = first; t + duration <= ms(free.endsAt); t += step) {
+          if (input.startBefore !== undefined && t >= input.startBefore) break;
           if (t >= rangeStart && t + duration <= rangeEnd) starts.add(t);
         }
       }
@@ -586,16 +600,29 @@ export function feasibleSlots(
  */
 export async function loadPublicFeasibilityData(
   db: Db,
-  input: { organizationId: string; typeId: string; range: Window },
+  input: {
+    organizationId: string;
+    typeId: string;
+    range: Window;
+    /** A booking of the caller's own to set aside, so a reschedule is judged without conflicting with itself. */
+    excludeWorkItemId?: string;
+  },
 ): Promise<FeasibilityData> {
   const rangeText = `[${input.range.startsAt},${input.range.endsAt})`;
 
-  const [candidates, commitments] = await Promise.all([
+  const [candidates, commitments, own] = await Promise.all([
     db.rpc('bookable_candidates', { p_type_id: input.typeId }),
     db.from('resource_commitments').select('resource_id, occupies').eq('organization_id', input.organizationId).overlaps('occupies', rangeText),
+    input.excludeWorkItemId ? db.rpc('booking_own_commitments', { p_work_item_id: input.excludeWorkItemId }) : Promise.resolve(null),
   ]);
   if (candidates.error) throw new DomainError(candidates.error.message, 'feasibility.candidates_failed');
   if (commitments.error) throw new DomainError(commitments.error.message, 'feasibility.commitments_failed');
+  if (own?.error) throw new DomainError(own.error.message, 'feasibility.commitments_failed');
+
+  // A resource cannot hold two commitments over the same time (the exclusion constraint), so a row
+  // identical to one of the booking's own is that booking and nothing else.
+  const ownKeys = new Set((own?.data ?? []).map((row) => `${row.resource_id}|${String(row.occupies)}`));
+  const committedRows = (commitments.data ?? []).filter((row) => !ownKeys.has(`${row.resource_id}|${String(row.occupies)}`));
 
   const ranks = new Map<string, number>();
   const demandRows = new Map<string, Demand>();
@@ -625,7 +652,7 @@ export async function loadPublicFeasibilityData(
     demands: [...demandRows.values()],
     ranks,
     open,
-    committed: groupById(commitments.data ?? []),
+    committed: groupById(committedRows),
     exceptions: new Map(),
     organizationHours: null,
   };

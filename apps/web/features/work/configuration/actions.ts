@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { setTypeBookingIntake } from '@/lib/domain/booking/intake';
+import { minutesFromAmount } from '@/lib/domain/booking/policy';
 import { DomainError } from '@/lib/domain/errors';
 import {
   addTypeChecklistItem,
@@ -23,6 +24,7 @@ import {
   createWorkItemType,
   renameWorkItemType,
   setTypeBookable,
+  setTypeBookingPolicy,
   setWorkItemTypeSchedulable,
 } from '@/lib/domain/work-items/types';
 import { requireOrganization } from '@/lib/route/organization';
@@ -228,6 +230,44 @@ export async function setTypeBookingIntakeAction(
 
   try {
     await setTypeBookingIntake(db, { typeId: String(formData.get('typeId') ?? ''), formId: formId === '' ? null : formId });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidateWork(organizationId);
+  return { error: null };
+}
+
+/**
+ * How customers may book this kind of work, and until when they may change it themselves. The form
+ * hands over what was typed (an amount and a unit); the domain owns what is acceptable.
+ */
+export async function setTypeBookingPolicyAction(
+  _previous: WorkConfigActionState,
+  formData: FormData,
+): Promise<WorkConfigActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  const text = (name: string) => String(formData.get(name) ?? '');
+  // "No cutoff" is a choice of its own, never a blank amount.
+  const cutoff = (name: string) =>
+    text(`${name}Unit`) === 'none' ? null : minutesFromAmount(text(`${name}Amount`), text(`${name}Unit`));
+
+  try {
+    await setTypeBookingPolicy(db, {
+      typeId: text('typeId'),
+      policy: {
+        cadenceMinutes: Number(text('cadenceMinutes')),
+        minimumNoticeMinutes: minutesFromAmount(text('noticeAmount'), text('noticeUnit')),
+        maximumHorizonDays: Number(text('horizonDays')),
+        allowSameDay: formData.get('allowSameDay') !== null,
+        customerRescheduleCutoffMinutes: cutoff('reschedule'),
+        customerCancellationCutoffMinutes: cutoff('cancel'),
+        cancellationStatusId: text('cancellationStatusId') === '' ? null : text('cancellationStatusId'),
+      },
+    });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;

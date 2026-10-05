@@ -142,8 +142,10 @@ describe('public booking offers what the exclusion constraint would accept (I5)'
     // constraint's `occupies`, not the appointment.
     await setBuffer(30);
 
-    // 10:30 is the first free instant; 11:30 would run past closing. Not 10:00 and not 11:00.
-    expect(await offered(watcher)).toEqual(['10:30']);
+    // 10:30 is the first free instant, but a one-hour cadence offers starts on the hour of the
+    // business's local clock (booking cadence, I86): 11:00 is the first, and it ends at closing.
+    // Not 10:00, which the buffer now occupies.
+    expect(await offered(watcher)).toEqual(['11:00']);
 
     // The other direction: the slot that was offered a moment ago is now refused by the
     // constraint, so what the page stopped offering is genuinely not committable.
@@ -161,7 +163,7 @@ describe('public booking offers what the exclusion constraint would accept (I5)'
 
   it('offers a slot again when the business says the booked job’s status releases the resource', async () => {
     const watcher = await visitor();
-    expect(await offered(watcher)).toEqual(['10:30']);
+    expect(await offered(watcher)).toEqual(['11:00']);
 
     // The tenant answers the question only the tenant can: work in this status no longer holds
     // the van. The cache on `work_items` follows, the constraint stops counting the job, and the

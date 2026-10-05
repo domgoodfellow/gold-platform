@@ -3,10 +3,11 @@
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { ConfirmSubmit } from '@/components/controls/confirm-submit';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
 import type { TypeBooking } from '@/lib/domain/work-items/types';
+import { amountAndUnit } from '@/lib/domain/booking/policy';
 import type { TypeChecklistItem } from '@/lib/domain/work-items/checklists';
 import {
   addTypeChecklistItemAction,
@@ -17,6 +18,7 @@ import {
   renameTypeAction,
   setTypeBookableAction,
   setTypeBookingIntakeAction,
+  setTypeBookingPolicyAction,
   setTypeSchedulableAction,
   updateStatusAction,
   type WorkConfigActionState,
@@ -528,6 +530,7 @@ export function PublishTypeForm({
         </span>
       ) : null}
     </form>
+    {booking ? <BookingPolicyForm organizationId={organizationId} typeId={typeId} booking={booking} statuses={statuses} disabled={disabled} /> : null}
     {booking ? <BookingIntakeForm organizationId={organizationId} typeId={typeId} current={booking.intakeFormId} forms={intakeForms} disabled={disabled} /> : null}
     </>
   );
@@ -593,5 +596,145 @@ function BookingIntakeForm({
         </span>
       ) : null}
     </form>
+  );
+}
+
+/**
+ * When customers may book, and until when they may change it themselves. Booking policy is not
+ * resource availability: it limits what a *customer* is offered and may do, and never what staff can
+ * schedule. Written in an owner's words; stored as minutes and days.
+ */
+function BookingPolicyForm({
+  organizationId,
+  typeId,
+  booking,
+  statuses,
+  disabled,
+}: {
+  organizationId: string;
+  typeId: string;
+  booking: TypeBooking;
+  statuses: WorkItemStatus[];
+  disabled: boolean;
+}) {
+  const [state, formAction, pending] = useActionState(setTypeBookingPolicyAction, INITIAL);
+  const { policy } = booking;
+  const notice = amountAndUnit(policy.minimumNoticeMinutes);
+  const reschedule = policy.customerRescheduleCutoffMinutes === null ? null : amountAndUnit(policy.customerRescheduleCutoffMinutes);
+  const cancel = policy.customerCancellationCutoffMinutes === null ? null : amountAndUnit(policy.customerCancellationCutoffMinutes);
+  const releasing = statuses.filter((status) => status.releasesResource);
+
+  const units = (
+    <>
+      <option value="minutes">minutes</option>
+      <option value="hours">hours</option>
+      <option value="days">days</option>
+    </>
+  );
+
+  return (
+    <form action={formAction} className="mt-6 flex flex-col gap-3">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="typeId" value={typeId} />
+      <h3 className="text-sm font-medium">When customers can book</h3>
+      <Hint>These limits apply to customers on the public page. Your own team can still schedule any time that works for the people and resources needed.</Hint>
+
+      <div className="text-sm">
+        <label htmlFor={`cadence-${typeId}`}>Start times every, in minutes</label>
+        <TextInput id={`cadence-${typeId}`} name="cadenceMinutes" type="number" min={5} max={1440} required defaultValue={policy.cadenceMinutes} disabled={disabled} aria-describedby={`cadence-hint-${typeId}`} className="mt-1 block w-full" />
+        <Hint id={`cadence-hint-${typeId}`}>Times are counted from midnight in your time zone. Appointments still last {booking.durationMinutes} minutes.</Hint>
+      </div>
+
+      <div className="text-sm">
+        <label htmlFor={`notice-${typeId}`}>How much notice is required?</label>
+        <div className="mt-1 flex gap-2">
+          <TextInput id={`notice-${typeId}`} name="noticeAmount" type="number" min={0} required defaultValue={notice.amount} disabled={disabled} className="w-28" />
+          <SelectInput name="noticeUnit" aria-label="Notice unit" defaultValue={notice.unit} disabled={disabled}>{units}</SelectInput>
+        </div>
+      </div>
+
+      <label className="text-sm">
+        How far ahead can customers book, in days?
+        <TextInput name="horizonDays" type="number" min={1} max={730} required defaultValue={policy.maximumHorizonDays} disabled={disabled} className="mt-1 block w-full" />
+      </label>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="allowSameDay" defaultChecked={policy.allowSameDay} disabled={disabled} />
+        Allow same-day booking
+      </label>
+
+      <h3 className="mt-2 text-sm font-medium">Changes and cancellations</h3>
+      <CutoffField id={`reschedule-${typeId}`} name="reschedule" label="Customers can reschedule until" unitLabel="Reschedule cutoff unit" current={reschedule} disabled={disabled} />
+      <CutoffField id={`cancel-${typeId}`} name="cancel" label="Customers can cancel until" unitLabel="Cancellation cutoff unit" current={cancel} disabled={disabled} />
+
+      <div className="text-sm">
+        <label htmlFor={`cancel-status-${typeId}`}>A cancelled booking moves to</label>
+        <SelectInput id={`cancel-status-${typeId}`} name="cancellationStatusId" defaultValue={policy.cancellationStatusId ?? ''} disabled={disabled} aria-describedby={`cancel-status-hint-${typeId}`} className="mt-1 block w-full">
+          <option value="">Customers cannot cancel online</option>
+          {releasing.map((status) => (
+            <option key={status.id} value={status.id}>{status.name}</option>
+          ))}
+        </SelectInput>
+        <Hint id={`cancel-status-hint-${typeId}`}>
+          {releasing.length === 0
+            ? 'No stage frees up its resources yet. Mark one (such as Cancelled) in the workflow first.'
+            : 'It needs a move to that stage from where a booking arrives (set under Workflow). Freed resources can be booked again.'}
+        </Hint>
+      </div>
+
+      <Button type="submit" disabled={disabled || pending} tone="secondary" className="w-fit">
+        {pending ? 'Saving…' : 'Save booking limits'}
+      </Button>
+      {state.error ? (
+        <span role="alert" className="text-sm text-danger">{state.error}</span>
+      ) : null}
+    </form>
+  );
+}
+
+/**
+ * "Until [n] [unit] before the appointment", or no cutoff at all. No cutoff is a choice of its own in
+ * the unit list — never a blank amount — and the amount steps aside when it is chosen, so there is no
+ * number sitting beside a rule that does not use one.
+ */
+function CutoffField({
+  id,
+  name,
+  label,
+  unitLabel,
+  current,
+  disabled,
+}: {
+  id: string;
+  name: string;
+  label: string;
+  unitLabel: string;
+  current: { amount: number; unit: string } | null;
+  disabled: boolean;
+}) {
+  const [unit, setUnit] = useState(current?.unit ?? 'none');
+  return (
+    <div className="text-sm">
+      <label htmlFor={id}>{label}</label>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        {unit === 'none' ? null : (
+          <TextInput id={id} name={`${name}Amount`} type="number" min={0} required defaultValue={current?.amount ?? 1} disabled={disabled} className="w-28" />
+        )}
+        <SelectInput
+          id={unit === 'none' ? id : undefined}
+          name={`${name}Unit`}
+          aria-label={unitLabel}
+          value={unit}
+          onChange={(event) => setUnit(event.target.value)}
+          disabled={disabled}
+        >
+          <option value="none">No cutoff</option>
+          <option value="minutes">minutes</option>
+          <option value="hours">hours</option>
+          <option value="days">days</option>
+        </SelectInput>
+        {unit === 'none' ? null : <span>before the appointment</span>}
+      </div>
+    </div>
   );
 }
