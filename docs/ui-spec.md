@@ -189,8 +189,8 @@ Workspaces
     ├── Brand
     └── Portal
 
-Business
-Platform Administration  ← GildOps organization + platform authority only
+Administration
+  Platform               ← GildOps organization + platform authority only
 ```
 
 Only implemented, entitled, permitted and reachable destinations are drawn. This target is not a

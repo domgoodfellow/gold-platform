@@ -1814,8 +1814,9 @@ that borrows a workspace's *entitlement* and declares its own *configuration* pe
 capability for declaring the shape of how a business records and runs its work, not narrowly
 "Custom Fields": it is the same act whether the shape being declared is a custom field, a work item
 type or status, a call outcome, or an opening-hours entry (Schedule configuration), so all four use
-it rather than each growing its own single-purpose permission. The Business section is drawn one item at a
-time by the authority for that item — there is no Business section a role has or lacks.
+it rather than each growing its own single-purpose permission. There is no Business section in the
+sidebar: Team, Connections and Plan & usage are Settings destinations, each offered by its own
+authority, and only a locked organization's recovery sidebar draws Plan & usage directly.
 Setup is kernel; Agent-assisted drafting is an optional accelerator inside it, and losing the
 `drafting` module does not remove the lifecycle.
 

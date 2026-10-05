@@ -126,7 +126,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   settings: Settings,
 };
 
-/** Every item the projection can produce: the areas, the business items, and the platform destinations. */
+/** Every item the projection can produce: the areas and the platform destinations. */
 export const NAV_ICONS: Record<string, LucideIcon> = {
   ...AREA_ICONS,
   // A workspace row is drawn with its Product's mark; its pages, in the phone sheet, with their own.
@@ -269,9 +269,10 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
 
 /**
  * The tablet and desktop rendering: `Sidebar`'s own grouped-menu vocabulary, one `SidebarGroup` per
- * projected section in order — Home, Workspaces,
- * Business, and (only inside GOLD, only with platform authority) Platform last. Platform is an extra
- * section beneath the business's own, never a replacement for any of it. Collapse-to-icon, the
+ * projected section in order — Home, Library, Workspaces, and (only inside GOLD, only with
+ * platform authority) Administration last, holding the Platform row. Administration is an extra
+ * section beneath the business's own, never a replacement for any of it. Team, Connections and
+ * Plan & usage are Settings destinations and have no row here. Collapse-to-icon, the
  * tooltip that appears while collapsed, and the `md`-and-up-only rendering are all `Sidebar`'s
  * own, not reimplemented here.
  */
@@ -286,7 +287,7 @@ export function OrgNav({ sections }: { sections: ShellSection[] }) {
       <SidebarGroupContent>
         <SidebarMenu>
           {section.items.map((item) => (
-            <NavRow key={item.key} item={item} active={active} expanded={section.key === 'platform' && platformActive} />
+            <NavRow key={item.key} item={item} active={active} expanded={section.key === 'administration' && platformActive} />
           ))}
         </SidebarMenu>
       </SidebarGroupContent>
@@ -418,7 +419,7 @@ export function OrgSidebar({
   /** True only while the business is in SETUP — the layout decides, from `operationalState`. */
   email: string;
   signOutAction: () => Promise<void>;
-  /** Whether the account menu should offer Business settings — `lib/shell.ts`'s `businessSettingsOffered`. */
+  /** Whether the account menu should offer Organization settings — `lib/shell.ts`'s `businessSettingsOffered`. */
   businessSettingsOffered: boolean;
 } & React.ComponentProps<typeof Sidebar>) {
   return (

@@ -105,21 +105,22 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(keys(noPlatform, 'workspaces')).not.toContain('finance-plans');
   });
 
-  it('sees organization administration, item by item', () => {
-    expect(keys(sections, 'business')).toEqual(['team', 'connections', 'plan']);
+  it('has no Business section: Team, Connections and Plan & usage are Settings destinations, not rows', () => {
+    expect(sections.map((section) => section.key)).not.toContain('business');
+    for (const key of ['team', 'connections', 'plan']) expect(keys(sections)).not.toContain(key);
   });
 
   it('sees every authorized Platform destination, and only through the projection', () => {
     // The root destination is the Platform row itself, never a `platform-overview` child.
-    const destinations = keys(sections, 'platform').filter((key) => !key.startsWith('platform-group-'));
+    const destinations = keys(sections, 'administration').filter((key) => !key.startsWith('platform-group-'));
     const expected = PLATFORM_DESTINATIONS.map((destination) => (destination.path === '' ? 'platform' : `platform-${destination.key}`));
     expect(destinations.sort()).toEqual(expected.sort());
   });
 
   it('nests Platform as one row, holding Organizations and Catalog, Commercial and Infrastructure', () => {
     // Platform is a single workspace-style parent at the top level — its own Home, never a repeated child.
-    expect(topLevel(sections, 'platform')).toEqual(['platform']);
-    expect(keys(sections, 'platform')).toEqual([
+    expect(topLevel(sections, 'administration')).toEqual(['platform']);
+    expect(keys(sections, 'administration')).toEqual([
       'platform',
       'platform-organizations',
       'platform-group-catalog',
@@ -147,23 +148,23 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(keys(sections, 'workspaces')).toContain('customers');
   });
 
-  it('labels its sections Home, Library, Workspaces, Business, Platform administration', () => {
-    expect(sections.map((section) => section.label)).toEqual([null, null, 'Workspaces', 'Business', 'Platform administration']);
+  it('labels its sections Home, Library, Workspaces, Administration', () => {
+    expect(sections.map((section) => section.label)).toEqual([null, null, 'Workspaces', 'Administration']);
   });
 
-  it('names the tenant destination Connections and the platform one Connectors, once each', () => {
+  it('draws the platform Connectors row once and no tenant Connections row', () => {
     const items = projectedItems(sections);
     const label = (key: string) => items.find((item) => item.key === key)?.label;
-    expect(label('connections')).toBe('Connections');
+    expect(label('connections')).toBeUndefined();
     expect(label('platform-connectors')).toBe('Connectors');
     const labels = items.map((item) => item.label);
-    expect(labels.filter((name) => name === 'Connections')).toHaveLength(1);
+    expect(labels).not.toContain('Connections');
     expect(labels.filter((name) => name === 'Connectors')).toHaveLength(1);
     expect(labels).not.toContain('Integrations');
   });
 
-  it('draws sections in one fixed order: Home, Library, Workspaces, Business, Platform', () => {
-    expect(sections.map((section) => section.key)).toEqual(['home', 'library', 'workspaces', 'business', 'platform']);
+  it('draws sections in one fixed order: Home, Library, Workspaces, Administration', () => {
+    expect(sections.map((section) => section.key)).toEqual(['home', 'library', 'workspaces', 'administration']);
   });
 });
 
@@ -177,10 +178,8 @@ describe('GOLD sales member in the same organization', () => {
   });
 
   it('sees no Platform and no administration they hold no authority for', () => {
-    expect(keys(sections, 'platform')).toEqual([]);
-    expect(keys(sections, 'business')).toEqual([]);
-    expect(sections.map((section) => section.key)).not.toContain('platform');
-    expect(sections.map((section) => section.key)).not.toContain('business');
+    expect(keys(sections, 'administration')).toEqual([]);
+    expect(sections.map((section) => section.key)).not.toContain('administration');
   });
 
   it('does not see automation, which needs its own permission', () => {
@@ -189,30 +188,29 @@ describe('GOLD sales member in the same organization', () => {
 
   it('is not given platform items by being a member: platform authority is an input, not an inference', () => {
     // Everything an ordinary member holds, entitled to everything, and still no Platform.
-    expect(keys(project(ALL_CAPABILITIES, { platform: null }), 'platform')).toEqual([]);
+    expect(keys(project(ALL_CAPABILITIES, { platform: null }), 'administration')).toEqual([]);
   });
 });
 
 describe('a platform member with limited platform permissions', () => {
   it('sees only the destinations their permissions reach', () => {
     const providersOnly = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.providers']) });
-    expect(keys(providersOnly, 'platform')).toEqual(['platform', 'platform-group-infrastructure', 'platform-providers', 'platform-ai-runtime']);
+    expect(keys(providersOnly, 'administration')).toEqual(['platform', 'platform-group-infrastructure', 'platform-providers', 'platform-ai-runtime']);
 
     const commercial = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.commercial']) });
-    expect(keys(commercial, 'platform')).toEqual(['platform', 'platform-group-commercial', 'platform-plans', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-portfolio-economics', 'platform-billing']);
+    expect(keys(commercial, 'administration')).toEqual(['platform', 'platform-group-commercial', 'platform-plans', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-portfolio-economics', 'platform-billing']);
 
     const catalogue = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.catalogue']) });
-    expect(keys(catalogue, 'platform')).toEqual(['platform', 'platform-group-catalog', 'platform-products', 'platform-meters', 'platform-connectors']);
+    expect(keys(catalogue, 'administration')).toEqual(['platform', 'platform-group-catalog', 'platform-products', 'platform-meters', 'platform-connectors']);
   });
 
   it('does not gain full platform administration, nor organization administration, from one permission', () => {
     const limited = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.organizations']) });
-    expect(keys(limited, 'platform')).toEqual(['platform', 'platform-organizations']);
-    expect(keys(limited, 'business')).toEqual([]);
+    expect(keys(limited, 'administration')).toEqual(['platform', 'platform-organizations']);
   });
 
   it('a person who holds no platform permission has an empty set, and so no Platform section', () => {
-    expect(project(preset('support'), { platform: new Set() }).map((section) => section.key)).not.toContain('platform');
+    expect(project(preset('support'), { platform: new Set() }).map((section) => section.key)).not.toContain('administration');
   });
 });
 
@@ -221,11 +219,10 @@ describe('tenant owner or administrator', () => {
 
   it('sees the tenant workspaces and the administration they hold authority for', () => {
     expect(keys(sections, 'workspaces')).toContain('customers');
-    expect(keys(sections, 'business')).toEqual(['team', 'connections', 'plan']);
   });
 
   it('never sees GOLD Platform controls, however many capabilities they hold', () => {
-    expect(keys(sections, 'platform')).toEqual([]);
+    expect(keys(sections, 'administration')).toEqual([]);
     expect(projectedItems(sections).some((item) => item.href.includes('/platform'))).toBe(false);
   });
 
@@ -239,34 +236,34 @@ describe('tenant ordinary member', () => {
 
   it('sees the operational workspaces their business has, and nothing administrative', () => {
     expect(keys(technician, 'workspaces')).toEqual(['workspace-crm', 'customers', 'pipeline', 'workspace-finance', 'finance-quotes', 'finance-invoices', 'finance-payments', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
-    expect(keys(technician, 'business')).toEqual([]);
-    expect(keys(technician, 'platform')).toEqual([]);
+    expect(keys(technician, 'administration')).toEqual([]);
   });
 
   it('a viewer with no capability at all still gets the kernel, and no administration', () => {
     const viewer = project(preset('viewer'));
     expect(keys(viewer, 'home')).toEqual(['home']);
     expect(keys(viewer, 'workspaces')).toEqual(['workspace-crm', 'customers', 'pipeline', 'workspace-finance', 'finance-quotes', 'finance-invoices', 'finance-payments', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
-    expect(keys(viewer, 'business')).toEqual([]);
   });
 });
 
 describe('configuration-only authority', () => {
-  it('has nothing in Business administration, but Business settings still offers them a target — no permanent sidebar row either way', () => {
+  it('has no permanent sidebar row for configuration, but Settings still offers them a target', () => {
     const configurer = project(['field.manage']);
-    // Cannot place calls, so there is no calling workspace for them…
+    // Cannot place calls, so there is no calling workspace for them.
     expect(keys(configurer, 'workspaces')).not.toContain('calls');
-    // …none of Team, Connections or Plan & usage names their capability, so Business
-    // administration has nothing to show — Settings is not a fourth permanent row beside them.
-    expect(keys(configurer, 'business')).toEqual([]);
-    // Yet the account menu's Business settings link is theirs, because they may configure.
+    for (const key of ['team', 'connections', 'plan']) expect(keys(configurer)).not.toContain(key);
+    // The account menu's Settings link is theirs, because they may configure.
     expect(businessSettingsOffered({ enabledModules: new Set(EVERYTHING_MODULES), featureAvailability: everyFeature(), capabilities: new Set(['field.manage']) })).toBe(true);
   });
 
-  it('is offered exactly the administration items their own permissions name', () => {
-    expect(keys(project(['role.manage']), 'business')).toEqual(['team']);
-    expect(keys(project(['billing.manage']), 'business')).toEqual(['plan']);
-    expect(keys(project(['integration.manage']), 'business')).toEqual(['connections']);
+  it('keeps Team, Connections and Plan & usage out of the shell whatever authority names them, yet reachable as Settings targets', () => {
+    const gate = { enabledModules: new Set(EVERYTHING_MODULES), featureAvailability: everyFeature(), capabilities: new Set<Capability>(ALL_CAPABILITIES), schedulableWork: undefined };
+    for (const [capability, key, target] of [['role.manage', 'team', 'team'], ['billing.manage', 'plan', 'plan'], ['integration.manage', 'connections', 'integrations']] as const) {
+      const sections = project([capability]);
+      expect(sections.map((section) => section.key), capability).not.toContain('business');
+      expect(keys(sections), capability).not.toContain(key);
+      expect(configTargetOffered(configTarget(target), gate), target).toBe(true);
+    }
   });
 });
 
@@ -278,8 +275,6 @@ describe('entitlement absent', () => {
     expect(keys(sections, 'workspaces')).toEqual([
       'workspace-crm', 'customers', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'workspace-studio', 'studio-website', 'studio-forms', 'studio-templates',
     ]);
-    // Connections is a product too: no Integrations entitlement, no item — Team and Plan remain.
-    expect(keys(sections, 'business')).toEqual(['team', 'plan']);
   });
 
   it('the kernel — Home, Customers, Work, Schedule, Setup — never depends on a module', () => {
@@ -294,17 +289,17 @@ describe('the current item', () => {
   const sections = project(ALL_CAPABILITIES, { platform: allPlatform });
 
   it('marks the most specific item, never two', () => {
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/plan`)).toBe('plan');
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/plan`)).toBeNull();
     // Settings is no longer a permanent sidebar row (Business settings is reached from the
     // account menu instead), so nothing in the sidebar highlights while visiting it.
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/general`)).toBeNull();
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/pricing`)).toBeNull();
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/custom-fields`)).toBeNull();
     expect(activeItemKey(sections, `/organizations/${ORG}/work/abc`)).toBe('work');
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/roles`)).toBe('team');
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/members`)).toBe('team');
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/invitations`)).toBe('team');
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/connections/connection-1`)).toBe('connections');
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/roles`)).toBeNull();
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/members`)).toBeNull();
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/invitations`)).toBeNull();
+    expect(activeItemKey(sections, `/organizations/${ORG}/settings/connections/connection-1`)).toBeNull();
     // Plans & Add-ons is Platform's commercial control plane, never Finance (D60).
     expect(activeItemKey(sections, platformHref(ORG, 'plans/base'))).toBe('platform-plans');
     expect(activeItemKey(sections, platformHref(ORG, 'economics/abc'))).toBe('platform-portfolio-economics');
@@ -339,7 +334,7 @@ describe('the current item', () => {
   });
 
   it('inside Platform the group holding the current page is the one that is open, and a heading yields to its first page', () => {
-    const platformRoot = sections.find((section) => section.key === 'platform')!.items[0];
+    const platformRoot = sections.find((section) => section.key === 'administration')!.items[0];
     const commercial = platformRoot.children!.find((item) => item.key === 'platform-group-commercial')!;
     const infrastructure = platformRoot.children!.find((item) => item.key === 'platform-group-infrastructure')!;
     const active = activeItemKey(sections, platformHref(ORG, 'pricing'));
@@ -408,23 +403,23 @@ describe('role presets are templates, not personas', () => {
   });
 });
 
-describe('the permission gradient: operating work, then business administration, then platform', () => {
+describe('the permission gradient: operating work, then Administration', () => {
   const partial = new Set<PlatformCapability>(['platform.catalogue']);
   const personas: { name: string; sections: ShellSection[]; sectionKeys: string[]; platformTop: string[] }[] = [
     { name: 'ordinary tenant member', sections: project(preset('technician')), sectionKeys: ['home', 'library', 'workspaces'], platformTop: [] },
-    { name: 'tenant administrator', sections: project(ALL_CAPABILITIES), sectionKeys: ['home', 'library', 'workspaces', 'business'], platformTop: [] },
+    { name: 'tenant administrator', sections: project(ALL_CAPABILITIES), sectionKeys: ['home', 'library', 'workspaces'], platformTop: [] },
     // Same organization as the platform operator below, but no platform_staff permission: an ordinary business.
     { name: 'GOLD member without platform permission', sections: project(preset('sales'), { platform: new Set() }), sectionKeys: ['home', 'library', 'workspaces'], platformTop: [] },
     {
       name: 'platform staff with partial permissions',
       sections: project(ALL_CAPABILITIES, { platform: partial }),
-      sectionKeys: ['home', 'library', 'workspaces', 'business', 'platform'],
+      sectionKeys: ['home', 'library', 'workspaces', 'administration'],
       platformTop: ['platform'],
     },
     {
       name: 'platform owner',
       sections: project(ALL_CAPABILITIES, { platform: allPlatform }),
-      sectionKeys: ['home', 'library', 'workspaces', 'business', 'platform'],
+      sectionKeys: ['home', 'library', 'workspaces', 'administration'],
       platformTop: ['platform'],
     },
   ];
@@ -435,7 +430,7 @@ describe('the permission gradient: operating work, then business administration,
       // Relative hierarchy: whatever is present follows the one fixed order.
       const positions = persona.sections.map((section) => SHELL_SECTION_ORDER.indexOf(section.key));
       expect(positions).toEqual([...positions].sort((a, b) => a - b));
-      expect(topLevel(persona.sections, 'platform')).toEqual(persona.platformTop);
+      expect(topLevel(persona.sections, 'administration')).toEqual(persona.platformTop);
     });
 
     it(`${persona.name}: every administration item comes after every operating item`, () => {
@@ -446,14 +441,23 @@ describe('the permission gradient: operating work, then business administration,
     });
   }
 
-  it('platform administration is the last thing in the sidebar, after business administration', () => {
+  it('Administration is the last section, holds exactly one Platform parent that lands on Platform Home, and repeats no Overview', () => {
     const sections = personas[4].sections;
-    expect(sections.at(-1)?.key).toBe('platform');
-    expect(sections.at(-2)?.key).toBe('business');
+    expect(sections.at(-1)?.key).toBe('administration');
+    expect(sections.at(-1)?.label).toBe('Administration');
+    expect(sections.at(-1)?.items).toHaveLength(1);
+    const root = sections.at(-1)!.items[0];
+    expect(root.href).toBe(platformHref(ORG, ''));
+    expect(projectedItems(sections).map((item) => item.key)).not.toContain('platform-overview');
+    expect(root.children?.map((child) => child.href)).not.toContain(root.href);
+  });
+
+  it('an ordinary tenant organization gets no Administration section', () => {
+    expect(project(ALL_CAPABILITIES, { platform: null }).map((section) => section.key)).not.toContain('administration');
   });
 
   it('partial platform permissions reach only their own group, in registry order', () => {
-    const platformRoot = personas[3].sections.find((section) => section.key === 'platform')!.items[0];
+    const platformRoot = personas[3].sections.find((section) => section.key === 'administration')!.items[0];
     const catalog = platformRoot.children![0];
     expect(catalog.key).toBe('platform-group-catalog');
     expect(catalog.children?.map((page) => page.key)).toEqual(['platform-products', 'platform-meters', 'platform-connectors']);

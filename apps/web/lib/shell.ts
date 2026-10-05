@@ -6,7 +6,6 @@ import {
   areaRelevantToShape,
   areaVisibleTo,
   CONFIG_TARGETS,
-  configTarget,
   configTargetOffered,
   type Area,
 } from '@/lib/navigation';
@@ -46,7 +45,7 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  * several make it an expandable one. A registered workspace with no reachable page has no row at
  * all: registered is not visible.
  */
-export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'business' | 'platform';
+export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'administration';
 
 export type NavItem = {
   /** Unique across the whole projection; also the icon key. */
@@ -98,20 +97,19 @@ const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
   home: null,
   library: null,
   workspaces: 'Workspaces',
-  business: 'Business',
-  platform: 'Platform administration',
+  administration: 'Administration',
 };
 
 /**
- * The scope hierarchy, top to bottom: routine operating work, then administration of this business,
- * then administration of the platform. Not a count of permissions — a widening of what a click can
- * change. `projectShell` returns sections in this order and a renderer settles the last two toward
- * the bottom of the sidebar, so the highest authority is the furthest from the daily work.
+ * Routine operating work first, then administration — which holds Platform and is drawn only for
+ * GildOps' own staff. `projectShell` returns sections in this order and a renderer settles
+ * administration toward the bottom of the sidebar, so the highest authority is the furthest from
+ * the daily work. Team, Connections and Plan & usage are Settings destinations, not rows here.
  */
-export const SHELL_SECTION_ORDER: readonly ShellSectionKey[] = ['home', 'library', 'workspaces', 'business', 'platform'];
+export const SHELL_SECTION_ORDER: readonly ShellSectionKey[] = ['home', 'library', 'workspaces', 'administration'];
 
 /** The sections that are administration rather than operating work: drawn as one block, at the foot. */
-export const ADMINISTRATION_SECTIONS: ReadonlySet<ShellSectionKey> = new Set(['business', 'platform']);
+export const ADMINISTRATION_SECTIONS: ReadonlySet<ShellSectionKey> = new Set(['administration']);
 
 function areaItem(organizationId: string, area: Area, section: ShellSectionKey): NavItem {
   return {
@@ -121,18 +119,6 @@ function areaItem(organizationId: string, area: Area, section: ShellSectionKey):
     section,
   };
 }
-
-/**
- * The Business section: administration of the current organization a member may reach, one item at a
- * time by the authority for that item — there is no Business section a role either has or lacks. Each item is a
- * configuration target (`CONFIG_TARGETS`), so it is offered by the same rule as its Settings entry.
- * Settings itself is the index of every target and is drawn when at least one is offered.
- */
-const BUSINESS_ITEMS: readonly { key: string; label: string; target: string }[] = [
-  { key: 'team', label: 'Team', target: 'team' },
-  { key: 'connections', label: 'Connections', target: 'integrations' },
-  { key: 'plan', label: 'Plan & usage', target: 'plan' },
-];
 
 /**
  * The Platform section, from the one registry: the destinations the caller's permissions reach,
@@ -152,7 +138,7 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
     key: `platform-${destination.key}`,
     label: destination.label,
     href: platformHref(organizationId, destination.path),
-    section: 'platform',
+    section: 'administration',
   });
 
   const children: NavItem[] = [];
@@ -170,7 +156,7 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
         key: `platform-group-${group.key}`,
         label: group.label,
         href: pages[0].href,
-        section: 'platform',
+        section: 'administration',
         heading: true,
         children: pages,
       });
@@ -183,7 +169,7 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
     key: 'platform',
     label: 'Platform',
     href: platformHref(organizationId, ''),
-    section: 'platform',
+    section: 'administration',
   };
   // Somebody holding only `platform.health` reaches the overview and nothing else: a plain row,
   // never a chevron over an empty disclosure — the same rule a workspace with one reachable area
@@ -193,8 +179,7 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
 
 /**
  * Whether this business's Organization Settings scope has anything this member may configure —
- * the same gate the Business section once used to draw a permanent Settings row (D-restated:
- * Settings is not one of the permanent rows, per the shell-chrome slice). The account menu's one
+ * the gate for the Settings entry (Settings is not one of the permanent sidebar rows). The account menu's one
  * Settings entry (D71) asks this to decide whether it lands on Organization or falls back to
  * Account; any contextual Configure link asks it the same way before offering a destination at all.
  */
@@ -240,26 +225,13 @@ export function projectShell(input: ShellInput): ShellSection[] {
       return [{ ...row, heading: true, children: home ? children : children.slice(1) }];
     });
 
-  const business: NavItem[] = [];
-  for (const item of BUSINESS_ITEMS) {
-    const target = configTarget(item.target);
-    if (!configTargetOffered(target, gate)) continue;
-    business.push({
-      key: item.key,
-      label: item.label,
-      href: `/organizations/${organizationId}/${target.path.split('#')[0]}`,
-      section: 'business',
-    });
-  }
-
   const platformItems: NavItem[] = platform ? projectPlatform(organizationId, platform) : [];
 
   const sections: ShellSection[] = [
     { key: 'home', label: SECTION_LABELS.home, items: inGroup('home').map((area) => areaItem(organizationId, area, 'home')) },
     { key: 'library', label: SECTION_LABELS.library, items: inGroup('library').map((area) => areaItem(organizationId, area, 'library')) },
     { key: 'workspaces', label: SECTION_LABELS.workspaces, items: workspaceItems() },
-    { key: 'business', label: SECTION_LABELS.business, items: business },
-    { key: 'platform', label: SECTION_LABELS.platform, items: platformItems },
+    { key: 'administration', label: SECTION_LABELS.administration, items: platformItems },
   ];
 
   // A section with nothing in it is not drawn: naming a part of the product that is not there for

@@ -665,10 +665,18 @@ describe('organization page composition', () => {
 describe('the sidebar settles administration at the foot', () => {
   const orgShell = readFileSync(`${WEB}/app/organizations/[organizationId]/org-shell.tsx`, 'utf8');
 
-  it('draws Business and Platform administration as one block, pushed down by layout rather than coordinates', () => {
+  it('draws Administration as one block, pushed down by layout rather than coordinates', () => {
     expect(orgShell).toContain('ADMINISTRATION_SECTIONS');
     expect(orgShell).toMatch(/mt-auto flex flex-col/);
     expect(orgShell).not.toMatch(/absolute|fixed bottom|top-\[/);
+  });
+
+  it('keeps Plan & usage in the locked-organization sidebar only: recovery, not a Business shortcut', () => {
+    const locked = orgShell.slice(orgShell.indexOf('export function LockedOrgSidebar'));
+    expect(locked).toContain('/settings/plan');
+    expect(locked).toContain('Plan &amp; usage');
+    const operating = orgShell.slice(0, orgShell.indexOf('export function LockedOrgSidebar'));
+    expect(operating).not.toMatch(/BUSINESS_ITEMS|section.key === 'business'/);
   });
 
   it('never offers Platform in the context switcher, which answers only which business', () => {
