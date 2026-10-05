@@ -53,7 +53,7 @@ async function newBusiness(label: string): Promise<Business> {
     p_organization_id: organizationId,
     p_title: `Secret job ${label}`,
     p_status_id: statusId,
-    p_resource_id: resourceId,
+    p_resource_ids: [resourceId],
     p_customer_id: null,
     p_location_id: null,
     p_asset_id: null,
@@ -63,7 +63,7 @@ async function newBusiness(label: string): Promise<Business> {
   const start = new Date(Date.now() + 86_400_000);
   const scheduled = await db.rpc('schedule_work_item', {
     p_work_item_id: created2.data as string,
-    p_resource_id: resourceId,
+    p_resource_ids: [resourceId],
     p_starts_at: start.toISOString(),
     p_ends_at: new Date(start.getTime() + 3_600_000).toISOString(),
   });

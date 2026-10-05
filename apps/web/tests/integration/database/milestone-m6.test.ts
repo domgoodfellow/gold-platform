@@ -238,7 +238,7 @@ describe('M6 — a business that runs itself', () => {
       const startsAt = new Date(Date.now() + 4 * 60 * 60 * 1000);
       await scheduleWorkItem(technician.db, {
         workItemId,
-        resourceId: van,
+        resourceIds: [van],
         startsAt: startsAt.toISOString(),
         endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000).toISOString(),
       });

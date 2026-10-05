@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { dayEvents } from './day-events';
 import { cx } from '@/components/class-names';
 import type { ScheduleDay } from '@/lib/domain/scheduling/availability';
 import { formatDayOfMonth } from './calendar-format';
@@ -51,9 +52,7 @@ export function MonthSchedule({
             {week.map((day) => {
               const inMonth = day.date.startsWith(monthPrefix);
               const isToday = day.date === today;
-              const events = day.resources.flatMap((entry) =>
-                entry.booked.map((booking) => ({ ...booking, resourceName: entry.resource.name })),
-              );
+              const events = dayEvents(day);
               const dayHref = scheduleHref(organizationId, { view: 'day', date: day.date, resourceIds });
 
               return (

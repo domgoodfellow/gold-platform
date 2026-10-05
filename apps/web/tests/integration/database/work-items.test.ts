@@ -166,7 +166,7 @@ describe('work items', () => {
       statusId: alice.statusId,
       customerId: alice.customerId,
       locationId: alice.locationId,
-      resourceId: alice.resourceId,
+      resourceIds: [alice.resourceId],
     });
     expect(id).toBeTypeOf('string');
 
@@ -175,7 +175,7 @@ describe('work items', () => {
     expect(item.status.label).toBe('Scheduled');
     expect(item.customer?.label).toBe('wi-alice Customer');
     expect(item.location?.label).toBe('wi-alice Site');
-    expect(item.resource?.label).toBe('wi-alice Tech');
+    expect(item.resources.map((r) => r.label)).toEqual(['wi-alice Tech']);
   });
 
   it('allows a work item with no customer, location or resource', async () => {
@@ -191,7 +191,7 @@ describe('work items', () => {
     const unassigned = items.find((i) => i.title === 'Tidy the yard');
     expect(unassigned?.customer).toBeNull();
     expect(unassigned?.location).toBeNull();
-    expect(unassigned?.resource).toBeNull();
+    expect(unassigned?.resources).toEqual([]);
   });
 
   it('cannot borrow another tenant\'s customer (I18)', async () => {
@@ -205,7 +205,19 @@ describe('work items', () => {
   });
 
   it('cannot borrow another tenant\'s resource (I18)', async () => {
-    const { error } = await insertDirectly(alice, { resource_id: bob.resourceId });
+    // An assignment is its own row, and both of its references are tenant-leading: one tenant's
+    // job cannot name another tenant's resource however the row is written.
+    const id = await createWorkItem(alice.db, {
+      organizationId: alice.organizationId,
+      title: 'Borrowing',
+      statusId: alice.statusId,
+    });
+    const { error } = await alice.db.from('work_item_resource_assignments').insert({
+      organization_id: alice.organizationId,
+      work_item_id: id,
+      resource_id: bob.resourceId,
+      created_by: alice.userId,
+    });
     expect(error?.code).toBe('23503');
   });
 

@@ -1,4 +1,4 @@
-import type { ResourceSchedule } from '@/lib/domain/scheduling/availability';
+import type { ResourceSchedule, UnassignedWork } from '@/lib/domain/scheduling/availability';
 import { clipWindow, zonedTimeToInstant, type Window } from '@/lib/domain/scheduling/window';
 
 /**
@@ -61,13 +61,17 @@ function unionWindow(a: Window, b: Window): Window {
  * contribute their *display* window, clipped to this tenant calendar day, never the canonical
  * one, so a booking spanning midnight can't pull the axis past the day being drawn.
  */
-function realAxisBounds(open: Window[], resources: ResourceSchedule[], within: Window, showOpen: boolean): Window | null {
+function realAxisBounds(open: Window[], resources: ResourceSchedule[], unassigned: UnassignedWork[], within: Window, showOpen: boolean): Window | null {
   const candidates: Window[] = showOpen ? [...open] : [];
   for (const entry of resources) {
     for (const booking of entry.booked) {
       const displayed = clipWindow(booking.window, within);
       if (displayed) candidates.push(displayed);
     }
+  }
+  for (const work of unassigned) {
+    const displayed = clipWindow(work.window, within);
+    if (displayed) candidates.push(displayed);
   }
   if (candidates.length === 0) return null;
   return candidates.reduce(unionWindow, candidates[0]);
@@ -86,10 +90,11 @@ export function computeDisplayAxisBounds(params: {
   within: Window;
   open: Window[];
   resources: ResourceSchedule[];
+  unassigned?: UnassignedWork[];
   hasConfiguredHours: boolean;
 }): { bounds: Window; hasRealContent: boolean } {
   const { date, timeZone, within, open, resources, hasConfiguredHours } = params;
-  const real = realAxisBounds(open, resources, within, hasConfiguredHours);
+  const real = realAxisBounds(open, resources, params.unassigned ?? [], within, hasConfiguredHours);
 
   const fallback: Window = {
     startsAt: zonedTimeToInstant(date, `${String(DISPLAY_DAY_START_HOUR).padStart(2, '0')}:00`, timeZone),

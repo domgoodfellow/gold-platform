@@ -182,7 +182,7 @@ describe('assets', () => {
     const job = items.find((i) => i.title === 'Service the compressor');
     expect(job?.asset?.label).toBe('Compressor');
     // Subject, not capacity: nothing has been assigned to do it.
-    expect(job?.resource).toBeNull();
+    expect(job?.resources).toEqual([]);
   });
 
   it('cannot make a work item about another tenant\'s asset (I18)', async () => {

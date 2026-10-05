@@ -9,8 +9,8 @@ import {
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { listResources } from '@/lib/domain/resources/resources';
-import { listSchedule } from '@/lib/domain/scheduling/availability';
-import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
+import { listScheduleDays } from '@/lib/domain/scheduling/availability';
+import { todayInZone } from '@/lib/domain/scheduling/window';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { areaAvailable, areaHref, areaLabel, workspaceLabel } from '@/lib/navigation';
@@ -31,7 +31,6 @@ export default async function FieldPage({ params }: PageProps<'/organizations/[o
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
   const date = todayInZone(organization.timezone);
-  const within = zonedDayRange(date, organization.timezone);
 
   const featureStates = await organizationResolvedFeatureStates(db, { organizationId });
   const state = {
@@ -48,7 +47,7 @@ export default async function FieldPage({ params }: PageProps<'/organizations/[o
   const [work, schedule, resources, locations, assets] = await Promise.all([
     listWorkItems(db, { organizationId }),
     hasSchedule
-      ? listSchedule(db, { organizationId, within, on: { date, timeZone: organization.timezone } })
+      ? listScheduleDays(db, { organizationId, dates: [date], timeZone: organization.timezone })
       : Promise.resolve(null),
     hasResources ? listResources(db, { organizationId }) : Promise.resolve(null),
     hasLocations ? listLocations(db, { organizationId }) : Promise.resolve(null),
@@ -63,7 +62,11 @@ export default async function FieldPage({ params }: PageProps<'/organizations/[o
     kpis.push({
       key: 'schedule',
       label: 'Scheduled today',
-      value: schedule.flatMap((entry) => entry.booked).length,
+      // Work items, not assignments: three resources on one job is one job scheduled today.
+      value: new Set([
+        ...(schedule[0]?.resources ?? []).flatMap((entry) => entry.booked.map((booking) => booking.workItemId)),
+        ...(schedule[0]?.unassigned ?? []).map((work) => work.workItemId),
+      ]).size,
       href: href('schedule'),
     });
   }

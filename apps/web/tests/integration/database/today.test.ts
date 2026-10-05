@@ -90,9 +90,10 @@ ${readFileSync(TODAY_FEATURE, 'utf8')}`;
   });
 
   it('preserves the existing schedule and work reads', () => {
-    expect(source).toContain("import { listSchedule } from '@/lib/domain/scheduling/availability'");
+    // The day is read through `listScheduleDays`, which carries scheduled work nobody is on.
+    expect(source).toContain("import { listScheduleDays } from '@/lib/domain/scheduling/availability'");
     expect(source).toContain("import { listWorkItems } from '@/lib/domain/work-items/work-items'");
-    expect(source).toContain('listSchedule(db, {');
+    expect(source).toContain('listScheduleDays(db, {');
   });
 
   it('gates optional blocks on the workspace being available, never on their current count', () => {

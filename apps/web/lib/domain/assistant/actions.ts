@@ -75,29 +75,18 @@ const validateReschedule: ActionValidator = (values) => {
 };
 
 /**
- * Asserts an instant rather than searching for one — not a second `freeWindows` (I5); whether
- * it lands is the exclusion constraint's call, not a check here (I6). The resource is read and
- * passed back deliberately: `scheduleWorkItem`'s `resourceId` is optional, and omitting it means
- * "nobody assigned" rather than "leave as is" — moving something in time and reassigning it are
- * two different decisions, and only one is here.
+ * Asserts an instant rather than searching for one — not a second `freeWindows` (I5); whether it
+ * lands is the exclusion constraint's call, not a check here (I6). Who is on the job is not named:
+ * `scheduleWorkItem` leaves the assignments as they are when none are given, so moving something
+ * in time can never quietly reassign it — moving and reassigning are two decisions, and only one
+ * is here. Every resource already on it is tested against the new time in the same transaction.
  */
 const rescheduleWorkItem: ActionExecutor = async (db, input) => {
   validateReschedule(input.arguments);
   const workItemId = requiredText(input.arguments, 'work_item_id', 'which job');
 
-  const { data: current, error } = await db
-    .from('work_items')
-    .select('resource_id')
-    .eq('id', workItemId)
-    .single();
-
-  if (error || !current) {
-    throw new DomainError('That job cannot be found.', 'assistant.action_unknown_job');
-  }
-
   await scheduleWorkItem(db, {
     workItemId,
-    resourceId: current.resource_id,
     startsAt: requiredInstant(input.arguments, 'starts_at', 'start'),
     endsAt: requiredInstant(input.arguments, 'ends_at', 'end'),
   });

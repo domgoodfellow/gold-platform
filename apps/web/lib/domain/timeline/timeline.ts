@@ -40,6 +40,7 @@ const WORK_ITEM_ACTIONS = [
   'work_item.booked',
   'work_item.status_changed',
   'work_item.scheduled',
+  'work_item.assigned',
   'work_item.unscheduled',
   'work_item.line_added',
   'work_item.line_removed',
@@ -106,6 +107,18 @@ type Vocabulary = {
   /** Only resolved by a caller that needs to name a customer from a payload id — today, a location's own timeline reading `location.linked` from the other side. */
   customers?: Map<string, string>;
 };
+
+/**
+ * Who an event says is on the job. `resource_ids` since a work item could have many; `resource_id`
+ * is what every event written before that carries, and it is read here for as long as those events
+ * exist — history is not rewritten to match a column that no longer does.
+ */
+function resourceIdsOf(payload: Record<string, unknown>): string[] {
+  const many = payload.resource_ids;
+  if (Array.isArray(many)) return many.filter((id): id is string => typeof id === 'string');
+  const one = payload.resource_id;
+  return typeof one === 'string' ? [one] : [];
+}
 
 function text(payload: Record<string, unknown>, key: string): string | null {
   const value = payload[key];
@@ -177,9 +190,12 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
       return `Moved to ${name ?? 'a status that no longer exists'}${on}`;
     }
     case 'work_item.scheduled': {
-      const resourceId = text(row.payload, 'resource_id');
-      const resource = resourceId ? words.resources.get(resourceId) : null;
-      return `Scheduled${resource ? ` to ${resource}` : ''}${on}`;
+      const names = resourceIdsOf(row.payload).flatMap((id) => words.resources.get(id) ?? []);
+      return `Scheduled${names.length > 0 ? ` to ${names.join(', ')}` : ''}${on}`;
+    }
+    case 'work_item.assigned': {
+      const names = resourceIdsOf(row.payload).flatMap((id) => words.resources.get(id) ?? []);
+      return names.length > 0 ? `Assigned to ${names.join(', ')}${on}` : `Taken off every resource${on}`;
     }
     case 'work_item.unscheduled':
       return `Unscheduled${on}`;

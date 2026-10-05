@@ -83,6 +83,8 @@ export function ScheduleWorkspace({
             within={activeDay.within}
             open={activeDay.open}
             resources={activeDay.resources}
+            unassigned={activeDay.unassigned}
+            resourceNames={new Map(allResources.map((resource) => [resource.id, resource.name]))}
             hasConfiguredHours={hasConfiguredHours}
             timezone={timezone}
             resourcesHref={resourcesHref}

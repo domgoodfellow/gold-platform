@@ -26,7 +26,8 @@ export type WorkItem = {
   status: WorkItemRef;
   customer: WorkItemRef | null;
   location: WorkItemRef | null;
-  resource: WorkItemRef | null;
+  /** Who takes part, by name. Zero, one or many; there is no "primary" one. Each takes part for the work item's one scheduled window. */
+  resources: WorkItemRef[];
   /** What the work is about, as opposed to what it is done with. */
   asset: WorkItemRef | null;
   /** When this work occupies its resource, or null if it is not yet scheduled. */
@@ -45,11 +46,25 @@ const TITLE_MAX = 300;
 // status hint names the three-column constraint, which carries type_id as well — a work item
 // cannot sit in another type's status, and that is a database fact rather than a convention.
 const WORK_ITEM_SELECT =
-  'id, title, custom, created_at, scheduled_during, type:work_item_types!work_items_type_same_org (id, name, schedulable), status:work_item_statuses!work_items_status_same_org_and_type (id, name), customer:customers!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), resource:resources!work_items_resource_same_org (id, name), asset:assets!work_items_asset_same_org (id, name)';
+  'id, title, custom, created_at, scheduled_during, type:work_item_types!work_items_type_same_org (id, name, schedulable), status:work_item_statuses!work_items_status_same_org_and_type (id, name), customer:customers!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), assignments:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource:resources!work_item_resource_assignments_resource_same_org (id, name)), asset:assets!work_items_asset_same_org (id, name)';
 
 function one<T>(value: T | T[] | null): T | undefined {
   if (value === null) return undefined;
   return Array.isArray(value) ? value[0] : value;
+}
+
+type AssignmentRow = {
+  resource: { id: string; name: string } | { id: string; name: string }[] | null;
+};
+
+/** The resources on a work item, by name — read from the embedded assignments, never from a column. */
+function resourcesOf(assignments: AssignmentRow[] | null): WorkItemRef[] {
+  return (assignments ?? [])
+    .flatMap((assignment) => {
+      const resource = one(assignment.resource);
+      return resource ? [{ id: resource.id, label: resource.name }] : [];
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /**
@@ -88,7 +103,18 @@ export async function listWorkItems(
     query = query.eq('asset_id', input.assetId);
   }
   if (input.resourceId) {
-    query = query.eq('resource_id', input.resourceId);
+    // The work this resource takes part in, however many others take part with it. Two steps
+    // rather than a filter on the embedded assignments, which would also trim the resources each
+    // job is shown with — and a job must still list everyone on it.
+    const { data: held, error: heldError } = await db
+      .from('work_item_resource_assignments')
+      .select('work_item_id')
+      .eq('organization_id', input.organizationId)
+      .eq('resource_id', input.resourceId);
+    if (heldError) {
+      throw new DomainError(heldError.message, 'work_items.list_failed');
+    }
+    query = query.in('id', (held ?? []).map((assignment) => assignment.work_item_id));
   }
   if (input.locationId) {
     query = query.eq('location_id', input.locationId);
@@ -116,7 +142,6 @@ export async function listWorkItems(
 
       const customer = one(row.customer);
       const location = one(row.location);
-      const resource = one(row.resource);
       const asset = one(row.asset);
 
       return [
@@ -127,7 +152,7 @@ export async function listWorkItems(
           status: { id: status.id, label: status.name },
           customer: customer ? { id: customer.id, label: customer.name } : null,
           location: location ? { id: location.id, label: location.label } : null,
-          resource: resource ? { id: resource.id, label: resource.name } : null,
+          resources: resourcesOf(row.assignments as AssignmentRow[] | null),
           asset: asset ? { id: asset.id, label: asset.name } : null,
           // D15's boundary again: `supabase gen types` has no TypeScript for a Postgres range
           // and emits `unknown`. The cast is at the one place the value enters the domain, and
@@ -162,7 +187,6 @@ export async function getWorkItem(
   if (!type || !status) return null;
   const customer = one(row.customer);
   const location = one(row.location);
-  const resource = one(row.resource);
   const asset = one(row.asset);
   return {
     id: row.id,
@@ -171,7 +195,7 @@ export async function getWorkItem(
     status: { id: status.id, label: status.name },
     customer: customer ? { id: customer.id, label: customer.name } : null,
     location: location ? { id: location.id, label: location.label } : null,
-    resource: resource ? { id: resource.id, label: resource.name } : null,
+    resources: resourcesOf(row.assignments as AssignmentRow[] | null),
     asset: asset ? { id: asset.id, label: asset.name } : null,
     window: parseWindow(row.scheduled_during as string | null),
     custom: (row.custom ?? {}) as CustomValues,
@@ -199,7 +223,8 @@ export async function createWorkItem(
     statusId: string;
     customerId?: string | null;
     locationId?: string | null;
-    resourceId?: string | null;
+    /** Who is on it from the start. Allowed to whoever raises the job, for this job only; changing it later is scheduling's. */
+    resourceIds?: string[];
     assetId?: string | null;
     /** Raw form values keyed by field key. Coerced and checked against the registry here. */
     custom?: CustomInput;
@@ -236,7 +261,7 @@ export async function createWorkItem(
     // become null before it reaches Postgres rather than after.
     p_customer_id: (input.customerId || null) as string,
     p_location_id: (input.locationId || null) as string,
-    p_resource_id: (input.resourceId || null) as string,
+    p_resource_ids: (input.resourceIds ?? null) as string[],
     p_asset_id: (input.assetId || null) as string,
     p_custom: custom,
   });

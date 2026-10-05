@@ -150,10 +150,10 @@ describe('no calendar entity, and no heavy calendar dependency', () => {
 describe('listSchedule still works for its existing callers, and Week reuses the same availability logic', () => {
   const availability = read(`${WEB}/lib/domain/scheduling/availability.ts`);
 
-  it('exports listSchedule with its original signature, unchanged for Field and Home', () => {
+  it('keeps listSchedule exported, and Field and Home read the one day through listScheduleDays — it carries who is unassigned, which their counts need', () => {
     expect(availability).toMatch(/export async function listSchedule\(/);
-    expect(read(`${ROUTES}/field/page.tsx`)).toContain('listSchedule(db, {');
-    expect(read(`${ROUTES}/home/page.tsx`)).toContain('listSchedule(db, {');
+    expect(read(`${ROUTES}/field/page.tsx`)).toContain('listScheduleDays(db, {');
+    expect(read(`${ROUTES}/home/page.tsx`)).toContain('listScheduleDays(db, {');
   });
 
   it('exports listScheduleDays for several tenant calendar days at once', () => {
@@ -164,7 +164,7 @@ describe('listSchedule still works for its existing callers, and Week reuses the
   it('both callers share one grouping and one free/booked computation — no second availability algorithm', () => {
     expect(availability.match(/function groupBookedByResource\(/g)).toHaveLength(1);
     expect(availability.match(/function resourceSchedulesFor\(/g)).toHaveLength(1);
-    expect(availability).toContain('groupBookedByResource((committed.data ?? []) as CommittedRow[])');
+    expect(availability).toContain('groupBookedByResource((committed.data ?? []) as unknown as CommittedRow[])');
     // listScheduleDays calls the same two helpers listSchedule does.
     const daysBody = availability.slice(availability.indexOf('export async function listScheduleDays('));
     expect(daysBody).toContain('resourceSchedulesFor(resourceRows, bookedForDay, open, input.minimumMinutes)');
@@ -313,11 +313,13 @@ describe('a booking spanning midnight is clipped to the day it is drawn on, for 
     const window = read(`${WEB}/lib/domain/scheduling/window.ts`);
     expect(window).toContain('export function clipWindow(');
 
-    for (const file of ['day-schedule.tsx', 'week-schedule.tsx']) {
+    // Day clips in place; Week and Month read `dayEvents`, which clips once for both.
+    for (const file of ['day-schedule.tsx', 'day-events.ts']) {
       const source = read(`${CALENDAR}/${file}`);
       expect(source, file).toContain('clipWindow(');
       expect(source, file).toContain('displayWindow');
     }
+    expect(read(`${CALENDAR}/week-schedule.tsx`)).toContain('dayEvents(day)');
 
     const event = read(`${CALENDAR}/schedule-event.tsx`);
     expect(event).toContain('displayWindow');

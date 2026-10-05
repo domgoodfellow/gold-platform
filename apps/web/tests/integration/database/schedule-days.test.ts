@@ -94,7 +94,7 @@ describe('listScheduleDays', () => {
     const workItemId = await createWorkItem(tenant.db, { organizationId: tenant.organizationId, title: 'Tuesday job', statusId: tenant.statusId });
     await scheduleWorkItem(tenant.db, {
       workItemId,
-      resourceId: tenant.resourceId,
+      resourceIds: [tenant.resourceId],
       startsAt: zonedTimeToInstant('2026-09-15', '10:00:00', ZONE),
       endsAt: zonedTimeToInstant('2026-09-15', '11:00:00', ZONE),
     });
@@ -145,7 +145,7 @@ describe('listScheduleDays', () => {
     const morning = await createWorkItem(tenant.db, { organizationId: tenant.organizationId, title: 'Wednesday morning', statusId: tenant.statusId });
     await scheduleWorkItem(tenant.db, {
       workItemId: morning,
-      resourceId: tenant.resourceId,
+      resourceIds: [tenant.resourceId],
       startsAt: zonedTimeToInstant('2026-09-16', '09:30:00', ZONE),
       endsAt: zonedTimeToInstant('2026-09-16', '10:30:00', ZONE),
     });

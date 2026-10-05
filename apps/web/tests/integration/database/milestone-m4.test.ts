@@ -298,7 +298,7 @@ describe('THE M4 MILESTONE: a real business runs on the platform', () => {
 
     await scheduleWorkItem(pneu.db, {
       workItemId,
-      resourceId: pneu.resourceId,
+      resourceIds: [pneu.resourceId],
       startsAt: slots[0].startsAt,
       endsAt: slots[0].endsAt,
     });

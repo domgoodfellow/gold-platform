@@ -604,7 +604,7 @@ describe('the clock', () => {
       const ends = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
       await scheduleWorkItem(one.db, {
         workItemId,
-        resourceId: resource,
+        resourceIds: [resource],
         startsAt: starts,
         endsAt: ends,
       });
@@ -969,7 +969,7 @@ describe('conditions at a job', () => {
       const ends = new Date(Date.now() + 5 * 60 * 60 * 1000);
       await scheduleWorkItem(one.db, {
         workItemId,
-        resourceId,
+        resourceIds: [resourceId],
         startsAt: starts.toISOString(),
         endsAt: ends.toISOString(),
       });
@@ -1038,7 +1038,7 @@ describe('conditions at a job', () => {
       });
       await scheduleWorkItem(one.db, {
         workItemId: blocked,
-        resourceId,
+        resourceIds: [resourceId],
         startsAt: starts.toISOString(),
         endsAt: ends.toISOString(),
       });
@@ -1057,7 +1057,7 @@ describe('conditions at a job', () => {
       });
       await scheduleWorkItem(one.db, {
         workItemId: inTheWay,
-        resourceId,
+        resourceIds: [resourceId],
         startsAt: new Date(starts.getTime() + 60 * 60 * 1000).toISOString(),
         endsAt: new Date(ends.getTime() + 60 * 60 * 1000).toISOString(),
       });

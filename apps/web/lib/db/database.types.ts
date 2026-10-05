@@ -8834,6 +8834,69 @@ export type Database = {
           },
         ]
       }
+      work_item_resource_assignments: {
+        Row: {
+          created_at: string
+          created_by: string
+          occupies: unknown
+          organization_id: string
+          resource_id: string
+          work_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          occupies?: unknown
+          organization_id: string
+          resource_id: string
+          work_item_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          occupies?: unknown
+          organization_id?: string
+          resource_id?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_resource_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_resource_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_resource_assignments_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "bookable_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_item_resource_assignments_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_item_resource_assignments_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       work_item_statuses: {
         Row: {
           created_at: string
@@ -9155,7 +9218,6 @@ export type Database = {
           location_id: string | null
           occupies: unknown
           organization_id: string
-          resource_id: string | null
           scheduled_during: unknown
           status_id: string
           status_releases_resource: boolean
@@ -9172,7 +9234,6 @@ export type Database = {
           location_id?: string | null
           occupies?: unknown
           organization_id: string
-          resource_id?: string | null
           scheduled_during?: unknown
           status_id: string
           status_releases_resource?: boolean
@@ -9189,7 +9250,6 @@ export type Database = {
           location_id?: string | null
           occupies?: unknown
           organization_id?: string
-          resource_id?: string | null
           scheduled_during?: unknown
           status_id?: string
           status_releases_resource?: boolean
@@ -9231,20 +9291,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_items_resource_same_org"
-            columns: ["organization_id", "resource_id"]
-            isOneToOne: false
-            referencedRelation: "bookable_resources"
-            referencedColumns: ["organization_id", "id"]
-          },
-          {
-            foreignKeyName: "work_items_resource_same_org"
-            columns: ["organization_id", "resource_id"]
-            isOneToOne: false
-            referencedRelation: "resources"
-            referencedColumns: ["organization_id", "id"]
           },
           {
             foreignKeyName: "work_items_status_same_org_and_type"
@@ -9387,28 +9433,28 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "work_items_organization_id_fkey"
+            foreignKeyName: "work_item_resource_assignments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "work_items_organization_id_fkey"
+            foreignKeyName: "work_item_resource_assignments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "work_items_resource_same_org"
+            foreignKeyName: "work_item_resource_assignments_resource_same_org"
             columns: ["organization_id", "resource_id"]
             isOneToOne: false
             referencedRelation: "bookable_resources"
             referencedColumns: ["organization_id", "id"]
           },
           {
-            foreignKeyName: "work_items_resource_same_org"
+            foreignKeyName: "work_item_resource_assignments_resource_same_org"
             columns: ["organization_id", "resource_id"]
             isOneToOne: false
             referencedRelation: "resources"
@@ -9848,7 +9894,7 @@ export type Database = {
           p_customer_id: string
           p_location_id: string
           p_organization_id: string
-          p_resource_id: string
+          p_resource_ids: string[]
           p_status_id: string
           p_title: string
         }
@@ -11250,7 +11296,7 @@ export type Database = {
       schedule_work_item: {
         Args: {
           p_ends_at: string
-          p_resource_id: string
+          p_resource_ids: string[]
           p_starts_at: string
           p_work_item_id: string
         }
@@ -11476,6 +11522,10 @@ export type Database = {
           p_price_item_id: string
           p_status_id: string
         }
+        Returns: undefined
+      }
+      set_work_item_resources: {
+        Args: { p_resource_ids: string[]; p_work_item_id: string }
         Returns: undefined
       }
       set_work_item_type_schedulable: {

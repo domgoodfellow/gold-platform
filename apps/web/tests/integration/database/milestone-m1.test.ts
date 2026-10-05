@@ -204,7 +204,7 @@ async function buildTenant(label: string): Promise<Tenant> {
     statusId,
     customerId,
     locationId,
-    resourceId,
+    resourceIds: [resourceId],
     assetId,
     custom: { [SHARED.fieldKey]: `VAT-${label}` },
   });

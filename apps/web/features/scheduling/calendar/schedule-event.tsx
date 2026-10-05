@@ -16,6 +16,7 @@ export function ScheduleEvent({
   window,
   displayWindow,
   resourceName,
+  alsoWith = [],
   timezone,
   variant = 'row',
   style,
@@ -33,6 +34,8 @@ export function ScheduleEvent({
   displayWindow?: Window;
   /** Shown in Week's agenda row, where there is no per-resource column to say it instead. */
   resourceName?: string;
+  /** In Day's lanes, the others on the same job — a work item shows in every lane it takes part in and is still one work item. */
+  alsoWith?: string[];
   timezone: string;
   variant?: 'row' | 'block';
   style?: CSSProperties;
@@ -41,7 +44,7 @@ export function ScheduleEvent({
   const time = new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit' }).format(
     new Date(shown.startsAt),
   );
-  const fullDescription = `${title}, ${formatWindow(window, timezone)}${resourceName ? `, ${resourceName}` : ''}`;
+  const fullDescription = `${title}, ${formatWindow(window, timezone)}${resourceName ? `, ${resourceName}` : ''}${alsoWith.length > 0 ? `, with ${alsoWith.join(', ')}` : ''}`;
   const href = `/organizations/${organizationId}/work/${workItemId}`;
 
   if (variant === 'block') {
@@ -58,6 +61,11 @@ export function ScheduleEvent({
         <span aria-hidden className="block truncate tabular-nums opacity-80">
           {time}
         </span>
+        {alsoWith.length > 0 ? (
+          <span aria-hidden className="block truncate opacity-80">
+            with {alsoWith.join(', ')}
+          </span>
+        ) : null}
       </Link>
     );
   }

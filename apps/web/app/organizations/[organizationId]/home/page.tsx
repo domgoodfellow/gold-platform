@@ -12,8 +12,8 @@ import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCalls } from '@/lib/domain/reception/calls';
 import { listInvoicedAndIncurred, totalsByCurrency } from '@/lib/domain/reporting/financials';
 import { PERIOD_LABELS, periodFor } from '@/lib/domain/reporting/shape';
-import { listSchedule } from '@/lib/domain/scheduling/availability';
-import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
+import { listScheduleDays } from '@/lib/domain/scheduling/availability';
+import { todayInZone, zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
 import { listRecentActivity } from '@/lib/domain/timeline/timeline';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
@@ -50,7 +50,7 @@ export default async function HomePage({ params }: PageProps<'/organizations/[or
   const schedulableWork = await hasSchedulableWork(db, { organizationId });
 
   const [schedule, workItems, customers, activity, calls, failedRuns, failedMessages, invoiced, setupOverview, usableModules] = await Promise.all([
-    schedulableWork ? listSchedule(db, { organizationId, within, on: { date, timeZone: organization.timezone } }) : Promise.resolve(null),
+    schedulableWork ? listScheduleDays(db, { organizationId, dates: [date], timeZone: organization.timezone }) : Promise.resolve(null),
     listWorkItems(db, { organizationId }),
     listCustomers(db, { organizationId, limit: 1 }),
     listRecentActivity(db, { organizationId, limit: 12 }),
@@ -64,8 +64,22 @@ export default async function HomePage({ params }: PageProps<'/organizations/[or
     organization.operationalState === 'setup' ? listUsableModules(db, { organizationId }) : Promise.resolve(new Set<string>()),
   ]);
 
-  const committed = (schedule ?? [])
-    .flatMap((entry) => entry.booked.map((booking) => ({ ...booking, resource: entry.resource.name })))
+  // One row per work item, however many resources are on it: a job with three people and a van is one
+  // job on today's board, not four. Work nobody is on is still on the board and says so.
+  const day = schedule?.[0] ?? null;
+  const rows = new Map<string, { workItemId: string; title: string; window: Window; occupied: Window; names: string[] }>();
+  for (const entry of day?.resources ?? []) {
+    for (const booking of entry.booked) {
+      const row = rows.get(booking.workItemId) ?? { ...booking, names: [] };
+      row.names.push(entry.resource.name);
+      rows.set(booking.workItemId, row);
+    }
+  }
+  for (const work of day?.unassigned ?? []) {
+    rows.set(work.workItemId, { ...work, occupied: work.window, names: [] });
+  }
+  const committed = [...rows.values()]
+    .map(({ names, ...row }) => ({ ...row, resource: names.length > 0 ? names.join(', ') : 'Nobody assigned' }))
     .sort((a, b) => a.window.startsAt.localeCompare(b.window.startsAt));
   const todaysCalls = calls?.filter((call) => call.startedAt >= within.startsAt && call.startedAt < within.endsAt) ?? [];
   const totals = invoiced ? totalsByCurrency(invoiced) : [];
@@ -80,7 +94,7 @@ export default async function HomePage({ params }: PageProps<'/organizations/[or
       // A count of what is waiting is only true of the whole list when the whole list was read.
       waiting: workItems.total > workItems.length ? null : workItems.filter((item) => item.type.schedulable && item.window === null),
     },
-    schedule: schedule ? { committed, byId: new Map(workItems.map((item) => [item.id, item])) } : null,
+    schedule: day ? { committed, byId: new Map(workItems.map((item) => [item.id, item])) } : null,
     communications: calls
       ? { today: todaysCalls.length, unwritten: todaysCalls.filter((call) => call.outcome === null).length }
       : null,

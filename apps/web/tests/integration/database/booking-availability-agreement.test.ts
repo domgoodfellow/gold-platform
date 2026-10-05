@@ -8,7 +8,9 @@ import {
   listBookableTypes,
   type BookableType,
 } from '@/lib/domain/booking/booking';
-import { createResource } from '@/lib/domain/resources/resources';
+import { createResource, listResources } from '@/lib/domain/resources/resources';
+import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
+import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { addOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { getOrganization, updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
@@ -186,5 +188,32 @@ describe('public booking offers what the exclusion constraint would accept (I5)'
         phone: '',
       }),
     ).resolves.toEqual(expect.any(String));
+  });
+
+  it('treats every resource of a multi-resource job as committed, and each one independently', async () => {
+    // A different Monday, so nothing above is in the way. Two vans; one job that needs both.
+    const monday = '2027-03-22';
+    const [van1] = (await listResources(owner, { organizationId })).filter((resource) => resource.name === 'Van 1');
+    const van2 = await createResource(owner, { organizationId, name: 'Van 2', resourceClass: 'vehicle' });
+    const at = (hh: string) => `${monday}T${hh}:00-04:00`;
+    const slotsOn = async () => {
+      const watcher = await visitor();
+      const slots = await bookableSlots(watcher, { organizationId, type: bookable, date: monday, timeZone: ZONE });
+      return slots.map((slot) => local.format(new Date(slot.startsAt)));
+    };
+
+    expect(await slotsOn()).toEqual(['09:00', '10:00', '11:00']);
+
+    // Both vans on one job at ten: with the 30-minute buffer neither is free again before 11:30, so
+    // the page offers only the hour before. One work item, one window, two resources committed.
+    // A status that holds its resources: the one used above was switched to releasing by the previous case.
+    const holding = await createWorkItemStatus(owner, { organizationId, typeId: bookable.id, name: 'Holding' });
+    const both = await createWorkItem(owner, { organizationId, title: 'Needs both vans', statusId: holding, resourceIds: [van1.id, van2] });
+    await scheduleWorkItem(owner, { workItemId: both, startsAt: at('10:00'), endsAt: at('11:00') });
+    expect(await slotsOn()).toEqual(['09:00']);
+
+    // Take one van off the job and the other's time is offered again: each resource is judged on its own.
+    await scheduleWorkItem(owner, { workItemId: both, resourceIds: [van1.id], startsAt: at('10:00'), endsAt: at('11:00') });
+    expect(await slotsOn()).toEqual(['09:00', '10:00', '11:00']);
   });
 });

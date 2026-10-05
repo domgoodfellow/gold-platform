@@ -83,17 +83,19 @@ Not duplicates: `work_at_risk`, `the_week_ahead` and the assistant's schedule to
 booked, never what is free (I5, D30). `propose_reschedule` shifts by an offset and lets the
 constraint decide.
 
-## 5. Single-resource dependency map (inventory only)
+## 5. Single-resource limitation — resolved
 
-| Layer | Place |
-|---|---|
-| Schema | `work_items.resource_id` and `work_items_resource_same_org` (composite FK, `on delete set null (resource_id)`); `work_items_resource_not_double_booked`; `check_work_item_update_capability` (`resource_id` change needs `work_item.schedule`); insert grant lists `resource_id` but not `scheduled_during`; `report_definitions.resource_id` + FK |
-| RPCs and views | `create_work_item(p_resource_id)`; `schedule_work_item`; `unschedule_work_item` (nulls it); `create_booking(p_resource_id)`; `resource_commitments`; `bookable_resources`; `time_committed(p_resource_id)`; `invoiced_and_incurred`/completed-work reports (resource grouping and filter); `work_at_risk` (unassigned test); `the_week_ahead`; assistant schedule tool; automation allowed fields, condition field and capability trigger |
-| Domain | `work-items.ts` (`resourceId` filter, create), `scheduling/schedule.ts`, `scheduling/availability.ts` (`CommittedRow`, `groupBookedByResource`), `booking/booking.ts` (`Slot.resourceId`), `assistant/actions.ts` (reads current resource to preserve it), `reporting/{shape,definitions,commitment}.ts`, `automation/rules.ts`, `resources/resources.ts` |
-| API | `apps/api/app/ai/actions.py` (`propose_reschedule`) |
-| UI | work create form and operations form (one "Assign to" select), Schedule workspace and resource filter, resource detail page (lists its work), report forms/view, demo builder `scripts/demo/run.ts` |
-| Events | `work_item.created`, `.scheduled`, `.booked` carry `resource_id` in payload; `timeline.ts` resolves it |
-| Tests | `scheduling`, `availability`, `buffer`, `schedule-days`, `booking`, `work-item-editing`, `work-items`, `reporting`, `resource-views-access`, `automations`, `ai-tools`, `milestone-m2`, `milestone-m4`, `timeline`; generated `database.types.ts` |
+Work Order 4 (`20261116000001`, `20261116000002`) replaced `work_items.resource_id` with
+`work_item_resource_assignments`, the only answer to which resources are on a work item, and moved
+the double-booking constraint onto it (I7). Every dependency this audit inventoried — the column and
+its exclusion constraint, `schedule_work_item`/`unschedule_work_item`/`create_work_item`/
+`create_booking`, `resource_commitments`, the reports, automation conditions, `work_at_risk`,
+`schedule_ahead`, the Work, Schedule, Home and Resource pages, the demo builder and event
+payloads — was migrated in the same slice; none reads the old column, which no longer exists.
+Scheduled work with nobody assigned is now drawn on Schedule as *Unassigned*.
+
+Remaining: no work type says which resources it requires, any resource may be assigned to any work,
+and an event does not yet distinguish a first scheduling from a reschedule.
 
 ## 6. Events
 
@@ -105,7 +107,7 @@ omits the resource because `update_work_item` cannot change it. Not changed here
 
 ## 7. Schedulable versus bookable
 
-**Resolved by Work Order 2 (`20261112000001`, I76).** At the time of this audit: no Work Type
+**Resolved by Work Order 2 (`20261112000001`, I80).** At the time of this audit: no Work Type
 declared schedulability, Schedule, Resources and Locations were shown to every business, and
 `booking_*` was the only scheduling-shaped declaration a type had. A type now carries
 `schedulable`; bookable implies it; `hasSchedulableWork` drives Schedule, Resources, Locations,
@@ -118,8 +120,8 @@ not drawn on Schedule.
 |---|---|---|
 | I5 text said three expressions of the predicate; there are four | documentation stale | yes, `domain-model.md` I5 |
 | The public view's agreement with the constraint had no test | missing evidence | yes, new test |
-| Work scheduled with a time and no Resource is allowed by `schedule_work_item`, blocks nothing, and is not drawn on Schedule | ambiguous (intended as "nobody assigned yet", but invisible) | recorded in the contract; no change |
-| No Work Type declared whether it is scheduled | unimplemented intended concept | resolved: I76 |
+| Work scheduled with a time and no Resource blocks nothing and was not drawn on Schedule | code bug (invisible) | resolved: Schedule's Unassigned lane |
+| No Work Type declared whether it is scheduled | unimplemented intended concept | resolved: I80 |
 | `20260827000009` header comments describe the original constraint (no `occupies`, no release clause) | obsolete plan, history only | left; migrations are not edited |
 | Field's `featureKeys` lists `weather_aware_dispatch` and `assignment`; no dispatch exists | unimplemented intended concept | left |
 | `maplibre-gl` imported directly under `features/locations/map` | acceptable rendering dependency; geocoding is behind `lib/adapters/geocoding` | none |
@@ -136,5 +138,5 @@ not drawn on Schedule.
 
 ## 10. Entry state for Work Order 2
 
-Work Order 2 shipped: see I76 in `domain-model.md`. The single-resource dependency map in section 5
+Work Order 2 shipped: see I80 in `domain-model.md`. The single-resource dependency map in section 5
 is unchanged and is the starting inventory for multi-resource assignment.

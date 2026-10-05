@@ -148,7 +148,7 @@ describe('a work type says whether it is scheduled', () => {
 
     const raw = await shop.db.rpc('schedule_work_item', {
       p_work_item_id: workItemId,
-      p_resource_id: null as unknown as string,
+      p_resource_ids: null as unknown as string[],
       p_starts_at: NINE,
       p_ends_at: TEN,
     });
@@ -170,7 +170,7 @@ describe('a work type says whether it is scheduled', () => {
     const resourceId = await createResource(shop.db, { resourceClass: 'other', organizationId: shop.organizationId, name: 'Van A' });
 
     await expect(
-      scheduleWorkItem(shop.db, { workItemId, resourceId, startsAt: NINE, endsAt: TEN }),
+      scheduleWorkItem(shop.db, { workItemId, resourceIds: [resourceId], startsAt: NINE, endsAt: TEN }),
     ).resolves.toBeUndefined();
 
     // Nothing was published to get there: schedulable did not drag bookable in with it.

@@ -1,32 +1,17 @@
 import { cx } from '@/components/class-names';
 import type { ScheduleDay } from '@/lib/domain/scheduling/availability';
-import { clipWindow } from '@/lib/domain/scheduling/window';
 import { formatDayHeader } from './calendar-format';
+import { dayEvents } from './day-events';
 import { ScheduleEvent } from './schedule-event';
 
 /**
  * "What is scheduled across this week?" — seven persistent day surfaces, side by side on a wide
  * screen and stacked on a narrow one. Unlike Day, a column is one chronological agenda rather
  * than a Resource lane: seven columns of Resource lanes would be unreadable, so Week answers a
- * coarser question than Day does and says which Resource an entry belongs to instead of showing
- * it spatially. Every day renders its own cell whether or not anything is booked — the board is
+ * coarser question than Day does and says who is on an entry instead of showing it spatially — once,
+ * however many resources take part, and "Unassigned" when nobody does. Every day renders its own cell whether or not anything is booked — the board is
  * never replaced by a sentence when the week is empty.
  */
-
-function eventsFor(day: ScheduleDay) {
-  return day.resources
-    .flatMap((entry) =>
-      entry.booked.map((booking) => ({
-        ...booking,
-        resourceName: entry.resource.name,
-        // A booking that spans midnight is clipped to this column's own day — otherwise it
-        // sorts and reads by the previous day's start time even on the day it only continues
-        // into.
-        displayWindow: clipWindow(booking.window, day.within) ?? booking.window,
-      })),
-    )
-    .sort((a, b) => a.displayWindow.startsAt.localeCompare(b.displayWindow.startsAt));
-}
 
 export function WeekSchedule({
   organizationId,
@@ -51,7 +36,7 @@ export function WeekSchedule({
       */}
       <div className="grid grid-cols-1 gap-3 md:min-h-0 md:flex-1 md:auto-rows-fr md:grid-cols-7 md:gap-0 md:divide-x md:divide-border">
         {days.map((day) => {
-          const events = eventsFor(day);
+          const events = dayEvents(day);
           const isToday = day.date === today;
           return (
             <div
@@ -77,7 +62,7 @@ export function WeekSchedule({
                         title={event.title}
                         window={event.window}
                         displayWindow={event.displayWindow}
-                        resourceName={event.resourceName}
+                        resourceName={event.resourceNames.length > 0 ? event.resourceNames.join(' · ') : 'Unassigned'}
                         timezone={timezone}
                         variant="row"
                       />

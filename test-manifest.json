@@ -1052,6 +1052,14 @@
         "accessibility"
       ]
     },
+    "apps/web/tests/component/work-resource-assignment-forms.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "scheduling",
+        "accessibility"
+      ]
+    },
     "apps/web/tests/component/work-type-scheduling-forms.test.tsx": {
       "category": "component",
       "concerns": [
@@ -1949,6 +1957,14 @@
         "work"
       ]
     },
+    "apps/web/tests/integration/database/work-item-resource-assignments.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling",
+        "booking",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/work-type-scheduling.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -2001,6 +2017,13 @@
       "category": "unit",
       "concerns": [
         "rbac"
+      ]
+    },
+    "apps/web/tests/unit/day-events.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "scheduling",
+        "ui"
       ]
     },
     "apps/web/tests/unit/discovery-requirements.test.ts": {

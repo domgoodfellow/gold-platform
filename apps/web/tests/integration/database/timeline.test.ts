@@ -109,7 +109,7 @@ async function newTenant(label: string): Promise<Tenant> {
   const resourceId = await createResource(db, { resourceClass: 'other', organizationId: orgId, name: 'Van 1' });
   await scheduleWorkItem(db, {
     workItemId,
-    resourceId,
+    resourceIds: [resourceId],
     startsAt: '2026-11-02T13:00:00.000Z',
     endsAt: '2026-11-02T14:00:00.000Z',
   });

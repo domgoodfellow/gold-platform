@@ -138,14 +138,13 @@ async function buildJob(
     title: job.title,
     customerId: ids.customerIds[job.customer],
     locationId: ids.locationIds[customer.location],
-    resourceId: job.resource === null ? null : ids.resourceIds[job.resource],
+    resourceIds: job.resource === null ? [] : [ids.resourceIds[job.resource]],
   });
 
   if (job.startsInDays !== null) {
     const starts = at(job.startsInDays, job.startHour);
     await scheduleWorkItem(db, {
       workItemId,
-      resourceId: job.resource === null ? null : ids.resourceIds[job.resource],
       startsAt: starts.toISOString(),
       endsAt: new Date(starts.getTime() + job.minutes * MINUTE).toISOString(),
     });

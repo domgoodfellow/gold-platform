@@ -315,7 +315,7 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
     });
     await scheduleWorkItem(owner.db, {
       workItemId,
-      resourceId: crewVanId,
+      resourceIds: [crewVanId],
       startsAt: '2026-11-02T09:00:00.000Z',
       endsAt: '2026-11-02T10:00:00.000Z',
     });

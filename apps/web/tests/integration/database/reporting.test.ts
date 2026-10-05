@@ -1260,7 +1260,7 @@ describe('time a business has committed', () => {
     });
     await scheduleWorkItem(yard.db, {
       workItemId: id,
-      resourceId: vanId,
+      resourceIds: [vanId],
       startsAt: from,
       endsAt: to,
     });
@@ -1357,7 +1357,7 @@ describe('time a business has committed', () => {
     // 22:00 to 02:00 Manila, which straddles midnight on the first of the month there.
     await scheduleWorkItem(spanning.db, {
       workItemId: id,
-      resourceId: van,
+      resourceIds: [van],
       startsAt: '2027-04-30T14:00:00.000Z',
       endsAt: '2027-04-30T18:00:00.000Z',
     });

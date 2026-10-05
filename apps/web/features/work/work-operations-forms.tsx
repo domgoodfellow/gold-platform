@@ -4,12 +4,14 @@ import { useActionState } from 'react';
 import {
   changeStatusAction,
   scheduleWorkItemAction,
+  setWorkItemResourcesAction,
   type WorkActionState,
 } from '@/app/organizations/[organizationId]/work/actions';
 import { Button } from '@/components/controls/button';
 import { FormActions, FormError, FormField } from '@/components/controls/form';
 import { TextInput } from '@/components/controls/inputs';
-import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
+import type { SelectOption } from '@/components/controls/optional-select';
+import { ResourceChecklist } from '@/components/controls/resource-checklist';
 
 const INITIAL: WorkActionState = { error: null };
 
@@ -52,11 +54,14 @@ export function ScheduleWorkItemForm({
   organizationId,
   workItemId,
   resources,
+  assigned,
   scheduled,
 }: {
   organizationId: string;
   workItemId: string;
   resources: SelectOption[];
+  /** Ids of the resources on the job now — what the boxes start ticked as. */
+  assigned: string[];
   scheduled: boolean;
 }) {
   const [state, formAction, pending] = useActionState(scheduleWorkItemAction, INITIAL);
@@ -73,12 +78,12 @@ export function ScheduleWorkItemForm({
           {(field) => <TextInput {...field} name="endsAt" type="datetime-local" />}
         </FormField>
       </div>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-muted">
-          Assign to <span className="text-subtle">(optional)</span>
-        </span>
-        <OptionalSelect name="resourceId" label="Assign to" options={resources} />
-      </label>
+      <ResourceChecklist
+        legend="Resources"
+        options={resources}
+        selected={assigned}
+        hint="Everyone ticked takes part for this whole time. Tick none for work nobody is on yet."
+      />
       <FormActions>
         <Button type="submit" disabled={pending} tone="secondary" size="small">
           {pending ? 'Scheduling…' : scheduled ? 'Reschedule' : 'Schedule'}
@@ -95,6 +100,38 @@ export function ScheduleWorkItemForm({
             Clear schedule
           </Button>
         ) : null}
+      </FormActions>
+      <FormError>{state.error}</FormError>
+    </form>
+  );
+}
+
+/**
+ * Who is on this job, changed on its own — the time stays exactly where it is. If any resource is
+ * busy for the job's time the whole change is refused and the job keeps who it had.
+ */
+export function AssignResourcesForm({
+  organizationId,
+  workItemId,
+  resources,
+  assigned,
+}: {
+  organizationId: string;
+  workItemId: string;
+  resources: SelectOption[];
+  assigned: string[];
+}) {
+  const [state, formAction, pending] = useActionState(setWorkItemResourcesAction, INITIAL);
+
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="workItemId" value={workItemId} />
+      <ResourceChecklist legend="Assigned to" options={resources} selected={assigned} />
+      <FormActions>
+        <Button type="submit" disabled={pending} tone="secondary" size="small">
+          {pending ? 'Saving…' : 'Save resources'}
+        </Button>
       </FormActions>
       <FormError>{state.error}</FormError>
     </form>

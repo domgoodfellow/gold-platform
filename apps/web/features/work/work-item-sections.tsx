@@ -26,7 +26,7 @@ import { AddChecklistItemForm, ChecklistItemControl } from './checklist-forms';
 import { RecordCostForm, RecordTimeForm } from './consumption-forms';
 import { AddPricedLineForm, RemovePricedLineForm } from './pricing-forms';
 import { IssueInvoiceForm, RecordPaymentForm, RequestCardPaymentForm } from './billing-forms';
-import { MoveWorkItemForm, ScheduleWorkItemForm } from './work-operations-forms';
+import { AssignResourcesForm, MoveWorkItemForm, ScheduleWorkItemForm } from './work-operations-forms';
 
 export function WorkRecordHeader({ organizationId, workItem, timezone }: {
   organizationId: string;
@@ -67,13 +67,18 @@ export function WorkIdentity({ organizationId, workItem, definitions, assetsEnab
           ) : null}
         </Detail>
         <Detail label="Assigned to">
-          {workItem.resource ? (
-            <Link
-              href={`/organizations/${organizationId}/resources/${workItem.resource.id}`}
-              className="underline underline-offset-4"
-            >
-              {workItem.resource.label}
-            </Link>
+          {workItem.resources.length > 0 ? (
+            <span className="flex flex-wrap gap-x-3 gap-y-1">
+              {workItem.resources.map((resource) => (
+                <Link
+                  key={resource.id}
+                  href={`/organizations/${organizationId}/resources/${resource.id}`}
+                  className="underline underline-offset-4"
+                >
+                  {resource.label}
+                </Link>
+              ))}
+            </span>
           ) : null}
         </Detail>
         <Detail label="Location">
@@ -157,7 +162,18 @@ export function WorkOperationalActions({
             organizationId={organizationId}
             workItemId={workItem.id}
             resources={resources}
+            assigned={workItem.resources.map((resource) => resource.id)}
             scheduled={workItem.window !== null}
+          />
+        </Disclosure>
+      ) : null}
+      {maySchedule && workItem.type.schedulable ? (
+        <Disclosure summary="Change who is on this" className="mt-3 max-w-2xl">
+          <AssignResourcesForm
+            organizationId={organizationId}
+            workItemId={workItem.id}
+            resources={resources}
+            assigned={workItem.resources.map((resource) => resource.id)}
           />
         </Disclosure>
       ) : null}

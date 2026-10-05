@@ -251,7 +251,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 
 | Never | Because | Held by |
 |---|---|---|
-| An overlap check in the domain layer | A check before an insert races identically (I6) | `work_items_resource_not_double_booked`, a partial gist exclusion; `scheduleWorkItem` does not look before it writes |
+| An overlap check in the domain layer | A check before an insert races identically (I6) | `work_item_resource_assignments_resource_not_double_booked`, a partial gist exclusion on each assigned resource's derived occupancy; `scheduleWorkItem` does not look before it writes |
 | A second answer to *what is free* | `freeWindows` is the one calculation (I5) | `listSchedule`'s filters are the constraint's predicate written as a query, and `time_committed` is the third expression; `availability.test.ts` and `reporting.test.ts` fail on any disagreement |
 | A write to `work_items.status_releases_resource` | It is a maintained cache, not a snapshot — the deliberate exception to I8, and what makes cancelling free the resource | In no column grant for insert or update; two triggers own it |
 | A platform-owned `is_terminal` | Releasing a resource and marking work complete are two tenant questions; one flag could not say both | `releases_resource` and `marks_complete`, both tenant-answered |

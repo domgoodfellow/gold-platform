@@ -120,7 +120,7 @@ describe('scheduling', () => {
     const workItemId = await newWorkItem(alice, 'Morning callout');
     await scheduleWorkItem(alice.db, {
       workItemId,
-      resourceId: alice.resourceId,
+      resourceIds: [alice.resourceId],
       startsAt: TUESDAY_09,
       endsAt: TUESDAY_10,
     });
@@ -128,7 +128,7 @@ describe('scheduling', () => {
     const items = await listWorkItems(alice.db, { organizationId: alice.organizationId });
     const scheduled = items.find((i) => i.id === workItemId);
     expect(scheduled?.window).toEqual({ startsAt: TUESDAY_09, endsAt: TUESDAY_10 });
-    expect(scheduled?.resource?.label).toBe('Sam Okafor');
+    expect(scheduled?.resources.map((r) => r.label)).toEqual(['Sam Okafor']);
   });
 
   it('refuses an overlapping booking on the same resource (I7)', async () => {
@@ -137,7 +137,7 @@ describe('scheduling', () => {
     await expect(
       scheduleWorkItem(alice.db, {
         workItemId,
-        resourceId: alice.resourceId,
+        resourceIds: [alice.resourceId],
         startsAt: TUESDAY_0930,
         endsAt: TUESDAY_11,
       }),
@@ -149,13 +149,20 @@ describe('scheduling', () => {
     // same answer, which is the whole reason I7 must be a database constraint.
     const workItemId = await newWorkItem(alice, 'Overlaps, written directly');
 
-    const { error } = await alice.db
+    // The window is written straight onto the work item, and the resource straight onto the
+    // assignment table — no function involved. The assignment's own constraint refuses it.
+    const window = await alice.db
       .from('work_items')
-      .update({
-        resource_id: alice.resourceId,
-        scheduled_during: `["${TUESDAY_0930}","${TUESDAY_11}")`,
-      })
+      .update({ scheduled_during: `["${TUESDAY_0930}","${TUESDAY_11}")` })
       .eq('id', workItemId);
+    expect(window.error).toBeNull();
+
+    const { error } = await alice.db.from('work_item_resource_assignments').insert({
+      organization_id: alice.organizationId,
+      work_item_id: workItemId,
+      resource_id: alice.resourceId,
+      created_by: alice.userId,
+    });
 
     expect(error?.code).toBe('23P01');
   });
@@ -167,7 +174,7 @@ describe('scheduling', () => {
     const workItemId = await newWorkItem(alice, 'Straight after');
     await scheduleWorkItem(alice.db, {
       workItemId,
-      resourceId: alice.resourceId,
+      resourceIds: [alice.resourceId],
       startsAt: TUESDAY_10,
       endsAt: TUESDAY_11,
     });
@@ -182,7 +189,7 @@ describe('scheduling', () => {
     const workItemId = await newWorkItem(bob, 'Morning callout');
     await scheduleWorkItem(bob.db, {
       workItemId,
-      resourceId: bob.resourceId,
+      resourceIds: [bob.resourceId],
       startsAt: TUESDAY_09,
       endsAt: TUESDAY_10,
     });
@@ -200,13 +207,13 @@ describe('scheduling', () => {
 
     await scheduleWorkItem(alice.db, {
       workItemId: first,
-      resourceId: null,
+      resourceIds: [],
       startsAt: TUESDAY_09,
       endsAt: TUESDAY_10,
     });
     await scheduleWorkItem(alice.db, {
       workItemId: second,
-      resourceId: null,
+      resourceIds: [],
       startsAt: TUESDAY_09,
       endsAt: TUESDAY_10,
     });
@@ -235,7 +242,7 @@ describe('scheduling', () => {
     ] as const) {
       await scheduleWorkItem(tenant.db, {
         workItemId,
-        resourceId: null,
+        resourceIds: [],
         startsAt: '2026-09-09T09:00:00.000Z',
         endsAt: '2026-09-09T10:00:00.000Z',
       });
@@ -254,7 +261,7 @@ describe('scheduling', () => {
       organizationId: alice.organizationId,
       title: 'Assigned, not yet timed',
       statusId: alice.statusId,
-      resourceId: alice.resourceId,
+      resourceIds: [alice.resourceId],
     });
 
     const items = await listWorkItems(alice.db, { organizationId: alice.organizationId });
@@ -265,7 +272,7 @@ describe('scheduling', () => {
     const workItemId = await newWorkItem(alice, 'Booked then dropped');
     await scheduleWorkItem(alice.db, {
       workItemId,
-      resourceId: alice.resourceId,
+      resourceIds: [alice.resourceId],
       startsAt: '2026-09-02T09:00:00.000Z',
       endsAt: '2026-09-02T10:00:00.000Z',
     });
@@ -276,7 +283,7 @@ describe('scheduling', () => {
     const successor = await newWorkItem(alice, 'Takes the freed slot');
     await scheduleWorkItem(alice.db, {
       workItemId: successor,
-      resourceId: alice.resourceId,
+      resourceIds: [alice.resourceId],
       startsAt: '2026-09-02T09:00:00.000Z',
       endsAt: '2026-09-02T10:00:00.000Z',
     });
@@ -294,7 +301,7 @@ describe('scheduling', () => {
     await expect(
       scheduleWorkItem(alice.db, {
         workItemId,
-        resourceId: alice.resourceId,
+        resourceIds: [alice.resourceId],
         startsAt: TUESDAY_10,
         endsAt: TUESDAY_09,
       }),
@@ -327,7 +334,7 @@ describe('scheduling', () => {
     await expect(
       scheduleWorkItem(alice.db, {
         workItemId,
-        resourceId: bob.resourceId,
+        resourceIds: [bob.resourceId],
         startsAt: '2026-09-03T09:00:00.000Z',
         endsAt: '2026-09-03T10:00:00.000Z',
       }),
@@ -426,7 +433,7 @@ describe('scheduling', () => {
     await expect(
       scheduleWorkItem(bob.db, {
         workItemId,
-        resourceId: bob.resourceId,
+        resourceIds: [bob.resourceId],
         startsAt: '2026-09-04T09:00:00.000Z',
         endsAt: '2026-09-04T10:00:00.000Z',
       }),

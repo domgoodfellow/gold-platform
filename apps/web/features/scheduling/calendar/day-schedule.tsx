@@ -1,5 +1,5 @@
 import { ButtonLink } from '@/components/controls/button';
-import type { ResourceSchedule } from '@/lib/domain/scheduling/availability';
+import type { ResourceSchedule, UnassignedWork } from '@/lib/domain/scheduling/availability';
 import { clipWindow, todayInZone, type Window } from '@/lib/domain/scheduling/window';
 import {
   computeDisplayAxisBounds,
@@ -31,6 +31,8 @@ export function DaySchedule({
   within,
   open,
   resources,
+  unassigned,
+  resourceNames,
   hasConfiguredHours,
   timezone,
   resourcesHref,
@@ -43,6 +45,10 @@ export function DaySchedule({
   /** This day's own open periods, from `ScheduleDay.open`. */
   open: Window[];
   resources: ResourceSchedule[];
+  /** Work scheduled this day with nobody on it — drawn as its own lane, because it holds no resource's time. */
+  unassigned: UnassignedWork[];
+  /** Every resource's name by id, so a lane can say who else is on a job even when the board is filtered to one lane. */
+  resourceNames: ReadonlyMap<string, string>;
   /** Whether this business has configured opening hours anywhere at all. */
   hasConfiguredHours: boolean;
   timezone: string;
@@ -55,6 +61,7 @@ export function DaySchedule({
     within,
     open,
     resources,
+    unassigned,
     hasConfiguredHours,
   });
   const { marks: hourMarks, hourCount } = hourMarksFor(bounds);
@@ -177,6 +184,9 @@ export function DaySchedule({
                         title={booking.title}
                         window={booking.window}
                         displayWindow={displayed}
+                        alsoWith={booking.resourceIds
+                          .filter((id) => id !== entry.resource.id)
+                          .map((id) => resourceNames.get(id) ?? 'Another resource')}
                         timezone={timezone}
                         variant="block"
                         style={{
@@ -190,6 +200,44 @@ export function DaySchedule({
               </div>
             ))
           )}
+
+          {/* Scheduled work nobody is on. It takes no resource's time, so it is not in anybody's lane
+              and not shaded as availability — it is on the board and says so, which is all this is. */}
+          {unassigned.length > 0 ? (
+            <div className="flex min-w-44 flex-1 basis-44 flex-col border-l border-border">
+              <div className="flex h-9 shrink-0 items-end truncate px-2 pb-1 text-sm font-medium">Unassigned</div>
+              <div className="relative flex-1 border-t border-border" style={{ minHeight: `${laneHeight}px` }}>
+                {hourMarks.slice(1, -1).map((mark) => (
+                  <div
+                    key={mark}
+                    aria-hidden
+                    className="absolute inset-x-0 border-t border-border/60"
+                    style={{ top: `${offsetPct(mark)}%` }}
+                  />
+                ))}
+                {unassigned.map((work) => {
+                  const displayed = clipWindow(work.window, within) ?? work.window;
+                  return (
+                    <ScheduleEvent
+                      key={work.workItemId}
+                      organizationId={organizationId}
+                      workItemId={work.workItemId}
+                      title={work.title}
+                      window={work.window}
+                      displayWindow={displayed}
+                      resourceName="Unassigned"
+                      timezone={timezone}
+                      variant="block"
+                      style={{
+                        top: `${offsetPct(displayed.startsAt)}%`,
+                        height: `${Math.max(heightPct(displayed.startsAt, displayed.endsAt), 2.5)}%`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

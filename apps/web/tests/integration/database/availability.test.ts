@@ -90,7 +90,7 @@ async function book(tenant: Tenant, title: string, startsAt: string, endsAt: str
   });
   await scheduleWorkItem(tenant.db, {
     workItemId,
-    resourceId: tenant.resourceId,
+    resourceIds: [tenant.resourceId],
     startsAt,
     endsAt,
   });
@@ -266,7 +266,7 @@ describe('availability', () => {
     await expect(
       scheduleWorkItem(alice.db, {
         workItemId,
-        resourceId: alice.resourceId,
+        resourceIds: [alice.resourceId],
         startsAt: contested.startsAt,
         endsAt: contested.endsAt,
       }),
@@ -302,7 +302,7 @@ describe('availability', () => {
     await expect(
       scheduleWorkItem(alice.db, {
         workItemId,
-        resourceId: alice.resourceId,
+        resourceIds: [alice.resourceId],
         startsAt: slot.startsAt,
         endsAt: slot.endsAt,
       }),

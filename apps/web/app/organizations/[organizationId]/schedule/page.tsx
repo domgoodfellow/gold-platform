@@ -101,6 +101,8 @@ export default async function SchedulePage({
       selectedResourceIds.length === 0
         ? day.resources
         : day.resources.filter((entry) => selectedResourceIds.includes(entry.resource.id)),
+    // A board filtered to particular resources is about them; work nobody is on belongs to none of them.
+    unassigned: selectedResourceIds.length === 0 ? day.unassigned : [],
   }));
 
   return (

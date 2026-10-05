@@ -270,8 +270,9 @@ pages, public auth context and attribution remain M16 work.
 
 ### 10. Trying to break it — the part worth doing twice
 
-- **Double-book a resource.** Overlapping windows on one resource — refused by
-  `work_items_resource_not_double_booked`, a partial gist exclusion, never a domain-layer check.
+- **Double-book a resource.** Overlapping windows on any resource of a job — refused by
+  `work_item_resource_assignments_resource_not_double_booked`, a partial gist exclusion, never a
+  domain-layer check. Put two resources on one job and try the second on either of them.
 - **Cancel one and re-book the slot.** Only frees up if the status says it releases the resource
   — flip that in Work → Statuses and watch the schedule change.
 - **Log in as the second account** under a role missing `work_item.transition` — every screen

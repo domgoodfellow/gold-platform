@@ -312,7 +312,7 @@ describe('M2 — the work engine', () => {
 
     await scheduleWorkItem(db, {
       workItemId: a.workItemId,
-      resourceId: a.resourceId,
+      resourceIds: [a.resourceId],
       startsAt: NINE,
       endsAt: TEN,
     });
@@ -326,7 +326,7 @@ describe('M2 — the work engine', () => {
     await expect(
       scheduleWorkItem(db, {
         workItemId: second,
-        resourceId: a.resourceId,
+        resourceIds: [a.resourceId],
         startsAt: HALF_PAST_NINE,
         endsAt: ELEVEN,
       }),
@@ -336,7 +336,7 @@ describe('M2 — the work engine', () => {
     await expect(
       scheduleWorkItem(db, {
         workItemId: second,
-        resourceId: a.resourceId,
+        resourceIds: [a.resourceId],
         startsAt: TEN,
         endsAt: ELEVEN,
       }),
@@ -351,7 +351,7 @@ describe('M2 — the work engine', () => {
 
     await scheduleWorkItem(db, {
       workItemId: b.workItemId,
-      resourceId: b.resourceId,
+      resourceIds: [b.resourceId],
       startsAt: NINE,
       endsAt: TEN,
     });
@@ -361,7 +361,7 @@ describe('M2 — the work engine', () => {
       typeId: b.typeId,
     });
     expect(item.window).toEqual({ startsAt: NINE, endsAt: TEN });
-    expect(item.resource?.label).toBe(SHARED.resourceName);
+    expect(item.resources.map((r) => r.label)).toEqual([SHARED.resourceName]);
   });
 
   it('shows each business a schedule built from its own rows only', async () => {
@@ -428,7 +428,7 @@ describe('M2 — the work engine', () => {
       await expect(
         scheduleWorkItem(db, {
           workItemId: other.workItemId,
-          resourceId: self.resourceId,
+          resourceIds: [self.resourceId],
           startsAt: '2026-09-02T09:00:00.000Z',
           endsAt: '2026-09-02T10:00:00.000Z',
         }),

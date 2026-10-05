@@ -155,7 +155,7 @@ async function newBusiness(label: string): Promise<Business> {
   const to = new Date(Date.now() - 25 * 60 * 60 * 1000);
   await scheduleWorkItem(db, {
     workItemId: late,
-    resourceId,
+    resourceIds: [resourceId],
     startsAt: from.toISOString(),
     endsAt: to.toISOString(),
   });
@@ -174,7 +174,7 @@ async function newBusiness(label: string): Promise<Business> {
   });
   await scheduleWorkItem(db, {
     workItemId: theirs,
-    resourceId,
+    resourceIds: [resourceId],
     startsAt: new Date(Date.now() - 30 * 60 * 60 * 1000).toISOString(),
     endsAt: new Date(Date.now() - 29 * 60 * 60 * 1000).toISOString(),
   });
@@ -595,7 +595,7 @@ describe('a write is proposed, and a person decides (D34)', () => {
     });
     await scheduleWorkItem(yard.db, {
       workItemId: rival,
-      resourceId: yard.resourceId,
+      resourceIds: [yard.resourceId],
       startsAt: tomorrow(16),
       endsAt: tomorrow(17),
     });

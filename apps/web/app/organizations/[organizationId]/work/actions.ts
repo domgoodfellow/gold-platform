@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db/server';
 import { customValuesFromFormData } from '@/lib/custom-fields';
 import {
   scheduleWorkItem,
+  setWorkItemResources,
   unscheduleWorkItem,
 } from '@/lib/domain/scheduling/schedule';
 import { DomainError } from '@/lib/domain/errors';
@@ -32,7 +33,7 @@ export async function createWorkItemAction(
       statusId: String(formData.get('statusId') ?? ''),
       customerId: String(formData.get('customerId') ?? ''),
       locationId: String(formData.get('locationId') ?? ''),
-      resourceId: String(formData.get('resourceId') ?? ''),
+      resourceIds: formData.getAll('resourceIds').map(String).filter(Boolean),
       assetId: String(formData.get('assetId') ?? ''),
       custom: customValuesFromFormData(formData),
     });
@@ -92,7 +93,7 @@ export async function scheduleWorkItemAction(
   await requireOrganization(organizationId);
 
   try {
-    // The overlap is not checked here and must not be. `work_items_resource_not_double_booked`
+    // The overlap is not checked here and must not be. `work_item_resource_assignments_resource_not_double_booked`
     // is the guarantee, and it is the only thing that can catch two dispatchers committing
     // the same free slot at the same moment (I6, I7).
     if (formData.get('clear')) {
@@ -100,7 +101,8 @@ export async function scheduleWorkItemAction(
     } else {
       await scheduleWorkItem(db, {
         workItemId: String(formData.get('workItemId') ?? ''),
-        resourceId: String(formData.get('resourceId') ?? ''),
+        // Every ticked box, or none: the form always shows who is on the job, so this is the set.
+        resourceIds: formData.getAll('resourceIds').map(String).filter(Boolean),
         startsAt: String(formData.get('startsAt') ?? ''),
         endsAt: String(formData.get('endsAt') ?? ''),
       });
@@ -117,6 +119,40 @@ export async function scheduleWorkItemAction(
     `/organizations/${organizationId}/work/${String(formData.get('workItemId') ?? '')}`,
   );
   revalidatePath(`/organizations/${organizationId}/schedule`);
+  revalidatePath(`/organizations/${organizationId}/field`);
+  return { error: null };
+}
+
+/**
+ * Change who is on a work item and nothing else. The database takes the whole set or none of it, so
+ * a busy resource leaves the job exactly as it was.
+ */
+export async function setWorkItemResourcesAction(
+  _previous: WorkActionState,
+  formData: FormData,
+): Promise<WorkActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+
+  try {
+    await setWorkItemResources(db, {
+      workItemId: String(formData.get('workItemId') ?? ''),
+      resourceIds: formData.getAll('resourceIds').map(String).filter(Boolean),
+    });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/work`);
+  revalidatePath(
+    `/organizations/${organizationId}/work/${String(formData.get('workItemId') ?? '')}`,
+  );
+  revalidatePath(`/organizations/${organizationId}/schedule`);
+  revalidatePath(`/organizations/${organizationId}/resources`);
   revalidatePath(`/organizations/${organizationId}/field`);
   return { error: null };
 }

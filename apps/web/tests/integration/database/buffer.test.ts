@@ -128,7 +128,7 @@ describe('a buffer between jobs, which the tenant owns', () => {
     const first = await job(yard, 'Nine to ten');
     await scheduleWorkItem(yard.db, {
       workItemId: first,
-      resourceId: yard.resourceId,
+      resourceIds: [yard.resourceId],
       startsAt: NINE,
       endsAt: TEN,
     });
@@ -137,7 +137,7 @@ describe('a buffer between jobs, which the tenant owns', () => {
     await expect(
       scheduleWorkItem(yard.db, {
         workItemId: second,
-        resourceId: yard.resourceId,
+        resourceIds: [yard.resourceId],
         startsAt: TEN,
         endsAt: ELEVEN,
       }),
@@ -153,7 +153,7 @@ describe('a buffer between jobs, which the tenant owns', () => {
     await expect(
       scheduleWorkItem(yard.db, {
         workItemId: second,
-        resourceId: yard.resourceId,
+        resourceIds: [yard.resourceId],
         startsAt: TEN,
         endsAt: ELEVEN,
       }),
@@ -165,7 +165,7 @@ describe('a buffer between jobs, which the tenant owns', () => {
     await expect(
       scheduleWorkItem(yard.db, {
         workItemId: later,
-        resourceId: yard.resourceId,
+        resourceIds: [yard.resourceId],
         startsAt: HALF_TEN,
         endsAt: ELEVEN,
       }),
@@ -196,7 +196,7 @@ describe('a buffer between jobs, which the tenant owns', () => {
     await expect(
       scheduleWorkItem(yard.db, {
         workItemId: taker,
-        resourceId: yard.resourceId,
+        resourceIds: [yard.resourceId],
         startsAt: HALF_TEN,
         endsAt: ELEVEN,
       }),
@@ -224,7 +224,7 @@ describe('a buffer between jobs, which the tenant owns', () => {
     const second = await job(yard, 'Ten to eleven, kept');
     await scheduleWorkItem(yard.db, {
       workItemId: second,
-      resourceId: yard.resourceId,
+      resourceIds: [yard.resourceId],
       startsAt: TEN,
       endsAt: ELEVEN,
     });

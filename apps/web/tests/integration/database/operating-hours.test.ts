@@ -205,7 +205,7 @@ describe('operating hours', () => {
     });
     await scheduleWorkItem(alice.db, {
       workItemId,
-      resourceId: alice.resourceId,
+      resourceIds: [alice.resourceId],
       startsAt: zonedTimeToInstant(TUESDAY, '10:00:00', ZONE),
       endsAt: zonedTimeToInstant(TUESDAY, '11:00:00', ZONE),
     });

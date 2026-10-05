@@ -27,8 +27,17 @@ export type ResourceSchedule = {
     window: Window;
     /** The appointment plus the tenant's buffer — what `free` is actually computed against. */
     occupied: Window;
+    /** Everyone on this work item, this resource included. One work item, one window, however many take part. */
+    resourceIds: string[];
   }[];
   free: Window[];
+};
+
+/** Scheduled work with nobody assigned: it has a time and consumes no resource's capacity, so no lane holds it. */
+export type UnassignedWork = {
+  workItemId: string;
+  title: string;
+  window: Window;
 };
 
 const MINUTE = 60_000;
@@ -80,10 +89,22 @@ export function freeWindows(
 type CommittedRow = {
   id: string;
   title: string;
-  resource_id: string | null;
   scheduled_during: string | null;
   occupies: string | null;
+  /** Who takes part. Embedded from `work_item_resource_assignments`, the only answer to that. */
+  assignments: { resource_id: string }[] | null;
 };
+
+/**
+ * The one select for "what is committed in this range" — work items that are not in a releasing
+ * status, with who is on each. Assigned work becomes bookings in each of its resources' lanes;
+ * work with nobody on it is what `unassignedFrom` returns. The two filters mirror the exclusion
+ * constraint's partial predicate exactly, and a clause added to one without the other would turn a
+ * free window into an unbookable one, or the reverse.
+ */
+const COMMITTED_SELECT =
+  'id, title, scheduled_during, occupies, assignments:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource_id)';
+
 
 /**
  * The raw committed rows, grouped by resource and parsed into windows — the one place a
@@ -96,16 +117,30 @@ function groupBookedByResource(rows: CommittedRow[]): Map<string, ResourceSchedu
     // `supabase gen types` has no TypeScript for a Postgres range (D15).
     const window = parseWindow(row.scheduled_during);
     const occupied = parseWindow(row.occupies);
-    if (!window || !occupied || !row.resource_id) continue;
+    const resourceIds = (row.assignments ?? []).map((assignment) => assignment.resource_id).sort();
+    if (!window || !occupied) continue;
 
-    const existing = byResource.get(row.resource_id) ?? [];
-    existing.push({ workItemId: row.id, title: row.title, window, occupied });
-    byResource.set(row.resource_id, existing);
+    // One work item appears in every lane it takes part in. It is still one work item: the same id
+    // and the same window in each, never a copy.
+    for (const resourceId of resourceIds) {
+      const existing = byResource.get(resourceId) ?? [];
+      existing.push({ workItemId: row.id, title: row.title, window, occupied, resourceIds });
+      byResource.set(resourceId, existing);
+    }
   }
   for (const entries of byResource.values()) {
     entries.sort((a, b) => a.window.startsAt.localeCompare(b.window.startsAt));
   }
   return byResource;
+}
+
+/** Scheduled work with nobody assigned. Not availability — it takes nothing from anyone — just the truthful answer to "what is on the board with no one on it". */
+function unassignedFrom(rows: CommittedRow[]): UnassignedWork[] {
+  return rows.flatMap((row) => {
+    if ((row.assignments ?? []).length > 0) return [];
+    const window = parseWindow(row.scheduled_during);
+    return window ? [{ workItemId: row.id, title: row.title, window }] : [];
+  });
 }
 
 /** One resource's schedule, from its already-parsed booked entries and the period it is asked about. The other half of the shared logic — free time subtracted from `open`, never from the appointment. */
@@ -156,11 +191,10 @@ export async function listSchedule(
       // `occupies` is what the resource is unavailable for (appointment plus buffer);
       // `scheduled_during` is what the customer was told.
       .from('work_items')
-      .select('id, title, resource_id, scheduled_during, occupies')
+      .select(COMMITTED_SELECT)
       .eq('organization_id', input.organizationId)
-      .not('resource_id', 'is', null)
-      // These three filters mirror the exclusion constraint's partial predicate exactly — a
-      // clause added to one without the other would turn a free window into an unbookable one, or the reverse.
+      // The constraint's partial predicate, written as a query: a releasing status takes the work
+      // off every resource it is on.
       .eq('status_releases_resource', false)
       .overlaps('occupies', range),
     input.on
@@ -180,7 +214,7 @@ export async function listSchedule(
     ? openWindows(input.on.date, input.on.timeZone, hours, input.within)
     : [input.within];
 
-  const booked = groupBookedByResource((committed.data ?? []) as CommittedRow[]);
+  const booked = groupBookedByResource((committed.data ?? []) as unknown as CommittedRow[]);
   return resourceSchedulesFor(resources.data ?? [], booked, open, input.minimumMinutes);
 }
 
@@ -192,6 +226,8 @@ export type ScheduleDay = {
   /** This day's open periods — the business's own claim, or the whole day if it has made none (I6, advisory). Background context for a caller that draws a timeline; never the source of a second calculation. */
   open: Window[];
   resources: ResourceSchedule[];
+  /** Work scheduled this day with nobody on it. Empty is the ordinary answer. */
+  unassigned: UnassignedWork[];
 };
 
 /**
@@ -234,9 +270,8 @@ export async function listScheduleDays(
       .order('name', { ascending: true }),
     db
       .from('work_items')
-      .select('id, title, resource_id, scheduled_during, occupies')
+      .select(COMMITTED_SELECT)
       .eq('organization_id', input.organizationId)
-      .not('resource_id', 'is', null)
       .eq('status_releases_resource', false)
       .overlaps('occupies', range),
     listOperatingHours(db, { organizationId: input.organizationId }),
@@ -250,7 +285,9 @@ export async function listScheduleDays(
   }
 
   const resourceRows = resources.data ?? [];
-  const bookedAcrossRange = groupBookedByResource((committed.data ?? []) as CommittedRow[]);
+  const committedRows = (committed.data ?? []) as unknown as CommittedRow[];
+  const bookedAcrossRange = groupBookedByResource(committedRows);
+  const unassignedAcrossRange = unassignedFrom(committedRows);
 
   return dayWindows.map(({ date, within }) => {
     // The combined-range query already scoped the SQL; this scopes each day within it, on the
@@ -268,6 +305,8 @@ export async function listScheduleDays(
       within,
       open,
       resources: resourceSchedulesFor(resourceRows, bookedForDay, open, input.minimumMinutes),
+      // By the appointment the customer was told, not the buffered window: nobody's time is held.
+      unassigned: unassignedAcrossRange.filter((work) => overlaps(work.window, within)),
     };
   });
 }

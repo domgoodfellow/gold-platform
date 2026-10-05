@@ -129,7 +129,7 @@ async function newTenant(label: string): Promise<Tenant> {
     statusId: bookedId,
   });
 
-  await scheduleWorkItem(db, { workItemId, resourceId, ...MORNING });
+  await scheduleWorkItem(db, { workItemId, resourceIds: [resourceId], ...MORNING });
 
   return {
     db,
@@ -220,7 +220,7 @@ describe('correcting a job, and cancelling one', () => {
 
     const after = await readItem(acme);
     expect(after.window).toEqual(before.window);
-    expect(after.resource?.id).toBe(acme.resourceId);
+    expect(after.resources.map((r) => r.id)).toEqual([acme.resourceId]);
     expect(after.status.id).toBe(acme.bookedId);
   });
 
@@ -266,7 +266,7 @@ describe('correcting a job, and cancelling one', () => {
     await expect(
       scheduleWorkItem(editor.db, {
         workItemId: acme.workItemId,
-        resourceId: acme.resourceId,
+        resourceIds: [acme.resourceId],
         startsAt: '2026-10-07T09:00:00.000Z',
         endsAt: '2026-10-07T10:00:00.000Z',
       }),
@@ -365,7 +365,7 @@ describe('correcting a job, and cancelling one', () => {
       statusId: acme.bookedId,
     });
     await expect(
-      scheduleWorkItem(acme.db, { workItemId: other, resourceId: acme.resourceId, ...MORNING }),
+      scheduleWorkItem(acme.db, { workItemId: other, resourceIds: [acme.resourceId], ...MORNING }),
     ).rejects.toMatchObject({ code: 'scheduling.double_booked' });
   });
 
@@ -396,7 +396,7 @@ describe('correcting a job, and cancelling one', () => {
     await expect(
       scheduleWorkItem(acme.db, {
         workItemId: replacement,
-        resourceId: acme.resourceId,
+        resourceIds: [acme.resourceId],
         ...MORNING,
       }),
     ).resolves.toBeUndefined();
@@ -482,7 +482,6 @@ describe('correcting a job, and cancelling one', () => {
       status_id: acme.bookedId,
       title: 'Raised straight into the diary',
       created_by: clerk.userId,
-      resource_id: acme.resourceId,
       scheduled_during: '["2026-10-09T09:00:00+00","2026-10-09T10:00:00+00")',
     });
 

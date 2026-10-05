@@ -20,8 +20,14 @@ export async function scheduleWorkItem(
   db: Db,
   input: {
     workItemId: string;
-    /** Null schedules a time with nobody assigned yet, which cannot double-book anyone. */
-    resourceId?: string | null;
+    /**
+     * Who is on the job. **Omitted leaves the assignments exactly as they are** — rescheduling is
+     * about time and must not quietly take people off the job. An empty list clears them, and a
+     * list replaces them; work with a time and nobody on it is ordinary and cannot double-book
+     * anyone. Every resource named is tested against the whole window in the same transaction,
+     * so one that is busy refuses the move and nothing changes.
+     */
+    resourceIds?: string[];
     startsAt: string;
     endsAt: string;
   },
@@ -52,7 +58,7 @@ export async function scheduleWorkItem(
     p_work_item_id: input.workItemId,
     // Null by design, not by omission: see the parameter above. The cast is D15's — Postgres
     // records no nullability for a function argument.
-    p_resource_id: (input.resourceId || null) as string,
+    p_resource_ids: (input.resourceIds ?? null) as string[],
     p_starts_at: starts.toISOString(),
     p_ends_at: ends.toISOString(),
   });
@@ -62,7 +68,7 @@ export async function scheduleWorkItem(
     // could have caught a race between two dispatchers looking at the same free slot.
     if (error.code === '23P01') {
       throw new DomainError(
-        'That resource is already booked for part of this window.',
+        'A resource on this job is already booked for part of that time.',
         'scheduling.double_booked',
       );
     }
@@ -90,7 +96,42 @@ export async function scheduleWorkItem(
   }
 }
 
-/** Take a work item off the schedule, freeing whatever it was holding. */
+/**
+ * Change who is on a work item, without touching when it happens. One transaction for the whole
+ * set: if any resource is busy for the work item's window, the assignments stay exactly as they
+ * were. On work with no time yet nothing can conflict, so this simply records who is on it.
+ *
+ * Whether the caller may is the database's (`work_item.schedule`), however it arrives.
+ */
+export async function setWorkItemResources(
+  db: Db,
+  input: { workItemId: string; resourceIds: string[] },
+): Promise<void> {
+  await requireActor(db);
+
+  const { error } = await db.rpc('set_work_item_resources', {
+    p_work_item_id: input.workItemId,
+    p_resource_ids: input.resourceIds,
+  });
+
+  if (error) {
+    if (error.code === '23P01') {
+      throw new DomainError(
+        'A resource on this job is already booked for part of that time.',
+        'scheduling.double_booked',
+      );
+    }
+    if (error.code === '23503') {
+      throw new DomainError('No such resource here.', 'scheduling.resource_not_found');
+    }
+    if (error.code === '42501') {
+      throw new DomainError('You cannot change who is on that work item.', 'scheduling.forbidden');
+    }
+    throw new DomainError(error.message, 'scheduling.failed');
+  }
+}
+
+/** Take a work item off the schedule, freeing every resource's time. Who is on the job stays. */
 export async function unscheduleWorkItem(
   db: Db,
   input: { workItemId: string },

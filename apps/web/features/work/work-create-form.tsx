@@ -6,6 +6,7 @@ import { Button } from '@/components/controls/button';
 import { FormActions, FormError, FormField } from '@/components/controls/form';
 import { Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
+import { ResourceChecklist } from '@/components/controls/resource-checklist';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
@@ -82,12 +83,7 @@ export function CreateWorkItemForm({
           </span>
           <OptionalSelect name="locationId" label="Location" options={locations} />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted">
-            Assigned to <span className="text-subtle">(optional)</span>
-          </span>
-          <OptionalSelect name="resourceId" label="Assigned to" options={resources} />
-        </label>
+        <ResourceChecklist legend="Assigned to (optional)" options={resources} />
         {assetsEnabled ? (
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-muted">

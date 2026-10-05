@@ -13,7 +13,7 @@ import { allowedNextStatusIds, type WorkItemTransition } from '@/lib/domain/work
 import type { WorkItemType } from '@/lib/domain/work-items/types';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import { CreateWorkItemForm } from './work-create-form';
-import { MoveWorkItemForm, ScheduleWorkItemForm } from './work-operations-forms';
+import { AssignResourcesForm, MoveWorkItemForm, ScheduleWorkItemForm } from './work-operations-forms';
 
 export function WorkList({ organizationId, role, timezone, types, selectedType, statuses, transitions, workItems, customers, locations, resources, assets, definitions, assetsEnabled, mayAdd, mayConfigure, mayMove, maySchedule }: {
   organizationId: string;
@@ -136,7 +136,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
                               <span className="font-medium text-foreground">Not scheduled</span>
                             )}
                           </div>
-                          {item.customer || item.location || (assetsEnabled && item.asset) || item.resource ? (
+                          {item.customer || item.location || (assetsEnabled && item.asset) || item.resources.length > 0 ? (
                             <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
                               <dt className="text-subtle">Customer</dt>
                               <dd>{item.customer?.label ?? '—'}</dd>
@@ -149,8 +149,14 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
                                 </>
                               ) : null}
                               <dt className="text-subtle">Assigned</dt>
-                              <dd>
-                                {item.resource ? <Badge tone="accent">{item.resource.label}</Badge> : '—'}
+                              <dd className="flex flex-wrap gap-1">
+                                {item.resources.length > 0
+                                  ? item.resources.map((resource) => (
+                                      <Badge key={resource.id} tone="accent">
+                                        {resource.label}
+                                      </Badge>
+                                    ))
+                                  : '—'}
                               </dd>
                             </dl>
                           ) : null}
@@ -178,7 +184,18 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
                                     organizationId={organizationId}
                                     workItemId={item.id}
                                     resources={resources}
+                                    assigned={item.resources.map((resource) => resource.id)}
                                     scheduled={item.window !== null}
+                                  />
+                                </Disclosure>
+                              ) : null}
+                              {maySchedule && item.type.schedulable ? (
+                                <Disclosure summary="Assign" className="border-0">
+                                  <AssignResourcesForm
+                                    organizationId={organizationId}
+                                    workItemId={item.id}
+                                    resources={resources}
+                                    assigned={item.resources.map((resource) => resource.id)}
                                   />
                                 </Disclosure>
                               ) : null}

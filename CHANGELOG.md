@@ -5,6 +5,21 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A job can have more than one resource
+
+A job is no longer tied to a single person or machine: put a technician, a van and a tire machine on the
+same job and each is held for its whole time. Scheduling and "Who is on this" both take a set of ticked
+resources — none is fine, for work nobody has been given yet — and the whole change is accepted or refused
+together, so one busy van leaves the job exactly as it was. Moving a job tests everyone on it; taking a
+job off the schedule frees all their time but keeps who was on it; a cancelled-type status frees them all
+and bringing the job back is refused if any is now taken. The Work list and a job's page show everyone on
+it, and Schedule shows the job in each person's and each machine's column — still one job — and in Week
+and Month once, listing who is on it. Scheduled work with nobody on it, which used to vanish from
+Schedule, now appears in an "Unassigned" column. Today's counts on Home and Field count jobs, not
+assignments. Online booking still takes one resource for the visitor and is otherwise unchanged. Reports
+grouped by resource give each resource the whole job, so those groups overlap; "time committed" counts
+resource-hours. Nothing yet says which resources a kind of work needs.
+
 ### A resource says what it is and what it can do
 
 Every resource now says what kind of thing it is — a person, a vehicle, equipment, a facility or
