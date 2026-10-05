@@ -9142,6 +9142,114 @@ export type Database = {
           },
         ]
       }
+      work_item_type_resource_requirement_capabilities: {
+        Row: {
+          capability_id: string
+          created_at: string
+          created_by: string
+          organization_id: string
+          requirement_id: string
+        }
+        Insert: {
+          capability_id: string
+          created_at?: string
+          created_by: string
+          organization_id: string
+          requirement_id: string
+        }
+        Update: {
+          capability_id?: string
+          created_at?: string
+          created_by?: string
+          organization_id?: string
+          requirement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirement_capabilities_capability_same_org"
+            columns: ["organization_id", "capability_id"]
+            isOneToOne: false
+            referencedRelation: "resource_capabilities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "requirement_capabilities_requirement_same_org"
+            columns: ["organization_id", "requirement_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_type_resource_requirements"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_item_type_resource_requirement_capabi_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_type_resource_requirement_capabi_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_item_type_resource_requirements: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          position: number
+          quantity: number
+          resource_class: string
+          type_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          position?: number
+          quantity: number
+          resource_class: string
+          type_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          position?: number
+          quantity?: number
+          resource_class?: string
+          type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_type_resource_requirements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_type_resource_requirements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_type_resource_requirements_type_same_org"
+            columns: ["organization_id", "type_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_types"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       work_item_types: {
         Row: {
           booking_duration_minutes: number | null
@@ -9644,6 +9752,7 @@ export type Database = {
         }
         Returns: string
       }
+      bookable_resource_ids: { Args: { p_type_id: string }; Returns: string[] }
       booking_organization: { Args: { p_slug: string }; Returns: string }
       bootstrap_gold_internal_workspace: {
         Args: {
@@ -9879,6 +9988,15 @@ export type Database = {
         Args: { p_name: string; p_organization_id: string }
         Returns: string
       }
+      create_resource_requirement: {
+        Args: {
+          p_capability_ids: string[]
+          p_quantity: number
+          p_resource_class: string
+          p_type_id: string
+        }
+        Returns: string
+      }
       create_role: {
         Args: {
           p_capabilities: string[]
@@ -9951,6 +10069,10 @@ export type Database = {
       default_platform_provider_account: {
         Args: { p_provider_key: string }
         Returns: string
+      }
+      delete_resource_requirement: {
+        Args: { p_id: string }
+        Returns: undefined
       }
       detach_plan_addon: {
         Args: { p_addon_plan_id: string; p_plan_id: string }
@@ -11724,6 +11846,15 @@ export type Database = {
           p_sections: Json
           p_seo_description: string
           p_seo_title: string
+        }
+        Returns: undefined
+      }
+      update_resource_requirement: {
+        Args: {
+          p_capability_ids: string[]
+          p_id: string
+          p_quantity: number
+          p_resource_class: string
         }
         Returns: undefined
       }

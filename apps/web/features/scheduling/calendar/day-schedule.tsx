@@ -33,6 +33,7 @@ export function DaySchedule({
   resources,
   unassigned,
   resourceNames,
+  shortfalls,
   hasConfiguredHours,
   timezone,
   resourcesHref,
@@ -49,6 +50,8 @@ export function DaySchedule({
   unassigned: UnassignedWork[];
   /** Every resource's name by id, so a lane can say who else is on a job even when the board is filtered to one lane. */
   resourceNames: ReadonlyMap<string, string>;
+  /** What each scheduled job is short of, by work item id — only jobs that are short appear. */
+  shortfalls: Readonly<Record<string, string>>;
   /** Whether this business has configured opening hours anywhere at all. */
   hasConfiguredHours: boolean;
   timezone: string;
@@ -187,6 +190,7 @@ export function DaySchedule({
                         alsoWith={booking.resourceIds
                           .filter((id) => id !== entry.resource.id)
                           .map((id) => resourceNames.get(id) ?? 'Another resource')}
+                        missing={shortfalls[booking.workItemId]}
                         timezone={timezone}
                         variant="block"
                         style={{
@@ -226,6 +230,7 @@ export function DaySchedule({
                       window={work.window}
                       displayWindow={displayed}
                       resourceName="Unassigned"
+                      missing={shortfalls[work.workItemId]}
                       timezone={timezone}
                       variant="block"
                       style={{

@@ -14,13 +14,14 @@ import {
   WorkOperationalActions,
   WorkQuoteSection,
   WorkRecordHeader,
+  WorkRequirementsSection,
   WorkTimeSection,
 } from '@/features/work/work-item-sections';
 
 export function WorkItemDetailScreen({ organizationId, organization, model }: { organizationId: string; organization: { timezone: string; currency: string | null; role: string }; model: WorkItemDetailModel }) {
   const { workItem, checklist, timeEntries, costs, definitions, lines, priceBook, customers, locations,
     assets, invoice, statuses, transitions, documents, timeline, price, economics, standing, mayAttach,
-    billingEnabled, assetsEnabled, cardsAccepted, resourceOptions, mayEditDetails } = model;
+    billingEnabled, assetsEnabled, cardsAccepted, resourceOptions, mayEditDetails, needs, coverage } = model;
   const workItemId = workItem.id;
   const can = (capability: string) => model.capabilities.has(capability);
 
@@ -59,12 +60,14 @@ export function WorkItemDetailScreen({ organizationId, organization, model }: { 
         }
         execution={
           <>
+            <WorkRequirementsSection coverage={coverage} />
             <WorkOperationalActions
               organizationId={organizationId}
               workItem={workItem}
               statuses={statuses}
               transitions={transitions}
               resources={resourceOptions}
+              needs={needs}
               mayMove={can('work_item.transition')}
               maySchedule={can('work_item.schedule')}
             />

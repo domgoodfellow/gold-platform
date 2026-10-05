@@ -3,6 +3,8 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from './actor';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { listResources } from '@/lib/domain/resources/resources';
+import { RESOURCE_CLASS_LABELS } from '@/lib/domain/resources/resource-class';
+import { isEligible, listResourceRequirements, requirementTitle } from '@/lib/domain/work-items/requirements';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { listEnabledModules, MODULES_WITH_READINESS_CHECK, outstandingModuleSetup } from './modules';
@@ -142,13 +144,15 @@ export async function computeSetupOverview(
   // The declaration, read from the types already loaded — the same fact `hasSchedulableWork`
   // answers for navigation, so setup cannot ask for resources the sidebar has withheld.
   const schedulesWork = types.some((type) => type.schedulable);
-  const [resources, locations, hours] = schedulesWork
+  const [resources, locations, hours, requirements, everyResource] = schedulesWork
     ? await Promise.all([
         listResources(db, { organizationId, limit: 1 }),
         listLocations(db, { organizationId, limit: 1 }),
         listOperatingHours(db, { organizationId }),
+        listResourceRequirements(db, { organizationId }),
+        listResources(db, { organizationId, limit: 1000 }),
       ])
-    : [null, null, null];
+    : [null, null, null, null, null];
 
   const moduleArea = (item: ReadinessRequirement, importance: SetupImportance): SetupArea => ({
     key: item.key,
@@ -229,6 +233,9 @@ export async function computeSetupOverview(
         ),
         label: 'Opening hours',
       },
+      ...(requirements && requirements.length > 0 && everyResource
+        ? [capacityArea(organizationId, types, requirements, everyResource)]
+        : []),
       kernel(
         'locations',
         'locations',
@@ -257,6 +264,36 @@ export async function computeSetupOverview(
     recommendedOpen: count('recommended'),
     optionalOpen: count('optional'),
   };
+}
+
+/**
+ * Does the business have enough resources of the kinds its work says it needs? A plain count of who
+ * is eligible against how many are required — **not** availability: nobody's calendar is read, and
+ * a resource off on holiday still counts. A requirement that is well formed is not invalid for
+ * being short of resources; it is setup still to do, so this is optional and never a blocker.
+ */
+function capacityArea(
+  organizationId: string,
+  types: { id: string; name: string }[],
+  requirements: Awaited<ReturnType<typeof listResourceRequirements>>,
+  resources: Awaited<ReturnType<typeof listResources>>,
+): SetupArea {
+  const typeName = new Map(types.map((type) => [type.id, type.name]));
+  const short = requirements.flatMap((requirement) => {
+    const eligible = resources.filter((resource) => isEligible(resource, requirement)).length;
+    return eligible >= requirement.quantity
+      ? []
+      : [`${typeName.get(requirement.typeId) ?? 'A kind of work'} needs ${requirement.quantity} × ${requirementTitle(requirement, RESOURCE_CLASS_LABELS)}; ${eligible} ${eligible === 1 ? 'exists' : 'exist'}.`];
+  });
+
+  const base = {
+    key: 'resource-capacity',
+    label: 'Resources for scheduled work',
+    area: { href: areaHref(organizationId, 'resources'), label: areaLabel('resources') },
+  };
+  return short.length === 0
+    ? { ...base, message: 'Enough resources exist for what each kind of work needs.', state: 'complete' as const }
+    : { ...base, message: short.join(' '), state: 'incomplete' as const, importance: 'optional' as const };
 }
 
 /** The database's own answer to which module keys currently block a launch. */

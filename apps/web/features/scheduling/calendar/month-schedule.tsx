@@ -21,6 +21,7 @@ export function MonthSchedule({
   monthDate,
   today,
   resourceIds,
+  shortfalls,
 }: {
   organizationId: string;
   /** 42 contiguous tenant calendar days, Monday first, spanning the viewed month plus its lead/trail. */
@@ -29,6 +30,8 @@ export function MonthSchedule({
   monthDate: string;
   today: string;
   resourceIds: readonly string[];
+  /** What each scheduled job is short of, by work item id. */
+  shortfalls: Readonly<Record<string, string>>;
 }) {
   const monthPrefix = monthDate.slice(0, 7);
   const weeks: ScheduleDay[][] = [];
@@ -80,6 +83,8 @@ export function MonthSchedule({
                         key={event.workItemId}
                         className="truncate rounded bg-foreground/90 px-1 py-0.5 text-[11px] leading-tight text-background"
                       >
+                        {shortfalls[event.workItemId] ? <span aria-hidden>! </span> : null}
+                        {shortfalls[event.workItemId] ? <span className="sr-only">Not fully staffed: {shortfalls[event.workItemId]}. </span> : null}
                         {event.title}
                       </span>
                     ))}

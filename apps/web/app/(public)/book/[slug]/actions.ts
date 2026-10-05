@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
-import { bookSlot, type Slot } from '@/lib/domain/booking/booking';
+import { beginBooking, bookSlot, type Slot } from '@/lib/domain/booking/booking';
 import { DomainError } from '@/lib/domain/errors';
 
 export type BookingActionState = { error: string | null };
@@ -34,6 +34,10 @@ export async function bookAction(
 
   let workItemId: string;
   try {
+    // The page binds a visitor while it renders, but a Server Component cannot set cookies, so that
+    // session is gone by the time the form arrives. A Server Action can — and binding is harmless to
+    // repeat (the unique index makes the second a no-op) — so the booking establishes its own.
+    await beginBooking(db, { organizationId });
     workItemId = await bookSlot(db, {
       organizationId,
       typeId: String(formData.get('typeId') ?? ''),

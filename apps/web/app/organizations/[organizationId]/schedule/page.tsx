@@ -12,6 +12,8 @@ import {
 } from '@/features/scheduling/calendar/schedule-url';
 import { listScheduleDays } from '@/lib/domain/scheduling/availability';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
+import { RESOURCE_CLASS_LABELS } from '@/lib/domain/resources/resource-class';
+import { describeShortfall, evaluateWorkItems } from '@/lib/domain/work-items/requirements';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import { isoDayOfWeek, shiftDate, startOfMonth, todayInZone } from '@/lib/domain/scheduling/window';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
@@ -94,6 +96,26 @@ export default async function SchedulePage({
     listOperatingHours(db, { organizationId }),
   ]);
 
+  // What each scheduled job is short of, from its kind's requirements and who is on it — derived on this
+  // read. A short job is still on the board; this only says what it lacks.
+  const scheduled = new Map<string, { workItemId: string; typeId: string; resourceIds: string[] }>();
+  for (const day of days) {
+    for (const entry of day.resources) {
+      for (const booking of entry.booked) {
+        scheduled.set(booking.workItemId, { workItemId: booking.workItemId, typeId: booking.typeId, resourceIds: booking.resourceIds });
+      }
+    }
+    for (const work of day.unassigned) {
+      scheduled.set(work.workItemId, { workItemId: work.workItemId, typeId: work.typeId, resourceIds: [] });
+    }
+  }
+  const evaluations = await evaluateWorkItems(db, { organizationId, items: [...scheduled.values()] });
+  const shortfalls: Record<string, string> = {};
+  for (const [workItemId, evaluation] of evaluations) {
+    const shortfall = describeShortfall(evaluation, RESOURCE_CLASS_LABELS);
+    if (shortfall) shortfalls[workItemId] = shortfall;
+  }
+
   const allResources = days[0]?.resources.map((entry) => entry.resource) ?? [];
   const visibleDays = days.map((day) => ({
     ...day,
@@ -152,6 +174,7 @@ export default async function SchedulePage({
         allResources={allResources}
         selectedResourceIds={selectedResourceIds}
         hasConfiguredHours={hours.length > 0}
+        shortfalls={shortfalls}
         resourcesHref={resourcesHref}
         mayAddResource={mayAddResource}
       />

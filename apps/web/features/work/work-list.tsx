@@ -13,9 +13,10 @@ import { allowedNextStatusIds, type WorkItemTransition } from '@/lib/domain/work
 import type { WorkItemType } from '@/lib/domain/work-items/types';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import { CreateWorkItemForm } from './work-create-form';
+import type { CoverageView, ResourceNeedsView } from '@/lib/domain/work-items/requirements';
 import { AssignResourcesForm, MoveWorkItemForm, ScheduleWorkItemForm } from './work-operations-forms';
 
-export function WorkList({ organizationId, role, timezone, types, selectedType, statuses, transitions, workItems, customers, locations, resources, assets, definitions, assetsEnabled, mayAdd, mayConfigure, mayMove, maySchedule }: {
+export function WorkList({ organizationId, role, timezone, types, selectedType, statuses, transitions, workItems, customers, locations, resources, assets, definitions, assetsEnabled, needs, coverage, mayAdd, mayConfigure, mayMove, maySchedule }: {
   organizationId: string;
   role: string;
   timezone: string;
@@ -30,6 +31,10 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
   assets: { id: string; label: string }[];
   definitions: FieldDefinition[];
   assetsEnabled: boolean;
+  /** What the selected kind of work needs, with who is eligible — null when it says nothing. */
+  needs: ResourceNeedsView | null;
+  /** Requirement coverage by work item id, for jobs of a type that needs something. */
+  coverage: Record<string, CoverageView>;
   mayAdd: boolean;
   mayConfigure: boolean;
   mayMove: boolean;
@@ -136,7 +141,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
                               <span className="font-medium text-foreground">Not scheduled</span>
                             )}
                           </div>
-                          {item.customer || item.location || (assetsEnabled && item.asset) || item.resources.length > 0 ? (
+                          {item.customer || item.location || (assetsEnabled && item.asset) || item.resources.length > 0 || coverage[item.id] ? (
                             <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
                               <dt className="text-subtle">Customer</dt>
                               <dd>{item.customer?.label ?? '—'}</dd>
@@ -158,6 +163,21 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
                                     ))
                                   : '—'}
                               </dd>
+                              {coverage[item.id] ? (
+                                <>
+                                  <dt className="text-subtle">Needs</dt>
+                                  <dd>
+                                    {coverage[item.id].satisfied ? (
+                                      'All assigned'
+                                    ) : (
+                                      <span className="font-medium">
+                                        <span aria-hidden>! </span>
+                                        {coverage[item.id].shortfall}
+                                      </span>
+                                    )}
+                                  </dd>
+                                </>
+                              ) : null}
                             </dl>
                           ) : null}
                           <CustomFieldValues definitions={definitions} custom={item.custom} />
@@ -185,6 +205,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
                                     workItemId={item.id}
                                     resources={resources}
                                     assigned={item.resources.map((resource) => resource.id)}
+                                    needs={needs}
                                     scheduled={item.window !== null}
                                   />
                                 </Disclosure>
@@ -196,6 +217,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
                                     workItemId={item.id}
                                     resources={resources}
                                     assigned={item.resources.map((resource) => resource.id)}
+                                    needs={needs}
                                   />
                                 </Disclosure>
                               ) : null}

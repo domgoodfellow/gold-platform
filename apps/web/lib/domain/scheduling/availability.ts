@@ -29,6 +29,8 @@ export type ResourceSchedule = {
     occupied: Window;
     /** Everyone on this work item, this resource included. One work item, one window, however many take part. */
     resourceIds: string[];
+    /** The kind of work it is — what a requirement is read against. */
+    typeId: string;
   }[];
   free: Window[];
 };
@@ -38,6 +40,7 @@ export type UnassignedWork = {
   workItemId: string;
   title: string;
   window: Window;
+  typeId: string;
 };
 
 const MINUTE = 60_000;
@@ -88,6 +91,7 @@ export function freeWindows(
 
 type CommittedRow = {
   id: string;
+  type_id: string;
   title: string;
   scheduled_during: string | null;
   occupies: string | null;
@@ -103,7 +107,7 @@ type CommittedRow = {
  * free window into an unbookable one, or the reverse.
  */
 const COMMITTED_SELECT =
-  'id, title, scheduled_during, occupies, assignments:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource_id)';
+  'id, type_id, title, scheduled_during, occupies, assignments:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource_id)';
 
 
 /**
@@ -124,7 +128,7 @@ function groupBookedByResource(rows: CommittedRow[]): Map<string, ResourceSchedu
     // and the same window in each, never a copy.
     for (const resourceId of resourceIds) {
       const existing = byResource.get(resourceId) ?? [];
-      existing.push({ workItemId: row.id, title: row.title, window, occupied, resourceIds });
+      existing.push({ workItemId: row.id, title: row.title, window, occupied, resourceIds, typeId: row.type_id });
       byResource.set(resourceId, existing);
     }
   }
@@ -139,7 +143,7 @@ function unassignedFrom(rows: CommittedRow[]): UnassignedWork[] {
   return rows.flatMap((row) => {
     if ((row.assignments ?? []).length > 0) return [];
     const window = parseWindow(row.scheduled_during);
-    return window ? [{ workItemId: row.id, title: row.title, window }] : [];
+    return window ? [{ workItemId: row.id, title: row.title, window, typeId: row.type_id }] : [];
   });
 }
 

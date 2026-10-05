@@ -94,8 +94,11 @@ its exclusion constraint, `schedule_work_item`/`unschedule_work_item`/`create_wo
 payloads — was migrated in the same slice; none reads the old column, which no longer exists.
 Scheduled work with nobody assigned is now drawn on Schedule as *Unassigned*.
 
-Remaining: no work type says which resources it requires, any resource may be assigned to any work,
-and an event does not yet distinguish a first scheduling from a reschedule.
+Work types now declare what resources they need (Work Order 5, `20261117000001`, I81): class, quantity
+and capabilities per requirement, with eligibility and job coverage derived. Remaining: resource
+working hours and time off, scheduling blocks, availability combined across the several resources a
+job needs (public booking supports a single one-resource requirement until then), travel and dispatch,
+and an event that distinguishes a first scheduling from a reschedule.
 
 ## 6. Events
 

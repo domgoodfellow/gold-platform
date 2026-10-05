@@ -133,7 +133,10 @@ export async function bookableSlots(
   const range = `[${within.startsAt},${within.endsAt})`;
 
   const [resources, commitments, hours] = await Promise.all([
-    db.from('bookable_resources').select('id').eq('organization_id', input.organizationId),
+    // The resources this kind of work can be booked against: all of them when it needs nothing (as
+    // before), only the eligible ones when it needs one thing. Ids only, and the same canonical
+    // availability arithmetic runs over them below — this narrows the candidates, not the sums.
+    db.rpc('bookable_resource_ids', { p_type_id: input.type.id }),
     db
       .from('resource_commitments')
       .select('resource_id, occupies')
@@ -160,9 +163,7 @@ export async function bookableSlots(
   const slots: Slot[] = [];
   const stepMs = input.type.durationMinutes * 60_000;
 
-  for (const resource of resources.data ?? []) {
-    // A view has no NOT NULL to read, so `supabase gen types` marks every column nullable (D15).
-    const resourceId = resource.id;
+  for (const resourceId of (resources.data ?? []) as unknown as string[]) {
     if (!resourceId) continue;
 
     const free = open.flatMap((window) =>
@@ -246,6 +247,20 @@ export async function bookSlot(
       throw new DomainError(
         'This booking has already been made.',
         'booking.already_booked',
+      );
+    }
+    // `create_booking` reasserts what the page offered: the resource must still be eligible for what
+    // this kind of work needs, and a type that needs more than one resource cannot be booked here.
+    if (error.code === 'GD012') {
+      throw new DomainError(
+        'That time is no longer available. Please choose another.',
+        'booking.not_eligible',
+      );
+    }
+    if (error.code === 'GD011') {
+      throw new DomainError(
+        'This business is not taking that booking.',
+        'booking.not_supported',
       );
     }
     if (error.code === '42501') {

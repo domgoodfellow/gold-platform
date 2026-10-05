@@ -21,6 +21,7 @@ function lane(id: string, name: string, workItemIds: string[]) {
       window,
       occupied: window,
       resourceIds: ['alex', 'van'],
+      typeId: 'type',
     })),
   };
 }
@@ -30,7 +31,7 @@ const day: ScheduleDay = {
   within,
   open: [],
   resources: [lane('alex', 'Alex', ['one']), lane('van', 'Service Van 1', ['one']), lane('machine', 'Tire Machine', ['two'])],
-  unassigned: [{ workItemId: 'three', title: 'Job three', window: { startsAt: '2027-04-05T13:00:00.000Z', endsAt: '2027-04-05T14:00:00.000Z' } }],
+  unassigned: [{ workItemId: 'three', typeId: 'type', title: 'Job three', window: { startsAt: '2027-04-05T13:00:00.000Z', endsAt: '2027-04-05T14:00:00.000Z' } }],
 };
 
 describe('dayEvents', () => {

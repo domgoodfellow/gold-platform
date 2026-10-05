@@ -20,6 +20,15 @@ import { SupportRegistrar } from '@/components/panels/support-registrar';
 import { WorkInsights } from '@/features/insights/workspace-insights';
 import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
 import { availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
+import { listResourceCapabilities } from '@/lib/domain/resources/resource-capabilities';
+import { RESOURCE_CLASS_LABELS } from '@/lib/domain/resources/resource-class';
+import {
+  coverageView,
+  evaluateRequirements,
+  listResourceRequirements,
+  requirementGroups,
+  type CoverageView,
+} from '@/lib/domain/work-items/requirements';
 import { todayInZone } from '@/lib/domain/scheduling/window';
 import { areaAvailable, areaHref, areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { PageHeader } from '@/components/headers/page-header';
@@ -34,7 +43,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
   const { db, organization } = await requireOrganization(organizationId);
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
-  const [statuses, transitions, workItems, customers, locations, resources, assets, definitions, enabledModules, templateSteps, prices, booking] = await Promise.all([
+  const [statuses, transitions, workItems, customers, locations, resources, assets, definitions, enabledModules, templateSteps, prices, booking, requirements, capabilities] = await Promise.all([
     selectedType ? listWorkItemStatuses(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
     selectedType ? listWorkItemTransitions(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
     selectedType ? listWorkItems(db, { organizationId, typeId: selectedType.id }) : Promise.resolve(counted([] as WorkItem[], 0)),
@@ -47,7 +56,20 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
     selectedType ? listTypeChecklistItems(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
     listPriceBookItems(db, { organizationId }),
     selectedType ? getTypeBooking(db, { organizationId, typeId: selectedType.id }) : Promise.resolve(null),
+    selectedType ? listResourceRequirements(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
+    listResourceCapabilities(db, { organizationId }),
   ]);
+
+  // What the selected kind of work needs against who is on each job — derived on this read from the
+  // type's requirements and the assignments, stored nowhere.
+  const needs = requirements.length > 0 ? requirementGroups(requirements, resources, RESOURCE_CLASS_LABELS) : null;
+  const resourcesById = new Map(resources.map((resource) => [resource.id, resource]));
+  const coverage: Record<string, CoverageView> = {};
+  for (const item of workItems) {
+    if (requirements.length === 0) break;
+    const assigned = item.resources.flatMap((ref) => resourcesById.get(ref.id) ?? []);
+    coverage[item.id] = coverageView(evaluateRequirements(requirements, assigned), RESOURCE_CLASS_LABELS);
+  }
 
   const can = (capability: Capability) => organization.capabilities.includes(capability);
   const assetsEnabled = enabledModules.has('assets');
@@ -98,6 +120,8 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
             prices={prices}
             booking={booking}
             bookingEnabled={enabledModules.has('booking')}
+            requirements={requirements}
+            capabilities={capabilities}
             typeHref={(typeId) => `/organizations/${organizationId}/work?type=${typeId}`}
           />
         </ConfigureRegistrar>
@@ -124,6 +148,8 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
         assets={assets.map((item) => ({ id: item.id, label: item.name }))}
         definitions={definitions}
         assetsEnabled={assetsEnabled}
+        needs={needs}
+        coverage={coverage}
         mayAdd={can('work_item.create')}
         mayConfigure={mayConfigure}
         mayMove={can('work_item.transition')}

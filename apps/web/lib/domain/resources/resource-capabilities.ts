@@ -115,6 +115,14 @@ export async function setResourceCapabilityArchived(
   });
 
   if (error) {
+    // `app.check_capability_not_required`: what a kind of work needs must not change meaning unnoticed.
+    if (error.code === 'GD010') {
+      const { data } = await db.from('resource_capabilities').select('name').eq('id', input.id).maybeSingle();
+      throw new DomainError(
+        `${data?.name ?? 'This capability'} is required by one or more work types. Remove it from those requirements before archiving it.`,
+        'resource_capabilities.required',
+      );
+    }
     if (error.code === '42501') {
       throw new DomainError('You cannot configure capabilities here.', 'resource_capabilities.forbidden');
     }

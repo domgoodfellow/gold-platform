@@ -11,6 +11,9 @@ import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
 import type { WorkItemTransition } from '@/lib/domain/work-items/transitions';
 import type { TypeBooking, WorkItemType } from '@/lib/domain/work-items/types';
 import type { TypeChecklistItem } from '@/lib/domain/work-items/checklists';
+import type { ResourceCapability } from '@/lib/domain/resources/resource-capabilities';
+import type { ResourceRequirement } from '@/lib/domain/work-items/requirements';
+import { ResourceRequirementsEditor } from './resource-requirements';
 import {
   AddTypeChecklistItemForm,
   CreateStatusForm,
@@ -36,6 +39,10 @@ export type WorkConfigurationData = {
   prices: PriceBookItem[];
   booking: TypeBooking | null;
   bookingEnabled: boolean;
+  /** What the selected type needs. Only meaningful, and only shown, for a type that is scheduled. */
+  requirements: ResourceRequirement[];
+  /** The active capability vocabulary a requirement may name. */
+  capabilities: ResourceCapability[];
   /** Where a chip/type link should point — differs between the Work page (`?type=`) and Settings (`?type=` too, but a different base path). */
   typeHref: (typeId: string) => string;
 };
@@ -61,6 +68,8 @@ export function WorkConfiguration({
   prices,
   booking,
   bookingEnabled,
+  requirements,
+  capabilities,
   typeHref,
 }: WorkConfigurationData) {
   const statusName = new Map(statuses.map((status) => [status.id, status.name]));
@@ -144,6 +153,20 @@ export function WorkConfiguration({
                 disabled={!mayConfigure}
               />
               {!mayConfigure ? <Hint>Your role, {role}, cannot change whether work is scheduled.</Hint> : null}
+            </FieldSet>
+          ) : null}
+
+          {selectedType && selectedType.schedulable ? (
+            <FieldSet>
+              <FieldLegend variant="label">Resources needed for {selectedType.name}</FieldLegend>
+              <ResourceRequirementsEditor
+                organizationId={organizationId}
+                typeId={selectedType.id}
+                typeName={selectedType.name}
+                requirements={requirements}
+                capabilities={capabilities}
+                mayConfigure={mayConfigure}
+              />
             </FieldSet>
           ) : null}
 

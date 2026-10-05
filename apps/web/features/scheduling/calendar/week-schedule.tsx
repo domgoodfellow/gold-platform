@@ -18,9 +18,12 @@ export function WeekSchedule({
   days,
   today,
   timezone,
+  shortfalls,
 }: {
   organizationId: string;
   days: ScheduleDay[];
+  /** What each scheduled job is short of, by work item id. */
+  shortfalls: Readonly<Record<string, string>>;
   /** Today in the organization's own timezone — which cell gets the "today" treatment. */
   today: string;
   timezone: string;
@@ -63,6 +66,7 @@ export function WeekSchedule({
                         window={event.window}
                         displayWindow={event.displayWindow}
                         resourceName={event.resourceNames.length > 0 ? event.resourceNames.join(' · ') : 'Unassigned'}
+                        missing={shortfalls[event.workItemId]}
                         timezone={timezone}
                         variant="row"
                       />

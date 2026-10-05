@@ -188,6 +188,12 @@ export async function setWorkItemTypeSchedulable(
         'work_item_types.has_scheduled_work',
       );
     }
+    if (error.code === 'GD009') {
+      throw new DomainError(
+        'This work type still needs resources. Remove the resource requirements before turning scheduling off.',
+        'work_item_types.has_requirements',
+      );
+    }
     if (error.code === '23514') {
       throw new DomainError(
         'This work type is open for public booking, which needs it to be scheduled. Withdraw its booking first.',
@@ -306,6 +312,13 @@ export async function setTypeBookable(
       throw new DomainError(
         'That status belongs to a different kind of work, or that price is not this business’s.',
         'types.booking_reference_invalid',
+      );
+    }
+    // `app.check_bookable_type_requirements`: public booking commits one resource.
+    if (error.code === 'GD011') {
+      throw new DomainError(
+        'Public booking currently supports one required resource. Remove the additional resource requirements or turn public booking off.',
+        'types.booking_requirements_incompatible',
       );
     }
     if (error.code === '23514') {

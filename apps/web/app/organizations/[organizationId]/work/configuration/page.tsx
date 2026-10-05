@@ -6,6 +6,8 @@ import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { listResourceCapabilities } from '@/lib/domain/resources/resource-capabilities';
+import { listResourceRequirements } from '@/lib/domain/work-items/requirements';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { listTypeChecklistItems } from '@/lib/domain/work-items/checklists';
@@ -28,7 +30,7 @@ export default async function WorkConfigurationPage({
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
 
-  const [statuses, transitions, templateSteps, fieldDefinitions, prices, booking, enabledModules] = await Promise.all([
+  const [statuses, transitions, templateSteps, fieldDefinitions, prices, booking, enabledModules, requirements, capabilities] = await Promise.all([
     selectedType
       ? listWorkItemStatuses(db, { organizationId, typeId: selectedType.id })
       : Promise.resolve([]),
@@ -44,6 +46,10 @@ export default async function WorkConfigurationPage({
       ? getTypeBooking(db, { organizationId, typeId: selectedType.id })
       : Promise.resolve(null),
     listUsableModules(db, { organizationId }),
+    selectedType
+      ? listResourceRequirements(db, { organizationId, typeId: selectedType.id })
+      : Promise.resolve([]),
+    listResourceCapabilities(db, { organizationId }),
   ]);
 
   const mayConfigure = organization.capabilities.includes('field.manage');
@@ -74,6 +80,8 @@ export default async function WorkConfigurationPage({
           prices={prices}
           booking={booking}
           bookingEnabled={enabledModules.has('booking')}
+          requirements={requirements}
+          capabilities={capabilities}
           typeHref={(typeId) => `/organizations/${organizationId}/work/configuration?type=${typeId}`}
         />
       </div>

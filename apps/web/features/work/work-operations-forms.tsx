@@ -12,6 +12,21 @@ import { FormActions, FormError, FormField } from '@/components/controls/form';
 import { TextInput } from '@/components/controls/inputs';
 import type { SelectOption } from '@/components/controls/optional-select';
 import { ResourceChecklist } from '@/components/controls/resource-checklist';
+import type { ResourceNeedsView } from '@/lib/domain/work-items/requirements';
+
+/** What the picker needs from a type's requirements: its groups, as plain props. */
+function needsProps(needs: ResourceNeedsView | null | undefined) {
+  if (!needs || needs.groups.length === 0) return {};
+  return {
+    groups: needs.groups.map((group) => ({
+      key: group.requirementId,
+      title: group.title,
+      hint: `${group.quantity} required`,
+      resourceIds: group.resourceIds,
+    })),
+    additionalIds: needs.additionalIds,
+  };
+}
 
 const INITIAL: WorkActionState = { error: null };
 
@@ -55,6 +70,7 @@ export function ScheduleWorkItemForm({
   workItemId,
   resources,
   assigned,
+  needs,
   scheduled,
 }: {
   organizationId: string;
@@ -62,6 +78,8 @@ export function ScheduleWorkItemForm({
   resources: SelectOption[];
   /** Ids of the resources on the job now — what the boxes start ticked as. */
   assigned: string[];
+  /** What this kind of work needs, with the resources eligible for each — absent when it says nothing. */
+  needs?: ResourceNeedsView | null;
   scheduled: boolean;
 }) {
   const [state, formAction, pending] = useActionState(scheduleWorkItemAction, INITIAL);
@@ -83,6 +101,7 @@ export function ScheduleWorkItemForm({
         options={resources}
         selected={assigned}
         hint="Everyone ticked takes part for this whole time. Tick none for work nobody is on yet."
+        {...needsProps(needs)}
       />
       <FormActions>
         <Button type="submit" disabled={pending} tone="secondary" size="small">
@@ -115,11 +134,13 @@ export function AssignResourcesForm({
   workItemId,
   resources,
   assigned,
+  needs,
 }: {
   organizationId: string;
   workItemId: string;
   resources: SelectOption[];
   assigned: string[];
+  needs?: ResourceNeedsView | null;
 }) {
   const [state, formAction, pending] = useActionState(setWorkItemResourcesAction, INITIAL);
 
@@ -127,7 +148,7 @@ export function AssignResourcesForm({
     <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="workItemId" value={workItemId} />
-      <ResourceChecklist legend="Assigned to" options={resources} selected={assigned} />
+      <ResourceChecklist legend="Assigned to" options={resources} selected={assigned} {...needsProps(needs)} />
       <FormActions>
         <Button type="submit" disabled={pending} tone="secondary" size="small">
           {pending ? 'Saving…' : 'Save resources'}

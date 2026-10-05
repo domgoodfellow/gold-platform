@@ -27,6 +27,7 @@ export function ScheduleWorkspace({
   allResources,
   selectedResourceIds,
   hasConfiguredHours,
+  shortfalls,
   resourcesHref,
   mayAddResource,
 }: {
@@ -44,6 +45,8 @@ export function ScheduleWorkspace({
   allResources: { id: string; name: string }[];
   selectedResourceIds: readonly string[];
   hasConfiguredHours: boolean;
+  /** What each scheduled job is short of, by work item id — only jobs that are short appear. Never hides an entry. */
+  shortfalls: Readonly<Record<string, string>>;
   /** Where Day's zero-Resource state sends a dispatcher to add one. */
   resourcesHref: string;
   mayAddResource: boolean;
@@ -67,7 +70,7 @@ export function ScheduleWorkspace({
 
       <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded-lg border border-border">
         {view === 'week' ? (
-          <WeekSchedule organizationId={organizationId} days={days} today={today} timezone={timezone} />
+          <WeekSchedule organizationId={organizationId} days={days} today={today} timezone={timezone} shortfalls={shortfalls} />
         ) : view === 'month' ? (
           <MonthSchedule
             organizationId={organizationId}
@@ -75,6 +78,7 @@ export function ScheduleWorkspace({
             monthDate={monthDate ?? date}
             today={today}
             resourceIds={selectedResourceIds}
+            shortfalls={shortfalls}
           />
         ) : (
           <DaySchedule
@@ -85,6 +89,7 @@ export function ScheduleWorkspace({
             resources={activeDay.resources}
             unassigned={activeDay.unassigned}
             resourceNames={new Map(allResources.map((resource) => [resource.id, resource.name]))}
+            shortfalls={shortfalls}
             hasConfiguredHours={hasConfiguredHours}
             timezone={timezone}
             resourcesHref={resourcesHref}

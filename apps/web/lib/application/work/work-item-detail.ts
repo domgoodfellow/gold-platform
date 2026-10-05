@@ -16,6 +16,13 @@ import { listCosts, listTimeEntries } from '@/lib/domain/work-items/consumption'
 import { jobEconomics } from '@/lib/domain/work-items/economics';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
+import { RESOURCE_CLASS_LABELS } from '@/lib/domain/resources/resource-class';
+import {
+  coverageView,
+  evaluateRequirements,
+  listResourceRequirements,
+  requirementGroups,
+} from '@/lib/domain/work-items/requirements';
 import { getWorkItem } from '@/lib/domain/work-items/work-items';
 
 export async function loadWorkItemDetail(db: Db, input: { organizationId: string; workItemId: string; capabilities: string[] }) {
@@ -31,7 +38,19 @@ export async function loadWorkItemDetail(db: Db, input: { organizationId: string
     listDocuments(db, { organizationId, attachedTo: { entity: 'work_item', id: workItemId } }), listWorkItemTimeline(db, { organizationId, workItemId }),
   ]);
   const enabledModules = activeModuleKeys(resolvedFeatures);
+
+  // What this kind of work needs, and whether this job has it. Derived on every read: the type is the
+  // authority, nothing is copied onto the job, and a short job is simply reported as short.
+  const requirements = await listResourceRequirements(db, { organizationId, typeId: workItem.type.id });
+  const needs = requirements.length > 0 ? requirementGroups(requirements, resources, RESOURCE_CLASS_LABELS) : null;
+  const assignedIds = new Set(workItem.resources.map((resource) => resource.id));
+  const coverage =
+    requirements.length > 0
+      ? coverageView(evaluateRequirements(requirements, resources.filter((resource) => assignedIds.has(resource.id))), RESOURCE_CLASS_LABELS)
+      : null;
+
   return {
+    needs, coverage,
     workItem, checklist, timeEntries, costs, resources, definitions, lines, priceBook, customers, locations, assets, invoice, resolvedFeatures, statuses, transitions, documents, timeline,
     price: priceWorkItem(lines), economics: jobEconomics({ lines, costs }), standing: invoice ? invoiceStanding(invoice) : null,
     mayAttach: input.capabilities.includes('document.create'), billingEnabled: enabledModules.has('billing'), assetsEnabled: enabledModules.has('assets'),

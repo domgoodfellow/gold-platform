@@ -90,6 +90,8 @@ export async function listResources(
     resourceClass?: ResourceClass;
     /** Only resources that hold this capability. Eligibility, not availability — nothing here looks at time. */
     capabilityId?: string;
+    /** Only resources that hold **every** one of these. The shape a work requirement asks in. */
+    capabilityIds?: string[];
   },
 ): Promise<Counted<Resource>> {
   let query = db
@@ -101,18 +103,27 @@ export async function listResources(
 
   if (input.resourceClass) query = query.eq('resource_class', input.resourceClass);
 
-  if (input.capabilityId) {
+  const wanted = [...new Set([...(input.capabilityIds ?? []), ...(input.capabilityId ? [input.capabilityId] : [])])];
+  if (wanted.length > 0) {
     // Two steps rather than an inner join: filtering the embedded assignments would also trim the
     // capabilities each resource is shown with, and a resource must list everything it can do.
+    // All of them, never any of them — a resource qualifies only when it holds each one asked for.
     const { data: holders, error: holdersError } = await db
       .from('resource_capability_assignments')
-      .select('resource_id')
+      .select('resource_id, capability_id')
       .eq('organization_id', input.organizationId)
-      .eq('capability_id', input.capabilityId);
+      .in('capability_id', wanted);
     if (holdersError) {
       throw new DomainError(holdersError.message, 'resources.list_failed');
     }
-    query = query.in('id', (holders ?? []).map((holder) => holder.resource_id));
+    const held = new Map<string, Set<string>>();
+    for (const holder of holders ?? []) {
+      held.set(holder.resource_id, (held.get(holder.resource_id) ?? new Set()).add(holder.capability_id));
+    }
+    query = query.in(
+      'id',
+      [...held.entries()].filter(([, ids]) => ids.size === wanted.length).map(([resourceId]) => resourceId),
+    );
   }
 
   const { data, error, count } = await query;

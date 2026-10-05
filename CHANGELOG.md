@@ -5,6 +5,21 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A kind of work says what resources it needs
+
+Under Work configuration, a kind of work that is scheduled can now say what each job of it needs: for
+example "1 × Person who has Tire service" and "1 × Vehicle that has Mobile service". Each need is a kind of
+resource, how many, and the capabilities it must have — all of them. These are minimums: a job can carry
+extra resources, and can be scheduled before it has everything. When you choose who is on a job, each need
+lists the resources that could fill it, with the rest under "Additional resources". A job's page says what
+is met and what is missing, the Work list says "Vehicle missing" where it is, and Schedule marks a short
+job without hiding it. One person is never counted for two needs, and the matching finds the arrangement that
+covers the most. Scheduling can't be turned off while a kind of work still needs resources, a capability a
+kind of work needs can't be archived, and setup says when you have fewer suitable resources than a kind of
+work needs. Online booking still books one resource: a kind of work that needs one can be booked, and only
+suitable resources are offered; one that needs more than one can't be opened for booking yet. The booking
+page's form now keeps its session, so a visitor can finish a booking.
+
 ### A job can have more than one resource
 
 A job is no longer tied to a single person or machine: put a technician, a van and a tire machine on the

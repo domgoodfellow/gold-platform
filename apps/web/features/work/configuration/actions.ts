@@ -11,6 +11,12 @@ import {
   createWorkItemStatus,
   updateWorkItemStatus,
 } from '@/lib/domain/work-items/statuses';
+import {
+  createResourceRequirement,
+  deleteResourceRequirement,
+  updateResourceRequirement,
+} from '@/lib/domain/work-items/requirements';
+import { isResourceClass } from '@/lib/domain/resources/resource-class';
 import { createWorkItemTransition } from '@/lib/domain/work-items/transitions';
 import {
   createWorkItemType,
@@ -273,4 +279,80 @@ export async function removeTypeChecklistItemAction(
 
   revalidateWork(organizationId);
   return { error: null };
+}
+
+function requirementInput(formData: FormData) {
+  const resourceClass = String(formData.get('resourceClass') ?? '');
+  if (!isResourceClass(resourceClass)) {
+    throw new DomainError('Say what kind of resource is needed.', 'resource_requirements.class_required');
+  }
+  return {
+    resourceClass,
+    // Left as typed: the domain refuses anything that is not a whole number from 1 to 50.
+    quantity: Number(formData.get('quantity') ?? Number.NaN),
+    capabilityIds: formData.getAll('capabilityIds').map(String).filter(Boolean),
+  };
+}
+
+/** What this kind of work needs. `field.manage` by the database's policies, however it arrives. */
+export async function createRequirementAction(
+  _previous: WorkConfigActionState,
+  formData: FormData,
+): Promise<WorkConfigActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+
+  try {
+    await createResourceRequirement(db, { typeId: String(formData.get('typeId') ?? ''), ...requirementInput(formData) });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidateRequirements(organizationId);
+  return { error: null };
+}
+
+export async function updateRequirementAction(
+  _previous: WorkConfigActionState,
+  formData: FormData,
+): Promise<WorkConfigActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+
+  try {
+    await updateResourceRequirement(db, { id: String(formData.get('requirementId') ?? ''), ...requirementInput(formData) });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidateRequirements(organizationId);
+  return { error: null };
+}
+
+export async function deleteRequirementAction(
+  _previous: WorkConfigActionState,
+  formData: FormData,
+): Promise<WorkConfigActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+
+  try {
+    await deleteResourceRequirement(db, { id: String(formData.get('requirementId') ?? '') });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidateRequirements(organizationId);
+  return { error: null };
+}
+
+/** A requirement is read by Work, Schedule and setup as well as by this screen. */
+function revalidateRequirements(organizationId: string): void {
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
 }

@@ -17,6 +17,7 @@ export function ScheduleEvent({
   displayWindow,
   resourceName,
   alsoWith = [],
+  missing,
   timezone,
   variant = 'row',
   style,
@@ -34,6 +35,8 @@ export function ScheduleEvent({
   displayWindow?: Window;
   /** Shown in Week's agenda row, where there is no per-resource column to say it instead. */
   resourceName?: string;
+  /** What this job is short of, in words ("Vehicle missing") — absent when it has what its kind of work needs. Never hides the entry. */
+  missing?: string;
   /** In Day's lanes, the others on the same job — a work item shows in every lane it takes part in and is still one work item. */
   alsoWith?: string[];
   timezone: string;
@@ -44,7 +47,7 @@ export function ScheduleEvent({
   const time = new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit' }).format(
     new Date(shown.startsAt),
   );
-  const fullDescription = `${title}, ${formatWindow(window, timezone)}${resourceName ? `, ${resourceName}` : ''}${alsoWith.length > 0 ? `, with ${alsoWith.join(', ')}` : ''}`;
+  const fullDescription = `${title}, ${formatWindow(window, timezone)}${resourceName ? `, ${resourceName}` : ''}${alsoWith.length > 0 ? `, with ${alsoWith.join(', ')}` : ''}${missing ? `. Not fully staffed: ${missing}` : ''}`;
   const href = `/organizations/${organizationId}/work/${workItemId}`;
 
   if (variant === 'block') {
@@ -66,6 +69,11 @@ export function ScheduleEvent({
             with {alsoWith.join(', ')}
           </span>
         ) : null}
+        {missing ? (
+          <span aria-hidden className="block truncate font-medium">
+            ! {missing}
+          </span>
+        ) : null}
       </Link>
     );
   }
@@ -82,6 +90,11 @@ export function ScheduleEvent({
       {resourceName ? (
         <span aria-hidden className="block truncate text-muted">
           {resourceName}
+        </span>
+      ) : null}
+      {missing ? (
+        <span aria-hidden className="block truncate font-medium">
+          ! {missing}
         </span>
       ) : null}
     </Link>

@@ -1052,6 +1052,14 @@
         "accessibility"
       ]
     },
+    "apps/web/tests/component/work-requirements-ui.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "scheduling",
+        "accessibility"
+      ]
+    },
     "apps/web/tests/component/work-resource-assignment-forms.test.tsx": {
       "category": "component",
       "concerns": [
@@ -1965,6 +1973,14 @@
         "security"
       ]
     },
+    "apps/web/tests/integration/database/work-type-requirements.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling",
+        "booking",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/work-type-scheduling.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -2086,6 +2102,13 @@
       "concerns": [
         "billing",
         "tenancy"
+      ]
+    },
+    "apps/web/tests/unit/resource-requirements.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "scheduling",
+        "work"
       ]
     },
     "apps/web/tests/unit/shell-projection.test.ts": {

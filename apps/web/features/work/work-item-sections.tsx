@@ -26,6 +26,7 @@ import { AddChecklistItemForm, ChecklistItemControl } from './checklist-forms';
 import { RecordCostForm, RecordTimeForm } from './consumption-forms';
 import { AddPricedLineForm, RemovePricedLineForm } from './pricing-forms';
 import { IssueInvoiceForm, RecordPaymentForm, RequestCardPaymentForm } from './billing-forms';
+import type { CoverageView, ResourceNeedsView } from '@/lib/domain/work-items/requirements';
 import { AssignResourcesForm, MoveWorkItemForm, ScheduleWorkItemForm } from './work-operations-forms';
 
 export function WorkRecordHeader({ organizationId, workItem, timezone }: {
@@ -116,6 +117,7 @@ export function WorkOperationalActions({
   statuses,
   transitions,
   resources,
+  needs,
   mayMove,
   maySchedule,
 }: {
@@ -124,6 +126,7 @@ export function WorkOperationalActions({
   statuses: WorkItemStatus[];
   transitions: WorkItemTransition[];
   resources: { id: string; label: string }[];
+  needs?: ResourceNeedsView | null;
   mayMove: boolean;
   maySchedule: boolean;
 }) {
@@ -163,6 +166,7 @@ export function WorkOperationalActions({
             workItemId={workItem.id}
             resources={resources}
             assigned={workItem.resources.map((resource) => resource.id)}
+            needs={needs}
             scheduled={workItem.window !== null}
           />
         </Disclosure>
@@ -174,8 +178,43 @@ export function WorkOperationalActions({
             workItemId={workItem.id}
             resources={resources}
             assigned={workItem.resources.map((resource) => resource.id)}
+            needs={needs}
           />
         </Disclosure>
+      ) : null}
+    </Section>
+  );
+}
+
+/**
+ * What this job needs against who is on it — derived, never stored. A short job is still a perfectly
+ * good job: it stays scheduled and visible, and this says plainly what is missing. Words carry the
+ * state (a mark is decoration), so it reads the same without colour or sight.
+ */
+export function WorkRequirementsSection({ coverage }: { coverage: CoverageView | null }) {
+  if (!coverage || coverage.lines.length === 0) return null;
+
+  return (
+    <Section className="mt-8">
+      <SectionHeading>Resources needed</SectionHeading>
+      <p className="mt-1 text-sm" role="status">
+        {coverage.satisfied ? 'Everything this kind of work needs is assigned.' : `Not fully staffed — ${coverage.shortfall}.`}
+      </p>
+      <ul className="mt-2 flex flex-col gap-1 text-sm">
+        {coverage.lines.map((line) => (
+          <li key={line.requirementId} className="flex items-baseline gap-2">
+            <span aria-hidden className={line.met ? 'text-muted' : 'font-medium'}>
+              {line.met ? '✓' : '!'}
+            </span>
+            <span>
+              <span className="sr-only">{line.met ? 'Met: ' : 'Missing: '}</span>
+              {line.text}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {coverage.extra.length > 0 ? (
+        <p className="mt-1 text-sm text-muted">Also assigned: {coverage.extra.join(', ')}.</p>
       ) : null}
     </Section>
   );
