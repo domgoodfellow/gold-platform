@@ -5,10 +5,14 @@ import { listOrganizationTerms } from '@/lib/domain/commercial/terms';
 import { listUsageEvents } from '@/lib/domain/commercial/usage';
 import { organizationAllowanceStates } from '@/lib/domain/commercial/allowances';
 import { listMeters } from '@/lib/domain/commercial/catalogue';
-import { listPlans, listPlanPrices } from '@/lib/domain/catalogue/plans';
+import { listPlans } from '@/lib/domain/catalogue/plans';
 import { currentAddonAssignments, currentPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { platformBillingProvider } from '@/lib/adapters/platform-billing';
-import { getOrganizationSubscription } from '@/lib/domain/platform-billing/subscriptions';
+import {
+  getOrganizationBillingSubscriptionState,
+  isEndedSubscription,
+} from '@/lib/domain/platform-billing/subscriptions';
+import { describeSubscriptionPackage } from '@/lib/domain/platform-billing/subscription-package';
 import { buildOrganizationPurchaseQuote, type PurchaseQuote } from '@/lib/domain/platform-billing/quote';
 
 /**
@@ -20,6 +24,11 @@ import { buildOrganizationPurchaseQuote, type PurchaseQuote } from '@/lib/domain
  * no consumption — so a business holding a base Plan and an Add-on saw the same allowance twice
  * and neither number told it anything about what was left. `organizationAllowanceStates` is the
  * one answer, the same one `app.record_usage` and `open_call` enforce against.
+ *
+ * **Whether Subscribe is offered is the quote's answer, and only the quote's.** A negotiated
+ * (agreement) price has no standard Plan price row at all, so a gate on one hid the button for a
+ * package checkout could in fact buy. The quote already resolves every line — agreement or
+ * standard — and says what blocks it.
  */
 export async function loadPlanUsage(db: Db, input: { organizationId: string; currency: string | null; capabilities: string[] }) {
   const { organizationId } = input;
@@ -33,25 +42,21 @@ export async function loadPlanUsage(db: Db, input: { organizationId: string; cur
   const basePlan = basePlanAssignment ? (planById.get(basePlanAssignment.planId) ?? null) : null;
   const addonPlans = addonAssignments.map((assignment) => planById.get(assignment.planId) ?? null);
   const billingProvider = await platformBillingProvider();
-  const [subscription, basePlanPrices] = await Promise.all([
-    billingProvider ? getOrganizationSubscription(db, { organizationId }) : Promise.resolve(null),
-    basePlan ? listPlanPrices(db, basePlan.id) : Promise.resolve([]),
-  ]);
-  const subscribablePrice = input.currency
-    ? basePlanPrices.find((price) => price.approvalState === 'approved' && price.currency === input.currency)
-    : undefined;
+  const subscriptionState = billingProvider ? await getOrganizationBillingSubscriptionState(db, { organizationId }) : null;
+  // An ended subscription is kept as provider history; it is neither one to manage nor a purchase already made.
+  const current = subscriptionState && !isEndedSubscription(subscriptionState.subscription) ? subscriptionState : null;
+  const subscription = current?.subscription ?? null;
+  const subscriptionPackage = current ? describeSubscriptionPackage(current.items, plans) : null;
   // The review-before-pay quote (work order C §5) -- only built when there is actually a purchase
   // in front of this business: no provider configured, or already subscribed, means nothing to
-  // review.
+  // review. It is the single authority on whether checkout can proceed.
   const quote: PurchaseQuote | null =
-    billingProvider && !subscription && basePlan && subscribablePrice
-      ? await buildOrganizationPurchaseQuote(db, { organizationId })
-      : null;
+    billingProvider && !subscription && basePlan ? await buildOrganizationPurchaseQuote(db, { organizationId }) : null;
   return {
     terms, products, usage, account, basePlanAssignment, addonAssignments, allowances, basePlan, addonPlans,
     meterLabel: new Map(meters.map((meter) => [meter.id, meter.label])),
     productLabel: new Map(products.map((product) => [product.key, product.label])), billingProvider, subscription,
-    subscribablePrice, quote,
+    subscriptionPackage, quote, canSubscribe: Boolean(quote && quote.blockers.length === 0),
     canManageBilling: input.capabilities.includes('billing.manage'),
   };
 }

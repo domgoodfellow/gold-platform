@@ -51,10 +51,16 @@ def subscription_body(**overrides: object) -> str:
         "current_period_end": 1_702_600_000,
         "cancel_at_period_end": False,
         "canceled_at": None,
-        "items": {"data": [{"price": {"id": "price_1"}}]},
+        "items": {"data": [item("si_1", "price_1")]},
         **overrides,
     }
-    return json.dumps({"id": "evt_1", "type": "customer.subscription.updated", "data": {"object": obj}})
+    return json.dumps(
+        {"id": "evt_1", "type": "customer.subscription.updated", "created": 1_750_000_000, "data": {"object": obj}}
+    )
+
+
+def item(item_id: str, price_id: str, **fields: object) -> dict[str, object]:
+    return {"id": item_id, "price": {"id": price_id}, "quantity": 1, **fields}
 
 
 def test_accepts_a_signature_it_can_reproduce() -> None:
@@ -117,7 +123,9 @@ def test_parses_a_subscription_created_event() -> None:
     assert parsed.event_reference == "evt_1"
     assert parsed.customer_reference == "cus_1"
     assert parsed.subscription_reference == "sub_1"
-    assert parsed.price_reference == "price_1"
+    assert [(i.item_reference, i.price_reference, i.quantity) for i in parsed.items] == [("si_1", "price_1", 1)]
+    assert parsed.provider_event_created_at == 1_750_000_000
+    assert parsed.checkout_correlation is None
     assert parsed.status == "active"
     # Upper-cased, because every currency column in this schema is `^[A-Z]{3}$`.
     assert parsed.currency == "CAD"
@@ -127,57 +135,98 @@ def test_parses_a_subscription_created_event() -> None:
     assert parsed.canceled_at is None
 
 
-def test_reads_the_period_from_the_subscription_item_when_absent_on_the_subscription() -> None:
-    # The API-version defensiveness the module docstring describes: 2025-03-31 ("basil") and
-    # later carry the period on the item, not the subscription.
-    body = json.dumps(
-        {
-            "id": "evt_4",
-            "type": "customer.subscription.created",
-            "data": {
-                "object": {
-                    "id": "sub_2",
-                    "customer": "cus_2",
-                    "status": "trialing",
-                    "currency": "usd",
-                    "cancel_at_period_end": False,
-                    "canceled_at": None,
-                    "items": {
-                        "data": [
-                            {
-                                "price": {"id": "price_2"},
-                                "current_period_start": 1_690_000_000,
-                                "current_period_end": 1_692_600_000,
-                            }
-                        ]
-                    },
-                }
-            },
-        }
-    )
+def parse_body(body: str) -> SubscriptionEvent:
     parsed = parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW)
-
     assert isinstance(parsed, SubscriptionEvent)
-    assert parsed.current_period_start == 1_690_000_000
-    assert parsed.current_period_end == 1_692_600_000
+    return parsed
 
 
-def test_a_subscription_missing_a_price_is_unreadable_rather_than_guessed() -> None:
-    body = json.dumps(
-        {
-            "id": "evt_5",
-            "type": "customer.subscription.updated",
-            "data": {
-                "object": {
-                    "id": "sub_3",
-                    "customer": "cus_3",
-                    "status": "active",
-                    "currency": "cad",
-                    "items": {"data": []},
-                }
-            },
-        }
+def test_keeps_each_items_own_period_and_never_borrows_the_first_items_for_the_subscription() -> None:
+    # The API-version defensiveness the module docstring describes: 2025-03-31 ("basil") and
+    # later carry the period on the item, not the subscription. Which item anchors the parent's
+    # billing period is the database's decision, so the parser reports the subscription-level
+    # period as absent rather than lifting `items[0]`'s into it.
+    body = subscription_body(
+        current_period_start=None,
+        current_period_end=None,
+        items={
+            "data": [
+                item("si_base", "price_base", current_period_start=1_690_000_000, current_period_end=1_692_600_000),
+                item("si_addon", "price_addon", current_period_start=1_691_000_000, current_period_end=1_693_600_000),
+            ]
+        },
     )
+    parsed = parse_body(body)
+
+    assert parsed.current_period_start is None
+    assert parsed.current_period_end is None
+    assert [(i.item_reference, i.current_period_start, i.current_period_end) for i in parsed.items] == [
+        ("si_base", 1_690_000_000, 1_692_600_000),
+        ("si_addon", 1_691_000_000, 1_693_600_000),
+    ]
+
+
+def test_reads_every_recurring_item_not_just_the_first() -> None:
+    body = subscription_body(
+        items={"data": [item("si_a", "price_a"), item("si_b", "price_b"), item("si_c", "price_c")]}
+    )
+    parsed = parse_body(body)
+
+    assert [i.item_reference for i in parsed.items] == ["si_a", "si_b", "si_c"]
+    assert [i.price_reference for i in parsed.items] == ["price_a", "price_b", "price_c"]
+    assert parsed.item_payload[1] == {
+        "item_reference": "si_b",
+        "price_reference": "price_b",
+        "quantity": 1,
+        "current_period_start": None,
+        "current_period_end": None,
+    }
+
+
+def test_retains_the_quantity_the_provider_reports_and_never_defaults_one() -> None:
+    body = subscription_body(
+        items={"data": [item("si_a", "price_a", quantity=3), {"id": "si_m", "price": {"id": "price_m"}}]}
+    )
+    parsed = parse_body(body)
+
+    assert [i.quantity for i in parsed.items] == [3, None]
+
+
+def test_reads_the_checkout_correlation_from_the_subscription_metadata() -> None:
+    body = subscription_body(metadata={"gildops_checkout_session_id": "8c3f0a52-0000-4000-8000-000000000001"})
+    assert parse_body(body).checkout_correlation == "8c3f0a52-0000-4000-8000-000000000001"
+
+    for absent in ({}, {"gildops_checkout_session_id": ""}, {"gildops_checkout_session_id": 7}, None):
+        assert parse_body(subscription_body(metadata=absent)).checkout_correlation is None
+
+
+def test_does_not_fabricate_an_item_for_a_one_time_checkout_line() -> None:
+    # Checkout in subscription mode also bills a one-time line on the first invoice; the provider
+    # does not list it as a subscription item, and nothing here may invent one.
+    body = subscription_body(items={"data": [item("si_base", "price_base")]})
+    parsed = parse_body(body)
+
+    assert [i.price_reference for i in parsed.items] == ["price_base"]
+
+
+def test_a_malformed_or_missing_item_is_unreadable_rather_than_guessed() -> None:
+    cases = [
+        {"data": []},
+        {"data": [{"id": "si_x", "price": {}}]},
+        {"data": [{"price": {"id": "price_x"}}]},
+        {"data": [item("si_ok", "price_ok"), {"id": "si_bad"}]},
+        {"data": ["not an object"]},
+    ]
+    for items in cases:
+        body = subscription_body(items=items)
+        assert parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW) is None
+
+
+def test_an_event_without_the_providers_occurrence_time_cannot_be_ordered_and_is_unreadable() -> None:
+    event = json.loads(subscription_body())
+    del event["created"]
+    body = json.dumps(event)
+
     assert parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW) is None
 
 

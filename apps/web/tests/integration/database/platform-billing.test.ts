@@ -13,6 +13,7 @@ import { beginPlatformBillingPortalSession } from '@/lib/domain/platform-billing
 import { getOrganizationSubscription } from '@/lib/domain/platform-billing/subscriptions';
 import { provisionAgreementPlanPrice, provisionPlanPrice } from '@/lib/domain/platform-billing/provisioning';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { applySubscriptionEvent } from '@/tests/support/subscription-events';
 
 /**
  * GOLD charging the organization for its own subscription — the opposite money direction from
@@ -1048,46 +1049,20 @@ describe('the webhook: applying subscription events (called exactly as platform_
     await seedCustomer(org.organizationId, customerReference, org.userId);
 
     const subscriptionReference = `sub_${randomUUID().slice(0, 12)}`;
-    const priceReference = `price_${randomUUID().slice(0, 8)}`;
+    const item = { itemReference: `si_${randomUUID().slice(0, 8)}`, priceReference: `price_${randomUUID().slice(0, 8)}` };
 
-    await pg.query(
-      `select public.apply_platform_subscription_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-      [
-        `evt_${randomUUID()}`,
-        'customer.subscription.created',
-        customerReference,
-        subscriptionReference,
-        priceReference,
-        'trialing',
-        'CAD',
-        null,
-        null,
-        false,
-        null,
-        'stripe',
-      ],
-    );
+    await applySubscriptionEvent(pg, {
+      type: 'customer.subscription.created', customerReference, subscriptionReference, status: 'trialing',
+      createdAt: 1_800_000_001, items: [item],
+    });
 
     let subscription = await getOrganizationSubscription(org.db, { organizationId: org.organizationId });
     expect(subscription?.status).toBe('trialing');
 
-    await pg.query(
-      `select public.apply_platform_subscription_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-      [
-        `evt_${randomUUID()}`,
-        'customer.subscription.updated',
-        customerReference,
-        subscriptionReference,
-        priceReference,
-        'active',
-        'CAD',
-        1_700_000_000,
-        1_702_600_000,
-        false,
-        null,
-        'stripe',
-      ],
-    );
+    await applySubscriptionEvent(pg, {
+      customerReference, subscriptionReference, status: 'active', periodStart: 1_700_000_000, periodEnd: 1_702_600_000,
+      createdAt: 1_800_000_002, items: [item],
+    });
 
     subscription = await getOrganizationSubscription(org.db, { organizationId: org.organizationId });
     expect(subscription?.status).toBe('active');
@@ -1100,83 +1075,49 @@ describe('the webhook: applying subscription events (called exactly as platform_
       .eq('organization_id', org.organizationId);
     expect(crossRead.data ?? []).toEqual([]);
 
-    await pg.query(
-      `select public.apply_platform_subscription_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-      [
-        `evt_${randomUUID()}`,
-        'customer.subscription.deleted',
-        customerReference,
-        subscriptionReference,
-        priceReference,
-        'canceled',
-        'CAD',
-        null,
-        null,
-        false,
-        null,
-        'stripe',
-      ],
-    );
+    await applySubscriptionEvent(pg, {
+      type: 'customer.subscription.deleted', customerReference, subscriptionReference, status: 'canceled',
+      createdAt: 1_800_000_003, items: [item],
+    });
 
+    // Kept as history, ended: the row's event clock is what stops a delayed event resurrecting it.
     subscription = await getOrganizationSubscription(org.db, { organizationId: org.organizationId });
-    expect(subscription).toBeNull();
+    expect(subscription?.status).toBe('canceled');
+    expect(subscription?.canceledAt).toBeTruthy();
   });
 
   it('is idempotent — the same event reference delivered twice applies once', async () => {
     const org = await newTenant('webhook-idempotent');
     const customerReference = `cus_${randomUUID().slice(0, 12)}`;
     await seedCustomer(org.organizationId, customerReference, org.userId);
-    const subscriptionReference = `sub_${randomUUID().slice(0, 12)}`;
-    const priceReference = `price_${randomUUID().slice(0, 8)}`;
-    const eventReference = `evt_${randomUUID()}`;
-
-    const args = [
-      eventReference,
-      'customer.subscription.updated',
+    const event = {
+      eventReference: `evt_${randomUUID()}`,
       customerReference,
-      subscriptionReference,
-      priceReference,
-      'active',
-      'CAD',
-      null,
-      null,
-      false,
-      null,
-      'stripe',
-    ];
-    await pg.query(`select public.apply_platform_subscription_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, args);
+      subscriptionReference: `sub_${randomUUID().slice(0, 12)}`,
+      createdAt: 1_800_000_010,
+      items: [{ itemReference: 'si_one', priceReference: `price_${randomUUID().slice(0, 8)}` }],
+    };
+    expect(await applySubscriptionEvent(pg, { ...event, status: 'active' })).toBe(org.organizationId);
 
     // Same event reference, a different (wrong) status — proves the second delivery is a no-op
     // rather than reapplying, not merely that it doesn't error.
-    const replay = [...args];
-    replay[5] = 'canceled';
-    await pg.query(`select public.apply_platform_subscription_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, replay);
+    expect(await applySubscriptionEvent(pg, { ...event, status: 'canceled' })).toBeNull();
 
     const subscription = await getOrganizationSubscription(org.db, { organizationId: org.organizationId });
     expect(subscription?.status).toBe('active');
   });
 
   it('safely ignores an event about a customer this platform never provisioned', async () => {
-    const { rows } = await pg.query(
-      `select public.apply_platform_subscription_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) as result`,
-      [
-        `evt_${randomUUID()}`,
-        'customer.subscription.updated',
-        `cus_unknown_${randomUUID().slice(0, 8)}`,
-        `sub_${randomUUID().slice(0, 8)}`,
-        `price_${randomUUID().slice(0, 8)}`,
-        'active',
-        'CAD',
-        null,
-        null,
-        false,
-        null,
-        'stripe',
-      ],
-    );
-    expect(rows[0].result).toBeNull();
+    const result = await applySubscriptionEvent(pg, {
+      eventReference: `evt_unknown_${randomUUID()}`,
+      customerReference: `cus_unknown_${randomUUID().slice(0, 8)}`,
+      subscriptionReference: `sub_${randomUUID().slice(0, 8)}`,
+      createdAt: 1_800_000_020,
+      items: [{ priceReference: `price_${randomUUID().slice(0, 8)}` }],
+    });
+    expect(result).toBeNull();
 
-    const ledger = await pg.query(`select count(*)::int as count from public.platform_billing_webhook_events where event_reference like 'evt_%unknown%'`);
+    const ledger = await pg.query(`select count(*)::int as count from public.platform_billing_webhook_events where event_reference like 'evt_unknown_%'`);
     expect(ledger.rows[0].count).toBe(0);
   });
 
@@ -1188,20 +1129,12 @@ describe('the webhook: applying subscription events (called exactly as platform_
     await seedCustomer(orgB.organizationId, collision, orgB.userId);
 
     await expect(
-      pg.query(`select public.apply_platform_subscription_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [
-        `evt_${randomUUID()}`,
-        'customer.subscription.updated',
-        collision,
-        `sub_${randomUUID().slice(0, 8)}`,
-        `price_${randomUUID().slice(0, 8)}`,
-        'active',
-        'CAD',
-        null,
-        null,
-        false,
-        null,
-        'stripe',
-      ]),
+      applySubscriptionEvent(pg, {
+        customerReference: collision,
+        subscriptionReference: `sub_${randomUUID().slice(0, 8)}`,
+        createdAt: 1_800_000_030,
+        items: [{ priceReference: `price_${randomUUID().slice(0, 8)}` }],
+      }),
     ).rejects.toThrow();
   });
 
@@ -1221,9 +1154,11 @@ describe('the webhook: applying subscription events (called exactly as platform_
   });
 
   it('nobody but the webhook role holds execute on either function', async () => {
+    const signature =
+      'public.apply_platform_subscription_event(text,text,text,text,text,text,bigint,bigint,boolean,bigint,bigint,jsonb,text,text)';
     const { rows } = await pg.query(
-      `select has_function_privilege('authenticated', 'public.apply_platform_subscription_event(text,text,text,text,text,text,text,bigint,bigint,boolean,bigint,text)', 'execute') as authenticated_apply,
-              has_function_privilege('platform_billing_webhook', 'public.apply_platform_subscription_event(text,text,text,text,text,text,text,bigint,bigint,boolean,bigint,text)', 'execute') as webhook_apply`,
+      `select has_function_privilege('authenticated', '${signature}', 'execute') as authenticated_apply,
+              has_function_privilege('platform_billing_webhook', '${signature}', 'execute') as webhook_apply`,
     );
     expect(rows[0].authenticated_apply).toBe(false);
     expect(rows[0].webhook_apply).toBe(true);

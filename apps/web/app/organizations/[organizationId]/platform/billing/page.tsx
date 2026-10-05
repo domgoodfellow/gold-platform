@@ -12,10 +12,16 @@ import { getDb } from '@/lib/db/server';
 import { platformBillingEnvironment, platformBillingProvider } from '@/lib/adapters/platform-billing';
 import { getOrganizationServiceAccess } from '@/lib/domain/platform-billing/service-access';
 import { getTenant } from '@/lib/domain/platform/tenants';
+import { listPlans } from '@/lib/domain/catalogue/plans';
 import {
   listOrganizationsRequiringAttention,
   listOrganizationSubscriptions,
+  listSubscriptionItems,
 } from '@/lib/domain/platform-billing/subscriptions';
+import {
+  describeReconciliationIssue,
+  RECONCILIATION_STATE_LABEL,
+} from '@/lib/domain/platform-billing/reconciliation';
 import { listRecentPlatformBillingEvents } from '@/lib/domain/platform-billing/webhook-events';
 
 export const dynamic = 'force-dynamic';
@@ -32,11 +38,22 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
   const db = await getDb();
   const provider = await platformBillingProvider();
 
-  const [subscriptions, attention, events] = await Promise.all([
+  const [subscriptions, attention, events, plans] = await Promise.all([
     listOrganizationSubscriptions(db),
     listOrganizationsRequiringAttention(db),
     listRecentPlatformBillingEvents(db, { limit: 20 }),
+    listPlans(db),
   ]);
+  // One read for every subscription's items, never one per row.
+  const items = await listSubscriptionItems(db, subscriptions);
+  const planLabel = new Map(plans.map((plan) => [plan.id, plan.label]));
+  const itemsOf = (s: (typeof subscriptions)[number]) =>
+    items.filter(
+      (item) => item.organizationId === s.organizationId && item.environment === s.environment && item.subscriptionReference === s.subscriptionReference,
+    );
+  const needsReconciliation = subscriptions.filter(
+    (s) => s.reconciliationState === 'mismatch' || s.reconciliationState === 'ambiguous',
+  );
 
   const organizationIds = [...new Set(subscriptions.map((s) => s.organizationId))];
   const tenants = await Promise.all(organizationIds.map((id) => getTenant(db, id)));
@@ -80,6 +97,7 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
       <WidgetGrid className="mt-6">
         <Widget title="Active or trialing" value={counts.active} />
         <Widget title="Requiring attention" value={counts.attention} />
+        <Widget title="Provider mismatch" value={needsReconciliation.length} />
         <Widget title="Total subscriptions recorded" value={counts.total} />
       </WidgetGrid>
 
@@ -151,9 +169,80 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
                 </>
               ),
             },
+            {
+              key: 'reconciliation',
+              header: 'Provider vs checkout',
+              cell: (s) => (
+                <Badge tone={s.reconciliationState === 'matched' ? 'success' : 'neutral'}>
+                  {RECONCILIATION_STATE_LABEL[s.reconciliationState]}
+                </Badge>
+              ),
+            },
+            {
+              key: 'items',
+              header: 'Active items',
+              cell: (s) => itemsOf(s).filter((item) => item.active).length,
+            },
+            {
+              key: 'checkout',
+              header: 'Checkout',
+              cell: (s) => (s.checkoutSessionId ? 'Linked' : 'Not linked'),
+            },
+            {
+              key: 'lastEvent',
+              header: 'Last provider event',
+              cell: (s) => (s.lastProviderEventAt ? new Date(s.lastProviderEventAt).toLocaleString() : '—'),
+            },
           ]}
         />
       </div>
+
+      <SectionHeading className="mt-8">Provider items</SectionHeading>
+      <Hint className="mt-1">
+        What the billing provider says is on each subscription. This is not what GildOps sold and not what is
+        entitled — a difference is evidence to repair, never an automatic change.
+      </Hint>
+      {subscriptions.length === 0 ? (
+        <EmptyState className="mt-2">No provider subscription recorded yet.</EmptyState>
+      ) : (
+        <div className="mt-2 space-y-6">
+          {subscriptions.map((s) => (
+            <div key={`${s.organizationId}:${s.environment}`} className="text-sm">
+              <p className="font-medium">
+                {nameById.get(s.organizationId) ?? s.organizationId}{' '}
+                <span className="font-normal text-muted">
+                  · {RECONCILIATION_STATE_LABEL[s.reconciliationState]} ·{' '}
+                  {s.baseItemReference ? 'base Plan identified' : 'no base Plan item identified'}
+                </span>
+              </p>
+              {s.reconciliationIssues.length > 0 ? (
+                <ul className="mt-1 list-disc pl-5 text-muted">
+                  {s.reconciliationIssues.map((issue, index) => (
+                    <li key={`${issue.code}-${index}`}>{describeReconciliationIssue(issue)}</li>
+                  ))}
+                </ul>
+              ) : null}
+              <DividedList className="mt-1">
+                {itemsOf(s).map((item) => (
+                  <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
+                    <span>
+                      {item.canonicalSource?.planId
+                        ? (planLabel.get(item.canonicalSource.planId) ?? 'Plan')
+                        : 'Unmapped provider price'}
+                      {item.canonicalSource?.domain === 'catalogue.plan_agreement' ? (
+                        <span className="text-muted"> · negotiated</span>
+                      ) : null}
+                    </span>
+                    <span className="font-mono text-xs text-muted">{item.providerPriceReference}</span>
+                    <span className="tabular-nums">× {item.quantity ?? '—'}</span>
+                    <Badge tone={item.active ? 'success' : 'neutral'}>{item.active ? 'Active' : 'Removed'}</Badge>
+                  </li>
+                ))}
+              </DividedList>
+            </div>
+          ))}
+        </div>
+      )}
 
       <SectionHeading className="mt-8">Recent webhook deliveries</SectionHeading>
       {events.length === 0 ? (
@@ -164,7 +253,13 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
             <li key={event.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
               <span className="font-mono text-xs">{event.eventType}</span>
               <span className="text-muted">{nameById.get(event.organizationId ?? '') ?? event.organizationId ?? '—'}</span>
-              <span className="text-xs text-muted">{new Date(event.receivedAt).toLocaleString()}</span>
+              {event.application && event.application !== 'applied' ? (
+                <Badge>{event.application === 'stale' ? 'Older than state held — ignored' : 'Same instant, conflicting — not applied'}</Badge>
+              ) : null}
+              <span className="text-xs text-muted">
+                {event.providerEventAt ? `provider ${new Date(event.providerEventAt).toLocaleString()} · ` : ''}
+                received {new Date(event.receivedAt).toLocaleString()}
+              </span>
             </li>
           ))}
         </DividedList>

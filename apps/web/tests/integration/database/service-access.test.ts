@@ -13,6 +13,7 @@ import {
 } from '@/lib/route/organization';
 import { createCustomerAction } from '@/app/organizations/[organizationId]/customers/actions';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { applySubscriptionEvent } from '@/tests/support/subscription-events';
 
 /**
  * Commercial service access end to end, against real RLS: the guard every page and action runs,
@@ -101,21 +102,18 @@ async function subscriptionEvent(
   type: 'customer.subscription.created' | 'customer.subscription.updated' | 'customer.subscription.deleted',
   status: string,
 ) {
-  await pg.query(`select public.apply_platform_subscription_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [
-    `evt_${randomUUID()}`,
+  // The provider's clock moves forward by one second per event, so each is newer than the last.
+  await applySubscriptionEvent(pg, {
     type,
     customerReference,
     subscriptionReference,
-    `price_${randomUUID().slice(0, 8)}`,
     status,
-    'CAD',
-    null,
-    null,
-    false,
-    null,
-    'stripe',
-  ]);
+    createdAt: (providerClock += 1),
+    items: [{ itemReference: `si_${subscriptionReference}`, priceReference: `price_${randomUUID().slice(0, 8)}` }],
+  });
 }
+
+let providerClock = 1_800_000_000;
 
 async function seedCustomerReference(tenant: Tenant): Promise<string> {
   const reference = `cus_${randomUUID().slice(0, 12)}`;

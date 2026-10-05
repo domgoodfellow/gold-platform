@@ -24,7 +24,7 @@ export type CheckoutSessionRequest = {
   customerId: string;
   /** One or more provider prices -- a base Plan plus any Add-ons, resolved entirely server-side (work order C §7). */
   lineItems: CheckoutLineItemRequest[];
-  /** Our own correlation token, handed to the provider as an idempotency key. */
+  /** Our own correlation token (`platform_billing_checkout_sessions.id`): the provider's idempotency key, and carried onto the subscription it creates so the webhook can correlate that subscription back to this checkout. */
   requestId: string;
   organizationId: string;
   successUrl: string;

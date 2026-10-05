@@ -82,6 +82,32 @@ function PurchaseReview({ quote }: { quote: PurchaseQuote }) {
 }
 
 /**
+ * What the billing provider currently says this business is paying for. Only items GildOps can name
+ * are named; anything else is "requires review" and never a raw provider id. Confirmation of the
+ * subscription is not confirmation of payment, so nothing here says paid.
+ */
+function SubscriptionPackageSummary({ summary }: { summary: NonNullable<PlanUsageModel['subscriptionPackage']> }) {
+  return (
+    <div className="mt-2">
+      {summary.basePlanLabel ? <p>Plan: <span className="font-medium">{summary.basePlanLabel}</span></p> : null}
+      {summary.addons.length > 0 ? (
+        <p className="mt-1 text-muted">
+          Recurring Add-ons:{' '}
+          {summary.addons.map((addon) => (addon.quantity && addon.quantity > 1 ? `${addon.label} × ${addon.quantity}` : addon.label)).join(', ')}
+        </p>
+      ) : null}
+      {summary.itemsNeedingReview > 0 ? (
+        <p className="mt-1 text-muted">
+          {summary.itemsNeedingReview === 1
+            ? 'One billing item requires review.'
+            : `${summary.itemsNeedingReview} billing items require review.`}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * What this business is entitled to use, what GOLD has recorded selling it, what it used, and
  * what that cost it — never what it cost GOLD, and never a margin (`constraints.md` D43). A
  * detail route under Settings, so it writes its own heading rather than
@@ -99,7 +125,7 @@ export function PlanUsageScreen({
   checkoutReturn?: 'success' | 'canceled' | null;
 }) {
   const { terms, usage, account, basePlan, addonPlans, allowances, meterLabel, productLabel,
-    billingProvider, subscription, subscribablePrice, quote, canManageBilling } = model;
+    billingProvider, subscription, subscriptionPackage, quote, canSubscribe, canManageBilling } = model;
 
   return (
     <SettingsPageFrame>
@@ -142,12 +168,14 @@ export function PlanUsageScreen({
           {subscription ? (
             <div className="mt-2 text-sm">
               <p>
+                {['active', 'trialing'].includes(subscription.status) ? 'Subscription confirmed · ' : ''}
                 Status: <span className="font-medium">{subscription.status.replace('_', ' ')}</span>
                 {subscription.currentPeriodEnd
                   ? ` · renews ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
                   : ''}
                 {subscription.cancelAtPeriodEnd ? ' · canceling at period end' : ''}
               </p>
+              {subscriptionPackage ? <SubscriptionPackageSummary summary={subscriptionPackage} /> : null}
               {canManageBilling ? (
                 <div className="mt-3">
                   <ManageBillingButton organizationId={organizationId} />
@@ -156,20 +184,22 @@ export function PlanUsageScreen({
                 <Hint className="mt-2">Only this business’s billing manager can manage billing.</Hint>
               )}
             </div>
-          ) : basePlan && subscribablePrice ? (
+          ) : basePlan && quote ? (
             <div className="mt-2 text-sm">
               <p className="text-muted">Not yet subscribed.</p>
-              {quote ? <PurchaseReview quote={quote} /> : null}
-              {canManageBilling ? (
+              {canSubscribe ? <PurchaseReview quote={quote} /> : null}
+              {!canSubscribe ? (
+                <EmptyState className="mt-2">
+                  {quote.blockers[0]?.message ?? `${basePlan.label} cannot be bought yet.`}
+                </EmptyState>
+              ) : canManageBilling ? (
                 <div className="mt-3">
-                  {quote ? (
-                    <SubscribeButton
-                      organizationId={organizationId}
-                      planKey={basePlan.key}
-                      planLabel={basePlan.label}
-                      quoteVersion={quote.reviewVersion}
-                    />
-                  ) : null}
+                  <SubscribeButton
+                    organizationId={organizationId}
+                    planKey={basePlan.key}
+                    planLabel={basePlan.label}
+                    quoteVersion={quote.reviewVersion}
+                  />
                 </div>
               ) : (
                 <Hint className="mt-2">Only this business’s billing manager can start a subscription.</Hint>

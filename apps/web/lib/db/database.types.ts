@@ -4998,59 +4998,175 @@ export type Database = {
           },
         ]
       }
+      organization_platform_subscription_items: {
+        Row: {
+          active: boolean
+          canonical_source_domain: string | null
+          canonical_source_record_id: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          environment: string
+          first_observed_at: string
+          id: string
+          last_observed_at: string
+          last_provider_event_created_at: string
+          last_provider_event_reference: string
+          organization_id: string
+          plan_id: string | null
+          provider: string
+          provider_item_reference: string
+          provider_price_reference: string
+          quantity: number | null
+          removed_at: string | null
+          subscription_reference: string
+        }
+        Insert: {
+          active?: boolean
+          canonical_source_domain?: string | null
+          canonical_source_record_id?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment: string
+          first_observed_at?: string
+          id?: string
+          last_observed_at?: string
+          last_provider_event_created_at: string
+          last_provider_event_reference: string
+          organization_id: string
+          plan_id?: string | null
+          provider?: string
+          provider_item_reference: string
+          provider_price_reference: string
+          quantity?: number | null
+          removed_at?: string | null
+          subscription_reference: string
+        }
+        Update: {
+          active?: boolean
+          canonical_source_domain?: string | null
+          canonical_source_record_id?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          first_observed_at?: string
+          id?: string
+          last_observed_at?: string
+          last_provider_event_created_at?: string
+          last_provider_event_reference?: string
+          organization_id?: string
+          plan_id?: string | null
+          provider?: string
+          provider_item_reference?: string
+          provider_price_reference?: string
+          quantity?: number | null
+          removed_at?: string | null
+          subscription_reference?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_platform_subscription_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_platform_subscription_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_platform_subscription_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_platform_subscriptions: {
         Row: {
+          base_item_reference: string | null
           cancel_at_period_end: boolean
           canceled_at: string | null
+          checkout_session_id: string | null
           created_at: string
           currency: string
           current_period_end: string | null
           current_period_start: string | null
           environment: string
           id: string
+          last_provider_event_created_at: string | null
+          last_provider_event_reference: string | null
           organization_id: string
           plan_id: string | null
           price_reference: string
           provider: string
+          reconciled_at: string | null
+          reconciliation_detail: Json
+          reconciliation_state: string
           status: string
           subscription_reference: string
           updated_at: string
         }
         Insert: {
+          base_item_reference?: string | null
           cancel_at_period_end?: boolean
           canceled_at?: string | null
+          checkout_session_id?: string | null
           created_at?: string
           currency: string
           current_period_end?: string | null
           current_period_start?: string | null
           environment: string
           id?: string
+          last_provider_event_created_at?: string | null
+          last_provider_event_reference?: string | null
           organization_id: string
           plan_id?: string | null
           price_reference: string
           provider?: string
+          reconciled_at?: string | null
+          reconciliation_detail?: Json
+          reconciliation_state?: string
           status: string
           subscription_reference: string
           updated_at?: string
         }
         Update: {
+          base_item_reference?: string | null
           cancel_at_period_end?: boolean
           canceled_at?: string | null
+          checkout_session_id?: string | null
           created_at?: string
           currency?: string
           current_period_end?: string | null
           current_period_start?: string | null
           environment?: string
           id?: string
+          last_provider_event_created_at?: string | null
+          last_provider_event_reference?: string | null
           organization_id?: string
           plan_id?: string | null
           price_reference?: string
           provider?: string
+          reconciled_at?: string | null
+          reconciliation_detail?: Json
+          reconciliation_state?: string
           status?: string
           subscription_reference?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "organization_platform_subscriptions_checkout_fk"
+            columns: ["organization_id", "checkout_session_id"]
+            isOneToOne: false
+            referencedRelation: "platform_billing_checkout_sessions"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "organization_platform_subscriptions_organization_id_fkey"
             columns: ["organization_id"]
@@ -5704,9 +5820,14 @@ export type Database = {
           id: string
           organization_id: string
           plan_price_id: string | null
+          provider_confirmed_at: string | null
+          provider_confirmed_event_reference: string | null
           provider_reference: string | null
+          provider_subscription_reference: string | null
           quote_snapshot: Json | null
           quote_version: string | null
+          reconciliation_detail: Json | null
+          reconciliation_state: string | null
           requested_at: string
           requested_by: string
         }
@@ -5716,9 +5837,14 @@ export type Database = {
           id?: string
           organization_id: string
           plan_price_id?: string | null
+          provider_confirmed_at?: string | null
+          provider_confirmed_event_reference?: string | null
           provider_reference?: string | null
+          provider_subscription_reference?: string | null
           quote_snapshot?: Json | null
           quote_version?: string | null
+          reconciliation_detail?: Json | null
+          reconciliation_state?: string | null
           requested_at?: string
           requested_by: string
         }
@@ -5728,9 +5854,14 @@ export type Database = {
           id?: string
           organization_id?: string
           plan_price_id?: string | null
+          provider_confirmed_at?: string | null
+          provider_confirmed_event_reference?: string | null
           provider_reference?: string | null
+          provider_subscription_reference?: string | null
           quote_snapshot?: Json | null
           quote_version?: string | null
+          reconciliation_detail?: Json | null
+          reconciliation_state?: string | null
           requested_at?: string
           requested_by?: string
         }
@@ -5805,31 +5936,40 @@ export type Database = {
       }
       platform_billing_webhook_events: {
         Row: {
+          application: string | null
           environment: string
           event_reference: string
           event_type: string
           id: string
           organization_id: string | null
           provider: string
+          provider_event_created_at: string | null
           received_at: string
+          reconciliation_state: string | null
         }
         Insert: {
+          application?: string | null
           environment: string
           event_reference: string
           event_type: string
           id?: string
           organization_id?: string | null
           provider?: string
+          provider_event_created_at?: string | null
           received_at?: string
+          reconciliation_state?: string | null
         }
         Update: {
+          application?: string | null
           environment?: string
           event_reference?: string
           event_type?: string
           id?: string
           organization_id?: string | null
           provider?: string
+          provider_event_created_at?: string | null
           received_at?: string
+          reconciliation_state?: string | null
         }
         Relationships: [
           {
@@ -9905,14 +10045,16 @@ export type Database = {
         Args: {
           p_cancel_at_period_end: boolean
           p_canceled_at: number
+          p_checkout_correlation: string
           p_currency: string
           p_current_period_end: number
           p_current_period_start: number
           p_customer_reference: string
           p_event_reference: string
           p_event_type: string
-          p_price_reference: string
+          p_items: Json
           p_provider?: string
+          p_provider_event_created_at: number
           p_status: string
           p_subscription_reference: string
         }

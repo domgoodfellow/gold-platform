@@ -1713,6 +1713,15 @@
       ],
       "note": "Stripe HTTP is stubbed with fetch spies; not a provider contract."
     },
+    "apps/web/tests/integration/database/platform-billing-subscription-items.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "platform",
+        "providers"
+      ],
+      "note": "The webhook's database function is called directly; checkout's one provider call is stubbed."
+    },
     "apps/web/tests/integration/database/platform-billing-quote.test.ts": {
       "category": "database-integration",
       "concerns": [

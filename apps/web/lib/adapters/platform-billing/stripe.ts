@@ -104,6 +104,11 @@ export function stripePlatformBillingProvider(config: { secret: string }): Platf
           // never trusted as payment proof, Phase 7) handed back.
           client_reference_id: input.organizationId,
           'metadata[organization_id]': input.organizationId,
+          // The same correlation token, put on the *subscription* this session creates so that
+          // every later subscription event carries it. The webhook reads it as correlation to the
+          // checkout snapshot; which organization an event is about still comes from the provider
+          // Customer on file, never from this.
+          'subscription_data[metadata][gildops_checkout_session_id]': input.requestId,
         },
       );
 

@@ -5,6 +5,28 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A subscription is its items, tied to the checkout that bought it, and an older event never wins
+
+The billing provider's subscription is now recorded as what it is — several recurring items, not one price. Each item
+is kept with its quantity and its own period, and is traced to the exact standard price or negotiated agreement it
+came from; a price GildOps does not recognise is kept and flagged rather than dropped. Checkout now puts its own id on
+the subscription it creates, so when the provider confirms the subscription GildOps can say whether the recurring items
+match what the business reviewed (matched, mismatch, no checkout on record, or ambiguous). A one-time fee is correctly
+not expected on the subscription. The id is only a pointer: which business an event belongs to still comes from the
+provider customer, and an id naming another business's checkout is refused.
+
+Events are now ordered by when the provider says they happened, not when they arrived. A delayed older event is
+recorded and changes nothing — it cannot bring back a removed Add-on, undo a cancellation, or restore an old status. Two
+conflicting events at the same instant keep the state already held and flag the subscription for staff. A cancelled
+subscription is kept as history instead of deleted, so that rule can hold. The billing period follows the base Plan's
+item, not whichever item the provider listed first.
+
+Plan & usage shows the confirmed Plan, its recurring Add-ons and the renewal date (an item GildOps cannot name reads
+"requires review", never a provider id), and offers Subscribe whenever the quote can be bought — including a Plan
+that exists only as a negotiated price, which previously never showed the button. The staff billing page shows the
+reconciliation, the items behind it and which events were ignored as stale. Confirming a subscription is not
+confirming payment; invoices and payments are not touched here.
+
 ### A call is one call, and a number says what it is for
 
 Calls now work the way the screens always claimed. A call is one thing however many telephones were on it:
