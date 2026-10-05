@@ -6,7 +6,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireAccessToken } from '@/lib/api/client';
 import { wrapUpCall } from '@/lib/api/voice';
 import { createCallOutcome } from '@/lib/domain/reception/outcomes';
-import { placeCall, recordCall } from '@/lib/domain/reception/calls';
+import { linkCallCustomer, recordCall } from '@/lib/domain/reception/calls';
 import { setCallingNumber } from '@/lib/domain/reception/telephony';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -55,31 +55,6 @@ export async function createOutcomeAction(
       // An unticked checkbox is absent from the payload rather than false.
       reached: formData.get('reached') !== null,
       position: Number(formData.get('position') ?? 0),
-    }),
-  );
-}
-
-/**
- * Ring somebody.
- *
- * The number is submitted rather than read from the customer here, because a business calls a
- * mobile today and a switchboard tomorrow and both belong to the same customer. Which numbers a
- * customer has is the customer's record; which one is being dialled is this call's fact.
- */
-export async function placeCallAction(
-  _previous: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
-  const customerId = String(formData.get('customerId') ?? '');
-
-  return attempt(organizationId, `/customers/${customerId}`, () =>
-    placeCall(db, {
-      organizationId,
-      customerId,
-      toNumber: String(formData.get('toNumber') ?? ''),
     }),
   );
 }
@@ -164,4 +139,23 @@ export async function setCallingNumberAction(
       number: String(formData.get('number') ?? ''),
     });
   });
+}
+
+/** Say who an unknown caller was. */
+export async function linkCallCustomerAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  const callId = String(formData.get('callId') ?? '');
+
+  return attempt(organizationId, `/calls/${callId}`, () =>
+    linkCallCustomer(db, {
+      organizationId,
+      callId,
+      customerId: String(formData.get('customerId') ?? ''),
+    }),
+  );
 }

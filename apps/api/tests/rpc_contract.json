@@ -20,13 +20,15 @@
       "sends": [
         "p_cancel_at_period_end",
         "p_canceled_at",
+        "p_checkout_correlation",
         "p_currency",
         "p_current_period_end",
         "p_current_period_start",
         "p_customer_reference",
         "p_event_reference",
         "p_event_type",
-        "p_price_reference",
+        "p_items",
+        "p_provider_event_created_at",
         "p_status",
         "p_subscription_reference"
       ]
@@ -214,6 +216,16 @@
         "p_status"
       ]
     },
+    "record_call_leg": {
+      "role": "voice_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_conference_name",
+        "p_external_id"
+      ]
+    },
     "record_call_outcome": {
       "role": "authenticated",
       "callers": [
@@ -225,8 +237,7 @@
         "p_duration_seconds",
         "p_note",
         "p_organization_id",
-        "p_outcome_id",
-        "p_status"
+        "p_outcome_id"
       ]
     },
     "record_custom_domain_registration": {
@@ -322,6 +333,19 @@
       ],
       "optional": [
         "p_rejection"
+      ]
+    },
+    "record_inbound_call": {
+      "role": "voice_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_external_id",
+        "p_from_number",
+        "p_payload",
+        "p_payload_hash",
+        "p_to_number"
       ]
     },
     "record_inbound_email": {

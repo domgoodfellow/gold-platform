@@ -51,8 +51,6 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
         outcome_id = outcome_id.strip() if isinstance(outcome_id, str) and outcome_id.strip() else None
         note = body.get("note") or ""
         duration_seconds = body.get("duration_seconds")
-        status = body.get("status")
-        status = status.strip() if isinstance(status, str) and status.strip() else None
 
         if not organization_id or not call_id:
             self._reply(400, {"error": "rejected"})
@@ -72,7 +70,6 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
                     outcome_id=outcome_id,
                     note=str(note).strip(),
                     duration_seconds=duration_seconds,
-                    status=status,
                 ),
             )
         except DomainError as failure:

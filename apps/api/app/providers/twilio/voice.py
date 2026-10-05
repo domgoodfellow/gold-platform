@@ -103,11 +103,33 @@ def _int_or_none(value: str | None) -> int | None:
     return parsed if parsed >= 0 else None
 
 
+# Who is in the room, which the carrier reports as people join and leave it. Every other
+# conference event (the room starting, ending, somebody muted) says nothing about a leg.
+_CONFERENCE_EVENT = {
+    "participant-join": "in_progress",
+    "participant-leave": "completed",
+}
+
+
 def status_report(params: dict[str, str]) -> CallReport | None:
-    """A progress callback, as a report. None when it names no call."""
+    """A progress callback, as a report. None when it names no leg this platform tracks."""
     external_id = (params.get("CallSid") or "").strip()
     if not external_id:
         return None
+
+    event = (params.get("StatusCallbackEvent") or "").strip().lower()
+    if event:
+        status = _CONFERENCE_EVENT.get(event)
+        if status is None:
+            return None
+        return CallReport(
+            external_id=external_id,
+            source="status",
+            raw_status=event,
+            status=status,
+            duration_seconds=None,
+            recording_url=None,
+        )
 
     raw = params.get("CallStatus")
     return CallReport(
@@ -158,7 +180,14 @@ def payload_hash(params: dict[str, str]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def conference_twiml(*, name: str, start_on_enter: bool, end_on_exit: bool, caller_id: str | None = None) -> str:
+def conference_twiml(
+    *,
+    name: str,
+    start_on_enter: bool,
+    end_on_exit: bool,
+    caller_id: str | None = None,
+    status_callback: str | None = None,
+) -> str:
     """Put whoever is calling this URL into a named room.
 
     **This is D38 in eleven lines of XML.** Both legs of every call join a conference rather
@@ -173,6 +202,14 @@ def conference_twiml(*, name: str, start_on_enter: bool, end_on_exit: bool, call
         f'startConferenceOnEnter="{"true" if start_on_enter else "false"}"',
         f'endConferenceOnExit="{"true" if end_on_exit else "false"}"',
     ]
+    if status_callback:
+        # Who joins and who leaves is how the platform learns a call is over: a leg ending says
+        # nothing about the room, but the last person leaving does.
+        attributes += [
+            f'statusCallback="{escape(status_callback, {chr(34): "&quot;"})}"',
+            'statusCallbackEvent="join leave"',
+            'statusCallbackMethod="POST"',
+        ]
     dial_attributes = f' callerId="{escape(caller_id, {chr(34): "&quot;"})}"' if caller_id else ""
 
     return (

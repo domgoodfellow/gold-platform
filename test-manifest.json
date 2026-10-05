@@ -578,6 +578,14 @@
       ],
       "note": "communication_rates stays gone; only app.record_usage writes usage_events."
     },
+    "apps/web/tests/architecture/database/voice-boundary.test.ts": {
+      "category": "architecture-db",
+      "concerns": [
+        "voice",
+        "security"
+      ],
+      "note": "Phase F: a call carries no carrier identifier, the carrier and a tenant write it only through narrow doors, status only moves forward, readiness is derived."
+    },
     "apps/web/tests/architecture/static/adapters.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -968,6 +976,15 @@
         "setup"
       ]
     },
+    "apps/web/tests/architecture/static/voice-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "voice",
+        "providers",
+        "security"
+      ],
+      "note": "Phase F: the call domain speaks only the capability, screens never reach the carrier, one call list, numbers are configured and never provisioned."
+    },
     "apps/web/tests/architecture/static/tailwind-source.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -1029,6 +1046,14 @@
         "navigation",
         "accessibility"
       ]
+    },
+    "apps/web/tests/component/active-call-dock.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "voice",
+        "ui"
+      ],
+      "note": "Phase F: the live call bar over a fake telephone; leave vs end, hold, add and transfer tell the truth about what the server said."
     },
     "apps/web/tests/component/agent-trigger.test.tsx": {
       "category": "component",
@@ -1243,6 +1268,15 @@
       "concerns": [
         "scheduling"
       ]
+    },
+    "apps/web/tests/integration/database/call-lifecycle.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "voice",
+        "tenancy",
+        "security"
+      ],
+      "note": "Phase F: a call is one fact settled from its legs, inbound recording, live controls and transfers against a fake carrier, and number configuration."
     },
     "apps/web/tests/integration/database/catalogue-plans.test.ts": {
       "category": "database-integration",

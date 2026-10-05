@@ -81,7 +81,7 @@ describe('a number names where it came from', () => {
     const created = numbers.find((number) => number.e164 === e164);
     expect(created).toBeDefined();
     expect(created!.origin).toBe('provisioned');
-    expect(created!.providerResourceId).not.toBeNull();
+    expect(created!.readiness).toBe('ready');
 
     // `created_by` is not selectable through `listPhoneNumbers`/`getPhoneNumber`'s public shape
     // today (neither type exposes it to a screen) — read it directly to prove the column itself,

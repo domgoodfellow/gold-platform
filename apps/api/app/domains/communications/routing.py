@@ -258,16 +258,28 @@ class OutboundIdentityRefused(RuntimeError):
 
 
 def _member_eligible_assignments(settings, token, organization_id: str, member_id: str) -> list[dict]:
-    """This member's own active, healthy, outbound-capable numbers -- never another member's,
-    and never a number this business has taken out of service."""
+    """This member's own active, ready, outbound-capable numbers -- never another member's,
+    and never a number this business has taken out of service. Ready is the database's reading of
+    the provider's state (`phone_number_readiness`), not a flag a business or this resolver keeps."""
     rows = _get(settings, token, "phone_number_assignments", {
         "organization_id": f"eq.{organization_id}", "member_id": f"eq.{member_id}", "released_at": "is.null",
-        "select": "id,phone_number_id,is_default,number:phone_numbers!phone_number_assignments_organization_id_phone_number_id_fkey(id,e164,lifecycle,outbound_enabled,health)",
+        "select": "id,phone_number_id,is_default,number:phone_numbers!phone_number_assignments_organization_id_phone_number_id_fkey(id,e164,lifecycle,voice_outbound_enabled)",
     })
+    if not rows:
+        return []
+    ready = {
+        row["phone_number_id"]
+        for row in _get(settings, token, "phone_number_readiness", {
+            "organization_id": f"eq.{organization_id}",
+            "phone_number_id": f"in.({','.join(row['phone_number_id'] for row in rows)})",
+            "readiness": "eq.ready",
+            "select": "phone_number_id",
+        })
+    }
     eligible = []
     for row in rows:
         number = row.get("number") or {}
-        if number.get("lifecycle") == "active" and number.get("outbound_enabled") and number.get("health") != "failed":
+        if number.get("lifecycle") == "active" and number.get("voice_outbound_enabled") and row["phone_number_id"] in ready:
             eligible.append(row)
     return eligible
 

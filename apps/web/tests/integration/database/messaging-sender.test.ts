@@ -172,7 +172,7 @@ describe('the server resolves the sender from a number id', () => {
 
   it('refuses a number that is not enabled for outbound', async () => {
     const number = await seedNumber(mine, '+14165550306');
-    await pg.query(`update public.phone_numbers set outbound_enabled = false where id = $1`, [number.id]);
+    await pg.query(`update public.phone_numbers set sms_outbound_enabled = false where id = $1`, [number.id]);
 
     await expect(send(mine, { phoneNumberId: number.id })).rejects.toMatchObject({ code: 'messaging.sender_not_outbound' });
   });
@@ -186,14 +186,14 @@ describe('the server resolves the sender from a number id', () => {
 
   it('refuses an identity that is not a telephone number', async () => {
     const number = await seedNumber(mine, '+14165550308');
-    await pg.query(`update public.phone_numbers set origin = 'browser', provider_resource_id = null where id = $1`, [number.id]);
+    await pg.query(`update public.phone_numbers set origin = 'browser', provider_resource_id = null, voice_inbound_enabled = false, sms_inbound_enabled = false where id = $1`, [number.id]);
 
     await expect(send(mine, { phoneNumberId: number.id })).rejects.toMatchObject({ code: 'messaging.sender_not_textable' });
   });
 
   it('lets an external number send on its lifecycle and direction alone', async () => {
     const number = await seedNumber(mine, '+14165550309');
-    await pg.query(`update public.phone_numbers set origin = 'external', provider_resource_id = null where id = $1`, [number.id]);
+    await pg.query(`update public.phone_numbers set origin = 'external', provider_resource_id = null, voice_inbound_enabled = false, sms_inbound_enabled = false where id = $1`, [number.id]);
     sent.length = 0;
 
     await send(mine, { phoneNumberId: number.id });

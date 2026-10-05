@@ -77,7 +77,19 @@ export type TelephonyProvider = {
     muted?: boolean;
     /** Ends this one leg. The conference itself survives — that is the entire point of D38. */
     status?: 'completed';
+    /**
+     * Whether this leg leaving closes the room for everybody. The agent who started a call closes
+     * it by hanging up; a transfer has to turn that off first, or handing a call over drops it.
+     */
+    endsRoomOnExit?: boolean;
   }): Promise<void>;
+
+  /**
+   * The audio of a recording, fetched with this platform's own credentials from the reference the
+   * carrier gave. The reference is never handed to a person: it is not authorization, and a
+   * recording is played only through a route that has already checked who is asking.
+   */
+  fetchRecording(input: { reference: string }): Promise<{ body: ReadableStream<Uint8Array>; contentType: string }>;
 };
 
 /**

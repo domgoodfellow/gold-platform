@@ -40,6 +40,14 @@ class FakeTransport:
     def get(self, url, headers=None, params=None, timeout=None):
         table = url.rsplit("/", 1)[-1]
         self.calls.append(("GET", table))
+        if table == "phone_number_readiness":
+            # The view the database derives from the provider's state; the real request asks for
+            # the ready ones only, so the fake answers that way.
+            return _Response(200, [
+                {"phone_number_id": row["phone_number_id"], "readiness": "ready"}
+                for row in self.tables.get("phone_number_assignments", [])
+                if row["number"].get("ready", True)
+            ])
         return _Response(200, self.tables.get(table, []))
 
     def post(self, url, headers=None, json=None, timeout=None):
@@ -288,12 +296,12 @@ def test_a_route_naming_another_route_as_destination_resolves_the_target(monkeyp
 # Outbound identity
 # ---------------------------------------------------------------------------
 
-def _assignment(number_id: str, e164: str, *, is_default: bool, lifecycle="active", outbound_enabled=True, health="healthy") -> dict:
+def _assignment(number_id: str, e164: str, *, is_default: bool, lifecycle="active", outbound_enabled=True, ready=True) -> dict:
     return {
         "id": f"assignment-{number_id}",
         "phone_number_id": number_id,
         "is_default": is_default,
-        "number": {"id": number_id, "e164": e164, "lifecycle": lifecycle, "outbound_enabled": outbound_enabled, "health": health},
+        "number": {"id": number_id, "e164": e164, "lifecycle": lifecycle, "voice_outbound_enabled": outbound_enabled, "ready": ready},
     }
 
 
@@ -308,9 +316,9 @@ def test_auto_picks_the_members_own_default_assignment(monkeypatch):
     assert decision.reason == "auto_default_assignment"
 
 
-def test_auto_excludes_an_unhealthy_number(monkeypatch):
+def test_auto_excludes_a_number_that_is_not_ready(monkeypatch):
     transport = FakeTransport(tables={"phone_number_assignments": [
-        _assignment("n1", "+14165550101", is_default=True, health="failed"),
+        _assignment("n1", "+14165550101", is_default=True, ready=False),
         _assignment("n2", "+14165550102", is_default=False),
     ]})
     _wire(monkeypatch, transport)

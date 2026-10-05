@@ -83,8 +83,8 @@ async function fulfilment(organizationId: string, number: string, accountForBind
   );
   await pg.query(
     `insert into public.phone_numbers
-       (organization_id, provider_resource_id, e164, lifecycle, purpose, inbound_enabled, outbound_enabled, health)
-     values ($1, $2, $3, 'active', 'general', true, true, 'healthy')`,
+       (organization_id, provider_resource_id, e164, lifecycle, purpose, voice_inbound_enabled, voice_outbound_enabled)
+     values ($1, $2, $3, 'active', 'general', true, true)`,
     [organizationId, resource[0].id, number],
   );
   return { bindingId: binding[0].id as string, resourceId: resource[0].id as string };

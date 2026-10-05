@@ -17,9 +17,14 @@ from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler
 
+import logging
+
 from api.voice_status import form_params, public_url
 from app.core.config import load_voice_settings
+from app.core.db import record_call_leg
 from app.providers.twilio.voice import conference_twiml, verify_signature
+
+logger = logging.getLogger(__name__)
 
 
 class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
@@ -46,18 +51,31 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             return
 
         # The room the web app already created and wrote onto the call row. Supplied by the
-        # browser through the carrier rather than looked up here, because this endpoint holds no
-        # database identity of its own and must not grow one: a TwiML responder that could read
-        # a tenant's rows would be a second authorization surface.
+        # browser through the carrier rather than looked up here: this endpoint reads no tenant's
+        # rows. It does tell the call which carrier telephone is the agent's, through the one
+        # narrow door the voice integration holds, because the carrier names that telephone
+        # only in this request and every later callback about the agent names nothing else.
         room = (params.get("Conference") or "").strip()
         if not room:
             self._reply(400, "text/plain; charset=utf-8", "rejected")
             return
 
+        leg = (params.get("CallSid") or "").strip()
+        if leg:
+            try:
+                record_call_leg(settings, conference_name=room, external_id=leg)
+            except Exception:  # noqa: BLE001 - the agent must still be connected if our bookkeeping fails
+                logger.exception("could not record the agent's leg")
+
         self._reply(
             200,
             "application/xml; charset=utf-8",
-            conference_twiml(name=room, start_on_enter=True, end_on_exit=True),
+            conference_twiml(
+                name=room,
+                start_on_enter=True,
+                end_on_exit=True,
+                status_callback=public_url(self.headers, "/voice/status"),
+            ),
         )
 
     def _reply(self, status: int, content_type: str, message: str) -> None:

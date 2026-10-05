@@ -72,7 +72,6 @@ def test_forwards_the_callers_token_and_mints_nothing(monkeypatch) -> None:
         "p_outcome_id": OUTCOME,
         "p_note": "Interested, call back Thursday.",
         "p_duration_seconds": 180,
-        "p_status": None,
     }
 
 

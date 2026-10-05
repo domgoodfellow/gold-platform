@@ -328,7 +328,6 @@ describe('a call', () => {
       p_outcome_id: outcomeId,
       p_note: 'Asked us to call back Thursday.',
       p_duration_seconds: 42,
-      p_status: null,
     });
     expect(error).toBeNull();
 
@@ -366,7 +365,6 @@ describe('a call', () => {
       p_outcome_id: theirOutcome,
       p_note: '',
       p_duration_seconds: null,
-      p_status: null,
     });
     expect(error).not.toBeNull();
   });
@@ -444,7 +442,6 @@ describe('the loop the module exists for', () => {
       p_outcome_id: outcomeId,
       p_note: 'Wants a proposal.',
       p_duration_seconds: null,
-      p_status: null,
     });
     expect(error).toBeNull();
     await updateCustomer(floor.db, {

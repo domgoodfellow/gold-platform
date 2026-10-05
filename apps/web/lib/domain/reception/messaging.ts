@@ -235,21 +235,13 @@ export async function resolveSmsSender(
   const number = await getPhoneNumber(db, { organizationId: input.organizationId, phoneNumberId: input.phoneNumberId });
   if (!number) throw new DomainError('That number does not belong to this business.', 'messaging.sender_not_found');
   if (number.lifecycle !== 'active') throw new DomainError('That number is not active, so it cannot send texts.', 'messaging.sender_inactive');
-  if (!number.outboundEnabled) throw new DomainError('That number is not enabled for sending.', 'messaging.sender_not_outbound');
+  if (!number.smsOutboundEnabled) throw new DomainError('That number is not enabled for sending.', 'messaging.sender_not_outbound');
   if (number.origin !== 'provisioned' && number.origin !== 'external') {
     throw new DomainError('That is not a number a text can be sent from.', 'messaging.sender_not_textable');
   }
 
-  if (number.providerResourceId) {
-    const { data, error } = await db
-      .from('organization_provider_resources')
-      .select('status')
-      .eq('organization_id', input.organizationId)
-      .eq('id', number.providerResourceId)
-      .maybeSingle();
-    if (error) throw new DomainError(error.message, 'messaging.sender_check_failed');
-    if (data?.status !== 'active') throw new DomainError('That number is not ready to send texts yet.', 'messaging.sender_unavailable');
-  }
+  // Whether the carrier stands behind it is read once, as `readiness`, from the provider's own state.
+  if (number.readiness !== 'ready') throw new DomainError('That number is not ready to send texts yet.', 'messaging.sender_unavailable');
 
   return { phoneNumberId: number.id, e164: number.e164 };
 }

@@ -165,7 +165,7 @@ export function CustomerDetail({
             mapStyleUrl={mapStyleUrl}
           />
         </TabsContent>
-        {features.voice ? <TabsContent value="calls" className="mt-6"><CallHistory calls={calls} empty="No calls with this customer." />{permissions.call ? null : <Hint className="mt-4">Your role, {role}, cannot call customers.</Hint>}</TabsContent> : null}
+        {features.voice ? <TabsContent value="calls" className="mt-6"><CallHistory organizationId={organizationId} timeZone={timezone} calls={calls} empty="No calls with this customer." />{permissions.call ? null : <Hint className="mt-4">Your role, {role}, cannot call customers.</Hint>}</TabsContent> : null}
         <TabsContent value="documents" className="mt-6"><DocumentsSection organizationId={organizationId} documents={documents} mayAttach={permissions.attach} roleLabel={role} uploadAction={uploadCustomerDocumentAction} hiddenFields={{ organizationId, customerId: customer.id }} className="mt-0" /></TabsContent>
         {features.billing ? <TabsContent value="invoices" className="mt-6"><CustomerFinancialSummary organizationId={organizationId} invoices={invoices} timezone={timezone} /></TabsContent> : null}
         {features.portal ? (

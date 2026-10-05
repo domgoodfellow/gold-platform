@@ -118,14 +118,18 @@ describe('objects removed as dead surface stay removed', () => {
     // code (`apps/web`/`apps/api`) — only from these two integration tests — which is a real,
     // separate gap: the Twilio provisioning flow that creates the underlying provider resource
     // does not yet call this to make the number usable. Flagged rather than invented here.
+    //
+    // `release_phone_number_assignment` and `set_user_phone_number_preference` are not named either:
+    // `20261006000004` said they would "come back with the feature that needs them, shaped by it",
+    // and `20261119000001/2` brought them back for the Numbers page — release an assignment, and
+    // dial from a number assigned to you. `call-lifecycle.test.ts` calls both.
     const { rows } = await pg.query(
       `select n.nspname || '.' || p.proname as name
          from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where (n.nspname, p.proname) in (
           ('public', 'store_integration_secret'), ('public', 'retail_rate_at'),
           ('public', 'add_runtime_mapping'), ('public', 'remove_runtime_mapping'),
-          ('public', 'release_phone_number_assignment'),
-          ('public', 'set_user_phone_number_preference'), ('app', 'enable_default_modules'))`,
+          ('app', 'enable_default_modules'))`,
     );
     expect(rows).toEqual([]);
   });

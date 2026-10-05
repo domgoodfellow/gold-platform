@@ -23,7 +23,7 @@ export default async function NewConversationPage({
   }
 
   const [numbers, senders] = await Promise.all([listPhoneNumbers(db, { organizationId }), listSendableEmailIdentities(db, { organizationId })]);
-  const outbound = numbers.filter((number) => number.outboundEnabled && number.lifecycle === 'active' && (number.origin === 'provisioned' || number.origin === 'external'));
+  const outbound = numbers.filter((number) => number.smsOutboundEnabled && number.lifecycle === 'active' && (number.origin === 'provisioned' || number.origin === 'external'));
 
   return (
     <NewConversation

@@ -34,10 +34,6 @@ class WrapUpCallCommand:
     outcome_id: str | None
     note: str
     duration_seconds: int | None
-    # `None` means "leave the network's own status as it is" -- a person writing up a call does
-    # not usually know better than the carrier whether it completed, and `record_call_outcome`
-    # defaults to `completed` only when nothing else is known (a call recorded by hand).
-    status: str | None = None
 
 
 @dataclass(frozen=True)
@@ -74,7 +70,6 @@ def wrap_up_call(
                 "outcome_id": command.outcome_id,
                 "note": command.note,
                 "duration_seconds": command.duration_seconds,
-                "status": command.status,
             },
         )
     except CommandFailed as failure:

@@ -10,10 +10,11 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Numbers, a page of the Communications workspace. What a carrier knows about a number is a
- * provider resource, platform-scoped; this reads the organization-facing row it produced — the
- * lifecycle, the enabled directions, who is currently dialling from it.
+ * provider resource, platform-scoped; this reads the organization-facing row it produced — what it
+ * is used for, what it can do, whether it is ready, who is currently dialling from it.
  *
- * No acquisition or search here — that reaches into provisioning, out of scope for this slice.
+ * No acquisition or search here — that is provisioning, which belongs to GildOps and not to this
+ * surface.
  */
 export default async function CommsNumbersPage({
   params,
@@ -38,7 +39,7 @@ export default async function CommsNumbersPage({
         crumbs={workspaceAncestry(organizationId, 'comms-numbers')}
       />
       <NumberList organizationId={organizationId} numbers={numbers} assignedCount={assignedCount} />
-      <Hint className="mt-4">Adding a number here is not available yet.</Hint>
+      <Hint className="mt-4">Numbers are added to a business by GildOps. What each is used for, and who dials from it, is set on its own page.</Hint>
     </AppPage>
   );
 }

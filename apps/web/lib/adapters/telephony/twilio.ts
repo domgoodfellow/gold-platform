@@ -87,6 +87,11 @@ export function twilioTelephony(config: {
             StatusCallback: `${input.reportTo}/voice/status`,
             StatusCallbackEvent: 'initiated ringing answered completed',
             StatusCallbackMethod: 'POST',
+            // Who is in the room is the carrier's fact, reported as people join and leave; the
+            // call is settled from those, not from any one leg's own ending.
+            ConferenceStatusCallback: `${input.reportTo}/voice/status`,
+            ConferenceStatusCallbackEvent: 'join leave',
+            ConferenceStatusCallbackMethod: 'POST',
             // Recording is asked for here rather than configured at the account, so a
             // deployment cannot be recording calls that this code does not know are recorded.
             Record: 'true',
@@ -154,6 +159,7 @@ export function twilioTelephony(config: {
       if (input.hold !== undefined) form.Hold = String(input.hold);
       if (input.muted !== undefined) form.Muted = String(input.muted);
       if (input.status) form.Status = input.status;
+      if (input.endsRoomOnExit !== undefined) form.EndConferenceOnExit = String(input.endsRoomOnExit);
 
       const response = await fetch(
         `${API}/Accounts/${actingAccount}/Conferences/${encodeURIComponent(input.room)}/Participants/${encodeURIComponent(input.externalId)}.json`,
@@ -171,6 +177,20 @@ export function twilioTelephony(config: {
         const detail = await response.text();
         throw new Error(`telephony refused to update the participant (${response.status}): ${detail}`);
       }
+    },
+
+    async fetchRecording(input) {
+      // The reference came from a signed callback, but it is fetched with credentials, so it is
+      // held to the carrier's own host rather than trusted to be one.
+      const url = new URL(input.reference);
+      if (url.protocol !== 'https:' || url.hostname !== 'api.twilio.com') {
+        throw new Error('telephony will only fetch a recording from its own host');
+      }
+      const response = await fetch(url, { headers: { Authorization: `Basic ${basic}` } });
+      if (!response.ok || !response.body) {
+        throw new Error(`telephony could not return that recording (${response.status})`);
+      }
+      return { body: response.body, contentType: response.headers.get('content-type') ?? 'audio/mpeg' };
     },
   };
 }

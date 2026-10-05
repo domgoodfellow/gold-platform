@@ -5,6 +5,45 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A call is one call, and a number says what it is for
+
+Calls now work the way the screens always claimed. A call is one thing however many telephones were on it:
+it is answered when two of them are connected, it ends when the last one leaves, and it is billed once, for the
+longest anyone was on the line. Before, the first telephone to hang up ended the whole call and billed it — so a
+transfer, which always has an agent leaving, ended the call it was handing over. A cold transfer now waits for
+the person you are transferring to to pick up, and if they do not you are still on the call; a warm transfer puts
+the caller on hold while you talk to them first, then hands over or is cancelled. *Leave call* and *End call* are
+different buttons, and the call bar says which one you are about to press. Holding, adding someone and removing
+someone now report what actually happened and change nothing when the phone company says no; nothing is shown
+as held or gone unless it is.
+
+An inbound call is written down for the business whose number was rung, even when the caller is not a customer
+and even when they withheld their number. It shows as missed: nothing answers a live call yet, so it is
+declined, and that is what the history now says rather than nothing. A caller is linked to a customer only when
+exactly one customer has that number; on a call's page you can say who an unknown caller was. Calling a number
+nobody has recorded works too.
+
+The Calls page is now the one place calls are listed: inbound and outbound together, filtered (direction,
+missed, active, completed, needs wrap-up, when, which number, who handled it), paged, and each call opens to its
+own page with who was on it, a timeline, its outcome and, where there is one, its recording. A recording plays
+only for people allowed to play it; the phone company's own address is never shown or sent to the browser. *New
+call* starts a call to any number. Writing up a call no longer rewrites how the phone company says it ended or
+how long it lasted.
+
+Numbers: a number now says separately whether it takes calls, places calls, takes texts and sends texts, what
+the business uses it for, and whether it is ready — read from the phone company's own state, never typed in, and
+shown as ready, setup required, degraded or unavailable. A number you already owned can be your caller id on
+outbound calls, and says plainly that it cannot take calls or texts through GildOps. A number's page lets you
+name it, set what it is for, assign it to people, choose their default, and see which route and which recent
+calls use it. Which number a person calls from is decided in one place — their own choice, then their default,
+then the business's — and a number that is not ready is skipped. Buying, releasing or porting a number is still
+not here; that is set up by GildOps.
+
+Not verified against a real phone company: nothing in this change has rung a real telephone. It is tested
+against the real database with the phone company replaced by a recorder, and the browser screens have been
+opened and checked, but a live call, a live transfer and a live recording are still to be tried with real
+credentials. A browser reload still drops the person's telephone (the call carries on without them).
+
 ### Booking and scheduling can use more than one resource at a time
 
 A kind of work that needs several things — "1 × Person who has Tire service" and "1 × Vehicle that has Mobile

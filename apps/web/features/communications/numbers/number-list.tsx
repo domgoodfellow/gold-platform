@@ -1,27 +1,8 @@
 import Link from 'next/link';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
-import type { PhoneNumber, PhoneNumberOrigin } from '@/lib/domain/reception/numbers';
-
-const LIFECYCLE_TONE: Record<PhoneNumber['lifecycle'], 'success' | 'neutral' | 'danger'> = {
-  active: 'success',
-  inactive: 'neutral',
-  quarantined: 'danger',
-};
-
-const HEALTH_TONE: Record<string, 'success' | 'neutral' | 'danger'> = {
-  healthy: 'success',
-  unknown: 'neutral',
-  degraded: 'danger',
-  failed: 'danger',
-};
-
-export const ORIGIN_LABEL: Record<PhoneNumberOrigin, string> = {
-  provisioned: 'Provisioned',
-  external: 'External',
-  browser: 'Browser',
-  sip: 'SIP',
-};
+import type { PhoneNumber } from '@/lib/domain/reception/numbers';
+import { ORIGIN_LABEL, PURPOSE_LABEL, READINESS_LABEL, READINESS_TONE, capabilitySummary } from './labels';
 
 /** The canonical responsive rendering of a business's number inventory. */
 export function NumberList({ organizationId, numbers, assignedCount }: {
@@ -33,33 +14,33 @@ export function NumberList({ organizationId, numbers, assignedCount }: {
     <DataTable
       rows={numbers}
       rowKey={(number) => number.id}
-      empty="No numbers recorded."
+      empty="This business has no numbers yet."
       columns={[
         {
           key: 'number',
           header: 'Number',
           emphasis: 'primary',
           cell: (number) => (
-            <Link href={`/organizations/${organizationId}/comms/numbers/${number.id}`} className="underline underline-offset-2">
-              {number.label ? `${number.e164} (${number.label})` : number.e164}
+            <Link href={`/organizations/${organizationId}/comms/numbers/${number.id}`} className="underline underline-offset-4">
+              {number.label ? `${number.label} (${number.e164})` : number.e164}
             </Link>
           ),
         },
-        { key: 'origin', header: 'Origin', cell: (number) => <Badge>{ORIGIN_LABEL[number.origin]}</Badge> },
-        { key: 'purpose', header: 'Purpose', emphasis: 'secondary', cell: (number) => <Badge>{number.purpose}</Badge> },
-        { key: 'lifecycle', header: 'Status', cell: (number) => <Badge tone={LIFECYCLE_TONE[number.lifecycle]}>{number.lifecycle}</Badge> },
+        { key: 'purpose', header: 'Used for', cell: (number) => <Badge>{PURPOSE_LABEL[number.purpose]}</Badge> },
+        { key: 'readiness', header: 'Status', cell: (number) => <Badge tone={READINESS_TONE[number.readiness]}>{READINESS_LABEL[number.readiness]}</Badge> },
         {
           key: 'capabilities',
-          header: 'Capabilities',
-          cell: (number) => (
-            <span className="flex gap-1">
-              {number.inboundEnabled ? <Badge>Inbound</Badge> : null}
-              {number.outboundEnabled ? <Badge>Outbound</Badge> : null}
-              {!number.inboundEnabled && !number.outboundEnabled ? <span className="text-subtle">None</span> : null}
-            </span>
-          ),
+          header: 'Can do',
+          cell: (number) => {
+            const words = capabilitySummary(number);
+            return words.length ? (
+              <span className="flex flex-wrap gap-1">{words.map((word) => <Badge key={word}>{word}</Badge>)}</span>
+            ) : (
+              <span className="text-subtle">Nothing</span>
+            );
+          },
         },
-        { key: 'health', header: 'Health', emphasis: 'secondary', cell: (number) => <Badge tone={HEALTH_TONE[number.health] ?? 'neutral'}>{number.health}</Badge> },
+        { key: 'origin', header: 'Source', emphasis: 'secondary', cell: (number) => ORIGIN_LABEL[number.origin] },
         { key: 'assignments', header: 'Assigned to', numeric: true, cell: (number) => assignedCount.get(number.id) ?? 0 },
       ]}
     />

@@ -115,8 +115,8 @@ CALLBACKS = [
         "record_call_event",
         {"CallSid": "CA1", "RecordingSid": "RE1", "RecordingUrl": "https://api.twilio.com/2010-04-01/Recordings/RE1", "RecordingStatus": "completed"},
     ),
-    (voice_inbound, "/voice/inbound", None, {"CallSid": "CA1", "To": "+31000000000"}),
-    (voice_outbound, "/voice/outbound", None, {"CallSid": "CA1", "Conference": "room-1"}),
+    (voice_inbound, "/voice/inbound", "record_inbound_call", {"CallSid": "CA1", "To": "+31000000000", "From": "+31000000009"}),
+    (voice_outbound, "/voice/outbound", "record_call_leg", {"CallSid": "CA1", "Conference": "room-1"}),
     (sms_inbound, "/sms/inbound", "record_inbound_message", {"MessageSid": "SM1", "To": "+31000000000", "From": "+31000000001", "Body": "Thanks"}),
     (sms_status, "/sms/status", "record_message_status", {"MessageSid": "SM1", "MessageStatus": "delivered"}),
 ]
@@ -205,18 +205,65 @@ class TestCarrierCallbacksThatAreSigned:
 
         assert self._signed(voice_status, "/voice/status", CALLBACKS[0][3]) == (200, "ignored")
 
-    def test_a_signed_inbound_call_is_declined_rather_than_improvised(self, configured) -> None:
+    def test_a_signed_inbound_call_is_recorded_for_the_number_rung_and_still_declined(self, configured, monkeypatch) -> None:
+        sink = Sink(result="a-call-row")
+        monkeypatch.setattr(voice_inbound, "record_inbound_call", sink)
+
+        status, body = self._signed(voice_inbound, "/voice/inbound", CALLBACKS[2][3])
+
+        assert status == 200
+        assert "<Reject" in body
+        (_, recorded), = sink.calls
+        # The carrier names the number it dialled and the caller; it names no business.
+        assert recorded["external_id"] == "CA1"
+        assert recorded["to_number"] == "+31000000000"
+        assert recorded["from_number"] == "+31000000009"
+        assert "organization_id" not in recorded
+
+    def test_an_inbound_call_that_cannot_be_written_down_is_still_answered_the_same_way(self, configured, monkeypatch) -> None:
+        def broken(*args, **kwargs):
+            raise RuntimeError("the database is away")
+
+        monkeypatch.setattr(voice_inbound, "record_inbound_call", broken)
+
         status, body = self._signed(voice_inbound, "/voice/inbound", CALLBACKS[2][3])
 
         assert status == 200
         assert "<Reject" in body
 
-    def test_a_signed_outbound_leg_joins_only_the_room_it_was_given(self, configured) -> None:
+    def test_a_call_with_no_called_number_is_declined_without_a_write(self, configured, monkeypatch) -> None:
+        sink = Sink(result="a-call-row")
+        monkeypatch.setattr(voice_inbound, "record_inbound_call", sink)
+
+        status, body = self._signed(voice_inbound, "/voice/inbound", {"CallSid": "CA1"})
+
+        assert status == 200 and "<Reject" in body
+        assert sink.calls == []
+
+    def test_a_signed_outbound_leg_joins_only_the_room_it_was_given(self, configured, monkeypatch) -> None:
+        sink = Sink(result="a-leg")
+        monkeypatch.setattr(voice_outbound, "record_call_leg", sink)
+
         status, body = self._signed(voice_outbound, "/voice/outbound", CALLBACKS[3][3])
         assert status == 200 and "room-1" in body
+        # Who joins and leaves is how a call learns it is over, so the room reports them.
+        assert 'statusCallback="https://' in body and "/voice/status" in body
+        (_, recorded), = sink.calls
+        assert recorded["conference_name"] == "room-1" and recorded["external_id"] == "CA1"
 
         status, _ = self._signed(voice_outbound, "/voice/outbound", {"CallSid": "CA1"})
         assert status == 400
+        assert len(sink.calls) == 1
+
+    def test_an_agent_is_connected_even_when_their_leg_cannot_be_recorded(self, configured, monkeypatch) -> None:
+        def broken(*args, **kwargs):
+            raise RuntimeError("the database is away")
+
+        monkeypatch.setattr(voice_outbound, "record_call_leg", broken)
+
+        status, body = self._signed(voice_outbound, "/voice/outbound", CALLBACKS[3][3])
+
+        assert status == 200 and "room-1" in body
 
     def test_a_signed_inbound_text_is_recorded(self, configured, monkeypatch) -> None:
         recorded = Sink(result="a-message-row")
