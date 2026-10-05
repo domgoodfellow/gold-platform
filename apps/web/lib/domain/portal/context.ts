@@ -23,6 +23,9 @@ export type PortalContext = {
 
 export async function portalContext(db: Db): Promise<PortalContext | null> {
   const { data, error } = await db.rpc('portal_context');
+  // No session at all reaches the database as `anon`, which holds no execute on the function: the
+  // same answer as every other way of not being a portal customer.
+  if (error?.code === '42501') return null;
   if (error) throw new DomainError(error.message, 'portal.context_failed');
   const row = data?.[0];
   if (!row || !row.customer_id) return null;

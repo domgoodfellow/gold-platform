@@ -15,6 +15,7 @@ import { organizationIdFromPath } from '@/lib/route/platform-context';
 export async function proxy(request: NextRequest) {
   const { response, identity } = await updateSession(request, {
     portal: request.nextUrl.pathname === '/portal' || request.nextUrl.pathname.startsWith('/portal/'),
+    proposal: request.nextUrl.pathname === '/proposal' || request.nextUrl.pathname.startsWith('/proposal/'),
   });
   const { pathname } = request.nextUrl;
 

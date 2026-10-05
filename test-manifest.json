@@ -1828,6 +1828,14 @@
         "platform"
       ]
     },
+    "apps/web/tests/integration/database/proposal-access.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "crm",
+        "commercial",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/proposal-invites.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -2274,6 +2282,14 @@
       ],
       "note": "The Studio form builder's add, select, edit, remove, reorder, dirty and publish behaviour, and the shared renderer's label/error association."
     },
+    "apps/web/tests/architecture/static/proposal-session-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "architecture",
+        "crm",
+        "security"
+      ]
+    },
     "apps/web/tests/architecture/static/portal-session-boundary.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -2290,6 +2306,21 @@
         "public-site"
       ],
       "note": "Forms are not booking, one renderer, slug-addressed anonymous doors, no infrastructure in authoring."
+    },
+    "apps/web/e2e/proposal-access.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "crm",
+        "public-site",
+        "security"
+      ]
+    },
+    "apps/web/e2e/studio-navigation.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "navigation",
+        "public-site"
+      ]
     },
     "apps/web/e2e/portal-booking-forms.spec.ts": {
       "category": "playwright-acceptance",

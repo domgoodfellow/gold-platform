@@ -397,11 +397,18 @@ export const AREAS: readonly Area[] = [
   { segment: 'locations', label: 'Locations', group: 'workspaces', workspace: 'field', needsSchedulableWork: true },
   { segment: 'assets', label: 'Equipment & Assets', group: 'workspaces', workspace: 'field', module: 'assets', featureKeys: ['assets'] },
   // Studio: what is public for this business, and what needs attention. Home is a real page —
-  // kernel, like Sales and Field's own Home, so a member sees it regardless of role. Website has
-  // earned its own operating page (the workbench, `studio-website` below), and so have Forms and
-  // Templates; Brand and Portal remain configuration reached from Settings (`CONFIG_TARGETS`)
-  // until each earns one too (D68).
+  // kernel, like Sales and Field's own Home, so a member sees it regardless of role. Website, Forms
+  // and Templates have each earned an operating page, listed beneath it; Brand and Portal remain
+  // configuration reached from Settings (`CONFIG_TARGETS`) until each earns one too (D68).
   { segment: 'studio', label: 'Studio', group: 'workspaces', workspace: 'studio' },
+  // Website, Forms and Templates are Studio's mature operating pages: children of the one Studio
+  // workspace, shown under its expandable row like Automations' own. Studio's row is Home and is
+  // never repeated as a child. Editor-internal concepts (structure, canvas, inspector) stay out of
+  // the sidebar; Pages, Navigation or Theme join only once the Website composition work decides
+  // whether each is a route or a view inside the editor.
+  { segment: 'studio-website', label: 'Website', group: 'workspaces', workspace: 'studio', route: 'studio/website', relevantCapabilities: ['organization.manage'] },
+  { segment: 'studio-forms', label: 'Forms', group: 'workspaces', workspace: 'studio', route: 'studio/forms', relevantCapabilities: ['organization.manage'] },
+  { segment: 'studio-templates', label: 'Templates', group: 'workspaces', workspace: 'studio', route: 'studio/templates', relevantCapabilities: ['organization.manage'] },
 
   // Insights: dashboards and reports over the one reporting aggregate every workspace reads. Not a
   // workspace of its own (D66) — no permanent sidebar row — but still a real, directly addressable
@@ -413,14 +420,6 @@ export const AREAS: readonly Area[] = [
   // Turning Pricing off also takes priced lines and the invoice off a job screen — see the work item route.
   // Owned by Finance, whose Home links here for configuration rather than repeating it.
   { segment: 'pricing', label: 'Pricing', group: 'settings', workspace: 'finance', module: 'billing', sidebar: false, relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
-  // The Website workbench: a child operating surface of Studio, not a second workspace or sidebar
-  // row (`sidebar: false`, the same shape as Pricing above) — reached from Studio Home's own
-  // Website card, never from the rail, and no longer from the Settings map either.
-  { segment: 'studio-website', label: 'Website', group: 'settings', workspace: 'studio', route: 'studio/website', sidebar: false, relevantCapabilities: ['organization.manage'] },
-  // Forms and Templates are Studio's other two operating pages, on the same terms as Website:
-  // pages of the one Studio workspace, reached from its Home, never rows or workspaces of their own.
-  { segment: 'studio-forms', label: 'Forms', group: 'settings', workspace: 'studio', route: 'studio/forms', sidebar: false, relevantCapabilities: ['organization.manage'] },
-  { segment: 'studio-templates', label: 'Templates', group: 'settings', workspace: 'studio', route: 'studio/templates', sidebar: false, relevantCapabilities: ['organization.manage'] },
   { segment: 'fields', label: 'Custom fields', group: 'settings', sidebar: false, relevantCapabilities: ['field.manage'] },
   { segment: 'roles', label: 'Team', group: 'settings', sidebar: false, relevantCapabilities: ['role.manage'] },
   // Setup is a lifecycle, not a permanent area: while SETUP lasts it is the one row `SetupEntry`

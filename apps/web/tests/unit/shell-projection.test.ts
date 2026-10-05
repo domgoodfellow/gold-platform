@@ -63,8 +63,8 @@ describe('GOLD owner who is also a platform operator', () => {
   it('sees the business workspaces GOLD is entitled to', () => {
     expect(keys(sections, 'home')).toEqual(['home']);
     // One row per registered workspace that has a reachable area, in the order a customer meets
-    // them. Service and AI are registered and have no page, so they draw no row. Studio has one
-    // page (Home), so it draws a plain row with no children. Finance has Home plus its Quotes, Invoices
+    // them. Service and AI are registered and have no page, so they draw no row. Studio has Home
+    // plus its Website, Forms and Templates pages. Finance has Home plus its Quotes, Invoices
     // and Payments pages, and nothing GildOps-commercial: Plans & Add-ons is Platform's. Insights is not a workspace row at all (D66) — it is
     // reached contextually.
     expect(topLevel(sections, 'workspaces')).toEqual(['workspace-crm', 'workspace-communications', 'workspace-finance', 'workspace-automations', 'workspace-field', 'workspace-studio']);
@@ -74,7 +74,7 @@ describe('GOLD owner who is also a platform operator', () => {
       'workspace-finance', 'finance-quotes', 'finance-invoices', 'finance-payments',
       'workspace-automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets',
-      'workspace-studio',
+      'workspace-studio', 'studio-website', 'studio-forms', 'studio-templates',
     ]);
     const row = (key: string) => sections.flatMap((section) => section.items).find((item) => item.key === key)!;
     // The parent's own destination is the workspace's Home, never repeated as a child beneath it.
@@ -92,9 +92,9 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(row('workspace-finance').heading).toBe(true);
     expect(row('workspace-finance').href).toBe(`/organizations/${ORG}/finance`);
     expect(row('workspace-finance').children?.find((page) => page.key === 'finance-invoices')?.href).toBe(`/organizations/${ORG}/finance/invoices`);
-    // Studio still has exactly one reachable area, so it stays a plain row: no children, no chevron.
-    expect(row('workspace-studio').children).toBeUndefined();
-    expect(row('workspace-studio').heading).toBeUndefined();
+    // Studio is one workspace: its row is Home, its children are the pages that have earned one.
+    expect(row('workspace-studio').children?.map((page) => page.label)).toEqual(['Website', 'Forms', 'Templates']);
+    expect(row('workspace-studio').heading).toBe(true);
     expect(row('workspace-studio').href).toBe(`/organizations/${ORG}/studio`);
   });
 
@@ -276,7 +276,7 @@ describe('entitlement absent', () => {
     // Assets is a module: without it Field has the rest of its pages, and no more. No modules: no
     // Pipeline, so Sales has just Home and the kernel Customers; the Home is never a child.
     expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-crm', 'customers', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'workspace-studio',
+      'workspace-crm', 'customers', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'workspace-studio', 'studio-website', 'studio-forms', 'studio-templates',
     ]);
     // Connections is a product too: no Integrations entitlement, no item — Team and Plan remain.
     expect(keys(sections, 'business')).toEqual(['team', 'plan']);

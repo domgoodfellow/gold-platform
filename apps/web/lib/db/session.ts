@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createPortalClient } from './portal';
+import { createProposalClient } from './proposal';
 import { classifySessionUser, type SessionIdentity } from '@/lib/domain/identity/session';
 import type { Database } from './types';
 
@@ -20,7 +21,7 @@ import type { Database } from './types';
  */
 export async function updateSession(
   request: NextRequest,
-  { portal = false }: { portal?: boolean } = {},
+  { portal = false, proposal = false }: { portal?: boolean; proposal?: boolean } = {},
 ): Promise<{ response: NextResponse; identity: SessionIdentity }> {
   let response = NextResponse.next({ request });
 
@@ -39,9 +40,12 @@ export async function updateSession(
 
   // The portal keeps its own cookie (`lib/db/portal.ts`), so a request under `/portal` refreshes
   // that session and leaves the account session alone — and the reverse everywhere else.
+  // The proposal recipient's session is a third cookie of its own (`lib/db/proposal.ts`), `/proposal` only.
   const db = portal
     ? createPortalClient(jar)
-    : createServerClient<Database>(requireEnv('NEXT_PUBLIC_SUPABASE_URL'), publicKey(), { cookies: jar });
+    : proposal
+      ? createProposalClient(jar)
+      : createServerClient<Database>(requireEnv('NEXT_PUBLIC_SUPABASE_URL'), publicKey(), { cookies: jar });
 
   // getUser() rather than getSession(): it revalidates the token against the auth server
   // instead of trusting whatever the cookie claims. This call is what performs the refresh,

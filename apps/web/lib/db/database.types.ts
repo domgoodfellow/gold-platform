@@ -2758,6 +2758,8 @@ export type Database = {
           organization_id: string
           portal_expires_at: string | null
           portal_invite_id: string | null
+          proposal_expires_at: string | null
+          proposal_invite_id: string | null
           user_id: string
         }
         Insert: {
@@ -2767,6 +2769,8 @@ export type Database = {
           organization_id: string
           portal_expires_at?: string | null
           portal_invite_id?: string | null
+          proposal_expires_at?: string | null
+          proposal_invite_id?: string | null
           user_id: string
         }
         Update: {
@@ -2776,6 +2780,8 @@ export type Database = {
           organization_id?: string
           portal_expires_at?: string | null
           portal_invite_id?: string | null
+          proposal_expires_at?: string | null
+          proposal_invite_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -2805,6 +2811,13 @@ export type Database = {
             columns: ["organization_id", "portal_invite_id"]
             isOneToOne: false
             referencedRelation: "customer_portal_invites"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "external_actors_proposal_invite_same_org"
+            columns: ["organization_id", "proposal_invite_id"]
+            isOneToOne: false
+            referencedRelation: "customer_proposal_invites"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -11100,6 +11113,15 @@ export type Database = {
         }[]
       }
       portal_forms_available: { Args: never; Returns: Json }
+      proposal_context: {
+        Args: never
+        Returns: {
+          customer_id: string
+          expires_at: string
+          organization_id: string
+          proposal_invite_id: string
+        }[]
+      }
       provision_organization: {
         Args: {
           p_capabilities: string[]

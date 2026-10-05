@@ -1,10 +1,10 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Badge, DefinitionList, Detail } from '@/components/display/data';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { PublicHeader } from '@/features/public-profile/public-header';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
-import { getDb } from '@/lib/db/server';
+import { getProposalDb } from '@/lib/db/proposal-server';
 import {
   commercialProposalTotalMinor,
   listCommercialProposalsForExternalCustomer,
@@ -15,8 +15,7 @@ import {
 } from '@/lib/domain/customers/discovery-snapshots';
 import { DISCOVERY_REQUIREMENTS } from '@/lib/domain/customers/discovery-requirements';
 import { recommendConfiguration, previewByWorkspace } from '@/lib/domain/customers/configuration-recommendation';
-import { claimProposalInvite } from '@/lib/domain/customers/proposal-invites';
-import { DomainError } from '@/lib/domain/errors';
+import { proposalAccessContext } from '@/lib/domain/customers/proposal-access';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { RespondForm } from './respond-form';
@@ -26,25 +25,21 @@ export const dynamic = 'force-dynamic';
 /**
  * A prospect's own commercial proposal (Slice 9). Pays for nothing new on the external axis —
  * see `20261024000001_a_prospect_reviews_their_own_proposal.sql` — the same shared-document
- * token model `portal/[token]/page.tsx` already uses, over the same `external_actors` binding.
+ * link model the portal uses, over the same `external_actors` binding, exchanged once for a
+ * session of its own (`[token]/route.ts`, `20261124000001`).
  *
  * Order follows what a prospect needs to judge the number that follows it: what GildOps
  * understood, what it would configure, then the price and the terms — never the reverse.
  */
-export default async function ProposalPage({ params }: PageProps<'/proposal/[token]'>) {
-  const { token } = await params;
-  const db = await getDb();
+export default async function ProposalPage() {
+  const db = await getProposalDb();
 
-  let organizationId: string;
-  try {
-    organizationId = await claimProposalInvite(db, { token });
-  } catch (error) {
-    // Invalid, withdrawn, and "already recognized by another business" are all a 404 — telling
-    // them apart would let somebody holding a dead link learn it had once been real (I26's
-    // reasoning, restated for a third kind of token over the same axis).
-    if (error instanceof DomainError) notFound();
-    throw error;
-  }
+  // The session is the one the link was exchanged for (`[token]/route.ts`). No session, a withdrawn
+  // link and an expired exchange are the same answer, so the same page — telling them apart would
+  // let somebody holding a dead link learn it had once been real (I26's reasoning).
+  const access = await proposalAccessContext(db);
+  if (!access) redirect('/proposal/unavailable');
+  const { organizationId } = access;
 
   const { data: organization } = await db.from('organizations').select('name, timezone').eq('id', organizationId).maybeSingle();
   if (!organization) notFound();
@@ -125,7 +120,7 @@ export default async function ProposalPage({ params }: PageProps<'/proposal/[tok
         {proposal.notes ? <p className="mt-3 text-sm text-subtle">{proposal.notes}</p> : null}
 
         {proposal.status === 'sent' ? (
-          <RespondForm token={token} proposalId={proposal.id} />
+          <RespondForm proposalId={proposal.id} />
         ) : proposal.status === 'accepted' ? (
           <p className="mt-4 text-sm text-success">Accepted {new Date(proposal.acceptedAt!).toLocaleDateString()}.</p>
         ) : proposal.status === 'declined' ? (

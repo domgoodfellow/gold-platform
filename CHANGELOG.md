@@ -5,6 +5,12 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A proposal link opens a real session, and Studio's pages are in its navigation
+
+Opening a proposal link signed the visitor in while the page drew, and a page cannot keep a session — so Accept and Decline ran with none, and a visitor with no session was sent to the sign-in page before reaching the link at all. The link is now exchanged once, the recipient lands on `/proposal` (no secret in the address), and the session lives in a cookie of its own that a script cannot read, kept apart from Studio's and the portal's. Withdrawing the link ends every session made from it at the next request; a session lasts 30 days unless the link is opened again. Accepting or declining is decided once: a second tab, a double press, or an answer to a version the business has since replaced is refused, and the link keeps showing the outcome. A signed-in account opening a proposal link is never made the recipient.
+
+Studio's navigation now lists Website, Forms and Templates under the Studio row (for people who can manage the organization); the row still opens Studio Home.
+
 ### Finance is the business's own money, and Plans & Add-ons is back in Platform
 
 Finance Home used to show what a business pays GildOps — its Plan, subscription, usage allowances and metered usage — which is a different money direction from Finance's own. It now shows the business's own financial operations: what needs attention (invoices past a due date the business set, unpaid invoices, quoted work with no invoice, billing or card-payment setup that is unfinished), what is outstanding and what is quoted but not invoiced, one currency at a time, the month's invoiced amount against recorded costs (shown as unknown, never zero, where no cost is defined), and the latest invoices and payments. Quotes, Invoices and Payments are now pages of Finance: every job with something priced on it, every invoice with its standing, and every payment as recorded — a payment with no processor reads "Recorded by hand", and no method is guessed. Each opens the work record or customer that owns it. Pricing stays under Settings and Home links to it; Financial insights opens the shared report.

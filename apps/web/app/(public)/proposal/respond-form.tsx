@@ -7,13 +7,7 @@ import { acceptProposalAction, declineProposalAction, type RespondToProposalStat
 
 const INITIAL: RespondToProposalState = { error: null };
 
-export function RespondForm({
-  token,
-  proposalId,
-}: {
-  token: string;
-  proposalId: string;
-}) {
+export function RespondForm({ proposalId }: { proposalId: string }) {
   const [acceptState, acceptFormAction, acceptPending] = useActionState(acceptProposalAction, INITIAL);
   const [declineState, declineFormAction, declinePending] = useActionState(declineProposalAction, INITIAL);
 
@@ -21,14 +15,12 @@ export function RespondForm({
     <div className="mt-4 flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
         <form action={acceptFormAction}>
-          <input type="hidden" name="token" value={token} />
           <input type="hidden" name="proposalId" value={proposalId} />
           <Button type="submit" disabled={acceptPending || declinePending}>
             {acceptPending ? 'Accepting…' : 'Accept'}
           </Button>
         </form>
         <form action={declineFormAction}>
-          <input type="hidden" name="token" value={token} />
           <input type="hidden" name="proposalId" value={proposalId} />
           <Button type="submit" tone="secondary" disabled={acceptPending || declinePending}>
             {declinePending ? 'Declining…' : 'Decline'}

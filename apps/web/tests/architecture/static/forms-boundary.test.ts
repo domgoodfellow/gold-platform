@@ -178,7 +178,8 @@ describe('a public write ends only the session it began', () => {
     }
     // The portal's exchange is the second helper. It ends a session only on a client that holds
     // the portal's own cookie (below), so it can never end a Studio or a booking visitor's.
-    expect(offenders.sort()).toEqual(['lib/domain/identity/anonymous-session.ts', 'lib/domain/identity/credentials.ts', 'lib/domain/portal/portal.ts']);
+    // The proposal's exchange is the third, on the same terms, in the proposal's own cookie.
+    expect(offenders.sort()).toEqual(['lib/domain/customers/proposal-access.ts', 'lib/domain/identity/anonymous-session.ts', 'lib/domain/identity/credentials.ts', 'lib/domain/portal/portal.ts']);
   });
 
   it('keeps the portal session in a cookie of its own, so it can neither replace nor end another', () => {

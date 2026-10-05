@@ -71,6 +71,15 @@ const PORTAL_PREFIX = '/portal/';
 const PORTAL_HOME = '/portal';
 
 /**
+ * A proposal link, on the same terms as the portal: the token in the path is a credential checked
+ * by `claim_proposal_invite` against a row, exchanged once for a session in the proposal's own
+ * cookie and left behind at `/proposal`, which carries no secret. This only declines to redirect a
+ * caller who has no session yet.
+ */
+const PROPOSAL_PREFIX = '/proposal/';
+const PROPOSAL_HOME = '/proposal';
+
+/**
  * A business's published form, on the same terms as booking: the organization and form are named
  * by slug in the path, `published_form` answers only for a published one, and a visitor gets an
  * anonymous session for exactly the length of one submission. Nothing here decides anything.
@@ -97,6 +106,8 @@ export function isPublic(pathname: string): boolean {
     pathname.startsWith(BOOKING_PREFIX) ||
     pathname === PORTAL_HOME ||
     pathname.startsWith(PORTAL_PREFIX) ||
+    pathname === PROPOSAL_HOME ||
+    pathname.startsWith(PROPOSAL_PREFIX) ||
     pathname.startsWith(FORMS_PREFIX) ||
     pathname.startsWith(FORM_KEY_PREFIX) ||
     pathname.startsWith(EMBED_PREFIX) ||
