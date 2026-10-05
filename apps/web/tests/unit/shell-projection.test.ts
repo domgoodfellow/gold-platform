@@ -64,16 +64,14 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(keys(sections, 'home')).toEqual(['home']);
     // One row per registered workspace that has a reachable area, in the order a customer meets
     // them. Service and AI are registered and have no page, so they draw no row. Studio has one
-    // page (Home), so it draws a plain row with no children. Finance also has one AREA page
-    // (Home), but this platform operator's own `platform.commercial` permission adds a second,
-    // GOLD-only child (Plans & Add-ons), so Finance is an expandable row for them though it would
-    // be a plain row for an ordinary member. Insights is not a workspace row at all (D66) — it is
+    // page (Home), so it draws a plain row with no children. Finance has Home plus its Quotes, Invoices
+    // and Payments pages, and nothing GildOps-commercial: Plans & Add-ons is Platform's. Insights is not a workspace row at all (D66) — it is
     // reached contextually.
     expect(topLevel(sections, 'workspaces')).toEqual(['workspace-crm', 'workspace-communications', 'workspace-finance', 'workspace-automations', 'workspace-field', 'workspace-studio']);
     expect(keys(sections, 'workspaces')).toEqual([
       'workspace-crm', 'customers', 'pipeline',
       'workspace-communications', 'calls', 'comms-inbox', 'comms-numbers',
-      'workspace-finance', 'finance-plans',
+      'workspace-finance', 'finance-quotes', 'finance-invoices', 'finance-payments',
       'workspace-automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets',
       'workspace-studio',
@@ -89,22 +87,21 @@ describe('GOLD owner who is also a platform operator', () => {
     expect(row('workspace-crm').href).toBe(`/organizations/${ORG}/sales`);
     expect(row('workspace-communications').href).toBe(`/organizations/${ORG}/comms`);
     expect(row('workspace-automations').href).toBe(`/organizations/${ORG}/automations`);
-    // For this platform operator, Finance is expandable: Home plus Plans & Add-ons.
-    expect(row('workspace-finance').children?.map((page) => page.key)).toEqual(['finance-plans']);
+    // Finance is expandable for everyone with billing: Home plus its operating pages. Platform authority adds nothing to it.
+    expect(row('workspace-finance').children?.map((page) => page.key)).toEqual(['finance-quotes', 'finance-invoices', 'finance-payments']);
     expect(row('workspace-finance').heading).toBe(true);
     expect(row('workspace-finance').href).toBe(`/organizations/${ORG}/finance`);
-    expect(row('workspace-finance').children?.find((page) => page.key === 'finance-plans')?.href).toBe(`/organizations/${ORG}/finance/plans`);
+    expect(row('workspace-finance').children?.find((page) => page.key === 'finance-invoices')?.href).toBe(`/organizations/${ORG}/finance/invoices`);
     // Studio still has exactly one reachable area, so it stays a plain row: no children, no chevron.
     expect(row('workspace-studio').children).toBeUndefined();
     expect(row('workspace-studio').heading).toBeUndefined();
     expect(row('workspace-studio').href).toBe(`/organizations/${ORG}/studio`);
   });
 
-  it('is a plain row without Plans & Add-ons for a member with no platform authority', () => {
+  it('draws the same Finance for a member with no platform authority', () => {
     const noPlatform = project(ALL_CAPABILITIES, { platform: null });
     const row = noPlatform.flatMap((section) => section.items).find((item) => item.key === 'workspace-finance')!;
-    expect(row.children).toBeUndefined();
-    expect(row.heading).toBeUndefined();
+    expect(row.children?.map((page) => page.key)).toEqual(['finance-quotes', 'finance-invoices', 'finance-payments']);
     expect(keys(noPlatform, 'workspaces')).not.toContain('finance-plans');
   });
 
@@ -130,10 +127,12 @@ describe('GOLD owner who is also a platform operator', () => {
       'platform-meters',
       'platform-connectors',
       'platform-group-commercial',
+      'platform-plans',
       'platform-pricing',
       'platform-usage-economics',
       'platform-vendor-rates',
       'platform-package-economics',
+      'platform-portfolio-economics',
       'platform-billing',
       'platform-group-infrastructure',
       'platform-providers',
@@ -173,7 +172,7 @@ describe('GOLD sales member in the same organization', () => {
 
   it('uses GOLD as an ordinary business: sales, customers and calls', () => {
     expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-crm', 'customers', 'pipeline', 'workspace-communications', 'calls', 'comms-inbox', 'comms-numbers', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio',
+      'workspace-crm', 'customers', 'pipeline', 'workspace-communications', 'calls', 'comms-inbox', 'comms-numbers', 'workspace-finance', 'finance-quotes', 'finance-invoices', 'finance-payments', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio',
     ]);
   });
 
@@ -200,7 +199,7 @@ describe('a platform member with limited platform permissions', () => {
     expect(keys(providersOnly, 'platform')).toEqual(['platform', 'platform-group-infrastructure', 'platform-providers', 'platform-ai-runtime']);
 
     const commercial = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.commercial']) });
-    expect(keys(commercial, 'platform')).toEqual(['platform', 'platform-group-commercial', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-billing']);
+    expect(keys(commercial, 'platform')).toEqual(['platform', 'platform-group-commercial', 'platform-plans', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-portfolio-economics', 'platform-billing']);
 
     const catalogue = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.catalogue']) });
     expect(keys(catalogue, 'platform')).toEqual(['platform', 'platform-group-catalog', 'platform-products', 'platform-meters', 'platform-connectors']);
@@ -239,7 +238,7 @@ describe('tenant ordinary member', () => {
   const technician = project(preset('technician'));
 
   it('sees the operational workspaces their business has, and nothing administrative', () => {
-    expect(keys(technician, 'workspaces')).toEqual(['workspace-crm', 'customers', 'pipeline', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
+    expect(keys(technician, 'workspaces')).toEqual(['workspace-crm', 'customers', 'pipeline', 'workspace-finance', 'finance-quotes', 'finance-invoices', 'finance-payments', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
     expect(keys(technician, 'business')).toEqual([]);
     expect(keys(technician, 'platform')).toEqual([]);
   });
@@ -247,7 +246,7 @@ describe('tenant ordinary member', () => {
   it('a viewer with no capability at all still gets the kernel, and no administration', () => {
     const viewer = project(preset('viewer'));
     expect(keys(viewer, 'home')).toEqual(['home']);
-    expect(keys(viewer, 'workspaces')).toEqual(['workspace-crm', 'customers', 'pipeline', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
+    expect(keys(viewer, 'workspaces')).toEqual(['workspace-crm', 'customers', 'pipeline', 'workspace-finance', 'finance-quotes', 'finance-invoices', 'finance-payments', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
     expect(keys(viewer, 'business')).toEqual([]);
   });
 });
@@ -306,10 +305,10 @@ describe('the current item', () => {
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/members`)).toBe('team');
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/invitations`)).toBe('team');
     expect(activeItemKey(sections, `/organizations/${ORG}/settings/connections/connection-1`)).toBe('connections');
-    // Plans & Add-ons moved to Finance (D25's Catalogue/Plan split); the old address is a redirect
-    // stub, no longer a registered destination, so the longest remaining match is Products.
-    expect(activeItemKey(sections, platformHref(ORG, 'catalog/plans/base'))).toBe('platform-products');
-    expect(activeItemKey(sections, `/organizations/${ORG}/finance/plans/base`)).toBe('finance-plans');
+    // Plans & Add-ons is Platform's commercial control plane, never Finance (D60).
+    expect(activeItemKey(sections, platformHref(ORG, 'plans/base'))).toBe('platform-plans');
+    expect(activeItemKey(sections, platformHref(ORG, 'economics/abc'))).toBe('platform-portfolio-economics');
+    expect(activeItemKey(sections, `/organizations/${ORG}/finance/invoices`)).toBe('finance-invoices');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog'))).toBe('platform-products');
     expect(activeItemKey(sections, platformHref(ORG, 'catalog/families/comms'))).toBe('platform-products');
     expect(activeItemKey(sections, platformHref(ORG))).toBe('platform');
@@ -368,9 +367,9 @@ describe('platform routes and their permission', () => {
     expect(platformRouteRequires('failures')).toBe('platform.health');
     expect(platformRouteRequires('organizations')).toBe('platform.organizations');
     expect(platformRouteRequires('organizations/abc/providers')).toBe('platform.organizations');
-    // Plans & Add-ons moved to Finance and is no longer a registered destination; the old address
-    // still resolves (Products is the next-longest registered prefix under `catalog`).
-    expect(platformRouteRequires('catalog/plans/base')).toBe('platform.catalogue');
+    // Plans & Add-ons and portfolio economics are the commercial plane's, not the catalogue's.
+    expect(platformRouteRequires('plans/base')).toBe('platform.commercial');
+    expect(platformRouteRequires('economics/abc')).toBe('platform.commercial');
     expect(platformRouteRequires('integrations/new')).toBe('platform.catalogue');
     expect(platformRouteRequires('pricing')).toBe('platform.commercial');
     expect(platformRouteRequires('billing')).toBe('platform.commercial');

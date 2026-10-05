@@ -4,6 +4,9 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   getInvoiceForWorkItem,
+  invoicedWorkItemIds,
+  listInvoices,
+  listOrganizationPayments,
   invoiceStanding,
   issueInvoice,
   recordPayment,
@@ -12,7 +15,7 @@ import {
 } from '@/lib/domain/billing/invoices';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { createPriceBookItem, updatePriceBookItem } from '@/lib/domain/pricing/price-book';
-import { addPricedLine, priceWorkItem, removePricedLine } from '@/lib/domain/pricing/prices';
+import { addPricedLine, listPricedWork, priceWorkItem, removePricedLine } from '@/lib/domain/pricing/prices';
 import { ALL_CAPABILITIES, CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
@@ -628,5 +631,73 @@ describe('money arriving from a processor', () => {
     // A real `auth.users` row rather than a null actor or a sentinel outside the table. That
     // choice is D26's, and it is what let I11 stay a single claim.
     expect(data!.created_by).toBe('00000000-0000-4000-8000-0000000000a1');
+  });
+});
+
+/**
+ * The organization-wide reads Finance lists from (`listInvoices`, `listOrganizationPayments`,
+ * `listPricedWork`). They add no table and no calculation: each is the same RLS-scoped rows the
+ * per-job reads return, gathered for a screen — so what is proved here is scope, snapshot and
+ * honesty about what was not recorded.
+ */
+describe('the organization-wide financial reads', () => {
+  it("lists only this business's invoices, payments and quoted work", async () => {
+    const aliceJob = await quotedJob(alice, 'Alice only');
+    const aliceInvoice = await issueInvoice(alice.db, { workItemId: aliceJob });
+    await recordPayment(alice.db, { invoiceId: aliceInvoice, amountMinor: 5_000 });
+    const bobJob = await quotedJob(bob, 'Bob only');
+    await issueInvoice(bob.db, { workItemId: bobJob });
+
+    const aliceInvoices = await listInvoices(alice.db, { organizationId: alice.organizationId });
+    expect(aliceInvoices.map((invoice) => invoice.workItemId)).toContain(aliceJob);
+    expect(aliceInvoices.map((invoice) => invoice.workItemId)).not.toContain(bobJob);
+
+    // Naming the other business changes nothing: RLS has already decided what is visible.
+    expect(await listInvoices(alice.db, { organizationId: bob.organizationId })).toEqual([]);
+    expect(await listOrganizationPayments(alice.db, { organizationId: bob.organizationId })).toEqual([]);
+    expect(await listPricedWork(alice.db, { organizationId: bob.organizationId })).toEqual([]);
+  });
+
+  it('reads a payment as recorded by hand, with the invoice as it read at issue, and infers no method', async () => {
+    const job = await quotedJob(alice, 'Paid in cash');
+    const invoiceId = await issueInvoice(alice.db, { workItemId: job });
+    await recordPayment(alice.db, { invoiceId, amountMinor: 3_000 });
+
+    const payments = await listOrganizationPayments(alice.db, { organizationId: alice.organizationId });
+    const payment = payments.find((entry) => entry.workItemId === job)!;
+    expect(payment.amountMinor).toBe(3_000);
+    expect(payment.currency).toBe('CAD');
+    expect(payment.provider).toBeNull();
+    expect(payment.providerReference).toBeNull();
+    expect(payment.invoiceId).toBe(invoiceId);
+
+    // Settled-ness comes from the one standing function over the payments recorded, not from the list.
+    const invoice = (await listInvoices(alice.db, { organizationId: alice.organizationId })).find((entry) => entry.id === invoiceId)!;
+    const standing = invoiceStanding(invoice);
+    expect(standing.paidMinor).toBe(3_000);
+    expect(standing.outstandingMinor).toBe(9_000);
+    expect(standing.settled).toBe(false);
+  });
+
+  it('keeps quoted work and invoices at the amounts they were priced, whatever the price book says now (I8)', async () => {
+    const job = await quotedJob(alice, 'Quoted before the rise', 2);
+    const before = (await listPricedWork(alice.db, { organizationId: alice.organizationId })).find((entry) => entry.workItemId === job)!;
+    expect(priceWorkItem(before.lines)).toEqual({ totalMinor: 24_000, currency: 'CAD' });
+    expect(await invoicedWorkItemIds(alice.db, { organizationId: alice.organizationId, workItemIds: [job] })).toEqual(new Set());
+
+    await issueInvoice(alice.db, { workItemId: job });
+    await updatePriceBookItem(alice.db, { id: alice.calloutId, name: 'Callout', unit: 'visit', unitAmountMinor: 50_000 });
+
+    const after = (await listPricedWork(alice.db, { organizationId: alice.organizationId })).find((entry) => entry.workItemId === job)!;
+    expect(priceWorkItem(after.lines)).toEqual({ totalMinor: 24_000, currency: 'CAD' });
+    expect(await invoicedWorkItemIds(alice.db, { organizationId: alice.organizationId, workItemIds: [job] })).toEqual(new Set([job]));
+    const invoice = (await listInvoices(alice.db, { organizationId: alice.organizationId })).find((entry) => entry.workItemId === job)!;
+    expect(invoiceStanding(invoice).total).toEqual({ totalMinor: 24_000, currency: 'CAD' });
+  });
+
+  it('leaves a job with nothing priced out of the quoted list', async () => {
+    const bare = await createWorkItem(alice.db, { organizationId: alice.organizationId, statusId: alice.statusId, title: 'Unpriced' });
+    const work = await listPricedWork(alice.db, { organizationId: alice.organizationId });
+    expect(work.map((entry) => entry.workItemId)).not.toContain(bare);
   });
 });

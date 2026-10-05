@@ -261,7 +261,7 @@ describe('the operator shell navigation', () => {
       'library',
       'sales', 'customers', 'pipeline',
       'comms', 'calls', 'comms-inbox', 'comms-numbers',
-      'finance',
+      'finance', 'finance-quotes', 'finance-invoices', 'finance-payments',
       'automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'field', 'work', 'schedule', 'resources', 'locations', 'assets',
       'studio',

@@ -369,13 +369,16 @@ export const AREAS: readonly Area[] = [
   // and by either channel's Features: a business with only one of the two channels still has its Inbox.
   { segment: 'comms-inbox', label: 'Inbox', group: 'workspaces', workspace: 'communications', route: 'comms/inbox', module: 'reception', relevantCapabilities: ['message.send'], featureKeys: ['inbound_sms', 'outbound_sms', 'sending'] },
   { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'communications', route: 'comms/numbers', module: 'reception', relevantCapabilities: ['call.place', 'message.send'], featureKeys: ['number_inventory', 'caller_id'] },
-  // Finance: what money is moving through this business, and what it is paying GildOps for —
-  // kernel, like Sales and Field's own Home, so a member sees it regardless of role. Its only
-  // page for now (D68's discipline against a row with nothing behind it); Billing, Usage or
-  // Insights pages of its own arrive once each has real, distinct content Home cannot already
-  // summarize in one line. Pricing stays a Settings-only configuration target it owns without
-  // drawing a sidebar row of its own.
+  // Finance: how this business prices, bills, gets paid and understands what its work earns —
+  // tenant Financial Operations, customer to business, and nothing a business pays GildOps (that is
+  // Settings → Plan & usage, and Platform for GildOps' own control plane). Home is kernel, like
+  // Sales and Field's own; Quotes, Invoices and Payments are its operating pages and sit behind the
+  // billing module as Pricing does. Pricing stays a Settings-only configuration target it owns
+  // without drawing a sidebar row of its own.
   { segment: 'finance', label: 'Finance', group: 'workspaces', workspace: 'finance' },
+  { segment: 'finance-quotes', label: 'Quotes', group: 'workspaces', workspace: 'finance', route: 'finance/quotes', module: 'billing', featureKeys: ['quote_creation'] },
+  { segment: 'finance-invoices', label: 'Invoices', group: 'workspaces', workspace: 'finance', route: 'finance/invoices', module: 'billing', featureKeys: ['invoices', 'invoice_history'] },
+  { segment: 'finance-payments', label: 'Payments', group: 'workspaces', workspace: 'finance', route: 'finance/payments', module: 'billing', featureKeys: ['invoices', 'card_payments'] },
   // Automations: building, reviewing and observing rules is ongoing work, so it is a workspace.
   // Home carries Rules' own entitlement, so the workspace draws no row for a business without it.
   // Rules, Messages and Activity are three pages of it, each its own route — the sidebar is the

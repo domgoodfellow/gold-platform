@@ -90,7 +90,7 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
       <PageHeader title="Billing" crumbs={platformAncestry(goldId, 'billing')} />
       <Hint className="mb-4 block">
         Plans and prices are managed at{' '}
-        <Link href={`/organizations/${goldId}/finance/plans`} className="underline underline-offset-4">
+        <Link href={platformHref(goldId, 'plans')} className="underline underline-offset-4">
           Finance → Plans
         </Link>
         .

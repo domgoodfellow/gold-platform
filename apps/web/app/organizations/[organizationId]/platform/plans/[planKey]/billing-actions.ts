@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateFinance } from '@/lib/route/platform';
+import { revalidatePlatform } from '@/lib/route/platform';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { provisionPlanPrice } from '@/lib/domain/platform-billing/provisioning';
@@ -20,6 +20,6 @@ export async function provisionPlanPriceAction(
     if (error instanceof DomainError) return { error: error.message, provisioned: false };
     throw error;
   }
-  revalidateFinance();
+  revalidatePlatform();
   return { error: null, provisioned: true };
 }

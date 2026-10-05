@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loadDemoContext, financeUrl, platformUrl, OWNER_STORAGE_STATE, STAFF_STORAGE_STATE } from './helpers';
+import { loadDemoContext, platformUrl, OWNER_STORAGE_STATE, STAFF_STORAGE_STATE } from './helpers';
 
 /**
  * Proves the durable breadcrumb contract by driving the real app rather than reading source:
@@ -58,14 +58,15 @@ test.describe('Platform breadcrumbs', () => {
     await expect(page).toHaveURL(new RegExp(`/platform$`));
   });
 
-  test('Plans & Add-ons reads Finance / Plans & Add-ons, moved out of Platform', async ({ page }) => {
-    await page.goto(financeUrl('plans'));
+  test('Plans & Add-ons reads Platform / Commercial / Plans & Add-ons, never Finance', async ({ page }) => {
+    await page.goto(platformUrl('plans'));
     const trail = page.getByRole('navigation', { name: 'breadcrumb' });
-    const financeLink = trail.getByRole('link', { name: 'Finance' });
-    await expect(financeLink).toBeVisible();
-    await expect(trail.getByText('Plans & Add-ons', { exact: true })).toBeVisible();
-    await financeLink.click();
-    await expect(page).toHaveURL(financeUrl());
+    const platformLink = trail.getByRole('link', { name: 'Platform' });
+    await expect(platformLink).toBeVisible();
+    await expect(trail.getByText('Commercial', { exact: true })).toBeVisible();
+    await expect(trail.getByRole('link', { name: 'Finance' })).toHaveCount(0);
+    await platformLink.click();
+    await expect(page).toHaveURL(new RegExp(`/platform$`));
   });
 
   test('a nested Platform record extends the trail one level further', async ({ page }) => {

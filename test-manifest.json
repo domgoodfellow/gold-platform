@@ -432,6 +432,13 @@
         "platform"
       ]
     },
+    "apps/web/e2e/finance-workspace.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "billing",
+        "ui"
+      ]
+    },
     "apps/web/e2e/operator-paths.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [
@@ -949,6 +956,14 @@
       "concerns": [
         "scheduling",
         "navigation"
+      ]
+    },
+    "apps/web/tests/architecture/static/finance-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "billing",
+        "pricing",
+        "ui"
       ]
     },
     "apps/web/tests/architecture/static/service-access-boundary.test.ts": {
@@ -2218,6 +2233,13 @@
       "concerns": [
         "scheduling",
         "work"
+      ]
+    },
+    "apps/web/tests/unit/finance-projections.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "billing",
+        "pricing"
       ]
     },
     "apps/web/tests/unit/shell-projection.test.ts": {

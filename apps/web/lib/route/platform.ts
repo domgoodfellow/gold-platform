@@ -92,17 +92,6 @@ export function revalidatePlatform(): void {
 }
 
 /**
- * Drop every cached Finance page. Plan & Add-on administration lives here even though it is
- * staff-gated the same way Platform is (`requirePlatformArea`); a write still needs to invalidate
- * both trees because Platform's catalogue pages (Products, a Product family) read Plan-derived
- * counts.
- */
-export function revalidateFinance(): void {
-  revalidatePath('/organizations/[organizationId]/finance', 'layout');
-  revalidatePlatform();
-}
-
-/**
  * The capability guard a Platform **server action** runs for itself.
  *
  * `requirePlatformArea` is the route-shaped guard: it answers `notFound()`/`redirect()`, which a

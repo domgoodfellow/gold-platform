@@ -1,4 +1,5 @@
 import type { Db } from '@/lib/db/types';
+import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -77,6 +78,69 @@ export async function listPricedLines(
 }
 
 /** The amount is never an argument — `add_work_item_priced_line` reads the catalogue row and copies it, so a caller chooses what and how many but never how much. */
+/** A job that has something priced on it — the quote — with the lines exactly as they were priced. */
+export type PricedWork = {
+  workItemId: string;
+  title: string;
+  status: string;
+  customer: { id: string; name: string } | null;
+  createdAt: string;
+  lines: PricedLine[];
+};
+
+/**
+ * The jobs this business has priced, newest first, each with all of its lines. A quote is a job
+ * with priced lines (there is no quote table), so this is that list; the amount is
+ * `priceWorkItem` over `lines`, applied by the caller (I4). The lines are the snapshots on the
+ * job, never re-read from the price book (I8). `!inner` keeps a job with nothing priced out, and
+ * the limit counts whole jobs rather than lines, so no job is shown with part of its quote.
+ */
+export async function listPricedWork(
+  db: Db,
+  input: { organizationId: string; limit?: number },
+): Promise<Counted<PricedWork>> {
+  const { data, error, count } = await db
+    .from('work_items')
+    .select(
+      'id, title, created_at, status:work_item_statuses!work_items_status_same_org_and_type (name), customer:customers!work_items_customer_same_org (id, name), lines:work_item_priced_lines!work_item_priced_lines_work_item_same_org!inner (id, description, unit, unit_amount_minor, currency, quantity, created_at)',
+      { count: 'exact' },
+    )
+    .eq('organization_id', input.organizationId)
+    .order('created_at', { ascending: false })
+    .limit(input.limit ?? LIST_LIMIT);
+
+  if (error) {
+    throw new DomainError(error.message, 'prices.work_failed');
+  }
+
+  const first = <T,>(value: T | T[] | null): T | null => (Array.isArray(value) ? (value[0] ?? null) : value);
+
+  return counted(
+    (data ?? []).map((row) => {
+      const status = first(row.status);
+      const customer = first(row.customer);
+      return {
+        workItemId: row.id,
+        title: row.title,
+        status: status?.name ?? '',
+        customer: customer ? { id: customer.id, name: customer.name } : null,
+        createdAt: row.created_at,
+        lines: [...row.lines]
+          .sort((a, b) => a.created_at.localeCompare(b.created_at))
+          .map((line) => ({
+            id: line.id,
+            description: line.description,
+            unit: line.unit,
+            unitAmountMinor: line.unit_amount_minor,
+            currency: line.currency,
+            quantity: line.quantity,
+          })),
+      };
+    }),
+    count,
+  );
+}
+
 export async function addPricedLine(
   db: Db,
   input: { workItemId: string; priceBookItemId: string; quantity: number },

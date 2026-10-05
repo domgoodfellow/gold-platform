@@ -13,7 +13,7 @@ export function platformUrl(subpath = ''): string {
   return `/organizations/${loadDemoContext().goldOrganizationId}/platform${subpath ? `/${subpath}` : ''}`;
 }
 
-/** GOLD's own Finance workspace: Plans & Add-ons administration lives here, not under Platform. */
+/** GOLD's own Finance workspace — ordinary tenant Finance, like any business's. Plans & Add-ons is Platform's (`platformUrl('plans')`). */
 export function financeUrl(subpath = ''): string {
   return `/organizations/${loadDemoContext().goldOrganizationId}/finance${subpath ? `/${subpath}` : ''}`;
 }

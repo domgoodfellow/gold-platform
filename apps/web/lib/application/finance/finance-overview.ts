@@ -1,120 +1,88 @@
 import type { Db } from '@/lib/db/types';
-import { getPlanById, listPlanPrices, type PlanPrice } from '@/lib/domain/catalogue/plans';
-import { currentPlanAssignment, organizationEffectiveQuotas, type EffectiveQuota } from '@/lib/domain/catalogue/organization-plans';
-import { listUsageEvents, type UsageEvent } from '@/lib/domain/commercial/usage';
-import { platformBillingProvider } from '@/lib/adapters/platform-billing';
-import { getOrganizationSubscription, type OrganizationSubscription } from '@/lib/domain/platform-billing/subscriptions';
-import { listConnections } from '@/lib/domain/integrations/connections';
-import { isConnectable, listConnectors, type Connector } from '@/lib/domain/integrations/connectors';
+import { listOrganizationPayments, type PaymentRecord } from '@/lib/domain/billing/invoices';
+import { listInvoicedAndIncurred, totalsByCurrency, type PeriodTotal } from '@/lib/domain/reporting/financials';
+import { periodFor } from '@/lib/domain/reporting/shape';
+import { listEnabledModules, outstandingModuleSetup } from '@/lib/domain/tenancy/modules';
+import type { ModuleKey } from '@/lib/navigation';
+import { loadFinanceInvoices, outstandingByCurrency, type FinanceInvoiceRow } from './invoices';
+import { awaitingInvoiceByCurrency, loadFinanceQuotes } from './quotes';
 
 /**
- * What this business's Finance Home summarizes — a projection over reads that already exist
- * elsewhere (I4/I5's reasoning, extended to a summary screen, the way `studioOverview` already
- * does it for Studio). Nothing here totals, prices or reconciles anything a second time; every
- * figure is the same one Settings → Plan & usage already shows, never GOLD's own cost or a
- * margin (D43) — this file reads only the tenant-safe functions those pages already call.
+ * What Finance Home summarizes: this business's own money with its own customers — a projection
+ * over reads that already own each fact (I4/I5's reasoning, as `studioOverview` does it for
+ * Studio). Standing is `invoiceStanding`'s, a quote is `priceWorkItem` over a job's lines, and
+ * invoiced/incurred/margin are `invoiced_and_incurred`'s. Nothing here totals across currencies,
+ * turns an unknown cost into zero, or touches what the business pays GildOps — that is
+ * Settings → Plan & usage, and Platform for GildOps' own control plane.
  */
 
-/** A financial system, as far as the connector catalogue's open `category` vocabulary can say so today. No schema addition: a label an admin already edits (`connectors.ts`). */
-const FINANCIAL_CONNECTOR_CATEGORIES = new Set(['accounting', 'banking', 'payments', 'payroll', 'commerce']);
-
-function isFinancialCategory(category: string): boolean {
-  return FINANCIAL_CONNECTOR_CATEGORIES.has(category.trim().toLowerCase());
-}
-
-export type FinanceSubscription = {
-  planLabel: string;
-  price: { amountMinor: number; currency: string; billingInterval: PlanPrice['billingInterval'] } | null;
-  subscription: OrganizationSubscription | null;
-};
-
-export type FinanceConnection = {
-  connectorKey: string;
-  connectorName: string;
-  status: 'connecting' | 'active' | 'needs_attention' | 'disconnected';
-};
+export type FinanceAttention =
+  | { kind: 'overdue_invoices'; count: number }
+  | { kind: 'unpaid_invoices'; count: number }
+  | { kind: 'quoted_not_invoiced'; jobs: number }
+  | { kind: 'setup'; module: ModuleKey; message: string };
 
 export type FinanceOverview = {
-  /** Null when this organization has no Plan assigned yet — a fact Finance Home says plainly rather than guessing at a price. */
-  subscription: FinanceSubscription | null;
-  billingProviderConfigured: boolean;
-  quotas: EffectiveQuota[];
-  recentUsage: UsageEvent[];
-  /** This business's own connections that are to a financial system, active or not. */
-  financialConnections: FinanceConnection[];
-  /** Whether any financial-category connector is actually connectable today, for the contextual prompt when the list above is empty. */
-  hasConnectableFinancialConnector: boolean;
+  /** True when the business has no invoice, no payment and no quoted work — an empty Finance, not a failed one. */
+  empty: boolean;
+  attention: FinanceAttention[];
+  /** Owed per currency. Empty when nothing is outstanding; never a single cross-currency number. */
+  outstanding: { currency: string; outstandingMinor: number; invoices: number }[];
+  /** Quoted work with no invoice yet, per currency. */
+  awaitingInvoice: { currency: string; quotedMinor: number; jobs: number }[];
+  recentInvoices: FinanceInvoiceRow[];
+  recentPayments: PaymentRecord[];
+  /** `invoiced_and_incurred` for the month, per currency. Null where the caller may not read reports; `incurredMinor`/`marginMinor` are null where no cost is defined, never zero. */
+  month: PeriodTotal[] | null;
+  /** True when a list was cut at its limit, so a count or total above covers part of the records. */
+  partial: boolean;
 };
 
-async function resolveSubscription(
-  db: Db,
-  input: { organizationId: string; currency: string | null; billingProviderConfigured: boolean },
-): Promise<FinanceSubscription | null> {
-  const assignment = await currentPlanAssignment(db, { organizationId: input.organizationId });
-  if (!assignment) return null;
-
-  const plan = await getPlanById(db, assignment.planId);
-  if (!plan) return null;
-
-  const [prices, subscription] = await Promise.all([
-    listPlanPrices(db, plan.id),
-    input.billingProviderConfigured
-      ? getOrganizationSubscription(db, { organizationId: input.organizationId })
-      : Promise.resolve(null),
-  ]);
-
-  const approvedPrice = input.currency
-    ? prices.find((price) => price.approvalState === 'approved' && price.currency === input.currency)
-    : undefined;
-
-  return {
-    planLabel: plan.label,
-    price: approvedPrice
-      ? { amountMinor: approvedPrice.amountMinor, currency: approvedPrice.currency, billingInterval: approvedPrice.billingInterval }
-      : null,
-    subscription,
-  };
-}
-
-function resolveFinancialConnections(
-  connections: Awaited<ReturnType<typeof listConnections>>,
-  connectors: Connector[],
-): FinanceConnection[] {
-  const connectorByKey = new Map(connectors.map((connector) => [connector.key, connector]));
-  return connections
-    .filter((connection) => {
-      const connector = connectorByKey.get(connection.connectorKey);
-      return connector ? isFinancialCategory(connector.category) : false;
-    })
-    .map((connection) => ({
-      connectorKey: connection.connectorKey,
-      connectorName: connectorByKey.get(connection.connectorKey)?.name ?? connection.connectorKey,
-      status: connection.status,
-    }));
-}
+const RECENT = 5;
 
 export async function financeOverview(
   db: Db,
-  input: { organizationId: string; currency: string | null },
+  input: { organizationId: string; today: string; canReadReports: boolean; now?: Date },
 ): Promise<FinanceOverview> {
-  const billingProviderConfigured = Boolean(await platformBillingProvider());
-
-  const [subscription, quotas, recentUsage, connections, connectors] = await Promise.all([
-    resolveSubscription(db, { ...input, billingProviderConfigured }),
-    organizationEffectiveQuotas(db, { organizationId: input.organizationId }),
-    listUsageEvents(db, { organizationId: input.organizationId, limit: 10 }),
-    listConnections(db, { organizationId: input.organizationId }),
-    listConnectors(db),
+  const now = input.now ?? new Date();
+  const [invoices, quotes, payments, enabled, invoiced] = await Promise.all([
+    loadFinanceInvoices(db, { organizationId: input.organizationId, now }),
+    loadFinanceQuotes(db, { organizationId: input.organizationId }),
+    listOrganizationPayments(db, { organizationId: input.organizationId, limit: RECENT }),
+    listEnabledModules(db, { organizationId: input.organizationId }),
+    input.canReadReports
+      ? listInvoicedAndIncurred(db, {
+          organizationId: input.organizationId,
+          grouping: 'customer',
+          period: periodFor('month', input.today),
+        })
+      : Promise.resolve(null),
   ]);
 
+  const setup = await outstandingModuleSetup(db, {
+    organizationId: input.organizationId,
+    enabled: new Set([...enabled].filter((key) => key === 'billing' || key === 'card_payments')),
+  });
+
+  const awaitingInvoice = awaitingInvoiceByCurrency(quotes.rows);
+  const unsettled = invoices.rows.filter((row) => !row.settled);
+  const overdue = unsettled.filter((row) => row.overdue).length;
+
+  const attention: FinanceAttention[] = [];
+  for (const [module, message] of setup) attention.push({ kind: 'setup', module, message });
+  if (overdue > 0) attention.push({ kind: 'overdue_invoices', count: overdue });
+  if (unsettled.length - overdue > 0) attention.push({ kind: 'unpaid_invoices', count: unsettled.length - overdue });
+  const jobsAwaiting = awaitingInvoice.reduce((sum, entry) => sum + entry.jobs, 0);
+  if (jobsAwaiting > 0) attention.push({ kind: 'quoted_not_invoiced', jobs: jobsAwaiting });
+
   return {
-    subscription,
-    billingProviderConfigured,
-    quotas,
-    recentUsage,
-    financialConnections: resolveFinancialConnections(connections, connectors),
-    hasConnectableFinancialConnector: connectors.some(
-      (connector) => isFinancialCategory(connector.category) && isConnectable(connector),
-    ),
+    empty: invoices.rows.length === 0 && payments.length === 0 && quotes.rows.length === 0,
+    attention,
+    outstanding: outstandingByCurrency(invoices.rows),
+    awaitingInvoice,
+    recentInvoices: invoices.rows.slice(0, RECENT),
+    recentPayments: [...payments],
+    month: invoiced ? totalsByCurrency(invoiced) : null,
+    partial: invoices.total > invoices.rows.length || quotes.total > quotes.rows.length,
   };
 }

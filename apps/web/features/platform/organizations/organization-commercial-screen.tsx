@@ -12,7 +12,7 @@ import { TenantWorkspaceHeader } from '@/features/platform/tenant-workspace';
 import { deriveOrganizationFeatureState, EntitlementStatus, FeatureStatusBadges } from '@/features/catalogue/feature-badges';
 import { AssignPlanSheet, ManageAddonsSheet, RecordCommercialTermForm, RecordPlanAgreementSheet, RecordQuotaOverrideSheet } from '@/features/platform/organizations/forms';
 import { ButtonLink } from '@/components/controls/button';
-import type { OrganizationEconomicsModel } from '@/lib/application/finance/economics-overview';
+import type { OrganizationEconomicsModel } from '@/lib/application/platform/economics-overview';
 
 const OVERAGE_BEHAVIOR_LABEL: Record<string, string> = {
   metered: 'Metered',
@@ -176,7 +176,7 @@ export function OrganizationCommercialScreen({
               </div>
             ) : null}
             <ButtonLink
-              href={`/organizations/${goldId}/finance/economics/${organizationId}`}
+              href={platformHref(goldId, `economics/${organizationId}`)}
               tone="text"
               size="small"
               className="mt-3"

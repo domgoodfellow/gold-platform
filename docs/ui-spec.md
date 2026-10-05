@@ -214,7 +214,7 @@ Agent-assisted drafting is an optional section inside it.
 says nothing about who owns the records on the page. Providers, catalogue and billing stay
 platform-scoped whatever the address. `PLATFORM_DESTINATIONS` is the one registry of its
 destinations, what each takes (`platform_staff.capabilities`) and how the sidebar nests them:
-Catalog holds Plans & Add-ons, Meters and Connectors, Commercial holds Pricing and Billing, and
+Catalog holds Products, Meters and Connectors, Commercial holds Plans & Add-ons, Pricing, Portfolio economics and Billing, and
 Infrastructure holds Providers and Failures. Platform is a section beneath GildOps' own workspaces,
 never a replacement for them, and while somebody is inside it every group is open. A GildOps
 salesperson sees GildOps as any business and no Platform; a limited operator sees only the

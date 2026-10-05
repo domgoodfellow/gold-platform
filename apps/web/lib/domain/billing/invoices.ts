@@ -1,4 +1,5 @@
 import type { Db } from '@/lib/db/types';
+import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import { DomainError } from '@/lib/domain/errors';
 import { priceWorkItem, type Price, type PricedLine } from '@/lib/domain/pricing/prices';
 import { requireActor } from '@/lib/domain/tenancy/actor';
@@ -113,33 +114,26 @@ export async function getInvoiceForWorkItem(
   };
 }
 
-/**
- * What this customer has actually been billed, across every job they've ever had — not which
- * jobs currently point to them. `invoices.customer_id` is snapshotted at `issue_invoice` and
- * never updated afterward (no update policy exists on `invoices` at all), so filtering on it
- * directly is already the historical truth (I8); nothing here joins through a work item's own,
- * mutable `customer_id`.
- *
- * **Batched rather than one query per invoice.** A customer's own record is exactly the
- * "dozens of invoices" case the portal's original per-invoice reads were never written for —
- * two extra queries, scoped to the invoice ids this customer actually has, rather than one for
- * every invoice's lines and another for every invoice's payments.
- */
-export async function listCustomerInvoices(
-  db: Db,
-  input: { organizationId: string; customerId: string },
-): Promise<Invoice[]> {
-  const { data: invoices, error } = await db
-    .from('invoices')
-    .select('id, work_item_id, number, billed_to, customer_id, currency, issued_at, due_at')
-    .eq('organization_id', input.organizationId)
-    .eq('customer_id', input.customerId)
-    .order('issued_at', { ascending: false });
+type InvoiceRow = {
+  id: string;
+  work_item_id: string;
+  number: number;
+  billed_to: string;
+  customer_id: string | null;
+  currency: string;
+  issued_at: string;
+  due_at: string | null;
+};
 
-  if (error) {
-    throw new DomainError(error.message, 'invoices.customer_read_failed');
-  }
-  if (!invoices || invoices.length === 0) return [];
+const INVOICE_COLUMNS = 'id, work_item_id, number, billed_to, customer_id, currency, issued_at, due_at';
+
+/**
+ * **Batched rather than one query per invoice:** two queries scoped to the invoice ids in hand,
+ * one for every invoice's lines and one for every invoice's payments. Shared by every list so a
+ * screen of dozens of invoices never costs two reads each.
+ */
+async function hydrateInvoices(db: Db, organizationId: string, invoices: InvoiceRow[]): Promise<Invoice[]> {
+  if (invoices.length === 0) return [];
 
   const invoiceIds = invoices.map((invoice) => invoice.id);
 
@@ -147,13 +141,13 @@ export async function listCustomerInvoices(
     db
       .from('invoice_lines')
       .select('id, invoice_id, description, unit, unit_amount_minor, currency, quantity, position')
-      .eq('organization_id', input.organizationId)
+      .eq('organization_id', organizationId)
       .in('invoice_id', invoiceIds)
       .order('position', { ascending: true }),
     db
       .from('payments')
       .select('id, invoice_id, amount_minor, currency, received_at, provider, note')
-      .eq('organization_id', input.organizationId)
+      .eq('organization_id', organizationId)
       .in('invoice_id', invoiceIds)
       .order('received_at', { ascending: true }),
   ]);
@@ -206,6 +200,139 @@ export async function listCustomerInvoices(
     lines: linesByInvoice.get(row.id) ?? [],
     payments: paymentsByInvoice.get(row.id) ?? [],
   }));
+}
+
+/**
+ * What this customer has actually been billed, across every job they've ever had — not which
+ * jobs currently point to them. `invoices.customer_id` is snapshotted at `issue_invoice` and
+ * never updated afterward (no update policy exists on `invoices` at all), so filtering on it
+ * directly is already the historical truth (I8); nothing here joins through a work item's own,
+ * mutable `customer_id`.
+ */
+export async function listCustomerInvoices(
+  db: Db,
+  input: { organizationId: string; customerId: string },
+): Promise<Invoice[]> {
+  const { data: invoices, error } = await db
+    .from('invoices')
+    .select(INVOICE_COLUMNS)
+    .eq('organization_id', input.organizationId)
+    .eq('customer_id', input.customerId)
+    .order('issued_at', { ascending: false });
+
+  if (error) {
+    throw new DomainError(error.message, 'invoices.customer_read_failed');
+  }
+  return hydrateInvoices(db, input.organizationId, invoices ?? []);
+}
+
+/**
+ * Every invoice this business has issued, newest first, to the list limit — with the total, so a
+ * screen can say it is showing part. Each carries its own snapshotted lines and recorded payments;
+ * standing is `invoiceStanding`'s to derive, never this reader's.
+ */
+export async function listInvoices(
+  db: Db,
+  input: { organizationId: string; limit?: number },
+): Promise<Counted<Invoice>> {
+  const { data, error, count } = await db
+    .from('invoices')
+    .select(INVOICE_COLUMNS, { count: 'exact' })
+    .eq('organization_id', input.organizationId)
+    .order('issued_at', { ascending: false })
+    .limit(input.limit ?? LIST_LIMIT);
+
+  if (error) {
+    throw new DomainError(error.message, 'invoices.list_failed');
+  }
+  return counted(await hydrateInvoices(db, input.organizationId, data ?? []), count);
+}
+
+/** Which of these jobs already have an invoice. One query for a page of jobs, never one per job. */
+export async function invoicedWorkItemIds(
+  db: Db,
+  input: { organizationId: string; workItemIds: string[] },
+): Promise<Set<string>> {
+  if (input.workItemIds.length === 0) return new Set();
+  const { data, error } = await db
+    .from('invoices')
+    .select('work_item_id')
+    .eq('organization_id', input.organizationId)
+    .in('work_item_id', input.workItemIds);
+
+  if (error) {
+    throw new DomainError(error.message, 'invoices.list_failed');
+  }
+  return new Set((data ?? []).map((row) => row.work_item_id));
+}
+
+/** A recorded payment together with the invoice it settled, as that invoice read at issue (I8). */
+export type PaymentRecord = Payment & {
+  invoiceId: string;
+  invoiceNumber: number;
+  billedTo: string;
+  customerId: string | null;
+  workItemId: string;
+  /** The processor's own reference. Null for a payment a person wrote down. */
+  providerReference: string | null;
+};
+
+/**
+ * Every payment this business has recorded, most recently received first. Customer-to-business
+ * money only: `payments` holds no row for what the business pays GildOps. Two queries — the
+ * payments, then the invoices they settle — rather than a join, so the invoice's own snapshot is
+ * what is read (I8).
+ */
+export async function listOrganizationPayments(
+  db: Db,
+  input: { organizationId: string; limit?: number },
+): Promise<Counted<PaymentRecord>> {
+  const { data, error, count } = await db
+    .from('payments')
+    .select('id, invoice_id, amount_minor, currency, received_at, provider, provider_reference, note', { count: 'exact' })
+    .eq('organization_id', input.organizationId)
+    .order('received_at', { ascending: false })
+    .limit(input.limit ?? LIST_LIMIT);
+
+  if (error) {
+    throw new DomainError(error.message, 'payments.list_failed');
+  }
+  const rows = data ?? [];
+  if (rows.length === 0) return counted([], count);
+
+  const { data: invoices, error: invoiceError } = await db
+    .from('invoices')
+    .select('id, work_item_id, number, billed_to, customer_id')
+    .eq('organization_id', input.organizationId)
+    .in('id', [...new Set(rows.map((row) => row.invoice_id))]);
+
+  if (invoiceError) {
+    throw new DomainError(invoiceError.message, 'invoices.list_failed');
+  }
+  const byId = new Map((invoices ?? []).map((invoice) => [invoice.id, invoice]));
+
+  return counted(
+    rows.flatMap((row) => {
+      const invoice = byId.get(row.invoice_id);
+      // A payment cannot outlive its invoice (foreign key), so this is unreachable rather than defensive.
+      if (!invoice) return [];
+      return [{
+        id: row.id,
+        amountMinor: row.amount_minor,
+        currency: row.currency,
+        receivedAt: row.received_at,
+        provider: row.provider,
+        providerReference: row.provider_reference,
+        note: row.note,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.number,
+        billedTo: invoice.billed_to,
+        customerId: invoice.customer_id,
+        workItemId: invoice.work_item_id,
+      }];
+    }),
+    count,
+  );
 }
 
 export async function listInvoiceLines(

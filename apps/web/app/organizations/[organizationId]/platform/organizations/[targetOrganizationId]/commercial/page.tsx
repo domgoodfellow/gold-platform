@@ -3,7 +3,7 @@ import { requirePlatformArea } from '@/lib/route/platform';
 import { platformHref } from '@/lib/platform-navigation';
 import { getDb } from '@/lib/db/server';
 import { loadOrganizationCommercial } from '@/lib/application/platform/organization-commercial';
-import { loadOrganizationEconomics } from '@/lib/application/finance/economics-overview';
+import { loadOrganizationEconomics } from '@/lib/application/platform/economics-overview';
 import { OrganizationCommercialScreen } from '@/features/platform/organizations/organization-commercial-screen';
 
 export const dynamic = 'force-dynamic';

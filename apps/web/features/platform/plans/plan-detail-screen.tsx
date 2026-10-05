@@ -1,4 +1,4 @@
-import { platformHref } from '@/lib/platform-navigation';
+import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { RecordHeader } from '@/components/headers/record-header';
 import { EmptyState, SectionHeading } from '@/components/surfaces/section';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@gold/ui/components/accordion';
-import type { PlanDetailModel } from '@/lib/application/finance/plan-detail';
+import type { PlanDetailModel } from '@/lib/application/platform/plan-detail';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { FeatureStatusBadges } from '@/features/catalogue/feature-badges';
 import {
@@ -22,8 +22,8 @@ import {
   RecordOverageRateSheet,
   PlanEconomicsSettingsSheet,
   PlanAddonToggle,
-} from '@/features/finance/plans/plan-forms';
-import { ProvisionPriceControl } from '@/features/finance/plans/plan-billing';
+} from '@/features/platform/plans/plan-forms';
+import { ProvisionPriceControl } from '@/features/platform/plans/plan-billing';
 
 export function PlanDetailScreen({ organizationId, model }: { organizationId: string; model: PlanDetailModel }) {
   const { plan, products, productGrants, featureGrants, assignments, productGrantSet, moduleGrantSet, featureOverrideByFeature, entitled, quotas,
@@ -34,7 +34,7 @@ export function PlanDetailScreen({ organizationId, model }: { organizationId: st
     <>
       <RecordHeader
         title={plan.label}
-        crumbs={[{ label: 'Finance', href: `/organizations/${organizationId}/finance` }, { label: 'Plans & Add-ons', href: `/organizations/${organizationId}/finance/plans` }, { label: plan.label }]}
+        crumbs={[...platformAncestry(organizationId, 'plans'), { label: 'Plans & Add-ons', href: `/organizations/${organizationId}/platform/plans` }, { label: plan.label }]}
         summary={plan.description}
         actions={<div className="flex gap-2"><ButtonLink href={`${platformHref(organizationId, 'package-economics')}?source=plan_default&id=${plan.id}`} tone="secondary" size="small">Simulate</ButtonLink><EditPlanSheet plan={plan} /></div>}
       />

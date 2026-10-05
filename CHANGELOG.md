@@ -5,6 +5,12 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Finance is the business's own money, and Plans & Add-ons is back in Platform
+
+Finance Home used to show what a business pays GildOps — its Plan, subscription, usage allowances and metered usage — which is a different money direction from Finance's own. It now shows the business's own financial operations: what needs attention (invoices past a due date the business set, unpaid invoices, quoted work with no invoice, billing or card-payment setup that is unfinished), what is outstanding and what is quoted but not invoiced, one currency at a time, the month's invoiced amount against recorded costs (shown as unknown, never zero, where no cost is defined), and the latest invoices and payments. Quotes, Invoices and Payments are now pages of Finance: every job with something priced on it, every invoice with its standing, and every payment as recorded — a payment with no processor reads "Recorded by hand", and no method is guessed. Each opens the work record or customer that owns it. Pricing stays under Settings and Home links to it; Financial insights opens the shared report.
+
+Plans & Add-ons and GildOps' portfolio economics moved back under Platform → Commercial (`/platform/plans`, `/platform/economics`), behind the same `platform.commercial` permission; the old Finance addresses redirect. GildOps' own Finance is now ordinary tenant Finance with no commercial controls. What a business buys from GildOps stays in Settings → Plan & usage. No schema changed.
+
 ### A business says when customers may book and until when they may change it
 
 A kind of work on the booking page now carries its own booking limits, apart from whether the people and equipment it needs are free. A business can ask for notice ("two hours"), cap how far ahead a customer may book (in days of its own time zone), turn same-day booking off, and choose how often start times are offered — separately from how long the appointment lasts, so a 90-minute job can start every 30 minutes. Start times fall on the clock of the business's own zone, not on when the visitor happened to look. A day that policy rules out says why, in plain words, and never mentions who is busy. Existing bookable kinds of work keep their behaviour: start times every duration, no notice, same-day on, a year ahead.

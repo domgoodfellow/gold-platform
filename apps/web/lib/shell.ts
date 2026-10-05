@@ -225,20 +225,10 @@ export function projectShell(input: ShellInput): ShellSection[] {
   const workspaceItems = (): NavItem[] =>
     WORKSPACES.flatMap((workspace) => {
       const areas = AREAS.filter((area) => area.workspace === workspace.key && operable(area));
-      // Plan & Add-on administration (D25's commercial-packaging side of Catalogue/Plan) is a real
-      // Finance page, not Settings-reached configuration — but it exists only for GOLD's own
-      // organization and a staff row naming `platform.commercial`, a fact `AREAS` cannot express
-      // (it gates on this organization's own modules/capabilities, never on being GOLD). `platform`
-      // already carries exactly that fact, so it is read here rather than teaching `Area` a second
-      // kind of gate for one page.
-      const financePlatformChildren: NavItem[] =
-        workspace.key === 'finance' && platform?.has('platform.commercial')
-          ? [{ key: 'finance-plans', label: 'Plans & Add-ons', href: `/organizations/${organizationId}/finance/plans`, section: 'workspaces' }]
-          : [];
-      if (areas.length === 0 && financePlatformChildren.length === 0) return [];
+      if (areas.length === 0) return [];
       const home = workspace.home ? areas.find((area) => area.segment === workspace.home) : undefined;
       const childAreas = home ? areas.filter((area) => area.segment !== home.segment) : areas;
-      const children = [...childAreas.map((area) => areaItem(organizationId, area, 'workspaces')), ...financePlatformChildren];
+      const children = childAreas.map((area) => areaItem(organizationId, area, 'workspaces'));
       const homeItem = home ? areaItem(organizationId, home, 'workspaces') : children[0];
       const row: NavItem = {
         key: `workspace-${workspace.key}`,
@@ -246,7 +236,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
         href: homeItem.href,
         section: 'workspaces',
       };
-      if (areas.length === 1 && financePlatformChildren.length === 0) return [row];
+      if (areas.length === 1) return [row];
       return [{ ...row, heading: true, children: home ? children : children.slice(1) }];
     });
 
