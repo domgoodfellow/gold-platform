@@ -5,6 +5,21 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### Booking and scheduling can use more than one resource at a time
+
+A kind of work that needs several things — "1 × Person who has Tire service" and "1 × Vehicle that has Mobile
+service", or "2 × Person" — can now be opened for online booking. A time is offered only when a complete set
+exists at once: each needed resource is suitable, working and free for the whole time, and nobody counts twice.
+The visitor sees times only and the business's own people and vehicles are never named to them; the booking
+takes every resource together or none, and if somebody else takes one first the visitor is told the time has
+gone (or, when another complete set is free, is booked on that). On the job's Schedule form, *Check this time*
+says whether the time works, suggests who, and — when it does not — says why in plain words: the business is
+closed, nobody suitable exists, somebody is not working or on time off, a van is already booked, or two needs want
+the same person. *Use suggested resources* ticks them for you; nothing is assigned until you schedule. A job that
+is short of what it needs says which resource is free at its own time and offers *Assign suggested resources*.
+Scheduling itself is unchanged and still decides: a time that looked fine can be refused if it changed meanwhile.
+Still not here: booking notice and cadence rules, travel, routing and dispatch.
+
 ### A resource says when it works
 
 Each person, van, machine or room can now follow its own working hours instead of the business's, and can

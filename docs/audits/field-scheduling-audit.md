@@ -19,7 +19,7 @@ slices it prepares for are named at the end.
 | Assignment | none of its own | `work_items.resource_id` | as above | `schedule_work_item`, `create_work_item` | "Assign to" select | exclusion constraint | single resource only |
 | Location | `locations/locations.ts` | `locations`, `customer_locations`, `work_items.location_id` | Work, map | `create_location` | `/locations` | I18 | no service areas; coordinates optional |
 | Asset | `assets/assets.ts` | `assets`, `work_items.asset_id` | Work, readings | `asset.create` | `/assets` (module `assets`) | I18 | none against Resource; the two are kept apart |
-| Booking | `booking/booking.ts` | `work_item_types.booking_*`, `external_actors` | `bookableSlots`, `resource_commitments`, `bookable_resources` | `create_booking` (definer) | `/book/[slug]` | I6, D22, one booking per visitor | resource chosen by slot offer, not by rule |
+| Booking | `booking/booking.ts` | `work_item_types.booking_*`, `external_actors` | `bookableSlots`, `resource_commitments`, `bookable_resources` | `create_booking` (definer) | `/book/[slug]` | I6, D22, one booking per visitor | the server picks a deterministic complete combination at booking time (I85); no choice of resource by the visitor |
 | Price | `pricing/prices.ts` (`priceWorkItem`) | `work_item_priced_lines` | Work, invoices | `add_work_item_priced_line` | Work, booking page | I4, I8 | none |
 | Buffer | `organizations.buffer_minutes` | derived `occupies` | `listSchedule` | `updateOrganization` | organization settings | I7 | one value for every resource and type |
 | Calendar | `features/scheduling/calendar/*` | derived, none | — | none | `/schedule` (Day, Week, Month) | I5 | draws only resource-assigned work |
@@ -99,11 +99,7 @@ and capabilities per requirement, with eligibility and job coverage derived. Res
 are resolved (Work Order 6, `20261118000001`, I82): `app.resource_open_windows` is organization hours ∩
 resource hours − exceptions, read by Schedule and booking, with commitments still subtracted by
 `freeWindows`, and an appointment outside an assigned resource's open time is refused at the database.
-Remaining: availability combined across the several resources a job needs — a feasible combination for
-a type with more than one requirement (public booking supports a single one-resource requirement until
-then), one explanation of why a time is infeasible, booking notice and cadence rules, travel, routing,
-dispatch, weather and organization closures, and an event that distinguishes a first scheduling from a
-reschedule.
+Multi-resource feasibility is resolved (Work Order 7, `20261120000001`, I85): one engine finds a distinct eligible, open and free resource for every required slot, explains an infeasible interval with structured reasons, and public booking now commits every resource a type needs (the one-resource limit is gone). Remaining: booking notice, horizon and cadence rules, organization closures and holidays, travel time, routing, service areas, traffic, dispatch, weather, and an event that distinguishes a first scheduling from a reschedule.
 
 ## 6. Events
 

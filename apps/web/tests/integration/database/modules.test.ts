@@ -202,7 +202,6 @@ describe('what a business has switched on', () => {
         slot: {
           startsAt: '2026-09-07T13:00:00.000Z',
           endsAt: '2026-09-07T14:00:00.000Z',
-          resourceId: randomUUID(),
         },
         name: 'Too late',
         email: `late-${randomUUID().slice(0, 6)}@example.test`,

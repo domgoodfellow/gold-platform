@@ -1,5 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { maximumMatching } from '@/lib/domain/matching';
 import { listResources, type Resource } from '@/lib/domain/resources/resources';
 import { isResourceClass, type ResourceClass } from '@/lib/domain/resources/resource-class';
 import type { ResourceCapability } from '@/lib/domain/resources/resource-capabilities';
@@ -102,12 +103,6 @@ function failure(error: { code?: string; message: string }): DomainError {
     return new DomainError(
       'This work is not scheduled, so it cannot need resources. Turn scheduling on for it first.',
       'resource_requirements.not_schedulable',
-    );
-  }
-  if (error.code === 'GD011') {
-    return new DomainError(
-      'Public booking currently supports one required resource. Remove the additional resource requirements or turn public booking off.',
-      'resource_requirements.booking_incompatible',
     );
   }
   if (error.code === 'GD007') {
@@ -243,7 +238,7 @@ type Slot = { requirement: ResourceRequirement; index: number };
  * assigned are eligible" per requirement independently would let one person who is both a tire
  * technician and an oil-change technician satisfy two required positions, and would make the
  * answer depend on nothing the business meant. So each requirement is expanded into its slots and
- * the slots are matched to the assigned resources as a bipartite matching (augmenting paths), which
+ * the slots are matched to the assigned resources as a bipartite matching (`maximumMatching`), which
  * finds the *largest* possible coverage — a greedy first-come match can spend the one resource that
  * can fill a hard slot on an easy one and report a gap that a better arrangement would not have.
  *
@@ -262,31 +257,12 @@ export function evaluateRequirements(
     Array.from({ length: requirement.quantity }, (_, index) => ({ requirement, index })),
   );
 
-  // resource index -> slot index, and the reverse, for the augmenting search.
-  const slotOf = new Map<number, number>();
-  const resourceOf = new Map<number, number>();
-
   const eligible = (slot: Slot) =>
     resources.flatMap((resource, index) => (isEligible(resource, slot.requirement) ? [index] : []));
 
-  function augment(slotIndex: number, seen: Set<number>): boolean {
-    for (const resourceIndex of eligible(slots[slotIndex])) {
-      if (seen.has(resourceIndex)) continue;
-      seen.add(resourceIndex);
-
-      const holder = slotOf.get(resourceIndex);
-      if (holder === undefined || augment(holder, seen)) {
-        slotOf.set(resourceIndex, slotIndex);
-        resourceOf.set(slotIndex, resourceIndex);
-        return true;
-      }
-    }
-    return false;
-  }
-
-  for (let slotIndex = 0; slotIndex < slots.length; slotIndex += 1) {
-    augment(slotIndex, new Set());
-  }
+  // The one matcher (`lib/domain/matching.ts`): slot index -> resource index.
+  const resourceOf = maximumMatching(slots.length, (slotIndex) => eligible(slots[slotIndex]));
+  const slotOf = new Map([...resourceOf].map(([slotIndex, resourceIndex]) => [resourceIndex, slotIndex]));
 
   const coverage: RequirementCoverage[] = orderedRequirements.map((requirement) => {
     const matched: Resource[] = [];

@@ -996,11 +996,12 @@ export type Database = {
         Row: {
           call_id: string
           created_at: string
+          duration_seconds: number | null
           external_id: string | null
           id: string
           joined_at: string | null
           left_at: string | null
-          member_id: string | null
+          membership_id: string | null
           muted: boolean
           on_hold: boolean
           organization_id: string
@@ -1010,11 +1011,12 @@ export type Database = {
         Insert: {
           call_id: string
           created_at?: string
+          duration_seconds?: number | null
           external_id?: string | null
           id?: string
           joined_at?: string | null
           left_at?: string | null
-          member_id?: string | null
+          membership_id?: string | null
           muted?: boolean
           on_hold?: boolean
           organization_id: string
@@ -1024,11 +1026,12 @@ export type Database = {
         Update: {
           call_id?: string
           created_at?: string
+          duration_seconds?: number | null
           external_id?: string | null
           id?: string
           joined_at?: string | null
           left_at?: string | null
-          member_id?: string | null
+          membership_id?: string | null
           muted?: boolean
           on_hold?: boolean
           organization_id?: string
@@ -1041,6 +1044,13 @@ export type Database = {
             columns: ["organization_id", "call_id"]
             isOneToOne: false
             referencedRelation: "calls"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "call_participants_membership_same_org"
+            columns: ["organization_id", "membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -1061,57 +1071,63 @@ export type Database = {
       }
       calls: {
         Row: {
+          answered_at: string | null
           conference_name: string | null
           created_at: string
           created_by: string
-          customer_id: string
+          customer_id: string | null
           direction: string
           duration_seconds: number | null
           ended_at: string | null
-          external_id: string | null
-          from_number: string
+          from_number: string | null
           id: string
           note: string
           organization_id: string
           outcome_id: string | null
+          phone_number_id: string | null
+          recording_available_at: string | null
           recording_url: string | null
           started_at: string
           status: string
           to_number: string
         }
         Insert: {
+          answered_at?: string | null
           conference_name?: string | null
           created_at?: string
           created_by: string
-          customer_id: string
+          customer_id?: string | null
           direction: string
           duration_seconds?: number | null
           ended_at?: string | null
-          external_id?: string | null
-          from_number: string
+          from_number?: string | null
           id?: string
           note?: string
           organization_id: string
           outcome_id?: string | null
+          phone_number_id?: string | null
+          recording_available_at?: string | null
           recording_url?: string | null
           started_at?: string
           status?: string
           to_number: string
         }
         Update: {
+          answered_at?: string | null
           conference_name?: string | null
           created_at?: string
           created_by?: string
-          customer_id?: string
+          customer_id?: string | null
           direction?: string
           duration_seconds?: number | null
           ended_at?: string | null
-          external_id?: string | null
-          from_number?: string
+          from_number?: string | null
           id?: string
           note?: string
           organization_id?: string
           outcome_id?: string | null
+          phone_number_id?: string | null
+          recording_available_at?: string | null
           recording_url?: string | null
           started_at?: string
           status?: string
@@ -1144,6 +1160,20 @@ export type Database = {
             columns: ["organization_id", "outcome_id"]
             isOneToOne: false
             referencedRelation: "call_outcomes"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "calls_phone_number_same_org"
+            columns: ["organization_id", "phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_number_readiness"
+            referencedColumns: ["organization_id", "phone_number_id"]
+          },
+          {
+            foreignKeyName: "calls_phone_number_same_org"
+            columns: ["organization_id", "phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_numbers"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -1530,6 +1560,13 @@ export type Database = {
             foreignKeyName: "communication_routes_organization_id_number_id_fkey"
             columns: ["organization_id", "number_id"]
             isOneToOne: false
+            referencedRelation: "phone_number_readiness"
+            referencedColumns: ["organization_id", "phone_number_id"]
+          },
+          {
+            foreignKeyName: "communication_routes_organization_id_number_id_fkey"
+            columns: ["organization_id", "number_id"]
+            isOneToOne: false
             referencedRelation: "phone_numbers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -1760,6 +1797,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_phone_number_id_fkey"
+            columns: ["organization_id", "phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_number_readiness"
+            referencedColumns: ["organization_id", "phone_number_id"]
           },
           {
             foreignKeyName: "conversations_organization_id_phone_number_id_fkey"
@@ -5482,6 +5526,13 @@ export type Database = {
             foreignKeyName: "phone_number_assignments_organization_id_phone_number_id_fkey"
             columns: ["organization_id", "phone_number_id"]
             isOneToOne: false
+            referencedRelation: "phone_number_readiness"
+            referencedColumns: ["organization_id", "phone_number_id"]
+          },
+          {
+            foreignKeyName: "phone_number_assignments_organization_id_phone_number_id_fkey"
+            columns: ["organization_id", "phone_number_id"]
+            isOneToOne: false
             referencedRelation: "phone_numbers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -5506,52 +5557,52 @@ export type Database = {
           created_at: string
           created_by: string | null
           e164: string
-          health: string
-          health_checked_at: string | null
           id: string
-          inbound_enabled: boolean
           label: string | null
           lifecycle: string
           organization_id: string
           origin: string
-          outbound_enabled: boolean
           provider_resource_id: string | null
           purpose: string
+          sms_inbound_enabled: boolean
+          sms_outbound_enabled: boolean
           updated_at: string
+          voice_inbound_enabled: boolean
+          voice_outbound_enabled: boolean
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           e164: string
-          health?: string
-          health_checked_at?: string | null
           id?: string
-          inbound_enabled?: boolean
           label?: string | null
           lifecycle?: string
           organization_id: string
           origin?: string
-          outbound_enabled?: boolean
           provider_resource_id?: string | null
           purpose?: string
+          sms_inbound_enabled?: boolean
+          sms_outbound_enabled?: boolean
           updated_at?: string
+          voice_inbound_enabled?: boolean
+          voice_outbound_enabled?: boolean
         }
         Update: {
           created_at?: string
           created_by?: string | null
           e164?: string
-          health?: string
-          health_checked_at?: string | null
           id?: string
-          inbound_enabled?: boolean
           label?: string | null
           lifecycle?: string
           organization_id?: string
           origin?: string
-          outbound_enabled?: boolean
           provider_resource_id?: string | null
           purpose?: string
+          sms_inbound_enabled?: boolean
+          sms_outbound_enabled?: boolean
           updated_at?: string
+          voice_inbound_enabled?: boolean
+          voice_outbound_enabled?: boolean
         }
         Relationships: [
           {
@@ -8822,6 +8873,13 @@ export type Database = {
             foreignKeyName: "user_phone_number_preferences_organization_id_phone_number_fkey"
             columns: ["organization_id", "phone_number_id"]
             isOneToOne: false
+            referencedRelation: "phone_number_readiness"
+            referencedColumns: ["organization_id", "phone_number_id"]
+          },
+          {
+            foreignKeyName: "user_phone_number_preferences_organization_id_phone_number_fkey"
+            columns: ["organization_id", "phone_number_id"]
+            isOneToOne: false
             referencedRelation: "phone_numbers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -9633,6 +9691,29 @@ export type Database = {
           },
         ]
       }
+      phone_number_readiness: {
+        Row: {
+          organization_id: string | null
+          phone_number_id: string | null
+          readiness: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_numbers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_numbers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_failures: {
         Row: {
           detail: string | null
@@ -9908,7 +9989,16 @@ export type Database = {
         }
         Returns: string
       }
-      bookable_resource_ids: { Args: { p_type_id: string }; Returns: string[] }
+      bookable_candidates: {
+        Args: { p_type_id: string }
+        Returns: {
+          quantity: number
+          req_position: number
+          requirement_id: string
+          resource_id: string
+          resource_rank: number
+        }[]
+      }
       booking_organization: { Args: { p_slug: string }; Returns: string }
       bootstrap_gold_internal_workspace: {
         Args: {
@@ -9916,6 +10006,10 @@ export type Database = {
           p_organization_id: string
           p_role: string
         }
+        Returns: string
+      }
+      call_recording_reference: {
+        Args: { p_call_id: string; p_organization_id: string }
         Returns: string
       }
       can_manage_custom_domains: {
@@ -9988,6 +10082,19 @@ export type Database = {
           written: boolean
         }[]
       }
+      configure_phone_number: {
+        Args: {
+          p_label: string
+          p_organization_id: string
+          p_phone_number_id: string
+          p_purpose: string
+          p_sms_inbound: boolean
+          p_sms_outbound: boolean
+          p_voice_inbound: boolean
+          p_voice_outbound: boolean
+        }
+        Returns: undefined
+      }
       confirm_external_card_payment: {
         Args: { p_provider_reference: string; p_request_id: string }
         Returns: undefined
@@ -10020,11 +10127,11 @@ export type Database = {
       }
       create_booking: {
         Args: {
+          p_allocations: Json
           p_email: string
           p_name: string
           p_organization_id: string
           p_phone: string
-          p_resource_id: string
           p_starts_at: string
           p_type_id: string
         }
@@ -10272,6 +10379,10 @@ export type Database = {
           outstanding_minor: number
         }[]
       }
+      fail_call_attempt: {
+        Args: { p_call_id: string; p_organization_id: string }
+        Returns: undefined
+      }
       finalize_organization_charges: {
         Args: {
           p_billing_period_end: string
@@ -10335,6 +10446,14 @@ export type Database = {
         Returns: string
       }
       launch_organization: { Args: { p_id: string }; Returns: undefined }
+      link_call_customer: {
+        Args: {
+          p_call_id: string
+          p_customer_id: string
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
       link_conversation_customer: {
         Args: {
           p_conversation_id: string
@@ -10890,6 +11009,10 @@ export type Database = {
         }
         Returns: string
       }
+      record_call_leg: {
+        Args: { p_conference_name: string; p_external_id: string }
+        Returns: string
+      }
       record_call_outcome: {
         Args: {
           p_call_id: string
@@ -10897,33 +11020,8 @@ export type Database = {
           p_note: string
           p_organization_id: string
           p_outcome_id: string
-          p_status: string
         }
-        Returns: {
-          conference_name: string | null
-          created_at: string
-          created_by: string
-          customer_id: string
-          direction: string
-          duration_seconds: number | null
-          ended_at: string | null
-          external_id: string | null
-          from_number: string
-          id: string
-          note: string
-          organization_id: string
-          outcome_id: string | null
-          recording_url: string | null
-          started_at: string
-          status: string
-          to_number: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "calls"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Returns: Json
       }
       record_commercial_adjustment: {
         Args: {
@@ -11023,6 +11121,16 @@ export type Database = {
           p_storage_path: string
         }
         Returns: undefined
+      }
+      record_inbound_call: {
+        Args: {
+          p_external_id: string
+          p_from_number: string
+          p_payload: Json
+          p_payload_hash: string
+          p_to_number: string
+        }
+        Returns: string
       }
       record_inbound_email: {
         Args: {
@@ -11461,6 +11569,10 @@ export type Database = {
         Args: { p_organization_id: string; p_resource_id: string }
         Returns: undefined
       }
+      release_phone_number_assignment: {
+        Args: { p_assignment_id: string; p_organization_id: string }
+        Returns: undefined
+      }
       remove_call_participant: {
         Args: { p_organization_id: string; p_participant_id: string }
         Returns: undefined
@@ -11532,9 +11644,13 @@ export type Database = {
           unit_amount_micros: number
         }[]
       }
-      resolve_effective_outbound_identity: {
-        Args: { p_organization_id: string }
-        Returns: string
+      resolve_outbound_number: {
+        Args: { p_organization_id: string; p_phone_number_id?: string }
+        Returns: {
+          e164: string
+          phone_number_id: string
+          source: string
+        }[]
       }
       resource_availability_conflicts: {
         Args: { p_from: string; p_organization_id: string; p_to: string }
@@ -11618,6 +11734,14 @@ export type Database = {
           p_body_font: string
           p_heading_font: string
           p_organization_id: string
+        }
+        Returns: undefined
+      }
+      set_call_leg_provider_id: {
+        Args: {
+          p_external_id: string
+          p_organization_id: string
+          p_participant_id: string
         }
         Returns: undefined
       }
@@ -11832,6 +11956,10 @@ export type Database = {
           p_price_item_id: string
           p_status_id: string
         }
+        Returns: undefined
+      }
+      set_user_phone_number_preference: {
+        Args: { p_organization_id: string; p_phone_number_id: string }
         Returns: undefined
       }
       set_work_item_resources: {

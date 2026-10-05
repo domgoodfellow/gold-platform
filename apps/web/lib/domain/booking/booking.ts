@@ -1,16 +1,21 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
-import { freeWindows } from '@/lib/domain/scheduling/availability';
-import { listResourceOpenWindows } from '@/lib/domain/scheduling/resource-availability';
-import { parseWindow, zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
+import {
+  feasibleSlots,
+  judgeInterval,
+  loadPublicFeasibilityData,
+} from '@/lib/domain/scheduling/feasibility';
+import { zonedDayRange } from '@/lib/domain/scheduling/window';
 
 /**
  * Booking: what a stranger may see of a business, and what they may commit it to — the first
  * caller of D22's axis. Everything reads under an RLS policy keyed to
  * `app.current_external_tenant()`; nothing here decides visibility. No second notion of
- * availability or price: `bookableSlots` uses the same pure functions `listSchedule` uses, and a
+ * availability or price: `bookableSlots` asks the feasibility engine — the same open windows and
+ * commitments `listSchedule` reads, then one distinct resource per slot the work needs — and a
  * price is copied from the catalogue by `add_work_item_priced_line` inside `create_booking` (I4,
- * I5, I6, I8).
+ * I5, I6, I8). A visitor sends a time; which resources take part is the server's to work out and
+ * never theirs to name.
  */
 
 export type BookableType = {
@@ -25,8 +30,6 @@ export type BookableType = {
 export type Slot = {
   startsAt: string;
   endsAt: string;
-  /** An id, never a name — a resource can be a person (D19), and who's free isn't a fact this page publishes. Travels back with the booking so the commit names the same resource the offer was computed against. */
-  resourceId: string;
 };
 
 /**
@@ -115,10 +118,14 @@ export async function listBookableTypes(
 }
 
 /**
- * When this business could do that work, on one of its days — the same availability calculation
- * the operator sees (I5), just reading `resource_commitments` (what's occupied, published) in
- * place of the work items themselves. Advisory only (I6): the re-assertion is the exclusion
- * constraint refusing the insert inside `create_booking`.
+ * When this business could do that work, on one of its days: the intervals for which a complete
+ * set of resources exists — every required slot filled by a distinct resource that is eligible,
+ * open and uncommitted. The same availability calculation the operator sees (I5), read through the
+ * published commitments, and advisory only (I6): the re-assertion is `create_booking`'s own
+ * transaction. Resource identities never leave this function — a visitor is offered times.
+ *
+ * Candidate starts step by the duration, as booking always has; duration and step are separate
+ * inputs to the engine so a later cadence rule changes one without the other.
  */
 export async function bookableSlots(
   db: Db,
@@ -129,81 +136,22 @@ export async function bookableSlots(
     timeZone: string;
   },
 ): Promise<Slot[]> {
-  const within = zonedDayRange(input.date, input.timeZone);
-  const range = `[${within.startsAt},${within.endsAt})`;
-
-  const [resources, commitments] = await Promise.all([
-    // The resources this kind of work can be booked against: all of them when it needs nothing (as
-    // before), only the eligible ones when it needs one thing. Ids only, and the same canonical
-    // availability arithmetic runs over them below — this narrows the candidates, not the sums.
-    db.rpc('bookable_resource_ids', { p_type_id: input.type.id }),
-    db
-      .from('resource_commitments')
-      .select('resource_id, occupies')
-      .eq('organization_id', input.organizationId)
-      .overlaps('occupies', range),
-  ]);
-
-  if (resources.error) throw new DomainError(resources.error.message, 'booking.resources_failed');
-  if (commitments.error) {
-    throw new DomainError(commitments.error.message, 'booking.commitments_failed');
-  }
-
-  const candidates = ((resources.data ?? []) as unknown as string[]).filter(Boolean);
-
-  // When each candidate is open — organization hours ∩ its own hours − its time off, from the same
-  // reader the operator's schedule uses. Candidates were chosen by eligibility first; nothing here
-  // widens that set to find a slot, and a resource that is closed simply has no windows.
-  const openByResource = await listResourceOpenWindows(db, {
+  const range = zonedDayRange(input.date, input.timeZone);
+  const data = await loadPublicFeasibilityData(db, {
     organizationId: input.organizationId,
-    within,
-    resourceIds: candidates,
+    typeId: input.type.id,
+    range,
   });
 
-  const busyByResource = new Map<string, Window[]>();
-  for (const row of commitments.data ?? []) {
-    const occupied = parseWindow(row.occupies as string | null);
-    if (!occupied || !row.resource_id) continue;
-    busyByResource.set(row.resource_id, [...(busyByResource.get(row.resource_id) ?? []), occupied]);
-  }
-
-  const slots: Slot[] = [];
-  const stepMs = input.type.durationMinutes * 60_000;
-
-  for (const resourceId of candidates) {
-    const free = (openByResource.get(resourceId) ?? []).flatMap((window) =>
-      freeWindows(window, busyByResource.get(resourceId) ?? [], {
-        minimumMinutes: input.type.durationMinutes,
-      }),
-    );
-
-    // Whole slots from the start of each free window — not a grid on the hour, since the platform has no opinion about when an appointment ought to start.
-    for (const window of free) {
-      const end = new Date(window.endsAt).getTime();
-      for (
-        let cursor = new Date(window.startsAt).getTime();
-        cursor + stepMs <= end;
-        cursor += stepMs
-      ) {
-        slots.push({
-          startsAt: new Date(cursor).toISOString(),
-          endsAt: new Date(cursor + stepMs).toISOString(),
-          resourceId,
-        });
-      }
-    }
-  }
-
-  // One offer per instant — two vans free at nine is one slot to a customer booking a time, not a vehicle.
-  const seen = new Set<string>();
-  return slots
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
-    .filter((slot) => {
-      if (seen.has(slot.startsAt)) return false;
-      seen.add(slot.startsAt);
-      return true;
-    });
+  return feasibleSlots(data, {
+    range,
+    durationMinutes: input.type.durationMinutes,
+    stepMinutes: input.type.durationMinutes,
+  }).map(({ startsAt, endsAt }) => ({ startsAt, endsAt }));
 }
+
+/** How many times a booking re-reads the world and tries again after losing a race. Small and bounded, never a loop. */
+const BOOKING_ATTEMPTS = 3;
 
 /** The duration is never an argument — `create_booking` reads it from the type the business published, same shape as `addPricedLine` choosing what and how many but never how much. */
 export async function bookSlot(
@@ -229,19 +177,68 @@ export async function bookSlot(
     );
   }
 
-  const { data, error } = await db.rpc('create_booking', {
-    p_organization_id: input.organizationId,
-    p_type_id: input.typeId,
-    p_resource_id: input.slot.resourceId,
-    p_starts_at: input.slot.startsAt,
-    p_name: name,
-    p_email: input.email,
-    p_phone: input.phone,
-  });
+  // The duration is the type's, read here only to know how long to hold the resources for.
+  const { data: type, error: typeError } = await db
+    .from('work_item_types')
+    .select('booking_duration_minutes')
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.typeId)
+    .maybeSingle();
+  if (typeError) throw new DomainError(typeError.message, 'booking.failed');
+  if (!type?.booking_duration_minutes) {
+    throw new DomainError('This business is not taking that booking.', 'booking.forbidden');
+  }
+  const startsAt = new Date(input.slot.startsAt);
+  if (Number.isNaN(startsAt.getTime())) {
+    throw new DomainError('That time is no longer available. Please choose another.', 'booking.slot_taken');
+  }
+  const interval = {
+    startsAt: startsAt.toISOString(),
+    endsAt: new Date(startsAt.getTime() + type.booking_duration_minutes * 60_000).toISOString(),
+  };
+
+  let data: string | null = null;
+  let error: { code?: string; message: string } | null = null;
+
+  // **The server chooses; the database checks.** The combination is worked out now, from current
+  // facts, never taken from the page that offered the slot (a stale or forged identity cannot ride
+  // along). `create_booking` then verifies it as a certificate and the assignment triggers and the
+  // exclusion constraint decide, in one transaction. If another booking won a resource between the
+  // two, one more look may find a different complete set — a bounded retry, each attempt atomic, so
+  // two bookings can both succeed on distinct combinations and never on the same resource.
+  for (let attempt = 0; attempt < BOOKING_ATTEMPTS; attempt += 1) {
+    const facts = await loadPublicFeasibilityData(db, {
+      organizationId: input.organizationId,
+      typeId: input.typeId,
+      range: interval,
+    });
+    const verdict = judgeInterval(facts, interval);
+    if (!verdict.feasible || !verdict.combination) {
+      throw new DomainError('That time is no longer available. Please choose another.', 'booking.slot_taken');
+    }
+
+    const result = await db.rpc('create_booking', {
+      p_organization_id: input.organizationId,
+      p_type_id: input.typeId,
+      p_allocations: verdict.combination.map((entry) => ({
+        requirement_id: entry.requirementId,
+        resource_id: entry.resourceId,
+      })),
+      p_starts_at: interval.startsAt,
+      p_name: name,
+      p_email: input.email,
+      p_phone: input.phone,
+    });
+    data = result.data;
+    error = result.error;
+    if (!error) break;
+    // Lost a race for a resource, or one stopped working: look again. Anything else is final.
+    if (error.code !== '23P01' && error.code !== 'GD013') break;
+  }
 
   if (error) {
     // I6, arriving as a sentence — the slot was free when rendered and is not now, and nothing could have prevented that.
-    if (error.code === '23P01') {
+    if (error.code === '23P01' || error.code === 'GD014') {
       throw new DomainError(
         'Somebody took that time while you were filling this in. Please choose another.',
         'booking.slot_taken',
@@ -270,12 +267,6 @@ export async function bookSlot(
         'booking.not_working',
       );
     }
-    if (error.code === 'GD011') {
-      throw new DomainError(
-        'This business is not taking that booking.',
-        'booking.not_supported',
-      );
-    }
     if (error.code === '42501') {
       throw new DomainError(
         'This business is not taking that booking.',
@@ -285,5 +276,5 @@ export async function bookSlot(
     throw new DomainError(error.message, 'booking.failed');
   }
 
-  return data;
+  return data as string;
 }

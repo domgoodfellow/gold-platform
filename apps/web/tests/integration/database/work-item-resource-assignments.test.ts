@@ -572,9 +572,9 @@ describe('a work item has many resources', () => {
         phone: '',
       });
 
-      // An ordinary work item with exactly one assignment, to the resource the slot named.
+      // An ordinary work item with exactly one assignment, to the one resource this shop has. The visitor was never told which.
       const rows = await pg.query('select resource_id, occupies is not null as holds from public.work_item_resource_assignments where work_item_id = $1', [workItemId]);
-      expect(rows.rows).toEqual([{ resource_id: wanted.resourceId, holds: true }]);
+      expect(rows.rows).toEqual([{ resource_id: t.van, holds: true }]);
 
       // The stale answer, committed after somebody else took it: refused by the constraint, with nothing checked first.
       await expect(
@@ -582,7 +582,7 @@ describe('a work item has many resources', () => {
       ).rejects.toMatchObject({ code: 'booking.slot_taken' });
       const after = await pg.query('select count(*)::int as n from public.work_item_resource_assignments where organization_id = $1 and resource_id = $2', [
         t.organizationId,
-        wanted.resourceId,
+        t.van,
       ]);
       expect(after.rows[0].n).toBe(1);
     });

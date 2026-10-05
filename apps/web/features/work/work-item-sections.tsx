@@ -27,7 +27,7 @@ import { RecordCostForm, RecordTimeForm } from './consumption-forms';
 import { AddPricedLineForm, RemovePricedLineForm } from './pricing-forms';
 import { IssueInvoiceForm, RecordPaymentForm, RequestCardPaymentForm } from './billing-forms';
 import type { CoverageView, ResourceNeedsView } from '@/lib/domain/work-items/requirements';
-import { AssignResourcesForm, MoveWorkItemForm, ScheduleWorkItemForm } from './work-operations-forms';
+import { AssignResourcesForm, AssignSuggestedForm, MoveWorkItemForm, ScheduleWorkItemForm } from './work-operations-forms';
 
 export function WorkRecordHeader({ organizationId, workItem, timezone }: {
   organizationId: string;
@@ -191,7 +191,18 @@ export function WorkOperationalActions({
  * good job: it stays scheduled and visible, and this says plainly what is missing. Words carry the
  * state (a mark is decoration), so it reads the same without colour or sight.
  */
-export function WorkRequirementsSection({ coverage }: { coverage: CoverageView | null }) {
+export function WorkRequirementsSection({
+  coverage,
+  suggestion = null,
+  organizationId,
+  workItemId,
+}: {
+  coverage: CoverageView | null;
+  /** A complete set that is free at the job's own time, when it is short and one exists. Offered, never applied. */
+  suggestion?: { names: string[]; resourceIds: string[] } | null;
+  organizationId?: string;
+  workItemId?: string;
+}) {
   if (!coverage || coverage.lines.length === 0) return null;
 
   return (
@@ -215,6 +226,15 @@ export function WorkRequirementsSection({ coverage }: { coverage: CoverageView |
       </ul>
       {coverage.extra.length > 0 ? (
         <p className="mt-1 text-sm text-muted">Also assigned: {coverage.extra.join(', ')}.</p>
+      ) : null}
+      {suggestion && organizationId && workItemId ? (
+        <div className="mt-3 flex flex-col gap-2">
+          <p className="text-sm">
+            <span className="text-muted">Available at this time: </span>
+            {suggestion.names.join(', ')}
+          </p>
+          <AssignSuggestedForm organizationId={organizationId} workItemId={workItemId} resourceIds={suggestion.resourceIds} />
+        </div>
       ) : null}
     </Section>
   );

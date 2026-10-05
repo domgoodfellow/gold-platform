@@ -361,7 +361,7 @@ describe('resource working hours and exceptions', () => {
 
       await expect(
         bookSlot(guest, { organizationId: t.organizationId, typeId: type.id, slot: wanted, name: 'Late', email: 'late@example.test', phone: '' }),
-      ).rejects.toMatchObject({ code: 'booking.not_working' });
+      ).rejects.toMatchObject({ code: 'booking.slot_taken' });
       const made = await pg.query('select count(*)::int as n from public.work_items where organization_id = $1', [t.organizationId]);
       expect(made.rows[0].n).toBe(0);
     });
@@ -377,7 +377,7 @@ describe('resource working hours and exceptions', () => {
 
       await expect(
         bookSlot(guest, { organizationId: t.organizationId, typeId: type.id, slot: wanted, name: 'Late', email: 'late@example.test', phone: '' }),
-      ).rejects.toMatchObject({ code: 'booking.not_working' });
+      ).rejects.toMatchObject({ code: 'booking.slot_taken' });
     });
   });
 

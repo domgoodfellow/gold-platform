@@ -399,7 +399,6 @@ describe('a work type says what resources it needs', () => {
 
       const { db, bookable, slots } = await offered(t.organizationId);
       expect(slots.length).toBeGreaterThan(0);
-      expect(new Set(slots.map((s) => s.resourceId))).toEqual(new Set([t.alex]));
 
       // Block Alex at nine and only the eligible capacity is consulted: ten remains, nothing from Jo.
       const job = await createWorkItem(t.db, { organizationId: t.organizationId, title: 'Alex at nine', statusId, resourceIds: [t.alex] });
@@ -411,16 +410,13 @@ describe('a work type says what resources it needs', () => {
       const raw = await db.rpc('create_booking', {
         p_organization_id: t.organizationId,
         p_type_id: bookable.id,
-        p_resource_id: t.jo,
+        p_allocations: [{ requirement_id: id, resource_id: t.jo }],
         p_starts_at: '2027-04-05T10:00:00.000Z',
         p_name: 'Forged',
         p_email: 'forged@example.test',
         p_phone: '',
       });
       expect(raw.error?.code).toBe('GD012');
-      await expect(
-        bookSlot(db, { organizationId: t.organizationId, typeId: bookable.id, slot: { startsAt: '2027-04-05T10:00:00.000Z', endsAt: '2027-04-05T11:00:00.000Z', resourceId: t.jo }, name: 'Forged', email: 'f@example.test', phone: '' }),
-      ).rejects.toMatchObject({ code: 'booking.not_eligible' });
 
       // And the eligible one books, to the resource the slot named, without revealing it publicly.
       const ok = await bookSlot(db, { organizationId: t.organizationId, typeId: bookable.id, slot: after.slots[0], name: 'Real', email: 'real@example.test', phone: '' });
@@ -438,75 +434,60 @@ describe('a work type says what resources it needs', () => {
       await pg.query('delete from public.resource_capability_assignments where resource_id = $1 and capability_id = $2', [t.alex, t.tire]);
       await expect(
         bookSlot(db, { organizationId: t.organizationId, typeId: bookable.id, slot: slots[0], name: 'Late', email: 'late@example.test', phone: '' }),
-      ).rejects.toMatchObject({ code: 'booking.not_eligible' });
+      ).rejects.toMatchObject({ code: 'booking.slot_taken' });
     });
 
-    it('cannot publish a type that needs more than one resource, or add to one that is published', async () => {
+    it('publishes a type that needs several resources, and lets a published type grow', async () => {
       const t = await newShop('wtr-compat');
       await setModuleEnabled(t.db, { organizationId: t.organizationId, key: 'booking', enabled: true });
 
-      // Quantity above one, and two requirements, each stop a type being opened for booking.
+      // The one-resource limit is gone: quantity above one and several requirements both publish.
       const many = await type(t, 'Two people');
       await createResourceRequirement(t.db, { typeId: many.typeId, resourceClass: 'person', quantity: 2, capabilityIds: [] });
-      await expect(setTypeBookable(t.db, { id: many.typeId, statusId: many.statusId, durationMinutes: 60 })).rejects.toMatchObject({
-        code: 'types.booking_requirements_incompatible',
-        message: expect.stringContaining('Public booking currently supports one required resource'),
-      });
+      await expect(setTypeBookable(t.db, { id: many.typeId, statusId: many.statusId, durationMinutes: 60 })).resolves.toBeUndefined();
 
       const pair = await type(t, 'Person and van');
       await createResourceRequirement(t.db, { typeId: pair.typeId, resourceClass: 'person', quantity: 1, capabilityIds: [] });
       await createResourceRequirement(t.db, { typeId: pair.typeId, resourceClass: 'vehicle', quantity: 1, capabilityIds: [] });
       const raw = await t.db.rpc('set_type_bookable', { p_id: pair.typeId, p_status_id: pair.statusId, p_duration_minutes: 60, p_price_item_id: null as unknown as string });
-      expect(raw.error?.code).toBe('GD011');
+      expect(raw.error).toBeNull();
 
-      // A published type accepts its one requirement and refuses any growth — including writing the rows directly.
+      // A published type accepts more requirements, written through the domain or directly.
       const single = await type(t, 'One person');
       await setTypeBookable(t.db, { id: single.typeId, statusId: single.statusId, durationMinutes: 60 });
       const id = await createResourceRequirement(t.db, { typeId: single.typeId, resourceClass: 'person', quantity: 1, capabilityIds: [] });
-      await expect(createResourceRequirement(t.db, { typeId: single.typeId, resourceClass: 'vehicle', quantity: 1, capabilityIds: [] })).rejects.toMatchObject({
-        code: 'resource_requirements.booking_incompatible',
-      });
-      await expect(updateResourceRequirement(t.db, { id, resourceClass: 'person', quantity: 2, capabilityIds: [] })).rejects.toMatchObject({
-        code: 'resource_requirements.booking_incompatible',
-      });
-      const direct = await t.db.from('work_item_type_resource_requirements').update({ quantity: 3 }).eq('id', id);
-      expect(direct.error?.code).toBe('GD011');
-      await expect(
-        pg.query('insert into public.work_item_type_resource_requirements (organization_id, type_id, resource_class, quantity, created_by) values ($1, $2, $3, 1, $4)', [
-          t.organizationId,
-          single.typeId,
-          'vehicle',
-          t.userId,
-        ]),
-      ).rejects.toMatchObject({ code: 'GD011' });
+      await expect(createResourceRequirement(t.db, { typeId: single.typeId, resourceClass: 'vehicle', quantity: 1, capabilityIds: [] })).resolves.toBeTruthy();
+      await expect(updateResourceRequirement(t.db, { id, resourceClass: 'person', quantity: 2, capabilityIds: [] })).resolves.toBeUndefined();
     });
 
-    it('refuses to commit a booking for a type that somehow needs more than one resource', async () => {
+    it('verifies the allocation a booking is handed, rather than choosing one', async () => {
       const { t, typeId } = await bookingShop('wtr-hard', { resourceClass: 'person', capabilityIds: [] });
-      // Around every configuration guard: a second requirement written with the triggers off.
-      await pg.query('alter table public.work_item_type_resource_requirements disable trigger user');
-      try {
-        await pg.query('insert into public.work_item_type_resource_requirements (organization_id, type_id, resource_class, quantity, position, created_by) values ($1, $2, $3, 1, 9, $4)', [
-          t.organizationId,
-          typeId,
-          'vehicle',
-          t.userId,
-        ]);
-        const { db, bookable } = await offered(t.organizationId);
-        const raw = await db.rpc('create_booking', {
+      await createResourceRequirement(t.db, { typeId, resourceClass: 'vehicle', quantity: 1, capabilityIds: [] });
+      const van = await createResource(t.db, { organizationId: t.organizationId, name: 'Van', resourceClass: 'vehicle' });
+      const [person, vehicle] = await listResourceRequirements(t.db, { organizationId: t.organizationId, typeId });
+      const { db, bookable } = await offered(t.organizationId);
+      const book = (allocations: unknown) =>
+        db.rpc('create_booking', {
           p_organization_id: t.organizationId,
           p_type_id: bookable.id,
-          p_resource_id: t.alex,
+          p_allocations: allocations as never,
           p_starts_at: '2027-04-05T09:00:00.000Z',
           p_name: 'X',
           p_email: 'x@example.test',
           p_phone: '',
         });
-        expect(raw.error?.code).toBe('GD011');
-      } finally {
-        await pg.query('delete from public.work_item_type_resource_requirements where organization_id = $1 and type_id = $2 and resource_class = $3', [t.organizationId, typeId, 'vehicle']);
-        await pg.query('alter table public.work_item_type_resource_requirements enable trigger user');
-      }
+
+      // A slot left empty, a resource used twice, and a resource that cannot do the role: each refused.
+      expect((await book([{ requirement_id: person.id, resource_id: t.alex }])).error?.code).toBe('GD014');
+      expect((await book([{ requirement_id: person.id, resource_id: t.alex }, { requirement_id: vehicle.id, resource_id: t.alex }])).error?.code).toBe('GD014');
+      expect((await book([{ requirement_id: person.id, resource_id: t.alex }, { requirement_id: vehicle.id, resource_id: t.jo }])).error?.code).toBe('GD012');
+      expect((await book([{ requirement_id: null, resource_id: t.alex }])).error?.code).toBe('GD014');
+
+      // And the whole of it commits, with every assignment, once.
+      const ok = await book([{ requirement_id: person.id, resource_id: t.alex }, { requirement_id: vehicle.id, resource_id: van }]);
+      expect(ok.error).toBeNull();
+      const rows = await pg.query('select resource_id from public.work_item_resource_assignments where work_item_id = $1 order by resource_id', [ok.data]);
+      expect(rows.rows.map((r) => r.resource_id).sort()).toEqual([t.alex, van].sort());
     });
   });
 

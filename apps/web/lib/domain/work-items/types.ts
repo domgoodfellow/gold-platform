@@ -314,13 +314,6 @@ export async function setTypeBookable(
         'types.booking_reference_invalid',
       );
     }
-    // `app.check_bookable_type_requirements`: public booking commits one resource.
-    if (error.code === 'GD011') {
-      throw new DomainError(
-        'Public booking currently supports one required resource. Remove the additional resource requirements or turn public booking off.',
-        'types.booking_requirements_incompatible',
-      );
-    }
     if (error.code === '23514') {
       // Two checks share this code; the constraint's name, which Postgres puts in the message, says which.
       if (error.message.includes('work_item_types_bookable_is_schedulable')) {

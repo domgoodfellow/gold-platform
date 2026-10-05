@@ -10,9 +10,8 @@ export type BookingActionState = { error: string | null };
 /**
  * Take the slot.
  *
- * The slot travels back as the three values the offer was computed from, rather than as an
- * index into a list the server would have to recompute — recomputing it would be a second
- * availability answer, and the first thing to diverge from it would be this page.
+ * The slot travels back as the two values the offer was computed from — a time. Who takes part is
+ * the server's to work out again at the moment of booking, never something this form names.
  *
  * A failure here is ordinary rather than exceptional: the whole of I6 is that the answer this
  * form was built from may be stale by the time it is submitted, so `booking.slot_taken` is a
@@ -29,7 +28,6 @@ export async function bookAction(
   const slot: Slot = {
     startsAt: String(formData.get('startsAt') ?? ''),
     endsAt: String(formData.get('endsAt') ?? ''),
-    resourceId: String(formData.get('resourceId') ?? ''),
   };
 
   let workItemId: string;

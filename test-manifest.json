@@ -1006,6 +1006,14 @@
         "accessibility"
       ]
     },
+    "apps/web/tests/component/feasibility-ui.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "scheduling",
+        "accessibility"
+      ]
+    },
     "apps/web/tests/component/locked-org-sidebar.test.tsx": {
       "category": "component",
       "concerns": [
@@ -1378,6 +1386,14 @@
         "security"
       ],
       "note": "A tenant names and releases its own sending domain and nothing more; record_email_domain_provisioning is executable by no signed-in role, creates nothing, and refuses a cross-tenant row or a record shape nothing could publish; a failed domain returns to pending on a retry and a verified one never unverifies."
+    },
+    "apps/web/tests/integration/database/feasibility.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling",
+        "booking",
+        "security"
+      ]
     },
     "apps/web/tests/integration/database/feature-activation.test.ts": {
       "category": "database-integration",
@@ -2061,6 +2077,12 @@
       "concerns": [
         "pricing",
         "margins"
+      ]
+    },
+    "apps/web/tests/unit/feasibility.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "scheduling"
       ]
     },
     "apps/web/tests/unit/file-intake.test.ts": {

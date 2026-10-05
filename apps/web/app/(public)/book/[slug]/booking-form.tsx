@@ -10,7 +10,7 @@ const INITIAL: BookingActionState = { error: null };
 /**
  * One primary action, which D23 asks of every screen and this one takes literally.
  *
- * Pick a time, say who you are, book. The slot's three values ride along in hidden fields
+ * Pick a time, say who you are, book. The slot's two values ride along in hidden fields
  * rather than as an index, so the server commits against exactly the offer that was rendered
  * — and finds out from the exclusion constraint if the world moved underneath it (I6).
  */
@@ -43,7 +43,6 @@ export function BookingForm({
       <input type="hidden" name="typeId" value={typeId} />
       <input type="hidden" name="startsAt" value={chosen?.startsAt ?? ''} />
       <input type="hidden" name="endsAt" value={chosen?.endsAt ?? ''} />
-      <input type="hidden" name="resourceId" value={chosen?.resourceId ?? ''} />
 
       <ul className="flex flex-wrap gap-2">
         {slots.map((slot) => {

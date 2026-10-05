@@ -24,8 +24,9 @@ import {
   requirementGroups,
 } from '@/lib/domain/work-items/requirements';
 import { getWorkItem } from '@/lib/domain/work-items/work-items';
+import { checkWorkTypeFeasibility } from '@/lib/domain/scheduling/feasibility';
 
-export async function loadWorkItemDetail(db: Db, input: { organizationId: string; workItemId: string; capabilities: string[] }) {
+export async function loadWorkItemDetail(db: Db, input: { organizationId: string; workItemId: string; capabilities: string[]; timeZone?: string }) {
   const workItem = await getWorkItem(db, input);
   if (!workItem) return null;
   const { organizationId, workItemId } = input;
@@ -49,8 +50,16 @@ export async function loadWorkItemDetail(db: Db, input: { organizationId: string
       ? coverageView(evaluateRequirements(requirements, resources.filter((resource) => assignedIds.has(resource.id))), RESOURCE_CLASS_LABELS)
       : null;
 
+  // A scheduled job that is short of what it needs: is a complete set available at its own time? Asked
+  // only here, for one job, because it is a calculation and not something a list should run per row.
+  // The job's own assignments are set aside and preferred, so the suggestion keeps who is already on it.
+  const suggestion =
+    coverage && !coverage.satisfied && workItem.window && input.capabilities.includes('work_item.schedule')
+      ? await suggestCompleteSet(db, { organizationId, workItem, resources, assignedIds, timeZone: input.timeZone ?? 'UTC' })
+      : null;
+
   return {
-    needs, coverage,
+    needs, coverage, suggestion,
     workItem, checklist, timeEntries, costs, resources, definitions, lines, priceBook, customers, locations, assets, invoice, resolvedFeatures, statuses, transitions, documents, timeline,
     price: priceWorkItem(lines), economics: jobEconomics({ lines, costs }), standing: invoice ? invoiceStanding(invoice) : null,
     mayAttach: input.capabilities.includes('document.create'), billingEnabled: enabledModules.has('billing'), assetsEnabled: enabledModules.has('assets'),
@@ -59,6 +68,36 @@ export async function loadWorkItemDetail(db: Db, input: { organizationId: string
     mayEditDetails: input.capabilities.includes('work_item.update'),
     capabilities: new Set(input.capabilities),
   };
+}
+
+async function suggestCompleteSet(
+  db: Db,
+  input: {
+    organizationId: string;
+    workItem: NonNullable<Awaited<ReturnType<typeof getWorkItem>>>;
+    resources: { id: string; name: string }[];
+    assignedIds: Set<string>;
+    timeZone: string;
+  },
+): Promise<{ names: string[]; resourceIds: string[] } | null> {
+  const window = input.workItem.window;
+  if (!window) return null;
+  const result = await checkWorkTypeFeasibility(db, {
+    organizationId: input.organizationId,
+    workTypeId: input.workItem.type.id,
+    timeZone: input.timeZone,
+    start: window.startsAt,
+    end: window.endsAt,
+    excludeWorkItemId: input.workItem.id,
+    prefer: [...input.assignedIds],
+  });
+  if (!result.feasible || !result.combination) return null;
+
+  // What is already on the job stays on it — extras beyond the requirements included; the suggestion adds.
+  const resourceIds = [...new Set([...input.assignedIds, ...result.combination.map((entry) => entry.resourceId)])];
+  const name = new Map(input.resources.map((resource) => [resource.id, resource.name]));
+  const added = result.combination.map((entry) => entry.resourceId).filter((id) => !input.assignedIds.has(id));
+  return { resourceIds, names: added.map((id) => name.get(id) ?? 'A resource') };
 }
 
 export type WorkItemDetailModel = NonNullable<Awaited<ReturnType<typeof loadWorkItemDetail>>>;

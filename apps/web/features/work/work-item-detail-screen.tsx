@@ -21,7 +21,7 @@ import {
 export function WorkItemDetailScreen({ organizationId, organization, model }: { organizationId: string; organization: { timezone: string; currency: string | null; role: string }; model: WorkItemDetailModel }) {
   const { workItem, checklist, timeEntries, costs, definitions, lines, priceBook, customers, locations,
     assets, invoice, statuses, transitions, documents, timeline, price, economics, standing, mayAttach,
-    billingEnabled, assetsEnabled, cardsAccepted, resourceOptions, mayEditDetails, needs, coverage } = model;
+    billingEnabled, assetsEnabled, cardsAccepted, resourceOptions, mayEditDetails, needs, coverage, suggestion } = model;
   const workItemId = workItem.id;
   const can = (capability: string) => model.capabilities.has(capability);
 
@@ -60,7 +60,12 @@ export function WorkItemDetailScreen({ organizationId, organization, model }: { 
         }
         execution={
           <>
-            <WorkRequirementsSection coverage={coverage} />
+            <WorkRequirementsSection
+              coverage={coverage}
+              suggestion={suggestion}
+              organizationId={organizationId}
+              workItemId={workItemId}
+            />
             <WorkOperationalActions
               organizationId={organizationId}
               workItem={workItem}
