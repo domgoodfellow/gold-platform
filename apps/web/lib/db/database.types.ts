@@ -2756,6 +2756,8 @@ export type Database = {
           customer_id: string | null
           id: string
           organization_id: string
+          portal_expires_at: string | null
+          portal_invite_id: string | null
           user_id: string
         }
         Insert: {
@@ -2763,6 +2765,8 @@ export type Database = {
           customer_id?: string | null
           id?: string
           organization_id: string
+          portal_expires_at?: string | null
+          portal_invite_id?: string | null
           user_id: string
         }
         Update: {
@@ -2770,6 +2774,8 @@ export type Database = {
           customer_id?: string | null
           id?: string
           organization_id?: string
+          portal_expires_at?: string | null
+          portal_invite_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -2793,6 +2799,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_actors_portal_invite_same_org"
+            columns: ["organization_id", "portal_invite_id"]
+            isOneToOne: false
+            referencedRelation: "customer_portal_invites"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -3032,6 +3045,7 @@ export type Database = {
       form_submissions: {
         Row: {
           answers: Json
+          booking_work_item_id: string | null
           context: Json
           customer_id: string | null
           form_id: string
@@ -3044,6 +3058,7 @@ export type Database = {
         }
         Insert: {
           answers: Json
+          booking_work_item_id?: string | null
           context?: Json
           customer_id?: string | null
           form_id: string
@@ -3056,6 +3071,7 @@ export type Database = {
         }
         Update: {
           answers?: Json
+          booking_work_item_id?: string | null
           context?: Json
           customer_id?: string | null
           form_id?: string
@@ -3067,6 +3083,13 @@ export type Database = {
           submitted_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "form_submissions_booking_fk"
+            columns: ["organization_id", "booking_work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "form_submissions_customer_fk"
             columns: ["organization_id", "customer_id"]
@@ -9607,6 +9630,7 @@ export type Database = {
       work_item_types: {
         Row: {
           booking_duration_minutes: number | null
+          booking_intake_form_id: string | null
           booking_price_item_id: string | null
           booking_status_id: string | null
           created_at: string
@@ -9618,6 +9642,7 @@ export type Database = {
         }
         Insert: {
           booking_duration_minutes?: number | null
+          booking_intake_form_id?: string | null
           booking_price_item_id?: string | null
           booking_status_id?: string | null
           created_at?: string
@@ -9629,6 +9654,7 @@ export type Database = {
         }
         Update: {
           booking_duration_minutes?: number | null
+          booking_intake_form_id?: string | null
           booking_price_item_id?: string | null
           booking_status_id?: string | null
           created_at?: string
@@ -9639,6 +9665,13 @@ export type Database = {
           schedulable?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "work_item_types_booking_intake_same_org"
+            columns: ["organization_id", "booking_intake_form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "work_item_types_booking_price_same_org"
             columns: ["organization_id", "booking_price_item_id"]
@@ -10141,6 +10174,7 @@ export type Database = {
           resource_rank: number
         }[]
       }
+      booking_intake_available: { Args: { p_type_id: string }; Returns: Json }
       booking_organization: { Args: { p_slug: string }; Returns: string }
       bootstrap_gold_internal_workspace: {
         Args: {
@@ -10271,6 +10305,8 @@ export type Database = {
         Args: {
           p_allocations: Json
           p_email: string
+          p_intake_answers?: Json
+          p_intake_revision_id?: string
           p_name: string
           p_organization_id: string
           p_phone: string
@@ -11001,6 +11037,15 @@ export type Database = {
           source_domain: string
           source_record_id: string
           usage_event_id: string
+        }[]
+      }
+      portal_context: {
+        Args: never
+        Returns: {
+          customer_id: string
+          expires_at: string
+          organization_id: string
+          portal_invite_id: string
         }[]
       }
       portal_forms_available: { Args: never; Returns: Json }
@@ -12100,6 +12145,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_type_booking_intake: {
+        Args: { p_form_id: string; p_type_id: string }
+        Returns: undefined
+      }
       set_user_phone_number_preference: {
         Args: { p_organization_id: string; p_phone_number_id: string }
         Returns: undefined
@@ -12407,6 +12456,10 @@ export type Database = {
           title: string
           work_item_id: string
         }[]
+      }
+      work_item_intake: {
+        Args: { p_organization_id: string; p_work_item_id: string }
+        Returns: Json
       }
       work_marked_complete: {
         Args: {

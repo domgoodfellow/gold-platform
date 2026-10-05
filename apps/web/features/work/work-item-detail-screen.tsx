@@ -1,4 +1,5 @@
 import { ActivityList } from '@/features/timeline/activity-list';
+import { WorkItemIntake } from '@/features/work/work-item-intake';
 import { DocumentsSection } from '@/features/documents/section';
 import { EditWorkItemSheet } from '@/features/work/edit-work-item-sheet';
 import { Hint } from '@/components/controls/inputs';
@@ -21,7 +22,7 @@ import {
 export function WorkItemDetailScreen({ organizationId, organization, model }: { organizationId: string; organization: { timezone: string; currency: string | null; role: string }; model: WorkItemDetailModel }) {
   const { workItem, checklist, timeEntries, costs, definitions, lines, priceBook, customers, locations,
     assets, invoice, statuses, transitions, documents, timeline, price, economics, standing, mayAttach,
-    billingEnabled, assetsEnabled, cardsAccepted, resourceOptions, mayEditDetails, needs, coverage, suggestion } = model;
+    billingEnabled, assetsEnabled, cardsAccepted, resourceOptions, mayEditDetails, needs, coverage, suggestion, intake } = model;
   const workItemId = workItem.id;
   const can = (capability: string) => model.capabilities.has(capability);
 
@@ -41,6 +42,7 @@ export function WorkItemDetailScreen({ organizationId, organization, model }: { 
               definitions={definitions}
               assetsEnabled={assetsEnabled}
             />
+            <WorkItemIntake organizationId={organizationId} intake={intake} timezone={organization.timezone} />
             {mayEditDetails ? (
               <EditWorkItemSheet
                 organizationId={organizationId}

@@ -3,23 +3,14 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FORM_SOURCE_LABEL, type FormDefinition } from '@gold/schemas';
+import { FORM_SOURCE_LABEL } from '@gold/schemas';
 import { Button } from '@/components/controls/button';
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import { customerCandidatesAction, linkSubmissionCustomerAction } from '@/app/organizations/[organizationId]/studio/forms/actions';
+import { displayAnswer } from '@/features/forms/answer-display';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { EmptyState } from '@/components/surfaces/section';
 import type { FormCustomerCandidate, FormSubmissionEntry, FormSubmissionsRead } from '@/lib/domain/forms/forms';
-
-function display(field: FormDefinition['fields'][number] | undefined, value: unknown): string {
-  if (value === undefined || value === null || value === '') return '—';
-  if (field && 'options' in field) {
-    const label = (key: unknown) => field.options.find((option) => option.value === key)?.label ?? String(key);
-    return Array.isArray(value) ? value.map(label).join(', ') : label(value);
-  }
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  return String(value);
-}
 
 /**
  * Master and detail: who responded and when on one side, the answers on the other. Each response is
@@ -50,7 +41,7 @@ function CustomerLine({ organizationId, formId, submission }: { organizationId: 
         <dt>Customer</dt>
         <dd>
           <Link href={`/organizations/${organizationId}/customers/${submission.customerId}`} className="underline underline-offset-4">{submission.customerName ?? 'Customer'}</Link>
-          {submission.source !== 'portal' ? <Button tone="text" size="tiny" disabled={pending} onClick={() => link(null)}>Unlink</Button> : null}
+          {submission.source !== 'portal' && submission.source !== 'booking' ? <Button tone="text" size="tiny" disabled={pending} onClick={() => link(null)}>Unlink</Button> : null}
         </dd>
       </>
     );
@@ -114,7 +105,7 @@ export function SubmissionsView({ organizationId, formId, formName, read }: { or
                 <span className="block truncate text-xs text-subtle">
                   Revision {revisions.get(submission.revisionId)?.number ?? '?'}
                   {' · '}
-                  {display(revisions.get(submission.revisionId)?.definition.fields[0], submission.answers[revisions.get(submission.revisionId)?.definition.fields[0]?.id ?? ''])}
+                  {displayAnswer(revisions.get(submission.revisionId)?.definition.fields[0], submission.answers[revisions.get(submission.revisionId)?.definition.fields[0]?.id ?? ''])}
                 </span>
               </button>
             </li>
@@ -129,13 +120,19 @@ export function SubmissionsView({ organizationId, formId, formName, read }: { or
             <dt>Form</dt><dd>{formName}</dd>
             <dt>Revision</dt><dd>{revision.number}</dd>
             <dt>Source</dt><dd>{FORM_SOURCE_LABEL[selected.source]}</dd>
+            {selected.bookingWorkItemId ? (
+              <>
+                <dt>Booking</dt>
+                <dd><Link href={`/organizations/${organizationId}/work/${selected.bookingWorkItemId}`} className="underline underline-offset-4">Open the booking</Link></dd>
+              </>
+            ) : null}
             <CustomerLine key={selected.id} organizationId={organizationId} formId={formId} submission={selected} />
           </dl>
           <dl className="grid gap-4 border-t border-border pt-4">
             {revision.definition.fields.map((field) => (
               <div key={field.id}>
                 <dt className="text-sm font-medium">{field.label}</dt>
-                <dd className="mt-0.5 whitespace-pre-line text-sm">{display(field, selected.answers[field.id])}</dd>
+                <dd className="mt-0.5 whitespace-pre-line text-sm">{displayAnswer(field, selected.answers[field.id])}</dd>
               </div>
             ))}
           </dl>

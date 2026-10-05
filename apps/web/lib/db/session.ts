@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createPortalClient } from './portal';
 import { classifySessionUser, type SessionIdentity } from '@/lib/domain/identity/session';
 import type { Database } from './types';
 
@@ -19,27 +20,28 @@ import type { Database } from './types';
  */
 export async function updateSession(
   request: NextRequest,
+  { portal = false }: { portal?: boolean } = {},
 ): Promise<{ response: NextResponse; identity: SessionIdentity }> {
   let response = NextResponse.next({ request });
 
-  const db = createServerClient<Database>(
-    requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-    publicKey(),
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          for (const { name, value } of cookiesToSet) {
-            request.cookies.set(name, value);
-          }
-          response = NextResponse.next({ request });
-          for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
-          }
-        },
-      },
+  const jar = {
+    getAll: () => request.cookies.getAll(),
+    setAll: (cookiesToSet: { name: string; value: string; options: CookieOptions }[]) => {
+      for (const { name, value } of cookiesToSet) {
+        request.cookies.set(name, value);
+      }
+      response = NextResponse.next({ request });
+      for (const { name, value, options } of cookiesToSet) {
+        response.cookies.set(name, value, options);
+      }
     },
-  );
+  };
+
+  // The portal keeps its own cookie (`lib/db/portal.ts`), so a request under `/portal` refreshes
+  // that session and leaves the account session alone — and the reverse everywhere else.
+  const db = portal
+    ? createPortalClient(jar)
+    : createServerClient<Database>(requireEnv('NEXT_PUBLIC_SUPABASE_URL'), publicKey(), { cookies: jar });
 
   // getUser() rather than getSession(): it revalidates the token against the auth server
   // instead of trusting whatever the cookie claims. This call is what performs the refresh,

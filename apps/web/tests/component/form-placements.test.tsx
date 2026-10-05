@@ -13,7 +13,7 @@ const actions = vi.hoisted(() => ({
   submitPortalFormAction: vi.fn(async () => ({ status: 'sent' as const })),
 }));
 vi.mock('@/app/(public)/forms/actions', () => actions);
-vi.mock('@/app/(public)/portal/[token]/actions', () => actions);
+vi.mock('@/app/(public)/portal/actions', () => actions);
 
 const DEFINITION: FormDefinition = {
   title: 'Request a quote',
@@ -101,13 +101,13 @@ describe('the public form\'s keyboard behaviour', () => {
 describe('the portal list', () => {
   it('opens a form in place and submits it as the portal, with only the form\'s own id', async () => {
     const user = userEvent.setup();
-    render(<PortalForms forms={[PUBLICATION]} token="tok" />);
+    render(<PortalForms forms={[PUBLICATION]} />);
     await user.click(screen.getByRole('button', { name: 'Open' }));
     await user.type(screen.getByLabelText('Your name'), 'Ada');
     await user.click(screen.getByLabelText('Small'));
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await waitFor(() => expect(actions.submitPortalFormAction).toHaveBeenCalledTimes(1));
-    expect(actions.submitPortalFormAction).toHaveBeenCalledWith({ token: 'tok', formId: PUBLICATION.formId, answers: { name: 'Ada', size: 's' } });
+    expect(actions.submitPortalFormAction).toHaveBeenCalledWith({ formId: PUBLICATION.formId, answers: { name: 'Ada', size: 's' } });
   });
 });
 

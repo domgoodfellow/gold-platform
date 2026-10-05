@@ -150,3 +150,25 @@ export async function claimPortalInvite(db: Db, input: { token: string }): Promi
 
   return data as string;
 }
+
+/**
+ * Exchange a link for a portal session, **always on a fresh one.**
+ *
+ * `claimPortalInvite` binds whichever anonymous session the caller already holds. A portal
+ * cookie left over from somebody else's link, or from an earlier visit to another business, would
+ * then become the customer this link names — a session fixation by another name. So the exchange
+ * ends any session on this client first (locally; it revokes nothing for anyone else) and starts
+ * a new one, and a refused link leaves no session behind at all.
+ *
+ * One portal session per browser: opening a second business's link replaces the first. Reopening
+ * the same link renews the exchange (`portal_expires_at`).
+ */
+export async function exchangePortalLink(db: Db, input: { token: string }): Promise<string> {
+  await db.auth.signOut({ scope: 'local' });
+  try {
+    return await claimPortalInvite(db, input);
+  } catch (error) {
+    await db.auth.signOut({ scope: 'local' });
+    throw error;
+  }
+}

@@ -11,7 +11,7 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         '/organizations/',
         '/platform/',
-        '/portal/',
+        '/portal', '/portal/',
         '/auth/',
         '/reset-password',
       ],

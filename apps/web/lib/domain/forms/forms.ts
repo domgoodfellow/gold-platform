@@ -65,6 +65,8 @@ export type FormSubmissionEntry = {
   answers: Record<string, unknown>;
   customerId: string | null;
   customerName: string | null;
+  /** The booking this response was recorded with, when its source is `booking`. */
+  bookingWorkItemId: string | null;
 };
 
 export type FormSubmissionsRead = {

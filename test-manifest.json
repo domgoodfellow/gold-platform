@@ -2223,6 +2223,15 @@
       ],
       "note": "The Studio form builder's add, select, edit, remove, reorder, dirty and publish behaviour, and the shared renderer's label/error association."
     },
+    "apps/web/tests/architecture/static/portal-session-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "architecture",
+        "portal",
+        "security"
+      ],
+      "note": "The portal link is exchanged once in a route handler into an HttpOnly session of its own; every portal operation takes identity from that session, never from the browser."
+    },
     "apps/web/tests/architecture/static/forms-boundary.test.ts": {
       "category": "architecture-static",
       "concerns": [
@@ -2230,6 +2239,16 @@
         "public-site"
       ],
       "note": "Forms are not booking, one renderer, slug-addressed anonymous doors, no infrastructure in authoring."
+    },
+    "apps/web/e2e/portal-booking-forms.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "portal",
+        "booking",
+        "public-site",
+        "security"
+      ],
+      "note": "Portal link exchanged once into its own session, portal form, revocation, booking with the business's own questions, refusals that book nothing, Studio/portal/public coexistence, phone width."
     },
     "apps/web/e2e/studio-forms.spec.ts": {
       "category": "playwright-acceptance",
@@ -2246,6 +2265,16 @@
         "public"
       ],
       "note": "A public write ends only the session it began: the helper, and the marketing intake that shares it."
+    },
+    "apps/web/tests/integration/database/booking-intake.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "booking",
+        "public-site",
+        "security",
+        "tenancy"
+      ],
+      "note": "A booking asks its business's own form: configuration refusals, revision pinning, booking and response in one transaction (a refusal leaves neither), the link in both directions, identifiers-only event, no flood guard."
     },
     "apps/web/tests/integration/database/form-placements.test.ts": {
       "category": "database-integration",

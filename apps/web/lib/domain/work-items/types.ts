@@ -226,6 +226,8 @@ export type TypeBooking = {
   statusId: string;
   durationMinutes: number;
   priceItemId: string | null;
+  /** A form of this business the public booking asks, or null when it asks nothing. */
+  intakeFormId: string | null;
 };
 
 export async function getTypeBooking(
@@ -234,7 +236,7 @@ export async function getTypeBooking(
 ): Promise<TypeBooking | null> {
   const { data, error } = await db
     .from('work_item_types')
-    .select('booking_status_id, booking_duration_minutes, booking_price_item_id')
+    .select('booking_status_id, booking_duration_minutes, booking_price_item_id, booking_intake_form_id')
     .eq('organization_id', input.organizationId)
     .eq('id', input.typeId)
     .maybeSingle();
@@ -252,6 +254,7 @@ export async function getTypeBooking(
     statusId: data.booking_status_id,
     durationMinutes: data.booking_duration_minutes,
     priceItemId: data.booking_price_item_id,
+    intakeFormId: data.booking_intake_form_id,
   };
 }
 

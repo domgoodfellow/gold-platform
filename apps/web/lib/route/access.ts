@@ -67,6 +67,8 @@ const BOOKING_PREFIX = '/book/';
  * prefix with an invented token gets a 404 from the page, not access.
  */
 const PORTAL_PREFIX = '/portal/';
+/** The address a link is exchanged for, which carries no secret: the portal's own home. */
+const PORTAL_HOME = '/portal';
 
 /**
  * A business's published form, on the same terms as booking: the organization and form are named
@@ -93,6 +95,7 @@ export function isPublic(pathname: string): boolean {
   return (
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith(BOOKING_PREFIX) ||
+    pathname === PORTAL_HOME ||
     pathname.startsWith(PORTAL_PREFIX) ||
     pathname.startsWith(FORMS_PREFIX) ||
     pathname.startsWith(FORM_KEY_PREFIX) ||

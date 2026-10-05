@@ -16,6 +16,7 @@ import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { todayInZone } from '@/lib/domain/scheduling/window';
+import { bookingIntake } from '@/lib/domain/booking/intake';
 import { BookingForm } from './booking-form';
 
 export const dynamic = 'force-dynamic';
@@ -65,7 +66,9 @@ export default async function BookingPage({
   const date = requested ?? todayInZone(organization.timezone);
 
   const slotsByType = new Map<string, Slot[]>();
+  const intakeByType = new Map<string, Awaited<ReturnType<typeof bookingIntake>>>();
   for (const type of types) {
+    intakeByType.set(type.id, await bookingIntake(db, { typeId: type.id }));
     slotsByType.set(
       type.id,
       await bookableSlots(db, { organizationId, type, date, timeZone: organization.timezone }),
@@ -112,6 +115,7 @@ export default async function BookingPage({
                     typeId={type.id}
                     slots={slots}
                     timeZone={organization.timezone}
+                    intake={intakeByType.get(type.id) ?? null}
                   />
                 )}
               </Card>

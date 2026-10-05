@@ -1,7 +1,7 @@
 'use client';
 
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
-import { Button } from '@/components/controls/button';
+import { Button, ButtonLink } from '@/components/controls/button';
 import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { useActionState } from 'react';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
@@ -16,6 +16,7 @@ import {
   removeTypeChecklistItemAction,
   renameTypeAction,
   setTypeBookableAction,
+  setTypeBookingIntakeAction,
   setTypeSchedulableAction,
   updateStatusAction,
   type WorkConfigActionState,
@@ -405,6 +406,7 @@ export function PublishTypeForm({
   statuses,
   prices,
   booking,
+  intakeForms,
   schedulable,
   disabled,
 }: {
@@ -415,6 +417,7 @@ export function PublishTypeForm({
   statuses: WorkItemStatus[];
   prices: PriceBookItem[];
   booking: TypeBooking | null;
+  intakeForms: Array<{ id: string; name: string }>;
   disabled: boolean;
 }) {
   const [state, formAction, pending] = useActionState(setTypeBookableAction, INITIAL);
@@ -437,6 +440,7 @@ export function PublishTypeForm({
   }
 
   return (
+    <>
     <form action={formAction} className="mt-4 flex flex-col gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="typeId" value={typeId} />
@@ -518,6 +522,71 @@ export function PublishTypeForm({
         ) : null}
       </div>
 
+      {state.error ? (
+        <span role="alert" className="text-sm text-danger">
+          {state.error}
+        </span>
+      ) : null}
+    </form>
+    {booking ? <BookingIntakeForm organizationId={organizationId} typeId={typeId} current={booking.intakeFormId} forms={intakeForms} disabled={disabled} /> : null}
+    </>
+  );
+}
+
+/**
+ * The questions a public booking asks, chosen from the business's own forms. Booking holds only the
+ * choice; the questions, their revisions and the answers stay Forms'. Editing is Studio's job, so
+ * this links there rather than growing a second editor.
+ */
+function BookingIntakeForm({
+  organizationId,
+  typeId,
+  current,
+  forms,
+  disabled,
+}: {
+  organizationId: string;
+  typeId: string;
+  current: string | null;
+  forms: Array<{ id: string; name: string }>;
+  disabled: boolean;
+}) {
+  const [state, formAction, pending] = useActionState(setTypeBookingIntakeAction, INITIAL);
+  const studio = `/organizations/${organizationId}/studio/forms`;
+
+  return (
+    <form action={formAction} className="mt-6 flex flex-col gap-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="typeId" value={typeId} />
+      <label className="text-sm">
+        Additional questions when somebody books
+        <SelectInput name="formId" defaultValue={current ?? ''} disabled={disabled} className="flex-1 mt-1 block w-full">
+          <option value="">No additional questions</option>
+          {forms.map((form) => (
+            <option key={form.id} value={form.id}>
+              {form.name}
+            </option>
+          ))}
+        </SelectInput>
+      </label>
+      <Hint>
+        {forms.length === 0
+          ? 'Publish a form in Studio to ask questions at booking.'
+          : 'The answers are kept with the booking. Name, email and phone are always asked.'}
+      </Hint>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" disabled={disabled || pending} tone="secondary" className="w-fit">
+          {pending ? 'Saving…' : 'Save'}
+        </Button>
+        {current ? (
+          <ButtonLink tone="text" href={`${studio}/${current}`}>
+            Edit the form
+          </ButtonLink>
+        ) : null}
+        <ButtonLink tone="text" href={studio}>
+          Open Forms
+        </ButtonLink>
+      </div>
       {state.error ? (
         <span role="alert" className="text-sm text-danger">
           {state.error}

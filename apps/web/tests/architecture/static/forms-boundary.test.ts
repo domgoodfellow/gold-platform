@@ -32,11 +32,35 @@ const FORMS_FILES = [
 ];
 
 describe('forms are not booking', () => {
-  it('shares no module with booking in either direction', () => {
+  // Booking owns the booking (service, slot, resources, price, status); Forms owns configurable
+  // questions. A booking may *ask* a form, so the dependency runs one way and through one seam.
+  it('forms never reach into booking', () => {
     for (const file of FORMS_FILES) expect(read(file), file).not.toMatch(/domain\/booking|book\/\[slug\]|booking-form/);
-    for (const file of [...filesUnder('lib/domain/booking'), 'app/(public)/book/[slug]/booking-form.tsx']) {
+  });
+
+  it('booking names a form in exactly one domain file, and only to read the list', () => {
+    for (const file of filesUnder('lib/domain/booking').filter((path) => !path.endsWith('/intake.ts'))) {
       expect(read(file), file).not.toMatch(/domain\/forms|features\/forms|@gold\/schemas.*Form/);
     }
+    const seam = read('lib/domain/booking/intake.ts');
+    expect(seam).toContain("import { listForms } from '@/lib/domain/forms/forms'");
+    expect(seam).not.toMatch(/record_form_submission|form_submissions|submit_public_form|submitPublicForm/);
+  });
+
+  it('the booking page draws the business\'s questions with the one field renderer, never Studio\'s UI', () => {
+    const page = read('app/(public)/book/[slug]/booking-form.tsx');
+    expect(page).toContain("@/features/forms/form-renderer");
+    for (const file of filesUnder('app/(public)/book')) expect(read(file), file).not.toMatch(/features\/studio|studio\/forms/);
+    expect(read('lib/domain/booking/booking.ts')).not.toMatch(/features\/studio/);
+  });
+
+  it('writes the answers inside create_booking, never by a second call', () => {
+    const booking = read('lib/domain/booking/booking.ts');
+    expect(booking).toContain('p_intake_revision_id');
+    expect(booking).not.toMatch(/submit_public_form|submitPublicForm|submit_portal_form/);
+    // And the form to ask is never named by the browser: the action reads it from the type.
+    const action = read('app/(public)/book/[slug]/actions.ts');
+    expect(action).not.toMatch(/formData\.get\('formId'\)|p_form_id/);
   });
 });
 
@@ -147,11 +171,25 @@ describe('a form is placed, not copied', () => {
 });
 
 describe('a public write ends only the session it began', () => {
-  it('signs out nowhere but the helper and the sign-out screen', () => {
+  it('signs out nowhere but the helpers and the sign-out screen', () => {
     const offenders: string[] = [];
     for (const file of [...filesUnder('lib/domain'), ...filesUnder('features'), ...filesUnder('app')]) {
       if (/auth\.signOut\(/.test(read(file))) offenders.push(file);
     }
-    expect(offenders.sort()).toEqual(['lib/domain/identity/anonymous-session.ts', 'lib/domain/identity/credentials.ts']);
+    // The portal's exchange is the second helper. It ends a session only on a client that holds
+    // the portal's own cookie (below), so it can never end a Studio or a booking visitor's.
+    expect(offenders.sort()).toEqual(['lib/domain/identity/anonymous-session.ts', 'lib/domain/identity/credentials.ts', 'lib/domain/portal/portal.ts']);
+  });
+
+  it('keeps the portal session in a cookie of its own, so it can neither replace nor end another', () => {
+    const portal = read('lib/db/portal.ts');
+    expect(portal).toContain("PORTAL_COOKIE_NAME = 'gold-portal'");
+    expect(portal).toContain('cookieOptions: { name: PORTAL_COOKIE_NAME }');
+    expect(portal).toMatch(/httpOnly: true/);
+    // The only code that exchanges a link builds that client itself, and ends sessions locally only.
+    expect(read('app/(public)/portal/[token]/route.ts')).toContain('createPortalClient');
+    expect(read('lib/domain/portal/portal.ts')).toMatch(/signOut\(\{ scope: 'local' \}\)/);
+    // The account session's client never learns the portal's cookie.
+    expect(read('lib/db/server.ts')).not.toMatch(/gold-portal|PORTAL_COOKIE/);
   });
 });

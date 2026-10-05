@@ -90,6 +90,10 @@ describe("the proxy's redirect rules", () => {
     expect(decideRedirect(anon, '/book/some-business')).toBeNull();
     expect(decideRedirect(account, '/book/some-business')).toBeNull();
     expect(isPublic('/organizations/accept-invite/abc123')).toBe(true);
+    // The portal's own home, where an exchanged link lands, and the page every dead link lands on.
+    expect(decideRedirect(NONE, '/portal')).toBeNull();
+    expect(decideRedirect(anon, '/portal/unavailable')).toBeNull();
+    expect(isPublic('/portalx')).toBe(false);
   });
 
   it('does not treat an anonymous session as an operator account on a protected path', () => {

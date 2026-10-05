@@ -3,9 +3,17 @@
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { beginBooking, bookSlot, type Slot } from '@/lib/domain/booking/booking';
+import { bookingIntake } from '@/lib/domain/booking/intake';
+import { checkAgainst } from '@/lib/domain/forms/public-forms';
 import { DomainError } from '@/lib/domain/errors';
 
-export type BookingActionState = { error: string | null };
+export type BookingActionState = {
+  error: string | null;
+  /** Answers to the business's own questions that the published form refused, by field id. */
+  fieldErrors?: Record<string, string>;
+  /** The questions changed under the visitor; nothing was booked and the page must reload. */
+  stale?: boolean;
+};
 
 /**
  * Take the slot.
@@ -36,16 +44,40 @@ export async function bookAction(
     // session is gone by the time the form arrives. A Server Action can — and binding is harmless to
     // repeat (the unique index makes the second a no-op) — so the booking establishes its own.
     await beginBooking(db, { organizationId });
+    const typeId = String(formData.get('typeId') ?? '');
+
+    // The business's own questions, if this kind of work asks any. The form is read from the type
+    // under this visitor's own binding -- never named by the browser -- and the answers are checked
+    // against the revision the visitor was shown. If it is no longer the published one, nothing is
+    // booked: the page reloads rather than judging their answers against a form they never saw.
+    const intake = await bookingIntake(db, { typeId });
+    let answered: { revisionId: string; answers: Record<string, unknown> } | undefined;
+    if (intake) {
+      if (String(formData.get('intakeRevisionId') ?? '') !== intake.revisionId) {
+        return { error: 'This booking was just updated. Please reload the page and book again.', stale: true };
+      }
+      let raw: unknown;
+      try {
+        raw = JSON.parse(String(formData.get('intakeAnswers') ?? '{}'));
+      } catch {
+        raw = {};
+      }
+      const checked = checkAgainst(intake.definition, raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {});
+      if (!checked.ok) return { error: checked.result.message, fieldErrors: checked.result.fieldErrors };
+      answered = { revisionId: intake.revisionId, answers: checked.answers };
+    }
+
     workItemId = await bookSlot(db, {
       organizationId,
-      typeId: String(formData.get('typeId') ?? ''),
+      typeId,
+      intake: answered,
       slot,
       name: String(formData.get('name') ?? ''),
       email: String(formData.get('email') ?? ''),
       phone: String(formData.get('phone') ?? ''),
     });
   } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
+    if (error instanceof DomainError) return { error: error.message, stale: error.code === 'booking.intake_stale' };
     throw error;
   }
 

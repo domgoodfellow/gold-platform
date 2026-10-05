@@ -43,6 +43,8 @@ export type WorkConfigurationData = {
   requirements: ResourceRequirement[];
   /** The active capability vocabulary a requirement may name. */
   capabilities: ResourceCapability[];
+  /** The forms a public booking of the selected type may ask: published, not archived. */
+  intakeForms: Array<{ id: string; name: string }>;
   /** Where a chip/type link should point — differs between the Work page (`?type=`) and Settings (`?type=` too, but a different base path). */
   typeHref: (typeId: string) => string;
 };
@@ -70,6 +72,7 @@ export function WorkConfiguration({
   bookingEnabled,
   requirements,
   capabilities,
+  intakeForms,
   typeHref,
 }: WorkConfigurationData) {
   const statusName = new Map(statuses.map((status) => [status.id, status.name]));
@@ -180,6 +183,7 @@ export function WorkConfiguration({
                 statuses={statuses}
                 prices={prices}
                 booking={booking}
+                intakeForms={intakeForms}
                 schedulable={selectedType.schedulable}
                 disabled={!mayConfigure}
               />

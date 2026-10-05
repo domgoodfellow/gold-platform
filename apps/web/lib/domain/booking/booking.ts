@@ -163,6 +163,11 @@ export async function bookSlot(
     name: string;
     email: string;
     phone: string;
+    /**
+     * The business's own questions, when the type asks any: the revision the visitor was shown and
+     * their answers. The form itself is never named here — it is the type's.
+     */
+    intake?: { revisionId: string; answers: Record<string, unknown> };
   },
 ): Promise<string> {
   const name = input.name.trim();
@@ -228,6 +233,8 @@ export async function bookSlot(
       p_name: name,
       p_email: input.email,
       p_phone: input.phone,
+      p_intake_revision_id: input.intake?.revisionId,
+      p_intake_answers: input.intake ? (input.intake.answers as never) : undefined,
     });
     data = result.data;
     error = result.error;
@@ -250,6 +257,19 @@ export async function bookSlot(
         'This booking has already been made.',
         'booking.already_booked',
       );
+    }
+    // The questions changed while the visitor was answering (a new revision, or the business started
+    // or stopped asking). Nothing was booked and no answer was kept; the page reloads.
+    if (error.code === 'GD002') {
+      throw new DomainError(
+        'This booking was just updated. Please reload the page and book again.',
+        'booking.intake_stale',
+      );
+    }
+    // An answer the published revision refuses. The browser and the action check first; this is the
+    // database's own refusal, and it too leaves no booking behind.
+    if (error.code === '23514') {
+      throw new DomainError(error.message, 'booking.intake_invalid');
     }
     // `create_booking` reasserts what the page offered: the resource must still be eligible for what
     // this kind of work needs, and a type that needs more than one resource cannot be booked here.

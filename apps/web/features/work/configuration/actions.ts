@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
+import { setTypeBookingIntake } from '@/lib/domain/booking/intake';
 import { DomainError } from '@/lib/domain/errors';
 import {
   addTypeChecklistItem,
@@ -208,6 +209,30 @@ export async function setTypeBookableAction(
 
   // The public booking page itself reads the published state directly (not cached here), but
   // the operational Work screen's per-type "publish" affordance and this one both need to agree.
+  revalidateWork(organizationId);
+  return { error: null };
+}
+
+/**
+ * Which of this business's forms a public booking of one kind of work asks. The form is a reference:
+ * Booking keeps no copy of its questions, and editing them is Studio's job.
+ */
+export async function setTypeBookingIntakeAction(
+  _previous: WorkConfigActionState,
+  formData: FormData,
+): Promise<WorkConfigActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  const formId = String(formData.get('formId') ?? '');
+
+  try {
+    await setTypeBookingIntake(db, { typeId: String(formData.get('typeId') ?? ''), formId: formId === '' ? null : formId });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
   revalidateWork(organizationId);
   return { error: null };
 }

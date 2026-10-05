@@ -1,21 +1,20 @@
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { PublicHeader } from '@/features/public-profile/public-header';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
-import { getDb } from '@/lib/db/server';
+import { getPortalDb } from '@/lib/db/portal-server';
 import {
   invoiceStanding,
   listInvoiceLines,
   listPayments,
 } from '@/lib/domain/billing/invoices';
 import { portalCardPaymentAvailable } from '@/lib/domain/billing/card-payments';
-import { claimPortalInvite } from '@/lib/domain/portal/portal';
+import { portalContext } from '@/lib/domain/portal/context';
 import { portalFormsAvailable } from '@/lib/domain/portal/portal-forms';
 import { PortalForms } from '@/features/portal-access/portal-forms';
-import { DomainError } from '@/lib/domain/errors';
 import { formatWindow, parseWindow } from '@/lib/domain/scheduling/window';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
@@ -29,30 +28,25 @@ export const dynamic = 'force-dynamic';
  * **D22's second surface, and it paid for nothing.** The axis was decided and built by booking;
  * this reads through the same policies with the same scope function. The only thing the portal
  * added is `external_actors.customer_id` — the column D22 predicted it would need — written by
- * one privileged function on presentation of the token in this URL.
+ * one privileged function on presentation of the link's token.
  *
- * **The token is the credential and the page does not pretend otherwise.** Anyone holding the
- * link is this customer; it is the security model of a link to a shared document, and the
- * business revokes it. Proving control of an email address would need a channel, and channels
- * are M6's.
+ * **The link is the credential, exchanged once.** Anyone holding the link is this customer; it is
+ * the security model of a link to a shared document, and the business revokes it. Opening it
+ * (`[token]/route.ts`) exchanges it for a session kept in the portal's own cookie and lands here,
+ * at an address with no secret in it; revoking the link ends that session on its next request.
+ * Proving control of an email address would need a channel, and channels are M6's.
  *
  * Every word a reader sees that is not application state comes from `PublicHeader` — the
  * business's own copy — for the same reason the booking page carries none of the platform's.
  */
-export default async function PortalPage({ params }: PageProps<'/portal/[token]'>) {
-  const { token } = await params;
-  const db = await getDb();
+export default async function PortalPage() {
+  const db = await getPortalDb();
 
-  let organizationId: string;
-  try {
-    organizationId = await claimPortalInvite(db, { token });
-  } catch (error) {
-    // An invalid link, a withdrawn one, and one belonging to a business this browser is
-    // already booking with are all a 404. Telling them apart would let somebody holding a
-    // revoked link learn that it had once been real.
-    if (error instanceof DomainError) notFound();
-    throw error;
-  }
+  // The session is the one the link was exchanged for (`[token]/route.ts`). No session, a
+  // withdrawn link and an expired exchange are the same answer, so the same page.
+  const portal = await portalContext(db);
+  if (!portal) redirect('/portal/unavailable');
+  const { organizationId } = portal;
 
   const { data: organization } = await db
     .from('organizations')
@@ -150,7 +144,7 @@ export default async function PortalPage({ params }: PageProps<'/portal/[token]'
       {offeredForms.length > 0 ? (
         <Section className="mt-8">
           <SectionHeading>Forms</SectionHeading>
-          <PortalForms forms={offeredForms} token={token} />
+          <PortalForms forms={offeredForms} />
         </Section>
       ) : null}
 

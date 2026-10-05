@@ -13,7 +13,9 @@ import { organizationIdFromPath } from '@/lib/route/platform-context';
  * the session, ask what to do, act on it.
  */
 export async function proxy(request: NextRequest) {
-  const { response, identity } = await updateSession(request);
+  const { response, identity } = await updateSession(request, {
+    portal: request.nextUrl.pathname === '/portal' || request.nextUrl.pathname.startsWith('/portal/'),
+  });
   const { pathname } = request.nextUrl;
 
   // A business's own hostname opens its public surface at the root, and its published forms. The rewrite carries the hostname, never an organization id: the page resolves it again

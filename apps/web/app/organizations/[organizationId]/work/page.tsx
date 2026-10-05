@@ -12,6 +12,7 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
 import { listTypeChecklistItems } from '@/lib/domain/work-items/checklists';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
+import { listBookingIntakeForms } from '@/lib/domain/booking/intake';
 import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
@@ -43,7 +44,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
   const { db, organization } = await requireOrganization(organizationId);
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
-  const [statuses, transitions, workItems, customers, locations, resources, assets, definitions, enabledModules, templateSteps, prices, booking, requirements, capabilities] = await Promise.all([
+  const [statuses, transitions, workItems, customers, locations, resources, assets, definitions, enabledModules, templateSteps, prices, booking, requirements, capabilities, intakeForms] = await Promise.all([
     selectedType ? listWorkItemStatuses(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
     selectedType ? listWorkItemTransitions(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
     selectedType ? listWorkItems(db, { organizationId, typeId: selectedType.id }) : Promise.resolve(counted([] as WorkItem[], 0)),
@@ -58,6 +59,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
     selectedType ? getTypeBooking(db, { organizationId, typeId: selectedType.id }) : Promise.resolve(null),
     selectedType ? listResourceRequirements(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
     listResourceCapabilities(db, { organizationId }),
+    listBookingIntakeForms(db, { organizationId }),
   ]);
 
   // What the selected kind of work needs against who is on each job — derived on this read from the
@@ -122,6 +124,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
             bookingEnabled={enabledModules.has('booking')}
             requirements={requirements}
             capabilities={capabilities}
+            intakeForms={intakeForms}
             typeHref={(typeId) => `/organizations/${organizationId}/work?type=${typeId}`}
           />
         </ConfigureRegistrar>

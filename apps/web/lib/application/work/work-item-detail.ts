@@ -23,6 +23,7 @@ import {
   listResourceRequirements,
   requirementGroups,
 } from '@/lib/domain/work-items/requirements';
+import { workItemIntake } from '@/lib/domain/booking/intake';
 import { getWorkItem } from '@/lib/domain/work-items/work-items';
 import { checkWorkTypeFeasibility } from '@/lib/domain/scheduling/feasibility';
 
@@ -30,13 +31,14 @@ export async function loadWorkItemDetail(db: Db, input: { organizationId: string
   const workItem = await getWorkItem(db, input);
   if (!workItem) return null;
   const { organizationId, workItemId } = input;
-  const [checklist, timeEntries, costs, resources, definitions, lines, priceBook, customers, locations, assets, invoice, resolvedFeatures, statuses, transitions, documents, timeline] = await Promise.all([
+  const [checklist, timeEntries, costs, resources, definitions, lines, priceBook, customers, locations, assets, invoice, resolvedFeatures, statuses, transitions, documents, timeline, intake] = await Promise.all([
     listChecklistItems(db, { organizationId, workItemId }), listTimeEntries(db, { organizationId, workItemId }), listCosts(db, { organizationId, workItemId }),
     listResources(db, { organizationId }), listFieldDefinitions(db, { organizationId, entityType: 'work_item' }), listPricedLines(db, { organizationId, workItemId }),
     listPriceBookItems(db, { organizationId }), listCustomers(db, { organizationId }), listLocations(db, { organizationId }), listAssets(db, { organizationId }),
     getInvoiceForWorkItem(db, { organizationId, workItemId }), organizationResolvedFeatureStates(db, { organizationId }),
     listWorkItemStatuses(db, { organizationId, typeId: workItem.type.id }), listWorkItemTransitions(db, { organizationId, typeId: workItem.type.id }),
     listDocuments(db, { organizationId, attachedTo: { entity: 'work_item', id: workItemId } }), listWorkItemTimeline(db, { organizationId, workItemId }),
+    workItemIntake(db, { organizationId, workItemId }),
   ]);
   const enabledModules = activeModuleKeys(resolvedFeatures);
 
@@ -59,7 +61,7 @@ export async function loadWorkItemDetail(db: Db, input: { organizationId: string
       : null;
 
   return {
-    needs, coverage, suggestion,
+    needs, coverage, suggestion, intake,
     workItem, checklist, timeEntries, costs, resources, definitions, lines, priceBook, customers, locations, assets, invoice, resolvedFeatures, statuses, transitions, documents, timeline,
     price: priceWorkItem(lines), economics: jobEconomics({ lines, costs }), standing: invoice ? invoiceStanding(invoice) : null,
     mayAttach: input.capabilities.includes('document.create'), billingEnabled: enabledModules.has('billing'), assetsEnabled: enabledModules.has('assets'),

@@ -5,6 +5,23 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A customer's portal session lasts, and a booking can ask the business's own questions
+
+Opening a portal link now makes a real session. Before, the session the page made while it drew was thrown away,
+so a customer who pressed an action — pay an invoice, send a form — had no session behind it; the form got around
+that by sending the link along again, and the invoice button never had that help. The link is now exchanged once, the
+customer lands on `/portal` (an address with no secret in it), and the session lives in a cookie of its own that a
+script on the page cannot read. It is kept apart from the account session, so a business owner trying their own
+customer link in another tab stays signed in to Studio. Withdrawing a link ends every session made from it at the next
+request, and a session made from a link that is still live stops after 30 days unless the link is opened again. An
+invalid, withdrawn or expired link all land on the same page.
+
+A kind of work on the public booking page can now ask one of the business's own forms: choose it beside the booking's
+settings and the page shows its questions under the name and contact fields. The answers are saved in the same step as
+the booking, so a booking never exists without the answers it asked for and an answer never exists without its booking.
+If an answer is refused, or the business changes the form while the visitor is answering, nothing is booked and the
+time stays free. The job shows what the customer answered, and the form's responses link back to the booking.
+
 ### A subscription is its items, tied to the checkout that bought it, and an older event never wins
 
 The billing provider's subscription is now recorded as what it is — several recurring items, not one price. Each item

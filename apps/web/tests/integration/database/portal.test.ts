@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { Client } from 'pg';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { issueInvoice, recordPayment } from '@/lib/domain/billing/invoices';
@@ -8,9 +9,11 @@ import { addPricedLine } from '@/lib/domain/pricing/prices';
 import {
   claimPortalInvite,
   createPortalInvite,
+  exchangePortalLink,
   listPortalInvites,
   revokePortalInvite,
 } from '@/lib/domain/portal/portal';
+import { portalContext, requirePortalContext } from '@/lib/domain/portal/context';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
@@ -121,6 +124,17 @@ async function newBusiness(label: string): Promise<Business> {
   const invoiceId = await issueInvoice(db, { workItemId, dueAt: null });
 
   return { db, organizationId: orgId, customerId, otherCustomerId, workItemId, otherWorkItemId, invoiceId };
+}
+
+/** Backdate an exchange. No signed-in role can write the column, which is the point; a test reaches it as the database owner. */
+async function expire(userId: string): Promise<void> {
+  const pg = new Client({ connectionString: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' });
+  await pg.connect();
+  try {
+    await pg.query("update public.external_actors set portal_expires_at = now() - interval '1 second' where user_id = $1", [userId]);
+  } finally {
+    await pg.end();
+  }
 }
 
 /** A customer holding the link the business sent them. */
@@ -256,6 +270,90 @@ describe('a customer, in a portal', () => {
     await expect(
       claimPortalInvite(anonClient(), { token: 'not-a-real-token' }),
     ).rejects.toMatchObject({ code: 'portal.invalid_link' });
+  });
+
+  describe('the session a link is exchanged for', () => {
+    it('resolves who the caller is from the session alone, with no token', async () => {
+      const db = await recognised(shop, shop.customerId);
+      const context = await requirePortalContext(db);
+      expect(context).toMatchObject({ organizationId: shop.organizationId, customerId: shop.customerId });
+      expect(new Date(context.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    });
+
+    it('ends on the next request after the business revokes the link', async () => {
+      const token = await createPortalInvite(shop.db, { customerId: shop.customerId });
+      const db = anonClient();
+      await claimPortalInvite(db, { token });
+      expect(await portalContext(db)).not.toBeNull();
+      const before = await db.from('invoices').select('id');
+      expect(before.data!.length).toBeGreaterThan(0);
+
+      const invite = (await listPortalInvites(shop.db, { organizationId: shop.organizationId, customerId: shop.customerId })).find((i) => i.token === token)!;
+      await revokePortalInvite(shop.db, { id: invite.id });
+
+      // The same session, unchanged: nothing cleared a cookie. The customer is simply no longer
+      // anyone, so every policy that reads the binding answers empty.
+      expect(await portalContext(db)).toBeNull();
+      await expect(requirePortalContext(db)).rejects.toMatchObject({ code: 'portal.no_session' });
+      expect((await db.from('invoices').select('id')).data).toEqual([]);
+      expect((await db.from('work_items').select('id')).data).toEqual([]);
+      const offered = await db.rpc('portal_forms_available');
+      expect(offered.data).toEqual([]);
+    });
+
+    it('ends when the exchange expires, though the link is still live', async () => {
+      const db = await recognised(shop, shop.customerId);
+      const user = (await db.auth.getUser()).data.user!.id;
+      await expire(user);
+      expect(await portalContext(db)).toBeNull();
+      expect((await db.from('invoices').select('id')).data).toEqual([]);
+    });
+
+    it('is renewed by reopening the link', async () => {
+      const token = await createPortalInvite(shop.db, { customerId: shop.customerId });
+      const db = anonClient();
+      await claimPortalInvite(db, { token });
+      const user = (await db.auth.getUser()).data.user!.id;
+      await expire(user);
+      expect(await portalContext(db)).toBeNull();
+      await claimPortalInvite(db, { token });
+      expect(await portalContext(db)).not.toBeNull();
+    });
+
+    it('is never the customer for a signed-in member of a business', async () => {
+      // An operator is not a customer. Binding a real account as an outsider would give one user
+      // id both a membership and a portal scope.
+      const token = await createPortalInvite(shop.db, { customerId: shop.customerId });
+      await expect(claimPortalInvite(shop.db, { token })).rejects.toMatchObject({ code: 'portal.invalid_link' });
+      expect(await portalContext(shop.db)).toBeNull();
+    });
+
+    it('starts a new session for each exchange, so an earlier one cannot become this customer', async () => {
+      const mine = await createPortalInvite(shop.db, { customerId: shop.customerId });
+      const theirs = await createPortalInvite(shop.db, { customerId: shop.otherCustomerId });
+      const db = anonClient();
+      await exchangePortalLink(db, { token: mine });
+      const first = (await db.auth.getUser()).data.user!.id;
+      await exchangePortalLink(db, { token: theirs });
+      const second = (await db.auth.getUser()).data.user!.id;
+      expect(second).not.toBe(first);
+      expect((await requirePortalContext(db)).customerId).toBe(shop.otherCustomerId);
+    });
+
+    it('leaves no session behind when the link is refused', async () => {
+      const db = anonClient();
+      await expect(exchangePortalLink(db, { token: 'not-a-real-token' })).rejects.toMatchObject({ code: 'portal.invalid_link' });
+      expect((await db.auth.getUser()).data.user).toBeNull();
+    });
+
+    it('is not writable by the caller: neither the link nor the expiry is in any grant', async () => {
+      const db = await recognised(shop, shop.customerId);
+      const user = (await db.auth.getUser()).data.user!.id;
+      for (const patch of [{ portal_expires_at: '2999-01-01T00:00:00Z' }, { portal_invite_id: null }]) {
+        const { error } = await db.from('external_actors').update(patch).eq('user_id', user);
+        expect(error).not.toBeNull();
+      }
+    });
   });
 
   it('keeps a binding to exactly one tenant, even holding a second link', async () => {

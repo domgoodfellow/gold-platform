@@ -1,10 +1,10 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { getDb } from '@/lib/db/server';
+import { getPortalDb } from '@/lib/db/portal-server';
 import { requestPortalCardPayment } from '@/lib/domain/billing/card-payments';
 import { DomainError } from '@/lib/domain/errors';
-import { claimPortalInvite } from '@/lib/domain/portal/portal';
+import { requirePortalContext } from '@/lib/domain/portal/context';
 import { submitPortalForm } from '@/lib/domain/portal/portal-forms';
 import type { PublicFormActionState } from '@/app/(public)/forms/actions';
 import { requestOrigin } from '@/lib/route/origin';
@@ -19,7 +19,7 @@ export type PayInvoiceActionState = { error: string | null };
  * connected account receives it — none of that is a value this action could choose even if the
  * form tried to submit one (D22, D27).
  *
- * **The return URL never carries this page's own token.** Building it here, from
+ * **The return URL carries no secret.** Building it here, from
  * `requestOrigin()`, at a route with no token in its path, is deliberate: the token is this
  * portal's credential, and hard-coding a route the browser is about to hand to a third-party
  * processor is not the place to disclose it. See `portal/payment-return/page.tsx`.
@@ -28,11 +28,12 @@ export async function payInvoiceAction(
   _previous: PayInvoiceActionState,
   formData: FormData,
 ): Promise<PayInvoiceActionState> {
-  const db = await getDb();
+  const db = await getPortalDb();
   const invoiceId = String(formData.get('invoiceId') ?? '');
 
   let requested;
   try {
+    await requirePortalContext(db);
     requested = await requestPortalCardPayment(db, {
       invoiceId,
       returnUrl: `${await requestOrigin()}/portal/payment-return`,
@@ -56,25 +57,18 @@ export async function payInvoiceAction(
 
 /**
  * A portal customer's form response. `formId` is the only identity-shaped value, and it only chooses
- * among the forms this customer's own portal binding is offered — which business, and which
- * customer the response is about, are read from that binding by the database.
- *
- * **The link's token is presented again here, on purpose.** A page render cannot set a cookie, so
- * the anonymous session the portal page made to read this customer's history lasts for that render
- * only; an action is where a session can be kept. Presenting the same credential again re-makes the
- * same binding (`claim_portal_invite` is idempotent for one business) and leaves a session behind
- * for the next action. It is the same trust the link already carried, not a new one.
+ * among the forms this customer's own portal session is offered — which business, and which
+ * customer the response is about, are read from that session by the database.
  */
 export async function submitPortalFormAction(input: {
-  token: string;
   formId: string;
   answers: Record<string, unknown>;
 }): Promise<PublicFormActionState> {
-  const db = await getDb();
+  const db = await getPortalDb();
   try {
-    await claimPortalInvite(db, { token: input.token });
+    await requirePortalContext(db);
   } catch (error) {
-    if (error instanceof DomainError) return { status: 'error', message: 'This link is no longer valid.', fieldErrors: {}, stale: false };
+    if (error instanceof DomainError) return { status: 'error', message: error.message, fieldErrors: {}, stale: false };
     throw error;
   }
   const result = await submitPortalForm(db, { formId: input.formId, answers: input.answers });

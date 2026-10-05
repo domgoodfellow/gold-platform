@@ -13,6 +13,7 @@ import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { listTypeChecklistItems } from '@/lib/domain/work-items/checklists';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
+import { listBookingIntakeForms } from '@/lib/domain/booking/intake';
 import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -30,7 +31,7 @@ export default async function WorkConfigurationPage({
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
 
-  const [statuses, transitions, templateSteps, fieldDefinitions, prices, booking, enabledModules, requirements, capabilities] = await Promise.all([
+  const [statuses, transitions, templateSteps, fieldDefinitions, prices, booking, enabledModules, requirements, capabilities, intakeForms] = await Promise.all([
     selectedType
       ? listWorkItemStatuses(db, { organizationId, typeId: selectedType.id })
       : Promise.resolve([]),
@@ -50,6 +51,7 @@ export default async function WorkConfigurationPage({
       ? listResourceRequirements(db, { organizationId, typeId: selectedType.id })
       : Promise.resolve([]),
     listResourceCapabilities(db, { organizationId }),
+    listBookingIntakeForms(db, { organizationId }),
   ]);
 
   const mayConfigure = organization.capabilities.includes('field.manage');
@@ -82,6 +84,7 @@ export default async function WorkConfigurationPage({
           bookingEnabled={enabledModules.has('booking')}
           requirements={requirements}
           capabilities={capabilities}
+          intakeForms={intakeForms}
           typeHref={(typeId) => `/organizations/${organizationId}/work/configuration?type=${typeId}`}
         />
       </div>

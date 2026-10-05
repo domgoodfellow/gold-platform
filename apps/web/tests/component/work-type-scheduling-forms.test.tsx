@@ -17,6 +17,7 @@ import { runAxe } from '@/tests/support/axe';
 vi.mock('@/features/work/configuration/actions', () => {
   const action = vi.fn(async () => ({ error: null }));
   return {
+    setTypeBookingIntakeAction: action,
     addTypeChecklistItemAction: action,
     createStatusAction: action,
     createTransitionAction: action,
@@ -80,6 +81,7 @@ describe('publishing a kind of work to the booking page', () => {
     statuses: [{ id: 's1', name: 'Open', position: 0, releasesResource: false, marksComplete: false }],
     prices: [],
     booking: null,
+    intakeForms: [] as Array<{ id: string; name: string }>,
     disabled: false,
   };
 
@@ -93,5 +95,30 @@ describe('publishing a kind of work to the booking page', () => {
     render(<PublishTypeForm {...props} typeName="Oil change" schedulable />);
     expect(screen.queryByText(/cannot be booked/)).toBeNull();
     expect(screen.getByRole('button')).toBeTruthy();
+  });
+
+  it('asks for no questions until the kind of work is on the booking page', () => {
+    render(<PublishTypeForm {...props} schedulable intakeForms={[{ id: 'f1', name: 'Service intake' }]} />);
+    expect(screen.queryByLabelText(/Additional questions/)).toBeNull();
+  });
+
+  it('lets a published kind of work pick one of the business’s forms, and links to Studio to edit it', () => {
+    render(
+      <PublishTypeForm
+        {...props}
+        schedulable
+        booking={{ statusId: 's1', durationMinutes: 30, priceItemId: null, intakeFormId: 'f1' }}
+        intakeForms={[{ id: 'f1', name: 'Service intake' }, { id: 'f2', name: 'Vehicle details' }]}
+      />,
+    );
+    const select = screen.getByLabelText(/Additional questions/) as HTMLSelectElement;
+    expect(select.value).toBe('f1');
+    expect([...select.options].map((option) => option.text)).toEqual(['No additional questions', 'Service intake', 'Vehicle details']);
+    expect(screen.getByRole('link', { name: 'Edit the form' }).getAttribute('href')).toBe('/organizations/org/studio/forms/f1');
+  });
+
+  it('says what to do when there is no form to ask', () => {
+    render(<PublishTypeForm {...props} schedulable booking={{ statusId: 's1', durationMinutes: 30, priceItemId: null, intakeFormId: null }} />);
+    expect(screen.getByText('Publish a form in Studio to ask questions at booking.')).toBeTruthy();
   });
 });

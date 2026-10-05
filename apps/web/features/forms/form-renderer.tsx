@@ -143,6 +143,44 @@ function RenderedField({ field, id, value, error, disabled, onChange }: FieldPro
   );
 }
 
+/**
+ * The questions alone — no `<form>`, title or button — so a host that already is a form (a booking
+ * asking its business's own questions) renders the same fields the hosted form does, rather than a
+ * second renderer of its own. `FormRenderer` is this plus the title, the confirmation and a submit.
+ */
+export function FormFields({
+  definition,
+  idPrefix,
+  values,
+  errors = {},
+  disabled,
+  onChange,
+}: {
+  definition: FormDefinition;
+  idPrefix: string;
+  values: FormValues;
+  errors?: FormErrors;
+  disabled?: boolean;
+  onChange: (fieldId: string, value: string | boolean | string[]) => void;
+}) {
+  return (
+    <>
+      {definition.fields.length === 0 ? <Hint>This form has no questions yet.</Hint> : null}
+      {definition.fields.map((field) => (
+        <RenderedField
+          key={field.id}
+          field={field}
+          id={`${idPrefix}-${field.id}`}
+          value={values[field.id]}
+          error={errors[field.id]}
+          disabled={disabled}
+          onChange={(value) => onChange(field.id, value)}
+        />
+      ))}
+    </>
+  );
+}
+
 export function FormRenderer({
   definition,
   values,
@@ -185,19 +223,7 @@ export function FormRenderer({
         {definition.description ? <p className="mt-1 text-sm text-muted">{definition.description}</p> : null}
       </div>
 
-      {definition.fields.length === 0 ? <Hint>This form has no questions yet.</Hint> : null}
-      {definition.fields.map((field) => (
-        <RenderedField
-          key={field.id}
-          field={field}
-          id={`${prefix}-${field.id}`}
-          value={values[field.id]}
-          error={errors[field.id]}
-          disabled={disabled}
-          onChange={(value) => onChange(field.id, value)}
-        />
-      ))}
-
+      <FormFields definition={definition} idPrefix={prefix} values={values} errors={errors} disabled={disabled} onChange={onChange} />
       {footer}
       <div>
         <Button type="submit" disabled={disabled || submitDisabled}>{definition.submitLabel}</Button>
