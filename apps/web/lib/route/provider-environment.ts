@@ -4,13 +4,13 @@
  * `lib/domain/`: naming a vendor to read its own environment variable is exactly what I15
  * reserves for an adapter or its caller, never the domain layer (`adapters.test.ts`).
  *
- * Never "configured" merely because a variable name is set: `anthropic` and `resend` both have
- * an adapter behind them (`lib/adapters/drafting`, the invitation mailer); a Provider catalogued
- * with no adapter at all (`google`, `openai`, today) has no environment variable this could even
- * read, so it answers 'not_implemented' rather than guessing at one (section 42).
+ * Never "configured" merely because a variable name is set. No provider reads one in this runtime
+ * any more: the model providers' credentials are Provider Accounts read by `apps/api`, and
+ * `apps/web` holds no model key at all (configuration drafting runs there too). A Provider with
+ * no account model and no environment variable this could read answers 'not_implemented' rather
+ * than guessing at one (section 42).
  */
-export function credentialEnvironmentState(providerKey: string): 'configured' | 'not_configured' | 'not_implemented' {
-  if (providerKey === 'anthropic') return process.env.ANTHROPIC_API_KEY ? 'configured' : 'not_configured';
+export function credentialEnvironmentState(): 'configured' | 'not_configured' | 'not_implemented' {
   return 'not_implemented';
 }
 

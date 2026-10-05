@@ -5,6 +5,14 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### AI is entitled before it is spent, metered after it is known, and one assignment decides which model answers
+
+Every model call's token use is now recorded. Each provider reports what a call consumed, the loop adds up every call a question makes, and the total is written once as the business's AI input and output tokens through the same usage ledger every other meter uses — so AI tokens can now sit in a Plan's allowance. A provider that does not report is recorded as a gap, never as zero, and a failed write is logged and reported without losing the answer.
+
+The Agent and guided setup now check that the business actually holds them before anything is spent, separately from the role's permission to ask. A business without the Agent is told so, instead of a failed run. The public website assistant is resolved from its deployment: the request names the deployment and the visitor's message, and the business, its owner's instructions and its entitlement come from the database. The owner's instructions are now their own section beneath the platform's rules, no longer mixed into the application's facts.
+
+Configuration drafting no longer carries its own Anthropic key and model name in the web app. It runs through the same assignment as the other two (a new AI runtime row, *Configuration drafting*), and its proposals still arrive as drafts for a person to review. The web project holds no model key or model SDK any more.
+
 ### A proposal link opens a real session, and Studio's pages are in its navigation
 
 Opening a proposal link signed the visitor in while the page drew, and a page cannot keep a session — so Accept and Decline ran with none, and a visitor with no session was sent to the sign-in page before reaching the link at all. The link is now exchanged once, the recipient lands on `/proposal` (no secret in the address), and the session lives in a cookie of its own that a script cannot read, kept apart from Studio's and the portal's. Withdrawing the link ends every session made from it at the next request; a session lasts 30 days unless the link is opened again. Accepting or declining is decided once: a second tab, a double press, or an answer to a version the business has since replaced is refused, and the link keeps showing the outcome. A signed-in account opening a proposal link is never made the recipient.

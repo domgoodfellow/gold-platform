@@ -193,6 +193,38 @@ describe('a New chat is nothing until its first question', () => {
   });
 });
 
+describe('a business that does not hold the Agent is told so, and nothing is recorded', () => {
+  it('is a typed refusal, distinct from a failed run, and leaves no conversation or run behind', async () => {
+    assistantConfigured();
+    const real = globalThis.fetch.bind(globalThis);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (!url.startsWith(ASSISTANT)) return real(input, init);
+      return new Response(JSON.stringify({ error: 'this business does not have the Agent', code: 'not_entitled' }), {
+        status: 403,
+      });
+    });
+    const before = await listAgentConversationSummaries(yard.db, { organizationId: yard.organizationId });
+
+    await expect(
+      askQuestion(yard.db, { organizationId: yard.organizationId, question: 'What is late today?' }),
+    ).rejects.toMatchObject({ code: 'assistant.not_entitled' });
+
+    const after = await listAgentConversationSummaries(yard.db, { organizationId: yard.organizationId });
+    expect(after).toHaveLength(before.length);
+  });
+
+  it('is not confused with an outage, which is still a recorded failed run', async () => {
+    assistantConfigured();
+    fakeAssistant(() => ({ status: 403 }));
+
+    const run = await askQuestion(yard.db, { organizationId: yard.organizationId, question: 'Anything at all?' });
+
+    // A 403 that does not say `not_entitled` is somebody else's refusal, recorded in their words.
+    expect(run.outcome).toBe('failed');
+  });
+});
+
 describe('later questions append, and carry only their own conversation', () => {
   it('appends to the same conversation and moves its last activity forward', async () => {
     assistantConfigured();

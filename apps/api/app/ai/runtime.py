@@ -21,6 +21,14 @@ from app.core.config import ProviderOperationsSettings
 from app.core.db import read_provider_account_credential, resolve_ai_runtime_assignment
 
 
+# The capabilities a runtime may be assigned to. The database's `app.ai_capabilities()` is the
+# list these must equal; `test_ai_runtime.py` and `ai-runtime-assignments.test.ts` hold both ends.
+OPERATOR_ASSISTANT = "operator_assistant"
+PUBLIC_ASSISTANT = "public_assistant"
+CONFIGURATION_DRAFTING = "configuration_drafting"
+CAPABILITIES = (OPERATOR_ASSISTANT, PUBLIC_ASSISTANT, CONFIGURATION_DRAFTING)
+
+
 def resolve_provider(
     settings: ProviderOperationsSettings | None, *, capability: str
 ) -> AnsweringProvider | None:

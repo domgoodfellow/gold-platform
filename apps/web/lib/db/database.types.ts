@@ -10857,6 +10857,10 @@ export type Database = {
         Args: { p_id: string }
         Returns: string[]
       }
+      organization_module_entitled: {
+        Args: { p_module_key: string; p_organization_id: string }
+        Returns: boolean
+      }
       organization_open_now: {
         Args: { p_at?: string; p_organization_id: string }
         Returns: boolean
@@ -11253,6 +11257,17 @@ export type Database = {
           p_model: string
           p_provider_account_id: string
           p_provider_service_id: string
+        }
+        Returns: undefined
+      }
+      record_ai_usage: {
+        Args: {
+          p_capability: string
+          p_input_tokens: number
+          p_organization_id: string
+          p_output_tokens: number
+          p_provider_key: string
+          p_reference: string
         }
         Returns: undefined
       }
@@ -11910,6 +11925,14 @@ export type Database = {
           e164: string
           phone_number_id: string
           source: string
+        }[]
+      }
+      resolve_public_assistant: {
+        Args: { p_deployment_id: string }
+        Returns: {
+          entitled: boolean
+          instructions: string
+          organization_id: string
         }[]
       }
       resource_availability_conflicts: {

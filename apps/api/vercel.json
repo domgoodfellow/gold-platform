@@ -20,6 +20,10 @@
       "destination": "/api/ai_ask"
     },
     {
+      "source": "/ai/draft-configuration",
+      "destination": "/api/ai_draft_configuration"
+    },
+    {
       "source": "/voice/outbound",
       "destination": "/api/voice_outbound"
     },

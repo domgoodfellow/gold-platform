@@ -12,6 +12,18 @@ export type ToolCallRecord = {
   error: string;
 };
 
+/**
+ * The business does not hold the Agent. Distinct from a refusal by the model, an outage and a
+ * role that may not ask: it is a fact about what the business has, and the sentence a person is
+ * shown for it is not "something went wrong".
+ */
+export class AnsweringNotEntitledError extends Error {
+  constructor() {
+    super('This business does not have the Agent.');
+    this.name = 'AnsweringNotEntitledError';
+  }
+}
+
 /** `unanswered` isn't a failure — the tools ran and there was simply nothing to say. */
 export type AnswerOutcome = 'answered' | 'unanswered' | 'failed';
 

@@ -61,6 +61,8 @@ class Scripted:
         context: str = "",
         prior_turns: tuple[PriorTurn, ...] = (),
         attachments: tuple[AttachedText, ...] = (),
+        audience: str = "operator",
+        instructions: str = "",
     ) -> Turn:
         self.seen.append((question, history))
         if not self.turns:
@@ -369,7 +371,7 @@ def test_the_context_reaches_the_provider() -> None:
         name = "watching"
         seen = ""
 
-        def next_turn(self, *, question, tools, history, context="", prior_turns=(), attachments=()) -> Turn:
+        def next_turn(self, *, question, tools, history, context="", prior_turns=(), attachments=(), audience="operator", instructions="") -> Turn:
             Watching.seen = context
             return Turn(text="Noted.")
 
@@ -392,7 +394,7 @@ class Recording:
     def __init__(self) -> None:
         self.prior: tuple[PriorTurn, ...] = ()
 
-    def next_turn(self, *, question, tools, history, context="", prior_turns=(), attachments=()) -> Turn:
+    def next_turn(self, *, question, tools, history, context="", prior_turns=(), attachments=(), audience="operator", instructions="") -> Turn:
         self.prior = prior_turns
         return Turn(text="Noted.")
 
@@ -450,7 +452,7 @@ class Watching2:
     def __init__(self) -> None:
         self.attachments: tuple[AttachedText, ...] = ()
 
-    def next_turn(self, *, question, tools, history, context="", prior_turns=(), attachments=()) -> Turn:
+    def next_turn(self, *, question, tools, history, context="", prior_turns=(), attachments=(), audience="operator", instructions="") -> Turn:
         self.attachments = attachments
         return Turn(text="Read it.")
 

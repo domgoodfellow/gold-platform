@@ -15,7 +15,6 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.122.0",
     "@gold/config": "workspace:*",
     "@gold/schemas": "workspace:*",
     "@gold/types": "workspace:*",

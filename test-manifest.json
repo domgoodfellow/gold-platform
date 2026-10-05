@@ -83,7 +83,7 @@
       "dir": "apps/web/e2e/visual",
       "requires": "running-app",
       "gate": false,
-      "description": "Pixel baselines at desktop/tablet/phone widths for a small set of representative patterns \u2014 spacing, alignment and responsive composition, never a business rule. Never in the default run: a baseline drifts with design intent, not with correctness, and a diff here is a prompt to look, not a build failure."
+      "description": "Pixel baselines at desktop/tablet/phone widths for a small set of representative patterns — spacing, alignment and responsive composition, never a business rule. Never in the default run: a baseline drifts with design intent, not with correctness, and a diff here is a prompt to look, not a build failure."
     },
     "provider-contract": {
       "runner": "vitest",
@@ -181,7 +181,7 @@
         "voice",
         "routing"
       ],
-      "note": "The routing resolver's own branching over a faked transport \u2014 business hours, ring strategies, fallback, cycle rejection, callback affinity, outbound AUTO/MANUAL."
+      "note": "The routing resolver's own branching over a faked transport — business hours, ring strategies, fallback, cycle rejection, callback affinity, outbound AUTO/MANUAL."
     },
     "apps/api/tests/component/test_domains_voice.py": {
       "category": "python-component",
@@ -1182,7 +1182,7 @@
         "providers",
         "security"
       ],
-      "note": "The relay to apps/api's /invitation_email: what is sent (never a subject or body, only an id and a link), and the unconfigured-deployment null. Names no vendor \u2014 apps/api's own suite covers the Resend call."
+      "note": "The relay to apps/api's /invitation_email: what is sent (never a subject or body, only an id and a link), and the unconfigured-deployment null. Names no vendor — apps/api's own suite covers the Resend call."
     },
     "apps/web/tests/contract/stripe-payments.test.ts": {
       "category": "offline-contract",
@@ -2386,6 +2386,47 @@
         "accessibility"
       ],
       "note": "A form on the website, a business hostname, the portal, another site's embed and the stable link; the signed-in session regression; keyboard and phone width."
+    },
+    "apps/api/tests/component/test_ai_draft_configuration.py": {
+      "category": "python-component",
+      "concerns": [
+        "ai",
+        "configuration",
+        "commercial"
+      ]
+    },
+    "apps/api/tests/component/test_ai_usage.py": {
+      "category": "python-component",
+      "concerns": [
+        "ai",
+        "usage",
+        "commercial"
+      ]
+    },
+    "apps/web/tests/architecture/static/ai-runtime-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "ai",
+        "boundaries",
+        "providers"
+      ]
+    },
+    "apps/web/tests/contract/drafting-gold-api.test.ts": {
+      "category": "offline-contract",
+      "concerns": [
+        "ai",
+        "configuration",
+        "providers"
+      ]
+    },
+    "apps/web/tests/integration/database/ai-usage.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "ai",
+        "usage",
+        "commercial",
+        "security"
+      ]
     }
   }
 }

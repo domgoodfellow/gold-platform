@@ -322,7 +322,7 @@ describe('M8 — a business describes itself and is configured from the descript
     expect(sources).toHaveLength(4);
     for (const source of sources) expect(source.length).toBeGreaterThan(500);
     expect(sources[0]).toContain('createWorkItemStatus');
-    expect(sources.join('\n')).toContain('json_schema');
+    expect(sources.join('\n')).toContain('additionalProperties');
 
     for (const source of sources) {
       for (const business of [SWEEP, DIVE]) {

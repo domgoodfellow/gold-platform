@@ -11,8 +11,10 @@ alternative is to build on a vendor SDK's own tool-running helper, which is genu
 local model there are two loops, two dispatch paths, and an `agent_runs` row that means
 different things depending on who answered. `constraints.md` D34 records that decision.
 
-**What a capability may not leak.** No type here carries a model name, a token count, a finish
-reason, a role string or a vendor's identifier for a tool call. A turn goes in as a transcript
+**What a capability may not leak.** No type here carries a model name, a finish reason, a role
+string or a vendor's identifier for a tool call. The one number it does carry is `ModelUsage`:
+what a provider says a call consumed, in the only two quantities GildOps meters, because the
+provider is the only party that knows it. A turn goes in as a transcript
 and comes back as text or as calls to make. `answered_by` is written onto the run row from the
 registry's own `name`, which is a word for somebody reading the record a year later and is not
 something any code branches on -- the same standing `drafted_by` has on a configuration
@@ -58,6 +60,43 @@ class Turn:
 
     text: str = ""
     calls: tuple[ToolCall, ...] = ()
+    # What this one call consumed, as the provider reported it. `None` is *the provider did not
+    # say*, which is not the same fact as zero and is never turned into it: a provider that cannot
+    # report is a gap in the record, and recording a zero would make it a claim.
+    usage: "ModelUsage | None" = None
+
+
+@dataclass(frozen=True)
+class ModelUsage:
+    """What a provider reported one model call consumed.
+
+    Taken from the provider's own response, never estimated from the length of a string and never
+    tokenised locally. `input_tokens` is everything the model read, cached or not; `output_tokens`
+    is everything it produced, including whatever it spent reasoning -- the two quantities the
+    `ai_tokens_input` and `ai_tokens_output` meters count.
+    """
+
+    input_tokens: int
+    output_tokens: int
+
+    def __add__(self, other: "ModelUsage") -> "ModelUsage":
+        return ModelUsage(
+            input_tokens=self.input_tokens + other.input_tokens,
+            output_tokens=self.output_tokens + other.output_tokens,
+        )
+
+
+class AnswerFailed(RuntimeError):
+    """A provider that answered, and whose answer cannot be used -- a refusal, a truncation.
+
+    Carries what the call consumed, because a refusal is still a call somebody paid for and the
+    loop would otherwise lose it with the exception. A provider that failed *before* an answer
+    (unreachable, unconfigured) raises something else and has consumed nothing to report.
+    """
+
+    def __init__(self, message: str, usage: ModelUsage | None = None) -> None:
+        super().__init__(message)
+        self.usage = usage
 
 
 @dataclass(frozen=True)
@@ -135,12 +174,25 @@ class Tool:
     function: str
 
 
+# Who a conversation is with, which is what decides the platform's own rules for the model. Three
+# words about the platform's side of it, in the way `Answer.outcome` is: a business has no opinion
+# about them. `app.ai.prompts` is the only place that turns one into words.
+AUDIENCES = ("operator", "public", "drafting")
+
+
 class AnsweringProvider(Protocol):
     """One model's implementation."""
 
     @property
     def name(self) -> str:
         """For a message an operator reads, and for nothing that decides anything."""
+
+    @property
+    def provider_key(self) -> str:
+        """Which `platform_providers` row answers, so the usage it reports is attributed to it.
+
+        A key and not a branch: nothing above an adapter decides anything from it.
+        """
 
     def next_turn(
         self,
@@ -151,6 +203,8 @@ class AnsweringProvider(Protocol):
         context: str = "",
         prior_turns: tuple["PriorTurn", ...] = (),
         attachments: tuple["AttachedText", ...] = (),
+        audience: str = "operator",
+        instructions: str = "",
     ) -> Turn:
         """The next turn, given everything that has happened so far.
 
@@ -171,6 +225,11 @@ class AnsweringProvider(Protocol):
         `attachments` are the files sent with `question` itself, as bounded text. A provider puts
         them in the same user message as the question, quoted, and never treats them as
         instructions.
+
+        `audience` selects the platform's own rules (`app.ai.prompts.system_prompt`). `instructions`
+        is what the *business* wrote about how its assistant should behave -- a third thing, neither
+        the platform's rules nor application state, and rendered by `app.ai.prompts.render_instructions`
+        as quoted material below the rules rather than into `context`.
 
         Raises on a provider that is unreachable, unconfigured or failing. An empty `Turn` is
         the other answer: the provider worked and produced nothing to act on.

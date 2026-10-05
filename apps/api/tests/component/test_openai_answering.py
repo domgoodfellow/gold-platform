@@ -11,6 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from app.ai import prompts
 from app.ai import AttachedText, Exchange, PriorTurn, Tool, ToolCall, ToolResult, Turn
 from app.providers.openai import answering as openai_answering
 from app.providers.openai.answering import openai_provider
@@ -171,15 +172,15 @@ def test_context_is_appended_to_instructions_not_the_question(monkeypatch) -> No
     assert question_item["content"][0]["text"] == "What is late?"
 
 
-def test_the_public_deployment_prefix_selects_the_public_system_prompt(monkeypatch) -> None:
+def test_the_public_audience_selects_the_public_system_prompt(monkeypatch) -> None:
     fake = _install(monkeypatch, _response(output_text="Ask a human."))
     provider = openai_provider(api_key="k", model="gpt-test")
 
     provider.next_turn(
-        question="Are you open Sunday?", tools=(), history=(), context="PUBLIC WEBSITE DEPLOYMENT\nHours info."
+        question="Are you open Sunday?", tools=(), history=(), audience="public", instructions="Hours info."
     )
 
-    assert fake.responses.calls[0]["instructions"].startswith(openai_answering.PUBLIC_SYSTEM)
+    assert fake.responses.calls[0]["instructions"].startswith(prompts.PUBLIC)
 
 
 def test_attachments_are_rendered_and_quoted_alongside_the_question(monkeypatch) -> None:

@@ -22,9 +22,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.ai import (
+    AnswerFailed,
     AnsweringProvider,
     AttachedText,
     Exchange,
+    ModelUsage,
     PriorTurn,
     Tool,
     ToolCall,
@@ -162,6 +164,12 @@ class Answer:
     detail: str = ""
     tools: list[ToolRecord] = field(default_factory=list)
     action: ProposedAction | None = None
+    # **What every model call this request made consumed, summed once.** The loop adds each call's
+    # own report as it arrives, so a request that asked three times carries three calls' worth and
+    # no call is counted twice. `None` when no call reported anything; and a call that could not
+    # report is counted in `calls_without_usage` rather than being added as zero.
+    usage: ModelUsage | None = None
+    calls_without_usage: int = 0
 
 
 def _run_tool(
@@ -230,6 +238,8 @@ def answer(
     attachments: tuple[AttachedText, ...] = (),
     tools: tuple[Tool, ...] = TOOLS,
     actions: tuple[Tool, ...] = ACTIONS,
+    audience: str = "operator",
+    instructions: str = "",
 ) -> Answer:
     """Run the loop until the provider stops asking for tools, or the cap is reached.
 
@@ -238,11 +248,28 @@ def answer(
     2024 — a model has no clock, and *tomorrow* is the most ordinary word an operator will use.
     It is application state rather than anything a tenant said, which is the line that decides
     what this platform may put into a prompt at all.
+
+    `instructions` is the opposite case, and is kept out of `context` for that reason: it is what a
+    *tenant* wrote about how their assistant should behave. It reaches the model as its own quoted
+    section beneath the platform's rules (`app.ai.prompts`), where a model can tell it from the rules
+    and from the application's facts.
     """
     prior_turns = bound_prior_turns(prior_turns)
     attachments = bound_attachments(attachments)
     history: list[Exchange] = []
     performed: list[ToolRecord] = []
+    total: ModelUsage | None = None
+    unreported = 0
+
+    def consumed(usage: ModelUsage | None) -> None:
+        nonlocal total, unreported
+        if usage is None:
+            unreported += 1
+        else:
+            total = usage if total is None else total + usage
+
+    def finish(**fields: Any) -> Answer:
+        return Answer(usage=total, calls_without_usage=unreported, tools=performed, **fields)
 
     for _ in range(MAX_TURNS):
         try:
@@ -257,9 +284,17 @@ def answer(
                 context=context,
                 prior_turns=prior_turns,
                 attachments=attachments,
+                audience=audience,
+                instructions=instructions,
             )
         except Exception as failure:  # noqa: BLE001 - the provider's own words, recorded
-            return Answer(outcome="failed", detail=str(failure), tools=performed)
+            # A provider that answered and could not be used (a refusal) says what it consumed;
+            # one that never answered has nothing to report, and is not charged for.
+            if isinstance(failure, AnswerFailed):
+                consumed(failure.usage)
+            return finish(outcome="failed", detail=str(failure))
+
+        consumed(turn.usage)
 
         # **An action ends the turn, and it ends it here rather than after the tools run.** A
         # model that asks to read something *and* proposes a move in one breath has proposed it
@@ -270,10 +305,9 @@ def answer(
         )
         if proposal is not None:
             because = str(proposal.arguments.get("because") or "")
-            return Answer(
+            return finish(
                 outcome="answered" if (turn.text.strip() or because) else "unanswered",
                 text=turn.text.strip() or because,
-                tools=performed,
                 action=ProposedAction(
                     name=proposal.name, arguments=proposal.arguments, because=because
                 ),
@@ -281,8 +315,8 @@ def answer(
 
         if not turn.calls:
             if turn.text.strip():
-                return Answer(outcome="answered", text=turn.text.strip(), tools=performed)
-            return Answer(outcome="unanswered", tools=performed)
+                return finish(outcome="answered", text=turn.text.strip())
+            return finish(outcome="unanswered")
 
         results: list[ToolResult] = []
         for call in turn.calls:
@@ -315,4 +349,4 @@ def answer(
 
     # The cap. Recorded as unanswered rather than failed, because nothing broke: the loop went
     # round six times and produced nothing worth showing, which is a fact about the question.
-    return Answer(outcome="unanswered", tools=performed)
+    return finish(outcome="unanswered")

@@ -1,42 +1,39 @@
-import Anthropic from '@anthropic-ai/sdk';
-
 import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { FIELD_KINDS, CUSTOM_FIELD_ENTITIES } from '@/lib/domain/fields/field-definitions';
 import { TRIGGER_EVENTS } from '@/lib/domain/automation/rules';
 import { FONT_KEYS } from '@/lib/domain/branding/palette';
 import { MODULES } from '@/lib/navigation';
 import type { BusinessShape } from '@/lib/domain/configuration/configure';
-import type {
-  ConfigurationGap,
-  DraftedConfiguration,
-  DraftingProvider,
-  DraftingRequest,
+import {
+  DraftingNotEntitledError,
+  type ConfigurationGap,
+  type DraftedConfiguration,
+  type DraftingProvider,
+  type DraftingRequest,
 } from './index';
 
 /**
- * The drafting capability, behind the interface that names it.
+ * The drafting capability, behind the interface that names it — and `apps/api` is who is asked.
  *
- * **One of two files in this repository that knows this vendor exists**, the other being the
- * registry that chooses it. Everything above asks for a proposed configuration; this is the one
- * place that knows who is asked, and I15 is the test that keeps it so.
+ * **No vendor, no model and no key in this file.** Which provider drafts, with which account and
+ * which model, is `platform_ai_runtime_assignments`' decision for the `configuration_drafting`
+ * capability, made and read by `apps/api` (D34, D62); this runtime used to hold its own Anthropic
+ * key and a model name hard-coded in source, which was a third answer to a question that has one.
+ * What it consumes is metered there, through the same writer as every other AI request.
  *
- * **An SDK here, unlike the other two adapters.** Payments and geocoding both refused one
- * because each needed a single stable HTTPS call and a query string. This needs constrained
- * decoding — the schema below is enforced by the API rather than hoped for — and reimplementing
- * that against the wire format would be maintaining a client for no benefit.
- *
- * **The schema is built from the domain's own lists**, imported rather than restated:
- * capabilities, field kinds, entities and trigger events all come from the files that define
- * them. A hand-copied enum here would be correct on the day it was written and wrong on the day
- * somebody added a capability, and the failure would be a proposal quietly unable to express
- * something the platform supports.
+ * **What stays here is the vocabulary.** The schema below is built from the domain's own lists,
+ * imported rather than restated: capabilities, field kinds, entities, trigger events, modules and
+ * fonts all come from the files that define them. A hand-copied enum would be correct on the day
+ * it was written and wrong on the day somebody added a capability, and the failure would be a
+ * proposal quietly unable to express something the platform supports. It is sent to `apps/api` as
+ * the input schema of the model's one way to answer, and the answer is narrowed back into the
+ * domain's own types here (`narrow`).
  *
  * **Nothing here writes anything.** No database handle reaches this file and no domain function
  * is called from it — the imports above are types and constant lists. That is the whole of how
  * I14 holds on this path (D32): the model has no tool, so there is no permitted write to check.
+ * Nothing is retried: a second attempt nobody asked for is a second bill.
  */
-
-const MODEL = 'claude-opus-5';
 
 /** One custom field, as the schema describes it. Five entities share it. */
 const FIELD_SCHEMA = {
@@ -284,47 +281,6 @@ function responseSchema(): Record<string, unknown> {
   };
 }
 
-/**
- * What the model is told about its job.
- *
- * **The two rules in it are this repository's, not prompt-craft.** It may not invent a working
- * week, because `constraints.md` forbids the platform holding one and a drafted default would
- * be that same hardcoded week arriving through a different door. And it must raise a gap rather
- * than guess a price, because a number nobody said is a claim the business would be publishing
- * without having made it — the same line the public pages hold.
- */
-const SYSTEM = [
-  'You help somebody set up their business on an operations platform. You are drafting a',
-  'proposal that they will read, edit and apply themselves. Nothing you produce takes effect',
-  'until they approve it.',
-  '',
-  'Use their words. The name of their work, their stages, their roles and their services are',
-  'theirs — take the vocabulary from what they wrote and do not translate it into generic',
-  'software terms. If they say "MOT", the status is "MOT", not "Inspection".',
-  '',
-  'Do not invent facts about their business. In particular:',
-  '- Never invent opening hours. If they did not say when they work, return an empty list and',
-  '  ask. A Monday-to-Friday week nobody mentioned is a guess that looks like a setting.',
-  '- Never invent a price. If they named a service but not what it costs, put nothing in the',
-  '  price list for it and ask what they charge.',
-  '- Give a role only the capabilities that job actually needs.',
-  '- Never write a claim they did not make. The tagline and the introduction are what this',
-  '  business says about itself to its own customers, so they are built from their words or',
-  '  left empty. "Quality service, guaranteed" is something you made up about somebody else.',
-  '- A colour only if they named one, or if their trade has one nobody would dispute. Leave it',
-  '  empty otherwise: a colour you invented is on every screen they look at.',
-  '- A module only if they described doing that thing. Each one is something they switch on and',
-  '  pay for, so switching one on because it sounded useful is spending their money for them.',
-  '  If a module needs another one, name both or neither.',
-  '',
-  'Raise a gap for anything you were thin about. A short proposal with three good questions is',
-  'better than a complete-looking one built on assumptions. Ask in plain language: the person',
-  'reading it runs a business and does not know what a status or a capability is.',
-  '',
-  'When a previous proposal is supplied, treat the new message as a correction or an answer to',
-  'your questions. Keep everything they already agreed to and change only what they addressed.',
-].join('\n');
-
 function userMessage(input: DraftingRequest): string {
   const parts = [
     `The business is called ${input.business.name}.`,
@@ -438,49 +394,53 @@ function record(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
 }
 
-export function anthropicDraftingProvider(config: { apiKey: string }): DraftingProvider {
-  const client = new Anthropic({ apiKey: config.apiKey });
-
+export function goldApiDraftingProvider(config: { baseUrl: string }): DraftingProvider {
   return {
-    name: 'Claude',
+    name: 'gold',
 
     async draft(input): Promise<DraftedConfiguration | null> {
-      const response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 16000,
-        system: SYSTEM,
-        thinking: { type: 'adaptive' },
-        output_config: {
-          effort: 'high',
-          format: { type: 'json_schema', schema: responseSchema() },
+      const response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/ai/draft-configuration`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          // The caller's own token, forwarded rather than exchanged — identity reaches the
+          // database as their JWT, and the far side reads the entitlement as them (D17).
+          authorization: `Bearer ${input.token}`,
         },
-        messages: [{ role: 'user', content: userMessage(input) }],
+        body: JSON.stringify({
+          question: userMessage(input),
+          organization_id: input.organizationId,
+          schema: responseSchema(),
+        }),
+        signal: AbortSignal.timeout(180_000),
       });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string; code?: string };
+        // Its own error, not a generic one: not holding guided setup is a fact about the business,
+        // and "something went wrong" is the wrong sentence for it.
+        if (response.status === 403 && body.code === 'not_entitled') throw new DraftingNotEntitledError();
+        throw new Error(body.error ?? `the drafting service is unavailable (${response.status})`);
+      }
+
+      const body = (await response.json()) as {
+        outcome?: string;
+        configuration?: unknown;
+        detail?: string;
+      };
 
       // A decline is something the business can act on by writing a different description, so it
       // comes back as null — the contract's distinction, and the same one geocoding draws
       // between an address nobody recognises and a provider that is down.
-      if (response.stop_reason === 'refusal') return null;
+      if (body.outcome === 'declined') return null;
 
-      // Not a refusal and not an answer. A truncated proposal is worse than none, because the
-      // half that arrived looks complete on screen.
-      if (response.stop_reason === 'max_tokens') {
-        throw new Error('The drafted configuration was cut off before it finished.');
+      if (body.outcome !== 'drafted') {
+        throw new Error(body.detail || 'The drafting provider returned no configuration.');
       }
 
-      const text = response.content.find((block) => block.type === 'text');
-      if (!text || text.type !== 'text') {
-        throw new Error('The drafting provider returned no configuration.');
-      }
-
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(text.text);
-      } catch {
-        throw new Error('The drafting provider returned something that is not a configuration.');
-      }
-
-      return narrow(parsed);
+      // `narrow` returns null for a malformed answer, which reads as a decline. That is the same
+      // answer the old direct path gave, and the domain layer remains the guarantee either way.
+      return narrow(body.configuration);
     },
   };
 }

@@ -514,6 +514,80 @@ def resolve_ai_runtime_assignment(
     return rows[0] if rows else None
 
 
+def resolve_public_assistant(
+    settings: ProviderOperationsSettings,
+    *,
+    deployment_id: str,
+) -> dict | None:
+    """The business, the instructions its owner wrote and whether it holds the Agent, for one live
+    website-chat deployment -- or `None` for a deployment that does not exist or is not live.
+
+    **How the public chat endpoint learns which business it is answering for.** The request names
+    a deployment and nothing else: an organization id or a block of instructions that arrived in
+    the body would be values the caller chose, and the shared secret proves who the caller is, not
+    that what it sent is true (D17, D22).
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=PROVIDER_ROLE, sub=PROVIDER_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/resolve_public_assistant",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={"p_deployment_id": deployment_id},
+        timeout=10.0,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"resolve_public_assistant failed: {response.status_code}")
+
+    rows = response.json()
+    return rows[0] if rows else None
+
+
+def record_ai_usage(
+    settings: ProviderOperationsSettings,
+    *,
+    organization_id: str,
+    capability: str,
+    provider_key: str,
+    input_tokens: int,
+    output_tokens: int,
+    reference: str,
+) -> None:
+    """Write down what one AI request consumed, as the two token meters.
+
+    **The writer of `ai_tokens_input` and `ai_tokens_output`**, and a thin one: the database door
+    hands both to `app.record_usage`, which decides what they are worth. Called once per request
+    with that request's total, so nothing here sums and nothing records a model call twice.
+    Idempotent on `reference`, so a retried call is the same fact.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=PROVIDER_ROLE, sub=PROVIDER_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/record_ai_usage",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "p_organization_id": organization_id,
+            "p_capability": capability,
+            "p_provider_key": provider_key,
+            "p_input_tokens": input_tokens,
+            "p_output_tokens": output_tokens,
+            "p_reference": reference,
+        },
+        timeout=10.0,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"record_ai_usage failed: {response.status_code}")
+
+
 def record_provider_account_verification(
     settings: ProviderOperationsSettings,
     *,

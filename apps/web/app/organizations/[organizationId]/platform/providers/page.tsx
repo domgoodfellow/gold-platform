@@ -108,7 +108,7 @@ export default async function ProvidersPage({ params }: PageProps<'/organization
               }
               // No account model built for this provider yet — the deployment env var is the
               // only signal there is (D31), and it says so rather than implying otherwise.
-              const state = credentialEnvironmentState(provider.key);
+              const state = credentialEnvironmentState();
               return <Badge tone={state === 'configured' ? 'success' : 'neutral'}>{ENVIRONMENT_LABEL[state]}</Badge>;
             },
           },

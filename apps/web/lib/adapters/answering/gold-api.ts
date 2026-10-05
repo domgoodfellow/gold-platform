@@ -1,9 +1,10 @@
-import type {
-  Answer,
-  AnsweringProvider,
-  AnsweringRequest,
-  ProposedAction,
-  ToolCallRecord,
+import {
+  AnsweringNotEntitledError,
+  type Answer,
+  type AnsweringProvider,
+  type AnsweringRequest,
+  type ProposedAction,
+  type ToolCallRecord,
 } from './index';
 
 /**
@@ -36,10 +37,9 @@ export function goldApiAnsweringProvider(config: { baseUrl: string }): Answering
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(
-          (body as { error?: string }).error ?? `the assistant is unavailable (${response.status})`,
-        );
+        const body = (await response.json().catch(() => ({}))) as { error?: string; code?: string };
+        if (response.status === 403 && body.code === 'not_entitled') throw new AnsweringNotEntitledError();
+        throw new Error(body.error ?? `the assistant is unavailable (${response.status})`);
       }
 
       const body = (await response.json()) as {

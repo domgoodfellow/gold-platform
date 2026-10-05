@@ -323,3 +323,21 @@ and operator conversations relate. Each needs its own caller first.
 
 None is newly enforced; this is a discovery document. The rows in §5 and the gap matrix in §4 are
 the backlog the `Enforced by` and `Held by` columns do not yet cover.
+
+---
+
+## 7. Implementation evidence (C8-WO2) — findings 2, 3, 4 and 10 closed
+
+Appended; nothing above was edited, so §1–§6 stay the record of the tree before this work.
+
+| Finding | Now | Where |
+|---|---|---|
+| 2 — usage never recorded | `Turn.usage` carries each provider's own report; the loop sums every call; `public.record_ai_usage` is the writer of both meters (`platform_meters.writer` set in the same migration) | `app/ai/__init__.py`, `loop.py`, `metering.py`, `20261125000001` |
+| 3 — no entitlement on the assistant | `app.module_entitled` asked by `apps/api` before a provider is resolved: as the caller for the operator endpoints, from a deployment id for the public one | `app/ai/entitlement.py`, `ai_ask.py`, `public_chat.py` |
+| 4 — drafting bypasses the assignment | `configuration_drafting` is an assignment; the web adapter calls `/ai/draft-configuration` and holds no model, key or SDK | `api/ai_draft_configuration.py`, `lib/adapters/drafting/gold-api.ts` |
+| 10 — tenant instructions in `context` | `instructions` is its own parameter, rendered by `app/ai/prompts.render_instructions` beneath the platform's rules | `app/ai/prompts.py`, the four adapters |
+| §5.2, §5.3 | Same two as 10 and a `deploymentId` that is now the whole identity of the request | `public_chat.py`, `resolve_public_assistant` |
+| §5.6 — two hard-coded model copies | The drafting copy is gone; `DEFAULT_ANTHROPIC_MODEL` remains as the documented environment fallback for an unassigned capability | `app/ai/registry.py` |
+| §5.7 — capability list in four places | One SQL function (`app.ai_capabilities()`) for the table check and the write door; Python and TypeScript keep one constant each, pinned by tests | `20261125000001`, `app/ai/runtime.py`, `lib/domain/ai/runtime.ts` |
+
+Still open, unchanged: findings 5 (Automation duplicates domain operations), 6 (five lists of what the assistant can do), 7 (approval is single-purpose), 8 (the audit chain breaks after execution) and 9 (`assistant_resource_grants` is not enforced); §5.1 (two D75 sections), §5.4 (knowledge sources have no reader) and §5.5 (`stages.py` documents a caller that does not exist). D78 remains proposed; the decisions this work made are D83.

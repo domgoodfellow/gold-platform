@@ -246,7 +246,7 @@ describe('a credential goes in and never comes out', () => {
     expect(rows[0]).toEqual({ decrypted: false, secrets: false });
   });
 
-  it('gives the machine role no table grant and exactly twelve executes', async () => {
+  it('gives the machine role no table grant and exactly fourteen executes', async () => {
     const tables = await pg.query(`select table_name from information_schema.role_table_grants where grantee = 'provider_operator'`);
     expect(tables.rows).toEqual([]);
 
@@ -272,12 +272,14 @@ describe('a credential goes in and never comes out', () => {
       'default_platform_provider_account',
       'email_domain_provider_account',
       'read_provider_account_credential',
+      'record_ai_usage',
       'record_custom_domain_registration',
       'record_email_domain_provisioning',
       'record_email_send_result',
       'record_invitation_delivery',
       'record_provider_account_verification',
       'resolve_ai_runtime_assignment',
+      'resolve_public_assistant',
       'set_custom_domain_verification',
     ]);
   });

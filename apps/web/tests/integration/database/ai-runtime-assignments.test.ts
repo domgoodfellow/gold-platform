@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { AI_CAPABILITIES } from '@/lib/domain/ai/runtime';
 import { asPlatformStaff } from '@/tests/support/founding';
 
 /**
@@ -163,6 +165,29 @@ describe('who may write an assignment', () => {
       provider_account_id: openaiAccount,
       model: 'gpt-test',
     });
+  });
+
+  it('assigns configuration drafting like the other two, and the list the app holds is the list the database accepts', async () => {
+    const write = await staff.rpc('record_ai_runtime_assignment', {
+      p_capability: 'configuration_drafting',
+      p_provider_service_id: openaiResponses,
+      p_provider_account_id: openaiAccount,
+      p_model: 'gpt-drafting-test',
+    });
+    expect(write.error).toBeNull();
+
+    const { data } = await staff.rpc('platform_ai_runtime_assignment_overview');
+    expect((data as Array<Record<string, unknown>>).find((r) => r.capability === 'configuration_drafting')).toMatchObject({
+      provider_key: 'openai',
+      model: 'gpt-drafting-test',
+    });
+
+    // One list, three copies (the database's, `apps/web`'s and `apps/api`'s): the first is
+    // asked, the other two are read, and all three must agree.
+    const { rows } = await pg.query('select app.ai_capabilities() as capabilities');
+    expect(AI_CAPABILITIES).toEqual(rows[0].capabilities);
+    const python = readFileSync(new URL('../../../../api/app/ai/runtime.py', import.meta.url), 'utf8');
+    expect([...python.matchAll(/^[A-Z_]+ = "([a-z_]+)"$/gm)].map((m) => m[1]).slice(0, 3)).toEqual(rows[0].capabilities);
   });
 
   it('reassigning the same capability replaces it rather than adding a second row', async () => {

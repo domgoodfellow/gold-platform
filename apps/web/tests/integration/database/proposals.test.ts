@@ -261,7 +261,7 @@ describe('a proposal is a row between the drafting and the applying', () => {
     // rather than on the write.
     //
     // What is deliberately allowed: importing the domain's own constant lists and types.
-    // `anthropic.ts` builds its schema from `CAPABILITIES`, `FIELD_KINDS` and `TRIGGER_EVENTS`
+    // `gold-api.ts` builds its schema from `CAPABILITIES`, `FIELD_KINDS` and `TRIGGER_EVENTS`
     // so it cannot fall out of step with them. Reading what the platform supports is not
     // reaching business state; holding a client that could write it is.
     const dir = join(SRC, 'lib', 'adapters', 'drafting');

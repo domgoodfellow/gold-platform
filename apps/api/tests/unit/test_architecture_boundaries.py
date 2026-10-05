@@ -79,3 +79,45 @@ def test_the_domains_package_no_longer_holds_what_moved_to_services() -> None:
         assert not (APP / "domains" / retired).exists()
     assert not (APP / "domains" / "errors.py").exists()
     assert (APP / "errors.py").exists()
+
+
+# --- the AI runtime: the platform's words once, a tenant's words apart, no env read in an adapter ----
+
+
+def test_the_platforms_prompts_are_written_once_and_a_tenants_words_are_never_context() -> None:
+    from app.ai import prompts
+
+    # Each adapter asks `system_prompt`; none carries a copy of the rules, and none decides who a
+    # conversation is with by sniffing a prefix in the application's own `context`.
+    adapters = sorted((APP / "providers").glob("*/answering.py"))
+    assert len(adapters) == 4
+    for path in adapters:
+        text = path.read_text(encoding="utf-8")
+        assert "system_prompt(audience)" in text, path.name
+        assert "SYSTEM =" not in text and "PUBLIC_SYSTEM" not in text, path
+        assert "PUBLIC WEBSITE DEPLOYMENT" not in text, path
+
+    assert "PUBLIC WEBSITE DEPLOYMENT" not in (API / "public_chat.py").read_text(encoding="utf-8")
+    assert set(prompts._PROMPTS) == {"operator", "public", "drafting"}
+
+
+def test_no_provider_adapter_reads_the_environment_or_names_a_model() -> None:
+    import re
+
+    # A credential and a model are handed in (`app.ai.adapters`, from the assignment); the one
+    # place that reads the environment is the documented fallback, `app.ai.registry`.
+    for path in (APP / "providers").glob("*/answering.py"):
+        text = path.read_text(encoding="utf-8")
+        assert "os.environ" not in text, path
+        assert not re.search(r"""["'](claude-|gpt-|gemini-)""", text), path
+
+
+def test_only_the_runtime_handlers_and_metering_may_write_usage() -> None:
+    # `app.core.db.record_ai_usage` is the one caller of the database door, and `app.ai.metering`
+    # the one caller of that; the loop and the adapters know no database.
+    callers = {
+        path.relative_to(APP.parent).as_posix()
+        for path in _python_files(APP.parent)
+        if "tests" not in path.parts and "record_ai_usage" in path.read_text(encoding="utf-8")
+    }
+    assert callers == {"app/core/db.py", "app/ai/metering.py"}

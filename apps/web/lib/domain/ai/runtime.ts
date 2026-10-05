@@ -6,21 +6,24 @@ import { DomainError } from '@/lib/domain/errors';
  *
  * **GOLD-owned and platform-wide, like a Provider Account itself.** A tenant bringing its own
  * model key is a different feature with a different record (D33) — nothing here carries an
- * `organizationId`. Two capabilities exist today because two callers actually resolve one:
- * `operator_assistant` (`apps/api/api/ai_ask.py`) and `public_assistant`
- * (`apps/api/api/public_chat.py`).
+ * `organizationId`. Three capabilities exist today because three callers actually resolve one:
+ * `operator_assistant` (`apps/api/api/ai_ask.py`), `public_assistant`
+ * (`apps/api/api/public_chat.py`) and `configuration_drafting`
+ * (`apps/api/api/ai_draft_configuration.py`). `app.ai_capabilities()` in Postgres is the list
+ * these must equal; `ai-runtime-assignments.test.ts` holds the two together.
  *
  * **The row itself is unreadable directly** (`platform_ai_runtime_assignments` carries no select
  * grant to any role) — `platform_ai_runtime_assignment_overview` is the one door a screen reads
  * through, and `record_ai_runtime_assignment` is the one door that writes.
  */
 
-export const AI_CAPABILITIES = ['operator_assistant', 'public_assistant'] as const;
+export const AI_CAPABILITIES = ['operator_assistant', 'public_assistant', 'configuration_drafting'] as const;
 export type AiCapability = (typeof AI_CAPABILITIES)[number];
 
 export const AI_CAPABILITY_LABEL: Record<AiCapability, string> = {
   operator_assistant: 'Operator assistant',
   public_assistant: 'Public assistant',
+  configuration_drafting: 'Configuration drafting',
 };
 
 export type AiRuntimeAssignment = {

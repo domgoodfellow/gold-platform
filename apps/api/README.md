@@ -18,7 +18,7 @@ platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and acces
 | `POST /webhooks/stripe` | `api/stripe_webhook.py` | Stripe signature over the raw body. Records a customer's settlement through the narrow payment machine role. |
 | `POST /webhooks/stripe-platform-billing` | `api/stripe_platform_billing_webhook.py` | Stripe signature, on its own secret and role. Applies GOLD's own subscription events; never the tenant-payment path. |
 | `GET, POST /tasks/automation-tick` | `api/automation_tick.py` | `Authorization: Bearer $CRON_SECRET` from the host's scheduler. Runs due automations and drains message and reading work. |
-| `POST /ai/ask` | `api/ai_ask.py` | The signed-in person's bearer token through `app/auth`, then forwarded. The API holds no database role for this path. |
+| `POST /ai/ask` | `api/ai_ask.py` | The signed-in person's bearer token through `app/auth`, then forwarded; every tool reads under it. The business must hold the Agent (asked as the caller). The provider-operations role resolves the assigned model and writes what the answer consumed, and nothing else. |
 | `POST /crm/change-customer-stage` | `api/crm_change_customer_stage.py` | Bearer token, forwarded. A domain command under the caller's own rights. |
 | `POST /voice/wrap-up-call` | `api/voice_wrap_up_call.py` | Bearer token, forwarded. A domain command under the caller's own rights. |
 | `POST /routing/preview-inbound` | `api/routing_preview_inbound.py` | Bearer token, forwarded. Calls the exact resolver a live inbound call will use, never a second approximation. |
@@ -33,13 +33,14 @@ platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and acces
 | `POST /voice/recording` | `api/voice_recording.py` | Twilio signature. Records recording metadata through the Voice machine role. |
 | `POST /sms/inbound` | `api/sms_inbound.py` | Twilio signature. Records an inbound text and applies STOP/START through the Messaging machine role. |
 | `POST /sms/status` | `api/sms_status.py` | Twilio signature. Records a message's delivery status through the Messaging machine role. |
+| `POST /ai/draft-configuration` | `api/ai_draft_configuration.py` | The signed-in person's bearer token, forwarded. Drafts a business's configuration for the `configuration_drafting` capability; the business must hold guided setup. |
 | `POST /public_chat` | `api/public_chat.py` | Shared server-to-server key (`x-gold-public-chat-key`) from `apps/web` only; the same answer as "not configured" on any mismatch. Public-site assistant. |
 | `POST /invitations/email` | `api/invitation_email.py` | Bearer token; the caller must be able to see the pending invitation named, proved by RLS. Sends or resends its email through GOLD's own Resend account (or the environment bootstrap fallback) — never a caller-supplied recipient, subject or body. |
 | `POST /communications/email/send` | `api/tenant_email_send.py` | Bearer token; names one queued email message and nothing else. RLS proves the caller may see it; the recipient, address, subject, body and attachments are all read from the message row, never from the request. Sends it through the provider that answers for the address beneath it, and records the provider's answer. |
 | `POST /webhooks/tenant-email` | `api/tenant_email_webhook.py` | The provider's Svix-shaped signature over the raw body, with its own secret. Records a business's email delivery events and arriving messages through the narrow `tenant_email_webhook` role; derives the business from the provider's own message id (delivery) or the receiving address (inbound). |
 | `POST /webhooks/invitation-email` | `api/invitation_email_webhook.py` | Resend's Svix-shaped signature over the raw body. Records a delivery event through the narrow invitation-email machine role; derives the organization and invitation from the provider's own message id. |
 
-23 deployable handlers, one file each. Vercel also serves every file under `api/` at its
+24 deployable handlers, one file each. Vercel also serves every file under `api/` at its
 physical `/api/<name>` path, so a rewrite is the documented route, not the only reachable one.
 `tests/architecture/static/python-handler-inventory.test.ts` holds this table, `vercel.json`, the
 files in `api/` and the handler tests to one another.

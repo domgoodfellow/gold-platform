@@ -1,5 +1,4 @@
 import { Section, SectionHeading } from '@/components/surfaces/section';
-import { Hint } from '@/components/controls/inputs';
 import { AI_CAPABILITIES, AI_CAPABILITY_LABEL, type AiRuntimeAssignment } from '@/lib/domain/ai/runtime';
 import { RuntimeAssignmentRow } from './runtime-assignment-row';
 import type { RuntimeAccount, RuntimeService } from './runtime-assignment-form';
@@ -36,16 +35,6 @@ export function AiRuntimeWorkspace({
             />
           ))}
         </ul>
-      </Section>
-
-      <Section>
-        <SectionHeading>Configuration drafting</SectionHeading>
-        <div className="mt-2 flex items-center justify-between gap-4">
-          <div>
-            <p className="font-medium">Anthropic</p>
-            <Hint>Deployment-backed. Not yet managed here — it reads its own credential from this deployment&apos;s environment.</Hint>
-          </div>
-        </div>
       </Section>
     </div>
   );

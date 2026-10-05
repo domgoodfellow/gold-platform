@@ -2,6 +2,7 @@ import type { Database, Db } from '@/lib/db/types';
 
 type Json = Database['public']['Tables']['agent_runs']['Insert']['tools'];
 import {
+  AnsweringNotEntitledError,
   answeringProvider,
   type AnswerOutcome,
   type PriorTurn,
@@ -409,6 +410,14 @@ export async function askQuestion(
     action = answer.action;
     actionRefusal = action ? reasonActionCannotRun(action.name, action.arguments) : null;
   } catch (failure) {
+    // Not holding the Agent is a fact about the business, not a run that went wrong: nothing was
+    // spent, so no run is recorded and no conversation is started for it.
+    if (failure instanceof AnsweringNotEntitledError) {
+      throw new DomainError(
+        'This business does not have the Agent, so it cannot answer questions.',
+        'assistant.not_entitled',
+      );
+    }
     // Their words, not a paraphrase (I25).
     detail = failure instanceof Error ? failure.message : 'the assistant could not answer';
   }

@@ -15,7 +15,11 @@ never reaches a tool at all; one who does still gets only what their own session
 every tool is scoped by RLS, not by this file.
 
 **What it will not do is answer for free.** A missing or malformed token is refused before a
-provider is called, because a question with nobody behind it is a bill with nobody behind it.
+provider is called, because a question with nobody behind it is a bill with nobody behind it. So
+is a business that does not hold the Agent: `assistant.ask` is a role's permission, and whether the
+*business* has the module is a separate, commercial question asked here, at the point of spend
+(`app.ai.entitlement`). What a question consumed is written down after it is answered
+(`app.ai.metering`).
 
 Vercel's Python runtime routes a file under `api/` to a path (D24). One file, one route.
 """
@@ -27,9 +31,11 @@ from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler
 
 from app.ai import AttachedText, PriorTurn
+from app.ai.entitlement import ASSISTANT_MODULE, EntitlementUnavailable, holds_module
 from app.ai.loop import answer
+from app.ai.metering import meter
 from app.ai.registry import unconfigured_reason
-from app.ai.runtime import resolve_provider
+from app.ai.runtime import OPERATOR_ASSISTANT, resolve_provider
 from app.auth import AuthError, require_caller
 from app.core.config import load_assistant_settings, load_provider_operations_settings
 
@@ -89,21 +95,6 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             self._reply(failure.status, {"error": failure.message})
             return
 
-        try:
-            # An explicit assignment is authoritative and never fails over; a capability with
-            # none keeps answering exactly as it always has (app.ai.runtime).
-            provider = resolve_provider(
-                load_provider_operations_settings(), capability="operator_assistant"
-            )
-        except RuntimeError as failure:
-            self._reply(503, {"error": str(failure)})
-            return
-        if provider is None:
-            # A deployment with no model. Said out loud rather than left as a silence, and in
-            # the same words the settings screen uses (D31).
-            self._reply(503, {"error": unconfigured_reason()})
-            return
-
         length = int(self.headers.get("content-length") or 0)
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
@@ -115,6 +106,37 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
         organization_id = (body.get("organization_id") or "").strip()
         if not question or not organization_id:
             self._reply(400, {"error": "rejected"})
+            return
+
+        # **Entitlement before anything is spent, and before Vault is read.** Asked as the caller,
+        # so a business they are not in answers the same *no* as one that has not bought the
+        # Agent. A database that cannot say is a different word from *no*.
+        try:
+            entitled = holds_module(
+                settings, token=caller.token, organization_id=organization_id, module_key=ASSISTANT_MODULE
+            )
+        except EntitlementUnavailable:
+            self._reply(503, {"error": "could not check whether this business has the Agent"})
+            return
+        if not entitled:
+            self._reply(
+                403,
+                {"error": "this business does not have the Agent", "code": "not_entitled"},
+            )
+            return
+
+        operations = load_provider_operations_settings()
+        try:
+            # An explicit assignment is authoritative and never fails over; a capability with
+            # none keeps answering exactly as it always has (app.ai.runtime).
+            provider = resolve_provider(operations, capability=OPERATOR_ASSISTANT)
+        except RuntimeError as failure:
+            self._reply(503, {"error": str(failure)})
+            return
+        if provider is None:
+            # A deployment with no model. Said out loud rather than left as a silence, and in
+            # the same words the settings screen uses (D31).
+            self._reply(503, {"error": unconfigured_reason()})
             return
 
         given = answer(
@@ -135,6 +157,14 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             attachments=_attachments(body.get("attachments")),
         )
 
+        usage = meter(
+            operations,
+            organization_id=organization_id,
+            capability=OPERATOR_ASSISTANT,
+            provider_key=provider.provider_key,
+            given=given,
+        )
+
         # **The run is not written here.** `apps/web` writes it, under the same session that
         # asked -- which is what makes `agent_runs.created_by` true and keeps this runtime
         # holding no write path at all. What goes back is everything that row needs.
@@ -149,6 +179,9 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
                 # Reported, and performed by nobody here. `apps/web` looks the name up in its
                 # own whitelist and a person decides (D34).
                 "action": asdict(given.action) if given.action else None,
+                # Whether what this answer consumed was written down: `recorded`, `none_reported`
+                # or `failed`. Carried back rather than swallowed, so a failed meter is visible.
+                "metering": usage,
             },
         )
 

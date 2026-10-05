@@ -13,6 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from app.ai import prompts
 from app.ai import AttachedText, Exchange, PriorTurn, Tool, ToolCall, ToolResult, Turn
 from app.providers.google import answering as google_answering
 from app.providers.google.answering import gemini_provider
@@ -180,15 +181,15 @@ def test_context_reaches_system_instruction_not_the_question(monkeypatch) -> Non
     assert question_item["content"][0]["text"] == "What is late?"
 
 
-def test_the_public_deployment_prefix_selects_the_public_system_prompt(monkeypatch) -> None:
+def test_the_public_audience_selects_the_public_system_prompt(monkeypatch) -> None:
     fake = _install(monkeypatch, interaction=_interaction(output_text="Ask a human."))
     provider = gemini_provider(api_key="k", model="gemini-test")
 
     provider.next_turn(
-        question="Are you open Sunday?", tools=(), history=(), context="PUBLIC WEBSITE DEPLOYMENT\nHours info."
+        question="Are you open Sunday?", tools=(), history=(), audience="public", instructions="Hours info."
     )
 
-    assert fake.interactions.calls[0]["system_instruction"].startswith(google_answering.PUBLIC_SYSTEM)
+    assert fake.interactions.calls[0]["system_instruction"].startswith(prompts.PUBLIC)
 
 
 def test_attachments_are_rendered_and_quoted_alongside_the_question(monkeypatch) -> None:

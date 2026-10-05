@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { draftingProvider, type ConfigurationGap } from '@/lib/adapters/drafting';
+import { DraftingNotEntitledError, draftingProvider, type ConfigurationGap } from '@/lib/adapters/drafting';
 import { DomainError } from '@/lib/domain/errors';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
@@ -169,10 +169,18 @@ export async function proposeConfiguration(
     throw new DomainError('That business is not yours to configure.', 'proposals.forbidden');
   }
 
+  const { data: session } = await db.auth.getSession();
+  const token = session.session?.access_token;
+  if (!token) {
+    throw new DomainError('Sign in to continue.', 'auth.required');
+  }
+
   let drafted: Awaited<ReturnType<typeof provider.draft>>;
   try {
     drafted = await provider.draft({
       description,
+      organizationId: input.organizationId,
+      token,
       business: {
         name: organization.name,
         currency: organization.currency,
@@ -180,7 +188,14 @@ export async function proposeConfiguration(
       },
       current: input.previous?.shape ?? null,
     });
-  } catch {
+  } catch (failure) {
+    // Not holding guided setup is a fact about the business, not an outage, and the sentence says so.
+    if (failure instanceof DraftingNotEntitledError) {
+      throw new DomainError(
+        'This business does not have guided setup. Everything it would propose can still be configured by hand.',
+        'proposals.not_entitled',
+      );
+    }
     // The adapter throws for unreachable/malformed, returns null for a decline — two different
     // situations, only one worth retrying. The provider's own words aren't shown: a vendor's
     // HTTP failure isn't a sentence fit for a screen, and showing it would leak their vocabulary

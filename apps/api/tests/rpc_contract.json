@@ -155,6 +155,17 @@
         "p_to"
       ]
     },
+    "organization_module_entitled": {
+      "role": "authenticated",
+      "callers": [
+        "app/ai/entitlement.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_module_key",
+        "p_organization_id"
+      ]
+    },
     "organization_open_now": {
       "role": "authenticated",
       "callers": [
@@ -198,6 +209,20 @@
       ],
       "sends": [
         "p_account_id"
+      ]
+    },
+    "record_ai_usage": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_capability",
+        "p_input_tokens",
+        "p_organization_id",
+        "p_output_tokens",
+        "p_provider_key",
+        "p_reference"
       ]
     },
     "record_call_event": {
@@ -551,6 +576,15 @@
       ],
       "sends": [
         "p_capability"
+      ]
+    },
+    "resolve_public_assistant": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_deployment_id"
       ]
     },
     "run_due_automations": {

@@ -17,8 +17,20 @@ export type DraftedConfiguration = {
   gaps: ConfigurationGap[];
 };
 
+/** The business does not hold guided setup. A fact about the business, not a failure of the service. */
+export class DraftingNotEntitledError extends Error {
+  constructor() {
+    super('This business does not have guided setup.');
+    this.name = 'DraftingNotEntitledError';
+  }
+}
+
 export type DraftingRequest = {
   description: string;
+  /** Never given to the model — `apps/api` reads the entitlement as the caller, so a business that is not theirs answers *no*. */
+  organizationId: string;
+  /** The caller's own access token (D17). */
+  token: string;
   business: {
     name: string;
     /** Null when the business hasn't said (signup doesn't require it) — never substituted. */

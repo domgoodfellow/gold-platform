@@ -64,7 +64,7 @@ module state is computed, effective-dated rates and usage/cost ledgers exist, an
 deepest provider binding/resource/provisioning path. They are not yet the canonical
 Product/Module/Feature catalogue, reusable Plans/Add-ons, Subscription lifecycle, resolved
 Limits, or a fully enforced entitlement plane. Entitlement resolution is generalized; write
-enforcement is proven only for `card_payments`. M17 requires every applicable optional
+enforcement is proven for `card_payments` and, at the point of spend, for AI requests (the Agent and guided setup, D83). M17 requires every applicable optional
 Product/Module to enforce Plan/Add-on → Entitlement → UI → domain/server → database write
 boundaries before migration readiness. Voice is the primary usage writer.
 
@@ -372,6 +372,9 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | Rows in `agent_runs` | That table's policies are not the ones protecting the original | It records a name, its arguments and a row count |
 | A conversation readable by anyone but its starter, or history from another conversation sent with a question | An answer holds whatever its asker could see, and a thread is a set of answers (D34, I48) | `agent_conversations_select` is creator-only; a run's composite key carries the asker; `agent-conversations.test.ts` |
 | A file attached to a question readable by anyone but its asker, or sent to a model as anything but bounded text | An attachment is part of a question (D34, I49); and nothing here reads a PDF or an image, so a model would be handed bytes it cannot use | `documents_agent_file_is_safe` and the owner-only `documents` policies; `agent-attachments.test.ts` |
+| A model id, a model vendor's SDK or a model credential in `apps/web`, or a second place that chooses which model answers | Which provider, account and model answers a capability is `platform_ai_runtime_assignments`' decision, read only by `apps/api` (D62); drafting once held its own key and a model name in source (D83) | `ai-runtime-boundary.test.ts` scans `apps/web` for the three; `configuration_drafting` is an assignment row like the other two |
+| AI usage written from a guess, per call *and* per request, or by anything but `public.record_ai_usage` | A token count the provider did not give is a guess billed as a fact, and counting a call twice bills it twice (D83) | `Turn.usage` is the provider's own report, `None` when absent; the loop sums once, `app/ai/metering.py` writes once; `usage-boundary.test.ts` finds no other inserter into `usage_events`; `test_ai_usage.py`, `ai-usage.test.ts` |
+| An AI request spent before the business is known to hold the module, or a public request naming its own business or instructions | `assistant.ask` is a role's permission, not the business's purchase (D25); the secret on a public request proves who called, not that what it sent is true (D17, D22) | `app.module_entitled` asked by `apps/api` before a provider is resolved; `resolve_public_assistant` derives the business, instructions and entitlement from the deployment id; `test_handlers.py`, `ai-usage.test.ts` |
 | A write performed by the loop | A person presses the button, and a name the loop invents must fail closed | The whitelist lives in `apps/web`; an action carries no Postgres function; `agent_runs_update` freezes a decided action |
 | A reschedule that omits the resource | `scheduleWorkItem` reads an absent resource as *nobody assigned*, so moving a job silently takes the person off it | The executor passes it |
 | A vendor's tool-runner | A second loop the day a business answers with its own model, and an `agent_runs` row that means two things | `app/ai/loop.py` owns iteration, dispatch, the cap and the record |
