@@ -15,6 +15,8 @@ function lane(id: string, name: string, workItemIds: string[]) {
   return {
     resource: { id, name },
     free: [],
+    open: [],
+    exceptions: [],
     booked: workItemIds.map((workItemId) => ({
       workItemId,
       title: `Job ${workItemId}`,
@@ -22,6 +24,7 @@ function lane(id: string, name: string, workItemIds: string[]) {
       occupied: window,
       resourceIds: ['alex', 'van'],
       typeId: 'type',
+      availabilityProblem: null,
     })),
   };
 }

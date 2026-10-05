@@ -1,7 +1,7 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { freeWindows } from '@/lib/domain/scheduling/availability';
-import { listOperatingHours, openWindows } from '@/lib/domain/scheduling/operating-hours';
+import { listResourceOpenWindows } from '@/lib/domain/scheduling/resource-availability';
 import { parseWindow, zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
 
 /**
@@ -132,7 +132,7 @@ export async function bookableSlots(
   const within = zonedDayRange(input.date, input.timeZone);
   const range = `[${within.startsAt},${within.endsAt})`;
 
-  const [resources, commitments, hours] = await Promise.all([
+  const [resources, commitments] = await Promise.all([
     // The resources this kind of work can be booked against: all of them when it needs nothing (as
     // before), only the eligible ones when it needs one thing. Ids only, and the same canonical
     // availability arithmetic runs over them below — this narrows the candidates, not the sums.
@@ -142,7 +142,6 @@ export async function bookableSlots(
       .select('resource_id, occupies')
       .eq('organization_id', input.organizationId)
       .overlaps('occupies', range),
-    listOperatingHours(db, { organizationId: input.organizationId }),
   ]);
 
   if (resources.error) throw new DomainError(resources.error.message, 'booking.resources_failed');
@@ -150,8 +149,16 @@ export async function bookableSlots(
     throw new DomainError(commitments.error.message, 'booking.commitments_failed');
   }
 
-  // No published hours is treated as open, same as the operator's schedule.
-  const open = openWindows(input.date, input.timeZone, hours, within);
+  const candidates = ((resources.data ?? []) as unknown as string[]).filter(Boolean);
+
+  // When each candidate is open — organization hours ∩ its own hours − its time off, from the same
+  // reader the operator's schedule uses. Candidates were chosen by eligibility first; nothing here
+  // widens that set to find a slot, and a resource that is closed simply has no windows.
+  const openByResource = await listResourceOpenWindows(db, {
+    organizationId: input.organizationId,
+    within,
+    resourceIds: candidates,
+  });
 
   const busyByResource = new Map<string, Window[]>();
   for (const row of commitments.data ?? []) {
@@ -163,10 +170,8 @@ export async function bookableSlots(
   const slots: Slot[] = [];
   const stepMs = input.type.durationMinutes * 60_000;
 
-  for (const resourceId of (resources.data ?? []) as unknown as string[]) {
-    if (!resourceId) continue;
-
-    const free = open.flatMap((window) =>
+  for (const resourceId of candidates) {
+    const free = (openByResource.get(resourceId) ?? []).flatMap((window) =>
       freeWindows(window, busyByResource.get(resourceId) ?? [], {
         minimumMinutes: input.type.durationMinutes,
       }),
@@ -255,6 +260,14 @@ export async function bookSlot(
       throw new DomainError(
         'That time is no longer available. Please choose another.',
         'booking.not_eligible',
+      );
+    }
+    // The resource stopped working at that time between the page and the booking: its hours changed
+    // or time off was added. Said the same way as a slot somebody took — nothing about who is off.
+    if (error.code === 'GD013') {
+      throw new DomainError(
+        'That time is no longer available. Please choose another.',
+        'booking.not_working',
       );
     }
     if (error.code === 'GD011') {

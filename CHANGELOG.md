@@ -5,6 +5,21 @@ lives on the issue board. Nothing here has a checkbox (`constraints.md` D9).
 
 ## Unreleased
 
+### A resource says when it works
+
+Each person, van, machine or room can now follow its own working hours instead of the business's, and can
+have time off. Open its page and choose *Availability*: *Use business hours* is what every resource does
+today and keeps doing until you change it; *Custom working hours* lets you set each day, with as many periods
+as you like, so a split shift is two periods. A resource's hours only ever narrow the business's. *Time off &
+exceptions* records a vacation, a servicing or a calibration for a date range or part of a day, read in the
+business's own time zone. Scheduling a job, or putting a resource on one, outside that resource's hours or over
+its time off is refused and says who and why. Online booking offers only times a suitable resource is working,
+and refuses a slot whose hours changed after it was offered. Changing hours or adding time off over work already
+booked moves nothing: the job stays, is flagged on Schedule as outside the resource's hours, and is listed on the
+resource's page. The Schedule day shows each lane's own working time and draws time off as text, not shading
+alone. Still not here: finding a combination of resources for a job that needs several, travel time, and
+booking notice rules.
+
 ### A kind of work says what resources it needs
 
 Under Work configuration, a kind of work that is scheduled can now say what each job of it needs: for

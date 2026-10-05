@@ -1828,6 +1828,14 @@
         "reporting"
       ]
     },
+    "apps/web/tests/integration/database/resource-availability.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling",
+        "booking",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/resource-class-capabilities.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -2087,6 +2095,13 @@
       "category": "unit",
       "concerns": [
         "security"
+      ]
+    },
+    "apps/web/tests/unit/resource-availability.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "scheduling",
+        "booking"
       ]
     },
     "apps/web/tests/unit/sending-domain-presentation.test.ts": {

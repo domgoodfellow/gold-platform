@@ -18,6 +18,7 @@ export function ScheduleEvent({
   resourceName,
   alsoWith = [],
   missing,
+  availabilityNote,
   timezone,
   variant = 'row',
   style,
@@ -37,6 +38,8 @@ export function ScheduleEvent({
   resourceName?: string;
   /** What this job is short of, in words ("Vehicle missing") — absent when it has what its kind of work needs. Never hides the entry. */
   missing?: string;
+  /** Set when this job now sits outside a resource's hours or over its time off ("Outside Alex's working hours"). Flagged, never hidden, never moved. */
+  availabilityNote?: string;
   /** In Day's lanes, the others on the same job — a work item shows in every lane it takes part in and is still one work item. */
   alsoWith?: string[];
   timezone: string;
@@ -47,7 +50,7 @@ export function ScheduleEvent({
   const time = new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit' }).format(
     new Date(shown.startsAt),
   );
-  const fullDescription = `${title}, ${formatWindow(window, timezone)}${resourceName ? `, ${resourceName}` : ''}${alsoWith.length > 0 ? `, with ${alsoWith.join(', ')}` : ''}${missing ? `. Not fully staffed: ${missing}` : ''}`;
+  const fullDescription = `${title}, ${formatWindow(window, timezone)}${resourceName ? `, ${resourceName}` : ''}${alsoWith.length > 0 ? `, with ${alsoWith.join(', ')}` : ''}${missing ? `. Not fully staffed: ${missing}` : ''}${availabilityNote ? `. ${availabilityNote}` : ''}`;
   const href = `/organizations/${organizationId}/work/${workItemId}`;
 
   if (variant === 'block') {
@@ -74,6 +77,11 @@ export function ScheduleEvent({
             ! {missing}
           </span>
         ) : null}
+        {availabilityNote ? (
+          <span aria-hidden className="block truncate font-medium">
+            ! {availabilityNote}
+          </span>
+        ) : null}
       </Link>
     );
   }
@@ -95,6 +103,11 @@ export function ScheduleEvent({
       {missing ? (
         <span aria-hidden className="block truncate font-medium">
           ! {missing}
+        </span>
+      ) : null}
+      {availabilityNote ? (
+        <span aria-hidden className="block truncate font-medium">
+          ! {availabilityNote}
         </span>
       ) : null}
     </Link>

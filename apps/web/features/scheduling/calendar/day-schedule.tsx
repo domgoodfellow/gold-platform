@@ -1,6 +1,7 @@
 import { ButtonLink } from '@/components/controls/button';
 import type { ResourceSchedule, UnassignedWork } from '@/lib/domain/scheduling/availability';
 import { clipWindow, todayInZone, type Window } from '@/lib/domain/scheduling/window';
+import { availabilityNote } from './availability-note';
 import {
   computeDisplayAxisBounds,
   hourMarksFor,
@@ -153,7 +154,14 @@ export function DaySchedule({
           ) : (
             resources.map((entry) => (
               <div key={entry.resource.id} className="flex min-w-44 flex-1 basis-44 flex-col border-l border-border">
-                <div className="flex h-9 shrink-0 items-end truncate px-2 pb-1 text-sm font-medium">{entry.resource.name}</div>
+                <div className="flex h-9 shrink-0 items-end truncate px-2 pb-1 text-sm font-medium">
+                  {entry.resource.name}
+                  <span className="sr-only">
+                    {entry.open.length === 0
+                      ? ', not working this day'
+                      : `, working ${entry.open.map((window) => `${formatHourLabel(window.startsAt, timezone)} to ${formatHourLabel(window.endsAt, timezone)}`).join(' and ')}`}
+                  </span>
+                </div>
                 <div className="relative flex-1 border-t border-border" style={{ minHeight: `${laneHeight}px` }}>
                   {hourMarks.slice(1, -1).map((mark) => (
                     <div
@@ -173,6 +181,23 @@ export function DaySchedule({
                     />
                   ))}
 
+                  {/* Time off and maintenance, drawn as what it is — text on a hatched block, so
+                      "not working" is never carried by shading alone and never looks like a job. */}
+                  {entry.exceptions.map((exception) => {
+                    const shown = clipWindow(exception.window, within);
+                    if (!shown) return null;
+                    return (
+                      <div
+                        key={exception.id}
+                        className="absolute inset-x-0.5 overflow-hidden rounded border border-dashed border-border bg-background/80 px-1.5 py-1 text-xs leading-tight text-muted"
+                        style={{ top: `${offsetPct(shown.startsAt)}%`, height: `${heightPct(shown.startsAt, shown.endsAt)}%` }}
+                      >
+                        <span className="sr-only">{`${entry.resource.name} is unavailable: ${exception.reason ?? 'time off'}`}</span>
+                        <span aria-hidden className="block truncate">Unavailable{exception.reason ? ` — ${exception.reason}` : ''}</span>
+                      </div>
+                    );
+                  })}
+
                   {entry.booked.map((booking) => {
                     // The appointment as it appears on *this* day — a booking that spans
                     // midnight is clipped to the day's own bounds for geometry only;
@@ -191,6 +216,7 @@ export function DaySchedule({
                           .filter((id) => id !== entry.resource.id)
                           .map((id) => resourceNames.get(id) ?? 'Another resource')}
                         missing={shortfalls[booking.workItemId]}
+                        availabilityNote={availabilityNote(booking.availabilityProblem, entry.resource.name)}
                         timezone={timezone}
                         variant="block"
                         style={{

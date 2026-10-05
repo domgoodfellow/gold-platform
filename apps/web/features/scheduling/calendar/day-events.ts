@@ -1,4 +1,5 @@
 import type { ScheduleDay } from '@/lib/domain/scheduling/availability';
+import { availabilityNote } from './availability-note';
 import { clipWindow, type Window } from '@/lib/domain/scheduling/window';
 
 /**
@@ -16,6 +17,8 @@ export type DayEvent = {
   displayWindow: Window;
   /** Who is on it, by name. Empty means scheduled with nobody assigned. */
   resourceNames: string[];
+  /** Set when any resource on it no longer works then — flagged on the entry, never a reason to drop it. */
+  availabilityNote?: string;
 };
 
 export function dayEvents(day: ScheduleDay): DayEvent[] {
@@ -23,9 +26,11 @@ export function dayEvents(day: ScheduleDay): DayEvent[] {
 
   for (const entry of day.resources) {
     for (const booking of entry.booked) {
+      const note = availabilityNote(booking.availabilityProblem, entry.resource.name);
       const existing = byWorkItem.get(booking.workItemId);
       if (existing) {
         existing.resourceNames.push(entry.resource.name);
+        existing.availabilityNote ??= note;
         continue;
       }
       byWorkItem.set(booking.workItemId, {
@@ -36,6 +41,7 @@ export function dayEvents(day: ScheduleDay): DayEvent[] {
         // previous day's start even on the day it only continues into.
         displayWindow: clipWindow(booking.window, day.within) ?? booking.window,
         resourceNames: [entry.resource.name],
+        availabilityNote: note,
       });
     }
   }

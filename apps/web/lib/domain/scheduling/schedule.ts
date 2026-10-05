@@ -86,6 +86,11 @@ export async function scheduleWorkItem(
       );
     }
     // The composite reference refusing a resource that is not in this tenant.
+    // The assignment trigger's own sentence names the resource and what is wrong ("Alex is not
+    // working at that time"), so it is passed through rather than replaced by a generic one.
+    if (error.code === 'GD013') {
+      throw new DomainError(error.message, 'scheduling.resource_not_working');
+    }
     if (error.code === '23503') {
       throw new DomainError('No such resource here.', 'scheduling.resource_not_found');
     }
@@ -120,6 +125,11 @@ export async function setWorkItemResources(
         'A resource on this job is already booked for part of that time.',
         'scheduling.double_booked',
       );
+    }
+    // The assignment trigger's own sentence names the resource and what is wrong ("Alex is not
+    // working at that time"), so it is passed through rather than replaced by a generic one.
+    if (error.code === 'GD013') {
+      throw new DomainError(error.message, 'scheduling.resource_not_working');
     }
     if (error.code === '23503') {
       throw new DomainError('No such resource here.', 'scheduling.resource_not_found');

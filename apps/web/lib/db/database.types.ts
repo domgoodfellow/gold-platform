@@ -7926,6 +7926,71 @@ export type Database = {
           },
         ]
       }
+      resource_availability_exceptions: {
+        Row: {
+          created_at: string
+          created_by: string
+          ends_at: string
+          id: string
+          kind: string
+          organization_id: string
+          reason: string | null
+          resource_id: string
+          starts_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ends_at: string
+          id?: string
+          kind?: string
+          organization_id: string
+          reason?: string | null
+          resource_id: string
+          starts_at: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ends_at?: string
+          id?: string
+          kind?: string
+          organization_id?: string
+          reason?: string | null
+          resource_id?: string
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_availability_exceptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_availability_exceptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_availability_exceptions_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "bookable_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "resource_availability_exceptions_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       resource_capabilities: {
         Row: {
           archived_at: string | null
@@ -8023,6 +8088,97 @@ export type Database = {
             foreignKeyName: "resource_capability_assignments_resource_same_org"
             columns: ["organization_id", "resource_id"]
             isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      resource_working_hours: {
+        Row: {
+          closes_at: string
+          created_at: string
+          created_by: string
+          day_of_week: number
+          id: string
+          opens_at: string
+          organization_id: string
+          resource_id: string
+        }
+        Insert: {
+          closes_at: string
+          created_at?: string
+          created_by: string
+          day_of_week: number
+          id?: string
+          opens_at: string
+          organization_id: string
+          resource_id: string
+        }
+        Update: {
+          closes_at?: string
+          created_at?: string
+          created_by?: string
+          day_of_week?: number
+          id?: string
+          opens_at?: string
+          organization_id?: string
+          resource_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_working_hours_schedule_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "resource_working_schedules"
+            referencedColumns: ["organization_id", "resource_id"]
+          },
+        ]
+      }
+      resource_working_schedules: {
+        Row: {
+          created_at: string
+          created_by: string
+          organization_id: string
+          resource_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          organization_id: string
+          resource_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          organization_id?: string
+          resource_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_working_schedules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_working_schedules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_working_schedules_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: true
+            referencedRelation: "bookable_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "resource_working_schedules_resource_same_org"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: true
             referencedRelation: "resources"
             referencedColumns: ["organization_id", "id"]
           },
@@ -9984,6 +10140,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_resource_availability_exception: {
+        Args: {
+          p_ends_at: string
+          p_reason: string
+          p_resource_id: string
+          p_starts_at: string
+        }
+        Returns: string
+      }
       create_resource_capability: {
         Args: { p_name: string; p_organization_id: string }
         Returns: string
@@ -10069,6 +10234,10 @@ export type Database = {
       default_platform_provider_account: {
         Args: { p_provider_key: string }
         Returns: string
+      }
+      delete_resource_availability_exception: {
+        Args: { p_id: string }
+        Returns: undefined
       }
       delete_resource_requirement: {
         Args: { p_id: string }
@@ -11367,6 +11536,21 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: string
       }
+      resource_availability_conflicts: {
+        Args: { p_from: string; p_organization_id: string; p_to: string }
+        Returns: {
+          problem: string
+          resource_id: string
+          work_item_id: string
+        }[]
+      }
+      resource_open_windows: {
+        Args: { p_from: string; p_organization_id: string; p_to: string }
+        Returns: {
+          during: unknown
+          resource_id: string
+        }[]
+      }
       revoke_invitation: { Args: { p_id: string }; Returns: undefined }
       revoke_plan_module: {
         Args: { p_module_id: string; p_plan_id: string }
@@ -11637,6 +11821,10 @@ export type Database = {
         Args: { p_membership_id: string; p_resource_id: string }
         Returns: undefined
       }
+      set_resource_working_hours: {
+        Args: { p_hours: Json; p_resource_id: string }
+        Returns: undefined
+      }
       set_type_bookable: {
         Args: {
           p_duration_minutes: number
@@ -11849,6 +12037,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_resource_availability_exception: {
+        Args: {
+          p_ends_at: string
+          p_id: string
+          p_reason: string
+          p_starts_at: string
+        }
+        Returns: undefined
+      }
       update_resource_requirement: {
         Args: {
           p_capability_ids: string[]
@@ -11921,6 +12118,10 @@ export type Database = {
         Returns: string
       }
       usable_modules: { Args: { p_organization_id: string }; Returns: string[] }
+      use_organization_hours: {
+        Args: { p_resource_id: string }
+        Returns: undefined
+      }
       work_at_risk: {
         Args: { p_organization_id: string }
         Returns: {

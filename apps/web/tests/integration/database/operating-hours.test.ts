@@ -400,7 +400,9 @@ describe('operating hours', () => {
   it('holds a bare `time` column only where a recurring local reading belongs', async () => {
     // The companion to scheduling.test.ts's "no timestamp without a zone" assertion. `time`
     // is right for "we open at nine" and wrong for everything else in this schema, so a
-    // second table growing one is a question worth being asked.
+    // second table growing one is a question worth being asked. `resource_working_hours` is the
+    // second, deliberately: a resource's weekly pattern is the same kind of recurring local
+    // reading, resolved against the same organization zone.
     const pg = new Client({
       connectionString:
         process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
@@ -418,7 +420,7 @@ describe('operating hours', () => {
             and not a.attisdropped
             and format_type(a.atttypid, a.atttypmod) = 'time without time zone'`,
       );
-      expect(rows.map((row) => row.table_name)).toEqual(['operating_hours']);
+      expect(rows.map((row) => row.table_name)).toEqual(['operating_hours', 'resource_working_hours']);
     } finally {
       await pg.end();
     }

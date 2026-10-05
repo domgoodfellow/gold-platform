@@ -14,8 +14,8 @@ slices it prepares for are named at the end.
 | Work Status | `work-items/statuses.ts`, `transitions.ts` | `work_item_statuses`, `work_item_transitions` | everywhere | `field.manage`; `change_work_item_status` | `/work/configuration` | I13; `releases_resource` mirrored to `work_items.status_releases_resource` | none |
 | Schedule window | `scheduling/schedule.ts` | `work_items.scheduled_during` (`tstzrange`), `occupies` | `listSchedule`, `listScheduleDays`, `resource_commitments` | `schedule_work_item`, `unschedule_work_item`, `create_booking` | work page form; Schedule is read-only | I6, I7, I9; window bounded and half-open | one window and one resource per item |
 | Availability | `scheduling/availability.ts` (`freeWindows`) | derived, none | Schedule, `bookableSlots`, Field Home | none | Schedule, `/book/[slug]` | I5, I6 | predicate written four times (§4) |
-| Operating hours | `scheduling/operating-hours.ts` | `operating_hours` | `openWindows` | `field.manage` | `/schedule/configuration` | no seeded week; empty means open | organization-wide only |
-| Resource | `resources/resources.ts` | `resources` (+ optional `membership_id`, `resource_class`; capabilities in `resource_capabilities` / `resource_capability_assignments`) | `listResources`, Schedule | `create_resource`, `set_resource_membership` | `/resources` | I18; one Resource per Membership | no working hours or time off (class and capabilities exist, I78; nothing reads them yet) |
+| Operating hours | `scheduling/operating-hours.ts` | `operating_hours` | `openWindows` (organization) | `field.manage` | `/schedule/configuration` | no seeded week; empty means open | organization-wide; a resource's own hours and time off are Resource Working Hours (I82) |
+| Resource | `resources/resources.ts` | `resources` (+ optional `membership_id`, `resource_class`; capabilities in `resource_capabilities` / `resource_capability_assignments`) | `listResources`, Schedule | `create_resource`, `set_resource_membership` | `/resources` | I18; one Resource per Membership | working hours and time off resolved by Work Order 6 (`resource_working_schedules`, `resource_working_hours`, `resource_availability_exceptions`, I82); organization hours stay advisory for a resource that inherits |
 | Assignment | none of its own | `work_items.resource_id` | as above | `schedule_work_item`, `create_work_item` | "Assign to" select | exclusion constraint | single resource only |
 | Location | `locations/locations.ts` | `locations`, `customer_locations`, `work_items.location_id` | Work, map | `create_location` | `/locations` | I18 | no service areas; coordinates optional |
 | Asset | `assets/assets.ts` | `assets`, `work_items.asset_id` | Work, readings | `asset.create` | `/assets` (module `assets`) | I18 | none against Resource; the two are kept apart |
@@ -95,10 +95,15 @@ payloads — was migrated in the same slice; none reads the old column, which no
 Scheduled work with nobody assigned is now drawn on Schedule as *Unassigned*.
 
 Work types now declare what resources they need (Work Order 5, `20261117000001`, I81): class, quantity
-and capabilities per requirement, with eligibility and job coverage derived. Remaining: resource
-working hours and time off, scheduling blocks, availability combined across the several resources a
-job needs (public booking supports a single one-resource requirement until then), travel and dispatch,
-and an event that distinguishes a first scheduling from a reschedule.
+and capabilities per requirement, with eligibility and job coverage derived. Resource working hours and time off
+are resolved (Work Order 6, `20261118000001`, I82): `app.resource_open_windows` is organization hours ∩
+resource hours − exceptions, read by Schedule and booking, with commitments still subtracted by
+`freeWindows`, and an appointment outside an assigned resource's open time is refused at the database.
+Remaining: availability combined across the several resources a job needs — a feasible combination for
+a type with more than one requirement (public booking supports a single one-resource requirement until
+then), one explanation of why a time is infeasible, booking notice and cadence rules, travel, routing,
+dispatch, weather and organization closures, and an event that distinguishes a first scheduling from a
+reschedule.
 
 ## 6. Events
 

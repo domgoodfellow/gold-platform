@@ -8,6 +8,7 @@ import {
   setWorkItemResources,
   unscheduleWorkItem,
 } from '@/lib/domain/scheduling/schedule';
+import { localDateTimeToInstant } from '@/lib/domain/scheduling/window';
 import { DomainError } from '@/lib/domain/errors';
 import { changeWorkItemStatus } from '@/lib/domain/work-items/transitions';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
@@ -90,7 +91,7 @@ export async function scheduleWorkItemAction(
 ): Promise<WorkActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
+  const { organization } = await requireOrganization(organizationId);
 
   try {
     // The overlap is not checked here and must not be. `work_item_resource_assignments_resource_not_double_booked`
@@ -103,8 +104,9 @@ export async function scheduleWorkItemAction(
         workItemId: String(formData.get('workItemId') ?? ''),
         // Every ticked box, or none: the form always shows who is on the job, so this is the set.
         resourceIds: formData.getAll('resourceIds').map(String).filter(Boolean),
-        startsAt: String(formData.get('startsAt') ?? ''),
-        endsAt: String(formData.get('endsAt') ?? ''),
+        // Typed as the business reads the clock, so it is converted in the business's zone — never the server's.
+        startsAt: localDateTimeToInstant(String(formData.get('startsAt') ?? ''), organization.timezone),
+        endsAt: localDateTimeToInstant(String(formData.get('endsAt') ?? ''), organization.timezone),
       });
     }
   } catch (error) {

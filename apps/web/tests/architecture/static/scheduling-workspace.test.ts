@@ -164,10 +164,12 @@ describe('listSchedule still works for its existing callers, and Week reuses the
   it('both callers share one grouping and one free/booked computation — no second availability algorithm', () => {
     expect(availability.match(/function groupBookedByResource\(/g)).toHaveLength(1);
     expect(availability.match(/function resourceSchedulesFor\(/g)).toHaveLength(1);
-    expect(availability).toContain('groupBookedByResource((committed.data ?? []) as unknown as CommittedRow[])');
+    expect(availability).toContain('groupBookedByResource((committed.data ?? []) as unknown as CommittedRow[], conflicts)');
     // listScheduleDays calls the same two helpers listSchedule does.
     const daysBody = availability.slice(availability.indexOf('export async function listScheduleDays('));
-    expect(daysBody).toContain('resourceSchedulesFor(resourceRows, bookedForDay, open, input.minimumMinutes)');
+    // Each lane's open windows come from the one resource-availability reader, never recomputed here.
+    expect(daysBody).toContain('resourceSchedulesFor(');
+    expect(daysBody).toContain('openForDay,');
   });
 
   it('reuses freeWindows and openWindows rather than recomputing availability', () => {
@@ -304,7 +306,8 @@ describe('Day shades each Resource’s own free time, never the day’s shared o
   it('lane background comes from entry.free, not the day-wide open windows', () => {
     const day = read(`${CALENDAR}/day-schedule.tsx`);
     expect(day).toContain('entry.free.map(');
-    expect(day).not.toMatch(/\bopen\.map\(/);
+    // The day-wide `open` prop is background context only; `entry.open` is a lane's own, read for assistive text.
+    expect(day).not.toMatch(/(?<![.\w])open\.map\(/);
   });
 });
 

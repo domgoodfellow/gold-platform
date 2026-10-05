@@ -67,6 +67,7 @@ export function WeekSchedule({
                         displayWindow={event.displayWindow}
                         resourceName={event.resourceNames.length > 0 ? event.resourceNames.join(' · ') : 'Unassigned'}
                         missing={shortfalls[event.workItemId]}
+                        availabilityNote={event.availabilityNote}
                         timezone={timezone}
                         variant="row"
                       />

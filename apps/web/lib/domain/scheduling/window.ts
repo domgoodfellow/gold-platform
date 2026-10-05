@@ -167,6 +167,18 @@ export function zonedTimeToInstant(date: string, time: string, timeZone: string)
 }
 
 /**
+ * What a person typed into a `datetime-local` field, as the instant it means in the tenant's zone.
+ * That control has no zone, so `new Date(value)` reads it in whatever zone the *server* runs in —
+ * a business in Amsterdam typing 10:00 on a server in Toronto got 10:00 Toronto, six hours off. A
+ * value that already carries an offset (`Z`, `+02:00`) names its instant and passes through; one
+ * that is not a date and a time is returned untouched for the caller's own validation to refuse.
+ */
+export function localDateTimeToInstant(value: string, timeZone: string): string {
+  const match = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2})?)$/.exec(value.trim());
+  return match ? zonedTimeToInstant(match[1], match[2], timeZone) : value;
+}
+
+/**
  * ISO 8601 day of the week: 1 is Monday through 7 is Sunday. No zone involved — the date string
  * is already the tenant's own calendar date. A number, never a name — which days a business
  * works is configuration; what to call them is the reader's locale.

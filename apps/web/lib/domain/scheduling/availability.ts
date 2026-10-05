@@ -3,9 +3,16 @@ import { DomainError } from '@/lib/domain/errors';
 import {
   listOperatingHours,
   openWindows,
-  type OperatingHours,
 } from '@/lib/domain/scheduling/operating-hours';
-import { overlaps, parseWindow, zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
+import {
+  listAvailabilityConflicts,
+  listResourceAvailabilityExceptions,
+  listResourceOpenWindows,
+  type AvailabilityConflict,
+  type AvailabilityProblem,
+  type ResourceAvailabilityException,
+} from '@/lib/domain/scheduling/resource-availability';
+import { clipWindow, overlaps, parseWindow, zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
 
 /**
  * **The** availability calculation (I5) — anything that wants to know what's free calls
@@ -15,6 +22,10 @@ import { overlaps, parseWindow, zonedDayRange, type Window } from '@/lib/domain/
  * `scheduleWorkItem` deliberately doesn't call this first. Operating hours are subtracted first
  * and are entirely the tenant's: no default working week exists, so a business with none
  * configured is treated as always open.
+ *
+ * What a resource is *open* for — organization hours ∩ its own working hours − its exceptions — is
+ * read from `listResourceOpenWindows` and never computed here; this file subtracts commitments from
+ * it. open is when it is expected to work, free is open with commitments removed.
  */
 
 /** A resource's day: what it is committed to, and what is left. */
@@ -31,7 +42,13 @@ export type ResourceSchedule = {
     resourceIds: string[];
     /** The kind of work it is — what a requirement is read against. */
     typeId: string;
+    /** Set when this work now sits outside this resource's hours or over its time off. Flagged, never moved. */
+    availabilityProblem: AvailabilityProblem | null;
   }[];
+  /** When this resource is expected to work: organization hours ∩ its own hours − its exceptions, commitments not removed. */
+  open: Window[];
+  /** The time off and maintenance overlapping the range, so a screen can say *why* it is not working. */
+  exceptions: ResourceAvailabilityException[];
   free: Window[];
 };
 
@@ -115,7 +132,11 @@ const COMMITTED_SELECT =
  * `work_items` row becomes a `ResourceSchedule['booked']` entry. Shared by `listSchedule` and
  * `listScheduleDays` so there is one reading of "what is this resource committed to", not two.
  */
-function groupBookedByResource(rows: CommittedRow[]): Map<string, ResourceSchedule['booked']> {
+function groupBookedByResource(
+  rows: CommittedRow[],
+  conflicts: AvailabilityConflict[] = [],
+): Map<string, ResourceSchedule['booked']> {
+  const problems = new Map(conflicts.map((c) => [`${c.workItemId}:${c.resourceId}`, c.problem]));
   const byResource = new Map<string, ResourceSchedule['booked']>();
   for (const row of rows) {
     // `supabase gen types` has no TypeScript for a Postgres range (D15).
@@ -128,7 +149,15 @@ function groupBookedByResource(rows: CommittedRow[]): Map<string, ResourceSchedu
     // and the same window in each, never a copy.
     for (const resourceId of resourceIds) {
       const existing = byResource.get(resourceId) ?? [];
-      existing.push({ workItemId: row.id, title: row.title, window, occupied, resourceIds, typeId: row.type_id });
+      existing.push({
+        workItemId: row.id,
+        title: row.title,
+        window,
+        occupied,
+        resourceIds,
+        typeId: row.type_id,
+        availabilityProblem: problems.get(`${row.id}:${resourceId}`) ?? null,
+      });
       byResource.set(resourceId, existing);
     }
   }
@@ -151,14 +180,21 @@ function unassignedFrom(rows: CommittedRow[]): UnassignedWork[] {
 function resourceSchedulesFor(
   resources: { id: string; name: string }[],
   booked: Map<string, ResourceSchedule['booked']>,
-  open: Window[],
+  openByResource: Map<string, Window[]>,
+  exceptions: ResourceAvailabilityException[],
+  within: Window,
   minimumMinutes?: number,
 ): ResourceSchedule[] {
   return resources.map((resource) => {
     const entries = booked.get(resource.id) ?? [];
+    const open = openByResource.get(resource.id) ?? [];
     return {
       resource: { id: resource.id, name: resource.name },
       booked: entries,
+      open,
+      exceptions: exceptions.filter(
+        (exception) => exception.resourceId === resource.id && overlaps(exception.window, within),
+      ),
       free: open.flatMap((window) =>
         freeWindows(
           window,
@@ -185,7 +221,7 @@ export async function listSchedule(
 ): Promise<ResourceSchedule[]> {
   const range = `[${input.within.startsAt},${input.within.endsAt})`;
 
-  const [resources, committed, hours] = await Promise.all([
+  const [resources, committed] = await Promise.all([
     db
       .from('resources')
       .select('id, name')
@@ -201,9 +237,6 @@ export async function listSchedule(
       // off every resource it is on.
       .eq('status_releases_resource', false)
       .overlaps('occupies', range),
-    input.on
-      ? listOperatingHours(db, { organizationId: input.organizationId })
-      : Promise.resolve([] as OperatingHours[]),
   ]);
 
   if (resources.error) {
@@ -213,13 +246,28 @@ export async function listSchedule(
     throw new DomainError(committed.error.message, 'availability.committed_failed');
   }
 
-  // The business's open periods, or the whole range if it has not said. Computed once, since hours are the organization's, not per resource.
-  const open = input.on
-    ? openWindows(input.on.date, input.on.timeZone, hours, input.within)
-    : [input.within];
+  const resourceRows = resources.data ?? [];
+  const resourceIds = resourceRows.map((resource) => resource.id);
 
-  const booked = groupBookedByResource((committed.data ?? []) as unknown as CommittedRow[]);
-  return resourceSchedulesFor(resources.data ?? [], booked, open, input.minimumMinutes);
+  // When each resource is open, from the one reader — or the whole range for everyone if the caller
+  // gave no date and zone, same as an empty hours set. Not computed per resource here.
+  const [openByResource, exceptions, conflicts] = input.on
+    ? await Promise.all([
+        listResourceOpenWindows(db, { organizationId: input.organizationId, within: input.within, resourceIds }),
+        listResourceAvailabilityExceptions(db, { organizationId: input.organizationId, within: input.within }),
+        listAvailabilityConflicts(db, { organizationId: input.organizationId, within: input.within }),
+      ])
+    : [new Map(resourceIds.map((id) => [id, [input.within]])), [], []];
+
+  const booked = groupBookedByResource((committed.data ?? []) as unknown as CommittedRow[], conflicts);
+  return resourceSchedulesFor(
+    resourceRows,
+    booked,
+    openByResource,
+    exceptions,
+    input.within,
+    input.minimumMinutes,
+  );
 }
 
 /** One tenant calendar day's schedule, as `listScheduleDays` returns it — one entry per requested date. */
@@ -290,7 +338,16 @@ export async function listScheduleDays(
 
   const resourceRows = resources.data ?? [];
   const committedRows = (committed.data ?? []) as unknown as CommittedRow[];
-  const bookedAcrossRange = groupBookedByResource(committedRows);
+  const [openAcrossRange, exceptionsAcrossRange, conflicts] = await Promise.all([
+    listResourceOpenWindows(db, {
+      organizationId: input.organizationId,
+      within: combined,
+      resourceIds: resourceRows.map((resource) => resource.id),
+    }),
+    listResourceAvailabilityExceptions(db, { organizationId: input.organizationId, within: combined }),
+    listAvailabilityConflicts(db, { organizationId: input.organizationId, within: combined }),
+  ]);
+  const bookedAcrossRange = groupBookedByResource(committedRows, conflicts);
   const unassignedAcrossRange = unassignedFrom(committedRows);
 
   return dayWindows.map(({ date, within }) => {
@@ -304,11 +361,28 @@ export async function listScheduleDays(
     }
 
     const open = openWindows(date, input.timeZone, hours, within);
+    // Each resource's own open windows, cut to this day: a window that runs past midnight is open on both days it covers.
+    const openForDay = new Map(
+      [...openAcrossRange].map(([resourceId, windows]) => [
+        resourceId,
+        windows.flatMap((window) => {
+          const clipped = clipWindow(window, within);
+          return clipped ? [clipped] : [];
+        }),
+      ]),
+    );
     return {
       date,
       within,
       open,
-      resources: resourceSchedulesFor(resourceRows, bookedForDay, open, input.minimumMinutes),
+      resources: resourceSchedulesFor(
+        resourceRows,
+        bookedForDay,
+        openForDay,
+        exceptionsAcrossRange,
+        within,
+        input.minimumMinutes,
+      ),
       // By the appointment the customer was told, not the buffered window: nobody's time is held.
       unassigned: unassignedAcrossRange.filter((work) => overlaps(work.window, within)),
     };
