@@ -7,6 +7,11 @@ import { RESOURCE_CLASS_LABELS } from '@/lib/domain/resources/resource-class';
 import { isEligible, listResourceRequirements, requirementTitle } from '@/lib/domain/work-items/requirements';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
+import { platformBillingEnvironment } from '@/lib/adapters/platform-billing';
+import {
+  describeServiceAccess,
+  getOrganizationServiceAccess,
+} from '@/lib/domain/platform-billing/service-access';
 import { listEnabledModules, MODULES_WITH_READINESS_CHECK, outstandingModuleSetup } from './modules';
 import { areaHref, areaLabel, MODULES, moduleConfiguration } from '@/lib/navigation';
 
@@ -21,6 +26,8 @@ export type OperationalState = 'setup' | 'live';
 export type ReadinessRequirement = {
   /** The module this came from — a stable key for a list React can render without re-keying. */
   key: string;
+  /** For a requirement that is not a module, which has no catalogue label to read. */
+  label?: string;
   /** Application state, in the platform's own voice — never a tenant's word, never advice. */
   message: string;
   /** Where this is resolved. */
@@ -56,13 +63,32 @@ export async function computeReadiness(
   input: { organizationId: string },
 ): Promise<Readiness> {
   const enabled = await listEnabledModules(db, { organizationId: input.organizationId });
-  const [outstanding, blocking] = await Promise.all([
+  const [outstanding, blocking, serviceIfLive] = await Promise.all([
     outstandingModuleSetup(db, { organizationId: input.organizationId, enabled }),
     launchBlockers(db, { organizationId: input.organizationId }),
+    // The one service-access resolver, asked the question Launch is: would this business be
+    // permitted once it is live? Setup's own leniency (`subscription_pending_setup`) ends there.
+    getOrganizationServiceAccess(db, {
+      organizationId: input.organizationId,
+      environment: platformBillingEnvironment(),
+      operationalState: 'live',
+    }),
   ]);
 
   const blockers: ReadinessRequirement[] = [];
   const warnings: ReadinessRequirement[] = [];
+
+  // Payment is mandatory at Launch (`service-access.ts`). Derived, never stored; and distinct from
+  // the module blockers below, which are the database's answer — the database does not know which
+  // billing environment this deployment bills in, so it cannot ask this one.
+  if (!serviceIfLive.permitted) {
+    blockers.push({
+      key: 'subscription',
+      label: 'Subscription',
+      message: `${describeServiceAccess(serviceIfLive)} Start the subscription before launching.`,
+      area: { href: `/organizations/${input.organizationId}/settings/plan`, label: 'Plan & usage' },
+    });
+  }
 
   for (const [key, message] of outstanding) {
     // Drafting is about producing this very setup, not a capability this business sells to
@@ -156,7 +182,7 @@ export async function computeSetupOverview(
 
   const moduleArea = (item: ReadinessRequirement, importance: SetupImportance): SetupArea => ({
     key: item.key,
-    label: MODULES.find((entry) => entry.key === item.key)?.label ?? item.key,
+    label: item.label ?? MODULES.find((entry) => entry.key === item.key)?.label ?? item.key,
     message: item.message,
     area: item.area,
     state: 'incomplete',

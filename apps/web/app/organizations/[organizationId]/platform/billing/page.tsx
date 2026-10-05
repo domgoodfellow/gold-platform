@@ -58,13 +58,23 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
   const organizationIds = [...new Set(subscriptions.map((s) => s.organizationId))];
   const tenants = await Promise.all(organizationIds.map((id) => getTenant(db, id)));
   const nameById = new Map(organizationIds.map((id, i) => [id, tenants[i]?.name ?? id]));
+  // A tenant staff cannot read is shown under the stricter (live) reading rather than a lenient guess.
+  const tenantById = new Map(organizationIds.map((id, i) => [id, tenants[i]]));
 
   // One row per organization: the resolver the tenant's own guard runs, not a second reading of `status`.
   const environment = platformBillingEnvironment();
   const accessById = new Map(
     await Promise.all(
       organizationIds.map(
-        async (id) => [id, await getOrganizationServiceAccess(db, { organizationId: id, environment })] as const,
+        async (id) =>
+          [
+            id,
+            await getOrganizationServiceAccess(db, {
+              organizationId: id,
+              environment,
+              operationalState: tenantById.get(id)?.operationalState ?? 'live',
+            }),
+          ] as const,
       ),
     ),
   );

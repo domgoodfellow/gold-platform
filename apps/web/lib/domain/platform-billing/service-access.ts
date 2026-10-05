@@ -13,8 +13,16 @@ import {
  * subscription (`organization_platform_subscriptions`). Nothing is stored for it; a stored
  * `locked` flag would be a second copy of those two facts, waiting to disagree.
  *
+ * **Payment is mandatory at Launch, not at Setup.** A business in SETUP that has never had a
+ * subscription (none, or a checkout that never completed) keeps its doors open so it can be
+ * configured; the moment it is LIVE the same facts lock it. A subscription that existed and
+ * lapsed (`past_due`, `unpaid`, `canceled`, `paused`) locks in either state — that is a
+ * restriction, not an onboarding gap. Launch itself asks the same resolver as if live
+ * (`computeReadiness`), so a business cannot go live into a lock.
+ *
  * Three things this is not:
- * - Not `organizations.operational_state`, which is SETUP/LIVE and stays a lifecycle.
+ * - Not `organizations.operational_state` — that stays a lifecycle, and is one *input* here, read
+ *   from the organization and never copied into a flag of its own.
  * - Not authentication. A locked person still signs in, and still reaches billing recovery.
  * - Not an entitlement. Which Features a Plan grants is `organization-plans.ts`; this decides
  *   only whether the tenant's workspaces open at all. No RLS policy reads it, and locking
@@ -46,6 +54,8 @@ export type ServiceAccessCode =
   /** The current base Plan is not billable (GOLD Internal). */
   | 'non_billable_plan'
   | 'subscription_serviceable'
+  /** In SETUP with a billable Plan and no subscription that ever took effect. Permitted; Launch is not. */
+  | 'subscription_pending_setup'
   | 'subscription_missing'
   | 'subscription_not_serviceable';
 
@@ -62,10 +72,20 @@ export type ServiceAccessFacts = {
   subscriptions: readonly Pick<OrganizationSubscription, 'status' | 'environment'>[];
   /** The environment this deployment bills in; null when billing is unconfigured, in which case every row counts. */
   environment: 'sandbox' | 'live' | null;
+  /** `organizations.operational_state`. Required: a caller that forgot it would silently choose a policy. */
+  operationalState: 'setup' | 'live';
 };
 
+/** A subscription in one of these never took effect, so it is an onboarding gap rather than a lapse. */
+const NEVER_TOOK_EFFECT: ReadonlySet<SubscriptionStatus> = new Set(['incomplete', 'incomplete_expired']);
+
 /** Pure. Every branch of the policy is here and nowhere else. */
-export function resolveServiceAccess({ plan, subscriptions, environment }: ServiceAccessFacts): ServiceAccess {
+export function resolveServiceAccess({
+  plan,
+  subscriptions,
+  environment,
+  operationalState,
+}: ServiceAccessFacts): ServiceAccess {
   if (!plan) {
     return { permitted: true, code: 'no_plan', planKey: null, subscriptionStatus: null };
   }
@@ -83,6 +103,14 @@ export function resolveServiceAccess({ plan, subscriptions, environment }: Servi
       subscriptionStatus: serviceable.status,
     };
   }
+  if (operationalState === 'setup' && relevant.every((s) => NEVER_TOOK_EFFECT.has(s.status))) {
+    return {
+      permitted: true,
+      code: 'subscription_pending_setup',
+      planKey: plan.key,
+      subscriptionStatus: relevant[0]?.status ?? null,
+    };
+  }
   const shown = relevant[0];
   if (!shown) {
     return { permitted: false, code: 'subscription_missing', planKey: plan.key, subscriptionStatus: null };
@@ -97,7 +125,11 @@ export function resolveServiceAccess({ plan, subscriptions, environment }: Servi
 
 export async function getOrganizationServiceAccess(
   db: Db,
-  input: { organizationId: string; environment: 'sandbox' | 'live' | null },
+  input: {
+    organizationId: string;
+    environment: 'sandbox' | 'live' | null;
+    operationalState: 'setup' | 'live';
+  },
 ): Promise<ServiceAccess> {
   const assignment = await currentPlanAssignment(db, { organizationId: input.organizationId });
   const plan = assignment ? await getPlanById(db, assignment.planId) : null;
@@ -109,6 +141,7 @@ export async function getOrganizationServiceAccess(
     plan: plan ? { key: plan.key, billable: plan.billable } : null,
     subscriptions,
     environment: input.environment,
+    operationalState: input.operationalState,
   });
 }
 
@@ -121,6 +154,8 @@ export function describeServiceAccess(access: ServiceAccess): string {
       return 'On a non-billable Plan; no subscription is required.';
     case 'subscription_serviceable':
       return `The GildOps subscription is ${access.subscriptionStatus}.`;
+    case 'subscription_pending_setup':
+      return 'Setup is open. A GildOps subscription is required before this business can launch.';
     case 'subscription_missing':
       return 'No GildOps subscription is on record for this Plan.';
     case 'subscription_not_serviceable':

@@ -111,8 +111,10 @@ export default async function SetupPage({
           <Card id="agent-setup" as="section" aria-labelledby="setup-agent-heading">
             <SectionHeading id="setup-agent-heading">Set up faster with Agent</SectionHeading>
             <Hint className="mt-1 max-w-2xl">
-              Describe how the business works. GildOps can draft configuration for you to read and
-              change first — nothing takes effect until you apply it.
+              {defaultDescription
+                ? 'Review what we learned during discovery and complete or correct anything that changed.'
+                : 'Describe how the business works.'}{' '}
+              GildOps can draft configuration for you to read and change first — nothing takes effect until you apply it.
             </Hint>
 
             {/* Application state in the platform's own voice. A deployment with no drafting behind

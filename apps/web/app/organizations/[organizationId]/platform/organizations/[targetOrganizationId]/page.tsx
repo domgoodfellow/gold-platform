@@ -34,7 +34,7 @@ export default async function PlatformOrganizationOverview({ params }: PageProps
     currentPlanAssignment(db, { organizationId }), findGoldInternalOrganization(db, myOrganizations),
   ]);
   // The same resolver the tenant's own guard runs — staff read the answer, never reinterpret a Stripe status.
-  const access = await getOrganizationServiceAccess(db, { organizationId, environment: platformBillingEnvironment() });
+  const access = await getOrganizationServiceAccess(db, { organizationId, environment: platformBillingEnvironment(), operationalState: tenant.operationalState });
   const canInitializeGold = canOpenBusiness && !currentPlan && !goldInternal;
 
   return <AppPage><TenantWorkspaceHeader goldId={goldId} id={tenant.id} name={tenant.name} currency={tenant.currency} canOpenBusiness={canOpenBusiness} />

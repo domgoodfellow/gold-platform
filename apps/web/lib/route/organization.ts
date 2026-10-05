@@ -50,10 +50,11 @@ const resolveMembership = cache(
 );
 
 const resolveServiceAccess = cache(async (organizationId: string): Promise<ServiceAccess> => {
-  const { db } = await resolveMembership(organizationId);
+  const { db, organization } = await resolveMembership(organizationId);
   return getOrganizationServiceAccess(db, {
     organizationId,
     environment: platformBillingEnvironment(),
+    operationalState: organization.operationalState,
   });
 });
 

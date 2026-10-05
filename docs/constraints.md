@@ -1740,6 +1740,20 @@ policy), which is also why locking writes nothing: data is refused a door, never
 rewritten. Authentication is a separate question and is unaffected; platform administration does not
 pass through this guard at all.
 
+**Amended: payment is mandatory at Launch, not at Setup.** A Sales-founded business is entitled
+to a billable Plan the moment `hand_off_accepted_proposal` creates it, but subscribing is its
+owner's own later act (checkout), so "billable Plan, no subscription" described every such
+business and locked its owner out of Setup. `operational_state` is now one *input* to the same
+resolver: in SETUP, no subscription (or only a checkout that never completed — `incomplete`,
+`incomplete_expired`) reads as `subscription_pending_setup`, permitted; a subscription that took
+effect and lapsed still locks in either state. Launch asks the resolver as if live
+(`computeReadiness` adds a `subscription` blocker), so a business cannot go live into a lock; the
+database launch trigger does not know the billing environment and does not carry this check, and
+a business launched around it is locked on its next request, never left half-open. Setup is not
+a bypass of entitlement (still the Plan), of the subscription (still Stripe's fact) or of
+authorization (membership is checked first). Nothing in the Python runtime consults this yet, so
+Setup does not widen what a provider-backed meter may spend.
+
 **Deferred edges, recorded rather than guessed.** `past_due` locks immediately; a grace period is a
 one-line change to the mapping. A Plan assignment that has lapsed reads as *no current Plan* and so
 as unlocked. A locked business cannot reach General settings, so one with no currency cannot start

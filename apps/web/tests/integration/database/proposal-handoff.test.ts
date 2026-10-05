@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { getPlan } from '@/lib/domain/catalogue/plans';
 import { acceptCommercialProposal, buildCommercialProposal, markCommercialProposalSent } from '@/lib/domain/customers/commercial-proposals';
 import { createCustomer, getCustomer } from '@/lib/domain/customers/customers';
@@ -9,7 +9,22 @@ import { upsertDiscoverySnapshotAnswers } from '@/lib/domain/customers/discovery
 import { claimProposalInvite, createProposalInvite } from '@/lib/domain/customers/proposal-invites';
 import { getFoundingHandoff, getProposalHandoff, handoffAcceptedProposal } from '@/lib/domain/customers/proposal-handoff';
 import { currentPlanAssignment, listOrganizationPlanAgreements } from '@/lib/domain/catalogue/organization-plans';
+import { computeReadiness, launchOrganization } from '@/lib/domain/tenancy/lifecycle';
+import { requireOrganization, requireOrganizationForBillingRecovery, serviceLockedHref } from '@/lib/route/organization';
 import { foundBusiness } from '@/tests/support/founding';
+import { applySubscriptionEvent } from '@/tests/support/subscription-events';
+
+// The route guards, observed as thrown values; `getDb` returns whichever signed-in client the test names.
+vi.mock('next/navigation', () => ({
+  redirect: (url: string) => {
+    throw new Error(`REDIRECT:${url}`);
+  },
+  notFound: () => {
+    throw new Error('NOT_FOUND');
+  },
+}));
+let currentDb: SupabaseClient;
+vi.mock('@/lib/db/server', () => ({ getDb: async () => currentDb }));
 
 /**
  * Slice 10: "Create this business in GildOps," from an accepted proposal. Proves the terminal
@@ -212,4 +227,88 @@ describe('handing off an accepted proposal', () => {
       handoffAcceptedProposal(repDb, { organizationId: gildOpsOrgId, proposalId: draft.id }),
     ).rejects.toMatchObject({ code: 'proposal_handoff.not_accepted' });
   });
+
+  /**
+   * The defect this slice closes. A Sales-founded business holds a billable Plan the moment it
+   * exists (the handoff entitles it) but no subscription — checkout is the owner's own act, later.
+   * `requireOrganization` used to read that as a lock, so the owner could never reach Setup.
+   * No subscription row is inserted to get past it: the owner is simply let in, and Launch is
+   * what asks for payment.
+   */
+  it('lets the founded owner into Setup with no subscription, and asks for payment at Launch', async () => {
+    const handoff = await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
+    const orgId = handoff!.createdOrganizationId;
+    process.env.STRIPE_SECRET_KEY = 'sk_test_handoff_suite';
+
+    const ownerDb = anonClient();
+    const { error } = await ownerDb.auth.signInWithPassword({ email: ownerEmail, password: ownerPassword });
+    if (error) throw error;
+    currentDb = ownerDb;
+
+    // Entitled, billable, unsubscribed, in Setup — the exact state that used to lock.
+    expect((await currentPlanAssignment(ownerDb, { organizationId: orgId }))!.planId).toBe(planId);
+    const { count } = await ownerDb
+      .from('organization_platform_subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId);
+    expect(count).toBe(0);
+
+    await expect(requireOrganization(orgId)).resolves.toBeTruthy();
+    const { access, organization } = await requireOrganizationForBillingRecovery(orgId);
+    expect(organization.operationalState).toBe('setup');
+    expect(access).toMatchObject({ permitted: true, code: 'subscription_pending_setup' });
+
+    // Distinct from READY and LIVE: Setup is open, Launch is not.
+    const readiness = await computeReadiness(ownerDb, { organizationId: orgId });
+    expect(readiness.blockers.map((b) => b.key)).toContain('subscription');
+    await expect(launchOrganization(ownerDb, { organizationId: orgId })).rejects.toMatchObject({
+      code: 'organizations.not_ready',
+    });
+    expect((await requireOrganizationForBillingRecovery(orgId)).organization.operationalState).toBe('setup');
+  }, 60_000);
+
+  it('launches once a subscription is serviceable, and locks a launched business whose subscription lapses', async () => {
+    const handoff = await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
+    const orgId = handoff!.createdOrganizationId;
+    const ownerDb = anonClient();
+    const { data: signedIn, error } = await ownerDb.auth.signInWithPassword({ email: ownerEmail, password: ownerPassword });
+    if (error) throw error;
+    currentDb = ownerDb;
+
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      const customerReference = `cus_${randomUUID().slice(0, 12)}`;
+      await pg.query(
+        `insert into public.platform_billing_customers (organization_id, environment, customer_reference, created_by)
+         values ($1, 'sandbox', $2, $3)`,
+        [orgId, customerReference, signedIn.user!.id],
+      );
+      const subscriptionReference = `sub_${randomUUID().slice(0, 12)}`;
+      const at = 1_900_000_000;
+      const send = (status: string, createdAt: number) =>
+        applySubscriptionEvent(pg, {
+          type: 'customer.subscription.updated',
+          customerReference,
+          subscriptionReference,
+          status,
+          createdAt,
+          items: [{ priceReference: `price_${randomUUID().slice(0, 8)}` }],
+        });
+
+      await send('active', at);
+      expect((await computeReadiness(ownerDb, { organizationId: orgId })).blockers.map((b) => b.key)).not.toContain(
+        'subscription',
+      );
+      await launchOrganization(ownerDb, { organizationId: orgId });
+      expect((await requireOrganizationForBillingRecovery(orgId)).organization.operationalState).toBe('live');
+      await expect(requireOrganization(orgId)).resolves.toBeTruthy();
+
+      // Live, and no longer in Setup's leniency: a lapse is a lock.
+      await send('canceled', at + 10);
+      await expect(requireOrganization(orgId)).rejects.toThrow(`REDIRECT:${serviceLockedHref(orgId)}`);
+    } finally {
+      await pg.end();
+    }
+  }, 60_000);
 });

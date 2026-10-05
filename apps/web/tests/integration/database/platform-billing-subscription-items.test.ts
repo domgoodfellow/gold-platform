@@ -618,10 +618,10 @@ describe('service access still reads the subscription status and nothing else', 
       items: [{ priceReference: 'price_a' }, { priceReference: 'price_b' }, { priceReference: 'price_c' }],
     }));
     expect((await parent(org)).reconciliation_state).toBe('mismatch');
-    expect(await getOrganizationServiceAccess(org.db, { organizationId: org.organizationId, environment: 'sandbox' })).toMatchObject({ permitted: true, code: 'subscription_serviceable' });
+    expect(await getOrganizationServiceAccess(org.db, { organizationId: org.organizationId, environment: 'sandbox', operationalState: 'live' })).toMatchObject({ permitted: true, code: 'subscription_serviceable' });
 
     await applySubscriptionEvent(pg, event(customer, 'sub_x', { status: 'past_due', items: [{ priceReference: 'price_a' }] }));
-    expect((await getOrganizationServiceAccess(org.db, { organizationId: org.organizationId, environment: 'sandbox' })).permitted).toBe(false);
+    expect((await getOrganizationServiceAccess(org.db, { organizationId: org.organizationId, environment: 'sandbox', operationalState: 'live' })).permitted).toBe(false);
   });
 });
 

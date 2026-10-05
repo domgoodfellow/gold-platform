@@ -45,7 +45,13 @@ const CONNECTION =
 
 type Tenant = { db: SupabaseClient; organizationId: string; userId: string };
 
-async function newTenant(label: string): Promise<Tenant> {
+/**
+ * A business founded through the real provisioning door, then taken live. Every business starts in
+ * SETUP, where a billable Plan with no subscription is deliberately not locked (`service-access.ts`);
+ * the lock tests below are about a business that is running, so they start there. The Setup cases
+ * ask for `{ live: false }`.
+ */
+async function newTenant(label: string, { live = true }: { live?: boolean } = {}): Promise<Tenant> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -61,6 +67,9 @@ async function newTenant(label: string): Promise<Tenant> {
     name: `${label} ${randomUUID().slice(0, 8)}`,
     currency: 'CAD',
   });
+  if (live) {
+    await pg.query("update public.organizations set operational_state = 'live' where id = $1", [organizationId]);
+  }
   return { db, organizationId, userId: created.user.id };
 }
 
@@ -224,6 +233,7 @@ describe('an organization with a billable Plan', () => {
     const access = await getOrganizationServiceAccess(staff, {
       organizationId: tenant.organizationId,
       environment: 'sandbox',
+      operationalState: 'live',
     });
     expect(access).toMatchObject({ permitted: false, code: 'subscription_missing' });
   }, 60_000);
@@ -239,5 +249,38 @@ describe('an organization with a non-billable Plan (GOLD Internal is one)', () =
     await expect(asTenant(tenant, () => requireOrganization(tenant.organizationId))).resolves.toBeTruthy();
     const { access } = await asTenant(tenant, () => requireOrganizationForBillingRecovery(tenant.organizationId));
     expect(access).toMatchObject({ permitted: true, code: 'non_billable_plan' });
+  }, 60_000);
+});
+
+describe('a billable Plan while the business is still in Setup', () => {
+  it('opens Setup and every operational door without a subscription, and keeps the recovery door open', async () => {
+    const tenant = await newTenant('access-setup', { live: false });
+    await assignPlan(tenant, true);
+
+    await expect(asTenant(tenant, () => requireOrganization(tenant.organizationId))).resolves.toBeTruthy();
+    const { access } = await asTenant(tenant, () => requireOrganizationForBillingRecovery(tenant.organizationId));
+    expect(access).toMatchObject({ permitted: true, code: 'subscription_pending_setup', subscriptionStatus: null });
+  }, 60_000);
+
+  it('does not hide a lapse: a subscription that took effect and ended locks even in Setup', async () => {
+    const tenant = await newTenant('access-setup-lapsed', { live: false });
+    await assignPlan(tenant, true);
+    const customer = await seedCustomerReference(tenant);
+    const subscription = `sub_${randomUUID().slice(0, 12)}`;
+
+    await subscriptionEvent(customer, subscription, 'customer.subscription.created', 'active');
+    await subscriptionEvent(customer, subscription, 'customer.subscription.updated', 'past_due');
+
+    await expect(asTenant(tenant, () => requireOrganization(tenant.organizationId))).rejects.toThrow(
+      `REDIRECT:${serviceLockedHref(tenant.organizationId)}`,
+    );
+  }, 60_000);
+
+  it('is no bypass for a stranger: Setup does not make the business readable to a non-member', async () => {
+    const setupTenant = await newTenant('access-setup-owner', { live: false });
+    const stranger = await newTenant('access-setup-stranger');
+    await assignPlan(setupTenant, true);
+
+    await expect(asTenant(stranger, () => requireOrganization(setupTenant.organizationId))).rejects.toThrow('NOT_FOUND');
   }, 60_000);
 });
