@@ -10,6 +10,7 @@ import type { FormEditorState } from '@/lib/domain/forms/forms';
 
 const actions = vi.hoisted(() => ({
   createFormDraftAction: vi.fn(async () => ({ error: null })),
+  setPortalFormAction: vi.fn(async () => ({ error: null })),
   publishFormAction: vi.fn(async () => ({ error: null })),
   renameFormAction: vi.fn(async () => ({ error: null })),
   saveFormDraftAction: vi.fn(async () => ({ error: null })),
@@ -31,7 +32,8 @@ const DEFINITION: FormDefinition = {
 
 function state(overrides: Partial<FormEditorState> = {}): FormEditorState {
   return {
-    form: { id: 'f1', name: 'Quote', slug: 'quote', archived: false, createdFromTemplateKey: null },
+    form: { id: 'f1', name: 'Quote', slug: 'quote', publicKey: 'abcdef012345', archived: false, createdFromTemplateKey: null },
+    placements: { websitePublished: false, websiteDraft: false, portal: false, booking: false },
     published: null,
     working: { id: 'r1', number: 1, status: 'draft', definition: DEFINITION, publishedAt: null },
     history: [],
@@ -42,7 +44,7 @@ function state(overrides: Partial<FormEditorState> = {}): FormEditorState {
 function renderBuilder(next = state()) {
   return render(
     <WorkspaceRailProvider>
-      <FormBuilder organizationId="o1" state={next} publicPath="/forms/acme/quote" />
+      <FormBuilder organizationId="o1" state={next} distribution={{ origin: 'http://localhost:3000', organizationSlug: 'acme', siteHostname: null }} />
     </WorkspaceRailProvider>,
   );
 }
@@ -128,7 +130,7 @@ describe('form builder', () => {
   it('keeps the live version visible and says so while a draft is open', () => {
     renderBuilder(state({ published: { id: 'p1', number: 1, status: 'published', definition: DEFINITION, publishedAt: '2026-01-01T00:00:00Z' }, working: { id: 'r2', number: 2, status: 'draft', definition: DEFINITION, publishedAt: null } }));
     expect(screen.getByText(/Visitors keep seeing Revision 1/)).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Open public form' }).getAttribute('href')).toBe('/forms/acme/quote');
+    expect(screen.getByRole('link', { name: 'Open public form' }).getAttribute('href')).toBe('/f/abcdef012345');
   });
 
   it('with no draft, offers to edit a published form instead of editing it in place', async () => {

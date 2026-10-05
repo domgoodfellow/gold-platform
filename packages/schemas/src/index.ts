@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { FormPublicationSchema } from './forms';
 
 /**
  * What a server action validates before ever reaching the domain layer or the database — the
@@ -43,6 +44,14 @@ const PublicTextItemSchema = z.object({
 }).strict();
 
 export const PublicHomepageSectionSchema = z.discriminatedUnion('kind', [
+  // A reference to a form, never a copy of one: the fields are read from the form's published
+  // revision when the page is served.
+  z.object({
+    kind: z.literal('form'),
+    heading: z.string().trim().min(1).max(240),
+    body: z.string().max(600),
+    formId: z.string().uuid(),
+  }).strict(),
   z.object({
     kind: z.literal('hero'),
     eyebrow: z.string().trim().min(1).max(100),
@@ -92,10 +101,18 @@ const PUBLIC_HOMEPAGE_KINDS = [
   'hero', 'problem', 'capabilities', 'process', 'trust', 'cta',
 ] as const;
 
+/**
+ * The six sections are positional and fixed. One optional `form` section may sit immediately
+ * before the closing call to action; nothing else may be added, removed or moved.
+ */
 export const PublicHomepageSectionsSchema = z.array(PublicHomepageSectionSchema)
-  .length(PUBLIC_HOMEPAGE_KINDS.length)
+  .min(PUBLIC_HOMEPAGE_KINDS.length)
+  .max(PUBLIC_HOMEPAGE_KINDS.length + 1)
   .superRefine((sections, context) => {
-    for (const [index, kind] of PUBLIC_HOMEPAGE_KINDS.entries()) {
+    const expected = sections.length === PUBLIC_HOMEPAGE_KINDS.length + 1
+      ? [...PUBLIC_HOMEPAGE_KINDS.slice(0, 5), 'form', 'cta']
+      : [...PUBLIC_HOMEPAGE_KINDS];
+    for (const [index, kind] of expected.entries()) {
       if (sections[index]?.kind !== kind) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
@@ -125,6 +142,8 @@ export const PublicSiteProjectionSchema = z.object({
   seoTitle: z.string(),
   seoDescription: z.string(),
   sections: PublicHomepageSectionsSchema,
+  /** The published forms the sections name, by form id — read from the forms, not stored in the website. */
+  forms: z.record(z.string().uuid(), FormPublicationSchema).default({}),
   profile: z.object({
     displayName: z.string(),
     tagline: z.string().nullable(),

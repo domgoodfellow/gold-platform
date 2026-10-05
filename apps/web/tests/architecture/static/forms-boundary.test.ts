@@ -62,9 +62,9 @@ describe('the public address names the form; a caller never supplies an id', () 
     expect(existsSync(`${WEB}/app/(public)/forms/[organizationSlug]/[formSlug]/page.tsx`)).toBe(true);
   });
 
-  it('reads and writes only through the two anonymous doors', () => {
+  it('reads and writes only through the anonymous doors, and writes through exactly one', () => {
     const source = read('lib/domain/forms/public-forms.ts');
-    expect([...source.matchAll(/\.rpc\('([a-z_]+)'/g)].map((match) => match[1]).sort()).toEqual(['published_form', 'submit_public_form']);
+    expect([...source.matchAll(/\.rpc\('([a-z_]+)'/g)].map((match) => match[1]).sort()).toEqual(['published_form', 'published_form_by_key', 'published_hostname_form', 'submit_public_form_by_key']);
     expect(source).not.toMatch(/\.from\(/);
   });
 
@@ -84,7 +84,7 @@ describe('authoring does not reach into infrastructure', () => {
 describe('a form does not decide what happens after it is submitted', () => {
   it('writes no customer, message or booking when a submission lands', () => {
     for (const file of filesUnder('lib/domain/forms')) {
-      expect(read(file), file).not.toMatch(/customers|createCustomer|sendMessage|create_booking|automation/);
+      expect(read(file), file).not.toMatch(/createCustomer|\.from\('customers'\)|sendMessage|create_booking|automation/);
     }
   });
 });
@@ -93,10 +93,65 @@ describe('every Studio forms action checks the caller before doing anything', ()
   it('calls requireOrganization first in each exported action', () => {
     const source = read('app/organizations/[organizationId]/studio/forms/actions.ts');
     const actions = source.split(/export async function /).slice(1);
-    expect(actions.length).toBeGreaterThanOrEqual(6);
+    expect(actions.length).toBeGreaterThanOrEqual(9);
     for (const action of actions) {
-      const body = action.slice(action.indexOf('Promise<FormActionResult> {') + 'Promise<FormActionResult> {'.length);
+      // The body starts after the line that closes the signature: `}): Promise<...> {`.
+      const signatureEnd = /\): Promise<[^\n]*> \{\r?\n/.exec(action);
+      const body = action.slice((signatureEnd?.index ?? 0) + (signatureEnd?.[0].length ?? 0));
       expect(body.trimStart().startsWith('await requireOrganization('), action.split('(')[0]).toBe(true);
     }
+  });
+});
+
+describe('a form is placed, not copied', () => {
+  it('lets a website section name a form by id and nothing of its fields', () => {
+    const schema = readFileSync(`${WEB}/../../packages/schemas/src/index.ts`, 'utf8');
+    const section = schema.slice(schema.indexOf("kind: z.literal('form')"), schema.indexOf("kind: z.literal('hero')"));
+    expect(section).toContain('formId');
+    expect(section).not.toMatch(/definition|fields|options/);
+  });
+
+  it('draws every placement through the one renderer', () => {
+    expect(read('features/public-site/form-section.tsx')).toMatch(/KeyedPublicForm|FormPreview/);
+    expect(read('features/forms/keyed-public-form.tsx')).toContain("./public-form");
+    expect(read('features/forms/form-preview.tsx')).toContain("./form-renderer");
+    expect(read('features/portal-access/portal-forms.tsx')).toContain("@/features/forms/public-form");
+    expect(read('app/(embed)/embed/forms/[publicKey]/page.tsx')).toContain('KeyedPublicForm');
+  });
+
+  it('keeps each owner\'s reference in its own domain: Forms imports none of the surfaces that place it', () => {
+    for (const file of filesUnder('lib/domain/forms')) {
+      expect(read(file), file).not.toMatch(/domain\/(portal|public-site|booking|customers)\//);
+    }
+  });
+
+  it('has no placement table that points at several owners', () => {
+    const migration = read('../../supabase/migrations/20261115000001_a_form_is_placed_not_copied.sql');
+    expect(migration).not.toMatch(/create table public\.form_placements/);
+    expect(migration).toContain('create table public.portal_forms');
+  });
+
+  it('lets a portal response name a customer only through the caller\'s own binding', () => {
+    const source = read('lib/domain/portal/portal-forms.ts');
+    expect(source).not.toMatch(/customerId|customer_id/);
+  });
+
+  it('serves the embed to other sites and nothing else, and frames nothing else', () => {
+    const config = read('next.config.ts');
+    expect(config).toContain('"/embed/:path*"');
+    expect(config).toContain('frame-ancestors *');
+    expect(config).toContain("frame-ancestors 'self'");
+    const embed = read('app/(embed)/embed/forms/[publicKey]/page.tsx');
+    expect(embed).not.toMatch(/organizationId|requireOrganization|studio/);
+  });
+});
+
+describe('a public write ends only the session it began', () => {
+  it('signs out nowhere but the helper and the sign-out screen', () => {
+    const offenders: string[] = [];
+    for (const file of [...filesUnder('lib/domain'), ...filesUnder('features'), ...filesUnder('app')]) {
+      if (/auth\.signOut\(/.test(read(file))) offenders.push(file);
+    }
+    expect(offenders.sort()).toEqual(['lib/domain/identity/anonymous-session.ts', 'lib/domain/identity/credentials.ts']);
   });
 });

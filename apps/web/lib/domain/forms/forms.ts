@@ -1,4 +1,4 @@
-import { FormDefinitionSchema, formIsPublishable, type FormDefinition } from '@gold/schemas';
+import { FormDefinitionSchema, formIsPublishable, type FormDefinition, type FormSource } from '@gold/schemas';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 
@@ -9,10 +9,20 @@ import { DomainError } from '@/lib/domain/errors';
  * that proves `organization.manage` itself; nothing here decides who may act.
  */
 
+/** Where a form is used. Each owner answers for its own reference; Forms asks them and keeps no list. */
+export type FormPlacements = {
+  websitePublished: boolean;
+  websiteDraft: boolean;
+  portal: boolean;
+  booking: boolean;
+};
+
 export type FormListEntry = {
   id: string;
   name: string;
   slug: string;
+  publicKey: string;
+  placements: FormPlacements;
   archived: boolean;
   publishedRevisionNumber: number | null;
   publishedAt: string | null;
@@ -40,7 +50,8 @@ export type FormHistoryEntry = {
 };
 
 export type FormEditorState = {
-  form: { id: string; name: string; slug: string; archived: boolean; createdFromTemplateKey: string | null };
+  form: { id: string; name: string; slug: string; publicKey: string; archived: boolean; createdFromTemplateKey: string | null };
+  placements: FormPlacements;
   published: FormRevision | null;
   working: FormRevision | null;
   history: FormHistoryEntry[];
@@ -50,8 +61,10 @@ export type FormSubmissionEntry = {
   id: string;
   submittedAt: string;
   revisionId: string;
-  source: string;
+  source: FormSource;
   answers: Record<string, unknown>;
+  customerId: string | null;
+  customerName: string | null;
 };
 
 export type FormSubmissionsRead = {
@@ -68,9 +81,30 @@ export type FormTemplate = {
   definition: FormDefinition;
 };
 
+export type FormCustomerCandidate = { id: string; name: string; email: string | null; phone: string | null };
+
 /** The one place a form's address is spelled, so a link shown in Studio is the link the public route serves. */
 export function publicFormPath(organizationSlug: string, formSlug: string): string {
   return `/forms/${organizationSlug}/${formSlug}`;
+}
+
+/** The address a business should share: it keeps working when the business or the form is renamed. */
+export function stableFormPath(publicKey: string): string {
+  return `/f/${publicKey}`;
+}
+
+/** The snippet another site pastes in: one element and one script, both ours. */
+export function embedSnippet(origin: string, publicKey: string): string {
+  return `<div data-gildops-form="${publicKey}"></div><script async src="${origin}/embed.js"></script>`;
+}
+
+/** Where a form is used, in words, for the places that say so. */
+export function placementLabels(placements: FormPlacements): string[] {
+  return [
+    placements.websitePublished ? 'Website' : placements.websiteDraft ? 'Website (draft)' : null,
+    placements.portal ? 'Portal' : null,
+    placements.booking ? 'Booking' : null,
+  ].filter((label): label is string => label !== null);
 }
 
 function fail(error: { code?: string; message: string }, fallback: string): never {
@@ -171,4 +205,24 @@ export async function listFormSubmissions(db: Db, organizationId: string, formId
   if (!data) return null;
   const raw = data as unknown as FormSubmissionsRead;
   return { ...raw, revisions: raw.revisions.map((revision) => ({ ...revision, definition: FormDefinitionSchema.parse(revision.definition) })) };
+}
+
+/** Customers who already hold a contact point this response gave — by CRM's own matching rule. */
+export async function formSubmissionCustomerCandidates(db: Db, organizationId: string, submissionId: string): Promise<FormCustomerCandidate[]> {
+  const { data, error } = await db.rpc('form_submission_customer_candidates', { p_organization_id: organizationId, p_submission_id: submissionId });
+  if (error) fail(error, 'The customers could not be read.');
+  return (data ?? []) as unknown as FormCustomerCandidate[];
+}
+
+/** A person with authority says who a response is about; `null` clears it. A response is not a customer until somebody says so. */
+export async function linkFormSubmissionCustomer(
+  db: Db,
+  input: { organizationId: string; submissionId: string; customerId: string | null },
+): Promise<void> {
+  const { error } = await db.rpc('link_form_submission_customer', {
+    p_organization_id: input.organizationId,
+    p_submission_id: input.submissionId,
+    p_customer_id: input.customerId as string,
+  });
+  if (error) fail(error, 'The response was not linked.');
 }

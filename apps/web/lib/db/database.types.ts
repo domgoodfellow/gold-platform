@@ -2989,6 +2989,7 @@ export type Database = {
         Row: {
           answers: Json
           context: Json
+          customer_id: string | null
           form_id: string
           form_revision_id: string
           id: string
@@ -3000,6 +3001,7 @@ export type Database = {
         Insert: {
           answers: Json
           context?: Json
+          customer_id?: string | null
           form_id: string
           form_revision_id: string
           id?: string
@@ -3011,6 +3013,7 @@ export type Database = {
         Update: {
           answers?: Json
           context?: Json
+          customer_id?: string | null
           form_id?: string
           form_revision_id?: string
           id?: string
@@ -3020,6 +3023,13 @@ export type Database = {
           submitted_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "form_submissions_customer_fk"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "form_submissions_organization_id_form_id_form_revision_id_fkey"
             columns: ["organization_id", "form_id", "form_revision_id"]
@@ -3073,6 +3083,7 @@ export type Database = {
           id: string
           name: string
           organization_id: string
+          public_key: string
           slug: string
           updated_at: string
         }
@@ -3086,6 +3097,7 @@ export type Database = {
           id?: string
           name: string
           organization_id: string
+          public_key?: string
           slug: string
           updated_at?: string
         }
@@ -3099,6 +3111,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string
+          public_key?: string
           slug?: string
           updated_at?: string
         }
@@ -7525,6 +7538,35 @@ export type Database = {
           },
         ]
       }
+      portal_forms: {
+        Row: {
+          created_at: string
+          created_by: string
+          form_id: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          form_id: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          form_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_forms_organization_id_form_id_fkey"
+            columns: ["organization_id", "form_id"]
+            isOneToOne: true
+            referencedRelation: "forms"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       price_book_items: {
         Row: {
           created_at: string
@@ -9905,6 +9947,10 @@ export type Database = {
         Args: { p_form_id: string; p_organization_id: string }
         Returns: Json
       }
+      form_submission_customer_candidates: {
+        Args: { p_organization_id: string; p_submission_id: string }
+        Returns: Json
+      }
       grant_plan_module: {
         Args: { p_module_id: string; p_plan_id: string }
         Returns: undefined
@@ -9965,6 +10011,14 @@ export type Database = {
           p_customer_id: string
           p_location_id: string
           p_organization_id: string
+        }
+        Returns: undefined
+      }
+      link_form_submission_customer: {
+        Args: {
+          p_customer_id: string
+          p_organization_id: string
+          p_submission_id: string
         }
         Returns: undefined
       }
@@ -10351,6 +10405,7 @@ export type Database = {
           usage_event_id: string
         }[]
       }
+      portal_forms_available: { Args: never; Returns: Json }
       provision_organization: {
         Args: {
           p_capabilities: string[]
@@ -10415,7 +10470,12 @@ export type Database = {
         Args: { p_form_slug: string; p_organization_slug: string }
         Returns: Json
       }
+      published_form_by_key: { Args: { p_key: string }; Returns: Json }
       published_gold_homepage: { Args: never; Returns: Json }
+      published_hostname_form: {
+        Args: { p_form_slug: string; p_hostname: string }
+        Returns: Json
+      }
       published_hostname_site: { Args: { p_hostname: string }; Returns: Json }
       queue_outbound_email: {
         Args: {
@@ -11353,6 +11413,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_portal_form: {
+        Args: {
+          p_enabled: boolean
+          p_form_id: string
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
       set_primary_custom_domain: {
         Args: { p_domain_id: string; p_organization_id: string }
         Returns: undefined
@@ -11438,12 +11506,16 @@ export type Database = {
         }
         Returns: string
       }
-      submit_public_form: {
+      submit_portal_form: {
+        Args: { p_answers: Json; p_form_id: string; p_revision_id: string }
+        Returns: string
+      }
+      submit_public_form_by_key: {
         Args: {
           p_answers: Json
-          p_form_slug: string
-          p_organization_slug: string
+          p_public_key: string
           p_revision_id: string
+          p_source?: string
         }
         Returns: string
       }

@@ -208,12 +208,30 @@ export function newOptionValue(label: string, taken: ReadonlySet<string>): strin
   return candidate;
 }
 
-export const FormProjectionSchema = z.object({
+/** A published form as any surface that is not the form's own page reads it. */
+export const FormPublicationSchema = z.object({
   formId: z.string().uuid(),
+  publicKey: z.string().regex(/^[a-f0-9]{12}$/),
   revisionId: z.string().uuid(),
   revisionNumber: z.number().int().positive(),
   name: z.string(),
   definition: FormDefinitionSchema,
+}).strict();
+export type FormPublication = z.infer<typeof FormPublicationSchema>;
+
+/** Where a response was submitted from. `portal` and `booking` are only ever written by their own owner. */
+export const FORM_SOURCES = ['hosted', 'website', 'portal', 'booking', 'embed'] as const;
+export type FormSource = (typeof FORM_SOURCES)[number];
+export const FORM_SOURCE_LABEL: Record<FormSource, string> = {
+  hosted: 'Hosted form',
+  website: 'Website',
+  portal: 'Customer portal',
+  booking: 'Booking',
+  embed: 'Embedded on another site',
+};
+
+/** The form plus the business's own public identity, for a page that is only the form. */
+export const FormProjectionSchema = FormPublicationSchema.extend({
   profile: z.object({
     displayName: z.string(),
     tagline: z.string().nullable(),

@@ -2112,6 +2112,43 @@
         "ui"
       ],
       "note": "Blank and template journeys from Studio to a published form to a submitted response, and draft isolation."
+    },
+    "apps/web/tests/unit/anonymous-session.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "security",
+        "public"
+      ],
+      "note": "A public write ends only the session it began: the helper, and the marketing intake that shares it."
+    },
+    "apps/web/tests/integration/database/form-placements.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "public-site",
+        "portal",
+        "security",
+        "tenancy"
+      ],
+      "note": "Website form section, hostname and key reads, portal identity derived from the link, response-to-customer linking, archive safety and the signed-in session regression."
+    },
+    "apps/web/tests/component/form-placements.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "accessibility",
+        "public-site"
+      ],
+      "note": "The website form section's modes, the public form's focus on a refused submit, the portal list and the website structure's one add/remove control."
+    },
+    "apps/web/e2e/studio-form-distribution.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "public-site",
+        "portal",
+        "ui",
+        "accessibility"
+      ],
+      "note": "A form on the website, a business hostname, the portal, another site's embed and the stable link; the signed-in session regression; keyboard and phone width."
     }
   }
 }

@@ -75,6 +75,10 @@ const PORTAL_PREFIX = '/portal/';
  */
 const FORMS_PREFIX = '/forms/';
 
+/** A form's stable address, and the frameable fragment other sites embed. Same terms as `/forms/`. */
+const FORM_KEY_PREFIX = '/f/';
+const EMBED_PREFIX = '/embed/';
+
 /**
  * Accepting an organization invitation, on the same terms as booking and the portal.
  *
@@ -91,6 +95,8 @@ export function isPublic(pathname: string): boolean {
     pathname.startsWith(BOOKING_PREFIX) ||
     pathname.startsWith(PORTAL_PREFIX) ||
     pathname.startsWith(FORMS_PREFIX) ||
+    pathname.startsWith(FORM_KEY_PREFIX) ||
+    pathname.startsWith(EMBED_PREFIX) ||
     pathname.startsWith(ACCEPT_INVITE_PREFIX)
   );
 }

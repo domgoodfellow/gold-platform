@@ -1,18 +1,24 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { FormDefinitionSchema } from '@gold/schemas';
 import { getDb } from '@/lib/db/server';
 import { requireOrganization } from '@/lib/route/organization';
 import { DomainError } from '@/lib/domain/errors';
+import { GOLD_HOMEPAGE_CACHE_TAG } from '@/lib/domain/public-site/cached';
+import { setPortalForm } from '@/lib/domain/portal/portal-forms';
 import {
   createForm,
   createFormDraft,
+  formEditorState,
+  formSubmissionCustomerCandidates,
+  linkFormSubmissionCustomer,
   publishFormRevision,
   renameForm,
   saveFormDraft,
   setFormArchived,
+  type FormCustomerCandidate,
 } from '@/lib/domain/forms/forms';
 
 export type FormActionResult = { error: string | null };
@@ -72,6 +78,9 @@ export async function publishFormAction(input: { organizationId: string; formId:
     const db = await getDb();
     await saveFormDraft(db, { organizationId: input.organizationId, revisionId: input.revisionId, definition });
     await publishFormRevision(db, { organizationId: input.organizationId, revisionId: input.revisionId, definition });
+    // A website that carries this form was cached with the revision it had; the form's own publish
+    // is what changes what that page shows, so it expires the page - and only when one carries it.
+    if ((await formEditorState(db, input.organizationId, input.formId))?.placements.websitePublished) updateTag(GOLD_HOMEPAGE_CACHE_TAG);
   } catch (error) {
     return failure(error);
   }
@@ -101,5 +110,38 @@ export async function setFormArchivedAction(input: { organizationId: string; for
   }
   revalidatePath(studioFormsPath(input.organizationId));
   revalidatePath(`${studioFormsPath(input.organizationId)}/${input.formId}`);
+  return { error: null };
+}
+
+/** The portal offers this form to its customers, or stops. The portal owns the list; the form is only named in it. */
+export async function setPortalFormAction(input: { organizationId: string; formId: string; enabled: boolean }): Promise<FormActionResult> {
+  await requireOrganization(input.organizationId);
+  try {
+    await setPortalForm(await getDb(), input);
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath(`${studioFormsPath(input.organizationId)}/${input.formId}`);
+  revalidatePath(studioFormsPath(input.organizationId));
+  return { error: null };
+}
+
+export async function customerCandidatesAction(input: { organizationId: string; submissionId: string }): Promise<{ error: string | null; candidates: FormCustomerCandidate[] }> {
+  await requireOrganization(input.organizationId);
+  try {
+    return { error: null, candidates: await formSubmissionCustomerCandidates(await getDb(), input.organizationId, input.submissionId) };
+  } catch (error) {
+    return { ...failure(error), candidates: [] };
+  }
+}
+
+export async function linkSubmissionCustomerAction(input: { organizationId: string; formId: string; submissionId: string; customerId: string | null }): Promise<FormActionResult> {
+  await requireOrganization(input.organizationId);
+  try {
+    await linkFormSubmissionCustomer(await getDb(), input);
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath(`${studioFormsPath(input.organizationId)}/${input.formId}/submissions`);
   return { error: null };
 }

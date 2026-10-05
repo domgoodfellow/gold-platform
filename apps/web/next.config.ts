@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@gold/ui", "@gold/types", "@gold/schemas", "@gold/config"],
   // `/account` was a second, orphaned settings surface. Personal settings has one address
   // (`lib/route/personal-settings.ts`); an old link or bookmark lands there.
+  // The application may not be framed by another site — except the one fragment made to be: a
+  // published form at `/embed/forms/{key}`, which shows only what the hosted page already shows.
+  async headers() {
+    return [
+      { source: "/embed/:path*", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors *" }] },
+      { source: "/((?!embed/).*)", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'self'" }] },
+    ];
+  },
   async redirects() {
     return [
       { source: "/account", destination: "/settings/account", permanent: true },

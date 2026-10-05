@@ -1,10 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import type { FormDefinition } from '@gold/schemas';
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { FORM_SOURCE_LABEL, type FormDefinition } from '@gold/schemas';
+import { Button } from '@/components/controls/button';
+import { ErrorText, Hint } from '@/components/controls/inputs';
+import { customerCandidatesAction, linkSubmissionCustomerAction } from '@/app/organizations/[organizationId]/studio/forms/actions';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { EmptyState } from '@/components/surfaces/section';
-import type { FormSubmissionsRead } from '@/lib/domain/forms/forms';
+import type { FormCustomerCandidate, FormSubmissionEntry, FormSubmissionsRead } from '@/lib/domain/forms/forms';
 
 function display(field: FormDefinition['fields'][number] | undefined, value: unknown): string {
   if (value === undefined || value === null || value === '') return '—';
@@ -21,7 +26,66 @@ function display(field: FormDefinition['fields'][number] | undefined, value: unk
  * read against the revision it was answered under — so a question renamed or removed since still
  * reads as it was asked, and an answer to a field that no longer exists is still shown.
  */
-export function SubmissionsView({ formName, read }: { formName: string; read: FormSubmissionsRead }) {
+/**
+ * Who a response is about. A portal response already knows (the link said); any other is a response,
+ * not a customer, until somebody with authority says so — and "who might it be" is CRM's own
+ * matching rule, offered as candidates, never applied on its own.
+ */
+function CustomerLine({ organizationId, formId, submission }: { organizationId: string; formId: string; submission: FormSubmissionEntry }) {
+  const router = useRouter();
+  const [candidates, setCandidates] = useState<FormCustomerCandidate[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const link = (customerId: string | null) => startTransition(async () => {
+    setError(null);
+    const result = await linkSubmissionCustomerAction({ organizationId, formId, submissionId: submission.id, customerId });
+    if (result.error) setError(result.error);
+    else { setCandidates(null); router.refresh(); }
+  });
+
+  if (submission.customerId) {
+    return (
+      <>
+        <dt>Customer</dt>
+        <dd>
+          <Link href={`/organizations/${organizationId}/customers/${submission.customerId}`} className="underline underline-offset-4">{submission.customerName ?? 'Customer'}</Link>
+          {submission.source !== 'portal' ? <Button tone="text" size="tiny" disabled={pending} onClick={() => link(null)}>Unlink</Button> : null}
+        </dd>
+      </>
+    );
+  }
+  return (
+    <>
+      <dt>Customer</dt>
+      <dd className="grid gap-1">
+        <span>Not linked</span>
+        {candidates === null ? (
+          <span>
+            <Button tone="secondary" size="tiny" disabled={pending} onClick={() => startTransition(async () => {
+              const result = await customerCandidatesAction({ organizationId, submissionId: submission.id });
+              if (result.error) setError(result.error); else setCandidates(result.candidates);
+            })}>Find matching customers</Button>
+          </span>
+        ) : candidates.length === 0 ? (
+          <Hint>No customer has this email address or phone number.</Hint>
+        ) : (
+          <ul className="grid gap-1">
+            {candidates.map((candidate) => (
+              <li key={candidate.id} className="flex items-center gap-2">
+                <span>{candidate.name}</span>
+                <Button tone="secondary" size="tiny" disabled={pending} onClick={() => link(candidate.id)}>Link</Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <ErrorText role="alert">{error}</ErrorText>
+      </dd>
+    </>
+  );
+}
+
+export function SubmissionsView({ organizationId, formId, formName, read }: { organizationId: string; formId: string; formName: string; read: FormSubmissionsRead }) {
   const [selectedId, setSelectedId] = useState<string | null>(read.submissions[0]?.id ?? null);
   const revisions = new Map(read.revisions.map((revision) => [revision.id, revision]));
   const selected = read.submissions.find((submission) => submission.id === selectedId) ?? null;
@@ -64,7 +128,8 @@ export function SubmissionsView({ formName, read }: { formName: string; read: Fo
             <dt>Submitted</dt><dd>{new Date(selected.submittedAt).toLocaleString()}</dd>
             <dt>Form</dt><dd>{formName}</dd>
             <dt>Revision</dt><dd>{revision.number}</dd>
-            <dt>Source</dt><dd>Hosted form</dd>
+            <dt>Source</dt><dd>{FORM_SOURCE_LABEL[selected.source]}</dd>
+            <CustomerLine key={selected.id} organizationId={organizationId} formId={formId} submission={selected} />
           </dl>
           <dl className="grid gap-4 border-t border-border pt-4">
             {revision.definition.fields.map((field) => (

@@ -3,7 +3,9 @@ import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
 import { Hint } from '@/components/controls/inputs';
 import { FormBuilder } from '@/features/studio/forms/form-builder';
-import { formEditorState, publicFormPath } from '@/lib/domain/forms/forms';
+import { getManagedHostname } from '@/lib/domain/domains/domains';
+import { formEditorState } from '@/lib/domain/forms/forms';
+import { requestOrigin } from '@/lib/route/origin';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -29,6 +31,8 @@ export default async function StudioFormPage({ params }: PageProps<'/organizatio
   const state = await formEditorState(db, organizationId, formId);
   if (!state) notFound();
 
+  const managed = await getManagedHostname(db, { slug: organization.slug });
+
   return (
     <AppPage>
       <PageHeader
@@ -40,7 +44,7 @@ export default async function StudioFormPage({ params }: PageProps<'/organizatio
         key={`${state.working?.id ?? 'none'}:${state.published?.id ?? 'none'}`}
         organizationId={organizationId}
         state={state}
-        publicPath={organization.slug ? publicFormPath(organization.slug, state.form.slug) : null}
+        distribution={{ origin: await requestOrigin(), organizationSlug: organization.slug, siteHostname: managed.state === 'ready' ? managed.hostname : null }}
       />
     </AppPage>
   );

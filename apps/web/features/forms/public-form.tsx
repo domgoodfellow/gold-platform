@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import type { FormDefinition } from '@gold/schemas';
 import { checkFormAnswers } from '@gold/schemas';
 import { FormError } from '@/components/controls/form';
@@ -23,7 +23,7 @@ export type PublicFormSubmit = (input: {
  * sending, send them, and show the confirmation the business wrote. The check here is for the
  * visitor's benefit; the server and the database check again.
  */
-export function PublicForm({ definition, revisionId, submit }: { definition: FormDefinition; revisionId: string; submit: PublicFormSubmit }) {
+export function PublicForm({ definition, revisionId, submit, showTitle = true }: { definition: FormDefinition; revisionId: string; submit: PublicFormSubmit; showTitle?: boolean }) {
   const [values, setValues] = useState<FormValues>({});
   const [errors, setErrors] = useState<FormErrors>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -31,6 +31,20 @@ export function PublicForm({ definition, revisionId, submit }: { definition: For
   const [sent, setSent] = useState(false);
   const [website, setWebsite] = useState('');
   const [pending, startTransition] = useTransition();
+  const container = useRef<HTMLDivElement>(null);
+
+  /**
+   * After a refused submit, put the keyboard where the problem is: the first field marked invalid
+   * (a group of choices hands focus to its first choice). Without this a keyboard or screen-reader
+   * user is left on the submit button with nothing said to have changed.
+   */
+  const focusFirstProblem = () => {
+    requestAnimationFrame(() => {
+      const bad = container.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+      const target = bad?.matches('fieldset') ? bad.querySelector<HTMLElement>('input, button') : bad;
+      target?.focus();
+    });
+  };
 
   if (sent) {
     return (
@@ -47,6 +61,7 @@ export function PublicForm({ definition, revisionId, submit }: { definition: For
       const { _form, ...fieldErrors } = checked.errors;
       setErrors(fieldErrors);
       setMessage(_form ?? 'Please check the highlighted answers.');
+      focusFirstProblem();
       return;
     }
     setErrors({});
@@ -58,11 +73,13 @@ export function PublicForm({ definition, revisionId, submit }: { definition: For
         setErrors(result.fieldErrors);
         setMessage(result.message);
         setStale(result.stale);
+        focusFirstProblem();
       }
     });
   };
 
   return (
+    <div ref={container}>
     <FormRenderer
       definition={definition}
       values={values}
@@ -71,6 +88,7 @@ export function PublicForm({ definition, revisionId, submit }: { definition: For
       onChange={(fieldId, value) => setValues((current) => ({ ...current, [fieldId]: value }))}
       onSubmit={send}
       submitDisabled={stale}
+      showTitle={showTitle}
       footer={
         <>
           {/* A honeypot: out of sight and out of the tab order, so only a script fills it in. */}
@@ -90,5 +108,6 @@ export function PublicForm({ definition, revisionId, submit }: { definition: For
         </>
       }
     />
+    </div>
   );
 }

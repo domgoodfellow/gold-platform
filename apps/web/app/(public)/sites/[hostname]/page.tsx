@@ -53,5 +53,5 @@ export default async function HostedSitePage({ params }: PageProps<'/sites/[host
 
   // A business with no published home page has nothing to show at its address yet.
   if (!hosted.home) notFound();
-  return <HomepageRenderer sections={hosted.home.sections} />;
+  return <HomepageRenderer sections={hosted.home.sections} forms={{ mode: 'live', forms: hosted.home.forms }} />;
 }

@@ -106,6 +106,10 @@ describe('schema conformance', () => {
     //     the invitation hash: a browser arrives holding a hostname, with no tenant in hand to
     //     scope it by, so it must be unique across every claim or resolution would have to guess
     //     which business `shop.example.com` means. Only an unreleased claim counts.
+    //   * `forms_public_key_unique` (20261115000001) is the same shape again: a visitor arrives
+    //     holding a form's public key with no tenant in hand, so the key must be unique across
+    //     every business or it could not say which form it means. It names only a published form
+    //     anybody could already open.
     //   * `platform_retail_rates_id_meter_currency_unique` is the inverse case: not an outsider's
     //     secret, but a row that may belong to *no* tenant at all. `platform_retail_rates` gained
     //     an optional `organization_id` in `20261018000001` for a negotiated override; most rows
@@ -138,6 +142,11 @@ describe('schema conformance', () => {
         table_name: 'external_actors',
         index_name: 'external_actors_one_tenant_per_user',
         first: 'user_id',
+      },
+      {
+        table_name: 'forms',
+        index_name: 'forms_public_key_unique',
+        first: 'public_key',
       },
       {
         table_name: 'organization_domains',

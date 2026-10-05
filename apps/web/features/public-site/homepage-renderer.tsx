@@ -3,6 +3,7 @@ import { ArrowRight, CalendarDays, ClipboardList, Headset, Layers, MessageSquare
 import type { PublicHomepageSection, PublicHomepageSections } from '@gold/schemas';
 import { ButtonLink } from '@/components/controls/button';
 import { FOCUS_RING, cx } from '@/components/class-names';
+import { FormSection, type FormSectionContext } from './form-section';
 
 /**
  * The three commercial doors, in the order the `capabilities` section's items are seeded
@@ -66,12 +67,16 @@ function ProductPreview() {
  * both call this — the only rendering vocabulary either owns, so Canvas can never drift from what
  * a visitor actually sees (never a second, editor-only approximation of the same six sections).
  */
-export function HomepageSectionRenderer({ section }: { section: PublicHomepageSection }) {
-  return <>{renderSection(section)}</>;
+export function HomepageSectionRenderer({ section, forms }: { section: PublicHomepageSection; forms: FormSectionContext }) {
+  return <>{renderSection(section, forms)}</>;
 }
 
-function renderSection(section: PublicHomepageSection) {
+/** A page with no `form` section needs no forms; this is what it passes. */
+export const NO_FORMS: FormSectionContext = { mode: 'live', forms: {} };
+
+function renderSection(section: PublicHomepageSection, forms: FormSectionContext) {
   switch (section.kind) {
+    case 'form': return <FormSection key={section.kind} heading={section.heading} body={section.body} formId={section.formId} context={forms} />;
     case 'hero': return (
       <section key={section.kind} className="grid gap-12 lg:grid-cols-[1fr_460px] lg:items-center lg:gap-16">
         <div className="flex flex-col items-start gap-6">
@@ -145,6 +150,6 @@ function renderSection(section: PublicHomepageSection) {
 }
 
 /** The only renderer for both published output and authenticated previews. */
-export function HomepageRenderer({ sections }: { sections: PublicHomepageSections }) {
-  return <div className="flex flex-col gap-24 py-6 sm:gap-32 sm:py-10">{sections.map(renderSection)}</div>;
+export function HomepageRenderer({ sections, forms = NO_FORMS }: { sections: PublicHomepageSections; forms?: FormSectionContext }) {
+  return <div className="flex flex-col gap-24 py-6 sm:gap-32 sm:py-10">{sections.map((section) => renderSection(section, forms))}</div>;
 }

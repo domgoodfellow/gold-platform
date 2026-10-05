@@ -16,16 +16,19 @@ export async function proxy(request: NextRequest) {
   const { response, identity } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
-  // A business's own hostname opens its public surface at the root and nowhere else in this
-  // slice. The rewrite carries the hostname, never an organization id: the page resolves it again
+  // A business's own hostname opens its public surface at the root, and its published forms. The rewrite carries the hostname, never an organization id: the page resolves it again
   // itself (D17). A hostname that resolves to nothing falls through unchanged — to exactly what an
   // unknown host would have seen — so nothing says which names are almost valid.
-  if (pathname === '/') {
+  // `/` opens the home page; `/forms/{slug}` — one segment, which no application route has — opens
+  // one of that business's published forms. Both carry the hostname, never an id.
+  const hostedForm = /^\/forms\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname);
+  if (pathname === '/' || hostedForm) {
     const host = request.headers.get('host');
     const binding = await bindingForRequestHost(host);
     if (binding && host) {
       const url = request.nextUrl.clone();
-      url.pathname = `/sites/${encodeURIComponent(host.toLowerCase().replace(/:\d+$/, ''))}`;
+      const hostname = encodeURIComponent(host.toLowerCase().replace(/:\d+$/, ''));
+      url.pathname = hostedForm ? `/sites/${hostname}/forms/${hostedForm[1]}` : `/sites/${hostname}`;
       const rewrite = NextResponse.rewrite(url, { request });
       for (const cookie of response.cookies.getAll()) rewrite.cookies.set(cookie);
       return rewrite;

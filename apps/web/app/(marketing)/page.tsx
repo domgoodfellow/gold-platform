@@ -38,7 +38,7 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }} />
-      <HomepageRenderer sections={site.sections} />
+      <HomepageRenderer sections={site.sections} forms={{ mode: 'live', forms: site.forms }} />
       {communication?.displayName && communication.greeting ? <PublicCommunicationWidget siteId={site.siteId} name={communication.displayName} greeting={communication.greeting} /> : null}
     </>
   );

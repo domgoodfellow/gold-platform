@@ -34,7 +34,8 @@ test.describe('Studio forms', () => {
     await expect(page.getByText('Published. Visitors now see this version.')).toBeVisible();
 
     const publicPath = await page.getByRole('link', { name: 'Open public form' }).getAttribute('href');
-    expect(publicPath).toMatch(/^\/forms\/[a-z0-9-]+\/[a-z0-9-]+$/);
+    // The link a business shares is the stable one: it survives a rename of the form or the business.
+    expect(publicPath).toMatch(/^\/f\/[a-f0-9]{12}$/);
 
     // A stranger: a fresh context with no session at all.
     const stranger = await browser.newContext({ storageState: { cookies: [], origins: [] } });

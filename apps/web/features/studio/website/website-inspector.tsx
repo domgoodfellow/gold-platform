@@ -1,7 +1,9 @@
 'use client';
 
 import type { PublicHomepageSection } from '@gold/schemas';
-import { FieldLabel, TextArea, TextInput } from '@/components/controls/inputs';
+import { ButtonLink } from '@/components/controls/button';
+import { FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import type { FormOption } from './website-editing';
 
 /**
  * The field-heavy editing surface, moved off the page and into a pane of its own. It edits
@@ -34,7 +36,7 @@ export function PageInspector({ seoTitle, seoDescription, onSeoTitle, onSeoDescr
   );
 }
 
-export function SectionInspector({ section, onChange }: { section: PublicHomepageSection; onChange: (section: PublicHomepageSection) => void }) {
+export function SectionInspector({ section, onChange, organizationId, forms }: { section: PublicHomepageSection; onChange: (section: PublicHomepageSection) => void; organizationId: string; forms: FormOption[] }) {
   const set = (key: string, value: unknown) => onChange({ ...section, [key]: value } as PublicHomepageSection);
 
   switch (section.kind) {
@@ -117,6 +119,28 @@ export function SectionInspector({ section, onChange }: { section: PublicHomepag
           <Field label="Secondary action path" value={section.secondaryCta.href} onChange={(v) => set('secondaryCta', { ...section.secondaryCta, href: v })} />
         </div>
       );
+    case 'form': {
+      const chosen = forms.find((form) => form.id === section.formId);
+      return (
+        <div className="grid gap-4">
+          <h3 className="font-semibold">Form</h3>
+          <FieldLabel className="grid gap-1 text-sm">
+            Form
+            <SelectInput value={section.formId} onChange={(event) => set('formId', event.target.value)}>
+              {chosen ? null : <option value={section.formId}>A form that is no longer available</option>}
+              {forms.map((form) => <option key={form.id} value={form.id}>{form.name}{form.published ? '' : ' (not published)'}</option>)}
+            </SelectInput>
+          </FieldLabel>
+          {chosen && !chosen.published ? <Hint>This form is not published, so visitors will see nothing here until it is.</Hint> : null}
+          <Field label="Heading" value={section.heading} onChange={(v) => set('heading', v)} />
+          <Field label="Introduction" multiline value={section.body} onChange={(v) => set('body', v)} />
+          <div>
+            <ButtonLink tone="secondary" size="small" href={`/organizations/${organizationId}/studio/forms/${section.formId}`}>Edit form</ButtonLink>
+            <Hint className="mt-2">The questions are edited in the form itself, not here.</Hint>
+          </div>
+        </div>
+      );
+    }
     default:
       return section satisfies never;
   }

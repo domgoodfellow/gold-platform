@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/headers/page-header';
 import { Hint } from '@/components/controls/inputs';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { WebsiteWorkbench } from '@/features/studio/website/website-workbench';
+import { listForms } from '@/lib/domain/forms/forms';
 import { homepageEditorState } from '@/lib/domain/public-site/public-site';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -22,7 +23,9 @@ export default async function StudioWebsitePage({ params }: PageProps<'/organiza
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
   const mayManage = organization.capabilities.includes('organization.manage');
-  const state = mayManage ? await homepageEditorState(db, organizationId) : null;
+  const [state, forms] = mayManage
+    ? await Promise.all([homepageEditorState(db, organizationId), listForms(db, organizationId)])
+    : [null, []];
 
   return (
     <AppPage>
@@ -41,6 +44,7 @@ export default async function StudioWebsitePage({ params }: PageProps<'/organiza
           working={state.working}
           published={state.published}
           history={state.history}
+          forms={forms.filter((form) => !form.archived).map((form) => ({ id: form.id, name: form.name, published: form.publishedRevisionNumber !== null }))}
         />
       ) : (
         <Hint className="mt-5">

@@ -5,7 +5,7 @@ import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
 import { DividedList, EmptyState } from '@/components/surfaces/section';
 import { NewFormDrawer } from '@/features/studio/forms/new-form-drawer';
-import { listForms, publicFormPath, type FormListEntry } from '@/lib/domain/forms/forms';
+import { listForms, placementLabels, stableFormPath, type FormListEntry } from '@/lib/domain/forms/forms';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -61,7 +61,8 @@ export default async function StudioFormsPage({ params }: PageProps<'/organizati
                 <Link href={`${base}/forms/${form.id}`} className="font-medium underline-offset-4 hover:underline">{form.name}</Link>
                 <p className="text-xs text-subtle">
                   {statusOf(form)}
-                  {organization.slug && form.publishedRevisionNumber !== null && !form.archived ? ` · ${publicFormPath(organization.slug, form.slug)}` : ''}
+                  {form.publishedRevisionNumber !== null && !form.archived ? ` · ${stableFormPath(form.publicKey)}` : ''}
+                  {placementLabels(form.placements).length > 0 ? ` · Used by ${placementLabels(form.placements).join(', ')}` : ''}
                 </p>
               </div>
               <Link href={`${base}/forms/${form.id}/submissions`} className="text-muted underline-offset-4 hover:underline">

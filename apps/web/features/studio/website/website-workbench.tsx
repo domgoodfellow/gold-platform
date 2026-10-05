@@ -24,6 +24,7 @@ import { WebsiteStructure, type StructureSelection } from './website-structure';
 import { WebsiteCanvas, VIEWPORT_LABEL, type Viewport } from './website-canvas';
 import { PageInspector, SectionInspector } from './website-inspector';
 import { RevisionHistorySheet, type HistoryEntry } from './revision-history-sheet';
+import { addFormSection, removeFormSection, type FormOption } from './website-editing';
 
 const INITIAL: WebsiteActionState = { error: null };
 
@@ -86,7 +87,8 @@ function ViewportControl({ viewport, onChange }: { viewport: Viewport; onChange:
   );
 }
 
-export function WebsiteWorkbench({ organizationId, working, published, history }: {
+export function WebsiteWorkbench({ organizationId, working, published, history, forms }: {
+  forms: FormOption[];
   organizationId: string;
   working: EditorRevision | null;
   published: EditorRevision | null;
@@ -126,6 +128,14 @@ export function WebsiteWorkbench({ organizationId, working, published, history }
   const isDraft = working.status === 'draft';
   const previewHref = `/preview/${organizationId}/${working.id}`;
 
+  const structureForms = {
+    forms,
+    disabled: !isDraft,
+    onAddForm: (form: FormOption) => { setSections(addFormSection(sections, form)); setSelected('form'); },
+    onRemoveForm: () => { setSections(removeFormSection(sections)); setSelected('page'); },
+  };
+  const formNames = Object.fromEntries(forms.map((form) => [form.id, form.name]));
+
   const inspectorContent = (
     <fieldset disabled={!isDraft} className="contents">
       {selected === 'page' ? (
@@ -139,6 +149,8 @@ export function WebsiteWorkbench({ organizationId, working, published, history }
             <SectionInspector
               section={section}
               onChange={(next: PublicHomepageSection) => setSections(sections.map((entry, i) => i === index ? next : entry) as PublicHomepageSections)}
+              organizationId={organizationId}
+              forms={forms}
             />
           );
         })()
@@ -166,7 +178,7 @@ export function WebsiteWorkbench({ organizationId, working, published, history }
               <PageDrawerTrigger asChild><Button tone="secondary" size="small">Structure</Button></PageDrawerTrigger>
               <PageDrawerContent>
                 <PageDrawerHeader><PageDrawerTitle>Structure</PageDrawerTitle></PageDrawerHeader>
-                <WebsiteStructure sections={sections} selected={selected} onSelect={setSelected} />
+                <WebsiteStructure sections={sections} selected={selected} onSelect={setSelected} {...structureForms} />
               </PageDrawerContent>
             </PageDrawer>
             <PageDrawer>
@@ -217,11 +229,11 @@ export function WebsiteWorkbench({ organizationId, working, published, history }
 
       <div className="grid gap-4 lg:grid-cols-[14rem_minmax(0,1fr)_20rem]">
         <div className="hidden rounded-lg border border-border bg-surface p-3 lg:sticky lg:top-4 lg:block lg:self-start">
-          <WebsiteStructure sections={sections} selected={selected} onSelect={setSelected} />
+          <WebsiteStructure sections={sections} selected={selected} onSelect={setSelected} {...structureForms} />
         </div>
 
         <div className="min-w-0">
-          <WebsiteCanvas sections={sections} selected={selected} onSelect={setSelected} viewport={viewport} />
+          <WebsiteCanvas sections={sections} selected={selected} onSelect={setSelected} viewport={viewport} formNames={formNames} />
         </div>
 
         <div className={cx('hidden rounded-lg border border-border bg-surface p-4 lg:sticky lg:top-4 lg:block lg:self-start', !isDraft && 'opacity-60')}>

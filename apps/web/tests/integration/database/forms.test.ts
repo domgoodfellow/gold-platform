@@ -74,7 +74,7 @@ async function publishedQuote(tenant: Tenant, name = 'Quote') {
   await saveFormDraft(tenant.db, { organizationId: tenant.organizationId, revisionId, definition: QUOTE });
   await publishFormRevision(tenant.db, { organizationId: tenant.organizationId, revisionId });
   const state = await formEditorState(tenant.db, tenant.organizationId, formId);
-  return { formId, revisionId, slug: state!.form.slug };
+  return { formId, revisionId, slug: state!.form.slug, publicKey: state!.form.publicKey };
 }
 
 describe('forms', () => {
@@ -184,29 +184,29 @@ describe('forms', () => {
       const live = (await publishedForm(visitor(), a.slug, slug))!;
       await submitPublicForm(visitor(), { organizationSlug: a.slug, formSlug: slug, revisionId: live.revisionId, answers: { name: 'Grace' } });
       const { rows } = await pgQuery(`select payload from public.events where organization_id = $1 and action = 'form.submitted' order by occurred_at desc limit 1`, [a.organizationId]);
-      expect(Object.keys(rows[0].payload).sort()).toEqual(['form_id', 'revision_id', 'revision_number']);
+      expect(Object.keys(rows[0].payload).sort()).toEqual(['form_id', 'revision_id', 'revision_number', 'source']);
       expect(JSON.stringify(rows[0].payload)).not.toContain('Grace');
     });
 
     it('refuses an answer to a revision that is no longer the published one', async () => {
-      const { formId, slug } = await publishedQuote(a, 'Stale');
+      const { formId, slug, publicKey } = await publishedQuote(a, 'Stale');
       const shown = (await publishedForm(visitor(), a.slug, slug))!;
       const draftId = await createFormDraft(a.db, a.organizationId, formId);
       await publishFormRevision(a.db, { organizationId: a.organizationId, revisionId: draftId });
 
       const attempt = visitor();
       await attempt.auth.signInAnonymously();
-      const { error } = await attempt.rpc('submit_public_form', { p_organization_slug: a.slug, p_form_slug: slug, p_revision_id: shown.revisionId, p_answers: { name: 'Late' } });
+      const { error } = await attempt.rpc('submit_public_form_by_key', { p_public_key: publicKey, p_revision_id: shown.revisionId, p_answers: { name: 'Late' } });
       expect(error?.code).toBe('GD002');
       expect((await listFormSubmissions(a.db, a.organizationId, formId))?.total).toBe(0);
     });
 
     it('enforces required answers, choices and size in the database itself', async () => {
-      const { slug } = await publishedQuote(a, 'Strict answers');
+      const { slug, publicKey } = await publishedQuote(a, 'Strict answers');
       const live = (await publishedForm(visitor(), a.slug, slug))!;
       const attempt = visitor();
       await attempt.auth.signInAnonymously();
-      const send = (answers: unknown) => attempt.rpc('submit_public_form', { p_organization_slug: a.slug, p_form_slug: slug, p_revision_id: live.revisionId, p_answers: answers as never });
+      const send = (answers: unknown) => attempt.rpc('submit_public_form_by_key', { p_public_key: publicKey, p_revision_id: live.revisionId, p_answers: answers as never });
       expect((await send({ vehicle_type: 'car' })).error?.code).toBe('23514');
       expect((await send({ name: 'x', vehicle_type: 'boat' })).error?.code).toBe('23514');
       expect((await send({ name: 'x', surprise: 'y' })).error?.code).toBe('23514');
@@ -215,20 +215,53 @@ describe('forms', () => {
     });
 
     it('needs a session: a caller with none cannot write', async () => {
-      const { slug } = await publishedQuote(a, 'No session');
+      const { slug, publicKey } = await publishedQuote(a, 'No session');
       const live = (await publishedForm(visitor(), a.slug, slug))!;
-      const { error } = await visitor().rpc('submit_public_form', { p_organization_slug: a.slug, p_form_slug: slug, p_revision_id: live.revisionId, p_answers: { name: 'x' } });
+      const { error } = await visitor().rpc('submit_public_form_by_key', { p_public_key: publicKey, p_revision_id: live.revisionId, p_answers: { name: 'x' } });
       expect(error).not.toBeNull();
     });
 
-    it('cannot be aimed at another business: the address, not an id, picks the form', async () => {
+    it('names the form by its key alone: an unknown key, a draft and a revision of another form all refuse', async () => {
       const own = await publishedQuote(a, 'Mine');
+      const other = await publishedQuote(b, 'Theirs');
       const live = (await publishedForm(visitor(), a.slug, own.slug))!;
       const attempt = visitor();
       await attempt.auth.signInAnonymously();
-      // A's revision id under B's address resolves no form there.
-      const { error } = await attempt.rpc('submit_public_form', { p_organization_slug: b.slug, p_form_slug: own.slug, p_revision_id: live.revisionId, p_answers: { name: 'x' } });
-      expect(error?.code).toBe('GD001');
+      const send = (key: string, revision: string) => attempt.rpc('submit_public_form_by_key', { p_public_key: key, p_revision_id: revision, p_answers: { name: 'x' } });
+      expect((await send('000000000000', live.revisionId)).error?.code).toBe('GD001');
+      // A's revision under B's key is not B's published revision.
+      expect((await send(other.publicKey, live.revisionId)).error?.code).toBe('GD002');
+      const draft = await createForm(a.db, { organizationId: a.organizationId, name: 'Unpublished' });
+      const draftKey = (await formEditorState(a.db, a.organizationId, draft.formId))!.form.publicKey;
+      expect((await send(draftKey, draft.revisionId)).error?.code).toBe('GD001');
+    });
+
+    it('limits only the public sources: portal and booking are not claimable by a visitor', async () => {
+      const { publicKey, slug } = await publishedQuote(a, 'Sources');
+      const live = (await publishedForm(visitor(), a.slug, slug))!;
+      const attempt = visitor();
+      await attempt.auth.signInAnonymously();
+      for (const source of ['portal', 'booking', 'anything']) {
+        const { error } = await attempt.rpc('submit_public_form_by_key', { p_public_key: publicKey, p_revision_id: live.revisionId, p_answers: { name: 'x' }, p_source: source });
+        expect(error?.code, source).toBe('22023');
+      }
+      for (const source of ['hosted', 'website', 'embed']) {
+        const { error } = await attempt.rpc('submit_public_form_by_key', { p_public_key: publicKey, p_revision_id: live.revisionId, p_answers: { name: 'x' }, p_source: source });
+        expect(error, source).toBeNull();
+      }
+    });
+
+    it('stops a flood: a form takes a bounded number of responses a minute', async () => {
+      const { publicKey, slug } = await publishedQuote(a, 'Flood');
+      const live = (await publishedForm(visitor(), a.slug, slug))!;
+      const attempt = visitor();
+      await attempt.auth.signInAnonymously();
+      let refused = 0;
+      for (let i = 0; i < 32; i += 1) {
+        const { error } = await attempt.rpc('submit_public_form_by_key', { p_public_key: publicKey, p_revision_id: live.revisionId, p_answers: { name: `n${i}` } });
+        if (error?.code === 'GD003') refused += 1;
+      }
+      expect(refused).toBe(2);
     });
   });
 

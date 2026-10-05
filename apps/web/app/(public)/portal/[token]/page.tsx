@@ -13,6 +13,8 @@ import {
 } from '@/lib/domain/billing/invoices';
 import { portalCardPaymentAvailable } from '@/lib/domain/billing/card-payments';
 import { claimPortalInvite } from '@/lib/domain/portal/portal';
+import { portalFormsAvailable } from '@/lib/domain/portal/portal-forms';
+import { PortalForms } from '@/features/portal-access/portal-forms';
 import { DomainError } from '@/lib/domain/errors';
 import { formatWindow, parseWindow } from '@/lib/domain/scheduling/window';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
@@ -62,7 +64,7 @@ export default async function PortalPage({ params }: PageProps<'/portal/[token]'
     notFound();
   }
 
-  const [profile, items, invoices, brand] = await Promise.all([
+  const [profile, items, invoices, brand, offeredForms] = await Promise.all([
     publicProfile(db, { organizationId, fallbackName: organization.name }),
     db
       .from('work_items')
@@ -74,6 +76,7 @@ export default async function PortalPage({ params }: PageProps<'/portal/[token]'
       ascending: false,
     }),
     getBrand(db, { organizationId }),
+    portalFormsAvailable(db),
   ]);
 
   // The standing of each invoice, from the one calculation. Read per invoice rather than in
@@ -143,6 +146,13 @@ export default async function PortalPage({ params }: PageProps<'/portal/[token]'
           />
         </div>
       </Section>
+
+      {offeredForms.length > 0 ? (
+        <Section className="mt-8">
+          <SectionHeading>Forms</SectionHeading>
+          <PortalForms forms={offeredForms} token={token} />
+        </Section>
+      ) : null}
 
       <Section className="mt-8">
         <SectionHeading>Your invoices</SectionHeading>

@@ -14,6 +14,7 @@ import {
   PageDrawerTrigger,
 } from '@/components/panels/page-drawer';
 import { FormRenderer, type FormValues } from '@/features/forms/form-renderer';
+import { FormDistribution } from './form-distribution';
 import type { FormEditorState } from '@/lib/domain/forms/forms';
 import {
   createFormDraftAction,
@@ -36,11 +37,10 @@ const snapshot = (name: string, definition: FormDefinition) => JSON.stringify({ 
  * visitor's page uses. Editing only ever touches a draft revision; the published one keeps being
  * served until Publish is pressed, and that is also the only moment the public form changes.
  */
-export function FormBuilder({ organizationId, state, publicPath }: {
+export function FormBuilder({ organizationId, state, distribution }: {
   organizationId: string;
   state: FormEditorState;
-  /** The address visitors use, or null while the business has no public web address. */
-  publicPath: string | null;
+  distribution: { origin: string; organizationSlug: string | null; siteHostname: string | null };
 }) {
   const router = useRouter();
   const { form, working, published, history } = state;
@@ -68,9 +68,22 @@ export function FormBuilder({ organizationId, state, publicPath }: {
     </div>
   ) : null;
 
-  const publicLink = published && publicPath ? (
-    <ButtonLink tone="secondary" size="small" href={publicPath} target="_blank" rel="noreferrer">Open public form</ButtonLink>
+  const publicLink = published ? (
+    <ButtonLink tone="secondary" size="small" href={`/f/${form.publicKey}`} target="_blank" rel="noreferrer">Open public form</ButtonLink>
   ) : null;
+  const distribute = (
+    <FormDistribution
+      organizationId={organizationId}
+      formId={form.id}
+      formSlug={form.slug}
+      publicKey={form.publicKey}
+      organizationSlug={distribution.organizationSlug}
+      siteHostname={distribution.siteHostname}
+      origin={distribution.origin}
+      published={published !== null}
+      placements={state.placements}
+    />
+  );
 
   // No draft: the form is read as published, and editing begins by making a draft copy.
   if (!working || !definition) {
@@ -84,6 +97,7 @@ export function FormBuilder({ organizationId, state, publicPath }: {
           <div className="flex flex-wrap items-center gap-2">
             <RevisionHistorySheet history={history} />
             {publicLink}
+            {distribute}
             <ButtonLink tone="secondary" size="small" href={`/organizations/${organizationId}/studio/forms/${form.id}/submissions`}>Submissions</ButtonLink>
             {!form.archived ? (
               <>
@@ -101,7 +115,6 @@ export function FormBuilder({ organizationId, state, publicPath }: {
             <FormRenderer definition={published.definition} values={previewValues} onChange={(id, value) => setPreviewValues((current) => ({ ...current, [id]: value }))} />
           </div>
         ) : null}
-        {published && !publicPath ? <Hint>This business has no public web address yet, so the form has no public link. Choose one in Settings.</Hint> : null}
       </div>
     );
   }
@@ -177,6 +190,7 @@ export function FormBuilder({ organizationId, state, publicPath }: {
           </div>
           <RevisionHistorySheet history={history} />
           {publicLink}
+          {distribute}
           <ButtonLink tone="secondary" size="small" href={`/organizations/${organizationId}/studio/forms/${form.id}/submissions`}>Submissions</ButtonLink>
           <Button tone="secondary" size="small" disabled={pending || !dirty || form.archived} onClick={() => run(save, 'Draft saved.', () => { setSaved(snapshot(name, definition)); router.refresh(); })}>
             {pending ? 'Working…' : 'Save'}
@@ -199,7 +213,6 @@ export function FormBuilder({ organizationId, state, publicPath }: {
       {message ? (message.tone === 'error' ? <ErrorText role="alert">{message.text}</ErrorText> : <Hint role="status">{message.text}</Hint>) : null}
       {!parsed.success ? <ErrorText role="alert">{parsed.error.issues[0]?.message ?? 'The form is not valid.'}</ErrorText> : null}
       {published ? <Hint>Visitors keep seeing Revision {published.number} until you publish this draft.</Hint> : null}
-      {!publicPath ? <Hint>This business has no public web address yet, so a published form has no public link. Choose one in Settings.</Hint> : null}
 
       <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_20rem]">
         <div className="hidden rounded-lg border border-border bg-surface p-3 lg:sticky lg:top-4 lg:block lg:self-start">{structure}</div>

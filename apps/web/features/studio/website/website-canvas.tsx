@@ -21,8 +21,9 @@ export const VIEWPORT_LABEL: Record<Viewport, string> = { desktop: 'Desktop', ta
  * wraps `HomepageSectionRenderer`'s output rather than changing it, so nothing here can leak into
  * the persisted revision or the public page.
  */
-export function WebsiteCanvas({ sections, selected, onSelect, viewport }: {
+export function WebsiteCanvas({ sections, selected, onSelect, viewport, formNames }: {
   sections: PublicHomepageSections;
+  formNames: Record<string, string>;
   selected: StructureSelection;
   onSelect: (selection: StructureSelection) => void;
   viewport: Viewport;
@@ -46,7 +47,7 @@ export function WebsiteCanvas({ sections, selected, onSelect, viewport }: {
               )}
             >
               <div className="pointer-events-none">
-                <HomepageSectionRenderer section={section} />
+                <HomepageSectionRenderer section={section} forms={{ mode: 'canvas', forms: {}, formNames }} />
               </div>
             </button>
           );

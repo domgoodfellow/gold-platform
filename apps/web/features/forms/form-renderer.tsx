@@ -152,6 +152,7 @@ export function FormRenderer({
   onSubmit,
   footer,
   submitDisabled,
+  showTitle = true,
   className,
 }: {
   definition: FormDefinition;
@@ -164,6 +165,8 @@ export function FormRenderer({
   /** Form-level feedback and anything a host adds beneath the questions, such as a failure message. */
   footer?: ReactNode;
   submitDisabled?: boolean;
+  /** A page that already has a heading for the form (a website section) draws the form without its own. */
+  showTitle?: boolean;
   className?: string;
 }) {
   const prefix = useId();
@@ -178,7 +181,7 @@ export function FormRenderer({
       }}
     >
       <div>
-        <h2 id={`${prefix}-title`} className="text-xl font-semibold tracking-tight">{definition.title}</h2>
+        <h2 id={`${prefix}-title`} className={showTitle ? 'text-xl font-semibold tracking-tight' : 'sr-only'}>{definition.title}</h2>
         {definition.description ? <p className="mt-1 text-sm text-muted">{definition.description}</p> : null}
       </div>
 

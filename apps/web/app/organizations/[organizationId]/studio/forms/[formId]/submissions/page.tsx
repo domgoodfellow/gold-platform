@@ -32,7 +32,7 @@ export default async function FormSubmissionsPage({ params }: PageProps<'/organi
         title={`${state.form.name} · Responses`}
         crumbs={[...workspaceAncestry(organizationId, 'studio-forms'), { label: areaLabel('studio-forms'), href: formsPath }, { label: state.form.name, href: `${formsPath}/${formId}` }]}
       />
-      <SubmissionsView formName={state.form.name} read={read} />
+      <SubmissionsView organizationId={organizationId} formId={formId} formName={state.form.name} read={read} />
     </AppPage>
   );
 }

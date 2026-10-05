@@ -1,5 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { openPublicSession } from '@/lib/domain/identity/anonymous-session';
 import { PUBLIC_INTAKE_LIMITS, type PublicInquiryKind } from './limits';
 
 const FIELD_LABEL: Record<keyof typeof PUBLIC_INTAKE_LIMITS, string> = {
@@ -81,12 +82,9 @@ export async function submitPublicInquiry(
     throw new DomainError('That phone number is not valid.', 'public_intake.phone_invalid');
   }
 
-  const { data: existing } = await db.auth.getUser();
-  if (!existing.user) {
-    const { error } = await db.auth.signInAnonymously();
-    if (error) {
-      throw new DomainError('This form is not available right now. Please try again shortly.', 'public_intake.no_session');
-    }
+  const session = await openPublicSession(db);
+  if (!session.ok) {
+    throw new DomainError('This form is not available right now. Please try again shortly.', 'public_intake.no_session');
   }
 
   const { error } = await db.rpc('submit_public_inquiry', {
@@ -101,9 +99,9 @@ export async function submitPublicInquiry(
     p_topic: normalized.topic,
   });
 
-  // Signed out either way: a failed attempt leaves no more of a session behind than a
-  // successful one does.
-  await db.auth.signOut();
+  // Ended either way — a failed attempt leaves no more of a session behind than a successful one —
+  // but only if this call began it; somebody already signed in stays signed in.
+  await session.end();
 
   if (error) {
     if (error.code === 'GD001') {
