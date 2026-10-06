@@ -293,7 +293,7 @@ describe('a credential goes in and never comes out', () => {
         return statSync(path).isDirectory() ? files(path) : /\.tsx?$/.test(entry) && !entry.endsWith('database.types.ts') ? [path] : [];
       });
     const offenders = files(root).filter((path) =>
-      /decrypted_secrets|read_provider_account_credential|secret_id/i.test(readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')),
+      /decrypted_secrets|read_provider_account_credential|(?<![a-z_])secret_id/i.test(readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')),
     );
     expect(offenders.map((p) => p.replace(root, ''))).toEqual([]);
   });

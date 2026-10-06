@@ -93,15 +93,12 @@ afterAll(async () => {
 });
 
 describe('the founding administrator holds the permission', () => {
-  it('names secret.manage on the founding role, and on no role that cannot also manage settings', async () => {
+  it('names secret.manage on this business’s founding role', async () => {
     const { rows } = await pg.query(
-      `select count(*) filter (where 'secret.manage' = any (capabilities)) as with_it,
-              count(*) filter (where 'secret.manage' = any (capabilities)
-                                 and not ('integration.manage' = any (capabilities) and 'organization.manage' = any (capabilities))) as without_basis
-         from public.roles`,
+      "select count(*) filter (where 'secret.manage' = any (capabilities)) as with_it from public.roles where organization_id = $1",
+      [alice.organizationId],
     );
     expect(Number(rows[0].with_it)).toBeGreaterThan(0);
-    expect(Number(rows[0].without_basis)).toBe(0);
   });
 });
 

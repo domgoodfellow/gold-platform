@@ -210,7 +210,7 @@ describe('the four external nouns never collapse into each other (section 54)', 
 });
 
 describe('Google Workspace’s expanded suite (section 10, 57)', () => {
-  it('contains the intended stable-key entries, each honestly planned', async () => {
+  it('contains the intended stable-key entries, each honestly stated (only what the adapter reads is partial)', async () => {
     const workspace = await getConnector(tenant.db, 'google_workspace');
     const byKey = new Map((workspace?.apps ?? []).map((app) => [app.key, app]));
 
@@ -218,7 +218,9 @@ describe('Google Workspace’s expanded suite (section 10, 57)', () => {
       'calendar', 'gmail', 'drive', 'docs', 'sheets', 'forms', 'meet', 'chat', 'people', 'tasks', 'workspace_events',
     ]) {
       expect(byKey.has(key), key).toBe(true);
-      expect(byKey.get(key)?.implementationState, key).toBe('planned');
+      // calendar, drive and sheets are what the adapter discovers (20261126000001); nothing else is built.
+      const read = ['calendar', 'drive', 'sheets'].includes(key);
+      expect(byKey.get(key)?.implementationState, key).toBe(read ? 'partial' : 'planned');
     }
   });
 
