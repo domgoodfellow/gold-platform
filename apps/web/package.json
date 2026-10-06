@@ -12,7 +12,11 @@
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
     "demo": "tsx scripts/demo/run.ts",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "audit:ui:static": "node scripts/audit/ui-recovery.mjs",
+    "audit:ui:capture": "playwright test -c playwright.audit.config.ts",
+    "audit:ui:gallery": "node scripts/audit/generate-ui-gallery.mjs",
+    "audit:ui": "pnpm audit:ui:static && pnpm audit:ui:capture && pnpm audit:ui:gallery"
   },
   "dependencies": {
     "@gold/config": "workspace:*",
