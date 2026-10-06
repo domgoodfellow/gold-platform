@@ -1,0 +1,616 @@
+{
+  "schema_version": 1,
+  "baseline": {
+    "repository": "domgoodfellow/gold-platform",
+    "ref": "main",
+    "head": "2a5fcd2435ce89c7cae8abe3f217f8edc9a266e7"
+  },
+  "counts": {
+    "shared_application_files": 52,
+    "ui_primitives": 37,
+    "by_category": {
+      "README.md": 1,
+      "class-names.ts": 1,
+      "controls": 10,
+      "display": 4,
+      "feedback": 1,
+      "headers": 3,
+      "layout": 5,
+      "marketing": 11,
+      "navigation": 5,
+      "panels": 4,
+      "patterns": 3,
+      "surfaces": 4
+    }
+  },
+  "shared_application": [
+    {
+      "id": "SHARED-001",
+      "source_file": "apps/web/components/README.md",
+      "category": "README.md",
+      "layer": "shared_application_component",
+      "source_bytes": 2715
+    },
+    {
+      "id": "SHARED-002",
+      "source_file": "apps/web/components/class-names.ts",
+      "category": "class-names.ts",
+      "layer": "shared_application_component",
+      "source_bytes": 1237
+    },
+    {
+      "id": "SHARED-003",
+      "source_file": "apps/web/components/controls/button.tsx",
+      "category": "controls",
+      "layer": "control",
+      "source_bytes": 1614
+    },
+    {
+      "id": "SHARED-004",
+      "source_file": "apps/web/components/controls/checkbox-field.tsx",
+      "category": "controls",
+      "layer": "control",
+      "source_bytes": 1064
+    },
+    {
+      "id": "SHARED-005",
+      "source_file": "apps/web/components/controls/confirm-submit.tsx",
+      "category": "controls",
+      "layer": "control",
+      "source_bytes": 2666
+    },
+    {
+      "id": "SHARED-006",
+      "source_file": "apps/web/components/controls/copy-field.tsx",
+      "category": "controls",
+      "layer": "control",
+      "source_bytes": 1547
+    },
+    {
+      "id": "SHARED-007",
+      "source_file": "apps/web/components/controls/date-picker.tsx",
+      "category": "controls",
+      "layer": "control",
+      "source_bytes": 3434
+    },
+    {
+      "id": "SHARED-008",
+      "source_file": "apps/web/components/controls/form.tsx",
+      "category": "controls",
+      "layer": "control",
+      "source_bytes": 1987
+    },
+    {
+      "id": "SHARED-009",
+      "source_file": "apps/web/components/controls/inputs.tsx",
+      "category": "controls",
+      "layer": "control",
+      "source_bytes": 2027
+    },
+    {
+      "id": "SHARED-010",
+      "source_file": "apps/web/components/controls/optional-select.tsx",
+      "category": "controls",
+      "layer": "control",
+      "source_bytes": 904
+    },
+    {
+      "id": "SHARED-011",
+      "source_file": "apps/web/components/controls/resource-checklist.tsx",
+      "category": "controls",
+      "layer": "control",
+      "source_bytes": 3734
+    },
+    {
+      "id": "SHARED-012",
+      "source_file": "apps/web/components/controls/view-mode-switcher.tsx",
+      "category": "controls",
+      "layer": "control",
+      "source_bytes": 2380
+    },
+    {
+      "id": "SHARED-013",
+      "source_file": "apps/web/components/display/brand-mark.tsx",
+      "category": "display",
+      "layer": "display",
+      "source_bytes": 2635
+    },
+    {
+      "id": "SHARED-014",
+      "source_file": "apps/web/components/display/data.tsx",
+      "category": "display",
+      "layer": "display",
+      "source_bytes": 2784
+    },
+    {
+      "id": "SHARED-015",
+      "source_file": "apps/web/components/display/table.tsx",
+      "category": "display",
+      "layer": "display",
+      "source_bytes": 5984
+    },
+    {
+      "id": "SHARED-016",
+      "source_file": "apps/web/components/display/widget.tsx",
+      "category": "display",
+      "layer": "display",
+      "source_bytes": 5236
+    },
+    {
+      "id": "SHARED-017",
+      "source_file": "apps/web/components/feedback/fallback-page.tsx",
+      "category": "feedback",
+      "layer": "feedback",
+      "source_bytes": 669
+    },
+    {
+      "id": "SHARED-018",
+      "source_file": "apps/web/components/headers/page-header.tsx",
+      "category": "headers",
+      "layer": "header",
+      "source_bytes": 4488
+    },
+    {
+      "id": "SHARED-019",
+      "source_file": "apps/web/components/headers/record-header.tsx",
+      "category": "headers",
+      "layer": "header",
+      "source_bytes": 988
+    },
+    {
+      "id": "SHARED-020",
+      "source_file": "apps/web/components/headers/workspace-header.tsx",
+      "category": "headers",
+      "layer": "header",
+      "source_bytes": 3227
+    },
+    {
+      "id": "SHARED-021",
+      "source_file": "apps/web/components/layout/app-page.tsx",
+      "category": "layout",
+      "layer": "layout",
+      "source_bytes": 1130
+    },
+    {
+      "id": "SHARED-022",
+      "source_file": "apps/web/components/layout/app-shell.tsx",
+      "category": "layout",
+      "layer": "layout",
+      "source_bytes": 2834
+    },
+    {
+      "id": "SHARED-023",
+      "source_file": "apps/web/components/layout/site-shell.tsx",
+      "category": "layout",
+      "layer": "layout",
+      "source_bytes": 4132
+    },
+    {
+      "id": "SHARED-024",
+      "source_file": "apps/web/components/layout/workspace-geometry.ts",
+      "category": "layout",
+      "layer": "layout",
+      "source_bytes": 1636
+    },
+    {
+      "id": "SHARED-025",
+      "source_file": "apps/web/components/layout/workspace-shell.tsx",
+      "category": "layout",
+      "layer": "layout",
+      "source_bytes": 1387
+    },
+    {
+      "id": "SHARED-026",
+      "source_file": "apps/web/components/marketing/cta-band.tsx",
+      "category": "marketing",
+      "layer": "marketing",
+      "source_bytes": 1199
+    },
+    {
+      "id": "SHARED-027",
+      "source_file": "apps/web/components/marketing/faq-section.tsx",
+      "category": "marketing",
+      "layer": "marketing",
+      "source_bytes": 1672
+    },
+    {
+      "id": "SHARED-028",
+      "source_file": "apps/web/components/marketing/legal-document.tsx",
+      "category": "marketing",
+      "layer": "marketing",
+      "source_bytes": 2037
+    },
+    {
+      "id": "SHARED-029",
+      "source_file": "apps/web/components/marketing/marketing-footer.tsx",
+      "category": "marketing",
+      "layer": "marketing",
+      "source_bytes": 3272
+    },
+    {
+      "id": "SHARED-030",
+      "source_file": "apps/web/components/marketing/marketing-header.tsx",
+      "category": "marketing",
+      "layer": "marketing",
+      "source_bytes": 1333
+    },
+    {
+      "id": "SHARED-031",
+      "source_file": "apps/web/components/marketing/marketing-nav.tsx",
+      "category": "marketing",
+      "layer": "marketing",
+      "source_bytes": 5707
+    },
+    {
+      "id": "SHARED-032",
+      "source_file": "apps/web/components/marketing/marketing-shell.tsx",
+      "category": "marketing",
+      "layer": "marketing",
+      "source_bytes": 1076
+    },
+    {
+      "id": "SHARED-033",
+      "source_file": "apps/web/components/marketing/mobile-demo-cta.tsx",
+      "category": "marketing",
+      "layer": "marketing",
+      "source_bytes": 844
+    },
+    {
+      "id": "SHARED-034",
+      "source_file": "apps/web/components/marketing/product-card.tsx",
+      "category": "marketing",
+      "layer": "marketing",
+      "source_bytes": 1122
+    },
+    {
+      "id": "SHARED-035",
+      "source_file": "apps/web/components/marketing/product-landing.tsx",
+      "category": "marketing",
+      "layer": "marketing",
+      "source_bytes": 4345
+    },
+    {
+      "id": "SHARED-036",
+      "source_file": "apps/web/components/marketing/product-preview.tsx",
+      "category": "marketing",
+      "layer": "marketing",
+      "source_bytes": 3037
+    },
+    {
+      "id": "SHARED-037",
+      "source_file": "apps/web/components/navigation/account-menu.tsx",
+      "category": "navigation",
+      "layer": "navigation",
+      "source_bytes": 4510
+    },
+    {
+      "id": "SHARED-038",
+      "source_file": "apps/web/components/navigation/context-switcher.tsx",
+      "category": "navigation",
+      "layer": "navigation",
+      "source_bytes": 9086
+    },
+    {
+      "id": "SHARED-039",
+      "source_file": "apps/web/components/navigation/page-location.tsx",
+      "category": "navigation",
+      "layer": "navigation",
+      "source_bytes": 783
+    },
+    {
+      "id": "SHARED-040",
+      "source_file": "apps/web/components/navigation/view-nav.tsx",
+      "category": "navigation",
+      "layer": "navigation",
+      "source_bytes": 1402
+    },
+    {
+      "id": "SHARED-041",
+      "source_file": "apps/web/components/navigation/workspace-crumbs.tsx",
+      "category": "navigation",
+      "layer": "navigation",
+      "source_bytes": 2931
+    },
+    {
+      "id": "SHARED-042",
+      "source_file": "apps/web/components/panels/configure-registrar.tsx",
+      "category": "panels",
+      "layer": "panel",
+      "source_bytes": 784
+    },
+    {
+      "id": "SHARED-043",
+      "source_file": "apps/web/components/panels/page-drawer.tsx",
+      "category": "panels",
+      "layer": "panel",
+      "source_bytes": 6236
+    },
+    {
+      "id": "SHARED-044",
+      "source_file": "apps/web/components/panels/support-registrar.tsx",
+      "category": "panels",
+      "layer": "panel",
+      "source_bytes": 2454
+    },
+    {
+      "id": "SHARED-045",
+      "source_file": "apps/web/components/panels/workspace-right-rail.tsx",
+      "category": "panels",
+      "layer": "panel",
+      "source_bytes": 14893
+    },
+    {
+      "id": "SHARED-046",
+      "source_file": "apps/web/components/patterns/collection-header.tsx",
+      "category": "patterns",
+      "layer": "pattern",
+      "source_bytes": 1755
+    },
+    {
+      "id": "SHARED-047",
+      "source_file": "apps/web/components/patterns/state.tsx",
+      "category": "patterns",
+      "layer": "pattern",
+      "source_bytes": 2051
+    },
+    {
+      "id": "SHARED-048",
+      "source_file": "apps/web/components/patterns/workspace-home.tsx",
+      "category": "patterns",
+      "layer": "pattern",
+      "source_bytes": 1654
+    },
+    {
+      "id": "SHARED-049",
+      "source_file": "apps/web/components/surfaces/card.tsx",
+      "category": "surfaces",
+      "layer": "surface",
+      "source_bytes": 1726
+    },
+    {
+      "id": "SHARED-050",
+      "source_file": "apps/web/components/surfaces/collection-view.tsx",
+      "category": "surfaces",
+      "layer": "surface",
+      "source_bytes": 3118
+    },
+    {
+      "id": "SHARED-051",
+      "source_file": "apps/web/components/surfaces/kpi-card.tsx",
+      "category": "surfaces",
+      "layer": "surface",
+      "source_bytes": 879
+    },
+    {
+      "id": "SHARED-052",
+      "source_file": "apps/web/components/surfaces/section.tsx",
+      "category": "surfaces",
+      "layer": "surface",
+      "source_bytes": 3892
+    }
+  ],
+  "ui_primitives": [
+    {
+      "id": "PRIM-001",
+      "source_file": "packages/ui/src/components/accordion.tsx",
+      "name": "accordion",
+      "source_bytes": 1945
+    },
+    {
+      "id": "PRIM-002",
+      "source_file": "packages/ui/src/components/alert.tsx",
+      "name": "alert",
+      "source_bytes": 1625
+    },
+    {
+      "id": "PRIM-003",
+      "source_file": "packages/ui/src/components/attachment.tsx",
+      "name": "attachment",
+      "source_bytes": 6330
+    },
+    {
+      "id": "PRIM-004",
+      "source_file": "packages/ui/src/components/avatar.tsx",
+      "name": "avatar",
+      "source_bytes": 3096
+    },
+    {
+      "id": "PRIM-005",
+      "source_file": "packages/ui/src/components/badge.tsx",
+      "name": "badge",
+      "source_bytes": 1251
+    },
+    {
+      "id": "PRIM-006",
+      "source_file": "packages/ui/src/components/breadcrumb.tsx",
+      "name": "breadcrumb",
+      "source_bytes": 2446
+    },
+    {
+      "id": "PRIM-007",
+      "source_file": "packages/ui/src/components/bubble.tsx",
+      "name": "bubble",
+      "source_bytes": 3468
+    },
+    {
+      "id": "PRIM-008",
+      "source_file": "packages/ui/src/components/button.tsx",
+      "name": "button",
+      "source_bytes": 3314
+    },
+    {
+      "id": "PRIM-009",
+      "source_file": "packages/ui/src/components/calendar.tsx",
+      "name": "calendar",
+      "source_bytes": 2325
+    },
+    {
+      "id": "PRIM-010",
+      "source_file": "packages/ui/src/components/card.tsx",
+      "name": "card",
+      "source_bytes": 2735
+    },
+    {
+      "id": "PRIM-011",
+      "source_file": "packages/ui/src/components/checkbox.tsx",
+      "name": "checkbox",
+      "source_bytes": 919
+    },
+    {
+      "id": "PRIM-012",
+      "source_file": "packages/ui/src/components/collapsible.tsx",
+      "name": "collapsible",
+      "source_bytes": 750
+    },
+    {
+      "id": "PRIM-013",
+      "source_file": "packages/ui/src/components/dialog.tsx",
+      "name": "dialog",
+      "source_bytes": 2461
+    },
+    {
+      "id": "PRIM-014",
+      "source_file": "packages/ui/src/components/drawer.tsx",
+      "name": "drawer",
+      "source_bytes": 4043
+    },
+    {
+      "id": "PRIM-015",
+      "source_file": "packages/ui/src/components/dropdown-menu.tsx",
+      "name": "dropdown-menu",
+      "source_bytes": 8004
+    },
+    {
+      "id": "PRIM-016",
+      "source_file": "packages/ui/src/components/empty.tsx",
+      "name": "empty",
+      "source_bytes": 1930
+    },
+    {
+      "id": "PRIM-017",
+      "source_file": "packages/ui/src/components/field.tsx",
+      "name": "field",
+      "source_bytes": 3300
+    },
+    {
+      "id": "PRIM-018",
+      "source_file": "packages/ui/src/components/input.tsx",
+      "name": "input",
+      "source_bytes": 958
+    },
+    {
+      "id": "PRIM-019",
+      "source_file": "packages/ui/src/components/item.tsx",
+      "name": "item",
+      "source_bytes": 2801
+    },
+    {
+      "id": "PRIM-020",
+      "source_file": "packages/ui/src/components/label.tsx",
+      "name": "label",
+      "source_bytes": 471
+    },
+    {
+      "id": "PRIM-021",
+      "source_file": "packages/ui/src/components/marker.tsx",
+      "name": "marker",
+      "source_bytes": 2036
+    },
+    {
+      "id": "PRIM-022",
+      "source_file": "packages/ui/src/components/message-scroller.tsx",
+      "name": "message-scroller",
+      "source_bytes": 3996
+    },
+    {
+      "id": "PRIM-023",
+      "source_file": "packages/ui/src/components/message.tsx",
+      "name": "message",
+      "source_bytes": 1961
+    },
+    {
+      "id": "PRIM-024",
+      "source_file": "packages/ui/src/components/native-select.tsx",
+      "name": "native-select",
+      "source_bytes": 1415
+    },
+    {
+      "id": "PRIM-025",
+      "source_file": "packages/ui/src/components/popover.tsx",
+      "name": "popover",
+      "source_bytes": 1247
+    },
+    {
+      "id": "PRIM-026",
+      "source_file": "packages/ui/src/components/progress.tsx",
+      "name": "progress",
+      "source_bytes": 735
+    },
+    {
+      "id": "PRIM-027",
+      "source_file": "packages/ui/src/components/resizable.tsx",
+      "name": "resizable",
+      "source_bytes": 1296
+    },
+    {
+      "id": "PRIM-028",
+      "source_file": "packages/ui/src/components/separator.tsx",
+      "name": "separator",
+      "source_bytes": 634
+    },
+    {
+      "id": "PRIM-029",
+      "source_file": "packages/ui/src/components/sheet.tsx",
+      "name": "sheet",
+      "source_bytes": 4547
+    },
+    {
+      "id": "PRIM-030",
+      "source_file": "packages/ui/src/components/sidebar.tsx",
+      "name": "sidebar",
+      "source_bytes": 21407
+    },
+    {
+      "id": "PRIM-031",
+      "source_file": "packages/ui/src/components/skeleton.tsx",
+      "name": "skeleton",
+      "source_bytes": 270
+    },
+    {
+      "id": "PRIM-032",
+      "source_file": "packages/ui/src/components/sonner.tsx",
+      "name": "sonner",
+      "source_bytes": 785
+    },
+    {
+      "id": "PRIM-033",
+      "source_file": "packages/ui/src/components/tab-styles.ts",
+      "name": "tab-styles",
+      "source_bytes": 917
+    },
+    {
+      "id": "PRIM-034",
+      "source_file": "packages/ui/src/components/table.tsx",
+      "name": "table",
+      "source_bytes": 2450
+    },
+    {
+      "id": "PRIM-035",
+      "source_file": "packages/ui/src/components/tabs.tsx",
+      "name": "tabs",
+      "source_bytes": 1234
+    },
+    {
+      "id": "PRIM-036",
+      "source_file": "packages/ui/src/components/textarea.tsx",
+      "name": "textarea",
+      "source_bytes": 666
+    },
+    {
+      "id": "PRIM-037",
+      "source_file": "packages/ui/src/components/tooltip.tsx",
+      "name": "tooltip",
+      "source_bytes": 2101
+    }
+  ]
+}
