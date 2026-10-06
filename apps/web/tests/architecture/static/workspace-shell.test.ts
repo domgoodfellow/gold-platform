@@ -124,7 +124,13 @@ describe('Agent is workspace-global and the support modes are page-level', () =>
       const source = readFileSync(`${root}/${area}/page.tsx`, 'utf8');
       expect(source, `${area} offers Activity`).toMatch(/\bactivity\b/);
       expect(source, `${area} registers Activity`).toContain('<SupportRegistrar mode="activity"');
-      expect(source, `${area} registers Insights`).toContain('<SupportRegistrar');
+      expect(source, `${area} offers Insights`).toContain('insights={mayInsight &&');
+      expect(source, `${area} registers Insights`).toMatch(/<SupportRegistrar\s+mode="insights"/);
+      expect(source, `${area} requires report access`).toContain(
+        area === 'work' ? "can('report.read')" : "organization.capabilities.includes('report.read')",
+      );
+      expect(source).not.toContain('/insights/reports');
+      expect(source).not.toContain('hrefLabel="Full report"');
       expect(source, `${area} gates Insights on the reporting workspace`).toMatch(/areaAvailable\('insights'/);
     }
     // Activity reads only through the timeline's named scopes; a page never names event actions.
@@ -139,14 +145,24 @@ describe('Agent is workspace-global and the support modes are page-level', () =>
     expect(insights).not.toMatch(/\.reduce\(/);
   });
 
+  it('Finance offers no global Insights link', () => {
+    const finance = readFileSync(`${WEB}/app/organizations/[organizationId]/finance/page.tsx`, 'utf8');
+    expect(finance).not.toContain('Financial insights');
+    expect(finance).not.toContain('/insights');
+    expect(finance).not.toContain("areaHref(organizationId, 'insights')");
+  });
+
   it('every page that offers Configure also registers the panel it opens', () => {
-    for (const area of ['resources', 'locations', 'assets', 'schedule']) {
+    for (const area of ['resources', 'locations', 'assets', 'schedule', 'customers', 'work']) {
       const source = readFileSync(
         `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
         'utf8',
       );
       expect(source, `${area}/page.tsx asks for Configure`).toMatch(/configure=\{mayConfigure\}/);
       expect(source, `${area}/page.tsx registers its panel`).toContain('<ConfigureRegistrar');
+      expect(source).not.toContain('configure={mayConfigure && types.length > 0}');
+      expect(source).not.toContain('configure={mayConfigure && !emptyCollection}');
+      if (area === 'work') expect(source).toMatch(/\{mayConfigure \? \(\s*<ConfigureRegistrar/);
     }
   });
 });

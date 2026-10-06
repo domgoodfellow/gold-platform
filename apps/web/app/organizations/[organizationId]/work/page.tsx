@@ -31,7 +31,7 @@ import {
   type CoverageView,
 } from '@/lib/domain/work-items/requirements';
 import { todayInZone } from '@/lib/domain/scheduling/window';
-import { areaAvailable, areaHref, areaLabel, workspaceAncestry } from '@/lib/navigation';
+import { areaAvailable, areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { PageHeader } from '@/components/headers/page-header';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 
@@ -98,13 +98,11 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
         <SupportRegistrar
           mode="insights"
           title="Work insights"
-          href={`${areaHref(organizationId, 'insights')}/reports?of=work_marked_complete&by=customer&period=month`}
-          hrefLabel="Full report"
         >
           <WorkInsights db={db} organizationId={organizationId} today={todayInZone(organization.timezone)} />
         </SupportRegistrar>
       ) : null}
-      {mayConfigure && types.length > 0 ? (
+      {mayConfigure ? (
         <ConfigureRegistrar
           title="Work configuration"
           settingsHref={`/organizations/${organizationId}/work/configuration${selectedType ? `?type=${selectedType.id}` : ''}`}
@@ -134,7 +132,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
         crumbs={workspaceAncestry(organizationId, 'work')}
         activity={types.length > 0}
         insights={mayInsight && types.length > 0}
-        configure={mayConfigure && types.length > 0}
+        configure={mayConfigure}
       />
       <WorkList
         organizationId={organizationId}

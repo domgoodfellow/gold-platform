@@ -3,7 +3,7 @@ import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { FinanceHomeBody } from '@/features/finance/home/finance-home';
 import { financeOverview } from '@/lib/application/finance/finance-overview';
 import { todayInZone } from '@/lib/domain/scheduling/window';
-import { areaHref, workspaceLabel } from '@/lib/navigation';
+import { workspaceLabel } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -32,14 +32,6 @@ export default async function FinancePage({
       title={workspaceLabel('finance')}
       actions={
         <div className="flex flex-wrap gap-2">
-          {canReadReports ? (
-            <ButtonLink
-              href={`${areaHref(organizationId, 'insights')}/reports?of=invoiced_and_incurred&by=customer&period=month`}
-              tone="secondary"
-            >
-              Financial insights
-            </ButtonLink>
-          ) : null}
           {organization.capabilities.includes('price.manage') ? (
             <ButtonLink href={`/organizations/${organizationId}/settings/pricing`} tone="secondary">Pricing</ButtonLink>
           ) : null}

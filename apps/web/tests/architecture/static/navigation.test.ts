@@ -924,9 +924,16 @@ describe('the organization shell taxonomy', () => {
     expect(AREA_GROUPS.filter((group) => group.label !== null).map((group) => group.key)).toEqual(['workspaces']);
   });
 
-  it('gives Insights a real Overview and Reports route, and nothing for the old paths', () => {
-    expect(existsSync(`${ROUTES}/insights/page.tsx`)).toBe(true);
-    expect(existsSync(`${ROUTES}/insights/reports/page.tsx`)).toBe(true);
+  it('keeps legacy Insights routes as compatibility redirects without global reporting UI', () => {
+    for (const route of ['insights', 'insights/reports']) {
+      const source = readFileSync(`${ROUTES}/${route}/page.tsx`, 'utf8');
+      expect(source).toContain('redirect(');
+      expect(source).toContain("redirect(areaHref(organizationId, 'home'))");
+      for (const retired of ['DashboardManagement', 'ReportManagement', 'InsightsViewNav']) {
+        expect(source).not.toContain(retired);
+      }
+    }
+    expect(readFileSync(`${ROUTES}/finance/page.tsx`, 'utf8')).not.toContain('Financial insights');
   });
 });
 

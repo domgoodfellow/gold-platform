@@ -1,7 +1,4 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ArrowRight } from 'lucide-react';
-import { cx, FOCUS_RING } from '@/components/class-names';
 import type { Db } from '@/lib/db/types';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { formatMinutes, listTimeCommitted, totalMinutes } from '@/lib/domain/reporting/commitment';
@@ -10,16 +7,11 @@ import { listInvoicedAndIncurred, totalsByCurrency } from '@/lib/domain/reportin
 import { periodFor } from '@/lib/domain/reporting/shape';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
-import { areaHref } from '@/lib/navigation';
 
 type Metric = { label: string; value: ReactNode; note?: string };
 
-/**
- * A handful of figures and one way out to the full report. Small on purpose: no table, no
- * multi-series chart, no filters — those are Insights' job, and the link carries the same
- * measure, grouping and period into it.
- */
-function Metrics({ metrics, href, hrefLabel }: { metrics: Metric[]; href: string; hrefLabel: string }) {
+/** A handful of contextual figures from the domain reads. */
+function Metrics({ metrics }: { metrics: Metric[] }) {
   return (
     <div className="flex flex-col gap-4">
       <dl className="divide-y divide-border">
@@ -31,10 +23,6 @@ function Metrics({ metrics, href, hrefLabel }: { metrics: Metric[]; href: string
           </div>
         ))}
       </dl>
-      <Link href={href} className={cx('flex items-center gap-1 self-start rounded text-sm underline-offset-4 hover:underline', FOCUS_RING)}>
-        {hrefLabel}
-        <ArrowRight aria-hidden size={14} />
-      </Link>
     </div>
   );
 }
@@ -66,8 +54,6 @@ export async function CustomersInsights({
   return (
     <Metrics
       metrics={metrics}
-      href={`${areaHref(organizationId, 'insights')}/reports?of=invoiced_and_incurred&by=customer&period=month`}
-      hrefLabel="Open in Insights"
     />
   );
 }
@@ -96,8 +82,6 @@ export async function WorkInsights({
         { label: 'Marked complete this month', value: totalJobs(completed) },
         { label: 'Time committed this month', value: formatMinutes(totalMinutes(committed)) },
       ]}
-      href={`${areaHref(organizationId, 'insights')}/reports?of=work_marked_complete&by=customer&period=month`}
-      hrefLabel="Open in Insights"
     />
   );
 }

@@ -15,7 +15,7 @@ import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { todayInZone } from '@/lib/domain/scheduling/window';
-import { areaAvailable, areaHref, areaLabel, workspaceAncestry } from '@/lib/navigation';
+import { areaAvailable, areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { CustomersInsights } from '@/features/insights/workspace-insights';
 import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
 import { requireOrganization } from '@/lib/route/organization';
@@ -73,7 +73,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
           ) : undefined}
           activity={!emptyCollection}
           insights={mayInsight && !emptyCollection}
-          configure={mayConfigure && !emptyCollection}
+          configure={mayConfigure}
         />
         <SupportRegistrar mode="activity" title="Customer activity">
           <WorkspaceActivity
@@ -88,8 +88,6 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
           <SupportRegistrar
             mode="insights"
             title="Customer insights"
-            href={`${areaHref(organizationId, 'insights')}/reports?of=invoiced_and_incurred&by=customer&period=month`}
-            hrefLabel="Full report"
           >
             <CustomersInsights
               db={db}
