@@ -27,6 +27,8 @@ function resource(name: string, resourceClass: ResourceClass, capabilityIds: str
     capabilities: capabilityIds.map(cap),
     custom: {},
     createdAt: '2027-01-01T00:00:00Z',
+    travelMode: null,
+    baseLocationId: null,
     member: null,
   };
 }

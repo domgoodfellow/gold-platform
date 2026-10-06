@@ -144,6 +144,8 @@ describe('the resource list', () => {
     capabilities: [],
     custom: {},
     createdAt: '2027-01-01T00:00:00Z',
+    travelMode: null,
+    baseLocationId: null,
     member: null,
     ...over,
   });

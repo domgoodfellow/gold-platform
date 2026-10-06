@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FormDefinition, FormPublication } from '@gold/schemas';
 import { PublicForm } from '@/features/forms/public-form';
 import { FormSection } from '@/features/public-site/form-section';
-import { WebsiteStructure } from '@/features/studio/website/website-structure';
 import { PortalForms } from '@/features/portal-access/portal-forms';
 
 const actions = vi.hoisted(() => ({
@@ -108,29 +107,5 @@ describe('the portal list', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await waitFor(() => expect(actions.submitPortalFormAction).toHaveBeenCalledTimes(1));
     expect(actions.submitPortalFormAction).toHaveBeenCalledWith({ formId: PUBLICATION.formId, answers: { name: 'Ada', size: 's' } });
-  });
-});
-
-describe('the website structure', () => {
-  const sections = [
-    { kind: 'hero' }, { kind: 'problem' }, { kind: 'capabilities' }, { kind: 'process' }, { kind: 'trust' }, { kind: 'cta' },
-  ] as never;
-
-  it('offers to add one form, and then only to remove it', async () => {
-    const user = userEvent.setup();
-    const onAddForm = vi.fn();
-    const props = { selected: 'page' as const, onSelect: vi.fn(), onRemoveForm: vi.fn() };
-    const { rerender } = render(<WebsiteStructure {...props} sections={sections} forms={[{ id: 'f1', name: 'Quote', published: true }]} onAddForm={onAddForm} />);
-    await user.selectOptions(screen.getByLabelText('Add a form'), 'f1');
-    expect(onAddForm).toHaveBeenCalledWith({ id: 'f1', name: 'Quote', published: true });
-
-    rerender(<WebsiteStructure {...props} sections={[...(sections as unknown[]).slice(0, 5), { kind: 'form' }, { kind: 'cta' }] as never} forms={[]} onAddForm={onAddForm} />);
-    await user.click(screen.getByRole('button', { name: 'Remove form section' }));
-    expect(props.onRemoveForm).toHaveBeenCalledTimes(1);
-  });
-
-  it('says what to do when there is no form to place', () => {
-    render(<WebsiteStructure selected="page" onSelect={vi.fn()} sections={sections} forms={[]} onAddForm={vi.fn()} onRemoveForm={vi.fn()} />);
-    expect(screen.getByText(/Create a form in Studio/)).toBeTruthy();
   });
 });

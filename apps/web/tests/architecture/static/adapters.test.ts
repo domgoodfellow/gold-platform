@@ -46,6 +46,10 @@ const VENDORS = [
   'postmark',
   'sendgrid',
   'mailgun',
+  // Routing. Named the day the capability landed, for the same reason geocoding's were.
+  'osrm',
+  'mapbox',
+  'graphhopper',
 ];
 
 /**
@@ -56,7 +60,7 @@ const VENDORS = [
  * this repository refuses to say in the wrong place, and it is allowed to run ahead of what has
  * been built.
  */
-const CONTRACTS = ['payments', 'platform-billing', 'geocoding', 'drafting', 'answering', 'telephony', 'messaging', 'email', 'email-domains', 'tenant-email'];
+const CONTRACTS = ['payments', 'platform-billing', 'geocoding', 'routing', 'drafting', 'answering', 'telephony', 'messaging', 'email', 'email-domains', 'tenant-email'];
 
 describe('the adapter boundary (I15)', () => {
   it('has no domain file importing a provider implementation', () => {

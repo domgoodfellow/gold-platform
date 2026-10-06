@@ -1175,6 +1175,13 @@
         "providers"
       ]
     },
+    "apps/web/tests/contract/osrm-routing.test.ts": {
+      "category": "offline-contract",
+      "concerns": [
+        "scheduling",
+        "providers"
+      ]
+    },
     "apps/web/tests/contract/platform-email.test.ts": {
       "category": "offline-contract",
       "concerns": [
@@ -2056,6 +2063,13 @@
       ],
       "note": "Also contains source scans."
     },
+    "apps/web/tests/integration/database/travel-feasibility.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "scheduling",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/usage-economics.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -2375,7 +2389,7 @@
         "accessibility",
         "public-site"
       ],
-      "note": "The website form section's modes, the public form's focus on a refused submit, the portal list and the website structure's one add/remove control."
+      "note": "The website form section's modes, the public form's focus on a refused submit, and the portal list."
     },
     "apps/web/e2e/studio-form-distribution.spec.ts": {
       "category": "playwright-acceptance",
@@ -2494,6 +2508,42 @@
         "providers",
         "platform"
       ]
+    },
+    "apps/web/tests/unit/travel-feasibility.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "scheduling"
+      ]
+    },
+    "apps/web/tests/unit/travel-text.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "scheduling"
+      ]
+    },
+    "apps/web/e2e/studio-website.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "public-site",
+        "ui"
+      ],
+      "note": "A business creates its own website, composes pages and sections, previews privately, publishes, restores, and a stranger reads it at its hostname."
+    },
+    "apps/web/tests/unit/website-composition.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "public-site"
+      ],
+      "note": "Page and section composition, the closed vocabulary, reserved paths and stable ids."
+    },
+    "apps/web/tests/component/website-workbench.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "ui",
+        "accessibility",
+        "public-site"
+      ],
+      "note": "The Website workbench: creation, pages, sections, reordering, unsaved state and read-only review."
     }
   }
 }

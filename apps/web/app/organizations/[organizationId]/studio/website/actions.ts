@@ -1,12 +1,12 @@
 'use server';
 
 import { updateTag, revalidatePath } from 'next/cache';
-import { PublicHomepageRevisionSchema } from '@gold/schemas';
+import { WebsiteContentSchema } from '@gold/schemas';
 import { getDb } from '@/lib/db/server';
 import { requireOrganization } from '@/lib/route/organization';
 import { DomainError } from '@/lib/domain/errors';
 import { GOLD_HOMEPAGE_CACHE_TAG } from '@/lib/domain/public-site/cached';
-import { createHomepageDraft, publishHomepageRevision, submitHomepageRevision, updateHomepageDraft } from '@/lib/domain/public-site/public-site';
+import { createSiteDraft, createWebsite, publishSiteRevision, submitSiteRevision, updateSiteDraft } from '@/lib/domain/public-site/public-site';
 
 export type WebsiteActionState = { error: string | null; success?: string };
 
@@ -19,12 +19,27 @@ function failure(error: unknown): WebsiteActionState {
   return { error: error instanceof Error ? error.message : 'The website could not be changed.' };
 }
 
+const refresh = (organizationId: string) => revalidatePath(`/organizations/${organizationId}/studio/website`);
+
+/** The business creating its own website, blank or from a starter. No hostname is involved. */
+export async function createWebsiteAction(_state: WebsiteActionState, formData: FormData): Promise<WebsiteActionState> {
+  const { organizationId } = ids(formData);
+  await requireOrganization(organizationId);
+  const templateKey = String(formData.get('templateKey') ?? '').trim() || null;
+  try { await createWebsite(await getDb(), { organizationId, templateKey }); }
+  catch (error) { return failure(error); }
+  refresh(organizationId);
+  return { error: null, success: 'Website created.' };
+}
+
+/** A working draft from the published website, or — with `fromRevisionId` — from an earlier revision. */
 export async function createDraftAction(_state: WebsiteActionState, formData: FormData): Promise<WebsiteActionState> {
   const { organizationId } = ids(formData);
   await requireOrganization(organizationId);
-  try { await createHomepageDraft(await getDb(), organizationId); }
+  const fromRevisionId = String(formData.get('fromRevisionId') ?? '').trim() || null;
+  try { await createSiteDraft(await getDb(), { organizationId, fromRevisionId }); }
   catch (error) { return failure(error); }
-  revalidatePath(`/organizations/${organizationId}/studio/website`);
+  refresh(organizationId);
   return { error: null, success: 'Draft ready.' };
 }
 
@@ -32,33 +47,31 @@ export async function saveDraftAction(_state: WebsiteActionState, formData: Form
   const identity = ids(formData);
   await requireOrganization(identity.organizationId);
   try {
-    const content = PublicHomepageRevisionSchema.parse({
-      seoTitle: formData.get('seoTitle'), seoDescription: formData.get('seoDescription'),
-      sections: JSON.parse(String(formData.get('sections') ?? 'null')),
-    });
-    await updateHomepageDraft(await getDb(), { ...identity, ...content });
+    const parsed = WebsiteContentSchema.safeParse(JSON.parse(String(formData.get('content') ?? 'null')));
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'The website could not be saved.' };
+    await updateSiteDraft(await getDb(), { ...identity, content: parsed.data });
   } catch (error) { return failure(error); }
-  revalidatePath(`/organizations/${identity.organizationId}/studio/website`);
+  refresh(identity.organizationId);
   return { error: null, success: 'Draft saved.' };
 }
 
 export async function submitRevisionAction(_state: WebsiteActionState, formData: FormData): Promise<WebsiteActionState> {
   const identity = ids(formData);
   await requireOrganization(identity.organizationId);
-  try { await submitHomepageRevision(await getDb(), identity.organizationId, identity.revisionId); }
+  try { await submitSiteRevision(await getDb(), identity.organizationId, identity.revisionId); }
   catch (error) { return failure(error); }
-  revalidatePath(`/organizations/${identity.organizationId}/studio/website`);
+  refresh(identity.organizationId);
   return { error: null, success: 'Sent for review.' };
 }
 
 export async function publishRevisionAction(_state: WebsiteActionState, formData: FormData): Promise<WebsiteActionState> {
   const identity = ids(formData);
   await requireOrganization(identity.organizationId);
-  try { await publishHomepageRevision(await getDb(), identity.organizationId, identity.revisionId); }
+  try { await publishSiteRevision(await getDb(), identity.organizationId, identity.revisionId); }
   catch (error) { return failure(error); }
   // Draft saves and review transitions never touch public output. This is deliberately the only
   // website action that expires the anonymous projection.
   updateTag(GOLD_HOMEPAGE_CACHE_TAG);
-  revalidatePath(`/organizations/${identity.organizationId}/studio/website`);
+  refresh(identity.organizationId);
   return { error: null, success: 'Published.' };
 }

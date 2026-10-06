@@ -7863,21 +7863,86 @@ export type Database = {
         }
         Relationships: []
       }
-      public_page_revisions: {
+      public_page_templates: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          display_order: number
+          id: string
+          key: string
+          name: string
+          page: Json
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          display_order?: number
+          id?: string
+          key: string
+          name: string
+          page: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          key?: string
+          name?: string
+          page?: Json
+        }
+        Relationships: []
+      }
+      public_section_patterns: {
+        Row: {
+          created_at: string
+          description: string
+          display_order: number
+          id: string
+          key: string
+          kind: string
+          name: string
+          section: Json
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          display_order?: number
+          id?: string
+          key: string
+          kind: string
+          name: string
+          section: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          key?: string
+          kind?: string
+          name?: string
+          section?: Json
+        }
+        Relationships: []
+      }
+      public_site_revisions: {
         Row: {
           archived_at: string | null
           created_at: string
           created_by: string | null
           created_source: string
           id: string
+          navigation: Json
           organization_id: string
-          page_id: string
+          pages: Json
           published_at: string | null
           published_by: string | null
           revision_number: number
-          sections: Json
-          seo_description: string
-          seo_title: string
+          site_id: string
           status: string
           submitted_at: string | null
           submitted_by: string | null
@@ -7888,14 +7953,13 @@ export type Database = {
           created_by?: string | null
           created_source: string
           id?: string
+          navigation?: Json
           organization_id: string
-          page_id: string
+          pages: Json
           published_at?: string | null
           published_by?: string | null
           revision_number: number
-          sections: Json
-          seo_description: string
-          seo_title: string
+          site_id: string
           status: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -7906,77 +7970,68 @@ export type Database = {
           created_by?: string | null
           created_source?: string
           id?: string
+          navigation?: Json
           organization_id?: string
-          page_id?: string
+          pages?: Json
           published_at?: string | null
           published_by?: string | null
           revision_number?: number
-          sections?: Json
-          seo_description?: string
-          seo_title?: string
+          site_id?: string
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "public_page_revisions_organization_id_page_id_fkey"
-            columns: ["organization_id", "page_id"]
-            isOneToOne: false
-            referencedRelation: "public_pages"
-            referencedColumns: ["organization_id", "id"]
-          },
-        ]
-      }
-      public_pages: {
-        Row: {
-          created_at: string
-          current_published_revision_id: string | null
-          id: string
-          organization_id: string
-          page_key: string
-          site_id: string
-          slug: string
-        }
-        Insert: {
-          created_at?: string
-          current_published_revision_id?: string | null
-          id?: string
-          organization_id: string
-          page_key: string
-          site_id: string
-          slug: string
-        }
-        Update: {
-          created_at?: string
-          current_published_revision_id?: string | null
-          id?: string
-          organization_id?: string
-          page_key?: string
-          site_id?: string
-          slug?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "public_pages_organization_id_site_id_fkey"
+            foreignKeyName: "public_site_revisions_organization_id_site_id_fkey"
             columns: ["organization_id", "site_id"]
             isOneToOne: false
             referencedRelation: "public_sites"
             referencedColumns: ["organization_id", "id"]
           },
-          {
-            foreignKeyName: "public_pages_published_revision_belongs_to_page"
-            columns: ["organization_id", "id", "current_published_revision_id"]
-            isOneToOne: false
-            referencedRelation: "public_page_revisions"
-            referencedColumns: ["organization_id", "page_id", "id"]
-          },
         ]
+      }
+      public_site_templates: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          display_order: number
+          id: string
+          key: string
+          name: string
+          navigation: Json
+          pages: Json
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          display_order?: number
+          id?: string
+          key: string
+          name: string
+          navigation?: Json
+          pages: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          key?: string
+          name?: string
+          navigation?: Json
+          pages?: Json
+        }
+        Relationships: []
       }
       public_sites: {
         Row: {
           created_at: string
           created_by: string | null
+          current_published_revision_id: string | null
           default_locale: string
           id: string
           organization_id: string
@@ -7984,6 +8039,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          current_published_revision_id?: string | null
           default_locale?: string
           id?: string
           organization_id: string
@@ -7991,6 +8047,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          current_published_revision_id?: string | null
           default_locale?: string
           id?: string
           organization_id?: string
@@ -8009,6 +8066,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_sites_published_revision_belongs_to_site"
+            columns: ["organization_id", "id", "current_published_revision_id"]
+            isOneToOne: false
+            referencedRelation: "public_site_revisions"
+            referencedColumns: ["organization_id", "site_id", "id"]
           },
         ]
       }
@@ -8413,6 +8477,7 @@ export type Database = {
       }
       resources: {
         Row: {
+          base_location_id: string | null
           created_at: string
           created_by: string
           custom: Json
@@ -8421,8 +8486,10 @@ export type Database = {
           name: string
           organization_id: string
           resource_class: string
+          travel_mode: string | null
         }
         Insert: {
+          base_location_id?: string | null
           created_at?: string
           created_by: string
           custom?: Json
@@ -8431,8 +8498,10 @@ export type Database = {
           name: string
           organization_id: string
           resource_class: string
+          travel_mode?: string | null
         }
         Update: {
+          base_location_id?: string | null
           created_at?: string
           created_by?: string
           custom?: Json
@@ -8441,8 +8510,16 @@ export type Database = {
           name?: string
           organization_id?: string
           resource_class?: string
+          travel_mode?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "resources_base_location_same_org"
+            columns: ["organization_id", "base_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "resources_membership_same_org"
             columns: ["organization_id", "membership_id"]
@@ -10522,8 +10599,12 @@ export type Database = {
         Args: { p_customer_id: string }
         Returns: string
       }
-      create_public_homepage_draft: {
-        Args: { p_organization_id: string }
+      create_public_site: {
+        Args: { p_organization_id: string; p_template_key?: string }
+        Returns: string
+      }
+      create_public_site_draft: {
+        Args: { p_from_revision_id?: string; p_organization_id: string }
         Returns: string
       }
       create_resource: {
@@ -10800,6 +10881,9 @@ export type Database = {
       }
       list_form_templates: { Args: never; Returns: Json }
       list_forms: { Args: { p_organization_id: string }; Returns: Json }
+      list_page_templates: { Args: never; Returns: Json }
+      list_section_patterns: { Args: never; Returns: Json }
+      list_site_templates: { Args: never; Returns: Json }
       module_commercial_state: {
         Args: { p_organization_id: string }
         Returns: {
@@ -11216,14 +11300,6 @@ export type Database = {
         Args: { p_site_id: string }
         Returns: Json
       }
-      public_homepage_editor_state: {
-        Args: { p_organization_id: string }
-        Returns: Json
-      }
-      public_homepage_preview: {
-        Args: { p_organization_id: string; p_revision_id: string }
-        Returns: Json
-      }
       public_plan_catalog: {
         Args: never
         Returns: {
@@ -11237,11 +11313,19 @@ export type Database = {
           requires_contact_sales: boolean
         }[]
       }
+      public_site_editor_state: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      public_site_preview: {
+        Args: { p_organization_id: string; p_revision_id: string }
+        Returns: Json
+      }
       publish_form_revision: {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: undefined
       }
-      publish_public_homepage_revision: {
+      publish_public_site_revision: {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: undefined
       }
@@ -12316,6 +12400,14 @@ export type Database = {
         Args: { p_membership_id: string; p_resource_id: string }
         Returns: undefined
       }
+      set_resource_routing: {
+        Args: {
+          p_base_location_id: string
+          p_resource_id: string
+          p_travel_mode: string
+        }
+        Returns: undefined
+      }
       set_resource_working_hours: {
         Args: { p_hours: Json; p_resource_id: string }
         Returns: undefined
@@ -12403,10 +12495,6 @@ export type Database = {
         }
         Returns: string
       }
-      submit_public_homepage_revision: {
-        Args: { p_organization_id: string; p_revision_id: string }
-        Returns: undefined
-      }
       submit_public_inquiry: {
         Args: {
           p_business_name: string
@@ -12419,6 +12507,10 @@ export type Database = {
           p_team_size: string
           p_topic: string
         }
+        Returns: undefined
+      }
+      submit_public_site_revision: {
+        Args: { p_organization_id: string; p_revision_id: string }
         Returns: undefined
       }
       sync_phone_number: {
@@ -12551,13 +12643,12 @@ export type Database = {
         }
         Returns: undefined
       }
-      update_public_homepage_draft: {
+      update_public_site_draft: {
         Args: {
+          p_navigation: Json
           p_organization_id: string
+          p_pages: Json
           p_revision_id: string
-          p_sections: Json
-          p_seo_description: string
-          p_seo_title: string
         }
         Returns: undefined
       }

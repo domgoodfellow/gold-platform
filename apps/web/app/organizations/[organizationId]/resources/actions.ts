@@ -13,10 +13,12 @@ import {
   setResourceCapabilityArchived,
 } from '@/lib/domain/resources/resource-capabilities';
 import { isResourceClass } from '@/lib/domain/resources/resource-class';
+import { isTravelMode, type TravelMode } from '@/lib/domain/resources/travel-mode';
 import {
   createResource,
   setResourceClass,
   setResourceMembership,
+  setResourceRouting,
 } from '@/lib/domain/resources/resources';
 import type { Db } from '@/lib/db/types';
 import { requireOrganization } from '@/lib/route/organization';
@@ -147,6 +149,39 @@ export async function setResourceClassAction(
       throw new DomainError('Say what kind of resource this is.', 'resources.class_required');
     }
     await setResourceClass(db, { resourceId, resourceClass });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidateResource(organizationId, resourceId);
+  return { error: null };
+}
+
+/**
+ * Say how a resource moves and where it starts from. Both are optional: an empty field is *not
+ * said*, which is a stored answer and not a default.
+ */
+export async function setResourceRoutingAction(
+  _previous: ResourceEditState,
+  formData: FormData,
+): Promise<ResourceEditState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const resourceId = String(formData.get('resourceId') ?? '');
+  const mode = String(formData.get('travelMode') ?? '');
+  const baseLocationId = String(formData.get('baseLocationId') ?? '');
+  await requireOrganization(organizationId);
+
+  try {
+    if (mode !== '' && !isTravelMode(mode)) {
+      throw new DomainError('Say whether this resource is mobile or fixed.', 'resources.travel_mode_invalid');
+    }
+    await setResourceRouting(db, {
+      resourceId,
+      travelMode: mode === '' ? null : (mode as TravelMode),
+      baseLocationId: baseLocationId === '' ? null : baseLocationId,
+    });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;

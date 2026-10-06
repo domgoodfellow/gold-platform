@@ -1,7 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
-import type { PublicHomepageSection, PublicHomepageSections } from '@gold/schemas';
+import { useActionState, useEffect, useState } from 'react';
+import type { PageTemplate, SectionPattern, SiteTemplate, WebsiteContent, WebsiteSection } from '@gold/schemas';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import { cx, FOCUS_RING } from '@/components/class-names';
@@ -12,56 +12,52 @@ import {
   PageDrawerTitle,
   PageDrawerTrigger,
 } from '@/components/panels/page-drawer';
-import type { EditorRevision } from '@/lib/domain/public-site/public-site';
 import {
-  createDraftAction,
+  addNavigationExternal, addNavigationPage, addPage, addSection, blankPage, duplicatePage, duplicateSection,
+  moveNavigationItem, moveSection, pageFromTemplate, removeNavigationItem, removePage, removeSection,
+  setHomepage, updateNavigationItem, updatePage, updateSection,
+} from '@/lib/domain/public-site/composition';
+import type { EditorRevision, RevisionHistoryEntry } from '@/lib/domain/public-site/public-site';
+import {
   publishRevisionAction,
   saveDraftAction,
   submitRevisionAction,
+  createDraftAction,
   type WebsiteActionState,
 } from '@/app/organizations/[organizationId]/studio/website/actions';
-import { WebsiteStructure, type StructureSelection } from './website-structure';
+import { SiteStructure } from './site-structure';
 import { WebsiteCanvas, VIEWPORT_LABEL, type Viewport } from './website-canvas';
-import { PageInspector, SectionInspector } from './website-inspector';
-import { RevisionHistorySheet, type HistoryEntry } from './revision-history-sheet';
-import { addFormSection, removeFormSection, type FormOption } from './website-editing';
+import { PageInspector } from './page-inspector';
+import { SectionEditor } from './section-editors';
+import { SectionLibrary } from './section-library';
+import { NavigationEditor } from './navigation-editor';
+import { CreateWebsite } from './create-website';
+import { WebsiteHistorySheet } from './website-history-sheet';
+import type { FormOption, Selection } from './types';
 
 const INITIAL: WebsiteActionState = { error: null };
 
-function snapshot(seoTitle: string, seoDescription: string, sections: PublicHomepageSections) {
-  return JSON.stringify({ seoTitle, seoDescription, sections });
-}
-
 function Feedback({ state }: { state: WebsiteActionState }) {
   if (state.error) return <ErrorText>{state.error}</ErrorText>;
-  if (state.success) return <Hint>{state.success}</Hint>;
+  if (state.success) return <Hint role="status">{state.success}</Hint>;
   return null;
 }
 
-/**
- * No working revision yet: the pre-workbench state. Published state is named so a business
- * publishing for the first time and one refining an already-live page read differently.
- */
-function NoDraftState({ organizationId, published, history }: { organizationId: string; published: EditorRevision | null; history: HistoryEntry[] }) {
+/** No working revision: the website is published and nothing is being changed, or was just restored from. */
+function NoDraftState({ organizationId, published, history }: { organizationId: string; published: EditorRevision | null; history: RevisionHistoryEntry[] }) {
   const [createState, createAction, creating] = useActionState(createDraftAction, INITIAL);
   return (
     <div className="grid gap-4">
-      {(published || history.length > 0) ? (
-        <div className="flex justify-end gap-2">
-          <RevisionHistorySheet history={history} />
-          {published ? <ButtonLink tone="secondary" size="small" href={`/preview/${organizationId}/${published.id}`} target="_blank">View published</ButtonLink> : null}
-        </div>
-      ) : null}
+      <div className="flex justify-end gap-2">
+        <WebsiteHistorySheet organizationId={organizationId} history={history} canRestore />
+        {published ? <ButtonLink tone="secondary" size="small" href={`/preview/${organizationId}/${published.id}`} target="_blank">View published</ButtonLink> : null}
+      </div>
       <div className="grid gap-4 rounded-lg border border-border bg-secondary p-8 text-center">
-        <p className="font-medium">
-          {published ? `Published · Revision ${published.number}` : 'No website has been published yet.'}
-        </p>
-        <p className="text-sm text-muted">
-          {published ? 'Create a draft from the published page to start editing.' : 'Create a first draft to start building the homepage.'}
-        </p>
+        <p className="font-medium">{published ? `Published · Revision ${published.number}` : 'Nothing has been published yet.'}</p>
+        <p className="text-sm text-muted">{published ? 'Create a draft from the published website to start editing.' : 'Create a draft to start editing.'}</p>
         <form action={createAction} className="flex items-center justify-center gap-3">
           <input type="hidden" name="organizationId" value={organizationId} />
-          <Button disabled={creating}>{published ? 'Create draft from published page' : 'Create homepage draft'}</Button>
+          <Button disabled={creating}>{published ? 'Create draft from published website' : 'Create draft'}</Button>
         </form>
         <Feedback state={createState} />
       </div>
@@ -87,19 +83,22 @@ function ViewportControl({ viewport, onChange }: { viewport: Viewport; onChange:
   );
 }
 
-export function WebsiteWorkbench({ organizationId, working, published, history, forms }: {
-  forms: FormOption[];
+function Editor({ organizationId, working, history, forms, pageTemplates, sectionPatterns }: {
   organizationId: string;
-  working: EditorRevision | null;
-  published: EditorRevision | null;
-  history: HistoryEntry[];
+  working: EditorRevision;
+  history: RevisionHistoryEntry[];
+  forms: FormOption[];
+  pageTemplates: PageTemplate[];
+  sectionPatterns: SectionPattern[];
 }) {
-  const [sections, setSections] = useState<PublicHomepageSections>(working?.sections ?? ([] as unknown as PublicHomepageSections));
-  const [seoTitle, setSeoTitle] = useState(working?.seoTitle ?? '');
-  const [seoDescription, setSeoDescription] = useState(working?.seoDescription ?? '');
-  const [savedSnapshot, setSavedSnapshot] = useState(() => snapshot(working?.seoTitle ?? '', working?.seoDescription ?? '', working?.sections ?? ([] as unknown as PublicHomepageSections)));
-  const [selected, setSelected] = useState<StructureSelection>('page');
+  const start: WebsiteContent = { pages: working.pages, navigation: working.navigation };
+  const [content, setContent] = useState<WebsiteContent>(start);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(start));
+  const [pageId, setPageId] = useState(() => (working.pages.find((page) => page.isHome) ?? working.pages[0]!).id);
+  const [selected, setSelected] = useState<Selection>('page');
   const [viewport, setViewport] = useState<Viewport>('desktop');
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [navigationOpen, setNavigationOpen] = useState(false);
 
   const [saveState, saveAction, saving] = useActionState(saveDraftAction, INITIAL);
   const [submitState, submitAction, submitting] = useActionState(submitRevisionAction, INITIAL);
@@ -111,49 +110,97 @@ export function WebsiteWorkbench({ organizationId, working, published, history, 
   const [processedSaveState, setProcessedSaveState] = useState(saveState);
   if (saveState !== processedSaveState) {
     setProcessedSaveState(saveState);
-    if (saveState.success) setSavedSnapshot(snapshot(seoTitle, seoDescription, sections));
+    if (saveState.success) setSavedSnapshot(JSON.stringify(content));
   }
 
-  const dirty = snapshot(seoTitle, seoDescription, sections) !== savedSnapshot;
+  const dirty = JSON.stringify(content) !== savedSnapshot;
 
-  if (!working) return <NoDraftState organizationId={organizationId} published={published} history={history} />;
+  // Moving between pages never discards anything (the whole website is one piece of state), but
+  // closing the tab with unsaved edits would. Say so, once, the way the browser does.
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
 
+  const isDraft = working.status === 'draft';
+  const home = content.pages.find((page) => page.isHome) ?? content.pages[0]!;
+  const page = content.pages.find((entry) => entry.id === pageId) ?? home;
+  const section = selected === 'page' ? null : page.sections.find((entry) => entry.id === selected.sectionId) ?? null;
+
+  const change = (next: WebsiteContent) => { if (isDraft) setContent(next); };
   const identityFields = (
     <>
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="revisionId" value={working.id} />
     </>
   );
-
-  const isDraft = working.status === 'draft';
-  const previewHref = `/preview/${organizationId}/${working.id}`;
-
-  const structureForms = {
-    forms,
-    disabled: !isDraft,
-    onAddForm: (form: FormOption) => { setSections(addFormSection(sections, form)); setSelected('form'); },
-    onRemoveForm: () => { setSections(removeFormSection(sections)); setSelected('page'); },
-  };
+  const previewBase = `/preview/${organizationId}/${working.id}`;
+  const previewHref = page.isHome ? previewBase : `${previewBase}/${page.slug}`;
   const formNames = Object.fromEntries(forms.map((form) => [form.id, form.name]));
 
-  const inspectorContent = (
+  const onAddSection = (added: WebsiteSection) => {
+    change(addSection(content, page.id, added));
+    setSelected({ sectionId: added.id });
+    setLibraryOpen(false);
+  };
+
+  const structure = (
+    <SiteStructure
+      content={content} pageId={page.id} selected={selected} disabled={!isDraft} pageTemplates={pageTemplates}
+      onSelectPage={setPageId} onSelect={setSelected}
+      onAddPage={(name, templateKey) => {
+        const template = pageTemplates.find((entry) => entry.key === templateKey);
+        const created = template ? { ...pageFromTemplate(content, template), name } : blankPage(content, name);
+        change(addPage(content, created));
+        setPageId(created.id);
+        setSelected('page');
+      }}
+      onAddSection={() => setLibraryOpen(true)}
+      onMoveSection={(sectionId, direction) => change(moveSection(content, page.id, sectionId, direction))}
+      onDuplicateSection={(sectionId) => {
+        const result = duplicateSection(content, page.id, sectionId);
+        change(result.content);
+        if (result.section) setSelected({ sectionId: result.section.id });
+      }}
+      onRemoveSection={(sectionId) => {
+        change(removeSection(content, page.id, sectionId));
+        setSelected('page');
+      }}
+    />
+  );
+
+  const inspector = (
     <fieldset disabled={!isDraft} className="contents">
-      {selected === 'page' ? (
-        <PageInspector seoTitle={seoTitle} seoDescription={seoDescription} onSeoTitle={setSeoTitle} onSeoDescription={setSeoDescription} />
+      {section ? (
+        <SectionEditor
+          // A new section is a new editor: its fields must not inherit the last one's focus or text.
+          key={section.id}
+          section={section}
+          onChange={(next) => change(updateSection(content, page.id, next))}
+          organizationId={organizationId}
+          forms={forms}
+        />
       ) : (
-        (() => {
-          const index = sections.findIndex((section) => section.kind === selected);
-          const section = sections[index];
-          if (!section) return null;
-          return (
-            <SectionInspector
-              section={section}
-              onChange={(next: PublicHomepageSection) => setSections(sections.map((entry, i) => i === index ? next : entry) as PublicHomepageSections)}
-              organizationId={organizationId}
-              forms={forms}
-            />
-          );
-        })()
+        <PageInspector
+          key={page.id}
+          content={content}
+          page={page}
+          onChange={(patch) => change(updatePage(content, page.id, patch))}
+          onSetHome={() => change(setHomepage(content, page.id))}
+          onDuplicate={() => {
+            const result = duplicatePage(content, page.id);
+            change(result.content);
+            if (result.page) { setPageId(result.page.id); setSelected('page'); }
+          }}
+          onDelete={() => {
+            change(removePage(content, page.id).content);
+            setPageId(home.id);
+            setSelected('page');
+          }}
+          onAddToNavigation={() => change(addNavigationPage(content, page.id))}
+        />
       )}
     </fieldset>
   );
@@ -162,8 +209,7 @@ export function WebsiteWorkbench({ organizationId, working, published, history, 
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="font-semibold">Website</span>
-          <span className="text-sm text-muted">Revision {working.number} · {isDraft ? 'Draft' : 'In review'}</span>
+          <span className="text-sm font-medium">Revision {working.number} · {isDraft ? 'Draft' : 'In review'}</span>
           {isDraft ? (
             <span className={cx('text-xs font-medium', dirty ? 'text-foreground' : 'text-muted')} role="status">
               {dirty ? 'Unsaved changes' : 'Saved'}
@@ -178,19 +224,20 @@ export function WebsiteWorkbench({ organizationId, working, published, history, 
               <PageDrawerTrigger asChild><Button tone="secondary" size="small">Structure</Button></PageDrawerTrigger>
               <PageDrawerContent>
                 <PageDrawerHeader><PageDrawerTitle>Structure</PageDrawerTitle></PageDrawerHeader>
-                <WebsiteStructure sections={sections} selected={selected} onSelect={setSelected} {...structureForms} />
+                {structure}
               </PageDrawerContent>
             </PageDrawer>
             <PageDrawer>
               <PageDrawerTrigger asChild><Button tone="secondary" size="small">Inspector</Button></PageDrawerTrigger>
               <PageDrawerContent>
-                <PageDrawerHeader><PageDrawerTitle>{selected === 'page' ? 'Page' : 'Section'}</PageDrawerTitle></PageDrawerHeader>
-                {inspectorContent}
+                <PageDrawerHeader><PageDrawerTitle>{section ? 'Section' : 'Page'}</PageDrawerTitle></PageDrawerHeader>
+                {inspector}
               </PageDrawerContent>
             </PageDrawer>
           </div>
+          <Button type="button" tone="secondary" size="small" onClick={() => setNavigationOpen(true)}>Navigation</Button>
           <ViewportControl viewport={viewport} onChange={setViewport} />
-          <RevisionHistorySheet history={history} />
+          <WebsiteHistorySheet organizationId={organizationId} history={history} canRestore={false} />
           <ButtonLink tone="secondary" size="small" href={previewHref} target="_blank">
             Preview{dirty ? ' (last saved)' : ''}
           </ButtonLink>
@@ -198,9 +245,7 @@ export function WebsiteWorkbench({ organizationId, working, published, history, 
             <>
               <form action={saveAction}>
                 {identityFields}
-                <input type="hidden" name="sections" value={JSON.stringify(sections)} />
-                <input type="hidden" name="seoTitle" value={seoTitle} />
-                <input type="hidden" name="seoDescription" value={seoDescription} />
+                <input type="hidden" name="content" value={JSON.stringify(content)} />
                 <Button size="small" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
               </form>
               <form action={submitAction}>
@@ -224,22 +269,61 @@ export function WebsiteWorkbench({ organizationId, working, published, history, 
         <Feedback state={publishState} />
       </div>
       {!isDraft ? (
-        <Hint>Review the exact preview before publishing. Publishing archives the previous revision and changes the public site.</Hint>
+        <Hint>Review the exact preview before publishing. Publishing changes every page and the navigation of the public website together.</Hint>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[14rem_minmax(0,1fr)_20rem]">
+      <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_20rem]">
         <div className="hidden rounded-lg border border-border bg-surface p-3 lg:sticky lg:top-4 lg:block lg:self-start">
-          <WebsiteStructure sections={sections} selected={selected} onSelect={setSelected} {...structureForms} />
+          {structure}
         </div>
 
         <div className="min-w-0">
-          <WebsiteCanvas sections={sections} selected={selected} onSelect={setSelected} viewport={viewport} formNames={formNames} />
+          <WebsiteCanvas page={page} selected={selected} onSelect={setSelected} viewport={viewport} formNames={formNames} />
         </div>
 
         <div className={cx('hidden rounded-lg border border-border bg-surface p-4 lg:sticky lg:top-4 lg:block lg:self-start', !isDraft && 'opacity-60')}>
-          {inspectorContent}
+          {inspector}
         </div>
       </div>
+
+      <SectionLibrary open={libraryOpen} onOpenChange={setLibraryOpen} forms={forms} patterns={sectionPatterns} onAdd={onAddSection} />
+      <NavigationEditor
+        open={navigationOpen} onOpenChange={setNavigationOpen} content={content} disabled={!isDraft}
+        onAddPage={(id) => change(addNavigationPage(content, id))}
+        onAddExternal={() => change(addNavigationExternal(content))}
+        onChange={(item) => change(updateNavigationItem(content, item))}
+        onMove={(id, direction) => change(moveNavigationItem(content, id, direction))}
+        onRemove={(id) => change(removeNavigationItem(content, id))}
+      />
     </div>
+  );
+}
+
+/**
+ * Studio's Website workbench: Structure, Canvas and Inspector over one whole website, a toolbar that
+ * knows whether there is a draft, and the review → publish path. With no website at all it offers to
+ * create one; with a published website and no draft, to start one.
+ */
+export function WebsiteWorkbench({ organizationId, hasWebsite, working, published, history, forms, siteTemplates, pageTemplates, sectionPatterns }: {
+  organizationId: string;
+  hasWebsite: boolean;
+  forms: FormOption[];
+  working: EditorRevision | null;
+  published: EditorRevision | null;
+  history: RevisionHistoryEntry[];
+  siteTemplates: SiteTemplate[];
+  pageTemplates: PageTemplate[];
+  sectionPatterns: SectionPattern[];
+}) {
+  if (!hasWebsite) return <CreateWebsite organizationId={organizationId} templates={siteTemplates} />;
+  if (!working) return <NoDraftState organizationId={organizationId} published={published} history={history} />;
+  return (
+    <Editor
+      // Local editing state is only meant to initialize once per revision; keying on the revision
+      // id forces a fresh mount when a draft appears, is replaced, or moves to a different id.
+      key={working.id}
+      organizationId={organizationId} working={working} history={history} forms={forms}
+      pageTemplates={pageTemplates} sectionPatterns={sectionPatterns}
+    />
   );
 }

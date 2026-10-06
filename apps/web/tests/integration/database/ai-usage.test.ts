@@ -392,7 +392,7 @@ const sites = new Map<string, { siteId: string }>();
 async function removePublicSite(organizationId: string) {
   await pg.query(`set session_replication_role = replica`);
   try {
-    for (const table of ['ai_assistant_deployments', 'ai_assistants', 'public_page_revisions', 'public_pages', 'public_sites']) {
+    for (const table of ['ai_assistant_deployments', 'ai_assistants', 'public_site_revisions', 'public_sites']) {
       await pg.query(`delete from public.${table} where organization_id = $1`, [organizationId]);
     }
   } finally {
@@ -406,26 +406,21 @@ async function publishDeployment(tenant: Tenant, instructions: string, options: 
   let site = sites.get(org);
   if (!site) {
     const siteId = randomUUID();
-    const pageId = randomUUID();
     const revisionId = randomUUID();
     await removePublicSite(org);
     await pg.query(`insert into public.public_sites (organization_id, id, created_by) values ($1, $2, $3)`, [org, siteId, tenant.userId]);
-    await pg.query(
-      `insert into public.public_pages (organization_id, site_id, id, page_key, slug) values ($1, $2, $3, 'home', 'home')`,
-      [org, siteId, pageId],
-    );
-    // What the homepage vocabulary and its guards accept is `public-site.test.ts`'s subject. This
-    // file only needs a page that counts as published, so the guard is stepped around for this one
-    // row rather than the vocabulary being copied here.
+    // What the website vocabulary and its guards accept is `public-site-publishing.test.ts`'s
+    // subject. This file only needs a site that counts as published, so the guard is stepped around
+    // for this one row rather than the vocabulary being copied here.
     await pg.query(`set session_replication_role = replica`);
     try {
       await pg.query(
-        `insert into public.public_page_revisions
-           (organization_id, page_id, id, revision_number, status, seo_title, seo_description, sections, created_source, created_by, submitted_at, submitted_by, published_at, published_by)
-         values ($1, $2, $3, 1, 'published', 't', 'd', '[]'::jsonb, 'account', $4, now(), $4, now(), $4)`,
-        [org, pageId, revisionId, tenant.userId],
+        `insert into public.public_site_revisions
+           (organization_id, site_id, id, revision_number, status, pages, navigation, created_source, created_by, submitted_at, submitted_by, published_at, published_by)
+         values ($1, $2, $3, 1, 'published', '[]'::jsonb, '[]'::jsonb, 'account', $4, now(), $4, now(), $4)`,
+        [org, siteId, revisionId, tenant.userId],
       );
-      await pg.query('update public.public_pages set current_published_revision_id = $1 where id = $2', [revisionId, pageId]);
+      await pg.query('update public.public_sites set current_published_revision_id = $1 where organization_id = $2 and id = $3', [revisionId, org, siteId]);
     } finally {
       await pg.query(`set session_replication_role = origin`);
     }

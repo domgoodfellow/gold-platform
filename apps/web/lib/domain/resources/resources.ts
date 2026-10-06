@@ -8,6 +8,7 @@ import {
 } from '@/lib/domain/fields/field-definitions';
 import { isResourceClass, type ResourceClass } from '@/lib/domain/resources/resource-class';
 import type { ResourceCapability } from '@/lib/domain/resources/resource-capabilities';
+import { isTravelMode, type TravelMode } from '@/lib/domain/resources/travel-mode';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 export type Resource = {
@@ -20,6 +21,13 @@ export type Resource = {
   /** Tenant-defined fields, governed by this organization's registry (D7). Nothing the scheduling engine reads lives here. */
   custom: CustomValues;
   createdAt: string;
+  /**
+   * How this resource moves, as the business says it — or null, which is *not said*, and means
+   * travel is not evaluated for it. Never inferred from `resourceClass`.
+   */
+  travelMode: TravelMode | null;
+  /** A routing fallback (and a fixed resource's place): a canonical Location. Not a live position. */
+  baseLocationId: string | null;
   /**
    * The tenant Membership this Resource represents, or null. Null is the ordinary case — a
    * vehicle, a room, a machine, or a person with no GildOps account — not an unset field
@@ -36,7 +44,7 @@ const NAME_MAX = 200;
 // parses a select at the type level, so this only resolves through `resources_membership_same_org`
 // when written as one literal rather than assembled.
 const RESOURCE_SELECT =
-  'id, name, resource_class, custom, created_at, membership_id, member:memberships!resources_membership_same_org(id, display_name), assignments:resource_capability_assignments!resource_capability_assignments_resource_same_org(capability:resource_capabilities!resource_capability_assignments_capability_same_org(id, name, archived_at))';
+  'id, name, resource_class, travel_mode, base_location_id, custom, created_at, membership_id, member:memberships!resources_membership_same_org(id, display_name), assignments:resource_capability_assignments!resource_capability_assignments_resource_same_org(capability:resource_capabilities!resource_capability_assignments_capability_same_org(id, name, archived_at))';
 
 type CapabilityRow = { id: string; name: string; archived_at: string | null };
 
@@ -44,6 +52,8 @@ type ResourceRow = {
   id: string;
   name: string;
   resource_class: string;
+  travel_mode: string | null;
+  base_location_id: string | null;
   assignments: { capability: CapabilityRow | CapabilityRow[] | null }[] | null;
   custom: unknown;
   created_at: string;
@@ -71,6 +81,8 @@ function toResource(row: ResourceRow): Resource {
     capabilities,
     custom: (row.custom ?? {}) as CustomValues,
     createdAt: row.created_at,
+    travelMode: isTravelMode(row.travel_mode) ? row.travel_mode : null,
+    baseLocationId: row.base_location_id,
     member: member ? { membershipId: member.id, displayName: member.display_name } : null,
   };
 }
@@ -333,6 +345,41 @@ export async function setResourceClass(
         'This resource represents a member, so it can only be a person. Clear the member first.',
         'resources.member_requires_person',
       );
+    }
+    throw new DomainError(error.message, 'resources.update_failed');
+  }
+}
+
+/**
+ * Say how a resource moves and where it starts from. Both optional and independent: a mobile
+ * resource with no base is valid (its origin is then unknown when it has no earlier job), and a
+ * fixed one needs a base to be able to take any work at all — the engine says so rather than this
+ * refusing, because a base may be added a moment later in the same sitting.
+ *
+ * The composite key refuses a Location of another business; RLS and the column grant decide who may.
+ */
+export async function setResourceRouting(
+  db: Db,
+  input: { resourceId: string; travelMode: TravelMode | null; baseLocationId: string | null },
+): Promise<void> {
+  await requireActor(db);
+
+  if (input.travelMode !== null && !isTravelMode(input.travelMode)) {
+    throw new DomainError('Say whether this resource is mobile or fixed.', 'resources.travel_mode_invalid');
+  }
+
+  const { error } = await db.rpc('set_resource_routing', {
+    p_resource_id: input.resourceId,
+    p_travel_mode: input.travelMode as string,
+    p_base_location_id: input.baseLocationId as string,
+  });
+
+  if (error) {
+    if (error.code === '42501') {
+      throw new DomainError('No such resource, or you cannot change it.', 'resources.update_forbidden');
+    }
+    if (error.code === '23503') {
+      throw new DomainError("That place is not one of this business's locations.", 'resources.base_location_invalid');
     }
     throw new DomainError(error.message, 'resources.update_failed');
   }

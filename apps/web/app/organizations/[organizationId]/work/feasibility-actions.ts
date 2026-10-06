@@ -50,6 +50,7 @@ export async function checkFeasibilityAction(
         start: startsAt,
         end: endsAt,
         excludeWorkItemId: workItemId,
+        locationId: workItem.location?.id ?? null,
         resourceIds: chosen,
       }),
       listResourceRequirements(db, { organizationId, typeId: workItem.type.id }),

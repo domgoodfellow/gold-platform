@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 const MARKETING = fileURLToPath(new URL('../../../app/(marketing)', import.meta.url));
 const page = readFileSync(`${MARKETING}/page.tsx`, 'utf8');
 const layout = readFileSync(`${MARKETING}/layout.tsx`, 'utf8');
-const renderer = readFileSync(fileURLToPath(new URL('../../../features/public-site/homepage-renderer.tsx', import.meta.url)), 'utf8');
+const renderer = readFileSync(fileURLToPath(new URL('../../../features/public-site/section-renderers.tsx', import.meta.url)), 'utf8');
 const nav = readFileSync(fileURLToPath(new URL('../../../components/marketing/marketing-nav.tsx', import.meta.url)), 'utf8');
 // The seed the current section content actually comes from — the base migration's own copy of
 // `app.default_gold_homepage_sections()` is superseded by `create or replace` here, the same way

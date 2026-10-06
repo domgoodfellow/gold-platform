@@ -4,7 +4,7 @@ import { getBrand } from '@/lib/domain/branding/brand';
 import { getManagedHostname } from '@/lib/domain/domains/domains';
 import { organizationPortalInviteCount } from '@/lib/domain/portal/portal';
 import { listForms } from '@/lib/domain/forms/forms';
-import { homepageEditorState } from '@/lib/domain/public-site/public-site';
+import { siteEditorState } from '@/lib/domain/public-site/public-site';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 
 /**
@@ -50,7 +50,7 @@ export type StudioOverview = {
   attention: StudioAttentionItem[];
 };
 
-function summarizeWebsite(state: Awaited<ReturnType<typeof homepageEditorState>>): StudioWebsiteSummary {
+function summarizeWebsite(state: Awaited<ReturnType<typeof siteEditorState>>): StudioWebsiteSummary {
   if (!state) return { state: 'not_configured', revisionNumber: null, publishedAt: null };
   if (state.published) {
     return { state: 'published', revisionNumber: state.published.number, publishedAt: state.published.publishedAt ?? null };
@@ -70,7 +70,7 @@ export async function studioOverview(
   input: { organizationId: string; slug: string | null; organizationName: string; mayManageWebsite: boolean },
 ): Promise<StudioOverview> {
   const [siteState, forms, brand, bookableTypes, portal, managedAddress, profile] = await Promise.all([
-    input.mayManageWebsite ? homepageEditorState(db, input.organizationId) : Promise.resolve(null),
+    input.mayManageWebsite ? siteEditorState(db, input.organizationId) : Promise.resolve(null),
     input.mayManageWebsite ? listForms(db, input.organizationId) : Promise.resolve(null),
     getBrand(db, { organizationId: input.organizationId }),
     listBookableTypes(db, { organizationId: input.organizationId }),

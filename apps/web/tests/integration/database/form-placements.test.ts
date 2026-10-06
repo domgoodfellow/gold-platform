@@ -18,7 +18,8 @@ import {
 import { publishedFormByKey, publishedHostnameForm, submitPublicFormByKey } from '@/lib/domain/forms/public-forms';
 import { claimPortalInvite, createPortalInvite } from '@/lib/domain/portal/portal';
 import { portalFormsAvailable, setPortalForm, submitPortalForm } from '@/lib/domain/portal/portal-forms';
-import { createHomepageDraft, homepageEditorState, publishHomepageRevision, submitHomepageRevision, updateHomepageDraft } from '@/lib/domain/public-site/public-site';
+import type { WebsiteContent } from '@gold/schemas';
+import { createSiteDraft, createWebsite, publishSiteRevision, siteEditorState, submitSiteRevision, updateSiteDraft } from '@/lib/domain/public-site/public-site';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { foundBusiness } from '@/tests/support/founding';
 
@@ -76,14 +77,20 @@ async function publishedForm(tenant: Tenant, name: string, publish = true) {
   return { formId, revisionId, slug: state.form.slug, publicKey: state.form.publicKey };
 }
 
-async function homepageSections(tenant: Tenant) {
-  await createHomepageDraft(tenant.db, tenant.organizationId);
-  const state = (await homepageEditorState(tenant.db, tenant.organizationId))!;
-  return { revisionId: state.working!.id, sections: state.working!.sections.filter((section) => section.kind !== 'form') as NonNullable<typeof state.working>['sections'], seoTitle: state.working!.seoTitle, seoDescription: state.working!.seoDescription };
+/** A working draft of the tenant's website, with every form section already taken out. */
+async function draftContent(tenant: Tenant) {
+  await createSiteDraft(tenant.db, { organizationId: tenant.organizationId });
+  const state = (await siteEditorState(tenant.db, tenant.organizationId))!;
+  const working = state.working!;
+  const content: WebsiteContent = { pages: working.pages.map((page) => ({ ...page, sections: page.sections.filter((section) => section.kind !== 'form') })), navigation: working.navigation };
+  return { revisionId: working.id, content };
 }
 
-function withForm(sections: Awaited<ReturnType<typeof homepageSections>>['sections'], formId: string) {
-  return [...sections.slice(0, 5), { kind: 'form', heading: 'Ask us', body: 'We reply fast.', formId }, ...sections.slice(5)] as never;
+type Content = WebsiteContent;
+
+function withForm(content: Content, formId: string): Content {
+  const section: WebsiteContent['pages'][number]['sections'][number] = { id: randomUUID(), kind: 'form', heading: 'Ask us', body: 'We reply fast.', formId };
+  return { ...content, pages: content.pages.map((page) => (page.isHome ? { ...page, sections: [...page.sections, section] } : page)) };
 }
 
 beforeAll(async () => {
@@ -93,10 +100,9 @@ beforeAll(async () => {
   await pg.query('update public.platform_settings set platform_public_domain = $1 where singleton', [ZONE]);
   a = await newTenant('placea');
   b = await newTenant('placeb');
-  // A tenant has no website of its own until one is configured for it; this gives `a` the one the
-  // platform bootstrap gives GildOps, and puts the platform setting back afterwards.
+  // A business creates its own website; no platform step is involved.
   previousSettings = (await pg.query('select gold_public_organization_id, gold_public_site_id from public.platform_settings where singleton')).rows[0];
-  await pg.query('select app.bootstrap_gold_public_site($1)', [a.organizationId]);
+  await createWebsite(a.db, { organizationId: a.organizationId });
 }, 60_000);
 
 afterAll(async () => {
@@ -107,57 +113,61 @@ afterAll(async () => {
 describe('website placement', () => {
   it('names a form by id, validates the reference, and never carries the definition', async () => {
     const form = await publishedForm(a, 'Website form');
-    const draft = await homepageSections(a);
+    const draft = await draftContent(a);
 
-    await updateHomepageDraft(a.db, { organizationId: a.organizationId, revisionId: draft.revisionId, seoTitle: draft.seoTitle, seoDescription: draft.seoDescription, sections: withForm(draft.sections, form.formId) });
-    const stored = (await pg.query('select sections from public.public_page_revisions where id = $1', [draft.revisionId])).rows[0].sections;
-    expect(stored[5]).toEqual({ kind: 'form', heading: 'Ask us', body: 'We reply fast.', formId: form.formId });
+    await updateSiteDraft(a.db, { organizationId: a.organizationId, revisionId: draft.revisionId, content: withForm(draft.content, form.formId) });
+    const stored = (await pg.query('select pages from public.public_site_revisions where id = $1', [draft.revisionId])).rows[0].pages;
+    const section = stored.find((page: { isHome: boolean }) => page.isHome).sections.at(-1);
+    expect(section).toMatchObject({ kind: 'form', heading: 'Ask us', body: 'We reply fast.', formId: form.formId });
     expect(JSON.stringify(stored)).not.toContain('Your name');
   });
 
-  it('refuses a form that is another business\'s, a malformed section and a second form section', async () => {
+  it("refuses a form that is another business's, a malformed section and a repeated section id", async () => {
     const foreign = await publishedForm(b, 'Their form');
-    const draft = await homepageSections(a);
-    const attempt = (sections: unknown) => a.db.rpc('update_public_homepage_draft', {
-      p_organization_id: a.organizationId, p_revision_id: draft.revisionId, p_seo_title: draft.seoTitle, p_seo_description: draft.seoDescription, p_sections: sections as never,
+    const draft = await draftContent(a);
+    const attempt = (content: Content) => a.db.rpc('update_public_site_draft', {
+      p_organization_id: a.organizationId, p_revision_id: draft.revisionId, p_pages: content.pages as never, p_navigation: content.navigation as never,
     });
-    expect((await attempt(withForm(draft.sections, foreign.formId))).error?.code).toBe('23503');
-    expect((await attempt(withForm(draft.sections, randomUUID()))).error?.code).toBe('23503');
+    expect((await attempt(withForm(draft.content, foreign.formId))).error?.code).toBe('23503');
+    expect((await attempt(withForm(draft.content, randomUUID()))).error?.code).toBe('23503');
 
     const own = await publishedForm(a, 'Own form');
-    const good = withForm(draft.sections, own.formId) as unknown[];
-    expect((await attempt([...good.slice(0, 5), { ...(good[5] as object), html: '<b>x</b>' }, ...good.slice(6)])).error?.code).toBe('23514');
-    expect((await attempt([...good.slice(0, 5), good[5], good[5], ...good.slice(6)])).error?.code).toBe('23514');
-    expect((await attempt([...(good as unknown[]).slice(0, 4), good[5], good[4], good[6]])).error?.code).toBe('23514');
+    const good = withForm(draft.content, own.formId);
+    const homeSections = (content: Content) => content.pages.find((page) => page.isHome)!.sections;
+    const withSections = (sections: unknown[]): Content => ({ ...good, pages: good.pages.map((page) => (page.isHome ? { ...page, sections: sections as never } : page)) });
+    const form = homeSections(good).at(-1)!;
+    expect((await attempt(withSections([...homeSections(good).slice(0, -1), { ...form, html: '<b>x</b>' }]))).error?.code).toBe('23514');
+    expect((await attempt(withSections([...homeSections(good), form]))).error?.code).toBe('23514');
+    expect((await attempt(good)).error).toBeNull();
   });
 
-  it('serves the form through the website from the form\'s published revision, and only once it is published', async () => {
+  it("serves the form through the website from the form's published revision, and only once it is published", async () => {
     const unpublished = await publishedForm(a, 'Not yet', false);
-    const draft = await homepageSections(a);
-    await updateHomepageDraft(a.db, { organizationId: a.organizationId, revisionId: draft.revisionId, seoTitle: draft.seoTitle, seoDescription: draft.seoDescription, sections: withForm(draft.sections, unpublished.formId) });
-    await submitHomepageRevision(a.db, a.organizationId, draft.revisionId);
-    await publishHomepageRevision(a.db, a.organizationId, draft.revisionId);
+    const draft = await draftContent(a);
+    await updateSiteDraft(a.db, { organizationId: a.organizationId, revisionId: draft.revisionId, content: withForm(draft.content, unpublished.formId) });
+    await submitSiteRevision(a.db, a.organizationId, draft.revisionId);
+    await publishSiteRevision(a.db, a.organizationId, draft.revisionId);
 
     const host = `${a.slug}.${ZONE}`;
-    const read = async () => (await client().rpc('published_hostname_site', { p_hostname: host })).data as { home: { forms: Record<string, { definition: { title: string }; revisionNumber: number }>; sections: unknown[] } };
-    expect(Object.keys((await read()).home.forms)).toEqual([]);
+    const read = async () => (await client().rpc('published_hostname_site', { p_hostname: host })).data as unknown as { site: { forms: Record<string, { definition: { title: string }; revisionNumber: number }>; pages: { isHome: boolean; sections: unknown[] }[] } };
+    expect(Object.keys((await read()).site.forms)).toEqual([]);
 
     // The form is published afterwards: the website is not re-published, and now shows it.
     const state = (await formEditorState(a.db, a.organizationId, unpublished.formId))!;
     await publishFormRevision(a.db, { organizationId: a.organizationId, revisionId: state.working!.id });
     const after = await read();
-    expect(after.home.forms[unpublished.formId].definition.title).toBe('Request a quote');
-    expect(after.home.forms[unpublished.formId].revisionNumber).toBe(1);
-    expect(after.home.sections).toHaveLength(7);
+    expect(after.site.forms[unpublished.formId].definition.title).toBe('Request a quote');
+    expect(after.site.forms[unpublished.formId].revisionNumber).toBe(1);
+    expect(after.site.pages.find((page) => page.isHome)!.sections).toHaveLength(1);
 
     // The form changes: the website's revision does not, and the page now shows the new revision.
     const draftForm = (await a.db.rpc('create_form_draft', { p_organization_id: a.organizationId, p_form_id: unpublished.formId })).data as string;
     await saveFormDraft(a.db, { organizationId: a.organizationId, revisionId: draftForm, definition: { ...FORM, title: 'Get a price' } });
     await publishFormRevision(a.db, { organizationId: a.organizationId, revisionId: draftForm });
     const changed = await read();
-    expect(changed.home.forms[unpublished.formId].definition.title).toBe('Get a price');
-    const sectionsNow = (await pg.query('select sections from public.public_page_revisions where id = $1', [draft.revisionId])).rows[0].sections;
-    expect(JSON.stringify(sectionsNow)).not.toContain('Get a price');
+    expect(changed.site.forms[unpublished.formId].definition.title).toBe('Get a price');
+    const pagesNow = (await pg.query('select pages from public.public_site_revisions where id = $1', [draft.revisionId])).rows[0].pages;
+    expect(JSON.stringify(pagesNow)).not.toContain('Get a price');
   });
 
   it('says where a form is used, and will not archive one a live page still shows', async () => {

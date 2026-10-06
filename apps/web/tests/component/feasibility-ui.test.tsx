@@ -97,12 +97,13 @@ describe('FeasibilityPanel', () => {
     });
     const selection = {
       allAvailable: false,
+      allTravelFeasible: true,
       requirementsMet: false,
       ok: false,
       resources: [{ resourceId: 'jo', problem: 'not_working' as const }],
       requirements: [
-        { requirementId: 'person', quantity: 1, eligibleResourceIds: [], openResourceIds: [], freeResourceIds: [], matchedResourceIds: ['jo'], missingQuantity: 0, satisfied: true },
-        { requirementId: 'vehicle', quantity: 1, eligibleResourceIds: [], openResourceIds: [], freeResourceIds: [], matchedResourceIds: [], missingQuantity: 1, satisfied: false },
+        { requirementId: 'person', quantity: 1, eligibleResourceIds: [], openResourceIds: [], freeResourceIds: [], travelFeasibleResourceIds: [], matchedResourceIds: ['jo'], missingQuantity: 0, satisfied: true },
+        { requirementId: 'vehicle', quantity: 1, eligibleResourceIds: [], openResourceIds: [], freeResourceIds: [], travelFeasibleResourceIds: [], matchedResourceIds: [], missingQuantity: 1, satisfied: false },
       ],
     };
     render(<FeasibilityPanel view={viewFeasibility(result, selection, names)} />);

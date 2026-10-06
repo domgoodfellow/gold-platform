@@ -1,9 +1,11 @@
 'use client';
 
-import type { PublicHomepageSections } from '@gold/schemas';
-import { HomepageSectionRenderer } from '@/features/public-site/homepage-renderer';
+import type { WebsitePage } from '@gold/schemas';
+import { SectionView } from '@/features/public-site/section-renderers';
 import { cx, FOCUS_RING } from '@/components/class-names';
-import type { StructureSelection } from './website-structure';
+import { Hint } from '@/components/controls/inputs';
+import { sectionLabel } from '@/lib/domain/public-site/section-registry';
+import type { Selection } from './types';
 
 export type Viewport = 'desktop' | 'tablet' | 'mobile';
 
@@ -16,30 +18,33 @@ const VIEWPORT_WIDTH: Record<Viewport, string> = {
 export const VIEWPORT_LABEL: Record<Viewport, string> = { desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile' };
 
 /**
- * The actual homepage presentation, via the one production renderer — never a second
- * approximation of it. Selection chrome (hover boundary, selected outline) is editor-only: it
- * wraps `HomepageSectionRenderer`'s output rather than changing it, so nothing here can leak into
- * the persisted revision or the public page.
+ * The page being edited, through the one production section renderer — never a second
+ * approximation of it. Selection chrome (hover boundary, selected outline) is editor-only: it wraps
+ * `SectionView`'s output rather than changing it, so nothing here can leak into the persisted
+ * revision or the public page.
  */
-export function WebsiteCanvas({ sections, selected, onSelect, viewport, formNames }: {
-  sections: PublicHomepageSections;
+export function WebsiteCanvas({ page, selected, onSelect, viewport, formNames }: {
+  page: WebsitePage;
   formNames: Record<string, string>;
-  selected: StructureSelection;
-  onSelect: (selection: StructureSelection) => void;
+  selected: Selection;
+  onSelect: (selection: Selection) => void;
   viewport: Viewport;
 }) {
   return (
     <div className={cx('transition-[max-width]', VIEWPORT_WIDTH[viewport])}>
       <div className="flex flex-col gap-6 rounded-lg border border-border bg-background p-4 sm:p-6">
-        {sections.map((section) => {
-          const isSelected = selected === section.kind;
+        {page.sections.length === 0 ? (
+          <Hint className="py-10 text-center">“{page.name}” has no sections yet. Use Add section to build it.</Hint>
+        ) : null}
+        {page.sections.map((section) => {
+          const isSelected = selected !== 'page' && selected.sectionId === section.id;
           return (
             <button
-              key={section.kind}
+              key={section.id}
               type="button"
-              onClick={() => onSelect(section.kind)}
+              onClick={() => onSelect({ sectionId: section.id })}
               aria-current={isSelected ? 'true' : undefined}
-              aria-label={`Select the ${section.kind} section`}
+              aria-label={`Select the ${sectionLabel(section.kind)} section`}
               className={cx(
                 'block w-full rounded-lg border-2 border-transparent p-2 text-left transition hover:border-border',
                 FOCUS_RING,
@@ -47,7 +52,7 @@ export function WebsiteCanvas({ sections, selected, onSelect, viewport, formName
               )}
             >
               <div className="pointer-events-none">
-                <HomepageSectionRenderer section={section} forms={{ mode: 'canvas', forms: {}, formNames }} />
+                <SectionView section={section} anchored={false} context={{ mode: 'canvas', forms: {}, formNames }} />
               </div>
             </button>
           );

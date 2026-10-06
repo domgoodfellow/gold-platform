@@ -129,7 +129,7 @@ describe('every Studio forms action checks the caller before doing anything', ()
 
 describe('a form is placed, not copied', () => {
   it('lets a website section name a form by id and nothing of its fields', () => {
-    const schema = readFileSync(`${WEB}/../../packages/schemas/src/index.ts`, 'utf8');
+    const schema = readFileSync(`${WEB}/../../packages/schemas/src/website.ts`, 'utf8');
     const section = schema.slice(schema.indexOf("kind: z.literal('form')"), schema.indexOf("kind: z.literal('hero')"));
     expect(section).toContain('formId');
     expect(section).not.toMatch(/definition|fields|options/);

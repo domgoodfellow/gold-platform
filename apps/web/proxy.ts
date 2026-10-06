@@ -5,6 +5,7 @@ import { decideRedirect } from '@/lib/route/access';
 import { bindingForRequestHost } from '@/lib/route/hostname';
 import { LAST_ORGANIZATION_COOKIE, LAST_ORGANIZATION_COOKIE_OPTIONS } from '@/lib/route/last-organization';
 import { organizationIdFromPath } from '@/lib/route/platform-context';
+import { isServablePageSlug } from '@/lib/domain/public-site/paths';
 
 /**
  * The routing rules themselves — the closed public-path set and `decideRedirect` — live in
@@ -22,16 +23,21 @@ export async function proxy(request: NextRequest) {
   // A business's own hostname opens its public surface at the root, and its published forms. The rewrite carries the hostname, never an organization id: the page resolves it again
   // itself (D17). A hostname that resolves to nothing falls through unchanged — to exactly what an
   // unknown host would have seen — so nothing says which names are almost valid.
-  // `/` opens the home page; `/forms/{slug}` — one segment, which no application route has — opens
-  // one of that business's published forms. Both carry the hostname, never an id.
+  // `/` opens the home page; `/forms/{slug}` opens one of that business's published forms; any other
+  // single segment that could name a page (and is not a path the platform owns) opens that page of
+  // the published website. All carry the hostname, never an id.
   const hostedForm = /^\/forms\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname);
-  if (pathname === '/' || hostedForm) {
+  const segment = /^\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname)?.[1];
+  const hostedPage = segment && isServablePageSlug(segment) ? segment : null;
+  if (pathname === '/' || hostedForm || hostedPage) {
     const host = request.headers.get('host');
     const binding = await bindingForRequestHost(host);
     if (binding && host) {
       const url = request.nextUrl.clone();
       const hostname = encodeURIComponent(host.toLowerCase().replace(/:\d+$/, ''));
-      url.pathname = hostedForm ? `/sites/${hostname}/forms/${hostedForm[1]}` : `/sites/${hostname}`;
+      url.pathname = hostedForm
+        ? `/sites/${hostname}/forms/${hostedForm[1]}`
+        : hostedPage ? `/sites/${hostname}/${hostedPage}` : `/sites/${hostname}`;
       const rewrite = NextResponse.rewrite(url, { request });
       for (const cookie of response.cookies.getAll()) rewrite.cookies.set(cookie);
       return rewrite;

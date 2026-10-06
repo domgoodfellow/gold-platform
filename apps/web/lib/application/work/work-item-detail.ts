@@ -91,6 +91,7 @@ async function suggestCompleteSet(
     start: window.startsAt,
     end: window.endsAt,
     excludeWorkItemId: input.workItem.id,
+    locationId: input.workItem.location?.id ?? null,
     prefer: [...input.assignedIds],
   });
   if (!result.feasible || !result.combination) return null;

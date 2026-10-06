@@ -185,7 +185,7 @@ describe('Website is a canonical Studio operating page, not a Settings sub-route
 
   it('the private preview backlink returns to Studio, not Settings', () => {
     const preview = readFileSync(
-      fileURLToPath(new URL('../../../app/(preview)/preview/[organizationId]/[revisionId]/page.tsx', import.meta.url)),
+      fileURLToPath(new URL('../../../app/(preview)/preview/[organizationId]/[revisionId]/[[...page]]/page.tsx', import.meta.url)),
       'utf8',
     );
     expect(preview).toContain('/studio/website');

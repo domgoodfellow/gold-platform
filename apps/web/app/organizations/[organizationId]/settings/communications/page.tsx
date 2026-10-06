@@ -9,7 +9,7 @@ import { requireOrganization } from '@/lib/route/organization';
 import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { configTarget } from '@/lib/navigation';
 import { CommunicationProfileForm } from '@/features/communications/communication-profile-form';
-import { homepageEditorState } from '@/lib/domain/public-site/public-site';
+import { siteEditorState } from '@/lib/domain/public-site/public-site';
 import type { Db } from '@/lib/db/types';
 
 export const dynamic = 'force-dynamic';
@@ -42,7 +42,7 @@ export default async function CommunicationsPage({
     listProviderBindings(db, { organizationId }),
     listProviderResources(db, { organizationId }),
     callingNumber(db, { organizationId }),
-    mayManageWebsite ? homepageEditorState(db as Db, organizationId) : Promise.resolve(null),
+    mayManageWebsite ? siteEditorState(db as Db, organizationId) : Promise.resolve(null),
   ]);
   const profileResult = site
     ? await (db.rpc.bind(db) as unknown as (name: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)('public_communication_profile', { p_site_id: site.siteId })

@@ -38,6 +38,25 @@ export function FeasibilityPanel({
         </div>
       ) : null}
 
+      {view.travel.length > 0 ? (
+        <div className="flex flex-col gap-0.5">
+          <p className="text-muted">Travel</p>
+          <ul className="flex flex-col gap-0.5">
+            {view.travel.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {view.warnings.length > 0 ? (
+        <ul className="flex flex-col gap-0.5" aria-label="Could not be checked">
+          {view.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      ) : null}
+
       {view.reasons.length > 0 ? (
         <ul className="flex flex-col gap-0.5">
           {view.reasons.map((reason) => (
@@ -54,6 +73,13 @@ export function FeasibilityPanel({
           {view.selection.lines.length > 0 ? (
             <ul className="flex flex-col gap-0.5">
               {view.selection.lines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          ) : null}
+          {view.selection.warnings.length > 0 ? (
+            <ul className="flex flex-col gap-0.5" aria-label="Could not be checked">
+              {view.selection.warnings.map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>

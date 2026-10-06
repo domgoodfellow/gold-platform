@@ -1,13 +1,28 @@
+import { routingProvider, type RoutingProvider } from '@/lib/adapters/routing';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { maximumMatching } from '@/lib/domain/matching';
 import { listResources } from '@/lib/domain/resources/resources';
+import type { TravelMode } from '@/lib/domain/resources/travel-mode';
 import { freeWindows } from '@/lib/domain/scheduling/availability';
 import { listOperatingHours, openWindows } from '@/lib/domain/scheduling/operating-hours';
 import {
   listResourceAvailabilityExceptions,
   listResourceOpenWindows,
 } from '@/lib/domain/scheduling/resource-availability';
+import {
+  judgeTravel,
+  newRouteBook,
+  planTravel,
+  resolveRoutes,
+  type Neighbour,
+  type Place,
+  type ResourceTravel,
+  type ResourceTravelFacts,
+  type RouteBook,
+  type TravelFacts,
+  type TravelReason,
+} from '@/lib/domain/scheduling/travel';
 import { parseWindow, zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
 import { isEligible, listResourceRequirements } from '@/lib/domain/work-items/requirements';
 
@@ -33,7 +48,13 @@ import { isEligible, listResourceRequirements } from '@/lib/domain/work-items/re
  *
  * **Deterministic, not optimal.** The combination is stable (requirement position then id, resource
  * by name then id, preferred resources first when asked) and is *a* valid one, never a ranked best:
- * no distance, load, cost or preference scoring lives here. No travel, routing or weather either.
+ * no distance, load, cost or preference scoring lives here. No weather, service area or route order.
+ *
+ * **Travel is one more edge condition, drawn before matching.** `requirements → eligible → open →
+ * free → travel-feasible → one distinct resource per slot`. A resource that is free but cannot arrive
+ * is not matched and another one may be — travel is never checked after the fact on a combination
+ * already chosen, which could miss a complete one. What travel *is* (the gaps, the legs, the router)
+ * is `travel.ts`; here it is only a resource's `travel` state.
  */
 
 // ---------------------------------------------------------------------------
@@ -72,7 +93,8 @@ export type FeasibilityReason =
       open: number;
       free: number;
     }
-  | { code: 'requirements_compete_for_same_resources'; requirementIds: (string | null)[] };
+  | { code: 'requirements_compete_for_same_resources'; requirementIds: (string | null)[] }
+  | TravelReason;
 
 export type RequirementFeasibility = {
   requirementId: string | null;
@@ -80,6 +102,8 @@ export type RequirementFeasibility = {
   eligibleResourceIds: string[];
   openResourceIds: string[];
   freeResourceIds: string[];
+  /** Free *and* able to arrive: what the matching actually drew edges to. Equal to `freeResourceIds` where travel is not in play. */
+  travelFeasibleResourceIds: string[];
   /** The resources the (maximum) matching gave this requirement — all of them when it is feasible. */
   matchedResourceIds: string[];
   missingQuantity: number;
@@ -95,6 +119,10 @@ export type FeasibilityResult = {
   /** One distinct resource per required slot, or null when none exists. Empty when nothing is required. */
   combination: FeasibleAssignment[] | null;
   reasons: FeasibilityReason[];
+  /** Doubts that did not stop the answer: travel that could not be verified for a resource the combination uses. */
+  warnings: TravelReason[];
+  /** What travel says for each resource it was asked about — the measured legs, for a screen to show. */
+  travel: ResourceTravel[];
 };
 
 /** What each resource is doing in the interval — the engine's only per-resource input. */
@@ -103,7 +131,20 @@ export type ResourceState = {
   /** Position in resource order; lower is preferred. */
   rank: number;
   problem: ResourceProblem | null;
+  /** Only for a resource that is free: whether it can arrive. Absent where travel is not in play. */
+  travel?: ResourceTravel;
 };
+
+/**
+ * What an unverifiable journey does to the answer. Staff are *warned* and may still schedule; a
+ * public visitor is never offered a time nobody could confirm is reachable.
+ */
+export type UnknownTravelPolicy = 'allow' | 'exclude';
+
+function travelBlocks(state: ResourceState | undefined, unknown: UnknownTravelPolicy): boolean {
+  const travel = state?.travel?.state;
+  return travel === 'infeasible' || (travel === 'unknown' && unknown === 'exclude');
+}
 
 // ---------------------------------------------------------------------------
 // The pure core
@@ -143,7 +184,10 @@ export function evaluateFeasibility(input: {
   outsideOrganizationHours?: boolean;
   /** Resources to use where several would do — a preference, never a requirement. */
   prefer?: readonly string[];
+  /** Defaults to `allow`: staff are told, not stopped. */
+  unknownTravel?: UnknownTravelPolicy;
 }): FeasibilityResult {
+  const unknownTravel = input.unknownTravel ?? 'allow';
   const demands = orderedDemands(input.demands);
   const prefer = new Set(input.prefer ?? []);
   const rank = new Map([...input.states.values()].map((state) => [state.id, state.rank]));
@@ -155,7 +199,8 @@ export function evaluateFeasibility(input: {
       return problem !== 'not_working' && problem !== 'unavailable';
     });
     const free = open.filter((id) => input.states.get(id)!.problem !== 'committed');
-    return { demand, eligible, open, free };
+    const arrives = free.filter((id) => !travelBlocks(input.states.get(id), unknownTravel));
+    return { demand, eligible, open, free, arrives };
   });
 
   // Matching works in dense indexes, in resource order; map an id to one and back.
@@ -165,7 +210,7 @@ export function evaluateFeasibility(input: {
   const slots = expand(demands);
   const matching = maximumMatching(slots.length, (slotIndex) => {
     const entry = perRequirement.find((candidate) => candidate.demand === slots[slotIndex].demand)!;
-    return candidateOrder(entry.free, rank, prefer).map((id) => index.get(id)!);
+    return candidateOrder(entry.arrives, rank, prefer).map((id) => index.get(id)!);
   });
 
   const matchedByDemand = new Map<Demand, string[]>();
@@ -183,6 +228,7 @@ export function evaluateFeasibility(input: {
       eligibleResourceIds: entry.eligible,
       openResourceIds: entry.open,
       freeResourceIds: entry.free,
+      travelFeasibleResourceIds: entry.arrives,
       matchedResourceIds: matched,
       missingQuantity: entry.demand.quantity - matched.length,
       satisfied: matched.length === entry.demand.quantity,
@@ -195,7 +241,7 @@ export function evaluateFeasibility(input: {
 
   const reasons: FeasibilityReason[] = [];
   // The constraint chain, outermost first: business closed → nobody could do it → not working →
-  // booked → competing for the same people. A deeper reason is never reported over a shallower one.
+  // booked → cannot arrive → competing for the same people. A deeper reason is never reported over a shallower one.
   if (closed) reasons.push({ code: 'outside_organization_hours' });
 
   if (!closed && !complete) {
@@ -237,8 +283,23 @@ export function evaluateFeasibility(input: {
         });
       }
     }
+    // Free but unable to arrive: say which resource, and what its journey needs, so "Jo is booked"
+    // is never hidden behind "Alex cannot reach it in time".
+    const told = new Set<string>();
+    for (const entry of perRequirement) {
+      if (entry.free.length < entry.demand.quantity || entry.arrives.length >= entry.demand.quantity) continue;
+      for (const id of entry.free) {
+        if (!travelBlocks(input.states.get(id), unknownTravel)) continue;
+        for (const reason of input.states.get(id)!.travel!.reasons) {
+          const signature = JSON.stringify(reason);
+          if (told.has(signature)) continue;
+          told.add(signature);
+          reasons.push(reason);
+        }
+      }
+    }
     // Each requirement could be met alone, yet not all at once: they want the same people.
-    if (perRequirement.every((entry) => entry.free.length >= entry.demand.quantity)) {
+    if (perRequirement.every((entry) => entry.arrives.length >= entry.demand.quantity)) {
       reasons.push({
         code: 'requirements_compete_for_same_resources',
         requirementIds: requirements.filter((entry) => !entry.satisfied).map((entry) => entry.requirementId),
@@ -254,13 +315,25 @@ export function evaluateFeasibility(input: {
     }));
   }
 
-  return { feasible, interval: input.interval, requirements, combination, reasons };
+  // Doubts that did not stop an answer: a resource the combination uses whose journey is unverified.
+  const used = new Set((combination ?? []).map((entry) => entry.resourceId));
+  const warnings = [...used].flatMap((id) => {
+    const travel = input.states.get(id)?.travel;
+    return travel?.state === 'unknown' ? travel.reasons : [];
+  });
+  const travel = [...input.states.values()].flatMap((state) =>
+    state.travel && state.travel.state !== 'not_applicable' && (feasible ? used.has(state.id) : true) ? [state.travel] : [],
+  );
+
+  return { feasible, interval: input.interval, requirements, combination, reasons, warnings, travel };
 }
 
 export type AssignedResourceCheck = {
   /** Every assigned resource is working and free for the interval. */
   allAvailable: boolean;
-  resources: { resourceId: string; problem: ResourceProblem | null }[];
+  resources: { resourceId: string; problem: ResourceProblem | null; travel?: ResourceTravel }[];
+  /** No assigned resource is *known* unable to arrive. An unverified journey is a warning, not a failure. */
+  allTravelFeasible: boolean;
   /** The assigned resources cover every requirement, each filling one slot. Independent of `allAvailable`. */
   requirementsMet: boolean;
   requirements: RequirementFeasibility[];
@@ -284,6 +357,7 @@ export function evaluateAssignedResources(input: {
   const resources = assigned.map((resourceId) => ({
     resourceId,
     problem: input.states.get(resourceId)?.problem ?? null,
+    travel: input.states.get(resourceId)?.travel,
   }));
 
   const slots = expand(demands);
@@ -306,6 +380,7 @@ export function evaluateAssignedResources(input: {
       eligibleResourceIds: demand.eligible,
       openResourceIds: [],
       freeResourceIds: [],
+      travelFeasibleResourceIds: [],
       matchedResourceIds: matched,
       missingQuantity: demand.quantity - matched.length,
       satisfied: matched.length === demand.quantity,
@@ -314,7 +389,8 @@ export function evaluateAssignedResources(input: {
 
   const allAvailable = resources.every((entry) => entry.problem === null);
   const requirementsMet = requirements.every((entry) => entry.satisfied);
-  return { allAvailable, resources, requirementsMet, requirements, ok: allAvailable && requirementsMet };
+  const allTravelFeasible = resources.every((entry) => entry.travel?.state !== 'infeasible');
+  return { allAvailable, resources, allTravelFeasible, requirementsMet, requirements, ok: allAvailable && requirementsMet && allTravelFeasible };
 }
 
 // ---------------------------------------------------------------------------
@@ -336,6 +412,11 @@ export type FeasibilityData = {
   exceptions: Map<string, Window[]>;
   /** The organization's own open periods per day if it has said, else null (never closed). Absent for a public visitor, whose slots already come from open windows. */
   organizationHours: { timeZone: string; hours: Awaited<ReturnType<typeof listOperatingHours>> } | null;
+  /**
+   * Present only when some resource is said to travel. The facts a journey is judged from, the
+   * router's answers so far this request, and what an unverifiable one does to the answer.
+   */
+  travel?: { facts: TravelFacts; book: RouteBook; unknown: UnknownTravelPolicy };
 };
 
 const ms = (iso: string) => new Date(iso).getTime();
@@ -352,14 +433,32 @@ function overlapsAny(windows: readonly Window[], interval: Window): boolean {
   return windows.some((window) => ms(window.startsAt) < end && start < ms(window.endsAt));
 }
 
-function stateFor(id: string, data: FeasibilityData, interval: Window): ResourceState {
-  let problem: ResourceProblem | null = null;
+function problemFor(id: string, data: FeasibilityData, interval: Window): ResourceProblem | null {
   if (!covers(data.open.get(id) ?? [], interval)) {
-    problem = overlapsAny(data.exceptions.get(id) ?? [], interval) ? 'unavailable' : 'not_working';
-  } else if (overlapsAny(data.committed.get(id) ?? [], interval)) {
-    problem = 'committed';
+    return overlapsAny(data.exceptions.get(id) ?? [], interval) ? 'unavailable' : 'not_working';
   }
-  return { id, rank: data.ranks.get(id) ?? 0, problem };
+  return overlapsAny(data.committed.get(id) ?? [], interval) ? 'committed' : null;
+}
+
+/** Whether a free resource can arrive — asked only after open and uncommitted, so no route is spent on a resource already ruled out. */
+function travelPlanFor(id: string, data: FeasibilityData, interval: Window) {
+  const travel = data.travel!;
+  return planTravel({
+    resourceId: id,
+    facts: travel.facts.resources.get(id),
+    candidate: travel.facts.candidate,
+    bufferMinutes: travel.facts.bufferMinutes,
+    interval,
+    // The open window the interval sits in is where this working period begins and ends.
+    period: (data.open.get(id) ?? []).find((window) => covers([window], interval)) ?? null,
+  });
+}
+
+function stateFor(id: string, data: FeasibilityData, interval: Window): ResourceState {
+  const problem = problemFor(id, data, interval);
+  const state: ResourceState = { id, rank: data.ranks.get(id) ?? 0, problem };
+  if (problem === null && data.travel) state.travel = judgeTravel(travelPlanFor(id, data, interval), data.travel.book);
+  return state;
 }
 
 function statesFor(data: FeasibilityData, interval: Window): Map<string, ResourceState> {
@@ -388,7 +487,36 @@ export function judgeInterval(
     states: statesFor(data, interval),
     outsideOrganizationHours: outsideHours(data, interval),
     prefer: options.prefer,
+    unknownTravel: data.travel?.unknown,
   });
+}
+
+/**
+ * Ask the router for every journey the given intervals need, **once each**, before they are judged.
+ * Only resources that could fill a requirement (or are named in `alsoResourceIds`) *and* are open and
+ * uncommitted for an interval are planned, so nothing is routed for a resource already ruled out.
+ * Judging stays synchronous and reads what this left in the book; a journey the router could not
+ * answer reads as unknown. Nothing is persisted.
+ */
+export async function prepareTravel(
+  data: FeasibilityData,
+  intervals: readonly Window[],
+  provider: RoutingProvider | null,
+  alsoResourceIds: readonly string[] = [],
+): Promise<void> {
+  if (!data.travel) return;
+  const relevant = new Set([...data.demands.flatMap((demand) => demand.eligible), ...alsoResourceIds]);
+
+  const legs: { from: NonNullable<Place['point']>; to: NonNullable<Place['point']>; departureAt?: string }[] = [];
+  for (const interval of intervals) {
+    for (const id of relevant) {
+      if (!data.ranks.has(id) || problemFor(id, data, interval) !== null) continue;
+      for (const leg of travelPlanFor(id, data, interval).routed) {
+        legs.push({ from: leg.from.point, to: leg.to.point, departureAt: leg.departureAt });
+      }
+    }
+  }
+  await resolveRoutes(data.travel.book, provider, legs);
 }
 
 function groupById(rows: { resource_id: string | null; occupies: unknown }[]): Map<string, Window[]> {
@@ -410,7 +538,15 @@ function groupById(rows: { resource_id: string | null; occupies: unknown }[]): M
  */
 export async function loadFeasibilityData(
   db: Db,
-  input: { organizationId: string; typeId: string; range: Window; timeZone: string; excludeWorkItemId?: string },
+  input: {
+    organizationId: string;
+    typeId: string;
+    range: Window;
+    timeZone: string;
+    excludeWorkItemId?: string;
+    /** The candidate work's canonical Location, when it has one. Travel is judged to and from it. */
+    locationId?: string | null;
+  },
 ): Promise<FeasibilityData> {
   const rangeText = `[${input.range.startsAt},${input.range.endsAt})`;
 
@@ -433,7 +569,11 @@ export async function loadFeasibilityData(
 
   const resources = [...resourceList].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
   const ids = resources.map((resource) => resource.id);
-  const open = await listResourceOpenWindows(db, { organizationId: input.organizationId, within: input.range, resourceIds: ids });
+  // Where somebody is *between* jobs needs the working period around the interval, not only the interval.
+  const travelling = resources.some((resource) => resource.travelMode !== null);
+  const context = travelling ? widen(input.range) : input.range;
+  const open = await listResourceOpenWindows(db, { organizationId: input.organizationId, within: context, resourceIds: ids });
+  const travel = travelling ? await loadTravelFacts(db, input, resources, context) : undefined;
 
   const exceptionWindows = new Map<string, Window[]>();
   for (const exception of exceptions) {
@@ -454,6 +594,99 @@ export async function loadFeasibilityData(
     committed: groupById(committedRows.data ?? []),
     exceptions: exceptionWindows,
     organizationHours: { timeZone: input.timeZone, hours },
+    ...(travel ? { travel: { facts: travel, book: newRouteBook(), unknown: 'allow' as const } } : {}),
+  };
+}
+
+/** A working period is bounded by a day in practice; this is how far either side of an interval its neighbours are looked for. */
+const CONTEXT_HOURS = 24;
+
+function widen(range: Window): Window {
+  return {
+    startsAt: new Date(ms(range.startsAt) - CONTEXT_HOURS * 3_600_000).toISOString(),
+    endsAt: new Date(ms(range.endsAt) + CONTEXT_HOURS * 3_600_000).toISOString(),
+  };
+}
+
+/**
+ * The staff reader's travel facts: each travelling resource's neighbours in the surrounding period,
+ * the Locations they and the candidate sit at (canonical `locations` rows, with the coordinates they
+ * already hold), each resource's base, and the business's buffer. A constant handful of reads for any
+ * number of resources; nothing is geocoded here, and a Location with no coordinates stays a place
+ * with no point.
+ */
+async function loadTravelFacts(
+  db: Db,
+  input: { organizationId: string; excludeWorkItemId?: string; locationId?: string | null },
+  resources: readonly { id: string; travelMode: TravelMode | null; baseLocationId: string | null }[],
+  context: Window,
+): Promise<TravelFacts> {
+  const mobile = resources.filter((resource) => resource.travelMode === 'mobile').map((resource) => resource.id);
+
+  let assignments = db
+    .from('work_item_resource_assignments')
+    .select('resource_id, work_item_id, occupies')
+    .eq('organization_id', input.organizationId)
+    .in('resource_id', mobile)
+    .overlaps('occupies', `[${context.startsAt},${context.endsAt})`);
+  if (input.excludeWorkItemId) assignments = assignments.neq('work_item_id', input.excludeWorkItemId);
+
+  const [assigned, organization] = await Promise.all([
+    mobile.length > 0 ? assignments : Promise.resolve({ data: [], error: null }),
+    db.from('organizations').select('buffer_minutes').eq('id', input.organizationId).maybeSingle(),
+  ]);
+  if (assigned.error) throw new DomainError(assigned.error.message, 'feasibility.travel_failed');
+  if (organization.error) throw new DomainError(organization.error.message, 'feasibility.travel_failed');
+
+  const workItemIds = [...new Set((assigned.data ?? []).map((row) => row.work_item_id))];
+  const items =
+    workItemIds.length > 0
+      ? await db.from('work_items').select('id, location_id').eq('organization_id', input.organizationId).in('id', workItemIds)
+      : { data: [], error: null };
+  if (items.error) throw new DomainError(items.error.message, 'feasibility.travel_failed');
+  const locationOfWork = new Map((items.data ?? []).map((item) => [item.id, item.location_id]));
+
+  const locationIds = [
+    ...new Set(
+      [
+        input.locationId ?? null,
+        ...resources.map((resource) => resource.baseLocationId),
+        ...locationOfWork.values(),
+      ].filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const locations =
+    locationIds.length > 0
+      ? await db.from('locations').select('id, latitude, longitude').eq('organization_id', input.organizationId).in('id', locationIds)
+      : { data: [], error: null };
+  if (locations.error) throw new DomainError(locations.error.message, 'feasibility.travel_failed');
+  const places = new Map<string, Place>(
+    (locations.data ?? []).map((row) => [
+      row.id,
+      { locationId: row.id, point: row.latitude !== null && row.longitude !== null ? { latitude: row.latitude, longitude: row.longitude } : null },
+    ]),
+  );
+  const placeOf = (id: string | null | undefined): Place | null => (id ? (places.get(id) ?? null) : null);
+
+  const neighbours = new Map<string, Neighbour[]>();
+  for (const row of assigned.data ?? []) {
+    const occupies = parseWindow(row.occupies as string | null);
+    if (!occupies) continue;
+    neighbours.set(row.resource_id, [
+      ...(neighbours.get(row.resource_id) ?? []),
+      { workItemId: row.work_item_id, occupies, place: placeOf(locationOfWork.get(row.work_item_id)) },
+    ]);
+  }
+
+  return {
+    candidate: placeOf(input.locationId),
+    bufferMinutes: organization.data?.buffer_minutes ?? 0,
+    resources: new Map<string, ResourceTravelFacts>(
+      resources.map((resource) => [
+        resource.id,
+        { mode: resource.travelMode, base: placeOf(resource.baseLocationId), neighbours: neighbours.get(resource.id) ?? [] },
+      ]),
+    ),
   };
 }
 
@@ -478,6 +711,10 @@ export async function checkWorkTypeFeasibility(
     excludeWorkItemId?: string;
     /** Resources to use where several would do (the job's current ones, say). A preference only. */
     prefer?: readonly string[];
+    /** The work's canonical Location, so travel can be judged to and from it. */
+    locationId?: string | null;
+    /** The router. Omitted, this deployment's own; `null` means none, and journeys read as unknown. Tests pass a fake. */
+    routing?: RoutingProvider | null;
   },
 ): Promise<FeasibilityResult> {
   const interval = { startsAt: new Date(input.start).toISOString(), endsAt: new Date(input.end).toISOString() };
@@ -490,7 +727,9 @@ export async function checkWorkTypeFeasibility(
     range: interval,
     timeZone: input.timeZone,
     excludeWorkItemId: input.excludeWorkItemId,
+    locationId: input.locationId,
   });
+  await prepareTravel(data, [interval], input.routing === undefined ? await routingProvider() : input.routing);
   return judgeInterval(data, interval, { prefer: input.prefer });
 }
 
@@ -505,6 +744,8 @@ export async function checkAssignedResources(
     end: string;
     resourceIds: readonly string[];
     excludeWorkItemId?: string;
+    locationId?: string | null;
+    routing?: RoutingProvider | null;
   },
 ): Promise<AssignedResourceCheck & { interval: Window }> {
   const interval = { startsAt: new Date(input.start).toISOString(), endsAt: new Date(input.end).toISOString() };
@@ -517,7 +758,9 @@ export async function checkAssignedResources(
     range: interval,
     timeZone: input.timeZone,
     excludeWorkItemId: input.excludeWorkItemId,
+    locationId: input.locationId,
   });
+  await prepareTravel(data, [interval], input.routing === undefined ? await routingProvider() : input.routing, input.resourceIds);
   const check = evaluateAssignedResources({
     demands: data.demands,
     states: statesFor(data, interval),
@@ -539,22 +782,43 @@ export type FeasibleSlot = { startsAt: string; endsAt: string; combination: Feas
  * Candidates are not every minute: they step from the start of each resource's free windows. Each
  * is then judged in memory over the facts loaded once for the range.
  */
-export function feasibleSlots(
+export function feasibleSlots(data: FeasibilityData, input: SlotSearch): FeasibleSlot[] {
+  return candidateIntervals(data, input).flatMap((interval) => {
+    const result = judgeInterval(data, interval);
+    return result.feasible && result.combination ? [{ ...interval, combination: result.combination }] : [];
+  });
+}
+
+/**
+ * `feasibleSlots` for a range where journeys matter: the same candidates, with the router asked —
+ * each distinct leg once — for the ones that survive eligibility, hours and commitments before any is
+ * judged. Where `data.travel` is absent this is `feasibleSlots` with an await.
+ */
+export async function feasibleSlotsWithTravel(
   data: FeasibilityData,
-  input: {
-    range: Window;
-    durationMinutes: number;
-    stepMinutes: number;
-    /**
-     * Where a candidate may begin, when something other than "where a free window begins" decides —
-     * a caller's cadence. Maps an instant to the first allowed start at or after it. Omitted, the
-     * engine steps from each free window's start, as staff scheduling and every older caller expect.
-     */
-    align?: (instantMs: number) => number;
-    /** Exclusive upper bound on a start, in ms; a caller's horizon. */
-    startBefore?: number;
-  },
-): FeasibleSlot[] {
+  input: SlotSearch,
+  provider: RoutingProvider | null,
+): Promise<FeasibleSlot[]> {
+  await prepareTravel(data, candidateIntervals(data, input), provider);
+  return feasibleSlots(data, input);
+}
+
+type SlotSearch = {
+  range: Window;
+  durationMinutes: number;
+  stepMinutes: number;
+  /**
+   * Where a candidate may begin, when something other than "where a free window begins" decides —
+   * a caller's cadence. Maps an instant to the first allowed start at or after it. Omitted, the
+   * engine steps from each free window's start, as staff scheduling and every older caller expect.
+   */
+  align?: (instantMs: number) => number;
+  /** Exclusive upper bound on a start, in ms; a caller's horizon. */
+  startBefore?: number;
+};
+
+/** The intervals worth judging: stepped from each eligible resource's free windows, never minute by minute. */
+function candidateIntervals(data: FeasibilityData, input: SlotSearch): Window[] {
   const duration = input.durationMinutes * 60_000;
   const step = input.stepMinutes * 60_000;
   if (!(duration > 0) || !(step > 0)) return [];
@@ -579,13 +843,10 @@ export function feasibleSlots(
     }
   }
 
-  const slots: FeasibleSlot[] = [];
-  for (const start of [...starts].sort((a, b) => a - b)) {
-    const interval = { startsAt: new Date(start).toISOString(), endsAt: new Date(start + duration).toISOString() };
-    const result = judgeInterval(data, interval);
-    if (result.feasible && result.combination) slots.push({ ...interval, combination: result.combination });
-  }
-  return slots;
+  return [...starts].sort((a, b) => a - b).map((start) => ({
+    startsAt: new Date(start).toISOString(),
+    endsAt: new Date(start + duration).toISOString(),
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -675,6 +936,8 @@ export async function assessInterval(
     excludeWorkItemId?: string;
     /** The resources currently ticked, or assigned. Empty means no selection to judge. */
     resourceIds?: readonly string[];
+    locationId?: string | null;
+    routing?: RoutingProvider | null;
   },
 ): Promise<{ feasibility: FeasibilityResult; selection: (AssignedResourceCheck & { interval: Window }) | null }> {
   const interval = { startsAt: new Date(input.start).toISOString(), endsAt: new Date(input.end).toISOString() };
@@ -687,8 +950,10 @@ export async function assessInterval(
     range: interval,
     timeZone: input.timeZone,
     excludeWorkItemId: input.excludeWorkItemId,
+    locationId: input.locationId,
   });
   const chosen = input.resourceIds ?? [];
+  await prepareTravel(data, [interval], input.routing === undefined ? await routingProvider() : input.routing, chosen);
   return {
     feasibility: judgeInterval(data, interval, { prefer: chosen }),
     selection:

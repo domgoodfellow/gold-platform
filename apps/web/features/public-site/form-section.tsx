@@ -11,6 +11,11 @@ export type FormSectionContext = {
   forms: Record<string, FormPublication>;
   /** Names for the canvas, which does not read definitions. */
   formNames?: Record<string, string>;
+  /**
+   * Where internal links resolve. A private preview of a draft keeps its visitor inside the preview
+   * by prefixing every in-site path; the public site and the canvas leave it unset.
+   */
+  linkBase?: string;
 };
 
 /**
@@ -19,12 +24,16 @@ export type FormSectionContext = {
  * published revision. A form that is not published, or was archived, draws nothing on a public page
  * rather than a hole with an apology in it.
  */
-export function FormSection({ heading, body, formId, context }: { heading: string; body: string; formId: string; context: FormSectionContext }) {
+export function FormSection({ heading, body, formId, context, anchorId }: {
+  heading: string; body: string; formId: string; context: FormSectionContext;
+  /** Set on the first form of a page only, so a page never holds two elements with one id. */
+  anchorId?: string;
+}) {
   const form = context.forms[formId];
   if (!form && context.mode === 'live') return null;
 
   return (
-    <section id="contact" className="scroll-mt-24 mx-auto w-full max-w-xl" aria-labelledby={`form-section-${formId}`}>
+    <section id={anchorId} className="scroll-mt-24 mx-auto w-full max-w-xl" aria-labelledby={`form-section-${formId}`}>
       <h2 id={`form-section-${formId}`} className="text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h2>
       {body ? <p className="mt-3 text-muted">{body}</p> : null}
       <div className="mt-8 rounded-xl border border-border bg-surface p-6 shadow-sm">

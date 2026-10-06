@@ -25,9 +25,9 @@ layout boundaries, not URL or security boundaries.
 | `/organizations/accept-invite/[token]` | Noindex, context-preserving organization invitation acceptance with exact-email validation. | Retain token-safe auth redirects. |
 
 The organization-side Website settings now provide a real edit, preview, revision and publish
-foundation. The built homepage vocabulary is intentionally narrow and typed; publishing
-atomically advances the public pointer, published revisions are immutable, and anonymous reads
-use `published_gold_homepage()` rather than table access. Tenant brand settings and logo also
+foundation. A website is pages of typed sections and a navigation, held as one site revision (D88, I95); publishing
+atomically advances the one public pointer, published revisions are immutable, and anonymous reads
+use `published_gold_homepage()` (GildOps' root) or `published_hostname_site()` (a business's own hostname) rather than table access. Tenant brand settings and logo also
 drive authenticated and selected public surfaces.
 
 A hostname resolver and a verified custom-domain lifecycle now exist (`20261010000001`):
@@ -42,10 +42,8 @@ binding pattern exactly as the Resend sending-domain binding does. Resolution it
 distinguish a managed subdomain from a custom domain — both reach `published_hostname_site` the
 same way — but this is still not full tenant website distribution: governed public media library,
 additional/legal page publication, full public authentication-context preservation, and complete
-attribution/consent remain unbuilt, and Website settings (`create_public_homepage_draft` and its
-siblings) still publishes only GildOps' own site (`platform_settings.workflow_review_organization_id`),
-so no ordinary tenant has a `public_sites` row to resolve to at either address yet — that gap
-belongs to Studio's own site model, not to hostname resolution.
+attribution/consent remain unbuilt. A business now creates its own website in Studio (`create_public_site`), blank or from a starter, and
+it resolves at either address once published; redirects after a path change are not built.
 
 Operational `assets` are customer/business equipment and property. Public images and downloads
 need a distinct governed media concept; reusing `assets` would corrupt both authorization and
@@ -88,8 +86,8 @@ not copy them into a “website service” or “website location.”
 canonical organization data                 website presentation
 organizations / organization_profiles  ─┐   public_sites (org, default locale, mode)
 brand_settings + public media assets    ─┼─► public_site_revisions (draft/review/published)
-locations / operating_hours             ─┤   public_pages (stable identity + slug)
-work_item_types as service capability   ─┤   public_page_revisions (SEO + ordered sections)
+locations / operating_hours             ─┤   pages and sections (stable ids, inside the revision)
+work_item_types as service capability   ─┤   navigation (names pages by id)
 price_book_items as public offer input  ─┘   section references canonical record ids
 
 platform-owned configuration

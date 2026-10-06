@@ -39,8 +39,10 @@ test.beforeAll(async () => {
   slug = (await pg.query('select slug from public.organizations where id = $1', [ctx.organizationId])).rows[0].slug;
   previousSettings = (await pg.query('select gold_public_organization_id, gold_public_site_id from public.platform_settings where singleton')).rows[0];
   await pg.query('update public.platform_settings set platform_public_domain = $1 where singleton', [ZONE]);
-  // A tenant's own website does not exist until one is configured for it; give this business the starting one.
-  await pg.query('select app.bootstrap_gold_public_site($1)', [ctx.organizationId]);
+  // The business makes its own website in the test below, as a person would; start from none.
+  await pg.query('set session_replication_role = replica');
+  try { await pg.query('delete from public.public_sites where organization_id = $1', [ctx.organizationId]); }
+  finally { await pg.query('set session_replication_role = origin'); }
 
   owner = createClient(process.env.SUPABASE_URL ?? '', process.env.SUPABASE_ANON_KEY ?? '', { auth: { autoRefreshToken: false, persistSession: false } });
   const signIn = await owner.auth.signInWithPassword({ email: BUSINESSES[0].owner.email, password: DEMO_PASSWORD });
@@ -87,16 +89,12 @@ test('website: place a published form on the website, publish it, and a visitor 
   const form = await publishForm(page, `Website enquiry ${Date.now()}`);
 
   await page.goto(`${studio()}/website`);
-  const create = page.getByRole('button', { name: /Create (homepage draft|draft from published page)/ });
+  await page.getByRole('button', { name: /Create blank website/ }).click();
   const structure = page.getByRole('navigation', { name: 'Website structure' });
-  await create.or(structure).first().waitFor();
-  if (await create.isVisible()) await create.click();
-  await expect(page.getByRole('navigation', { name: 'Website structure' })).toBeVisible();
-  // A form section from an earlier run is taken out first: the website carries at most one.
-  const remove = page.getByRole('button', { name: 'Remove form section' });
-  if (await remove.isVisible()) await remove.click();
-  await page.getByLabel('Add a form').selectOption({ value: form.formId });
-  await expect(page.getByRole('heading', { name: 'Form', exact: true })).toBeVisible();
+  await expect(structure).toBeVisible();
+  await structure.getByRole('button', { name: 'Add section' }).click();
+  await page.getByRole('region', { name: 'Forms' }).getByRole('combobox').selectOption(form.formId);
+  await page.getByRole('button', { name: 'Add form section' }).click();
   // The questions are edited in the form, never here.
   await expect(page.getByRole('link', { name: 'Edit form' })).toHaveAttribute('href', new RegExp(`/studio/forms/${form.formId}$`));
   await expect(page.getByLabel('Your name')).toHaveCount(0);
@@ -106,7 +104,7 @@ test('website: place a published form on the website, publish it, and a visitor 
   await expect(page.getByText('Sent for review.')).toBeVisible();
   await page.getByRole('button', { name: 'Publish' }).click();
   // Publishing starts a fresh editor for the next draft, so the confirmation is the page's own state.
-  await expect(page.getByRole('button', { name: /Create draft from published page/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Create draft from published website/ })).toBeVisible();
 
   // The form now says it is used by the website, and will not be archived out from under it.
   await page.goto(`${studio()}/forms/${form.formId}`);

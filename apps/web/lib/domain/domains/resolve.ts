@@ -1,4 +1,4 @@
-import { PublicSiteProjectionSchema, type PublicSiteProjection } from '@gold/schemas';
+import { PublicWebsiteSnapshotSchema, type PublicWebsiteSnapshot } from '@gold/schemas';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import type { PublicProfile } from '@/lib/domain/tenancy/profile';
@@ -36,8 +36,8 @@ export async function resolveHostname(db: Db, host: string): Promise<HostnameBin
 export type HostedSite = {
   surface: DomainSurface;
   profile: PublicProfile;
-  /** The published home page, or null when the business has published none. Website surface only. */
-  home: PublicSiteProjection | null;
+  /** The whole published website — every page and the navigation, at one revision — or null when the business has published none. Website surface only. */
+  site: PublicWebsiteSnapshot | null;
 };
 
 /** What a resolved hostname renders, read in one step so the page never holds an id a URL supplied. */
@@ -48,14 +48,14 @@ export async function publishedHostnameSite(db: Db, host: string): Promise<Hoste
   if (error) throw new DomainError(error.message, 'domains.resolve_failed');
   if (!data) return null;
 
-  const raw = data as { surface: DomainSurface; profile: PublicProfile; home: unknown };
-  let home: PublicSiteProjection | null = null;
-  if (raw.home) {
-    const parsed = PublicSiteProjectionSchema.safeParse(raw.home);
+  const raw = data as { surface: DomainSurface; profile: PublicProfile; site: unknown };
+  let site: PublicWebsiteSnapshot | null = null;
+  if (raw.site) {
+    const parsed = PublicWebsiteSnapshotSchema.safeParse(raw.site);
     if (!parsed.success) {
       throw new DomainError('The published website does not match its supported schema.', 'public_site.invalid_projection');
     }
-    home = parsed.data;
+    site = parsed.data;
   }
-  return { surface: raw.surface, profile: raw.profile, home };
+  return { surface: raw.surface, profile: raw.profile, site };
 }

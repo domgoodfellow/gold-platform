@@ -259,6 +259,7 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | An unconstrained work item type | A type with no configured transitions is frozen, not free (I13) | `app.check_status_transition`, a trigger; the domain layer re-checks only to produce the message |
 | A per-column rule in the update policy | A policy sees the old row or the new one, never both | `app.check_work_item_update_capability`, a trigger beside the policy |
 | A checklist template joined to a job | Copying is what makes editing a template safe (I8) | The template is copied at creation |
+| A travel duration stored on Work, or a router's vendor named in scheduling | Travel depends on whatever is adjacent, so a stored one is stale the moment a neighbour moves; and unknown travel read as zero makes every job reachable (I94, D87) | No `travel`/`route` column on `work_items` or `work_item_resource_assignments`, and `travel.ts` touches no database; `travel-feasibility.test.ts`, `adapters.test.ts` |
 | Customer booking policy inside the feasibility engine, or binding staff scheduling | *May a customer book this* and *can the resources do it* are two questions, and staff are asked only the second (I86) | `feasibility.ts` imports nothing of `lib/domain/booking`; one evaluator and one reader in `policy.ts`; the commit reasserts it (`GD017`); `booking-policy-boundary.test.ts`, `booking-policy.test.ts` |
 
 ### Pricing and configuration
@@ -512,6 +513,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | Which platform tables a member, a booking visitor and staff may each read | D64 |
 | Settings as one destination, and its five scopes | D71, D45 |
 | A business's private values, which connectors are offered, and source control against Studio | D84, D85, D86 |
+| A website as pages of typed sections, one published snapshot, and a business creating its own | D88 (I95) |
 
 ## When you finish a change
 

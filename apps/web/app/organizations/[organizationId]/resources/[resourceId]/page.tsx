@@ -9,10 +9,13 @@ import { ResourceCapabilitiesControl } from '@/features/resources/resource-capab
 import { ResourceClassControl } from '@/features/resources/resource-class-control';
 import { ResourceExceptionsPanel } from '@/features/resources/resource-exceptions-panel';
 import { ResourceMembershipControl } from '@/features/resources/resource-membership-control';
+import { ResourceRoutingControl } from '@/features/resources/resource-routing-control';
 import { ResourceWorkingHoursEditor } from '@/features/resources/resource-working-hours-editor';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { listLocations } from '@/lib/domain/locations/locations';
 import { listResourceCapabilities } from '@/lib/domain/resources/resource-capabilities';
 import { RESOURCE_CLASS_LABELS } from '@/lib/domain/resources/resource-class';
+import { TRAVEL_MODE_LABELS } from '@/lib/domain/resources/travel-mode';
 import { getResource, listResources } from '@/lib/domain/resources/resources';
 import {
   getResourceWorkingHours,
@@ -51,7 +54,7 @@ export default async function ResourcePage({
 
   const now = new Date();
   const ahead = { startsAt: now.toISOString(), endsAt: new Date(now.getTime() + 400 * 86_400_000).toISOString() };
-  const [definitions, workItems, members, resources, vocabulary, workingHours, exceptions, conflicts] = await Promise.all([
+  const [definitions, workItems, members, resources, vocabulary, workingHours, exceptions, conflicts, locations] = await Promise.all([
     listFieldDefinitions(db, { organizationId, entityType: 'resource' }),
     listWorkItems(db, { organizationId, resourceId }),
     listMembers(db, { organizationId }),
@@ -60,6 +63,7 @@ export default async function ResourcePage({
     getResourceWorkingHours(db, { organizationId, resourceId }),
     listResourceAvailabilityExceptions(db, { organizationId, resourceId, endingAfter: now.toISOString() }),
     listAvailabilityConflicts(db, { organizationId, within: ahead }),
+    listLocations(db, { organizationId, limit: 500 }),
   ]);
   const affected = new Set(
     conflicts.filter((conflict) => conflict.resourceId === resourceId).map((conflict) => conflict.workItemId),
@@ -125,6 +129,25 @@ export default async function ResourcePage({
               )}
             </div>
           ) : null}
+          <div>
+            <div className="text-sm font-medium text-muted">Travel</div>
+            {mayUpdate ? (
+              <ResourceRoutingControl
+                organizationId={organizationId}
+                resourceId={resourceId}
+                travelMode={resource.travelMode}
+                baseLocationId={resource.baseLocationId}
+                locations={locations.map((location) => ({ id: location.id, label: location.label }))}
+              />
+            ) : (
+              <div>
+                {resource.travelMode ? TRAVEL_MODE_LABELS[resource.travelMode] : 'Not set — travel is not checked'}
+                {resource.baseLocationId
+                  ? ` · base: ${locations.find((location) => location.id === resource.baseLocationId)?.label ?? 'a place you cannot see'}`
+                  : ''}
+              </div>
+            )}
+          </div>
           <CustomFieldValues definitions={definitions} custom={resource.custom} />
         </TabsContent>
 

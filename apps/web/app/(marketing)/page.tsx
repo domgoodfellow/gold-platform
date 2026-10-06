@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { HomepageRenderer } from '@/features/public-site/homepage-renderer';
+import { PageSections } from '@/features/public-site/section-renderers';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { canonicalUrl } from '@/lib/seo/site';
 import { PLATFORM_NAME } from '@/lib/brand';
@@ -38,7 +38,7 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }} />
-      <HomepageRenderer sections={site.sections} forms={{ mode: 'live', forms: site.forms }} />
+      <PageSections sections={site.sections} context={{ mode: 'live', forms: site.forms }} />
       {communication?.displayName && communication.greeting ? <PublicCommunicationWidget siteId={site.siteId} name={communication.displayName} greeting={communication.greeting} /> : null}
     </>
   );
