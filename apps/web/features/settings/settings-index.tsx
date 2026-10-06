@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { SettingsNavigationRow } from './settings-navigation-row';
 import { CollectionView } from '@/components/surfaces/collection-view';
 import { DividedList } from '@/components/surfaces/section';
 import { FOCUS_RING } from '@/components/class-names';
@@ -64,18 +64,12 @@ export function SettingsList({ organizationId, sections, describe }: Props) {
       {(section) => (
         <DividedList className="border-y border-border">
           {section.entries.map((entry) => (
-            <li key={entry.key} className="relative flex items-center gap-4 py-3 transition-colors hover:bg-hover">
-              <div className="min-w-0 flex-1">
-                <Link
-                  href={entryHref(organizationId, entry)}
-                  className={`${FOCUS_RING} rounded font-medium after:absolute after:inset-0`}
-                >
-                  {entry.title}
-                </Link>
-                <p className="mt-0.5 text-sm text-muted">{describe?.(entry.key) ?? entry.description}</p>
-              </div>
-              <ChevronRight aria-hidden className="size-4 shrink-0 text-subtle" />
-            </li>
+            <SettingsNavigationRow
+              key={entry.key}
+              href={entryHref(organizationId, entry)}
+              title={entry.title}
+              description={describe?.(entry.key) ?? entry.description}
+            />
           ))}
         </DividedList>
       )}

@@ -17,6 +17,9 @@ import { listMyOrganizations, type Organization } from '@/lib/domain/tenancy/org
 export type PersonContext = {
   email: string;
   hasPassword: boolean;
+  displayName: string;
+  pendingEmail: string | null;
+  signInMethods: string[];
   organizations: Organization[];
   staff: boolean;
   goldInternal: { id: string } | null;
@@ -27,10 +30,16 @@ export async function loadPersonContext(): Promise<PersonContext> {
 
   let email: string;
   let hasPassword: boolean;
+  let displayName: string;
+  let pendingEmail: string | null;
+  let signInMethods: string[];
   try {
     await requireActor(db);
     const { data } = await db.auth.getUser();
     email = data.user?.email ?? '';
+    displayName = typeof data.user?.user_metadata.display_name === 'string' ? data.user.user_metadata.display_name : '';
+    pendingEmail = data.user?.new_email || null;
+    signInMethods = [...new Set((data.user?.identities ?? []).map((identity) => identity.provider))];
     // Supabase records how somebody actually signed in as a list of identities. A Google-only
     // account has no password to change, and offering the form anyway would be a control with
     // nothing behind it (D31's reasoning, restated for auth rather than a module switch).
@@ -48,6 +57,9 @@ export async function loadPersonContext(): Promise<PersonContext> {
   return {
     email,
     hasPassword,
+    displayName,
+    pendingEmail,
+    signInMethods,
     organizations,
     staff,
     goldInternal,

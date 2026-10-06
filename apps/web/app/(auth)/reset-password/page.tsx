@@ -2,6 +2,8 @@ import { AuthHeading, AuthSecondaryAction } from '../auth-parts';
 import { redirect } from 'next/navigation';
 import { CredentialsForm } from '../credentials-form';
 import { getDb } from '@/lib/db/server';
+import { requirePasswordRecovery } from '@/lib/domain/identity/credentials';
+import { DomainError } from '@/lib/domain/errors';
 import { resetPasswordAction } from './actions';
 
 export const metadata = { title: 'Set a new password · GildOps' };
@@ -24,6 +26,12 @@ export default async function ResetPasswordPage() {
 
   if (!data.user) {
     redirect('/forgot-password');
+  }
+  try {
+    await requirePasswordRecovery(db);
+  } catch (error) {
+    if (error instanceof DomainError) redirect('/forgot-password');
+    throw error;
   }
 
   return (

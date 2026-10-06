@@ -46,15 +46,13 @@ describe('the Settings configuration map', () => {
 
   it('organizes by business concern, in the documented order', () => {
     expect(SETTINGS_SECTIONS.map((section) => section.title)).toEqual([
-      'Business',
+      'General',
       'Work & scheduling',
-      'Services & pricing',
-      'Customers & data',
-      'People & access',
+      'Pricing',
+      'Customer data',
       'Brand & public presence',
-      'Connections',
-      'Products & features',
-      'Plan & usage',
+      'Communications configuration',
+      'Features',
     ]);
   });
 
@@ -62,7 +60,7 @@ describe('the Settings configuration map', () => {
     for (const entry of entries) expect(entry.path).toBe(configTarget(entry.key).path);
     expect(new Set(CONFIG_TARGETS.map((target) => target.key)).size).toBe(CONFIG_TARGETS.length);
     // Every target is on the map, and none is a door nobody may open.
-    expect(CONFIG_TARGETS.filter((target) => target.key !== 'setup').map((target) => target.key).sort()).toEqual(entries.map((entry) => entry.key).sort());
+    expect(CONFIG_TARGETS.filter((target) => target.scope === 'organization' && target.key !== 'setup').map((target) => target.key).sort()).toEqual(entries.map((entry) => entry.key).sort());
     for (const target of CONFIG_TARGETS) expect(target.permission.length, target.key).toBeGreaterThan(0);
   });
 
@@ -79,10 +77,22 @@ describe('the Settings configuration map', () => {
     };
     for (const area of AREAS.filter((candidate) => candidate.sidebar === false && !['setup', 'insights', 'studio-website', 'studio-forms', 'studio-templates'].includes(candidate.segment))) {
       expect(
-        entries.some((entry) => entry.key === settingsOwned[area.segment] || entry.path.split(/[/#]/)[0] === area.segment),
+        CONFIG_TARGETS.some((target) => target.key === settingsOwned[area.segment] || target.path.split(/[/#]/)[0] === area.segment),
         `${area.segment} left the sidebar and is not on the Settings map`,
       ).toBe(true);
     }
+  });
+
+  it('Organization never contains a peer Settings scope', () => {
+    for (const entry of entries) {
+      expect(configTarget(entry.key).scope, entry.key).toBe('organization');
+      expect(entry.path, entry.key).not.toMatch(/^settings\/(account|access|connections|secrets|plan)(?:[/?#]|$)/);
+    }
+    for (const peer of ['team', 'integrations', 'secrets', 'plan']) expect(entries.map((entry) => entry.key)).not.toContain(peer);
+    expect(configTarget('team').scope).toBe('access');
+    expect(configTarget('integrations').scope).toBe('connections');
+    expect(configTarget('secrets').scope).toBe('connections');
+    expect(configTarget('plan').scope).toBe('plan');
   });
 
   it('borrows only an entitlement from a workspace, never its operating permission', () => {

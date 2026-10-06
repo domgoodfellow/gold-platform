@@ -44,6 +44,7 @@ describe('the one address', () => {
 
   it('is behind sign-in like every other workspace path', () => {
     expect(decideRedirect({ kind: 'none' }, '/settings/account')).toBe('/login');
+    expect(decideRedirect({ kind: 'none' }, '/auth/email-change')).toBeNull();
     expect(decideRedirect({ kind: 'account', userId: 'u' }, '/settings/account/security')).toBeNull();
   });
 

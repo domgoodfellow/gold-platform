@@ -1,7 +1,5 @@
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
 import { DividedList } from '@/components/surfaces/section';
-import { FOCUS_RING } from '@/components/class-names';
+import { SettingsNavigationRow } from './settings-navigation-row';
 import { settingsScopeHref, settingsScopesFor, type SettingsScopeKey } from '@/lib/route/settings';
 
 const SCOPE_DESCRIPTIONS: Record<SettingsScopeKey, string> = {
@@ -24,18 +22,12 @@ export function SettingsLanding({ organizationId }: { organizationId: string }) 
   return (
     <DividedList className="border-y border-border">
       {scopes.map((scope) => (
-        <li key={scope.key} className="relative flex items-center gap-4 py-3 transition-colors hover:bg-hover">
-          <div className="min-w-0 flex-1">
-            <Link
-              href={settingsScopeHref(scope.key, organizationId)}
-              className={`${FOCUS_RING} rounded font-medium after:absolute after:inset-0`}
-            >
-              {scope.label}
-            </Link>
-            <p className="mt-0.5 text-sm text-muted">{SCOPE_DESCRIPTIONS[scope.key]}</p>
-          </div>
-          <ChevronRight aria-hidden className="size-4 shrink-0 text-subtle" />
-        </li>
+        <SettingsNavigationRow
+          key={scope.key}
+          href={settingsScopeHref(scope.key, organizationId)}
+          title={scope.label}
+          description={SCOPE_DESCRIPTIONS[scope.key]}
+        />
       ))}
     </DividedList>
   );

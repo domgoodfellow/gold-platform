@@ -121,6 +121,18 @@
     ]
   },
   "files": {
+    "apps/web/tests/unit/email-change-callback.test.ts": {
+      "category": "unit",
+      "concerns": ["identity", "security"]
+    },
+    "apps/web/tests/unit/account-identity.test.ts": {
+      "category": "unit",
+      "concerns": ["identity", "security"]
+    },
+    "apps/web/tests/component/account-settings.test.tsx": {
+      "category": "component",
+      "concerns": ["settings", "navigation", "security"]
+    },
     "apps/api/tests/component/test_ai_loop.py": {
       "category": "python-component",
       "concerns": [

@@ -1,4 +1,5 @@
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
+import type { SettingsScopeKey } from '@/lib/route/settings';
 import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 
 /**
@@ -446,6 +447,8 @@ export const AREAS: readonly Area[] = [
  * Setup areas all read the path and the two requirements from here rather than restating them.
  */
 export type ConfigTarget = {
+  /** Settings scope that owns this configuration, independent of workspace entitlement. */
+  scope: SettingsScopeKey;
   key: string;
   /** The workspace whose behaviour this configures, when it is one workspace's (`WORKSPACES`); absent for the organization as a whole. */
   workspace?: WorkspaceKey;
@@ -458,34 +461,34 @@ export type ConfigTarget = {
 };
 
 export const CONFIG_TARGETS: readonly ConfigTarget[] = [
-  { key: 'general', path: 'settings/general', permission: ['organization.manage'] },
-  { key: 'work-configuration', workspace: 'field', path: 'work/configuration', permission: ['field.manage'] },
-  { key: 'schedule-configuration', workspace: 'field', path: 'schedule/configuration', entitledBy: 'schedule', permission: ['field.manage'] },
-  { key: 'pricing', workspace: 'finance', path: 'settings/pricing', entitledBy: 'pricing', permission: ['price.manage'] },
-  { key: 'custom-fields', path: 'settings/custom-fields', permission: ['field.manage'] },
+  { key: 'general', scope: 'organization', path: 'settings/general', permission: ['organization.manage'] },
+  { key: 'work-configuration', scope: 'organization', workspace: 'field', path: 'work/configuration', permission: ['field.manage'] },
+  { key: 'schedule-configuration', scope: 'organization', workspace: 'field', path: 'schedule/configuration', entitledBy: 'schedule', permission: ['field.manage'] },
+  { key: 'pricing', scope: 'organization', workspace: 'finance', path: 'settings/pricing', entitledBy: 'pricing', permission: ['price.manage'] },
+  { key: 'custom-fields', scope: 'organization', path: 'settings/custom-fields', permission: ['field.manage'] },
   // Entitled through Pipeline, permitted through field.manage: naming stages is not moving a customer between them.
-  { key: 'sales-stages', workspace: 'crm', path: 'settings/sales-stages', entitledBy: 'pipeline', permission: ['field.manage'] },
+  { key: 'sales-stages', scope: 'organization', workspace: 'crm', path: 'settings/sales-stages', entitledBy: 'pipeline', permission: ['field.manage'] },
   // Entitled through Calls, permitted through field.manage: configuring outcomes and routing is not making calls.
   // A dedicated settings route, never `calls#setup` — a fragment into an operational page is not a canonical destination.
-  { key: 'call-setup', workspace: 'communications', path: 'settings/calls', entitledBy: 'calls', permission: ['field.manage'] },
-  { key: 'team', path: 'settings/access', permission: ['role.manage'] },
-  { key: 'branding', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
-  { key: 'domains', workspace: 'studio', path: 'settings/domains', permission: ['organization.manage'] },
-  { key: 'communications', workspace: 'communications', path: 'settings/communications', permission: ['organization.manage'] },
+  { key: 'call-setup', scope: 'organization', workspace: 'communications', path: 'settings/calls', entitledBy: 'calls', permission: ['field.manage'] },
+  { key: 'team', scope: 'access', path: 'settings/access', permission: ['role.manage'] },
+  { key: 'branding', scope: 'organization', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
+  { key: 'domains', scope: 'organization', workspace: 'studio', path: 'settings/domains', permission: ['organization.manage'] },
+  { key: 'communications', scope: 'organization', workspace: 'communications', path: 'settings/communications', permission: ['organization.manage'] },
   // Proving a sending domain is infrastructure readiness, not a Communications operating act, so
   // it is `organization.manage` like Domains rather than a messaging capability — and it is its
   // own destination rather than a block inside Communications, because a lifecycle with DNS
   // records, a review step and a verification check is not a field on somebody else's page.
-  { key: 'email', workspace: 'communications', path: 'settings/email', permission: ['organization.manage'] },
-  { key: 'integrations', path: 'settings/connections', entitledBy: 'integrations', permission: ['integration.manage'] },
+  { key: 'email', scope: 'organization', workspace: 'communications', path: 'settings/email', permission: ['organization.manage'] },
+  { key: 'integrations', scope: 'connections', path: 'settings/connections', entitledBy: 'integrations', permission: ['integration.manage'] },
   // Its own permission and no entitlement: handing over a private value is not connecting an app, and a business that has switched integrations off still owns what it stored.
-  { key: 'secrets', path: 'settings/secrets', permission: ['secret.manage'] },
-  { key: 'features', path: 'settings/features', permission: ['feature.manage'] },
-  { key: 'plan', path: 'settings/plan', permission: ['billing.manage'] },
+  { key: 'secrets', scope: 'connections', path: 'settings/secrets', permission: ['secret.manage'] },
+  { key: 'features', scope: 'organization', path: 'settings/features', permission: ['feature.manage'] },
+  { key: 'plan', scope: 'plan', path: 'settings/plan', permission: ['billing.manage'] },
   // Setup is kernel. Launching is `organization.manage`; asking for a drafted setup is
   // `configuration.propose`; either makes the lifecycle worth entering. No module gate: the
   // optional drafting section decides for itself whether to draw.
-  { key: 'setup', path: 'setup', permission: ['organization.manage', 'configuration.propose'] },
+  { key: 'setup', scope: 'organization', path: 'setup', permission: ['organization.manage', 'configuration.propose'] },
 ];
 
 export type ConfigGate = {

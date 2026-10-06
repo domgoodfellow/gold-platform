@@ -1,11 +1,10 @@
 import { PageHeader } from '@/components/headers/page-header';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
-import { CredentialsForm } from '@/app/(auth)/credentials-form';
+import { ChangePasswordForm } from '@/features/account/change-password-form';
 import { AccountSectionNav } from '@/features/account/account-section-nav';
 import { PersonalSettingsShell } from '@/features/account/personal-settings-shell';
 import { personalSettingsAncestry } from '@/lib/route/personal-settings';
-import { changePasswordAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,26 +14,22 @@ export default async function SecurityPage({ searchParams }: PageProps<'/setting
 
   return (
     <PersonalSettingsShell returnOrganizationId={typeof org === 'string' ? org : undefined}>
-      {({ hasPassword, organizationId }) => (
+      {({ hasPassword, signInMethods, organizationId }) => (
         <>
           <PageHeader title="Security & sign-in" crumbs={personalSettingsAncestry(organizationId)} />
           <AccountSectionNav organizationId={organizationId} />
           <Section>
+            <SectionHeading>Sign-in methods</SectionHeading>
+            <ul className="mt-3 space-y-2">
+              {signInMethods.map((method) => <li key={method}>{method === 'email' ? 'Email and password' : method === 'google' ? 'Google' : method}</li>)}
+            </ul>
+          </Section>
+          <Section>
             <SectionHeading>Password</SectionHeading>
             {hasPassword ? (
-              <div className="max-w-md">
-                <CredentialsForm
-                  action={changePasswordAction}
-                  fields="password"
-                  confirmPassword
-                  submitLabel="Change password"
-                  pendingLabel="Changing…"
-                  passwordAutoComplete="new-password"
-                  successMessage="Password changed."
-                />
-              </div>
+              <ChangePasswordForm />
             ) : (
-              <Hint className="mt-2">Signed in with Google. There is no password here to change.</Hint>
+              <Hint className="mt-2">Manage your password with your connected sign-in provider.</Hint>
             )}
           </Section>
         </>

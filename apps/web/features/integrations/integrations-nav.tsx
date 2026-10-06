@@ -1,6 +1,6 @@
 import { ViewNav } from '@/components/navigation/view-nav';
 
-export type IntegrationsView = 'connected' | 'browse' | 'sources' | 'imports';
+export type IntegrationsView = 'connected' | 'browse' | 'sources' | 'imports' | 'secrets';
 
 /**
  * Connections' four canonical views — Connected, Browse apps, Data sources, Imports — as one
@@ -19,6 +19,7 @@ export function IntegrationsNav({ organizationId, current }: { organizationId: s
       views={[
         { key: 'connected', label: 'Connected', href: base },
         { key: 'browse', label: 'Browse apps', href: `${base}/apps` },
+        { key: 'secrets', label: 'Secrets & credentials', href: `/organizations/${organizationId}/settings/secrets` },
       ]}
     />
   );

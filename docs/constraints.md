@@ -2596,37 +2596,41 @@ component idempotency, historical rate selection, unknown-not-zero, number-month
 tenant refusal. The Communications and usage-boundary suites continue to prove one usage ledger
 and server-derived call/message quantities.
 
-### D71 — Settings is one destination; Organization, Account, Access, Connections and Subscription are scopes inside it
+### D71 — Settings is one landing page with five independent scopes
 
-**Decision.** Reverses the earlier split (never itself a numbered decision) that gave "Business
-settings" and "Account settings" separate account-menu entries and separate visual shells. There
-is one Settings destination, one shared tab bar (`SettingsScopeNav`, `lib/route/settings.ts`)
-naming five scopes, and one account-menu entry that opens it — landing on the Organization scope
-when a business is in play, on Account otherwise. A Subscription shortcut sits beside it for the
-same reason a person reaches billing often enough to skip a hop.
+**Decision.** Settings (`/organizations/{id}/settings`) is a chooser for Organization,
+Account, Access, Connections and Plan & usage. It is not the Organization directory and does
+not render a persistent scope tab bar. The account menu offers one Settings entry and a
+Plan & usage shortcut when a business is in context; without a business, Settings opens Account.
+Each scope renders its own page identity, breadcrumbs and local navigation in the shared shell.
 
-**What does not move.** Account remains the signed-in person's own route tree
-(`/settings/account`), independent of which organization is selected (D45) — merging the *shell*
-does not merge the *domain*. Organization (`/organizations/{id}/settings`), Access
-(`/organizations/{id}/roles`), Connections (`/organizations/{id}/integrations`) and Subscription
-(`/organizations/{id}/settings/plan`) keep their existing routes, RLS and capability gates
-unchanged; the tab bar is a navigation layer over them, not a re-platforming. `configTarget`,
-`CONFIG_TARGETS` and the Settings configuration map (`settings-map.ts`) are unaffected — they
-remain how the *Organization* scope's own index of configuration doors is built and gated.
+**Ownership.** `ConfigTarget.scope` declares `organization | account | access | connections | plan`.
+No peer scope appears inside another peer scope. `SETTINGS_SECTIONS` is exclusively the
+Organization directory and accepts only organization-owned configuration targets:
+General, Work & scheduling, Pricing, Customer data, Brand & public presence,
+Communications configuration and Features. Team is Access-owned; integrations and secrets
+are Connections-owned; plan is Plan-owned. Workspace ownership and entitlement remain
+independent of Settings scope, and all existing capability and RLS gates remain authoritative.
 
-**What is still owed.** Work/Schedule configuration, Pricing, Custom fields, Calls/sales-stage
-wording, Branding, Website, Domains and Phone/email provider setup remain reachable only from the
-Organization scope's own index, not from Connections or a workspace's contextual Configure surface
-— they are workspace-owned configuration this slice deliberately left in place rather than
-migrating blind (see `CLAUDE.md`'s "the load-bearing absences" table and the roadmap's contextual
-Configure work). The sidebar's own Business-section label for Access still reads "Team"
-(`lib/shell.ts`'s `BUSINESS_ITEMS`) and the underlying `Area.label` for `roles` still reads "Team"
-(`lib/navigation.ts`) — both are legacy labels a later pass may rename; only the pages a caller
-actually lands on say "Access" today.
+**Addresses.** Organization is `/organizations/{id}/settings/organization`;
+Access is `/organizations/{id}/settings/access` (Members, Invitations, Roles);
+Connections is `/organizations/{id}/settings/connections` (apps, sources/imports, credentials);
+Plan & usage is `/organizations/{id}/settings/plan`.
+Account is `/settings/account` (Profile, Security & sign-in), owned by the person (D19/D45).
+The `?org=` return hint is checked against the caller's memberships and confers no authority.
+Legacy addresses remain compatibility redirects rather than competing navigation entries.
 
-**Holds.** `personal-settings.test.ts` proves the account menu offers one Settings entry, no
-Business/Account split, and that `PersonalSettingsShell` and every organization-scoped Settings
-page render the same `SettingsScopeNav`.
+**Identity.** Supabase `auth.users` remains the identity authority. A personal display name is
+user-editable, non-authoritative metadata; `memberships.display_name` remains organization-specific.
+Neither profile metadata nor a return URL may decide authorization. Email changes require
+fresh proof of the existing identity, confirmation at both addresses and security notifications.
+Password changes use a dedicated current/new/confirmation form and require current-password
+verification; login, signup and recovery retain their own credential form.
+
+**Holds.** `settings-map.test.ts` prevents Organization entries from routing into Account,
+Access, Connections or Plan and checks scope ownership. `personal-settings.test.ts` keeps the
+one Settings menu entry and person/organization boundary. Settings route browser coverage
+checks the five destinations at desktop and phone widths.
 
 ### D72 — Communications is multi-channel at its foundation: one Conversation, per-channel identities, a server-decided sender
 

@@ -73,7 +73,7 @@ export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
             <SidebarMenuButton
               size="lg"
               tooltip={email}
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="group/account-menu data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="size-8 rounded-lg">
                 <AvatarFallback className="rounded-lg">
@@ -84,7 +84,7 @@ export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
                 <span className="truncate font-medium">{email}</span>
                 <span className="truncate text-xs text-sidebar-foreground/70">Signed in</span>
               </div>
-              <ChevronUp aria-hidden className="ml-auto size-4" />
+              <ChevronUp aria-hidden className="ml-auto size-4 transition-transform group-data-[state=open]/account-menu:rotate-180" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

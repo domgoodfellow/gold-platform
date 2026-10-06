@@ -41,6 +41,8 @@ const PUBLIC_PATHS = [
   // Where a Google sign-in lands. Same standing as `/auth/recover`: reachable with no session,
   // because arriving here with one is the point.
   '/auth/callback',
+  // Email confirmation establishes the session; it must be reachable before sign-in.
+  '/auth/email-change',
 ];
 
 /**

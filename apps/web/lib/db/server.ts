@@ -1,6 +1,14 @@
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import type { Database, Db } from './types';
+
+/** Fresh proof of identity without replacing the caller's session or its MFA assurance. */
+export function getIdentityVerifier(): Db {
+  return createClient<Database>(requireEnv('NEXT_PUBLIC_SUPABASE_URL'), publicKey(), {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
 
 /**
  * The request-scoped database client, running under the caller's own JWT.

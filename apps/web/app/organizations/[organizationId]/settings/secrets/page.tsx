@@ -5,7 +5,8 @@ import { SecretSheet } from '@/features/secrets/secret-sheet';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { listSecretReferences } from '@/lib/domain/secrets/secret-references';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref } from '@/lib/route/settings';
+import { IntegrationsNav } from '@/features/integrations/integrations-nav';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,9 +20,10 @@ export default async function SecretsSettingsPage({ params }: PageProps<'/organi
     <SettingsPageFrame>
       <PageHeader
         title="Secrets & credentials"
-        crumbs={[{ label: 'Settings', href: settingsLandingHref(organizationId) }]}
+        crumbs={[{ label: 'Settings', href: settingsLandingHref(organizationId) }, { label: 'Connections', href: settingsScopeHref('connections', organizationId) }]}
         actions={mayManage ? <SecretSheet mode="create" organizationId={organizationId} /> : undefined}
       />
+      <IntegrationsNav organizationId={organizationId} current="secrets" />
       {mayManage ? (
         <SecretsList organizationId={organizationId} references={references} />
       ) : (

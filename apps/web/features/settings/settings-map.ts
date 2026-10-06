@@ -29,13 +29,15 @@ export type SettingsSection = {
 };
 
 function entry(key: string, title: string, description: string): SettingsEntry {
-  return { key, title, description, path: configTarget(key).path };
+  const target = configTarget(key);
+  if (target.scope !== 'organization') throw new Error(`${key} belongs to Settings ${target.scope}.`);
+  return { key, title, description, path: target.path };
 }
 
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   {
     key: 'business',
-    title: 'Business',
+    title: 'General',
     entries: [
       entry('general', 'General', 'Business name, time zone, and currency.'),
     ],
@@ -50,24 +52,17 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   },
   {
     key: 'pricing',
-    title: 'Services & pricing',
+    title: 'Pricing',
     entries: [
       entry('pricing', 'Pricing', 'The price book, quote and invoice wording, and how this business gets paid.'),
     ],
   },
   {
     key: 'data',
-    title: 'Customers & data',
+    title: 'Customer data',
     entries: [
       entry('custom-fields', 'Custom fields', 'The extra details this business records about its customers, jobs and places.'),
       entry('sales-stages', 'Sales stages', 'The stages a relationship moves through, in order.'),
-    ],
-  },
-  {
-    key: 'people',
-    title: 'People & access',
-    entries: [
-      entry('team', 'Team', 'Who works here, and what each role is allowed to do.'),
     ],
   },
   {
@@ -80,27 +75,18 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   },
   {
     key: 'connections',
-    title: 'Connections',
+    title: 'Communications configuration',
     entries: [
       entry('communications', 'Phone and messaging', 'The phone numbers this business has, and how its website answers a visitor.'),
       entry('call-setup', 'Call setup', 'The words this business uses for how a call went, routing, and caller identity.'),
       entry('email', 'Email', 'The domain this business sends email from, and what it still needs to be verified.'),
-      entry('integrations', 'Apps and files', 'The outside apps this business connects, and the data it brings in.'),
-      entry('secrets', 'Secrets & credentials', 'The private values this business has given GildOps to use. Stored, never shown again.'),
     ],
   },
   {
     key: 'products',
-    title: 'Products & features',
+    title: 'Features',
     entries: [
       entry('features', 'Features', 'What this business has switched on, and what each one still needs.'),
-    ],
-  },
-  {
-    key: 'plan',
-    title: 'Plan & usage',
-    entries: [
-      entry('plan', 'Plan & usage', 'The current plan, what it includes, usage, and commercial status.'),
     ],
   },
 ];

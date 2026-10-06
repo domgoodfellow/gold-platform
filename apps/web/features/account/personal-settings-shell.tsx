@@ -3,7 +3,7 @@ import { GlobalFallbackShell } from '@/features/account/global-fallback-shell';
 import { OrganizationShell } from '@/features/shell/organization-shell';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { readLastOrganizationId } from '@/lib/route/landing';
-import { loadPersonContext } from '@/lib/route/person-context';
+import { loadPersonContext, type PersonContext } from '@/lib/route/person-context';
 
 /**
  * The frame both Personal settings pages render inside. Each page calls this itself rather than
@@ -27,9 +27,9 @@ export async function PersonalSettingsShell({
   /** The `?org=` hint. Honoured only if the caller is genuinely a member of that business. */
   returnOrganizationId?: string;
   /** `organizationId` is the verified origin — honoured only if it is genuinely a membership — so a page can render `AccountSectionNav` with it after its own `PageHeader`, the same order every other Settings scope uses. */
-  children: (person: { email: string; hasPassword: boolean; organizationId: string | null }) => ReactNode;
+  children: (person: Pick<PersonContext, 'email' | 'hasPassword' | 'displayName' | 'pendingEmail' | 'signInMethods'> & { organizationId: string | null }) => ReactNode;
 }) {
-  const { email, hasPassword, organizations: myOrganizations } = await loadPersonContext();
+  const { email, hasPassword, displayName, pendingEmail, signInMethods, organizations: myOrganizations } = await loadPersonContext();
   const hinted = returnOrganizationId
     ? myOrganizations.find((organization) => organization.id === returnOrganizationId)
     : undefined;
@@ -38,7 +38,7 @@ export async function PersonalSettingsShell({
 
   const body = (
     <SettingsPageFrame>
-      {children({ email, hasPassword, organizationId: origin?.id ?? null })}
+      {children({ email, hasPassword, displayName, pendingEmail, signInMethods, organizationId: origin?.id ?? null })}
     </SettingsPageFrame>
   );
 

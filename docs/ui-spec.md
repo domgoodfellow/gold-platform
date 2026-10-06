@@ -44,18 +44,30 @@ Three consequences that are easy to undo.
 Public, portal and auth surfaces remain flows or single-purpose pages. A customer must
 never meet a business-configuration concept or a Platform section.
 
-**Settings has two scopes, and they share a presentation without sharing ownership.** *Account
-settings* (`/settings/account`: Profile, Security & sign-in) is the signed-in person's identity —
-their email and password belong to them, so no business's Settings ever holds them (D45).
-*Business settings* (`/organizations/{id}/settings`) is the selected business's. Both render
-through `WorkspaceShell` and `SettingsPageFrame`, and each says whose it is in its own description.
-The account menu — the footer of the sidebar, which on a phone is the footer of the Menu sheet — offers *Business
-settings* (only where the member may configure something there), *Account settings* and *Sign
-out*; switching business is the context switcher's alone, and Settings holds no permanent row of
-its own in the sidebar (`lib/shell.ts`'s `businessSettingsOffered`). The link to Account settings
-carries the business being left as `?org=`, which the page honours only for a business the caller
-belongs to, so Account settings can offer *Back to* it. `/account` redirects here and has no page.
-Nothing organization-owned is listed in the Personal sidebar to fill it. Addresses:
+**Settings is one landing page with five scopes, each with one owner (D71).**
+`/organizations/{id}/settings` offers Organization, Account, Access, Connections and Plan & usage.
+Choosing a scope opens its own page, breadcrumbs and local navigation; no persistent global
+Settings tab bar follows the reader. Organization (`settings/organization`) lists only General,
+Work & scheduling, Pricing, Customer data, Brand & public presence, Communications configuration
+and Features. Access owns Members, Invitations and Roles; Connections owns external apps,
+sources/imports and secrets; Plan & usage owns the commercial relationship with GildOps.
+No peer scope is repeated inside the Organization directory.
+
+Account (`/settings/account`) owns the person's Profile and Security & sign-in, independent of
+the selected business. Profile edits a personal display name and initiates verified email changes.
+Organization membership names remain separate; personal metadata never supplies authorization.
+Password changes collect current password, new password and confirmation in a dedicated form.
+Connected sign-in methods are named on Security & sign-in, including provider-only accounts.
+MFA recovery and device/session management are a subsequent hardening slice, not implied by
+rendering a password form.
+
+The account menu in the sidebar footer (the Menu sheet footer on a phone) offers Settings,
+Plan & usage where a business is in context, and Sign out. Its chevron reacts to the dropdown's
+open state. With no business in context, Settings opens Account. The `?org=` Account return hint
+is honoured only for one of the caller's memberships. `/account` redirects to Account.
+Settings landing and directory lists share one navigation row with `px-4 py-3.5`, a full-row
+link, and consistent hover and keyboard focus treatment. Shared presentation does not merge
+scope ownership or authorization. Addresses: `lib/route/settings.ts` and
 `lib/route/personal-settings.ts`.
 
 **`SiteShell` is GildOps' chrome and belongs on GildOps' pages only** — the front page and the four

@@ -1,10 +1,9 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { requireActor } from '@/lib/domain/tenancy/actor';
+import { PASSWORD_MIN } from './password-policy';
 
 /** Identity is global; membership binds a user to an organization — kept separate so one person can belong to several businesses. */
-
-/** A backstop, not the rule — checked here so every caller (form, API, future tool) gets the same message. */
-const PASSWORD_MIN = 8;
 
 function normaliseEmail(raw: string): string {
   const email = raw.trim().toLowerCase();
@@ -16,7 +15,7 @@ function normaliseEmail(raw: string): string {
 }
 
 function checkPassword(password: string, confirmation: string): void {
-  if (password.length < PASSWORD_MIN) {
+  if (Array.from(password).length < PASSWORD_MIN) {
     throw new DomainError(
       `Use at least ${PASSWORD_MIN} characters.`,
       'identity.password_too_short',
@@ -96,16 +95,16 @@ export async function requestPasswordReset(
 /**
  * Set a new password, for somebody who arrived holding a recovery link.
  *
- * **Nothing here decides whether they may.** The recovery link is what proves who they are, and
- * Supabase turned it into a session before this runs; with no session the update is refused by
- * the auth server, which is the boundary. This applies the same length and confirmation rules
- * registration does, from the same function, so the two cannot drift apart.
+ * Requires a fresh, signed Auth recovery/email-code claim bound to the acting user.
+ * A normal authenticated session cannot use recovery to bypass current-password verification.
+ * Registration and recovery share length and confirmation validation.
  */
 export async function setNewPassword(
   db: Db,
   input: { password: string; passwordConfirmation: string },
 ): Promise<void> {
   checkPassword(input.password, input.passwordConfirmation);
+  await requirePasswordRecovery(db);
 
   const { error } = await db.auth.updateUser({ password: input.password });
 
@@ -119,23 +118,54 @@ export async function setNewPassword(
   }
 }
 
+/** A normal password/OAuth session is not recovery authority, even if it is signed in. */
+export async function requirePasswordRecovery(db: Db): Promise<void> {
+  const actor = await requireActor(db);
+  const { data, error } = await db.auth.getClaims();
+  const now = Math.floor(Date.now() / 1000);
+  const methods = data?.claims.amr;
+  const freshProof = Array.isArray(methods) && methods.some((entry) =>
+    typeof entry === 'object' && entry !== null &&
+    (entry.method === 'recovery' || entry.method === 'otp') &&
+    typeof entry.timestamp === 'number' && entry.timestamp <= now && now - entry.timestamp < 3600,
+  );
+  if (error || data?.claims.sub !== actor.id || !freshProof) {
+    throw new DomainError('Follow a fresh password recovery link to set a new password.', 'identity.recovery_invalid');
+  }
+}
+
 /**
  * Change password for somebody already signed in.
  *
- * The same Supabase call `setNewPassword` makes for a recovery link, with its own message
- * rather than that one's: nobody reaching this from a signed-in account page arrived holding an
- * expired link, so telling them so would be wrong rather than merely unlikely.
+ * Verify the current password in an isolated client and bind that proof to the acting user.
+ * Also supply current_password to the authoritative update, independent of session age.
  */
 export async function changePassword(
   db: Db,
-  input: { password: string; passwordConfirmation: string },
+  input: { currentPassword: string; password: string; passwordConfirmation: string; nonce?: string },
+  verifier: Db,
 ): Promise<void> {
   checkPassword(input.password, input.passwordConfirmation);
 
-  const { error } = await db.auth.updateUser({ password: input.password });
-
-  if (error) {
-    throw new DomainError(error.message, 'identity.password_change_failed');
+  if (!input.currentPassword) {
+    throw new DomainError('Enter your current password.', 'identity.current_password_required');
+  }
+  const actor = await requireActor(db);
+  const { data } = await db.auth.getUser();
+  if (!data.user?.email) throw new DomainError('Sign in to continue.', 'auth.required');
+  const proof = await verifier.auth.signInWithPassword({ email: data.user.email, password: input.currentPassword });
+  try {
+    if (proof.error || !proof.data.session || proof.data.user?.id !== actor.id) {
+      throw new DomainError('Your current password is incorrect.', 'identity.current_password_rejected');
+    }
+    const { error } = await db.auth.updateUser({
+      current_password: input.currentPassword,
+      password: input.password,
+      ...(input.nonce ? { nonce: input.nonce } : {}),
+    });
+    if (error) throw new DomainError(error.message, 'identity.password_change_failed');
+  } finally {
+    if (proof.data.session) await verifier.auth.signOut({ scope: 'local' });
   }
 }
 
