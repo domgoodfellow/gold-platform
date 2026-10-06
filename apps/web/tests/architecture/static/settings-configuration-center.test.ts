@@ -71,6 +71,36 @@ describe('Settings, as the Configuration Center (source scan)', () => {
   });
 });
 
+describe('configuration fields stay with their owning surfaces', () => {
+  it('keeps General limited to organization identity and regional settings', () => {
+    const general = readFileSync(`${WEB_FEATURES}/tenancy/organization-settings-form.tsx`, 'utf8');
+    expect(general).toContain('name="name"');
+    expect(general).toContain('TimeZoneField');
+    expect(general).toContain('CurrencyField');
+    expect(general).not.toContain('bufferMinutes');
+    expect(general).not.toContain('slug');
+    expect(general).not.toContain('Public booking address');
+    expect(general).not.toContain('Time a resource stays busy after a job');
+  });
+
+  it('renders the scheduling buffer in Schedule configuration', () => {
+    const schedule = readFileSync(
+      `${WEB_FEATURES}/scheduling/configuration/schedule-configuration.tsx`,
+      'utf8',
+    );
+    expect(schedule).toContain('ScheduleBufferForm');
+  });
+
+  it('renders the public booking address in Branding, outside ProfileForm', () => {
+    const branding = readFileSync(`${ROUTES}/settings/branding/page.tsx`, 'utf8');
+    const profile = readFileSync(`${WEB_FEATURES}/public-profile/profile-form.tsx`, 'utf8');
+    expect(branding).toContain('PublicBookingAddressForm');
+    expect(profile).not.toContain('/book/');
+    expect(profile).not.toContain('hasBookableType');
+    expect(profile).not.toContain('slug');
+  });
+});
+
 /**
  * The four canonical workspaces this slice restored â€” each a real top-level Area again, with
  * the content that had accreted under Settings while it was one, and each old Settings route now

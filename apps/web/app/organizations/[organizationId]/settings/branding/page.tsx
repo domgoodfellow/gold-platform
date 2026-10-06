@@ -2,6 +2,7 @@ import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/headers/page-header';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { ProfileForm } from '@/features/public-profile/profile-form';
+import { PublicBookingAddressForm } from '@/features/public-profile/public-booking-address-form';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { listBookableTypes } from '@/lib/domain/booking/booking';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
@@ -52,13 +53,18 @@ export default async function BrandingSettingsPage({
         </Hint>
 
         {mayManage ? (
-          <ProfileForm
-            organizationId={organizationId}
-            profile={profile}
-            slug={organization.slug}
-            hasBookableType={bookableTypes.length > 0}
-            action={updateProfileAction}
-          />
+          <>
+            <PublicBookingAddressForm
+              organizationId={organizationId}
+              slug={organization.slug}
+              hasBookableType={bookableTypes.length > 0}
+            />
+            <ProfileForm
+              organizationId={organizationId}
+              profile={profile}
+              action={updateProfileAction}
+            />
+          </>
         ) : (
           <Hint className="mt-4">
             Your role, {organization.role}, cannot change what this business says about itself.

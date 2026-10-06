@@ -140,6 +140,7 @@ export default async function SchedulePage({
             mayConfigure={mayConfigure}
             hours={hours}
             timezone={organization.timezone}
+            bufferMinutes={organization.bufferMinutes}
           />
         </ConfigureRegistrar>
       ) : null}

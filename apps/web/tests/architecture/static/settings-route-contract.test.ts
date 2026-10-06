@@ -85,6 +85,12 @@ describe('Settings is a landing page, not a persistent tab bar (IA correction)',
   const landing = read('app/organizations/[organizationId]/settings/page.tsx');
   const organization = read('app/organizations/[organizationId]/settings/organization/page.tsx');
 
+  it('the account menu enters Settings through the landing page', () => {
+    const menu = read('components/navigation/account-menu.tsx');
+    expect(menu).toContain('const settingsHref = settingsLandingHref(from);');
+    expect(menu).not.toContain("settingsScopeHref('organization', from)");
+  });
+
   it('/settings renders the Settings identity, never the Organization identity', () => {
     expect(landing).toContain("title={areaLabel('settings')}");
     expect(landing).not.toContain('title="Organization"');

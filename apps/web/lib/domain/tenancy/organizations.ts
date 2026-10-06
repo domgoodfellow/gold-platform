@@ -254,7 +254,7 @@ export async function updateOrganization(
     id: string;
     name: string;
     timezone: string;
-    currency: string;
+    currency: string | null;
     bufferMinutes: number;
     slug: string | null;
   },
@@ -262,7 +262,10 @@ export async function updateOrganization(
   await requireActor(db);
 
   const name = normaliseName(input.name);
-  const currency = normaliseCurrency(input.currency);
+  const currency =
+    input.currency === null
+      ? null
+      : normaliseCurrency(input.currency);
   const timezone = input.timezone.trim();
 
   if (timezone.length === 0) {
@@ -294,7 +297,9 @@ export async function updateOrganization(
     p_id: input.id,
     p_name: name,
     p_timezone: timezone,
-    p_currency: currency,
+    // Postgres function arguments accept null unless the function rejects it; generated RPC
+    // types cannot express that nullability, so keep the runtime value unchanged at this boundary.
+    p_currency: currency as string,
     p_buffer_minutes: input.bufferMinutes,
     p_slug: slug,
   });

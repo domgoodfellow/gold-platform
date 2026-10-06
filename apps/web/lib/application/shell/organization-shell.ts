@@ -7,7 +7,7 @@ import { isGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
-import { businessSettingsOffered, projectShell } from '@/lib/shell';
+import { projectShell } from '@/lib/shell';
 
 export async function loadOrganizationShellModel(db: Db, input: { organizationId: string; capabilities: readonly Capability[]; locked: boolean }) {
   const { organizationId, locked } = input;
@@ -29,6 +29,5 @@ export async function loadOrganizationShellModel(db: Db, input: { organizationId
       id: organization.id, name: organization.name, role: organization.role, operationalState: organization.operationalState,
     })),
     sections: projectShell({ organizationId, enabledModules, featureAvailability, capabilities, platform, schedulableWork }),
-    settingsOffered: businessSettingsOffered({ enabledModules, featureAvailability, capabilities, schedulableWork }),
   };
 }

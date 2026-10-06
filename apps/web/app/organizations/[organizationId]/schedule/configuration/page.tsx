@@ -38,6 +38,7 @@ export default async function ScheduleConfigurationPage({
           mayConfigure={mayConfigure}
           hours={hours}
           timezone={organization.timezone}
+          bufferMinutes={organization.bufferMinutes}
         />
       </div>
     </SettingsPageFrame>

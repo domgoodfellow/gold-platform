@@ -45,7 +45,7 @@ export async function OrganizationShell({
   const locked = !access.permitted;
   // A locked business runs none of the workspace reads below — no feature resolution and no
   // Agent transcript — because none of it is drawn.
-  const { brand, email, switchable, sections, settingsOffered } = await loadOrganizationShellModel(db, {
+  const { brand, email, switchable, sections } = await loadOrganizationShellModel(db, {
     organizationId,
     capabilities: organization.capabilities,
     locked,
@@ -121,7 +121,6 @@ export async function OrganizationShell({
       sections={sections}
       email={email}
       signOutAction={signOutAction}
-      businessSettingsOffered={settingsOffered}
     />
   );
 

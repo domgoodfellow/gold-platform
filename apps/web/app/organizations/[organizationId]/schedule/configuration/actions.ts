@@ -4,9 +4,38 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { addOperatingHours, removeOperatingHours } from '@/lib/domain/scheduling/operating-hours';
+import { updateOrganization } from '@/lib/domain/tenancy/organizations';
 import { requireOrganization } from '@/lib/route/organization';
 
 export type ScheduleConfigActionState = { error: string | null };
+
+export async function updateScheduleBufferAction(
+  _previous: ScheduleConfigActionState,
+  formData: FormData,
+): Promise<ScheduleConfigActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const { organization } = await requireOrganization(organizationId);
+
+  try {
+    await updateOrganization(db, {
+      id: organizationId,
+      name: organization.name,
+      timezone: organization.timezone,
+      currency: organization.currency,
+      bufferMinutes: Number(formData.get('bufferMinutes') ?? Number.NaN),
+      slug: organization.slug,
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/schedule/configuration`);
+  revalidatePath(`/organizations/${organizationId}/schedule`);
+  if (organization.slug) revalidatePath(`/book/${organization.slug}`);
+  return { error: null };
+}
 
 export async function addOperatingHoursAction(
   _previous: ScheduleConfigActionState,

@@ -55,7 +55,7 @@ function browserTimeZone(): string {
 
 export function TimeZoneField({
   defaultValue,
-  label = 'Where is this business?',
+  label = 'Time zone',
 }: {
   defaultValue?: string;
   label?: string;
@@ -87,14 +87,19 @@ export function TimeZoneField({
         />
       )}
       <Hint weight="subtle" className="text-xs">
-        The clock your staff read. Every booking is stored as an absolute instant and shown in
-        this zone.
+        Used to display schedules, bookings, and other local times.
       </Hint>
     </div>
   );
 }
 
-export function CurrencyField({ defaultValue }: { defaultValue?: string }) {
+export function CurrencyField({
+  defaultValue,
+  label = 'Currency',
+}: {
+  defaultValue?: string;
+  label?: string;
+}) {
   const codes = useMemo(() => supported('currency'), []);
 
   // Names, not just the list, are ICU output — and ICU's own CLDR data genuinely differs
@@ -120,7 +125,7 @@ export function CurrencyField({ defaultValue }: { defaultValue?: string }) {
   return (
     <div className="flex flex-1 flex-col gap-1">
       <FieldLabel htmlFor="currency">
-        What does it trade in?
+        {label}
       </FieldLabel>
       {codes ? (
         <SelectInput id="currency" name="currency" required defaultValue={defaultValue ?? ''}>
@@ -155,8 +160,7 @@ export function CurrencyField({ defaultValue }: { defaultValue?: string }) {
         />
       )}
       <Hint weight="subtle" className="text-xs">
-        Recorded on every amount as it is written, so changing this later never reinterprets
-        what past work cost.
+        Used for new prices and amounts. Existing amounts keep the currency recorded with them.
       </Hint>
     </div>
   );

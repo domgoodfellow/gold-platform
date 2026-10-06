@@ -15,7 +15,7 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@gold/ui/components/sidebar';
 import { cx } from '@/components/class-names';
 import { organizationIdFromPath } from '@/lib/route/platform-context';
-import { settingsScopeHref } from '@/lib/route/settings';
+import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 
 /**
  * The truthful, shared person/session menu, one implementation for every shell's sidebar footer.
@@ -23,27 +23,22 @@ import { settingsScopeHref } from '@/lib/route/settings';
  * business, entering Platform Administration) is `ContextSwitcher`'s job alone. Settings is one
  * landing page with five destinations chosen from it (Organization, Account, Access, Connections
  * and Plan & usage), so this menu offers exactly one Settings entry rather than a Business/Account
- * split — landing on Organization when a business is offered, on Account otherwise.
+ * split. Settings opens the canonical Settings landing page when an organization is in context,
+ * and Account when there is no organization context.
  */
 
 type AccountMenuProps = {
   /** The signed-in Supabase Auth email. Every caller resolves it the same way: `db.auth.getUser()`. */
   email: string;
   signOutAction: () => Promise<void>;
-  /** Whether the current organization has anything this member may configure — `lib/shell.ts`'s
-   * `businessSettingsOffered`. Absent or `false` sends the one Settings entry to Account instead
-   * of Organization, rather than opening a scope with nothing behind it. */
-  businessSettingsOffered?: boolean;
 };
 
-function AccountMenuContent({ email, signOutAction, businessSettingsOffered }: AccountMenuProps) {
-  // The business being left, so Settings can land on its Organization scope and Plan & usage can
+function AccountMenuContent({ email, signOutAction }: AccountMenuProps) {
+  // The business being left, so Settings can open its canonical landing page and Plan & usage can
   // offer a shortcut. Read from the path rather than passed in: this menu is shared by shells that
   // have no organization at all.
   const from = organizationIdFromPath(usePathname());
-  const settingsHref = from && businessSettingsOffered
-    ? settingsScopeHref('organization', from)
-    : settingsScopeHref('account', from);
+  const settingsHref = settingsLandingHref(from);
 
   return (
     <>
@@ -66,7 +61,7 @@ function AccountMenuContent({ email, signOutAction, businessSettingsOffered }: A
  * to the right, beside the icon rail; expanded, it opens above its own trigger, attached to the
  * footer it sits in, rather than floating off to the side of a full-width row.
  */
-export function AccountMenu({ email, signOutAction, businessSettingsOffered }: AccountMenuProps) {
+export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
   const { isMobile, state } = useSidebar();
   const side = isMobile ? 'bottom' : state === 'collapsed' ? 'right' : 'top';
 
@@ -98,7 +93,7 @@ export function AccountMenu({ email, signOutAction, businessSettingsOffered }: A
             sideOffset={8}
             className={cx('min-w-56', side === 'top' && 'w-(--radix-dropdown-menu-trigger-width)')}
           >
-            <AccountMenuContent email={email} signOutAction={signOutAction} businessSettingsOffered={businessSettingsOffered} />
+            <AccountMenuContent email={email} signOutAction={signOutAction} />
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

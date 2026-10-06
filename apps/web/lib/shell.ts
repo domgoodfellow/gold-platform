@@ -5,8 +5,6 @@ import {
   areaHref,
   areaRelevantToShape,
   areaVisibleTo,
-  CONFIG_TARGETS,
-  configTargetOffered,
   type Area,
 } from '@/lib/navigation';
 import {
@@ -177,20 +175,8 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
   return [children.length === 0 ? root : { ...root, heading: true, children }];
 }
 
-/**
- * Whether this business's Organization Settings scope has anything this member may configure —
- * the gate for the Settings entry (Settings is not one of the permanent sidebar rows). The account menu's one
- * Settings entry (D71) asks this to decide whether it lands on Organization or falls back to
- * Account; any contextual Configure link asks it the same way before offering a destination at all.
- */
-export function businessSettingsOffered(input: Pick<ShellInput, 'enabledModules' | 'featureAvailability' | 'capabilities' | 'schedulableWork'>): boolean {
-  const gate = { enabledModules: input.enabledModules, featureAvailability: input.featureAvailability, capabilities: input.capabilities, schedulableWork: input.schedulableWork };
-  return CONFIG_TARGETS.some((target) => configTargetOffered(target, gate));
-}
-
 export function projectShell(input: ShellInput): ShellSection[] {
   const { organizationId, enabledModules, featureAvailability, capabilities, platform, schedulableWork } = input;
-  const gate = { enabledModules, featureAvailability, capabilities, schedulableWork };
 
   const operable = (area: Area) =>
     area.sidebar !== false &&

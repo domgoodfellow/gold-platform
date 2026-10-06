@@ -4,7 +4,6 @@ import {
   ADMINISTRATION_SECTIONS,
   SHELL_SECTION_ORDER,
   activeItemKey,
-  businessSettingsOffered,
   inPlatformScope,
   itemContains,
   projectedItems,
@@ -247,13 +246,11 @@ describe('tenant ordinary member', () => {
 });
 
 describe('configuration-only authority', () => {
-  it('has no permanent sidebar row for configuration, but Settings still offers them a target', () => {
+  it('has no permanent sidebar row for configuration', () => {
     const configurer = project(['field.manage']);
     // Cannot place calls, so there is no calling workspace for them.
     expect(keys(configurer, 'workspaces')).not.toContain('calls');
     for (const key of ['team', 'connections', 'plan']) expect(keys(configurer)).not.toContain(key);
-    // The account menu's Settings link is theirs, because they may configure.
-    expect(businessSettingsOffered({ enabledModules: new Set(EVERYTHING_MODULES), featureAvailability: everyFeature(), capabilities: new Set(['field.manage']) })).toBe(true);
   });
 
   it('keeps Team, Connections and Plan & usage out of the shell whatever authority names them, yet reachable as Settings targets', () => {

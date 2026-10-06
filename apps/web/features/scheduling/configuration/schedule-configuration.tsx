@@ -1,6 +1,7 @@
 import { FieldSet, FieldLegend, FieldGroup } from '@gold/ui/components/field';
 import type { OperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { OperatingHoursEditor } from './operating-hours-editor';
+import { ScheduleBufferForm } from './schedule-buffer-form';
 
 export type ScheduleConfigurationData = {
   organizationId: string;
@@ -8,6 +9,7 @@ export type ScheduleConfigurationData = {
   mayConfigure: boolean;
   hours: OperatingHours[];
   timezone: string;
+  bufferMinutes: number;
 };
 
 /**
@@ -22,19 +24,32 @@ export function ScheduleConfiguration({
   mayConfigure,
   hours,
   timezone,
+  bufferMinutes,
 }: ScheduleConfigurationData) {
   return (
-    <FieldSet>
-      <FieldLegend>Opening hours</FieldLegend>
-      <FieldGroup>
-        <OperatingHoursEditor
-          organizationId={organizationId}
-          role={role}
-          mayConfigure={mayConfigure}
-          hours={hours}
-          timezone={timezone}
-        />
-      </FieldGroup>
-    </FieldSet>
+    <div className="flex flex-col gap-8">
+      <FieldSet>
+        <FieldLegend>Opening hours</FieldLegend>
+        <FieldGroup>
+          <OperatingHoursEditor
+            organizationId={organizationId}
+            role={role}
+            mayConfigure={mayConfigure}
+            hours={hours}
+            timezone={timezone}
+          />
+        </FieldGroup>
+      </FieldSet>
+      <FieldSet>
+        <FieldLegend>Scheduling buffer</FieldLegend>
+        <FieldGroup>
+          <ScheduleBufferForm
+            organizationId={organizationId}
+            bufferMinutes={bufferMinutes}
+            mayConfigure={mayConfigure}
+          />
+        </FieldGroup>
+      </FieldSet>
+    </div>
   );
 }

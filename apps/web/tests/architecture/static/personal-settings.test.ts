@@ -65,6 +65,11 @@ describe('the menu', () => {
     expect(menu).not.toContain('href="/account"');
   });
 
+  it('opens the canonical Settings landing page instead of bypassing it', () => {
+    expect(menu).toContain('const settingsHref = settingsLandingHref(from);');
+    expect(menu).not.toContain("settingsScopeHref('organization', from)");
+  });
+
   it('offers a Plan & usage shortcut only when a business is in play', () => {
     expect(menu).toContain('Plan &amp; usage');
     expect(menu).toContain("settingsScopeHref('plan', from)");

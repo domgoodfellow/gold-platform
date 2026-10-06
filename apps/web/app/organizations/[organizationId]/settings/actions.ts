@@ -16,13 +16,13 @@ import { requireOrganization } from '@/lib/route/organization';
 
 export type SettingsActionState = { error: string | null };
 
-export async function updateOrganizationAction(
+export async function updateOrganizationGeneralAction(
   _previous: SettingsActionState,
   formData: FormData,
 ): Promise<SettingsActionState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
+  const { organization } = await requireOrganization(organizationId);
 
   try {
     await updateOrganization(db, {
@@ -30,8 +30,8 @@ export async function updateOrganizationAction(
       name: String(formData.get('name') ?? ''),
       timezone: String(formData.get('timezone') ?? ''),
       currency: String(formData.get('currency') ?? ''),
-      bufferMinutes: Number(formData.get('bufferMinutes') ?? Number.NaN),
-      slug: String(formData.get('slug') ?? ''),
+      bufferMinutes: organization.bufferMinutes,
+      slug: organization.slug,
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
@@ -41,6 +41,37 @@ export async function updateOrganizationAction(
   // 'layout', not the page alone: the organization's name is read by the sidebar identity, the
   // context switcher and every breadcrumb in this shell, none of which sit under this route.
   revalidatePath(`/organizations/${organizationId}`, 'layout');
+  await invalidateGoldHomepageIfReferenced(db, organizationId);
+  return { error: null };
+}
+
+export async function updatePublicBookingAddressAction(
+  _previous: SettingsActionState,
+  formData: FormData,
+): Promise<SettingsActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const { organization } = await requireOrganization(organizationId);
+  const slug = String(formData.get('slug') ?? '');
+
+  try {
+    await updateOrganization(db, {
+      id: organizationId,
+      name: organization.name,
+      timezone: organization.timezone,
+      currency: organization.currency,
+      bufferMinutes: organization.bufferMinutes,
+      slug,
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/settings/branding`);
+  if (organization.slug) revalidatePath(`/book/${organization.slug}`);
+  const normalizedSlug = slug.trim().toLowerCase();
+  if (normalizedSlug) revalidatePath(`/book/${normalizedSlug}`);
   await invalidateGoldHomepageIfReferenced(db, organizationId);
   return { error: null };
 }

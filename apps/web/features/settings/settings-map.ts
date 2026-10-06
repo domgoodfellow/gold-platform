@@ -37,7 +37,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     key: 'business',
     title: 'Business',
     entries: [
-      entry('general', 'General', 'Business name, public address, timezone, currency, and the buffer between jobs.'),
+      entry('general', 'General', 'Business name, time zone, and currency.'),
     ],
   },
   {
@@ -45,7 +45,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     title: 'Work & scheduling',
     entries: [
       entry('work-configuration', 'Kinds of work', 'The kinds of work this business does, their stages, and the checklists that come with them.'),
-      entry('schedule-configuration', 'Working hours', 'When this business works, and how long a slot needs to be.'),
+      entry('schedule-configuration', 'Working hours', 'Opening hours and the default buffer after scheduled work.'),
     ],
   },
   {
@@ -74,7 +74,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     key: 'brand',
     title: 'Brand & public presence',
     entries: [
-      entry('branding', 'Branding', 'Logo, colours, and the public booking page.'),
+      entry('branding', 'Branding', 'Logo, colours, public page content, and public booking address.'),
       entry('domains', 'Domains', 'This business’s GildOps address, and any domain it owns and has connected.'),
     ],
   },
