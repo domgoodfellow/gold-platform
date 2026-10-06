@@ -1,7 +1,7 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
-import { usesSignIn } from '@/lib/adapters/integrations';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { getConnector, usesSignIn } from './connectors';
 import { disconnectOAuth } from './oauth';
 
 /**
@@ -128,7 +128,8 @@ export async function disconnectConnection(
   // A connection made through a vendor's sign-in holds a credential only the API can reach, so it
   // is the API that revokes upstream, deletes it and retires the connection.
   const connection = await getConnection(db, input);
-  if (connection && usesSignIn(connection.connectorKey)) {
+  const connector = connection ? await getConnector(db, connection.connectorKey) : null;
+  if (connector && usesSignIn(connector)) {
     await disconnectOAuth(db, { connectionId: input.connectionId });
     return;
   }

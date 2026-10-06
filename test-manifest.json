@@ -2427,6 +2427,73 @@
         "commercial",
         "security"
       ]
+    },
+    "apps/api/tests/component/test_connector_readiness.py": {
+      "category": "python-component",
+      "concerns": [
+        "integrations"
+      ],
+      "note": "The API's own answer to whether a connector can be connected here: the one authority the web asks, and what each caller may learn from it."
+    },
+    "apps/api/tests/component/test_secret_resolution.py": {
+      "category": "python-component",
+      "concerns": [
+        "integrations",
+        "security"
+      ],
+      "note": "The one machine door that reads a business's stored value: the role it wears, what it sends, and that a failure carries no value."
+    },
+    "apps/web/tests/integration/database/secret-references.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "integrations",
+        "security"
+      ]
+    },
+    "apps/api/tests/contract/test_github_connector.py": {
+      "category": "python-contract",
+      "concerns": [
+        "integrations",
+        "providers"
+      ],
+      "note": "GitHub's own installation handshake, offline: the installation id is proven to be the signing-in user's before a token is minted. Proves the contract GildOps depends on, not that a GitHub App is registered."
+    },
+    "apps/api/tests/unit/test_credential_boundaries.py": {
+      "category": "python-unit",
+      "concerns": [
+        "integrations",
+        "security"
+      ],
+      "note": "Static scan: a connector holds no door onto Vault, and each credential has one reader."
+    },
+    "apps/web/tests/integration/database/github-source-control.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "integrations",
+        "security"
+      ]
+    },
+    "apps/web/tests/architecture/static/source-control-boundary.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "integrations",
+        "security"
+      ]
+    },
+    "apps/web/tests/architecture/static/provider-account-adapters.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "providers",
+        "platform"
+      ],
+      "note": "Holds the web's list of account-capable providers to the API's registry, both ways."
+    },
+    "apps/web/tests/unit/provider-stages.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "providers",
+        "platform"
+      ]
     }
   }
 }

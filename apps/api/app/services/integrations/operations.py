@@ -25,7 +25,7 @@ from app.core.config import IntegrationSettings
 from app.core.postgrest import caller_rest
 from app.errors import DomainError, NotFoundError, ValidationError
 from app.services.integrations.state import StateInvalid, sign_state, verify_state
-from app.connectors import oauth_app_for, oauth_provider_for
+from app.connectors import Readiness, oauth_app_for, oauth_provider_for, readiness_of, registered_connector_keys
 from app.connectors.base import OAuthApp, OAuthProvider, Tokens
 from app.providers.providers import UpstreamRefused
 
@@ -75,6 +75,16 @@ def _client(connector_key: str) -> tuple[OAuthProvider, OAuthApp]:
     if app is None:
         raise ValidationError("This deployment is not set up to connect that app yet.")
     return provider, app
+
+
+# Whatever else a vendor put on its redirect that the browser relayed. Strings only, a few of them, and
+# short: a provider reads the few it knows and every other is ignored, and none is trusted -- a
+# provider that depends on one proves it itself (GitHub asks which installations the *person* can reach).
+def _relayed(arguments: dict) -> dict[str, str]:
+    given = arguments.get("extra")
+    if not isinstance(given, dict):
+        return {}
+    return {str(k)[:40]: str(v)[:200] for k, v in list(given.items())[:10] if isinstance(v, (str, int))}
 
 
 def _pack(tokens: Tokens) -> str:
@@ -138,7 +148,7 @@ def complete(settings: IntegrationSettings, caller: CallerContext, arguments: di
     provider, app = _client(connector_key)
 
     try:
-        tokens = provider.exchange(app, code=code, redirect_uri=settings.redirect_uri)
+        tokens = provider.exchange(app, code=code, redirect_uri=settings.redirect_uri, extra=_relayed(arguments))
         account = provider.account(tokens.access_token)
     except UpstreamRefused as failure:
         raise ProviderRefusedError(str(failure)) from failure
@@ -252,7 +262,54 @@ def disconnect(settings: IntegrationSettings, caller: CallerContext, arguments: 
     return {"ok": True}
 
 
-OPERATIONS = {"begin": begin, "complete": complete, "sync": sync, "disconnect": disconnect}
+def _keys_asked(arguments: dict) -> list[str]:
+    asked = arguments.get("connector_keys")
+    if isinstance(asked, list) and asked:
+        return [str(key) for key in asked][:200]
+    return registered_connector_keys()
+
+
+def readiness(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
+    """Whether this deployment can connect each app. For any signed-in caller: a yes or a coarse
+    reason, never the names of the inputs and never a value. Authority over *who* may connect is
+    still `begin`'s, so this reads nothing of any business."""
+    return {"connectors": [_public_readiness(readiness_of(key)) for key in _keys_asked(arguments)]}
+
+
+def readiness_detail(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
+    """The same answer plus what is missing and where providers must send people back -- platform
+    staff only. Staff is proved the way the web proves it: a staff-only database function answers
+    under the caller's own token, so this runtime decides nothing about who staff is."""
+    try:
+        _rest(settings, caller, "POST", "rpc/platform_connector_usage", json={})
+    except DomainError as refused:
+        raise NotFoundError("No such operation.") from refused
+    return {
+        "redirect_uri": settings.redirect_uri,
+        "connectors": [
+            {**_public_readiness(found), "required_configuration": list(found.required_configuration)}
+            for found in (readiness_of(key) for key in _keys_asked(arguments))
+        ],
+    }
+
+
+def _public_readiness(found: Readiness) -> dict:
+    return {
+        "connector_key": found.connector_key,
+        "implemented": found.implemented,
+        "configured": found.configured,
+        "reason": found.reason,
+    }
+
+
+OPERATIONS = {
+    "begin": begin,
+    "complete": complete,
+    "sync": sync,
+    "disconnect": disconnect,
+    "readiness": readiness,
+    "readiness_detail": readiness_detail,
+}
 
 
 def operate(settings: IntegrationSettings, caller: CallerContext, *, operation: str, arguments: dict) -> dict:

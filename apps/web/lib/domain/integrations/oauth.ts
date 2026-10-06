@@ -32,7 +32,7 @@ export function beginOAuth(
 
 export function completeOAuth(
   db: Db,
-  input: { code: string; state: string; nonce: string },
+  input: { code: string; state: string; nonce: string; extra?: Record<string, string> },
 ): Promise<{ organization_id: string; connection_id: string }> {
   return operate(db, 'complete', input);
 }

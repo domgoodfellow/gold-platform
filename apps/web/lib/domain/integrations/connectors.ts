@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
-import { isConnectorImplemented } from '@/lib/adapters/integrations';
 import { DomainError } from '@/lib/domain/errors';
+import type { ConnectorReadiness } from './readiness';
 
 /**
  * The connector catalogue (D55) — which outside apps exist, never which a business has
@@ -165,11 +165,80 @@ export async function getConnector(db: Db, key: string): Promise<Connector | nul
 }
 
 /**
- * Whether a business can press Connect. The catalogue says the app is `beta` or `live`; the
- * registry says GOLD has code that can actually connect it. Both, or the button stays off.
+ * What a business is told about an app it has not connected. Three independent facts decide it —
+ * the catalogue's product status, whether this deployment holds an adapter, and whether it holds the
+ * vendor's registration — so `planned` never doubles for *someone forgot to configure the client*.
+ *
+ * - `connectable`: not planned, and the API says it implements and is configured for it.
+ * - `upcoming`: planned. A roadmap fact; no control is drawn for it.
+ * - `unavailable`: promised by the catalogue but not operable here. Not offered to a business at
+ *   all; platform staff sees why on the connector's own page.
  */
-export function isConnectable(connector: Pick<Connector, 'key' | 'status'>): boolean {
-  return connector.status !== 'planned' && isConnectorImplemented(connector.key);
+export type ConnectorAvailability = 'connectable' | 'upcoming' | 'unavailable';
+
+export function connectorAvailability(
+  connector: Pick<Connector, 'status'>,
+  readiness: Pick<ConnectorReadiness, 'implemented' | 'configured'> | undefined,
+): ConnectorAvailability {
+  if (connector.status === 'planned') return 'upcoming';
+  return readiness?.implemented && readiness.configured ? 'connectable' : 'unavailable';
+}
+
+/**
+ * The operator's reading of the same three facts, which a business is never shown: *why* an app is
+ * or is not offered. `unknown` is the API not answering, said plainly rather than guessed at.
+ */
+export type ConnectorOperationalState = 'upcoming' | 'adapter_missing' | 'needs_setup' | 'operational' | 'unknown';
+
+export function connectorOperationalState(
+  connector: Pick<Connector, 'status'>,
+  readiness: Pick<ConnectorReadiness, 'implemented' | 'configured'> | undefined,
+): ConnectorOperationalState {
+  if (connector.status === 'planned') return 'upcoming';
+  if (!readiness) return 'unknown';
+  if (!readiness.implemented) return 'adapter_missing';
+  return readiness.configured ? 'operational' : 'needs_setup';
+}
+
+/** Whether a business can press Connect: never true for a deployment known not to honour it. */
+export function isConnectable(
+  connector: Pick<Connector, 'status'>,
+  readiness: Pick<ConnectorReadiness, 'implemented' | 'configured'> | undefined,
+): boolean {
+  return connectorAvailability(connector, readiness) === 'connectable';
+}
+
+/**
+ * Whether connecting means a vendor's own sign-in (handled by `apps/api`) rather than a direct
+ * record. The catalogue says how a connector authorizes; nothing here names a connector.
+ */
+export function usesSignIn(connector: Pick<Connector, 'authMethod'>): boolean {
+  return connector.authMethod === 'oauth2';
+}
+
+/** The one view of the catalogue Browse shows by default and its two siblings. */
+export const BROWSE_FILTERS = ['available', 'connected', 'upcoming'] as const;
+export type BrowseFilter = (typeof BROWSE_FILTERS)[number];
+
+export function browseFilterFrom(value: string | undefined): BrowseFilter {
+  return (BROWSE_FILTERS as readonly string[]).includes(value ?? '') ? (value as BrowseFilter) : 'available';
+}
+
+/**
+ * What each Browse filter holds. `available` is only what can be connected right now and is not yet
+ * connected; `connected` is what this business already has; `upcoming` is the roadmap. A connector
+ * that is unavailable on this deployment appears under none of them.
+ */
+export function connectorsForFilter<T extends Pick<Connector, 'key' | 'status'>>(
+  connectors: readonly T[],
+  input: { filter: BrowseFilter; readiness: ReadonlyMap<string, ConnectorReadiness>; connectedKeys: ReadonlySet<string> },
+): T[] {
+  return connectors.filter((connector) => {
+    const availability = connectorAvailability(connector, input.readiness.get(connector.key));
+    if (input.filter === 'upcoming') return availability === 'upcoming';
+    if (input.filter === 'connected') return availability !== 'upcoming' && input.connectedKeys.has(connector.key);
+    return availability === 'connectable' && !input.connectedKeys.has(connector.key);
+  });
 }
 
 function oneOf<T extends string>(value: string, allowed: readonly T[], message: string): T {

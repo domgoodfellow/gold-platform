@@ -184,6 +184,13 @@
       ],
       "sends": []
     },
+    "platform_connector_usage": {
+      "role": "authenticated",
+      "callers": [
+        "app/services/integrations/operations.py"
+      ],
+      "sends": []
+    },
     "queued_messages": {
       "role": "automation_runner",
       "callers": [
@@ -585,6 +592,16 @@
       ],
       "sends": [
         "p_deployment_id"
+      ]
+    },
+    "resolve_secret_reference": {
+      "role": "secret_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_organization_id",
+        "p_key"
       ]
     },
     "run_due_automations": {

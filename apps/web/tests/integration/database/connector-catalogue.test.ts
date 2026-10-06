@@ -87,7 +87,10 @@ describe('the connector catalogue', () => {
     }
     // A file is an artifact, not a connection (20261005000001): no format is ever a connector.
     for (const key of ['csv', 'spreadsheet', 'xlsx', 'pdf', 'markdown']) expect(byKey.has(key), key).toBe(false);
-    expect(byKey.get('google_workspace')).toBe('planned');
+    // Status is product maturity. The six with an adapter and a vendor contract test are beta; the
+    // rest of the roadmap stays planned until an adapter exists.
+    for (const key of ['google_workspace', 'microsoft_365', 'hubspot', 'notion', 'slack', 'dropbox', 'cloudflare']) expect(byKey.get(key), key).toBe('beta');
+    for (const key of ['salesforce', 'quickbooks', 'shopify']) expect(byKey.get(key), key).toBe('planned');
   });
 
   it('shows a business only public connectors, and staff every one', async () => {
@@ -111,12 +114,12 @@ describe('the connector catalogue', () => {
 
   it('refuses a connection to a planned connector, at the table', async () => {
     await expect(
-      recordConnection(tenant.db, { organizationId: tenant.organizationId, connectorKey: 'notion' }),
+      recordConnection(tenant.db, { organizationId: tenant.organizationId, connectorKey: 'shopify' }),
     ).rejects.toThrow();
 
     const direct = await tenant.db.from('integration_connections').insert({
       organization_id: tenant.organizationId,
-      connector_key: 'notion',
+      connector_key: 'shopify',
       connected_by: (await tenant.db.auth.getUser()).data.user!.id,
     });
     expect(direct.error?.code).toBe('42501');

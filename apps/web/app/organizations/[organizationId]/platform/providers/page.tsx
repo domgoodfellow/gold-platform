@@ -12,35 +12,44 @@ import { listProviderRates, listProviders } from '@/lib/domain/commercial/catalo
 import { listProviderAccounts } from '@/lib/domain/providers/accounts';
 import { listProviderBindingSummary } from '@/lib/domain/providers/bindings';
 import { listProviderServices } from '@/lib/domain/providers/services';
-import { providerReadiness } from '@/lib/domain/providers/status';
-import { credentialEnvironmentState, GENERIC_ACCOUNT_PROVIDER_KEYS } from '@/lib/route/provider-environment';
-import { ReadinessBadge } from '@/features/platform/providers/health-badge';
+import { CREDENTIAL_LABEL, providerStages } from '@/lib/domain/providers/stages';
+import { listAiRuntimeAssignments } from '@/lib/domain/ai/runtime';
+import { GENERIC_ACCOUNT_PROVIDER_KEYS, platformEmailOperationalStatus } from '@/lib/route/provider-environment';
 import { ProviderIcon } from '@/features/platform/providers/provider-icon';
 
 export const dynamic = 'force-dynamic';
-
-const ENVIRONMENT_LABEL: Record<string, string> = {
-  configured: 'configured (deployment)',
-  not_configured: 'not configured',
-  not_implemented: 'not implemented',
-};
 
 export default async function ProvidersPage({ params }: PageProps<'/organizations/[organizationId]/platform/providers'>) {
   const { organizationId: goldId } = await params;
   await requirePlatformArea(goldId, 'platform.providers');
   const db = await getDb();
-  const [providers, rates, bindings, accounts, services] = await Promise.all([
+  const [providers, rates, bindings, accounts, services, assignments] = await Promise.all([
     listProviders(db),
     listProviderRates(db),
     listProviderBindingSummary(db),
     listProviderAccounts(db),
     listProviderServices(db),
+    listAiRuntimeAssignments(db),
   ]);
 
-  // A provider has a detail workspace the day it has an account model to operate; today that is
-  // the telephony provider alone, and no other row pretends otherwise.
-  const detailKey = telephonyProviderKey();
-  const apiConfigured = Boolean(process.env.GOLD_API_URL);
+  // Six separate facts per provider (`stages.ts`): a catalogue row says none of the others. An
+  // account adapter exists only for the providers this deployment built account handling for.
+  const twilioKey = telephonyProviderKey();
+  const stagesOf = (providerKey: string) => {
+    const own = accounts.filter((account) => account.providerKey === providerKey);
+    return providerStages({
+      accountAdapter: providerKey === twilioKey || GENERIC_ACCOUNT_PROVIDER_KEYS.has(providerKey),
+      accounts: own,
+      services: services.filter((service) => service.providerKey === providerKey),
+      runtimeAssignments: assignments.filter((assignment) => assignment.providerKey === providerKey).length,
+      deploymentCredential:
+        providerKey === twilioKey
+          ? telephonyBootstrapConfigured()
+          : providerKey === 'resend'
+            ? platformEmailOperationalStatus(own.find((account) => account.isDefault) ?? own[0] ?? null).source === 'environment'
+            : false,
+    });
+  };
 
   return (
     <AppPage>
@@ -67,14 +76,14 @@ export default async function ProvidersPage({ params }: PageProps<'/organization
           },
           {
             key: 'implementation',
-            header: 'Implementation',
+            header: 'Services implemented',
             cell: (provider) => {
               const own = services.filter((service) => service.providerKey === provider.key);
-              if (own.length === 0) return <span className="text-subtle">No services catalogued</span>;
+              if (own.length === 0) return <span className="text-subtle">None catalogued</span>;
               const implemented = own.filter((service) => service.implementationState === 'available').length;
               return (
                 <Badge tone={implemented > 0 ? 'success' : 'neutral'}>
-                  {implemented} implemented / {own.length} catalogued
+                  {implemented} of {own.length}
                 </Badge>
               );
             },
@@ -83,48 +92,41 @@ export default async function ProvidersPage({ params }: PageProps<'/organization
             key: 'account',
             header: 'Account',
             cell: (provider) => {
-              // Three separate facts, deliberately: what GOLD runs (Implementation, above), the
-              // account's own readiness (here), and — for Twilio alone — what that also does for
-              // organizations bound beneath it (Organizations bound/Failed, further right).
-              if (provider.key === detailKey) {
-                const readiness = providerReadiness({
-                  accounts: accounts.filter((account) => account.providerKey === provider.key),
-                  bootstrapConfigured: telephonyBootstrapConfigured(),
-                  apiConfigured,
-                });
-                return (
-                  <div>
-                    <ReadinessBadge state={readiness.state} />
-                    <span className="mt-1 block text-xs text-muted-foreground">{readiness.summary}</span>
-                  </div>
-                );
-              }
-              if (GENERIC_ACCOUNT_PROVIDER_KEYS.has(provider.key)) {
-                const own = accounts.filter((account) => account.providerKey === provider.key);
-                const active = own.filter((account) => account.status === 'active');
-                if (own.length === 0) return <Badge tone="neutral">Not configured</Badge>;
-                const verified = active.filter((account) => account.verificationState === 'verified').length;
-                return <Badge tone={verified > 0 ? 'success' : 'neutral'}>{verified} / {active.length} verified</Badge>;
-              }
-              // No account model built for this provider yet — the deployment env var is the
-              // only signal there is (D31), and it says so rather than implying otherwise.
-              const state = credentialEnvironmentState();
-              return <Badge tone={state === 'configured' ? 'success' : 'neutral'}>{ENVIRONMENT_LABEL[state]}</Badge>;
+              const stages = stagesOf(provider.key);
+              if (!stages.accountAdapter) return <span className="text-subtle">No adapter</span>;
+              return (
+                <Badge tone={stages.credential === 'verified' || stages.credential === 'deployment' ? 'success' : stages.credential === 'failed' ? 'danger' : 'neutral'}>
+                  {CREDENTIAL_LABEL[stages.credential]}
+                </Badge>
+              );
+            },
+          },
+          {
+            key: 'status',
+            header: 'Status',
+            cell: (provider) => {
+              const stages = stagesOf(provider.key);
+              return (
+                <div>
+                  <Badge tone={stages.operational ? 'success' : 'neutral'}>{stages.operational ? 'Operational' : 'Not operational'}</Badge>
+                  {stages.blocker ? <span className="mt-1 block text-xs text-muted-foreground">{stages.blocker}</span> : null}
+                </div>
+              );
             },
           },
           {
             key: 'organizations',
             header: 'Organizations bound',
             numeric: true,
-            cell: (provider) => bindings.get(provider.key)?.total ?? 0,
-          },
-          {
-            key: 'failures',
-            header: 'Failed',
-            numeric: true,
             cell: (provider) => {
-              const failed = bindings.get(provider.key)?.failed ?? 0;
-              return failed > 0 ? <span className="text-danger">{failed}</span> : 0;
+              const summary = bindings.get(provider.key);
+              const failed = summary?.failed ?? 0;
+              return (
+                <span>
+                  {summary?.total ?? 0}
+                  {failed > 0 ? <span className="text-danger"> · {failed} failed</span> : null}
+                </span>
+              );
             },
           },
           {

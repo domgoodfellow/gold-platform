@@ -1,25 +1,10 @@
 /**
- * Deployment-level readiness for a Provider with no account model — an environment variable
- * either holds a credential a real GOLD adapter uses, or it does not. Route-owned, not
- * `lib/domain/`: naming a vendor to read its own environment variable is exactly what I15
- * reserves for an adapter or its caller, never the domain layer (`adapters.test.ts`).
- *
- * Never "configured" merely because a variable name is set. No provider reads one in this runtime
- * any more: the model providers' credentials are Provider Accounts read by `apps/api`, and
- * `apps/web` holds no model key at all (configuration drafting runs there too). A Provider with
- * no account model and no environment variable this could read answers 'not_implemented' rather
- * than guessing at one (section 42).
- */
-export function credentialEnvironmentState(): 'configured' | 'not_configured' | 'not_implemented' {
-  return 'not_implemented';
-}
-
-/**
  * Providers with the generic, API-key-only account model (`ProviderConfiguration`) rather than
- * Twilio's own subaccount/binding one, or the environment-only path above. Route-owned for the
- * same reason `credentialEnvironmentState` is: naming which providers this platform built account
- * UI for is a fact about this deployment's routes, never something `lib/domain/` may say (I15).
- * Named once so the Providers list and a Provider's own detail route agree.
+ * Twilio's own subaccount/binding one. Route-owned: naming which
+ * providers this platform built account UI for is a fact about this deployment's routes, never
+ * something `lib/domain/` may say (I15). Named once so the Providers list and a Provider's own
+ * detail route agree, and held to the API's own registry (`app.providers.providers.operations_for`)
+ * by `provider-account-adapters.test.ts`, so the two lists cannot drift apart.
  *
  * `resend` joined this set once platform email moved onto `platform_provider_accounts` (D62,
  * work order 1 §6); `RESEND_API_KEY`/`PLATFORM_EMAIL_FROM_ADDRESS` are the bootstrap fallback

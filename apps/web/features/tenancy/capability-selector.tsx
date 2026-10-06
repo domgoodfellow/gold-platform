@@ -38,7 +38,7 @@ const GROUPS: readonly { label: string; capabilities: readonly Capability[] }[] 
     // managing this business's own subscription with GOLD), the opposite money direction from
     // price.manage/invoice.issue/payment.record above, and never presented as their sibling
     // (the same separation the Settings hub draws between tenant identity and product state).
-    capabilities: ['organization.manage', 'integration.manage', 'feature.manage', 'billing.manage'],
+    capabilities: ['organization.manage', 'integration.manage', 'feature.manage', 'billing.manage', 'secret.manage'],
   },
 ];
 

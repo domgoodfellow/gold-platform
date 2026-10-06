@@ -45,6 +45,7 @@ const TOP_LEVEL_FROM_LOGOS = {
   hubspot: 'hubspot',
   salesforce: 'salesforce',
   shopify: 'shopify',
+  github: 'github-icon',
 };
 
 const TOP_LEVEL_FROM_SIMPLE_ICONS = {

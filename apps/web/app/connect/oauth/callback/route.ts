@@ -5,6 +5,23 @@ import { DomainError } from '@/lib/domain/errors';
 import { completeOAuth } from '@/lib/domain/integrations/oauth';
 import { OAUTH_NONCE_COOKIE } from '@/lib/domain/integrations/oauth-cookie';
 
+const OAUTH_OWN = new Set(['code', 'state', 'error', 'error_description', 'error_uri']);
+
+/**
+ * Whatever else a vendor put on its redirect, relayed untouched and bounded. Not understood and not
+ * trusted here: the API hands it to the one provider that asked for it, which proves what it
+ * depends on itself (a vendor that returns an installation id is asked which installations the
+ * signed-in person can actually reach).
+ */
+function relayedParameters(url: URL): Record<string, string> {
+  return Object.fromEntries(
+    [...url.searchParams.entries()]
+      .filter(([name]) => !OAUTH_OWN.has(name))
+      .slice(0, 10)
+      .map(([name, value]) => [name.slice(0, 40), value.slice(0, 200)]),
+  );
+}
+
 /**
  * Where every vendor sends a person back to. It trusts nothing in the URL: the `state` names the
  * business, and the API verifies its signature, its age, that it belongs to this signed-in person,
@@ -48,6 +65,7 @@ export async function GET(request: Request) {
       code: url.searchParams.get('code') ?? '',
       state: url.searchParams.get('state') ?? '',
       nonce,
+      extra: relayedParameters(url),
     });
     const target = new URL(`/organizations/${done.organization_id}/settings/connections/${done.connection_id}`, request.url);
     target.searchParams.set('connected', '1');

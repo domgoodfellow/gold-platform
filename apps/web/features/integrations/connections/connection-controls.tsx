@@ -45,7 +45,17 @@ export function DisconnectForm({
 
 const CHECK_INITIAL: CheckState = { error: null, checked: false };
 
-export function CheckConnectionForm({ organizationId, connectionId }: { organizationId: string; connectionId: string }) {
+export function CheckConnectionForm({
+  organizationId,
+  connectionId,
+  label = 'Check connection',
+  pendingLabel = 'Checking…',
+}: {
+  organizationId: string;
+  connectionId: string;
+  label?: string;
+  pendingLabel?: string;
+}) {
   const [state, formAction, pending] = useActionState(checkConnectionAction, CHECK_INITIAL);
 
   return (
@@ -53,7 +63,7 @@ export function CheckConnectionForm({ organizationId, connectionId }: { organiza
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="connectionId" value={connectionId} />
       <Button type="submit" tone="secondary" size="small" disabled={pending}>
-        {pending ? 'Checking…' : 'Check connection'}
+        {pending ? pendingLabel : label}
       </Button>
       <ErrorText role="alert">{state.error}</ErrorText>
       {state.checked ? <Hint role="status">Checked.</Hint> : null}

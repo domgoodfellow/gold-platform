@@ -482,6 +482,17 @@ M14 proves the reusable provider contract through Voice; M17 owns applying the p
 across Email, SMS and Automation. Local-model bindings remain Platform Context only in this
 phase.
 
+**The speech providers are the next concrete callers, and their shape is proposed here, not built.**
+ElevenLabs and Deepgram are catalogued as providers with no services, no account adapter and no
+credential path, and the Providers screen says so (`lib/domain/providers/stages.ts`). The services
+worth seeding are only the ones GildOps intends to use: Deepgram *transcription* and *realtime
+speech to text*; ElevenLabs *text to speech* and *voices*, and a conversational service only if
+that is actually intended. Neither needs the AI Runtime assignment table, which is a *model*
+choice (`operator_assistant`, `public_assistant`, `configuration_drafting`): transcription, text to
+speech, realtime voice and embeddings are different capability dimensions, and generalizing that
+table is justified when one of these is a real caller, not before. The first slice per provider is
+an account adapter (verify a credential), then one service, then the assignment dimension it needs.
+
 ## M15 — Financial Operations boundary
 
 > **Done when:** a tenant can price, quote, invoice and record or collect payment from its own

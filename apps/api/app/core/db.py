@@ -1136,3 +1136,37 @@ def record_email_send_result(
             "p_rfc_message_id": rfc_message_id,
         },
     )
+
+
+# --- a business's own private value: one role, one door ------------------------------------------
+
+SECRET_ROLE = "secret_operator"
+
+# The secret-resolution integration's own `auth.users` row, fixed in
+# 20261126000002_an_organization_stores_a_private_credential_once.sql.
+SECRET_RESOLUTION_ACTOR = "00000000-0000-4000-8000-0000000000a9"
+
+
+def resolve_secret_reference(settings: IntegrationSettings, *, organization_id: str, key: str) -> str | None:
+    """A business's stored value, by the name it was stored under, or `None` when it is absent or
+    disabled. **The only place in this repository a Secret Reference is read.**
+
+    The caller is a runtime that needs this one value for this one business -- never "all of an
+    organization's secrets" and never a Vault id. The failure carries the status and nothing else:
+    an error from this call could echo an argument, and no message here may hold a value.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=SECRET_ROLE, sub=SECRET_RESOLUTION_ACTOR)
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/resolve_secret_reference",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={"p_organization_id": organization_id, "p_key": key},
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"resolve_secret_reference failed: {response.status_code}")
+    value = response.json() if response.content else None
+    return value if isinstance(value, str) else None

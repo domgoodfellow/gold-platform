@@ -7,9 +7,10 @@ import { DividedList, Section, SectionHeading } from '@/components/surfaces/sect
 import { Hint } from '@/components/controls/inputs';
 import { getDb } from '@/lib/db/server';
 import { connectorLogoUrl, getConnector } from '@/lib/domain/integrations/connectors';
-import { isConnectorImplemented } from '@/lib/adapters/integrations';
+import { loadConnectorReadinessDetail } from '@/lib/domain/integrations/readiness';
 import { ConnectorIcon, isBuiltInConnector } from '@/features/integrations/catalogue/connector-icon';
 import { AppForm, ConnectorForm, LogoForm, RemoveAppButton } from '@/features/platform/integrations/connector-form';
+import { ConnectorRuntime } from '@/features/platform/integrations/connector-readiness';
 import { ImplementationStateBadge } from '@/features/catalogue/implementation-state';
 
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,7 @@ export default async function ConnectorPage({ params }: PageProps<'/organization
   const connector = await getConnector(db, connectorKey);
   if (!connector) notFound();
 
+  const detail = connector.status === 'planned' ? null : await loadConnectorReadinessDetail(db, [connector.key]);
   const logoUrl = connector.iconRef ? connectorLogoUrl(db, connector.iconRef) : null;
 
   return (
@@ -30,11 +32,11 @@ export default async function ConnectorPage({ params }: PageProps<'/organization
         crumbs={[...platformAncestry(goldId, 'connectors'), { label: 'Connectors', href: platformHref(goldId, 'integrations') }]}
         meta={<ConnectorIcon connector={connector} logoUrl={logoUrl} size="large" />}
       />
-      {connector.status !== 'planned' && !isConnectorImplemented(connector.key) ? (
-        <Hint className="block" role="status">
-          This connector is {connector.status}, but this deployment has no adapter for it, so a business can browse it and cannot yet connect.
-        </Hint>
-      ) : null}
+      <ConnectorRuntime
+        connector={connector}
+        readiness={detail?.byKey.get(connector.key)}
+        redirectUri={detail?.redirectUri ?? null}
+      />
 
       <Section className="mt-6">
         <SectionHeading>Identity</SectionHeading>

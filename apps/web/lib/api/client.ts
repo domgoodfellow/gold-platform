@@ -26,7 +26,7 @@ export async function requireAccessToken(db: Db): Promise<string> {
 
 export async function callDomainCommand<TResult>(
   path: string,
-  input: { token: string; body: Record<string, unknown> },
+  input: { token: string; body: Record<string, unknown>; /** Defaults to 15 seconds; a read a page waits on asks for less. */ timeoutMs?: number },
 ): Promise<TResult> {
   const baseUrl = process.env.GOLD_API_URL;
   if (!baseUrl) {
@@ -45,7 +45,7 @@ export async function callDomainCommand<TResult>(
         authorization: `Bearer ${input.token}`,
       },
       body: JSON.stringify(input.body),
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(input.timeoutMs ?? 15_000),
     });
   } catch {
     throw new DomainError('The API could not be reached.', 'api.unreachable');

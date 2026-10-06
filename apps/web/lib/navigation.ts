@@ -478,6 +478,8 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   // records, a review step and a verification check is not a field on somebody else's page.
   { key: 'email', workspace: 'communications', path: 'settings/email', permission: ['organization.manage'] },
   { key: 'integrations', path: 'settings/connections', entitledBy: 'integrations', permission: ['integration.manage'] },
+  // Its own permission and no entitlement: handing over a private value is not connecting an app, and a business that has switched integrations off still owns what it stored.
+  { key: 'secrets', path: 'settings/secrets', permission: ['secret.manage'] },
   { key: 'features', path: 'settings/features', permission: ['feature.manage'] },
   { key: 'plan', path: 'settings/plan', permission: ['billing.manage'] },
   // Setup is kernel. Launching is `organization.manage`; asking for a drafted setup is

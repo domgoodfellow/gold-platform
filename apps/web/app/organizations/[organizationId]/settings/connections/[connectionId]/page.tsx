@@ -5,11 +5,12 @@ import { PageHeader } from '@/components/headers/page-header';
 import { ConnectionDetail } from '@/features/integrations/connections/connection-detail';
 import { CheckConnectionForm, DisconnectForm } from '@/features/integrations/connections/connection-controls';
 import { getConnection } from '@/lib/domain/integrations/connections';
-import { connectorLogoUrl, getConnector, isConnectable } from '@/lib/domain/integrations/connectors';
+import { connectorLogoUrl, getConnector, isConnectable, usesSignIn } from '@/lib/domain/integrations/connectors';
 import { listResources } from '@/lib/domain/integrations/resources';
 import { requireOrganization } from '@/lib/route/organization';
 import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
-import { usesSignIn } from '@/lib/adapters/integrations';
+import { loadConnectorReadiness } from '@/lib/domain/integrations/readiness';
+import { sourceControlReader, type SourceRepository } from '@/lib/adapters/source-control';
 import { listGrantedResourceIds } from '@/lib/domain/integrations/assistant-grants';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 
@@ -33,8 +34,25 @@ export default async function ConnectionDetailPage({
   const granted = await listGrantedResourceIds(db, { organizationId, resourceIds: resources.map((r) => r.id) });
   const mayManage = organization.capabilities.includes('integration.manage');
   const name = connector?.name ?? connection.connectorKey;
-  const needsReconnect =
-    connector !== null && connector.authMethod !== 'none' && isConnectable(connector) && connection.status !== 'active';
+  // Reconnect is offered only where this deployment could honour it.
+  const readiness = connector ? await loadConnectorReadiness(db, [connector.key]) : new Map();
+  // A source-control connection is shown as the repositories it reaches, never as generic resources.
+  const reader = sourceControlReader(connection.connectorKey);
+  const repositories: SourceRepository[] | null = reader
+    ? resources
+        .filter((resource) => resource.connectionId !== null && reader.resourceTypes.includes(resource.resourceType) && resource.status === 'active')
+        .map((resource) =>
+          reader.toRepository({
+            id: resource.id,
+            connectionId: connectionId,
+            displayName: resource.displayName,
+            metadata: resource.metadata,
+          }),
+        )
+        .filter((repository): repository is SourceRepository => repository !== null)
+    : null;
+  const connectable = connector !== null && isConnectable(connector, readiness.get(connector.key));
+  const needsReconnect = connector !== null && connector.authMethod !== 'none' && connectable && connection.status !== 'active';
 
   return (
     <SettingsPageFrame>
@@ -51,8 +69,22 @@ export default async function ConnectionDetailPage({
         }
         actions={
           <>
-            {mayManage && connection.status !== 'disconnected' && usesSignIn(connection.connectorKey) ? (
-              <CheckConnectionForm organizationId={organizationId} connectionId={connectionId} />
+            {mayManage && connection.status !== 'disconnected' && connector !== null && usesSignIn(connector) ? (
+              <CheckConnectionForm
+                organizationId={organizationId}
+                connectionId={connectionId}
+                label={repositories ? 'Refresh repositories' : 'Check connection'}
+                pendingLabel={repositories ? 'Refreshing…' : 'Checking…'}
+              />
+            ) : null}
+            {mayManage && repositories && connectable && connection.status === 'active' ? (
+              <ButtonLink
+                href={`/organizations/${organizationId}/settings/connections/connect/${connection.connectorKey}?connection=${connectionId}`}
+                tone="secondary"
+                size="small"
+              >
+                Change repository access
+              </ButtonLink>
             ) : null}
             {mayManage && needsReconnect ? (
               <ButtonLink
@@ -66,7 +98,7 @@ export default async function ConnectionDetailPage({
             {mayManage && connection.status !== 'disconnected' ? (
               <DisconnectForm organizationId={organizationId} connectionId={connectionId} />
             ) : null}
-            {mayManage && connection.status !== 'disconnected' ? (
+            {mayManage && connection.status !== 'disconnected' && !repositories ? (
               <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">
                 Add data source
               </ButtonLink>
@@ -82,6 +114,7 @@ export default async function ConnectionDetailPage({
         logoUrl={connector?.iconRef ? connectorLogoUrl(db, connector.iconRef) : null}
         resources={resources}
         grantedResourceIds={granted}
+        repositories={repositories}
         mayManage={mayManage}
         justConnected={justConnected}
       />

@@ -15,6 +15,8 @@ export type IntegrationResource = {
   externalId: string | null;
   status: 'active' | 'needs_attention' | 'disabled';
   createdAt: string;
+  /** What the provider reported about it, written only by the API's discovery. Descriptive, never a credential. */
+  metadata: unknown;
 };
 
 const DISPLAY_NAME_MAX = 200;
@@ -25,7 +27,7 @@ export async function listResources(
 ): Promise<IntegrationResource[]> {
   let query = db
     .from('integration_resources')
-    .select('id, connection_id, resource_type, display_name, external_id, status, created_at')
+    .select('id, connection_id, resource_type, display_name, external_id, status, created_at, metadata')
     .eq('organization_id', input.organizationId)
     .order('created_at', { ascending: false });
 
@@ -47,6 +49,7 @@ export async function listResources(
     externalId: row.external_id,
     status: row.status as IntegrationResource['status'],
     createdAt: row.created_at,
+    metadata: row.metadata,
   }));
 }
 

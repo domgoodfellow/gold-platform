@@ -8508,6 +8508,66 @@ export type Database = {
           },
         ]
       }
+      secret_references: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          key: string
+          label: string
+          last_resolved_at: string | null
+          organization_id: string
+          purpose: string
+          rotated_at: string | null
+          secret_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          key: string
+          label: string
+          last_resolved_at?: string | null
+          organization_id: string
+          purpose?: string
+          rotated_at?: string | null
+          secret_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          key?: string
+          label?: string
+          last_resolved_at?: string | null
+          organization_id?: string
+          purpose?: string
+          rotated_at?: string | null
+          secret_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secret_references_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_references_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       telephony_settings: {
         Row: {
           calling_number: string | null
@@ -10507,6 +10567,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_secret_reference: {
+        Args: {
+          p_key: string
+          p_label: string
+          p_organization_id: string
+          p_purpose: string
+          p_value: string
+        }
+        Returns: string
+      }
       create_work_item: {
         Args: {
           p_asset_id: string
@@ -10590,6 +10660,10 @@ export type Database = {
       }
       delete_resource_requirement: {
         Args: { p_id: string }
+        Returns: undefined
+      }
+      delete_secret_reference: {
+        Args: { p_organization_id: string; p_secret_id: string }
         Returns: undefined
       }
       detach_plan_addon: {
@@ -11935,6 +12009,10 @@ export type Database = {
           organization_id: string
         }[]
       }
+      resolve_secret_reference: {
+        Args: { p_key: string; p_organization_id: string }
+        Returns: string
+      }
       resource_availability_conflicts: {
         Args: { p_from: string; p_organization_id: string; p_to: string }
         Returns: {
@@ -11957,6 +12035,16 @@ export type Database = {
       }
       revoke_plan_product: {
         Args: { p_plan_id: string; p_product_key: string }
+        Returns: undefined
+      }
+      rotate_secret_reference: {
+        Args: {
+          p_label?: string
+          p_organization_id: string
+          p_purpose?: string
+          p_secret_id: string
+          p_value: string
+        }
         Returns: undefined
       }
       run_due_automations: { Args: never; Returns: number }
@@ -12230,6 +12318,14 @@ export type Database = {
       }
       set_resource_working_hours: {
         Args: { p_hours: Json; p_resource_id: string }
+        Returns: undefined
+      }
+      set_secret_reference_status: {
+        Args: {
+          p_organization_id: string
+          p_secret_id: string
+          p_status: string
+        }
         Returns: undefined
       }
       set_type_bookable: {

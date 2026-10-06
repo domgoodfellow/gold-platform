@@ -1,16 +1,16 @@
-import { Button, ButtonLink } from '@/components/controls/button';
+import { ButtonLink } from '@/components/controls/button';
 import { Card } from '@/components/surfaces/card';
 import { Badge } from '@/components/display/data';
-import { isConnectable, type Connector } from '@/lib/domain/integrations/connectors';
+import type { Connector } from '@/lib/domain/integrations/connectors';
 import { ConnectorAppStrip } from './connector-app-strip';
 import { ConnectorIcon } from './connector-icon';
 
 const STATUS_LABEL = { planned: 'Planned', beta: 'Beta', live: 'Live' } as const;
 
 /**
- * One catalogue entry as a business sees it. The connector's own facts come from the catalogue;
- * whether it can be connected is `isConnectable` — catalogue status *and* a registered adapter —
- * so a Connect button is never shown for something that would do nothing.
+ * One connectable (or already connected) app. Only a connector the deployment can actually connect
+ * reaches this card — the route filters on `connectorAvailability` — so it never draws a control
+ * that would do nothing, and a planned one is a row in the Upcoming list, not a card.
  */
 export function ConnectorCard({
   connector,
@@ -25,8 +25,6 @@ export function ConnectorCard({
   connected: boolean;
   mayManage: boolean;
 }) {
-  const connectable = isConnectable(connector);
-
   return (
     <Card className="flex flex-col gap-2.5">
       <div className="flex items-start gap-3">
@@ -47,19 +45,13 @@ export function ConnectorCard({
           {connector.suite ? `${connector.suite} · ` : ''}
           {connector.category}
         </p>
-        {!connectable ? (
-          <Button type="button" tone="secondary" size="small" disabled>
-            {connector.status === 'planned' ? 'Coming soon' : 'Not available yet'}
-          </Button>
-        ) : !mayManage ? null : connected ? (
-          <Button type="button" tone="primary" size="small" disabled>
-            Connected
-          </Button>
-        ) : (
+        {connected ? (
+          <Badge tone="success">Connected</Badge>
+        ) : mayManage ? (
           <ButtonLink href={`/organizations/${organizationId}/settings/connections/connect/${connector.key}`} tone="primary" size="small">
             Connect
           </ButtonLink>
-        )}
+        ) : null}
       </div>
     </Card>
   );

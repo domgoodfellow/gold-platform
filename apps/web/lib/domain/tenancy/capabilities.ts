@@ -33,6 +33,7 @@ export const CAPABILITIES = [
   'integration.manage',
   'feature.manage',
   'billing.manage',
+  'secret.manage',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -88,4 +89,6 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'feature.manage': 'Switch entitled features on or off for this business',
   /** GOLD → organization money (domain-model.md's own plane), never the Commerce capabilities this business collects from its own customers with. */
   'billing.manage': 'Start or manage this business’s own subscription with GildOps',
+  /** Its own authority, not part of `integration.manage`: connecting a spreadsheet and handing over a private key are different decisions, and a stored value is never read back by anyone who holds this. */
+  'secret.manage': 'Add, replace and remove the private credentials this business gives GildOps to use',
 };

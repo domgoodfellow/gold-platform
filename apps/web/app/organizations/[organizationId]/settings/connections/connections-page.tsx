@@ -2,11 +2,18 @@ import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/headers/page-header';
 import { listConnections } from '@/lib/domain/integrations/connections';
 import {
+  BROWSE_FILTERS,
+  browseFilterFrom,
+  connectorAvailability,
   connectorCategories,
   connectorLogoUrl,
+  connectorsForFilter,
   filterConnectors,
   listConnectors,
+  type BrowseFilter,
 } from '@/lib/domain/integrations/connectors';
+import { loadConnectorReadiness } from '@/lib/domain/integrations/readiness';
+import { isSourceControlConnector } from '@/lib/adapters/source-control';
 import { listResources } from '@/lib/domain/integrations/resources';
 import { listImportRuns } from '@/lib/domain/integrations/import-runs';
 import { requireOrganization } from '@/lib/route/organization';
@@ -46,16 +53,34 @@ export async function ConnectionsPage({
   ]);
 
   const mayManage = organization.capabilities.includes('integration.manage');
+  // A repository is something GildOps may read, not a source a business imports customers from, so it is not a "data source".
+  const sourceControlConnections = new Set(connections.filter((c) => isSourceControlConnector(c.connectorKey)).map((c) => c.id));
+  const importableResources = resources.filter((r) => !(r.connectionId && sourceControlConnections.has(r.connectionId))).length;
   const active = connections.filter((connection) => connection.status !== 'disconnected');
   const needsAttention = connections.filter((connection) => connection.status === 'needs_attention');
   const connectorByKey = new Map(connectors.map((connector) => [connector.key, connector]));
   const connectedKeys = new Set(active.map((connection) => connection.connectorKey));
   const logoUrlByKey = new Map(connectors.map((connector) => [connector.key, connector.iconRef ? connectorLogoUrl(db, connector.iconRef) : null]));
 
-  const categories = connectorCategories(connectors);
-  const shown = filterConnectors(connectors, { query: q, category });
-  const browseHref = (next: { q?: string; category?: string }) => {
+  // Only a connector the catalogue has promoted is worth asking the API about; a planned one is
+  // upcoming whatever the deployment holds.
+  const readiness = await loadConnectorReadiness(
+    db,
+    connectors.filter((connector) => connector.status !== 'planned').map((connector) => connector.key),
+  );
+  const connectable = connectors.filter((connector) => connectorAvailability(connector, readiness.get(connector.key)) === 'connectable');
+
+  const filter = browseFilterFrom(first(query.filter));
+  const counts = Object.fromEntries(
+    BROWSE_FILTERS.map((name) => [name, connectorsForFilter(connectors, { filter: name, readiness, connectedKeys }).length]),
+  ) as Record<BrowseFilter, number>;
+  const inFilter = connectorsForFilter(connectors, { filter, readiness, connectedKeys });
+  // A category pill exists only if the set on screen has something under it.
+  const categories = connectorCategories(inFilter);
+  const shown = filterConnectors(inFilter, { query: q, category });
+  const browseHref = (next: { filter?: BrowseFilter; q?: string; category?: string }) => {
     const params = new URLSearchParams();
+    if (next.filter && next.filter !== 'available') params.set('filter', next.filter);
     if (next.q) params.set('q', next.q);
     if (next.category) params.set('category', next.category);
     const suffix = params.size ? `?${params}` : '';
@@ -86,12 +111,12 @@ export async function ConnectionsPage({
           active={active}
           connectorByKey={connectorByKey}
           logoUrlByKey={logoUrlByKey}
-          resourceCount={resources.length}
+          resourceCount={importableResources}
           importCount={runs.length}
           needsAttentionCount={needsAttention.length}
           mayManage={mayManage}
           browseHref={browseHref({})}
-          connectors={connectors}
+          connectable={connectable}
           organizationName={organization.name}
         />
       ) : (
@@ -101,10 +126,12 @@ export async function ConnectionsPage({
           logoUrlByKey={logoUrlByKey}
           connectedKeys={connectedKeys}
           mayManage={mayManage}
+          filter={filter}
+          counts={counts}
           categories={categories}
           query={q}
           category={category}
-          categoryHref={browseHref}
+          hrefFor={browseHref}
         />
       )}
     </SettingsPageFrame>

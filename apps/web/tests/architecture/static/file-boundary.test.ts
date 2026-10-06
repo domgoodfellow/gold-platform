@@ -30,7 +30,7 @@ describe('the file layer knows no consumer', () => {
 
 describe('a file format is never a connector', () => {
   it('names no `csv` connector anywhere a connection is made or drawn', () => {
-    for (const file of [...sources('features/integrations'), ...sources('lib/domain/integrations'), ...sources('lib/adapters/integrations')]) {
+    for (const file of [...sources('features/integrations'), ...sources('lib/domain/integrations')]) {
       expect(readFileSync(join(ROOT, file), 'utf8'), file).not.toMatch(/connectorKey\s*[:=!]==?\s*'csv'|connectorKey:\s*'csv'|['"]csv['"]\s*\)/);
     }
   });

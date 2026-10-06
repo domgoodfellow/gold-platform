@@ -86,6 +86,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
       entry('call-setup', 'Call setup', 'The words this business uses for how a call went, routing, and caller identity.'),
       entry('email', 'Email', 'The domain this business sends email from, and what it still needs to be verified.'),
       entry('integrations', 'Apps and files', 'The outside apps this business connects, and the data it brings in.'),
+      entry('secrets', 'Secrets & credentials', 'The private values this business has given GildOps to use. Stored, never shown again.'),
     ],
   },
   {

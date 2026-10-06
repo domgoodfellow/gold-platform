@@ -16,6 +16,9 @@ import { AI_CAPABILITY_LABEL, listAiRuntimeAssignments } from '@/lib/domain/ai/r
 import { telephonyProviderKey } from '@/lib/adapters/telephony';
 import { ProviderDetail } from '@/features/platform/providers/provider-detail';
 import { ProviderIcon } from '@/features/platform/providers/provider-icon';
+import { ProviderStagesSection } from '@/features/platform/providers/provider-stages-section';
+import { listProviderAccounts } from '@/lib/domain/providers/accounts';
+import { providerStages } from '@/lib/domain/providers/stages';
 import { ProviderAccountSummary } from '@/features/platform/providers/accounts/provider-account-summary';
 import { ProviderConfiguration } from '@/features/platform/providers/accounts/provider-configuration';
 
@@ -60,6 +63,14 @@ export default async function ProviderDetailPage({
     isAiRuntimeProvider ? listAiRuntimeAssignments(db) : Promise.resolve([]),
   ]);
   const runtimeUsage = runtimeAssignments.filter((assignment) => assignment.providerKey === providerKey);
+  // Readiness is asked of the same facts the Providers list reads, so the two cannot disagree.
+  const stages = providerStages({
+    accountAdapter: hasAccountModel,
+    accounts: hasAccountModel ? (await listProviderAccounts(db)).filter((candidate) => candidate.providerKey === providerKey) : [],
+    services,
+    runtimeAssignments: runtimeUsage.length,
+    deploymentCredential: providerKey === 'resend' && platformEmailOperationalStatus(account).source === 'environment',
+  });
   const platformEmail = providerKey === 'resend' ? platformEmailOperationalStatus(account) : null;
 
   return (
@@ -81,6 +92,7 @@ export default async function ProviderDetailPage({
         <ProviderDetail services={services} />
       ) : (
         <div className="flex flex-col gap-6">
+          <ProviderStagesSection stages={stages} />
           {hasAccountModel ? <ProviderAccountSummary account={account} /> : null}
 
           {platformEmail ? (

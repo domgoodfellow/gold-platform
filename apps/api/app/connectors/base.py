@@ -14,6 +14,7 @@ that makes a failing connection readable, and a provider's error body carries no
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from urllib.parse import urlencode
 
@@ -24,10 +25,16 @@ from app.providers.providers import UpstreamRefused
 
 @dataclass(frozen=True)
 class OAuthApp:
-    """GOLD's own registration with the vendor. Never a tenant's credential."""
+    """GOLD's own registration with the vendor. Never a tenant's credential.
+
+    `extra` holds the further registration inputs a vendor needs that are not a client id and
+    secret -- a GitHub App's numeric id and signing key, for one. Named in the registry
+    (`app.connectors`), present only when every one of them is, and never rendered anywhere.
+    """
 
     client_id: str
     client_secret: str
+    extra: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -71,7 +78,9 @@ class OAuthProvider:
             query["scope"] = " ".join(self.scopes)
         return f"{self.authorize_endpoint}?{urlencode(query)}"
 
-    def exchange(self, app: OAuthApp, *, code: str, redirect_uri: str) -> Tokens:
+    def exchange(self, app: OAuthApp, *, code: str, redirect_uri: str, extra: Mapping[str, str] | None = None) -> Tokens:
+        """`extra` is whatever else the vendor put on the redirect (a short allowlist of strings the
+        browser relayed untouched); most vendors put nothing there, and this ignores it."""
         return self._token_request(
             app, {"grant_type": "authorization_code", "code": code, "redirect_uri": redirect_uri}
         )

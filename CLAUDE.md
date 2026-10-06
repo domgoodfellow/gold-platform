@@ -340,6 +340,9 @@ is what fails if they do. **An empty cell is an intention, not a guarantee** —
 | A tenant selecting another organization's bound resource as its own | A number or a domain typed by hand must not let GildOps use somebody else's scope (D39) | `app.phone_number_owner`, `security definer`, checked inside `set_calling_number`; a number bound to a different organization is refused, one bound to nobody is unaffected |
 | A subaccount's own credential used to place a call | GildOps' master account can already address any subaccount by naming it in the request path (D39); a second credential per business is a second thing to rotate for no isolation gained | `telephonyProvider(actingAccountSid)` authenticates with GildOps' master token throughout; only the acting account in the URL path changes |
 | A tenant submission, a DNS write, or platform staff marking a provider resource active/verified | A sending domain's readiness and a custom domain's verification are the provider's own fact; a form being submitted or a DNS record landing is not the provider confirming anything (D44, D54) | `record_email_domain_provisioning` and `set_custom_domain_verification`/`record_custom_domain_registration` are `provider_operator`-only and hold no grant to any signed-in role; `email-sending-domains.test.ts` and `test_web_delivery_domains.py` prove neither a tenant nor platform staff can write either state directly, and `test_email_provisioning.py` proves publishing DNS is never itself recorded as verification |
+| A business's private value read back by a signed-in role (staff included), a `secret_id` selectable, or a second reader of a Secret Reference | Four credentials have four owners and one reader each; a reveal door is a door a stolen session opens (D84) | `secret_references` holds no write grant and withholds `secret_id`; `resolve_secret_reference` is `secret_operator`-only and has no caller; `secret-references.test.ts`, `test_credential_boundaries.py`, `source-control-boundary.test.ts` |
+| A web-runtime list of which connectors run, or a Connect offered where the API has not said this deployment can honour it | *Planned*, *no adapter*, *no registration* and a business's connection health are four facts; only the API knows two of them (D85) | `readiness_of` and the `readiness` operations are the one answer; `connectorAvailability` is the one reading; `integrations-browse.test.ts` fails on a card that draws a control for what is unavailable, and on a registry in `apps/web` |
+| A GitHub installation trusted because a URL carried it, a repository a tenant wrote, or a vendor named in Studio | The id in a redirect is a value a browser chose; a repository is provider evidence; Studio asks for a capability (D86) | `GitHub.exchange` asks which installations the signing-in user can reach before it mints; resources under a connection are `integration_operator`-only; `lib/adapters/source-control` alone names the vendor; `test_github_connector.py`, `github-source-control.test.ts`, `source-control-boundary.test.ts` |
 
 ### Files and imports
 
@@ -508,6 +511,7 @@ Every entry above has a decision record behind it. Read it before changing the t
 | Usage, its provenance, and retail and provider rates as one model | D65, D40, D43 |
 | Which platform tables a member, a booking visitor and staff may each read | D64 |
 | Settings as one destination, and its five scopes | D71, D45 |
+| A business's private values, which connectors are offered, and source control against Studio | D84, D85, D86 |
 
 ## When you finish a change
 
