@@ -1,0 +1,1487 @@
+{
+  "schema_version": 1,
+  "baseline": {
+    "repository": "domgoodfellow/gold-platform",
+    "ref": "main",
+    "head": "2a5fcd2435ce89c7cae8abe3f217f8edc9a266e7",
+    "generated": "2026-10-06"
+  },
+  "counts": {
+    "total": 161,
+    "by_scope": {
+      "AUTH": 4,
+      "PUBLIC_CUSTOMER": 14,
+      "PUBLIC_MARKETING": 11,
+      "PREVIEW": 1,
+      "ORGANIZATION": 94,
+      "PLATFORM": 33,
+      "PLATFORM_COMPAT": 1,
+      "PERSONAL": 3
+    },
+    "by_surface_type": {
+      "auth": 4,
+      "public_experience": 10,
+      "marketing": 10,
+      "workspace_or_domain_home": 10,
+      "record_detail": 21,
+      "collection_or_page": 39,
+      "create": 2,
+      "platform_detail": 14,
+      "platform_control_plane": 20,
+      "configuration": 2,
+      "settings_detail": 28,
+      "settings_index": 1
+    }
+  },
+  "surfaces": [
+    {
+      "surface_id": "SURF-001",
+      "source_file": "apps/web/app/(auth)/forgot-password/page.tsx",
+      "route": "/forgot-password",
+      "scope": "AUTH",
+      "owner": null,
+      "surface_type": "auth",
+      "source_bytes": 1190
+    },
+    {
+      "surface_id": "SURF-002",
+      "source_file": "apps/web/app/(auth)/login/page.tsx",
+      "route": "/login",
+      "scope": "AUTH",
+      "owner": null,
+      "surface_type": "auth",
+      "source_bytes": 835
+    },
+    {
+      "surface_id": "SURF-003",
+      "source_file": "apps/web/app/(auth)/reset-password/page.tsx",
+      "route": "/reset-password",
+      "scope": "AUTH",
+      "owner": null,
+      "surface_type": "auth",
+      "source_bytes": 1879
+    },
+    {
+      "surface_id": "SURF-004",
+      "source_file": "apps/web/app/(auth)/sign-up/page.tsx",
+      "route": "/sign-up",
+      "scope": "AUTH",
+      "owner": null,
+      "surface_type": "auth",
+      "source_bytes": 833
+    },
+    {
+      "surface_id": "SURF-005",
+      "source_file": "apps/web/app/(embed)/embed/forms/[publicKey]/page.tsx",
+      "route": "/embed/forms/[publicKey]",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "public_experience",
+      "source_bytes": 1311
+    },
+    {
+      "surface_id": "SURF-006",
+      "source_file": "apps/web/app/(marketing)/contact/page.tsx",
+      "route": "/contact",
+      "scope": "PUBLIC_MARKETING",
+      "owner": null,
+      "surface_type": "marketing",
+      "source_bytes": 3515
+    },
+    {
+      "surface_id": "SURF-007",
+      "source_file": "apps/web/app/(marketing)/customer-service/page.tsx",
+      "route": "/customer-service",
+      "scope": "PUBLIC_MARKETING",
+      "owner": null,
+      "surface_type": "marketing",
+      "source_bytes": 1465
+    },
+    {
+      "surface_id": "SURF-008",
+      "source_file": "apps/web/app/(marketing)/demo/page.tsx",
+      "route": "/demo",
+      "scope": "PUBLIC_MARKETING",
+      "owner": null,
+      "surface_type": "marketing",
+      "source_bytes": 1240
+    },
+    {
+      "surface_id": "SURF-009",
+      "source_file": "apps/web/app/(marketing)/how-it-works/page.tsx",
+      "route": "/how-it-works",
+      "scope": "PUBLIC_MARKETING",
+      "owner": null,
+      "surface_type": "marketing",
+      "source_bytes": 1998
+    },
+    {
+      "surface_id": "SURF-010",
+      "source_file": "apps/web/app/(marketing)/integrations/page.tsx",
+      "route": "/integrations",
+      "scope": "PUBLIC_MARKETING",
+      "owner": null,
+      "surface_type": "marketing",
+      "source_bytes": 3257
+    },
+    {
+      "surface_id": "SURF-011",
+      "source_file": "apps/web/app/(marketing)/operations/page.tsx",
+      "route": "/operations",
+      "scope": "PUBLIC_MARKETING",
+      "owner": null,
+      "surface_type": "marketing",
+      "source_bytes": 1436
+    },
+    {
+      "surface_id": "SURF-012",
+      "source_file": "apps/web/app/(marketing)/page.tsx",
+      "route": "/",
+      "scope": "PUBLIC_MARKETING",
+      "owner": null,
+      "surface_type": "marketing",
+      "source_bytes": 2575
+    },
+    {
+      "surface_id": "SURF-013",
+      "source_file": "apps/web/app/(marketing)/pricing/page.tsx",
+      "route": "/pricing",
+      "scope": "PUBLIC_MARKETING",
+      "owner": null,
+      "surface_type": "marketing",
+      "source_bytes": 2721
+    },
+    {
+      "surface_id": "SURF-014",
+      "source_file": "apps/web/app/(marketing)/privacy/page.tsx",
+      "route": "/privacy",
+      "scope": "PUBLIC_MARKETING",
+      "owner": null,
+      "surface_type": "marketing",
+      "source_bytes": 4193
+    },
+    {
+      "surface_id": "SURF-015",
+      "source_file": "apps/web/app/(marketing)/sales/page.tsx",
+      "route": "/sales",
+      "scope": "PUBLIC_MARKETING",
+      "owner": null,
+      "surface_type": "workspace_or_domain_home",
+      "source_bytes": 1439
+    },
+    {
+      "surface_id": "SURF-016",
+      "source_file": "apps/web/app/(marketing)/terms/page.tsx",
+      "route": "/terms",
+      "scope": "PUBLIC_MARKETING",
+      "owner": null,
+      "surface_type": "marketing",
+      "source_bytes": 2980
+    },
+    {
+      "surface_id": "SURF-017",
+      "source_file": "apps/web/app/(preview)/preview/[organizationId]/[revisionId]/[[...page]]/page.tsx",
+      "route": "/preview/[organizationId]/[revisionId]/[[...page]]",
+      "scope": "PREVIEW",
+      "owner": null,
+      "surface_type": "record_detail",
+      "source_bytes": 2529
+    },
+    {
+      "surface_id": "SURF-018",
+      "source_file": "apps/web/app/(public)/book/[slug]/[workItemId]/page.tsx",
+      "route": "/book/[slug]/[workItemId]",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "record_detail",
+      "source_bytes": 5257
+    },
+    {
+      "surface_id": "SURF-019",
+      "source_file": "apps/web/app/(public)/book/[slug]/[workItemId]/reschedule/page.tsx",
+      "route": "/book/[slug]/[workItemId]/reschedule",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "record_detail",
+      "source_bytes": 4909
+    },
+    {
+      "surface_id": "SURF-020",
+      "source_file": "apps/web/app/(public)/book/[slug]/page.tsx",
+      "route": "/book/[slug]",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "public_experience",
+      "source_bytes": 7179
+    },
+    {
+      "surface_id": "SURF-021",
+      "source_file": "apps/web/app/(public)/f/[publicKey]/page.tsx",
+      "route": "/f/[publicKey]",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "public_experience",
+      "source_bytes": 1318
+    },
+    {
+      "surface_id": "SURF-022",
+      "source_file": "apps/web/app/(public)/forms/[organizationSlug]/[formSlug]/page.tsx",
+      "route": "/forms/[organizationSlug]/[formSlug]",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "record_detail",
+      "source_bytes": 1649
+    },
+    {
+      "surface_id": "SURF-023",
+      "source_file": "apps/web/app/(public)/portal/page.tsx",
+      "route": "/portal",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "public_experience",
+      "source_bytes": 8682
+    },
+    {
+      "surface_id": "SURF-024",
+      "source_file": "apps/web/app/(public)/portal/payment-return/page.tsx",
+      "route": "/portal/payment-return",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "public_experience",
+      "source_bytes": 1204
+    },
+    {
+      "surface_id": "SURF-025",
+      "source_file": "apps/web/app/(public)/portal/unavailable/page.tsx",
+      "route": "/portal/unavailable",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "public_experience",
+      "source_bytes": 703
+    },
+    {
+      "surface_id": "SURF-026",
+      "source_file": "apps/web/app/(public)/proposal/page.tsx",
+      "route": "/proposal",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "public_experience",
+      "source_bytes": 6567
+    },
+    {
+      "surface_id": "SURF-027",
+      "source_file": "apps/web/app/(public)/proposal/unavailable/page.tsx",
+      "route": "/proposal/unavailable",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "public_experience",
+      "source_bytes": 725
+    },
+    {
+      "surface_id": "SURF-028",
+      "source_file": "apps/web/app/(public)/sites/[hostname]/[slug]/page.tsx",
+      "route": "/sites/[hostname]/[slug]",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "public_experience",
+      "source_bytes": 1053
+    },
+    {
+      "surface_id": "SURF-029",
+      "source_file": "apps/web/app/(public)/sites/[hostname]/forms/[formSlug]/page.tsx",
+      "route": "/sites/[hostname]/forms/[formSlug]",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "record_detail",
+      "source_bytes": 1126
+    },
+    {
+      "surface_id": "SURF-030",
+      "source_file": "apps/web/app/(public)/sites/[hostname]/page.tsx",
+      "route": "/sites/[hostname]",
+      "scope": "PUBLIC_CUSTOMER",
+      "owner": null,
+      "surface_type": "public_experience",
+      "source_bytes": 974
+    },
+    {
+      "surface_id": "SURF-031",
+      "source_file": "apps/web/app/organizations/[organizationId]/[...unmatched]/page.tsx",
+      "route": "/organizations/[organizationId]/[...unmatched]",
+      "scope": "ORGANIZATION",
+      "owner": "[...unmatched]",
+      "surface_type": "record_detail",
+      "source_bytes": 1012
+    },
+    {
+      "surface_id": "SURF-032",
+      "source_file": "apps/web/app/organizations/[organizationId]/assets/[assetId]/page.tsx",
+      "route": "/organizations/[organizationId]/assets/[assetId]",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "record_detail",
+      "source_bytes": 2634
+    },
+    {
+      "surface_id": "SURF-033",
+      "source_file": "apps/web/app/organizations/[organizationId]/assets/page.tsx",
+      "route": "/organizations/[organizationId]/assets",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "collection_or_page",
+      "source_bytes": 3526
+    },
+    {
+      "surface_id": "SURF-034",
+      "source_file": "apps/web/app/organizations/[organizationId]/automations/[ruleId]/page.tsx",
+      "route": "/organizations/[organizationId]/automations/[ruleId]",
+      "scope": "ORGANIZATION",
+      "owner": "Automations",
+      "surface_type": "record_detail",
+      "source_bytes": 4782
+    },
+    {
+      "surface_id": "SURF-035",
+      "source_file": "apps/web/app/organizations/[organizationId]/automations/activity/page.tsx",
+      "route": "/organizations/[organizationId]/automations/activity",
+      "scope": "ORGANIZATION",
+      "owner": "Automations",
+      "surface_type": "collection_or_page",
+      "source_bytes": 1194
+    },
+    {
+      "surface_id": "SURF-036",
+      "source_file": "apps/web/app/organizations/[organizationId]/automations/messages/page.tsx",
+      "route": "/organizations/[organizationId]/automations/messages",
+      "scope": "ORGANIZATION",
+      "owner": "Automations",
+      "surface_type": "collection_or_page",
+      "source_bytes": 1191
+    },
+    {
+      "surface_id": "SURF-037",
+      "source_file": "apps/web/app/organizations/[organizationId]/automations/page.tsx",
+      "route": "/organizations/[organizationId]/automations",
+      "scope": "ORGANIZATION",
+      "owner": "Automations",
+      "surface_type": "workspace_or_domain_home",
+      "source_bytes": 2877
+    },
+    {
+      "surface_id": "SURF-038",
+      "source_file": "apps/web/app/organizations/[organizationId]/automations/rules/page.tsx",
+      "route": "/organizations/[organizationId]/automations/rules",
+      "scope": "ORGANIZATION",
+      "owner": "Automations",
+      "surface_type": "collection_or_page",
+      "source_bytes": 2360
+    },
+    {
+      "surface_id": "SURF-039",
+      "source_file": "apps/web/app/organizations/[organizationId]/calls/[callId]/page.tsx",
+      "route": "/organizations/[organizationId]/calls/[callId]",
+      "scope": "ORGANIZATION",
+      "owner": "Communications",
+      "surface_type": "record_detail",
+      "source_bytes": 7768
+    },
+    {
+      "surface_id": "SURF-040",
+      "source_file": "apps/web/app/organizations/[organizationId]/calls/page.tsx",
+      "route": "/organizations/[organizationId]/calls",
+      "scope": "ORGANIZATION",
+      "owner": "Communications",
+      "surface_type": "collection_or_page",
+      "source_bytes": 7244
+    },
+    {
+      "surface_id": "SURF-041",
+      "source_file": "apps/web/app/organizations/[organizationId]/comms/inbox/[conversationId]/page.tsx",
+      "route": "/organizations/[organizationId]/comms/inbox/[conversationId]",
+      "scope": "ORGANIZATION",
+      "owner": "Communications",
+      "surface_type": "record_detail",
+      "source_bytes": 1623
+    },
+    {
+      "surface_id": "SURF-042",
+      "source_file": "apps/web/app/organizations/[organizationId]/comms/inbox/new/page.tsx",
+      "route": "/organizations/[organizationId]/comms/inbox/new",
+      "scope": "ORGANIZATION",
+      "owner": "Communications",
+      "surface_type": "create",
+      "source_bytes": 1735
+    },
+    {
+      "surface_id": "SURF-043",
+      "source_file": "apps/web/app/organizations/[organizationId]/comms/inbox/page.tsx",
+      "route": "/organizations/[organizationId]/comms/inbox",
+      "scope": "ORGANIZATION",
+      "owner": "Communications",
+      "surface_type": "collection_or_page",
+      "source_bytes": 561
+    },
+    {
+      "surface_id": "SURF-044",
+      "source_file": "apps/web/app/organizations/[organizationId]/comms/numbers/[phoneNumberId]/page.tsx",
+      "route": "/organizations/[organizationId]/comms/numbers/[phoneNumberId]",
+      "scope": "ORGANIZATION",
+      "owner": "Communications",
+      "surface_type": "record_detail",
+      "source_bytes": 7721
+    },
+    {
+      "surface_id": "SURF-045",
+      "source_file": "apps/web/app/organizations/[organizationId]/comms/numbers/page.tsx",
+      "route": "/organizations/[organizationId]/comms/numbers",
+      "scope": "ORGANIZATION",
+      "owner": "Communications",
+      "surface_type": "collection_or_page",
+      "source_bytes": 1968
+    },
+    {
+      "surface_id": "SURF-046",
+      "source_file": "apps/web/app/organizations/[organizationId]/comms/page.tsx",
+      "route": "/organizations/[organizationId]/comms",
+      "scope": "ORGANIZATION",
+      "owner": "Communications",
+      "surface_type": "workspace_or_domain_home",
+      "source_bytes": 5319
+    },
+    {
+      "surface_id": "SURF-047",
+      "source_file": "apps/web/app/organizations/[organizationId]/customers/[customerId]/page.tsx",
+      "route": "/organizations/[organizationId]/customers/[customerId]",
+      "scope": "ORGANIZATION",
+      "owner": "CRM",
+      "surface_type": "record_detail",
+      "source_bytes": 5673
+    },
+    {
+      "surface_id": "SURF-048",
+      "source_file": "apps/web/app/organizations/[organizationId]/customers/page.tsx",
+      "route": "/organizations/[organizationId]/customers",
+      "scope": "ORGANIZATION",
+      "owner": "CRM",
+      "surface_type": "collection_or_page",
+      "source_bytes": 6699
+    },
+    {
+      "surface_id": "SURF-049",
+      "source_file": "apps/web/app/organizations/[organizationId]/customers/pipeline/page.tsx",
+      "route": "/organizations/[organizationId]/customers/pipeline",
+      "scope": "ORGANIZATION",
+      "owner": "CRM",
+      "surface_type": "collection_or_page",
+      "source_bytes": 3053
+    },
+    {
+      "surface_id": "SURF-050",
+      "source_file": "apps/web/app/organizations/[organizationId]/field/page.tsx",
+      "route": "/organizations/[organizationId]/field",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "workspace_or_domain_home",
+      "source_bytes": 4766
+    },
+    {
+      "surface_id": "SURF-051",
+      "source_file": "apps/web/app/organizations/[organizationId]/fields/page.tsx",
+      "route": "/organizations/[organizationId]/fields",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "collection_or_page",
+      "source_bytes": 546
+    },
+    {
+      "surface_id": "SURF-052",
+      "source_file": "apps/web/app/organizations/[organizationId]/finance/economics/[targetOrganizationId]/page.tsx",
+      "route": "/organizations/[organizationId]/finance/economics/[targetOrganizationId]",
+      "scope": "ORGANIZATION",
+      "owner": "Finance",
+      "surface_type": "record_detail",
+      "source_bytes": 459
+    },
+    {
+      "surface_id": "SURF-053",
+      "source_file": "apps/web/app/organizations/[organizationId]/finance/economics/page.tsx",
+      "route": "/organizations/[organizationId]/finance/economics",
+      "scope": "ORGANIZATION",
+      "owner": "Finance",
+      "surface_type": "collection_or_page",
+      "source_bytes": 464
+    },
+    {
+      "surface_id": "SURF-054",
+      "source_file": "apps/web/app/organizations/[organizationId]/finance/invoices/page.tsx",
+      "route": "/organizations/[organizationId]/finance/invoices",
+      "scope": "ORGANIZATION",
+      "owner": "Finance",
+      "surface_type": "collection_or_page",
+      "source_bytes": 1527
+    },
+    {
+      "surface_id": "SURF-055",
+      "source_file": "apps/web/app/organizations/[organizationId]/finance/page.tsx",
+      "route": "/organizations/[organizationId]/finance",
+      "scope": "ORGANIZATION",
+      "owner": "Finance",
+      "surface_type": "workspace_or_domain_home",
+      "source_bytes": 1817
+    },
+    {
+      "surface_id": "SURF-056",
+      "source_file": "apps/web/app/organizations/[organizationId]/finance/payments/page.tsx",
+      "route": "/organizations/[organizationId]/finance/payments",
+      "scope": "ORGANIZATION",
+      "owner": "Finance",
+      "surface_type": "collection_or_page",
+      "source_bytes": 1582
+    },
+    {
+      "surface_id": "SURF-057",
+      "source_file": "apps/web/app/organizations/[organizationId]/finance/plans/[planKey]/page.tsx",
+      "route": "/organizations/[organizationId]/finance/plans/[planKey]",
+      "scope": "ORGANIZATION",
+      "owner": "Finance",
+      "surface_type": "record_detail",
+      "source_bytes": 460
+    },
+    {
+      "surface_id": "SURF-058",
+      "source_file": "apps/web/app/organizations/[organizationId]/finance/plans/page.tsx",
+      "route": "/organizations/[organizationId]/finance/plans",
+      "scope": "ORGANIZATION",
+      "owner": "Finance",
+      "surface_type": "collection_or_page",
+      "source_bytes": 990
+    },
+    {
+      "surface_id": "SURF-059",
+      "source_file": "apps/web/app/organizations/[organizationId]/finance/quotes/page.tsx",
+      "route": "/organizations/[organizationId]/finance/quotes",
+      "scope": "ORGANIZATION",
+      "owner": "Finance",
+      "surface_type": "collection_or_page",
+      "source_bytes": 1509
+    },
+    {
+      "surface_id": "SURF-060",
+      "source_file": "apps/web/app/organizations/[organizationId]/home/page.tsx",
+      "route": "/organizations/[organizationId]/home",
+      "scope": "ORGANIZATION",
+      "owner": "Home",
+      "surface_type": "workspace_or_domain_home",
+      "source_bytes": 6694
+    },
+    {
+      "surface_id": "SURF-061",
+      "source_file": "apps/web/app/organizations/[organizationId]/insights/page.tsx",
+      "route": "/organizations/[organizationId]/insights",
+      "scope": "ORGANIZATION",
+      "owner": "Shared Insights",
+      "surface_type": "workspace_or_domain_home",
+      "source_bytes": 296
+    },
+    {
+      "surface_id": "SURF-062",
+      "source_file": "apps/web/app/organizations/[organizationId]/insights/reports/page.tsx",
+      "route": "/organizations/[organizationId]/insights/reports",
+      "scope": "ORGANIZATION",
+      "owner": "Shared Insights",
+      "surface_type": "collection_or_page",
+      "source_bytes": 311
+    },
+    {
+      "surface_id": "SURF-063",
+      "source_file": "apps/web/app/organizations/[organizationId]/integrations/[connectionId]/page.tsx",
+      "route": "/organizations/[organizationId]/integrations/[connectionId]",
+      "scope": "ORGANIZATION",
+      "owner": "Connections",
+      "surface_type": "record_detail",
+      "source_bytes": 662
+    },
+    {
+      "surface_id": "SURF-064",
+      "source_file": "apps/web/app/organizations/[organizationId]/integrations/imports/[runId]/page.tsx",
+      "route": "/organizations/[organizationId]/integrations/imports/[runId]",
+      "scope": "ORGANIZATION",
+      "owner": "Connections",
+      "surface_type": "record_detail",
+      "source_bytes": 1530
+    },
+    {
+      "surface_id": "SURF-065",
+      "source_file": "apps/web/app/organizations/[organizationId]/integrations/imports/new/page.tsx",
+      "route": "/organizations/[organizationId]/integrations/imports/new",
+      "scope": "ORGANIZATION",
+      "owner": "Connections",
+      "surface_type": "create",
+      "source_bytes": 3212
+    },
+    {
+      "surface_id": "SURF-066",
+      "source_file": "apps/web/app/organizations/[organizationId]/integrations/imports/page.tsx",
+      "route": "/organizations/[organizationId]/integrations/imports",
+      "scope": "ORGANIZATION",
+      "owner": "Connections",
+      "surface_type": "collection_or_page",
+      "source_bytes": 2046
+    },
+    {
+      "surface_id": "SURF-067",
+      "source_file": "apps/web/app/organizations/[organizationId]/integrations/page.tsx",
+      "route": "/organizations/[organizationId]/integrations",
+      "scope": "ORGANIZATION",
+      "owner": "Connections",
+      "surface_type": "collection_or_page",
+      "source_bytes": 756
+    },
+    {
+      "surface_id": "SURF-068",
+      "source_file": "apps/web/app/organizations/[organizationId]/integrations/sources/page.tsx",
+      "route": "/organizations/[organizationId]/integrations/sources",
+      "scope": "ORGANIZATION",
+      "owner": "Connections",
+      "surface_type": "collection_or_page",
+      "source_bytes": 1507
+    },
+    {
+      "surface_id": "SURF-069",
+      "source_file": "apps/web/app/organizations/[organizationId]/library/collections/page.tsx",
+      "route": "/organizations/[organizationId]/library/collections",
+      "scope": "ORGANIZATION",
+      "owner": "Library",
+      "surface_type": "collection_or_page",
+      "source_bytes": 693
+    },
+    {
+      "surface_id": "SURF-070",
+      "source_file": "apps/web/app/organizations/[organizationId]/library/files/page.tsx",
+      "route": "/organizations/[organizationId]/library/files",
+      "scope": "ORGANIZATION",
+      "owner": "Library",
+      "surface_type": "collection_or_page",
+      "source_bytes": 668
+    },
+    {
+      "surface_id": "SURF-071",
+      "source_file": "apps/web/app/organizations/[organizationId]/library/knowledge/page.tsx",
+      "route": "/organizations/[organizationId]/library/knowledge",
+      "scope": "ORGANIZATION",
+      "owner": "Library",
+      "surface_type": "collection_or_page",
+      "source_bytes": 673
+    },
+    {
+      "surface_id": "SURF-072",
+      "source_file": "apps/web/app/organizations/[organizationId]/library/media/page.tsx",
+      "route": "/organizations/[organizationId]/library/media",
+      "scope": "ORGANIZATION",
+      "owner": "Library",
+      "surface_type": "collection_or_page",
+      "source_bytes": 652
+    },
+    {
+      "surface_id": "SURF-073",
+      "source_file": "apps/web/app/organizations/[organizationId]/library/page.tsx",
+      "route": "/organizations/[organizationId]/library",
+      "scope": "ORGANIZATION",
+      "owner": "Library",
+      "surface_type": "workspace_or_domain_home",
+      "source_bytes": 2365
+    },
+    {
+      "surface_id": "SURF-074",
+      "source_file": "apps/web/app/organizations/[organizationId]/library/sources/page.tsx",
+      "route": "/organizations/[organizationId]/library/sources",
+      "scope": "ORGANIZATION",
+      "owner": "Library",
+      "surface_type": "collection_or_page",
+      "source_bytes": 627
+    },
+    {
+      "surface_id": "SURF-075",
+      "source_file": "apps/web/app/organizations/[organizationId]/library/templates/page.tsx",
+      "route": "/organizations/[organizationId]/library/templates",
+      "scope": "ORGANIZATION",
+      "owner": "Library",
+      "surface_type": "collection_or_page",
+      "source_bytes": 661
+    },
+    {
+      "surface_id": "SURF-076",
+      "source_file": "apps/web/app/organizations/[organizationId]/library/trash/page.tsx",
+      "route": "/organizations/[organizationId]/library/trash",
+      "scope": "ORGANIZATION",
+      "owner": "Library",
+      "surface_type": "collection_or_page",
+      "source_bytes": 603
+    },
+    {
+      "surface_id": "SURF-077",
+      "source_file": "apps/web/app/organizations/[organizationId]/locations/[locationId]/page.tsx",
+      "route": "/organizations/[organizationId]/locations/[locationId]",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "record_detail",
+      "source_bytes": 3200
+    },
+    {
+      "surface_id": "SURF-078",
+      "source_file": "apps/web/app/organizations/[organizationId]/locations/page.tsx",
+      "route": "/organizations/[organizationId]/locations",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "collection_or_page",
+      "source_bytes": 6057
+    },
+    {
+      "surface_id": "SURF-079",
+      "source_file": "apps/web/app/organizations/[organizationId]/page.tsx",
+      "route": "/organizations/[organizationId]",
+      "scope": "ORGANIZATION",
+      "owner": null,
+      "surface_type": "collection_or_page",
+      "source_bytes": 1127
+    },
+    {
+      "surface_id": "SURF-080",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/[...unmatched]/page.tsx",
+      "route": "/organizations/[organizationId]/platform/[...unmatched]",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 556
+    },
+    {
+      "surface_id": "SURF-081",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/ai-runtime/page.tsx",
+      "route": "/organizations/[organizationId]/platform/ai-runtime",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 2788
+    },
+    {
+      "surface_id": "SURF-082",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/billing/page.tsx",
+      "route": "/organizations/[organizationId]/platform/billing",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 12248
+    },
+    {
+      "surface_id": "SURF-083",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/catalog/families/[familyKey]/page.tsx",
+      "route": "/organizations/[organizationId]/platform/catalog/families/[familyKey]",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 781
+    },
+    {
+      "surface_id": "SURF-084",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/catalog/meters/page.tsx",
+      "route": "/organizations/[organizationId]/platform/catalog/meters",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 3367
+    },
+    {
+      "surface_id": "SURF-085",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/catalog/modules/page.tsx",
+      "route": "/organizations/[organizationId]/platform/catalog/modules",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 2627
+    },
+    {
+      "surface_id": "SURF-086",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/catalog/page.tsx",
+      "route": "/organizations/[organizationId]/platform/catalog",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 6501
+    },
+    {
+      "surface_id": "SURF-087",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/catalog/products/[productKey]/page.tsx",
+      "route": "/organizations/[organizationId]/platform/catalog/products/[productKey]",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 2996
+    },
+    {
+      "surface_id": "SURF-088",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/catalog/products/page.tsx",
+      "route": "/organizations/[organizationId]/platform/catalog/products",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 3668
+    },
+    {
+      "surface_id": "SURF-089",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/economics/[targetOrganizationId]/page.tsx",
+      "route": "/organizations/[organizationId]/platform/economics/[targetOrganizationId]",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 8569
+    },
+    {
+      "surface_id": "SURF-090",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/economics/page.tsx",
+      "route": "/organizations/[organizationId]/platform/economics",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 4403
+    },
+    {
+      "surface_id": "SURF-091",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/failures/page.tsx",
+      "route": "/organizations/[organizationId]/platform/failures",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 2701
+    },
+    {
+      "surface_id": "SURF-092",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/integrations/[connectorKey]/page.tsx",
+      "route": "/organizations/[organizationId]/platform/integrations/[connectorKey]",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 4731
+    },
+    {
+      "surface_id": "SURF-093",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/integrations/new/page.tsx",
+      "route": "/organizations/[organizationId]/platform/integrations/new",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 836
+    },
+    {
+      "surface_id": "SURF-094",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/integrations/page.tsx",
+      "route": "/organizations/[organizationId]/platform/integrations",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 4862
+    },
+    {
+      "surface_id": "SURF-095",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/commercial/page.tsx",
+      "route": "/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/commercial",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 2596
+    },
+    {
+      "surface_id": "SURF-096",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/failures/page.tsx",
+      "route": "/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/failures",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 2500
+    },
+    {
+      "surface_id": "SURF-097",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/integrations/page.tsx",
+      "route": "/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/integrations",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 3742
+    },
+    {
+      "surface_id": "SURF-098",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/page.tsx",
+      "route": "/organizations/[organizationId]/platform/organizations/[targetOrganizationId]",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 5209
+    },
+    {
+      "surface_id": "SURF-099",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/providers/page.tsx",
+      "route": "/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/providers",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 6396
+    },
+    {
+      "surface_id": "SURF-100",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/usage/page.tsx",
+      "route": "/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/usage",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 4979
+    },
+    {
+      "surface_id": "SURF-101",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/organizations/page.tsx",
+      "route": "/organizations/[organizationId]/platform/organizations",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 3259
+    },
+    {
+      "surface_id": "SURF-102",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/package-economics/page.tsx",
+      "route": "/organizations/[organizationId]/platform/package-economics",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 2944
+    },
+    {
+      "surface_id": "SURF-103",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/page.tsx",
+      "route": "/organizations/[organizationId]/platform",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 773
+    },
+    {
+      "surface_id": "SURF-104",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/plans/[planKey]/page.tsx",
+      "route": "/organizations/[organizationId]/platform/plans/[planKey]",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 766
+    },
+    {
+      "surface_id": "SURF-105",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/plans/page.tsx",
+      "route": "/organizations/[organizationId]/platform/plans",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 4981
+    },
+    {
+      "surface_id": "SURF-106",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/pricing/page.tsx",
+      "route": "/organizations/[organizationId]/platform/pricing",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 8252
+    },
+    {
+      "surface_id": "SURF-107",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/providers/[providerKey]/page.tsx",
+      "route": "/organizations/[organizationId]/platform/providers/[providerKey]",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_detail",
+      "source_bytes": 7866
+    },
+    {
+      "surface_id": "SURF-108",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/providers/page.tsx",
+      "route": "/organizations/[organizationId]/platform/providers",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 6342
+    },
+    {
+      "surface_id": "SURF-109",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/providers/twilio/configure/page.tsx",
+      "route": "/organizations/[organizationId]/platform/providers/twilio/configure",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 1788
+    },
+    {
+      "surface_id": "SURF-110",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/providers/twilio/page.tsx",
+      "route": "/organizations/[organizationId]/platform/providers/twilio",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 919
+    },
+    {
+      "surface_id": "SURF-111",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/usage/page.tsx",
+      "route": "/organizations/[organizationId]/platform/usage",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 7539
+    },
+    {
+      "surface_id": "SURF-112",
+      "source_file": "apps/web/app/organizations/[organizationId]/platform/vendor-rates/page.tsx",
+      "route": "/organizations/[organizationId]/platform/vendor-rates",
+      "scope": "PLATFORM",
+      "owner": "Platform Administration",
+      "surface_type": "platform_control_plane",
+      "source_bytes": 5772
+    },
+    {
+      "surface_id": "SURF-113",
+      "source_file": "apps/web/app/organizations/[organizationId]/pricing/page.tsx",
+      "route": "/organizations/[organizationId]/pricing",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "collection_or_page",
+      "source_bytes": 274
+    },
+    {
+      "surface_id": "SURF-114",
+      "source_file": "apps/web/app/organizations/[organizationId]/resources/[resourceId]/page.tsx",
+      "route": "/organizations/[organizationId]/resources/[resourceId]",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "record_detail",
+      "source_bytes": 10572
+    },
+    {
+      "surface_id": "SURF-115",
+      "source_file": "apps/web/app/organizations/[organizationId]/resources/page.tsx",
+      "route": "/organizations/[organizationId]/resources",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "collection_or_page",
+      "source_bytes": 3316
+    },
+    {
+      "surface_id": "SURF-116",
+      "source_file": "apps/web/app/organizations/[organizationId]/roles/page.tsx",
+      "route": "/organizations/[organizationId]/roles",
+      "scope": "ORGANIZATION",
+      "owner": "Access",
+      "surface_type": "collection_or_page",
+      "source_bytes": 490
+    },
+    {
+      "surface_id": "SURF-117",
+      "source_file": "apps/web/app/organizations/[organizationId]/sales/page.tsx",
+      "route": "/organizations/[organizationId]/sales",
+      "scope": "ORGANIZATION",
+      "owner": "CRM",
+      "surface_type": "workspace_or_domain_home",
+      "source_bytes": 2355
+    },
+    {
+      "surface_id": "SURF-118",
+      "source_file": "apps/web/app/organizations/[organizationId]/schedule/configuration/page.tsx",
+      "route": "/organizations/[organizationId]/schedule/configuration",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "configuration",
+      "source_bytes": 1833
+    },
+    {
+      "surface_id": "SURF-119",
+      "source_file": "apps/web/app/organizations/[organizationId]/schedule/page.tsx",
+      "route": "/organizations/[organizationId]/schedule",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "collection_or_page",
+      "source_bytes": 8465
+    },
+    {
+      "surface_id": "SURF-120",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/access/invitations/page.tsx",
+      "route": "/organizations/[organizationId]/settings/access/invitations",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 488
+    },
+    {
+      "surface_id": "SURF-121",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/access/members/page.tsx",
+      "route": "/organizations/[organizationId]/settings/access/members",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 476
+    },
+    {
+      "surface_id": "SURF-122",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/access/page.tsx",
+      "route": "/organizations/[organizationId]/settings/access",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 286
+    },
+    {
+      "surface_id": "SURF-123",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/access/roles/page.tsx",
+      "route": "/organizations/[organizationId]/settings/access/roles",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 470
+    },
+    {
+      "surface_id": "SURF-124",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/branding/page.tsx",
+      "route": "/organizations/[organizationId]/settings/branding",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 4022
+    },
+    {
+      "surface_id": "SURF-125",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/calls/page.tsx",
+      "route": "/organizations/[organizationId]/settings/calls",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 2835
+    },
+    {
+      "surface_id": "SURF-126",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/commerce/page.tsx",
+      "route": "/organizations/[organizationId]/settings/commerce",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 506
+    },
+    {
+      "surface_id": "SURF-127",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/communications/page.tsx",
+      "route": "/organizations/[organizationId]/settings/communications",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 6323
+    },
+    {
+      "surface_id": "SURF-128",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/connections/[connectionId]/page.tsx",
+      "route": "/organizations/[organizationId]/settings/connections/[connectionId]",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 5907
+    },
+    {
+      "surface_id": "SURF-129",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/connections/apps/page.tsx",
+      "route": "/organizations/[organizationId]/settings/connections/apps",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 538
+    },
+    {
+      "surface_id": "SURF-130",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/connections/page.tsx",
+      "route": "/organizations/[organizationId]/settings/connections",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 538
+    },
+    {
+      "surface_id": "SURF-131",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/custom-fields/page.tsx",
+      "route": "/organizations/[organizationId]/settings/custom-fields",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 2046
+    },
+    {
+      "surface_id": "SURF-132",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/data-automation/page.tsx",
+      "route": "/organizations/[organizationId]/settings/data-automation",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 511
+    },
+    {
+      "surface_id": "SURF-133",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/domains/page.tsx",
+      "route": "/organizations/[organizationId]/settings/domains",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 2457
+    },
+    {
+      "surface_id": "SURF-134",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/email/page.tsx",
+      "route": "/organizations/[organizationId]/settings/email",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 4354
+    },
+    {
+      "surface_id": "SURF-135",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/features/page.tsx",
+      "route": "/organizations/[organizationId]/settings/features",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 4605
+    },
+    {
+      "surface_id": "SURF-136",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/general/page.tsx",
+      "route": "/organizations/[organizationId]/settings/general",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 1633
+    },
+    {
+      "surface_id": "SURF-137",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/organization/page.tsx",
+      "route": "/organizations/[organizationId]/settings/organization",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 2035
+    },
+    {
+      "surface_id": "SURF-138",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/page.tsx",
+      "route": "/organizations/[organizationId]/settings",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_index",
+      "source_bytes": 1277
+    },
+    {
+      "surface_id": "SURF-139",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/people/page.tsx",
+      "route": "/organizations/[organizationId]/settings/people",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 426
+    },
+    {
+      "surface_id": "SURF-140",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/plan/locked/page.tsx",
+      "route": "/organizations/[organizationId]/settings/plan/locked",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 2162
+    },
+    {
+      "surface_id": "SURF-141",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/plan/page.tsx",
+      "route": "/organizations/[organizationId]/settings/plan",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 1171
+    },
+    {
+      "surface_id": "SURF-142",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/pricing/page.tsx",
+      "route": "/organizations/[organizationId]/settings/pricing",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 6709
+    },
+    {
+      "surface_id": "SURF-143",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/sales-stages/page.tsx",
+      "route": "/organizations/[organizationId]/settings/sales-stages",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 2385
+    },
+    {
+      "surface_id": "SURF-144",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/secrets/page.tsx",
+      "route": "/organizations/[organizationId]/settings/secrets",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 1797
+    },
+    {
+      "surface_id": "SURF-145",
+      "source_file": "apps/web/app/organizations/[organizationId]/settings/website/page.tsx",
+      "route": "/organizations/[organizationId]/settings/website",
+      "scope": "ORGANIZATION",
+      "owner": "Settings",
+      "surface_type": "settings_detail",
+      "source_bytes": 513
+    },
+    {
+      "surface_id": "SURF-146",
+      "source_file": "apps/web/app/organizations/[organizationId]/setup/page.tsx",
+      "route": "/organizations/[organizationId]/setup",
+      "scope": "ORGANIZATION",
+      "owner": "Setup",
+      "surface_type": "collection_or_page",
+      "source_bytes": 7359
+    },
+    {
+      "surface_id": "SURF-147",
+      "source_file": "apps/web/app/organizations/[organizationId]/studio/forms/[formId]/page.tsx",
+      "route": "/organizations/[organizationId]/studio/forms/[formId]",
+      "scope": "ORGANIZATION",
+      "owner": "Studio",
+      "surface_type": "record_detail",
+      "source_bytes": 2401
+    },
+    {
+      "surface_id": "SURF-148",
+      "source_file": "apps/web/app/organizations/[organizationId]/studio/forms/[formId]/submissions/page.tsx",
+      "route": "/organizations/[organizationId]/studio/forms/[formId]/submissions",
+      "scope": "ORGANIZATION",
+      "owner": "Studio",
+      "surface_type": "record_detail",
+      "source_bytes": 1811
+    },
+    {
+      "surface_id": "SURF-149",
+      "source_file": "apps/web/app/organizations/[organizationId]/studio/forms/page.tsx",
+      "route": "/organizations/[organizationId]/studio/forms",
+      "scope": "ORGANIZATION",
+      "owner": "Studio",
+      "surface_type": "collection_or_page",
+      "source_bytes": 3762
+    },
+    {
+      "surface_id": "SURF-150",
+      "source_file": "apps/web/app/organizations/[organizationId]/studio/page.tsx",
+      "route": "/organizations/[organizationId]/studio",
+      "scope": "ORGANIZATION",
+      "owner": "Studio",
+      "surface_type": "workspace_or_domain_home",
+      "source_bytes": 6083
+    },
+    {
+      "surface_id": "SURF-151",
+      "source_file": "apps/web/app/organizations/[organizationId]/studio/templates/page.tsx",
+      "route": "/organizations/[organizationId]/studio/templates",
+      "scope": "ORGANIZATION",
+      "owner": "Studio",
+      "surface_type": "collection_or_page",
+      "source_bytes": 2143
+    },
+    {
+      "surface_id": "SURF-152",
+      "source_file": "apps/web/app/organizations/[organizationId]/studio/website/page.tsx",
+      "route": "/organizations/[organizationId]/studio/website",
+      "scope": "ORGANIZATION",
+      "owner": "Studio",
+      "surface_type": "collection_or_page",
+      "source_bytes": 2756
+    },
+    {
+      "surface_id": "SURF-153",
+      "source_file": "apps/web/app/organizations/[organizationId]/work/[workItemId]/page.tsx",
+      "route": "/organizations/[organizationId]/work/[workItemId]",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "record_detail",
+      "source_bytes": 847
+    },
+    {
+      "surface_id": "SURF-154",
+      "source_file": "apps/web/app/organizations/[organizationId]/work/configuration/page.tsx",
+      "route": "/organizations/[organizationId]/work/configuration",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "configuration",
+      "source_bytes": 4261
+    },
+    {
+      "surface_id": "SURF-155",
+      "source_file": "apps/web/app/organizations/[organizationId]/work/page.tsx",
+      "route": "/organizations/[organizationId]/work",
+      "scope": "ORGANIZATION",
+      "owner": "Field",
+      "surface_type": "collection_or_page",
+      "source_bytes": 8161
+    },
+    {
+      "surface_id": "SURF-156",
+      "source_file": "apps/web/app/organizations/accept-invite/[token]/page.tsx",
+      "route": "/organizations/accept-invite/[token]",
+      "scope": "ORGANIZATION",
+      "owner": null,
+      "surface_type": "collection_or_page",
+      "source_bytes": 2266
+    },
+    {
+      "surface_id": "SURF-157",
+      "source_file": "apps/web/app/organizations/page.tsx",
+      "route": "/organizations",
+      "scope": "ORGANIZATION",
+      "owner": null,
+      "surface_type": "collection_or_page",
+      "source_bytes": 4992
+    },
+    {
+      "surface_id": "SURF-158",
+      "source_file": "apps/web/app/platform/[[...path]]/page.tsx",
+      "route": "/platform/[[...path]]",
+      "scope": "PLATFORM_COMPAT",
+      "owner": null,
+      "surface_type": "platform_detail",
+      "source_bytes": 2773
+    },
+    {
+      "surface_id": "SURF-159",
+      "source_file": "apps/web/app/settings/[[...unmatched]]/page.tsx",
+      "route": "/settings/[[...unmatched]]",
+      "scope": "PERSONAL",
+      "owner": null,
+      "surface_type": "settings_detail",
+      "source_bytes": 520
+    },
+    {
+      "surface_id": "SURF-160",
+      "source_file": "apps/web/app/settings/account/page.tsx",
+      "route": "/settings/account",
+      "scope": "PERSONAL",
+      "owner": null,
+      "surface_type": "settings_detail",
+      "source_bytes": 1835
+    },
+    {
+      "surface_id": "SURF-161",
+      "source_file": "apps/web/app/settings/account/security/page.tsx",
+      "route": "/settings/account/security",
+      "scope": "PERSONAL",
+      "owner": null,
+      "surface_type": "settings_detail",
+      "source_bytes": 1827
+    }
+  ]
+}
